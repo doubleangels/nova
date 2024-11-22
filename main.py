@@ -251,15 +251,15 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         if assign_role and role_id:
             channel = guild.get_channel(channel_id)
             embed = interactions.Embed(
-                title=f"Welcome {member.mention}!",
+                title=f"Welcome {member.username}!",
                 description=(
-                    f"• **How old are you?**"
-                    "• Where are you from?"
-                    "• What do you do in your free time?"
-                    "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?"
-                    "• What's your blood type?"
-                    "• What's your shoe size?"
-                    "• Can we donate your organs to ... \"charity\"?"
+                    f"• **How old are you?**\n"
+                    "• Where are you from?\n"
+                    "• What do you do in your free time?\n"
+                    "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
+                    "• What's your blood type?\n"
+                    "• What's your shoe size?\n"
+                    "• Can we donate your organs to ... \"charity\"?\n"
                 ),
                 color=0xcd41ff
             )
