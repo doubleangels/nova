@@ -253,7 +253,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             embed = interactions.Embed(
                 title=f"Welcome {member.username}!",
                 description=(
-                    f"• **How old are you?**\n• Where are you from?\n• What do you do in your free time?\n• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n• What's your blood type?\n• What's your shoe size?\n• Can we donate your organs to ... \"charity\"?\n"
+                    f"• **How old are you?**\n• Where are you from?\n• What do you do in your free time?\n• What is your address?\n• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n• What's your blood type?\n• What's your shoe size?\n• Can we donate your organs to ... \"charity\"?\n"
                 ),
                 color=0xcd41ff
             )
