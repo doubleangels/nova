@@ -239,7 +239,17 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         assign_role = db.get("backup_mode_enabled")
         role_id = db.get("backup_mode_id")
         channel_id = db.get("backup_mode_channel")
+        kick_users = db.get("troll_mode_enabled")
         member = event.member  # Get the member who joined
+
+        # Calculate account age
+        account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
+        account_age_limit = datetime.timedelta(weeks=2)
+
+        # Check if the account is less than two weeks old and kick if so
+        if kick_users and account_age < account_age_limit:
+                await member.kick(reason="Account age is less than two weeks.")
+                logger.info(f"Kicked {member.username} due to account age.")
 
         # Ensure required values are set
         if not (assign_role and role_id and channel_id):
@@ -492,6 +502,26 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Slash command to toggle new account kicks
+@interactions.slash_command(name="trollmode", description="Toggle kicking of accounts with an age of less than two weeks")
+@interactions.slash_option(
+    name="enabled",
+    description="Enabled",
+    required=True,
+    opt_type=interactions.OptionType.BOOLEAN
+)
+async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool):
+    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        return
+    try:
+        db.set("troll_mode_enabled", enabled)
+        db.dump()
+        status = "enabled" if enabled else "disabled"
+        await ctx.send(f"Troll mode for new members has been {status}.")
+        logger.info(f"Troll mode for new members has been {status}.")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
 
 try:
     # Start the bot using the token
