@@ -240,15 +240,16 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         role_id = db.get("backup_mode_id")
         channel_id = db.get("backup_mode_channel")
         kick_users = db.get("troll_mode_enabled")
+        kick_users_age_limit = db.get("troll_mode_account_age")
         member = event.member  # Get the member who joined
 
         # Calculate account age
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
-        account_age_limit = datetime.timedelta(weeks=2)
+        account_age_limit = datetime.timedelta(days=kick_users_age_limit) if kick_users_age_limit else datetime.timedelta(days=14)
 
         # Check if the account is less than two weeks old and kick if so
         if kick_users and account_age < account_age_limit:
-                await member.kick(reason="Account age is less than two weeks.")
+                await member.kick(reason="Account is too new!")
                 logger.info(f"Kicked {member.username} due to account age.")
 
         # Ensure required values are set
@@ -502,24 +503,31 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
-# Slash command to toggle new account kicks
-@interactions.slash_command(name="trollmode", description="Toggle kicking of accounts with an age of less than two weeks")
+# Slash command to toggle new account kicks and set account age threshold
+@interactions.slash_command(name="trollmode", description="Toggle kicking of accounts with a specified account age threshold")
 @interactions.slash_option(
     name="enabled",
-    description="Enabled",
+    description="Enable or disable kicking of new accounts",
     required=True,
     opt_type=interactions.OptionType.BOOLEAN
 )
-async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool):
+@interactions.slash_option(
+    name="account_age",
+    description="Minimum account age in days (default: 14)",
+    required=False,
+    opt_type=interactions.OptionType.INTEGER
+)
+async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, account_age: int = 14):
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     try:
         db.set("troll_mode_enabled", enabled)
+        db.set("troll_mode_account_age", account_age)
         db.dump()
         status = "enabled" if enabled else "disabled"
-        await ctx.send(f"Troll mode for new members has been {status}.")
-        logger.info(f"Troll mode for new members has been {status}.")
+        await ctx.send(f"Troll mode for new members has been {status} and the account age threshold has been set to {account_age} days.")
+        logger.info(f"Troll mode for new members has been {status}. Account age threshold set to {account_age} days.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
