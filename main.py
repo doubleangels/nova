@@ -523,11 +523,11 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
         return
     try:
         db.set("troll_mode_enabled", enabled)
-        db.set("troll_mode_account_age", account_age)
+        db.set("troll_mode_account_age", age)
         db.dump()
         status = "enabled" if enabled else "disabled"
-        await ctx.send(f"Troll mode for new members has been {status} and the account age threshold has been set to {account_age} days.")
-        logger.info(f"Troll mode for new members has been {status}. Account age threshold set to {account_age} days.")
+        await ctx.send(f"Troll mode for new members has been {status} and the account age threshold has been set to {age} days.")
+        logger.info(f"Troll mode for new members has been {status}. Account age threshold set to {age} days.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
