@@ -517,7 +517,7 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
-async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, account_age: int = 14):
+async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, age: int = 14):
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
