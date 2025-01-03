@@ -513,7 +513,7 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
 )
 @interactions.slash_option(
     name="age",
-    description="Minimum account age in days",
+    description="Minimum account age in days (default: 14)",
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
