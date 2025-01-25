@@ -613,7 +613,7 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
                             snippet = result.get("snippet", "No Description Found")
 
                             embed = interactions.Embed(
-                                title=f"{i}. {title}",
+                                title=f"{title}",
                                 description=f"{snippet}\n[Link]({link})",
                                 color=0x1a73e8
                             )
@@ -675,7 +675,7 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
                         embeds = []
                         for i, item in enumerate(data["items"], start=1):
                             embed = interactions.Embed(
-                                title=f"{i}. {item.get('title', 'No Title')}",
+                                title=f"{item.get('title', 'No Title')}",
                                 description=f"[View Image]({item.get('link', '')})",
                                 color=0x1a73e8
                             )
