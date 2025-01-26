@@ -657,17 +657,24 @@ async def dev(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
-@interactions.slash_command(name="source", description="Send link to the hosting for this bot.")
+@interactions.slash_command(name="source", description="Get links for the bot's resources.")
 async def source(ctx: interactions.ComponentContext):
     """
-    Responds with the URL where the bot's source cod and database is hosted.
+    Responds with an embed containing links for the bot's resources.
     """
     try:
-        logger.info(f'Source link requested by {ctx.author.username}.')
-        await ctx.send("https://github.com/doubleangels/Nova\nhttps://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public")
-        logger.info("Source link has been successfully sent.")
+        embed = interactions.Embed(
+            title="Bot Resources",
+            description="Here are the links for the bot's resources:",
+            color=0x00ff00,
+        )
+        embed.add_field(name="GitHub Repository", value="https://github.com/doubleangels/Nova", inline=False)
+        embed.add_field(name="Supabase Project", value="https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public", inline=False)
+
+        await ctx.send(embeds=[embed])
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
+        await ctx.send("An error occurred while processing your request.", ephemeral=True)
 
 
 @interactions.slash_command(name="togglebackupmode", description="Toggle role assignment for new members.")
