@@ -770,10 +770,6 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     name="fix",
     description="Runs the logic to add Disboard data to the database under the key name of 'fix'."
 )
-@interactions.slash_command(
-    name="fix",
-    description="Runs the logic to add Disboard data to the database under the key name of 'fix'."
-)
 async def fix_command(ctx: interactions.ComponentContext):
     """
     This command mimics Disboard logic but stores it in the reminders table with the key "fix".
