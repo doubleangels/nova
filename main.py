@@ -143,6 +143,8 @@ def set_reminder_data(key: str, data: dict):
         serialized = json.dumps(data)
         existing = get_reminder_data(key)
         if existing is None:
+            supabase.table("reminders").insert({"key": key, "reminder_data": serialized}).execute()
+        else:
             supabase.table("reminders").update({"reminder_data": serialized}).eq("key", key).execute()
     except Exception as e:
         logger.error(f"Error setting reminder data for key '{key}': {e}")
