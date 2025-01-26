@@ -657,29 +657,18 @@ async def dev(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
-@interactions.slash_command(name="github", description="Send link to the GitHub project for this bot.")
-async def github(ctx: interactions.ComponentContext):
+@interactions.slash_command(name="source", description="Send link to the hosting for this bot.")
+async def source(ctx: interactions.ComponentContext):
     """
-    Responds with the GitHub URL where the bot's source code is hosted.
+    Responds with the URL where the bot's source cod and database is hosted.
     """
     try:
-        logger.info(f'Github link requested by {ctx.author.username}.')
-        await ctx.send("https://github.com/doubleangels/Nova")
-        logger.info("GitHub link has been successfully sent.")
+        logger.info(f'Source link requested by {ctx.author.username}.')
+        await ctx.send("https://github.com/doubleangels/Nova\nhttps://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public")
+        logger.info("Source link has been successfully sent.")
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
-@interactions.slash_command(name="supabase", description="Send link to the Supabase project for this bot.")
-async def supabase(ctx: interactions.ComponentContext):
-    """
-    Responds with the Supabase URL where the bot's database is hosted.
-    """
-    try:
-        logger.info(f'Supabase link requested by {ctx.author.username}.')
-        await ctx.send("https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public")
-        logger.info("Supabase link has been successfully sent.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
 
 @interactions.slash_command(name="togglebackupmode", description="Toggle role assignment for new members.")
 @interactions.slash_option(
