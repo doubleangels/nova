@@ -14,12 +14,14 @@ import sentry_sdk
 import json
 from supabase import create_client, Client
 
+# Initialize Sentry for error tracking and performance monitoring
 sentry_sdk.init(
     dsn="https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
 )
 
+# Set up logger for both console and file output
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -36,6 +38,7 @@ console_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
+# Load and check required environment variables
 required_env_vars = {
     "DISCORD_BOT_TOKEN": os.getenv("DISCORD_BOT_TOKEN"),
     "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
@@ -52,6 +55,7 @@ if missing_vars:
         logger.error(f"{var} not found in environment variables.")
     sys.exit(1)
 
+# Extract the variables into local constants
 TOKEN = required_env_vars["DISCORD_BOT_TOKEN"]
 GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
@@ -60,8 +64,10 @@ GEMINI_API_KEY = required_env_vars["GEMINI_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
+# Create a Supabase client instance
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# Retrieve a JSON value from the "nova_config" table in Supabase
 def get_value(key: str):
     try:
         response = supabase.table("nova_config").select("value").eq("id", key).single().execute()
@@ -71,10 +77,12 @@ def get_value(key: str):
         logger.error(f"Error retrieving key '{key}' from Supabase: {e}")
     return None
 
+# Set or update a JSON value in the "nova_config" table in Supabase
 def set_value(key: str, value):
     try:
         serialized = json.dumps(value)
         existing = get_value(key)
+        # If the key doesn't exist, insert a new entry; otherwise update existing
         if existing is None:
             supabase.table("nova_config").insert({"id": key, "value": serialized}).execute()
         else:
@@ -82,15 +90,17 @@ def set_value(key: str, value):
     except Exception as e:
         logger.error(f"Error setting key '{key}' in Supabase: {e}")
 
+# Delete a key/value pair from the "nova_config" table in Supabase
 def delete_value(key: str):
     try:
         supabase.table("nova_config").delete().eq("id", key).execute()
     except Exception as e:
         logger.error(f"Error deleting key '{key}' in Supabase: {e}")
 
-
+# Configure the Gemini generative AI with the provided API key
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Create a Discord bot client using the interactions library
 bot = interactions.Client(
     intents=(
         interactions.Intents.DEFAULT
@@ -99,6 +109,7 @@ bot = interactions.Client(
     )
 )
 
+# Dictionary mapping certain known bot IDs to their names
 bot_ids = {
     "302050872383242240": "Disboard",
     "1222548162741538938": "Discadia",
@@ -106,10 +117,12 @@ bot_ids = {
     "835255643157168168": "Unfocused",
 }
 
+# ID for this particular bot (Nova)
 nova_id = "835255643157168168"
 
 print("Starting the bot...")
 
+# Gracefully handle interrupt signals to shut down
 def handle_interrupt(signal_num, frame):
     logger.info("Gracefully shutting down.")
     sys.exit(0)
@@ -117,6 +130,7 @@ def handle_interrupt(signal_num, frame):
 signal.signal(signal.SIGINT, handle_interrupt)
 signal.signal(signal.SIGTERM, handle_interrupt)
 
+# Retrieve the role ID used for reminders from the database
 def get_role():
     try:
         role = get_value("role")
@@ -127,6 +141,7 @@ def get_role():
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Retrieve a channel ID from the database and return a channel object
 async def get_channel(channel_key):
     try:
         channel_id = get_value(channel_key)
@@ -137,6 +152,7 @@ async def get_channel(channel_key):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Calculate how much time is left until a scheduled datetime
 def calculate_remaining_time(scheduled_time):
     if not scheduled_time:
         return "Not set!"
@@ -152,12 +168,14 @@ def calculate_remaining_time(scheduled_time):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Helper to wrap tasks to ensure exceptions are caught properly
 async def safe_task(task):
     try:
         await task
     except Exception as e:
         logger.error(f"Exception in scheduled task: {e}")
 
+# Reschedule a reminder if it already has data in the database
 async def reschedule_reminder(key, role):
     try:
         reminder_data = get_value(f"{key}_reminder_data")
@@ -189,12 +207,13 @@ async def reschedule_reminder(key, role):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Functions that trigger reminders for known bump/boop services
 async def disboard():
     await handle_reminder(
         key="disboard",
         initial_message="Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.",
         reminder_message="It's time to bump the server on Disboard again!",
-        interval=7200
+        interval=7200  # 2 hours
     )
 
 async def dsme():
@@ -202,7 +221,7 @@ async def dsme():
         key="dsme",
         initial_message="Thanks for voting for the server on DS.me! I'll remind you when it's time to vote again.",
         reminder_message="It's time to vote for the server on DS.me again!",
-        interval=43200
+        interval=43200  # 12 hours
     )
 
 async def unfocused():
@@ -210,7 +229,7 @@ async def unfocused():
         key="unfocused",
         initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
         reminder_message="It's time to boop the server on Unfocused again!",
-        interval=21600
+        interval=21600  # 6 hours
     )
 
 async def discadia():
@@ -218,9 +237,10 @@ async def discadia():
         key="discadia",
         initial_message="Thanks for bumping the server on Discadia! I'll remind you when it's time to bump again.",
         reminder_message="It's time to bump the server on Discadia again!",
-        interval=43200
+        interval=43200  # 12 hours
     )
 
+# When the bot is ready, set a custom status and attempt to reschedule any existing reminders
 @interactions.listen()
 async def on_ready():
     try:
@@ -238,6 +258,7 @@ async def on_ready():
         if not role:
             return
         
+        # Attempt to reschedule any reminders found in the database
         for key in ["disboard", "dsme", "unfocused", "discadia"]:
             await reschedule_reminder(key, role)
 
@@ -246,6 +267,7 @@ async def on_ready():
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Listen for messages created in the server, look for known triggers from other bots and handle reminders
 @interactions.listen()
 async def on_message_create(event: interactions.api.events.MessageCreate):
     try:
@@ -256,7 +278,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
             bot_name = bot_ids[bot_id]
             logger.info(f"Detected message from {bot_name}.")
         
-        # Check if the message has an embed with specific text
+        # Check for embeds containing specific text for Disboard or DS.me
         if event.message.embeds and len(event.message.embeds) > 0:
             embed = event.message.embeds[0]
             embed_description = embed.description
@@ -266,7 +288,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
                 elif "Your vote streak for this server" in embed_description:
                     await dsme()
         else:
-            # Look for plain text triggers
+            # Look for plain text triggers for Unfocused or Discadia
             if "Your server has been booped" in message_content:
                 await unfocused()
             elif "has been successfully bumped" in message_content:
@@ -274,9 +296,11 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Listen for new members joining, handle "backup mode" auto-roles and "troll mode" for kicking new accounts
 @interactions.listen()
 async def on_member_join(event: interactions.api.events.MemberAdd):
     try:
+        # Check settings in the database
         assign_role = get_value("backup_mode_enabled")
         role_id = get_value("backup_mode_id")
         channel_id = get_value("backup_mode_channel")
@@ -287,16 +311,20 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
         account_age_limit = datetime.timedelta(days=kick_users_age_limit) if kick_users_age_limit else datetime.timedelta(days=14)
 
+        # If troll_mode is enabled, check the new member's account age and kick if too new
         if kick_users and account_age < account_age_limit:
             await member.kick(reason="Account is too new!")
             logger.info(f"Kicked {member.username} due to account age.")
 
+        # Check if backup mode is fully configured
         if not (assign_role and role_id and channel_id):
             logger.error("Role assignment or channel announcement cannot proceed, configuration values missing.")
             return
 
         guild = event.guild
         logger.info(f"New member {member.username} has joined the guild.")
+
+        # If backup mode is enabled, post a welcome message and assign a role
         if assign_role and role_id:
             channel = guild.get_channel(channel_id)
             embed = interactions.Embed(
@@ -323,21 +351,25 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Generic scheduled message sender used by the handle_reminder function
 async def send_scheduled_message(initial_message: str, reminder_message: str, interval: int, key: str):
     try:
         channel = await get_channel("reminder_channel")
         if not channel:
             return
         
+        # Send an initial message if one is provided
         if initial_message:
             logger.info(f"Sending initial message: {initial_message}")
             await channel.send(initial_message)
 
+        # Wait for the specified interval before sending the reminder
         await asyncio.sleep(interval)
 
         logger.info(f"Sending reminder message: {reminder_message}")
         await channel.send(reminder_message)
 
+        # Once the reminder is sent, remove the corresponding reminder data from the database
         reminder_data = get_value(f"{key}_reminder_data")
         if reminder_data:
             delete_value(f"{key}_reminder_data")
@@ -345,12 +377,15 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Handle the logic of starting a new reminder if one is not already set
 async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
+    # If there's already a reminder set for this key, do nothing
     if get_value(f"{key}_reminder_data"):
         logger.info(f"{key.capitalize()} already has a timer set for a reminder.")
         return
 
     reminder_id = str(uuid.uuid4())
+    # Save reminder details in the database so we can reschedule if the bot restarts
     reminder_data = {
         "state": True,
         "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
@@ -362,6 +397,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
     if not role:
         return
 
+    # Send the initial message and schedule the reminder
     await send_scheduled_message(
         initial_message,
         f"<@&{role}> {reminder_message}",
@@ -369,6 +405,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
         key
     )
 
+# Slash command to set up the channel and role used for bump/boop reminders
 @interactions.slash_command(name="remindersetup", description="Setup bump and boop reminders.")
 @interactions.slash_option(
     name="channel",
@@ -383,6 +420,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
     opt_type=interactions.OptionType.ROLE
 )
 async def reminder_setup(ctx: interactions.ComponentContext, channel, role: interactions.Role):
+    # Check for administrator permissions
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
@@ -392,6 +430,7 @@ async def reminder_setup(ctx: interactions.ComponentContext, channel, role: inte
         role_id = role.id
         logger.info(f"Reminder channel set to <#{channel_id}> and the role set to <@&{role_id}>.")
         
+        # Save the chosen channel and role in the database
         set_value("reminder_channel", channel_id)
         set_value("role", role_id)
 
@@ -400,6 +439,7 @@ async def reminder_setup(ctx: interactions.ComponentContext, channel, role: inte
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Slash command to check the status of each reminder (how much time remains, etc.)
 @interactions.slash_command(name="status", description="Check the current status of reminders.")
 async def check_status(ctx: interactions.ComponentContext):
     try:
@@ -413,11 +453,13 @@ async def check_status(ctx: interactions.ComponentContext):
         channel_status = f"<#{channel_id}>" if channel_id else "Not set!"
         role_name = f"<@&{role}>" if role else "Not set!"
 
+        # Retrieve stored reminder data
         disboard_data = get_value("disboard_reminder_data")
         discadia_data = get_value("discadia_reminder_data")
         dsme_data = get_value("dsme_reminder_data")
         unfocused_data = get_value("unfocused_reminder_data")
 
+        # Calculate remaining time for each of the reminders
         disboard_remaining_time = calculate_remaining_time(disboard_data.get("scheduled_time")) if disboard_data else "Not set!"
         discadia_remaining_time = calculate_remaining_time(discadia_data.get("scheduled_time")) if discadia_data else "Not set!"
         dsme_remaining_time = calculate_remaining_time(dsme_data.get("scheduled_time")) if dsme_data else "Not set!"
@@ -436,8 +478,10 @@ async def check_status(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Command to send a test message to the reminder channel
 @interactions.slash_command(name="testmessage", description="Send a test message.")
 async def test_reminders(ctx: interactions.ComponentContext):
+    # Check for administrator permissions
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
@@ -452,8 +496,10 @@ async def test_reminders(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Command stub for developer tag maintenance
 @interactions.slash_command(name="dev", description="Maintain developer tag.")
 async def dev(ctx: interactions.ComponentContext):
+    # Check for administrator permissions
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
@@ -464,6 +510,7 @@ async def dev(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Command to send the GitHub repository link
 @interactions.slash_command(name="github", description="Send link to the GitHub project for this bot.")
 async def github(ctx: interactions.ComponentContext):
     try:
@@ -473,6 +520,7 @@ async def github(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Toggle the "backup mode" which automatically assigns a role to new members upon joining
 @interactions.slash_command(name="togglebackupmode", description="Toggle role assignment for new members.")
 @interactions.slash_option(
     name="enabled",
@@ -481,6 +529,7 @@ async def github(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.BOOLEAN
 )
 async def toggle_backup_mode(ctx: interactions.ComponentContext, enabled: bool):
+    # Check for administrator permissions
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
@@ -492,6 +541,7 @@ async def toggle_backup_mode(ctx: interactions.ComponentContext, enabled: bool):
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Configure which role to be assigned to new members and which channel to welcome them in
 @interactions.slash_command(name="backupmode", description="Set the role to be assigned to new members.")
 @interactions.slash_option(
     name="channel",
@@ -506,6 +556,7 @@ async def toggle_backup_mode(ctx: interactions.ComponentContext, enabled: bool):
     opt_type=interactions.OptionType.ROLE
 )
 async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: interactions.Role):
+    # Check for administrator permissions
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
@@ -519,6 +570,7 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Toggle "troll mode," which kicks newly joined users if their account is under a certain age
 @interactions.slash_command(name="trollmode", description="Toggle kicking of accounts with a specified account age threshold.")
 @interactions.slash_option(
     name="enabled",
@@ -533,6 +585,7 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
     opt_type=interactions.OptionType.INTEGER
 )
 async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, age: int = 14):
+    # Check for administrator permissions
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
@@ -545,6 +598,7 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+# Slash command to perform a Google text search
 @interactions.slash_command(name="search", description="Search Google and return the top results.")
 @interactions.slash_option(
     name="query",
@@ -560,6 +614,7 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
 )
 async def google_search(ctx: interactions.ComponentContext, query: str, results: int = 1):
     try:
+        # Defer the response because we may need time to query the API
         await ctx.defer()
         results = max(1, min(results, 10))
         search_url = "https://www.googleapis.com/customsearch/v1"
@@ -592,6 +647,7 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
         logger.error(f"Error in /search command: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+# Slash command to perform a Google image search
 @interactions.slash_command(name="imagesearch", description="Search Google for images and return the top results.")
 @interactions.slash_option(
     name="query",
@@ -646,6 +702,7 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
         logger.error(f"Error in /imagesearch: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+# Slash command to query Google's Gemini AI model
 @interactions.slash_command(name="ai", description="Ask Gemini a question and get a response.")
 @interactions.slash_option(
     name="query",
@@ -656,6 +713,7 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
 async def ai_query(ctx: interactions.ComponentContext, query: str):
     try:
         await ctx.defer()
+        # Create a GenerativeModel instance and generate a response
         model = genai.GenerativeModel(
             model_name="gemini-1.5-flash",
             system_instruction=(
@@ -672,6 +730,7 @@ async def ai_query(ctx: interactions.ComponentContext, query: str):
         logger.error(f"Error in /ai: {e}")
         await ctx.send("An error occurred while querying the AI. Please try again later.")
 
+# Slash command to search YouTube for videos
 @interactions.slash_command(name="youtube", description="Search YouTube for videos and return the top result.")
 @interactions.slash_option(
     name="query",
@@ -681,7 +740,8 @@ async def ai_query(ctx: interactions.ComponentContext, query: str):
 )
 async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
     """
-    For simplicity, we only return 1 result. If you want more, add an integer slash option like in google_search.
+    For simplicity, we only return 1 result. If you want more, 
+    you can add an integer slash option like in google_search.
     """
     try:
         await ctx.defer()
@@ -727,6 +787,7 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
         logger.error(f"Error in /youtube: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+# Slash command to search Wikipedia for articles
 @interactions.slash_command(name="wikipedia", description="Search Wikipedia for articles and return the top result.")
 @interactions.slash_option(
     name="query",
@@ -773,6 +834,7 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
         logger.error(f"Error in /wikipedia: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+# Slash command to search Urban Dictionary
 @interactions.slash_command(name="urban", description="Search Urban Dictionary for definitions.")
 @interactions.slash_option(
     name="query",
@@ -819,6 +881,7 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
         logger.error(f"Error in /urban: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.")
 
+# Start the bot with the provided token, and handle any exceptions that occur during startup
 try:
     bot.start(TOKEN)
 except Exception as e:
