@@ -760,7 +760,7 @@ async def fix_command(ctx: interactions.ComponentContext):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
 
-    existing_data = get_reminder_data("fix")
+    existing_data = get_reminder_data("fix") or {}
     if existing_data:
         await ctx.send("The 'fix' key already exists in the database.", ephemeral=True)
         return
@@ -773,7 +773,6 @@ async def fix_command(ctx: interactions.ComponentContext):
     set_reminder_data("fix", reminder_data)
 
     await ctx.send("Fix logic has been applied! A new entry was created under the key 'fix'.")
-
 
 @interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to their default values.")
 async def reset_reminders(ctx: interactions.ComponentContext):
