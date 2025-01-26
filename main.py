@@ -84,11 +84,10 @@ def get_value(key: str):
     """
     try:
         response = supabase.table("nova_config").select("value").eq("id", key).maybe_single().execute()
-        if response.data:
+        if response.data and "value" in response.data:
             return json.loads(response.data["value"])
-    except Exception as e:
-        logger.error(f"Error retrieving key '{key}' from Supabase: {e}")
-    return None
+        else:
+            return None
 
 def set_value(key: str, value):
     """
