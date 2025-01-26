@@ -74,7 +74,6 @@ SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 # -------------------------
 # Supabase Client
 # -------------------------
-# Create a Supabase client instance using the provided URL and KEY
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_value(key: str):
@@ -116,7 +115,6 @@ def delete_value(key: str):
 # -------------------------
 # Gemini (Google Generative AI) Configuration
 # -------------------------
-# Configure the Google Generative AI library with the Gemini API key
 genai.configure(api_key=GEMINI_API_KEY)
 
 # -------------------------
@@ -125,8 +123,8 @@ genai.configure(api_key=GEMINI_API_KEY)
 bot = interactions.Client(
     intents=(
         interactions.Intents.DEFAULT
-        | interactions.Intents.MESSAGE_CONTENT  # allow reading message content
-        | interactions.Intents.GUILD_MEMBERS    # allow tracking member joins, etc.
+        | interactions.Intents.MESSAGE_CONTENT
+        | interactions.Intents.GUILD_MEMBERS
     )
 )
 
@@ -263,8 +261,6 @@ async def reschedule_reminder(key, role):
 # -------------------------
 # Specific Bump/Boop Handlers
 # -------------------------
-# These functions are called when a service indicates its action is complete (e.g. "Bump done").
-
 async def disboard():
     """
     Called when Disboard has completed a bump. Sets a 2-hour reminder.
@@ -312,7 +308,6 @@ async def discadia():
 # -------------------------
 # Event Listeners
 # -------------------------
-
 @interactions.listen()
 async def on_ready():
     """
@@ -500,7 +495,6 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
 # -------------------------
 # Slash Commands
 # -------------------------
-
 @interactions.slash_command(name="remindersetup", description="Setup bump and boop reminders.")
 @interactions.slash_option(
     name="channel",
@@ -708,7 +702,6 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
 # -------------------------
 # Search / AI Commands
 # -------------------------
-
 @interactions.slash_command(name="search", description="Search Google and return the top results.")
 @interactions.slash_option(
     name="query",
