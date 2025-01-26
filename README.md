@@ -17,8 +17,6 @@ services:
        - GEMINI_API_KEY=
        - SUPABASE_URL=
        - SUPABASE_KEY=
-     volumes:
-       - ./nova:/db
 
 networks:
   default:
