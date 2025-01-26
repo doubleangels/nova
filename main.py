@@ -61,7 +61,6 @@ if missing_vars:
         logger.error(f"{var} not found in environment variables.")
     sys.exit(1)
 
-# Extract environment variables into local constants
 TOKEN = required_env_vars["DISCORD_BOT_TOKEN"]
 GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
@@ -167,7 +166,6 @@ def initialize_reminders_table():
     for k in default_keys:
         existing = get_reminder_data(k)
         if existing is None:
-            # Provide whatever default data you prefer
             default_data = {
                 "state": False,
                 "scheduled_time": None,
@@ -192,7 +190,6 @@ bot = interactions.Client(
     )
 )
 
-# Known external bot IDs mapped to their names
 bot_ids = {
     "302050872383242240": "Disboard",
     "1222548162741538938": "Discadia",
@@ -200,7 +197,6 @@ bot_ids = {
     "835255643157168168": "Unfocused",
 }
 
-# Bot's own ID
 nova_id = "835255643157168168"
 
 print("Starting the bot...")
@@ -212,7 +208,6 @@ def handle_interrupt(signal_num, frame):
     logger.info("Gracefully shutting down.")
     sys.exit(0)
 
-# Attach the interrupt handlers
 signal.signal(signal.SIGINT, handle_interrupt)
 signal.signal(signal.SIGTERM, handle_interrupt)
 
@@ -295,13 +290,11 @@ async def reschedule_reminder(key, role):
             scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
             now = datetime.datetime.now(tz=pytz.UTC)
             
-            # If this reminder has already expired, remove it
             if scheduled_dt <= now:
                 logger.info(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
                 delete_reminder_data(key)
                 return
             
-            # If not expired, schedule a future reminder
             remaining_time = scheduled_dt - now
             logger.info(f"Rescheduling reminder {reminder_id} for {key.title()}.")
             asyncio.create_task(
@@ -388,7 +381,6 @@ async def on_ready():
             )
         )
 
-        # Ensure default rows in 'reminders' table:
         initialize_reminders_table()
 
         logger.info("Checking for active reminders...")
@@ -420,7 +412,6 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
             bot_name = bot_ids[bot_id]
             logger.info(f"Detected message from {bot_name}.")
 
-        # Check if the message has an embed with specific text
         if event.message.embeds and len(event.message.embeds) > 0:
             embed = event.message.embeds[0]
             embed_description = embed.description
@@ -430,7 +421,6 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
                 elif "Your vote streak for this server" in embed_description:
                     await dsme()
         else:
-            # Look for plain text triggers (Unfocused, Discadia)
             if "Your server has been booped" in message_content:
                 await unfocused()
             elif "has been successfully bumped" in message_content:
@@ -446,7 +436,6 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     2. Backup mode: Assign a default role to new users and send a welcome message.
     """
     try:
-        # Retrieve stored configuration
         assign_role = get_value("backup_mode_enabled")
         role_id = get_value("backup_mode_id")
         channel_id = get_value("backup_mode_channel")
@@ -457,12 +446,10 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
         account_age_limit = datetime.timedelta(days=kick_users_age_limit) if kick_users_age_limit else datetime.timedelta(days=14)
 
-        # If troll mode is enabled, check the new member's account age and kick if too new
         if kick_users and account_age < account_age_limit:
             await member.kick(reason="Account is too new!")
             logger.info(f"Kicked {member.username} due to account age.")
 
-        # If backup mode is enabled (assign_role==True), assign role and send welcome
         if not (assign_role and role_id and channel_id):
             return
 
@@ -512,14 +499,11 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
             logger.info(f"Sending initial message: {initial_message}")
             await channel.send(initial_message)
 
-        # Wait for the reminder interval
         await asyncio.sleep(interval)
 
-        # Send the reminder
         logger.info(f"Sending reminder message: {reminder_message}")
         await channel.send(reminder_message)
 
-        # Clean up the reminder data
         reminder_data = get_reminder_data(key)
         if reminder_data:
             delete_reminder_data(key)
@@ -614,13 +598,11 @@ async def check_status(ctx: interactions.ComponentContext):
         channel_status = f"<#{channel_id}>" if channel_id else "Not set!"
         role_name = f"<@&{role}>" if role else "Not set!"
 
-        # Fetch existing reminder data from the new 'reminders' table
         disboard_data = get_reminder_data("disboard")
         discadia_data = get_reminder_data("discadia")
         dsme_data = get_reminder_data("dsme")
         unfocused_data = get_reminder_data("unfocused")
 
-        # Calculate time remaining for each reminder
         disboard_remaining_time = calculate_remaining_time(disboard_data.get("scheduled_time")) if disboard_data else "Not set!"
         discadia_remaining_time = calculate_remaining_time(discadia_data.get("scheduled_time")) if discadia_data else "Not set!"
         dsme_remaining_time = calculate_remaining_time(dsme_data.get("scheduled_time")) if dsme_data else "Not set!"
@@ -774,20 +756,17 @@ async def fix_command(ctx: interactions.ComponentContext):
     """
     This command mimics Disboard logic but stores it in the reminders table with the key "fix".
     """
-    # Only let admins use it, or remove this check if you want anyone to use /fix
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     
-    # Perform the same logic you do for disboard, but store it under "fix"
-    initial_message = "Thanks for bumping the server on Disboard (Fix Mode)! I'll remind you when it's time to bump again."
-    reminder_message = "It's time to bump the server on Disboard (Fix Mode) again!"
+    initial_message = "This is dummy data for the fix command."
+    reminder_message = "This is dummy data for the fix command."
     interval = 7200  # 2 hours
 
-    # Check if there's already a scheduled_time set for "fix"
     existing_data = get_reminder_data("fix")
     if existing_data and existing_data.get("scheduled_time") is not None:
-        await ctx.send("'fix' key already has a timer set for a reminder.", ephemeral=True)
+        await ctx.send("The 'fix' key already has a timer set for a reminder.", ephemeral=True)
         return
 
     # Build the reminder data
@@ -801,7 +780,6 @@ async def fix_command(ctx: interactions.ComponentContext):
     }
     set_reminder_data("fix", reminder_data)
 
-    # Optionally send an immediate message to confirm the "fix" logic is set
     role = get_role()
     if role:
         channel = await get_channel("reminder_channel")
