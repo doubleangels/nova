@@ -83,7 +83,7 @@ def get_value(key: str):
     Returns None if there's an error or no data is found.
     """
     try:
-        response = supabase.table("config").select("value").eq("id", key).single().execute()
+        response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
         if response.data and "value" in response.data:
             return json.loads(response.data["value"])
         else:
@@ -125,9 +125,9 @@ def get_reminder_data(key: str):
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders").select("reminders").eq("key", key).single().execute()
-        if response.data and "reminders" in response.data:
-            return json.loads(response.data["reminders"])
+        response = supabase.table("reminders").select("reminder_data").eq("key", key).maybe_single().execute()
+        if response.data and "reminder_data" in response.data:
+            return json.loads(response.data["reminder_data"])
         else:
             return None
     except Exception as e:
@@ -143,9 +143,9 @@ def set_reminder_data(key: str, data: dict):
         serialized = json.dumps(data)
         existing = get_reminder_data(key)
         if existing is None:
-            supabase.table("reminders").insert({"key": key, "reminders": serialized}).execute()
+            supabase.table("reminders").insert({"key": key, "reminder_data": serialized}).execute()
         else:
-            supabase.table("reminders").update({"reminders": serialized}).eq("key", key).execute()
+            supabase.table("reminders").update({"reminder_data": serialized}).eq("key", key).execute()
     except Exception as e:
         logger.error(f"Error setting reminder data for key '{key}': {e}")
 
