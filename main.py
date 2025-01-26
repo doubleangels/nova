@@ -529,10 +529,12 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
 
 async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
     """
-    Checks if a reminder is already set for `key`.
-    - If not, create it (store in DB) and schedule a message.
+    Checks if a reminder is truly set for `key`.
+    A "set" reminder has a non-None scheduled_time (meaning it's active).
     """
-    if get_reminder_data(key):
+    existing_data = get_reminder_data(key)
+
+    if existing_data and existing_data.get("scheduled_time") is not None:
         logger.info(f"{key.capitalize()} already has a timer set for a reminder.")
         return
 
