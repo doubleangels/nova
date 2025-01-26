@@ -83,7 +83,7 @@ def get_value(key: str):
     Returns None if there's an error or no data is found.
     """
     try:
-        response = supabase.table("nova_config").select("value").eq("id", key).single().execute()
+        response = supabase.table("nova_config").select("value").eq("id", key).maybe_single().execute()
         if response.data:
             return json.loads(response.data["value"])
     except Exception as e:
