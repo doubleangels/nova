@@ -77,11 +77,11 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_value(key: str):
     """
-    Retrieve a JSON value from the 'nova_config' table in Supabase, using the provided key.
+    Retrieve a JSON value from the 'config' table in Supabase, using the provided key.
     Returns None if there's an error or no data is found.
     """
     try:
-        response = supabase.table("nova_config").select("value").eq("id", key).maybe_single().execute()
+        response = supabase.table("config").select("value").eq("id", key).single().execute()
         if response.data and "value" in response.data:
             return json.loads(response.data["value"])
         else:
@@ -89,25 +89,25 @@ def get_value(key: str):
 
 def set_value(key: str, value):
     """
-    Insert or update a JSON value in the 'nova_config' table in Supabase.
+    Insert or update a JSON value in the 'config' table in Supabase.
     If key doesn't exist, a new entry is inserted; otherwise, it is updated.
     """
     try:
         serialized = json.dumps(value)
         existing = get_value(key)
         if existing is None:
-            supabase.table("nova_config").insert({"id": key, "value": serialized}).execute()
+            supabase.table("config").insert({"id": key, "value": serialized}).execute()
         else:
-            supabase.table("nova_config").update({"value": serialized}).eq("id", key).execute()
+            supabase.table("config").update({"value": serialized}).eq("id", key).execute()
     except Exception as e:
         logger.error(f"Error setting key '{key}' in Supabase: {e}")
 
 def delete_value(key: str):
     """
-    Delete a key/value pair from the 'nova_config' table in Supabase.
+    Delete a key/value pair from the 'config' table in Supabase.
     """
     try:
-        supabase.table("nova_config").delete().eq("id", key).execute()
+        supabase.table("config").delete().eq("id", key).execute()
     except Exception as e:
         logger.error(f"Error deleting key '{key}' in Supabase: {e}")
 
