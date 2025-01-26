@@ -769,7 +769,6 @@ async def fix_command(ctx: interactions.ComponentContext):
         await ctx.send("The 'fix' key already has a timer set for a reminder.", ephemeral=True)
         return
 
-    # Build the reminder data
     reminder_id = str(uuid.uuid4())
     reminder_data = {
         "state": True,
@@ -787,6 +786,35 @@ async def fix_command(ctx: interactions.ComponentContext):
             await channel.send(initial_message)
     
     await ctx.send("Fix logic has been applied! A new reminder entry was created under the key 'fix'.")
+
+@interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to their default values.")
+async def reset_reminders(ctx: interactions.ComponentContext):
+    """
+    Resets all reminders in the 'reminders' table to their default values.
+    """
+    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        return
+
+    try:
+        default_data = {
+            "state": False,
+            "scheduled_time": None,
+            "reminder_id": None
+        }
+
+        reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
+
+        for key in reminder_keys:
+            set_reminder_data(key, default_data)
+            logger.info(f"Reset reminder data for key: {key}")
+
+        await ctx.send("All reminders have been reset to their default values.")
+        logger.info("All reminders successfully reset.")
+
+    except Exception as e:
+        logger.error(f"Error occurred while resetting reminders: {e}")
+        await ctx.send("An error occurred while resetting reminders. Please try again later.")
 
 # -------------------------
 # Search / AI Commands
