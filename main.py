@@ -83,7 +83,7 @@ def get_value(key: str):
     Returns None if there's an error or no data is found.
     """
     try:
-        response = supabase.table("config").select("value").eq("id", key).single().execute()
+        response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
         if response.data and "value" in response.data:
             return json.loads(response.data["value"])
         else:
@@ -125,7 +125,7 @@ def get_reminder_data(key: str):
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders").select("reminder_data").eq("key", key).single().execute()
+        response = supabase.table("reminders").select("reminder_data").eq("key", key).maybe_single().execute()
         if response.data and "reminder_data" in response.data:
             return json.loads(response.data["reminder_data"])
         else:
