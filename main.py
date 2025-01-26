@@ -766,6 +766,50 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     except Exception as e:
         logger.error(f"An unexpected error occurred: {e}")
 
+@interactions.slash_command(
+    name="fix",
+    description="Runs the logic to add Disboard data to the database under the key name of 'fix'."
+)
+async def fix_command(ctx: interactions.ComponentContext):
+    """
+    This command mimics Disboard logic but stores it in the reminders table with the key "fix".
+    """
+    # Only let admins use it, or remove this check if you want anyone to use /fix
+    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        return
+    
+    # Perform the same logic you do for disboard, but store it under "fix"
+    initial_message = "Thanks for bumping the server on Disboard (Fix Mode)! I'll remind you when it's time to bump again."
+    reminder_message = "It's time to bump the server on Disboard (Fix Mode) again!"
+    interval = 7200  # 2 hours
+
+    # Check if there's already a scheduled_time set for "fix"
+    existing_data = get_reminder_data("fix")
+    if existing_data and existing_data.get("scheduled_time") is not None:
+        await ctx.send("'fix' key already has a timer set for a reminder.", ephemeral=True)
+        return
+
+    # Build the reminder data
+    reminder_id = str(uuid.uuid4())
+    reminder_data = {
+        "state": True,
+        "scheduled_time": (
+            datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)
+        ).isoformat(),
+        "reminder_id": reminder_id
+    }
+    set_reminder_data("fix", reminder_data)
+
+    # Optionally send an immediate message to confirm the "fix" logic is set
+    role = get_role()
+    if role:
+        channel = await get_channel("reminder_channel")
+        if channel:
+            await channel.send(initial_message)
+    
+    awa
+
 # -------------------------
 # Search / AI Commands
 # -------------------------
