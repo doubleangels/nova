@@ -829,7 +829,7 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
 async def ai_query(ctx: interactions.ComponentContext, query: str):
     """
     Sends a query to Google's Gemini model and returns the generated response as an embed.
-    Uses the 'gemini-1.5-pro' model.
+    Uses the 'gemini-1.5-flash' model.
     """
     try:
         await ctx.defer()
