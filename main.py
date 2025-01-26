@@ -754,38 +754,26 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
 )
 async def fix_command(ctx: interactions.ComponentContext):
     """
-    This command mimics Disboard logic but stores it in the reminders table with the key "fix".
+    This command mimics Disboard logic but only writes to the reminders table with the key "fix".
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
-    
-    initial_message = "This is dummy data for the fix command."
-    reminder_message = "This is dummy data for the fix command."
-    interval = 7200  # 2 hours
 
     existing_data = get_reminder_data("fix")
-    if existing_data and existing_data.get("scheduled_time") is not None:
-        await ctx.send("The 'fix' key already has a timer set for a reminder.", ephemeral=True)
+    if existing_data:
+        await ctx.send("The 'fix' key already exists in the database.", ephemeral=True)
         return
 
     reminder_id = str(uuid.uuid4())
     reminder_data = {
         "state": True,
-        "scheduled_time": (
-            datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)
-        ).isoformat(),
         "reminder_id": reminder_id
     }
     set_reminder_data("fix", reminder_data)
 
-    role = get_role()
-    if role:
-        channel = await get_channel("reminder_channel")
-        if channel:
-            await channel.send(initial_message)
-    
-    await ctx.send("Fix logic has been applied! A new reminder entry was created under the key 'fix'.")
+    await ctx.send("Fix logic has been applied! A new entry was created under the key 'fix'.")
+
 
 @interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to their default values.")
 async def reset_reminders(ctx: interactions.ComponentContext):
