@@ -834,7 +834,7 @@ async def ai_query(ctx: interactions.ComponentContext, query: str):
     try:
         await ctx.defer()
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flase",
+            model_name="gemini-1.5-flash",
             system_instruction=(
                 "You are a Discord bot named Nova. Respond to the user's query. They cannot chat back to you for additional "
                 "information, so keep that in mind when you respond."
