@@ -126,10 +126,12 @@ def get_reminder_data(key: str):
     """
     try:
         response = supabase.table("reminders").select("reminder_data").eq("key", key).maybe_single().execute()
-        if response.data and "reminder_data" in response.data:
-            return json.loads(response.data["reminder_data"])
-        else:
-            return None
+
+        if response and response.data:
+            reminder_data = response.data.get("reminder_data")
+            if reminder_data:
+                return json.loads(reminder_data)
+        return None
     except Exception as e:
         logger.error(f"Error getting reminder data for key '{key}': {e}")
         return None
