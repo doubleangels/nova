@@ -163,16 +163,19 @@ def initialize_reminders_table():
     Ensures that each known reminder key has a default row in the 'reminders' table.
     """
     default_keys = ["disboard", "discadia", "dsme", "unfocused"]
-    for k in default_keys:
-        existing = get_reminder_data(k)
-        if existing is None:
-            default_data = {
-                "state": False,
-                "scheduled_time": None,
-                "reminder_id": None
-            }
-            set_reminder_data(k, default_data)
-            logger.info(f"Inserted default reminder_data for key: {k}")
+    try:
+        for k in default_keys:
+            existing = get_reminder_data(k)
+            if existing is None:
+                default_data = {
+                    "state": False,
+                    "scheduled_time": None,
+                    "reminder_id": None
+                }
+                set_reminder_data(k, default_data)
+                logger.info(f"Inserted default reminder_data for key: {k}")
+    except Exception as e: 
+        logger.error(f"Error initializing reminders table: {e}")
 
 # -------------------------
 # Gemini (Google Generative AI) Configuration
