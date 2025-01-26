@@ -669,7 +669,7 @@ async def source(ctx: interactions.ComponentContext):
             color=0x00ff00,
         )
         embed.add_field(name="GitHub Repository", value="https://github.com/doubleangels/Nova", inline=False)
-        embed.add_field(name="Supabase Project", value="https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public", inline=False)
+        embed.add_field(name="Supabase Database", value="https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public", inline=False)
 
         await ctx.send(embeds=[embed])
     except Exception as e:
