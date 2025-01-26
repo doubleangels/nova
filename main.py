@@ -61,6 +61,7 @@ if missing_vars:
         logger.error(f"{var} not found in environment variables.")
     sys.exit(1)
 
+# Extract environment variables into local constants
 TOKEN = required_env_vars["DISCORD_BOT_TOKEN"]
 GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
@@ -83,7 +84,7 @@ def get_value(key: str):
     Returns None if there's an error or no data is found.
     """
     try:
-        response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
+        response = supabase.table("config").select("value").eq("id", key).single().execute()
         if response.data and "value" in response.data:
             return json.loads(response.data["value"])
         else:
@@ -125,7 +126,7 @@ def get_reminder_data(key: str):
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders").select("reminder_data").eq("key", key).maybe_single().execute()
+        response = supabase.table("reminders").select("reminder_data").eq("key", key).single().execute()
         if response.data and "reminder_data" in response.data:
             return json.loads(response.data["reminder_data"])
         else:
@@ -163,19 +164,17 @@ def initialize_reminders_table():
     Ensures that each known reminder key has a default row in the 'reminders' table.
     """
     default_keys = ["disboard", "discadia", "dsme", "unfocused"]
-    try:
-        for k in default_keys:
-            existing = get_reminder_data(k)
-            if existing is None:
-                default_data = {
-                    "state": False,
-                    "scheduled_time": None,
-                    "reminder_id": None
-                }
-                set_reminder_data(k, default_data)
-                logger.info(f"Inserted default reminder_data for key: {k}")
-    except Exception as e: 
-        logger.error(f"Error initializing reminders table: {e}")
+    for k in default_keys:
+        existing = get_reminder_data(k)
+        if existing is None:
+            # Provide whatever default data you prefer
+            default_data = {
+                "state": False,
+                "scheduled_time": None,
+                "reminder_id": None
+            }
+            set_reminder_data(k, default_data)
+            logger.info(f"Inserted default reminder_data for key: {k}")
 
 # -------------------------
 # Gemini (Google Generative AI) Configuration
@@ -193,6 +192,7 @@ bot = interactions.Client(
     )
 )
 
+# Known external bot IDs mapped to their names
 bot_ids = {
     "302050872383242240": "Disboard",
     "1222548162741538938": "Discadia",
@@ -200,6 +200,7 @@ bot_ids = {
     "835255643157168168": "Unfocused",
 }
 
+# Bot's own ID
 nova_id = "835255643157168168"
 
 print("Starting the bot...")
@@ -211,6 +212,7 @@ def handle_interrupt(signal_num, frame):
     logger.info("Gracefully shutting down.")
     sys.exit(0)
 
+# Attach the interrupt handlers
 signal.signal(signal.SIGINT, handle_interrupt)
 signal.signal(signal.SIGTERM, handle_interrupt)
 
@@ -293,11 +295,13 @@ async def reschedule_reminder(key, role):
             scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
             now = datetime.datetime.now(tz=pytz.UTC)
             
+            # If this reminder has already expired, remove it
             if scheduled_dt <= now:
                 logger.info(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
                 delete_reminder_data(key)
                 return
             
+            # If not expired, schedule a future reminder
             remaining_time = scheduled_dt - now
             logger.info(f"Rescheduling reminder {reminder_id} for {key.title()}.")
             asyncio.create_task(
@@ -328,7 +332,7 @@ async def disboard():
         key="disboard",
         initial_message="Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.",
         reminder_message="It's time to bump the server on Disboard again!",
-        interval=7200
+        interval=7200  # 2 hours
     )
 
 async def dsme():
@@ -339,7 +343,7 @@ async def dsme():
         key="dsme",
         initial_message="Thanks for voting for the server on DS.me! I'll remind you when it's time to vote again.",
         reminder_message="It's time to vote for the server on DS.me again!",
-        interval=43200
+        interval=43200  # 12 hours
     )
 
 async def unfocused():
@@ -350,7 +354,7 @@ async def unfocused():
         key="unfocused",
         initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
         reminder_message="It's time to boop the server on Unfocused again!",
-        interval=21600
+        interval=21600  # 6 hours
     )
 
 async def discadia():
@@ -361,7 +365,7 @@ async def discadia():
         key="discadia",
         initial_message="Thanks for bumping the server on Discadia! I'll remind you when it's time to bump again.",
         reminder_message="It's time to bump the server on Discadia again!",
-        interval=43200
+        interval=43200  # 12 hours
     )
 
 # -------------------------
@@ -384,6 +388,7 @@ async def on_ready():
             )
         )
 
+        # Ensure default rows in 'reminders' table:
         initialize_reminders_table()
 
         logger.info("Checking for active reminders...")
@@ -415,6 +420,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
             bot_name = bot_ids[bot_id]
             logger.info(f"Detected message from {bot_name}.")
 
+        # Check if the message has an embed with specific text
         if event.message.embeds and len(event.message.embeds) > 0:
             embed = event.message.embeds[0]
             embed_description = embed.description
@@ -424,6 +430,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
                 elif "Your vote streak for this server" in embed_description:
                     await dsme()
         else:
+            # Look for plain text triggers (Unfocused, Discadia)
             if "Your server has been booped" in message_content:
                 await unfocused()
             elif "has been successfully bumped" in message_content:
@@ -439,6 +446,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     2. Backup mode: Assign a default role to new users and send a welcome message.
     """
     try:
+        # Retrieve stored configuration
         assign_role = get_value("backup_mode_enabled")
         role_id = get_value("backup_mode_id")
         channel_id = get_value("backup_mode_channel")
@@ -449,10 +457,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
         account_age_limit = datetime.timedelta(days=kick_users_age_limit) if kick_users_age_limit else datetime.timedelta(days=14)
 
+        # If troll mode is enabled, check the new member's account age and kick if too new
         if kick_users and account_age < account_age_limit:
             await member.kick(reason="Account is too new!")
             logger.info(f"Kicked {member.username} due to account age.")
 
+        # If backup mode is enabled (assign_role==True), assign role and send welcome
         if not (assign_role and role_id and channel_id):
             return
 
@@ -502,11 +512,14 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
             logger.info(f"Sending initial message: {initial_message}")
             await channel.send(initial_message)
 
+        # Wait for the reminder interval
         await asyncio.sleep(interval)
 
+        # Send the reminder
         logger.info(f"Sending reminder message: {reminder_message}")
         await channel.send(reminder_message)
 
+        # Clean up the reminder data
         reminder_data = get_reminder_data(key)
         if reminder_data:
             delete_reminder_data(key)
@@ -599,11 +612,13 @@ async def check_status(ctx: interactions.ComponentContext):
         channel_status = f"<#{channel_id}>" if channel_id else "Not set!"
         role_name = f"<@&{role}>" if role else "Not set!"
 
+        # Fetch existing reminder data from the new 'reminders' table
         disboard_data = get_reminder_data("disboard")
         discadia_data = get_reminder_data("discadia")
         dsme_data = get_reminder_data("dsme")
         unfocused_data = get_reminder_data("unfocused")
 
+        # Calculate time remaining for each reminder
         disboard_remaining_time = calculate_remaining_time(disboard_data.get("scheduled_time")) if disboard_data else "Not set!"
         discadia_remaining_time = calculate_remaining_time(discadia_data.get("scheduled_time")) if discadia_data else "Not set!"
         dsme_remaining_time = calculate_remaining_time(dsme_data.get("scheduled_time")) if dsme_data else "Not set!"
@@ -1026,3 +1041,31 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                         thumbs_down = top_result.get("thumbs_down", 0)
 
                         example = example if example else "No example available."
+
+                        embed = interactions.Embed(
+                            title=f"Definition: {word}",
+                            description=definition,
+                            color=0x1D2439
+                        )
+                        embed.add_field(name="Example", value=example, inline=False)
+                        embed.add_field(name="Thumbs Up", value=str(thumbs_up), inline=True)
+                        embed.add_field(name="Thumbs Down", value=str(thumbs_down), inline=True)
+                        embed.set_footer(text="Powered by Urban Dictionary")
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send("No definitions found for your query. Try refining it.")
+                else:
+                    logger.warning(f"Urban Dictionary API error: {response.status}")
+                    await ctx.send(f"Error: Urban Dictionary API returned status code {response.status}.")
+    except Exception as e:
+        logger.error(f"Error in /urban: {e}")
+        await ctx.send("An unexpected error occurred. Please try again later.")
+
+# -------------------------
+# Bot Startup
+# -------------------------
+try:
+    bot.start(TOKEN)
+except Exception as e:
+    logger.error("Exception occurred during bot startup!", exc_info=True)
+    sys.exit(1)
