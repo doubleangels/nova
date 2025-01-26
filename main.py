@@ -17,7 +17,6 @@ from supabase import create_client, Client
 # -------------------------
 # Sentry Setup
 # -------------------------
-# Initialize Sentry for error tracking and performance monitoring
 sentry_sdk.init(
     dsn="https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
     traces_sample_rate=1.0,
