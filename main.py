@@ -176,11 +176,6 @@ def initialize_reminders_table():
             logger.info(f"Inserted default reminder_data for key: {k}")
 
 # -------------------------
-# Gemini (Google Generative AI) Configuration
-# -------------------------
-genai.configure(api_key=GEMINI_API_KEY)
-
-# -------------------------
 # Discord Bot Setup
 # -------------------------
 bot = interactions.Client(
