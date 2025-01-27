@@ -9,7 +9,6 @@ import signal
 import logging
 from logging.handlers import RotatingFileHandler
 import aiohttp
-import google.generativeai as genai
 import sentry_sdk
 import json
 from supabase import create_client, Client
@@ -924,36 +923,6 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
     except Exception as e:
         logger.error(f"Error in /imagesearch: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.")
-
-@interactions.slash_command(name="ai", description="Ask Gemini a question and get a response.")
-@interactions.slash_option(
-    name="query",
-    description="What do you want to ask Gemini?",
-    required=True,
-    opt_type=interactions.OptionType.STRING
-)
-async def ai_query(ctx: interactions.ComponentContext, query: str):
-    """
-    Sends a query to Google's Gemini model and returns the generated response as an embed.
-    Uses the 'gemini-1.5-flash' model.
-    """
-    try:
-        await ctx.defer()
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            system_instruction=(
-                "You are a Discord bot named Nova. Respond to the user's query. They cannot chat back to you for additional "
-                "information, so keep that in mind when you respond."
-            )
-        )
-        response = model.generate_content(query)
-        ai_response = response.text if response and hasattr(response, "text") else "No response returned from Gemini."
-
-        embed = interactions.Embed(description=ai_response, color=0x1A73E8)
-        await ctx.send(embeds=[embed])
-    except Exception as e:
-        logger.error(f"Error in /ai: {e}")
-        await ctx.send("An error occurred while querying the AI. Please try again later.")
 
 @interactions.slash_command(name="youtube", description="Search YouTube for videos and return the top result.")
 @interactions.slash_option(
