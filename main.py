@@ -753,9 +753,15 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
 
 @interactions.slash_command(
     name="fix",
-    description="Runs the logic to add Disboard data to the database under the key name of 'fix'."
+    description="Runs the logic to add service data to the database under the key name of 'fix'."
 )
-async def fix_command(ctx: interactions.ComponentContext):
+@interactions.slash_option(
+    name="service",
+    description="Service to generate fix for in the database",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def fix_command(ctx: interactions.ComponentContext, service: str):
     """
     This command mimics Disboard logic but only writes to the reminders table with the key "fix".
     """
@@ -767,10 +773,23 @@ async def fix_command(ctx: interactions.ComponentContext):
         if existing_data:
             await ctx.send("The 'fix' key already exists in the database.", ephemeral=True)
             return
+        
+        if service == "disboard":
+            seconds = 7200  # 2 hours
+        elif service == "dsme":
+            seconds = 43200  # 12 hours
+        elif service == "unfocused":
+            seconds = 21600  # 6 hours
+        elif service == "discadia":
+            seconds = 43200  # 12 hours
+        else:
+            await ctx.send("Invalid service name provided. Please use one of: disboard, dsme, unfocused, discadia.", ephemeral=True)
+            return
 
         reminder_id = str(uuid.uuid4())
         reminder_data = {
             "state": True,
+            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(),
             "reminder_id": reminder_id
         }
         set_reminder_data("fix", reminder_data)
