@@ -81,10 +81,16 @@ def get_value(key: str):
     """
     try:
         response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
-        if response.data and "value" in response.data:
-            return json.loads(response.data["value"])
-        else:
+        
+        if response is None:
+            logger.error(f"Supabase query for key '{key}' returned None.")
             return None
+        
+        if response.data and isinstance(response.data, dict) and "value" in response.data:
+            return json.loads(response.data["value"])
+        
+        logger.error(f"Key '{key}' not found in Supabase.")
+        return None
     except Exception as e:
         logger.error(f"Error getting key '{key}' in Supabase: {e}")
         return None
