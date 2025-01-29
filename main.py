@@ -26,7 +26,7 @@ sentry_sdk.init(
 # -------------------------
 # Logger Configuration
 # -------------------------
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("discord_bot")
 logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
