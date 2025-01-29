@@ -8,10 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
@@ -32,12 +31,12 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/nova:latest
+
   delete-workflow-runs:
     runs-on: ubuntu-latest
     permissions:
         actions: write
         contents: read
-
     steps:
         - name: Delete workflow runs
           uses: Mattraks/delete-workflow-runs@v2
@@ -46,3 +45,20 @@ jobs:
             repository: ${{ github.repository }}
             retain_days: 30
             keep_minimum_runs: 1
+  
+  create-sentry-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: doubleangels
+          SENTRY_PROJECT: nova
+        with:
+          environment: production
