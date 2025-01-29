@@ -20,6 +20,7 @@ sentry_sdk.init(
     dsn="https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
+    enable_tracing=True,
 )
 
 # -------------------------
