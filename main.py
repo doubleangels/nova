@@ -763,17 +763,12 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
 )
 async def fix_command(ctx: interactions.ComponentContext, service: str):
     """
-    This command mimics Disboard logic but only writes to the reminders table with the key "fix".
+    This command mimics logic to write reminder data to the database and fix broken entries.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     try:
-        existing_data = get_reminder_data("fix") or {}
-        if existing_data:
-            await ctx.send("The 'fix' key already exists in the database.", ephemeral=True)
-            return
-        
         if service == "disboard":
             seconds = 7200  # 2 hours
         elif service == "dsme":
@@ -792,8 +787,8 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
             "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(),
             "reminder_id": reminder_id
         }
-        set_reminder_data("fix", reminder_data)
-        await ctx.send("Fix logic applied! A new entry was created under the key 'fix'.")
+        set_reminder_data(service, reminder_data)
+        await ctx.send("Fix logic applied!.")
         logger.info("Fix key created in reminders table.")
     except Exception:
         logger.exception("Error in /fix command.")
