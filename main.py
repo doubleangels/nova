@@ -7,10 +7,10 @@ import uuid
 import sys
 import signal
 import logging
-from logging.handlers import RotatingFileHandler
+import json
 import aiohttp
 import sentry_sdk
-import json
+from logging.handlers import RotatingFileHandler
 from supabase import create_client, Client
 
 # -------------------------
@@ -28,17 +28,16 @@ sentry_sdk.init(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
 file_handler = RotatingFileHandler("bot.log", maxBytes=2_000_000, backupCount=5)
 file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
 
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.INFO)
-
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-file_handler.setFormatter(formatter)
 console_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 # -------------------------
@@ -50,7 +49,7 @@ required_env_vars = {
     "SEARCH_ENGINE_ID": os.getenv("SEARCH_ENGINE_ID"),
     "IMAGE_SEARCH_ENGINE_ID": os.getenv("IMAGE_SEARCH_ENGINE_ID"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
-    "SUPABASE_KEY": os.getenv("SUPABASE_KEY")
+    "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
 
 missing_vars = [key for key, value in required_env_vars.items() if not value]
@@ -72,7 +71,7 @@ SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # -------------------------
-# "config" Table Helpers (unchanged for general settings)
+# "config" Table Helpers
 # -------------------------
 def get_value(key: str):
     """
@@ -83,16 +82,16 @@ def get_value(key: str):
         response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
         
         if response is None:
-            logger.error(f"Supabase query for key '{key}' returned None.")
+            logger.warning(f"Supabase query for key '{key}' returned None.")
             return None
         
         if response.data and isinstance(response.data, dict) and "value" in response.data:
             return json.loads(response.data["value"])
         
-        logger.error(f"Key '{key}' not found in Supabase.")
+        logger.warning(f"Key '{key}' not found in Supabase or data missing.")
         return None
-    except Exception as e:
-        logger.error(f"Error getting key '{key}' in Supabase: {e}")
+    except Exception:
+        logger.exception(f"Error getting key '{key}' in Supabase.")
         return None
 
 def set_value(key: str, value):
@@ -105,10 +104,12 @@ def set_value(key: str, value):
         existing = get_value(key)
         if existing is None:
             supabase.table("config").insert({"id": key, "value": serialized}).execute()
+            logger.info(f"Inserted new config entry for key '{key}'.")
         else:
             supabase.table("config").update({"value": serialized}).eq("id", key).execute()
-    except Exception as e:
-        logger.error(f"Error setting key '{key}' in Supabase: {e}")
+            logger.info(f"Updated config entry for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error setting key '{key}' in Supabase.")
 
 def delete_value(key: str):
     """
@@ -116,11 +117,12 @@ def delete_value(key: str):
     """
     try:
         supabase.table("config").delete().eq("id", key).execute()
-    except Exception as e:
-        logger.error(f"Error deleting key '{key}' in Supabase: {e}")
+        logger.info(f"Deleted config entry for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error deleting key '{key}' in Supabase.")
 
 # -------------------------
-# New "reminders" Table Helpers
+# "reminders" Table Helpers
 # -------------------------
 def get_reminder_data(key: str):
     """
@@ -135,8 +137,8 @@ def get_reminder_data(key: str):
             if reminder_data:
                 return json.loads(reminder_data)
         return None
-    except Exception as e:
-        logger.error(f"Error getting reminder data for key '{key}': {e}")
+    except Exception:
+        logger.exception(f"Error getting reminder data for key '{key}'.")
         return None
 
 def set_reminder_data(key: str, data: dict):
@@ -149,10 +151,12 @@ def set_reminder_data(key: str, data: dict):
         existing = get_reminder_data(key)
         if existing is None:
             supabase.table("reminders").insert({"key": key, "reminder_data": serialized}).execute()
+            logger.info(f"Inserted new reminder entry for key '{key}'.")
         else:
             supabase.table("reminders").update({"reminder_data": serialized}).eq("key", key).execute()
-    except Exception as e:
-        logger.error(f"Error setting reminder data for key '{key}': {e}")
+            logger.info(f"Updated reminder entry for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error setting reminder data for key '{key}'.")
 
 def delete_reminder_data(key: str):
     """
@@ -160,8 +164,9 @@ def delete_reminder_data(key: str):
     """
     try:
         supabase.table("reminders").delete().eq("key", key).execute()
-    except Exception as e:
-        logger.error(f"Error deleting reminder data for key '{key}': {e}")
+        logger.info(f"Deleted reminder data for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error deleting reminder data for key '{key}'.")
 
 def initialize_reminders_table():
     """
@@ -197,8 +202,6 @@ bot_ids = {
     "835255643157168168": "Unfocused",
 }
 
-nova_id = "835255643157168168"
-
 print("Starting the bot...")
 
 def handle_interrupt(signal_num, frame):
@@ -222,8 +225,9 @@ def get_role():
             logger.info("No role has been set up for reminders.")
             return None
         return role
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    except Exception:
+        logger.exception("An error occurred while fetching the reminder role.")
+        return None
 
 async def get_channel(channel_key):
     """
@@ -234,11 +238,12 @@ async def get_channel(channel_key):
     try:
         channel_id = get_value(channel_key)
         if not channel_id:
-            logger.info(f"No channel has been set for {channel_key}.")
+            logger.info(f"No channel has been set for '{channel_key}'.")
             return None
         return bot.get_channel(channel_id)
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    except Exception:
+        logger.exception("An error occurred while fetching the reminder channel.")
+        return None
 
 def calculate_remaining_time(scheduled_time):
     """
@@ -251,15 +256,16 @@ def calculate_remaining_time(scheduled_time):
         return "Not set!"
     try:
         now = datetime.datetime.now(tz=pytz.UTC)
-        scheduled_time = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
-        remaining_time = scheduled_time - now
+        scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
+        remaining_time = scheduled_dt - now
         if remaining_time <= datetime.timedelta(seconds=0):
             return "Expired!"
         hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02}:{minutes:02}:{seconds:02}"
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    except Exception:
+        logger.exception("An error occurred while calculating remaining time.")
+        return "Error calculating time!"
 
 async def safe_task(task):
     """
@@ -268,8 +274,8 @@ async def safe_task(task):
     """
     try:
         await task
-    except Exception as e:
-        logger.error(f"Exception in scheduled task: {e}")
+    except Exception:
+        logger.exception("Exception in scheduled task.")
 
 async def reschedule_reminder(key, role):
     """
@@ -296,7 +302,7 @@ async def reschedule_reminder(key, role):
                 return
             
             remaining_time = scheduled_dt - now
-            logger.info(f"Rescheduling reminder {reminder_id} for {key.title()}.")
+            logger.info(f"Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
             asyncio.create_task(
                 safe_task(
                     send_scheduled_message(
@@ -311,16 +317,14 @@ async def reschedule_reminder(key, role):
                     )
                 )
             )
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    except Exception:
+        logger.exception("Error while attempting to reschedule a reminder.")
 
 # -------------------------
 # Specific Bump/Boop Handlers
 # -------------------------
 async def disboard():
-    """
-    Called when Disboard has completed a bump. Sets a 2-hour reminder.
-    """
+    """Called when Disboard has completed a bump. Sets a 2-hour reminder."""
     await handle_reminder(
         key="disboard",
         initial_message="Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.",
@@ -329,9 +333,7 @@ async def disboard():
     )
 
 async def dsme():
-    """
-    Called when DS.me indicates a successful vote. Sets a 12-hour reminder.
-    """
+    """Called when DS.me indicates a successful vote. Sets a 12-hour reminder."""
     await handle_reminder(
         key="dsme",
         initial_message="Thanks for voting for the server on DS.me! I'll remind you when it's time to vote again.",
@@ -340,9 +342,7 @@ async def dsme():
     )
 
 async def unfocused():
-    """
-    Called when Unfocused's boop confirmation is detected. Sets a 6-hour reminder.
-    """
+    """Called when Unfocused's boop confirmation is detected. Sets a 6-hour reminder."""
     await handle_reminder(
         key="unfocused",
         initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
@@ -351,15 +351,73 @@ async def unfocused():
     )
 
 async def discadia():
-    """
-    Called when Discadia completes a bump. Sets a 12-hour reminder.
-    """
+    """Called when Discadia completes a bump. Sets a 12-hour reminder."""
     await handle_reminder(
         key="discadia",
         initial_message="Thanks for bumping the server on Discadia! I'll remind you when it's time to bump again.",
         reminder_message="It's time to bump the server on Discadia again!",
         interval=43200  # 12 hours
     )
+
+# -------------------------
+# Reminder Scheduling
+# -------------------------
+async def send_scheduled_message(initial_message: str, reminder_message: str, interval: int, key: str):
+    """
+    Sends an initial message (if provided), waits for `interval` seconds,
+    then sends a reminder message. After sending the reminder, removes it from DB.
+    """
+    try:
+        channel = await get_channel("reminder_channel")
+        if not channel:
+            logger.warning("No valid reminder channel found; cannot send scheduled message.")
+            return
+        
+        if initial_message:
+            logger.info(f"Sending initial message for '{key}': {initial_message}")
+            await channel.send(initial_message)
+
+        await asyncio.sleep(interval)
+
+        logger.info(f"Sending reminder message for '{key}': {reminder_message}")
+        await channel.send(reminder_message)
+
+        reminder_data = get_reminder_data(key)
+        if reminder_data:
+            delete_reminder_data(key)
+            logger.info(f"Reminder {reminder_data['reminder_id']} for {key.title()} has been cleaned up.")
+    except Exception:
+        logger.exception("Error in send_scheduled_message.")
+
+async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
+    """
+    Checks if a reminder is set for `key`. A "set" reminder has a non-None 'scheduled_time'.
+    If not, creates a new reminder in the DB and schedules the task.
+    """
+    try:
+        existing_data = get_reminder_data(key)
+        if existing_data and existing_data.get("scheduled_time"):
+            logger.info(f"{key.capitalize()} already has a timer set.")
+            return
+
+        reminder_id = str(uuid.uuid4())
+        reminder_data = {
+            "state": True,
+            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
+            "reminder_id": reminder_id
+        }
+        set_reminder_data(key, reminder_data)
+        role = get_role()
+
+        if role:
+            await send_scheduled_message(
+                initial_message,
+                f"<@&{role}> {reminder_message}",
+                interval,
+                key
+            )
+    except Exception:
+        logger.exception(f"Error handling reminder for key '{key}'.")
 
 # -------------------------
 # Event Listeners
@@ -369,7 +427,7 @@ async def on_ready():
     """
     Fired once the bot is fully online and ready.
     - Sets custom presence/status.
-    - Attempts to reschedule any existing reminders.
+    - Attempts to reschedule existing reminders.
     """
     try:
         logger.info("Bot is online. Setting up status and activity...")
@@ -377,8 +435,8 @@ async def on_ready():
             status=interactions.Status.ONLINE,
             activity=interactions.Activity(
                 name="for ways to assist!",
-                type=interactions.ActivityType.WATCHING
-            )
+                type=interactions.ActivityType.WATCHING,
+            ),
         )
 
         initialize_reminders_table()
@@ -386,54 +444,51 @@ async def on_ready():
         logger.info("Checking for active reminders...")
         role = get_role()
         if not role:
+            logger.info("No role set; skipping reminder reschedule.")
             return
         
         for key in ["disboard", "dsme", "unfocused", "discadia"]:
             await reschedule_reminder(key, role)
 
-        logger.info("Active reminders have been checked and rescheduled.")
-        logger.info("I am online and ready!")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        logger.info("Reminders checked and rescheduled. Bot is ready!")
+    except Exception:
+        logger.exception("An unexpected error occurred during on_ready.")
 
 @interactions.listen()
 async def on_message_create(event: interactions.api.events.MessageCreate):
     """
-    Fired whenever a new message is created. We check:
-    - If it's from a known bump bot (Disboard, DS.me, etc.).
-    - If it matches certain textual patterns (bump confirmations, etc.).
-    - Then trigger the appropriate reminder function.
+    Fired whenever a new message is created.
+    Checks if it's from known bump bots and triggers reminders accordingly.
     """
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
         
         if bot_id in bot_ids:
-            bot_name = bot_ids[bot_id]
-            logger.info(f"Detected message from {bot_name}.")
+            logger.info(f"Detected message from {bot_ids[bot_id]}.")
 
-        if event.message.embeds and len(event.message.embeds) > 0:
+        if event.message.embeds:
             embed = event.message.embeds[0]
-            embed_description = embed.description
-            if embed_description:
-                if "Bump done" in embed_description:
-                    await disboard()
-                elif "Your vote streak for this server" in embed_description:
-                    await dsme()
+            embed_description = embed.description or ""
+            if "Bump done" in embed_description:
+                await disboard()
+            elif "Your vote streak for this server" in embed_description:
+                await dsme()
         else:
+            # Plain text checks
             if "Your server has been booped" in message_content:
                 await unfocused()
             elif "has been successfully bumped" in message_content:
                 await discadia()
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    except Exception:
+        logger.exception("Error processing on_message_create event.")
 
 @interactions.listen()
 async def on_member_join(event: interactions.api.events.MemberAdd):
     """
-    Fired when a new user joins the server. Handles two features:
-    1. Troll mode: Kick users if their accounts are younger than a configured threshold.
-    2. Backup mode: Assign a default role to new users and send a welcome message.
+    Fired when a new user joins the server. Handles:
+    1. Troll mode: Kick if account is younger than a configured threshold.
+    2. Backup mode: Auto-assign role & send welcome message.
     """
     try:
         assign_role = get_value("backup_mode_enabled")
@@ -444,18 +499,21 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
 
         member = event.member
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
-        account_age_limit = datetime.timedelta(days=kick_users_age_limit) if kick_users_age_limit else datetime.timedelta(days=14)
+        if kick_users_age_limit is None:
+            kick_users_age_limit = 14  # default if not set
 
-        if kick_users and account_age < account_age_limit:
+        if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
             await member.kick(reason="Account is too new!")
-            logger.info(f"Kicked {member.username} due to account age.")
+            logger.info(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
+            return
 
+        # If no backup mode, exit
         if not (assign_role and role_id and channel_id):
             return
 
         guild = event.guild
-        logger.info(f"New member {member.username} has joined the guild.")
-        
+        logger.info(f"New member {member.username} joined the guild (ID: {guild.id}).")
+
         if assign_role and role_id:
             channel = guild.get_channel(channel_id)
             embed = interactions.Embed(
@@ -470,78 +528,17 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
                     "• What's your shoe size?\n"
                     "• Can we donate your organs to ... \"charity\"?\n"
                 ),
-                color=0xCD41FF
+                color=0xCD41FF,
             )
             await channel.send(embeds=[embed])
             role_obj = guild.get_role(role_id)
             if role_obj:
                 await member.add_role(role_obj)
-                logger.info(f"Assigned role {role_obj.name} to new member {member.username}.")
+                logger.info(f"Assigned role '{role_obj.name}' to {member.username}.")
             else:
-                logger.error(f"Role with ID {role_id} not found in the guild.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
-
-# -------------------------
-# Reminder Scheduling
-# -------------------------
-async def send_scheduled_message(initial_message: str, reminder_message: str, interval: int, key: str):
-    """
-    Sends an initial message (if provided), waits for `interval` seconds,
-    then sends a reminder message. After sending the reminder, removes it from DB.
-    """
-    try:
-        channel = await get_channel("reminder_channel")
-        if not channel:
-            return
-        
-        if initial_message:
-            logger.info(f"Sending initial message: {initial_message}")
-            await channel.send(initial_message)
-
-        await asyncio.sleep(interval)
-
-        logger.info(f"Sending reminder message: {reminder_message}")
-        await channel.send(reminder_message)
-
-        reminder_data = get_reminder_data(key)
-        if reminder_data:
-            delete_reminder_data(key)
-            logger.info(f"Reminder {reminder_data['reminder_id']} for {key.title()} has been cleaned up from the database.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
-
-async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
-    """
-    Checks if a reminder is truly set for `key`.
-    A "set" reminder has a non-None scheduled_time (meaning it's active).
-    """
-    existing_data = get_reminder_data(key)
-
-    if existing_data and existing_data.get("scheduled_time") is not None:
-        logger.info(f"{key.capitalize()} already has a timer set for a reminder.")
-        return
-
-    reminder_id = str(uuid.uuid4())
-    reminder_data = {
-        "state": True,
-        "scheduled_time": (
-            datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)
-        ).isoformat(),
-        "reminder_id": reminder_id
-    }
-    set_reminder_data(key, reminder_data)
-
-    role = get_role()
-    if not role:
-        return
-
-    await send_scheduled_message(
-        initial_message,
-        f"<@&{role}> {reminder_message}",
-        interval,
-        key
-    )
+                logger.warning(f"Role with ID {role_id} not found in the guild.")
+    except Exception:
+        logger.exception("Error during on_member_join event.")
 
 # -------------------------
 # Slash Commands
@@ -568,18 +565,15 @@ async def reminder_setup(ctx: interactions.ComponentContext, channel, role: inte
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     try:
-        logger.info(f'Setup requested by {ctx.author.username}.')
-        channel_id = channel.id
-        role_id = role.id
-        logger.info(f"Reminder channel set to <#{channel_id}> and the role set to <@&{role_id}>.")
-        
-        set_value("reminder_channel", channel_id)
-        set_value("role", role_id)
+        logger.info(f"Reminder setup requested by {ctx.author.username}. Channel: {channel.id}, Role: {role.id}")
+        set_value("reminder_channel", channel.id)
+        set_value("role", role.id)
 
-        await ctx.send(f"Reminder setup complete! Nova will use <#{channel_id}> for reminders and the role <@&{role_id}>.")
-        logger.info("Reminder setup has been successfully completed.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        await ctx.send(f"Reminder setup complete! Will use <#{channel.id}> for reminders and role <@&{role.id}>.")
+        logger.info("Reminder setup successfully completed.")
+    except Exception:
+        logger.exception("Error in /remindersetup command.")
+        await ctx.send("An error occurred while setting up reminders.", ephemeral=True)
 
 @interactions.slash_command(name="status", description="Check the current status of all reminders.")
 async def check_status(ctx: interactions.ComponentContext):
@@ -588,38 +582,31 @@ async def check_status(ctx: interactions.ComponentContext):
     remains for each known reminder (Disboard, Discadia, DS.me, Unfocused).
     """
     try:
-        logger.info(f'Status check requested by {ctx.author.username}.')
+        logger.info(f"Status check requested by {ctx.author.username}.")
         channel_id = get_value("reminder_channel")
-        role = get_value("role")
-        if not role:
-            await ctx.send("No role has been set up for reminders.")
-            return
-        
-        channel_status = f"<#{channel_id}>" if channel_id else "Not set!"
-        role_name = f"<@&{role}>" if role else "Not set!"
+        role_id = get_value("role")
 
-        disboard_data = get_reminder_data("disboard")
-        discadia_data = get_reminder_data("discadia")
-        dsme_data = get_reminder_data("dsme")
-        unfocused_data = get_reminder_data("unfocused")
+        channel_str = f"<#{channel_id}>" if channel_id else "Not set!"
+        role_str = f"<@&{role_id}>" if role_id else "Not set!"
 
-        disboard_remaining_time = calculate_remaining_time(disboard_data.get("scheduled_time")) if disboard_data else "Not set!"
-        discadia_remaining_time = calculate_remaining_time(discadia_data.get("scheduled_time")) if discadia_data else "Not set!"
-        dsme_remaining_time = calculate_remaining_time(dsme_data.get("scheduled_time")) if dsme_data else "Not set!"
-        unfocused_remaining_time = calculate_remaining_time(unfocused_data.get("scheduled_time")) if unfocused_data else "Not set!"
+        # Gather times
+        reminders_info = []
+        for reminder_key in ["disboard", "discadia", "dsme", "unfocused"]:
+            data = get_reminder_data(reminder_key)
+            time_str = calculate_remaining_time(data.get("scheduled_time")) if data else "Not set!"
+            reminders_info.append(f"{reminder_key.capitalize()}: {time_str}")
 
-        await ctx.send(
+        summary = (
             f"**Reminder Status:**\n"
-            f"Channel: {channel_status}\n"
-            f"Role: {role_name}\n"
-            f"Disboard: {disboard_remaining_time}\n"
-            f"Discadia: {discadia_remaining_time}\n"
-            f"DS.me: {dsme_remaining_time}\n"
-            f"Unfocused: {unfocused_remaining_time}"
+            f"Channel: {channel_str}\n"
+            f"Role: {role_str}\n\n"
+            + "\n".join(reminders_info)
         )
-        logger.info("Status check has been successfully completed.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        await ctx.send(summary)
+        logger.info("Status check completed.")
+    except Exception:
+        logger.exception("Error in /status command.")
+        await ctx.send("An error occurred while fetching status.", ephemeral=True)
 
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
 async def test_reminders(ctx: interactions.ComponentContext):
@@ -630,15 +617,16 @@ async def test_reminders(ctx: interactions.ComponentContext):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     try:
-        role = get_value("role")
-        if not role:
-            await ctx.send("No role has been set up for reminders.")
+        logger.info(f"Test message requested by {ctx.author.username}.")
+        role_id = get_value("role")
+        if not role_id:
+            await ctx.send("No role has been set up for reminders.", ephemeral=True)
             return
-        logger.info(f'Test message requested by {ctx.author.username}.')
-        await ctx.send(f"<@&{role}> This is a test message!")
-        logger.info("Test reminder message has been successfully sent.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        await ctx.send(f"<@&{role_id}> This is a test message!")
+        logger.info("Test reminder message sent.")
+    except Exception:
+        logger.exception("Error in /testmessage command.")
+        await ctx.send("Could not send test message.", ephemeral=True)
 
 @interactions.slash_command(name="dev", description="Maintain developer tag.")
 async def dev(ctx: interactions.ComponentContext):
@@ -649,11 +637,12 @@ async def dev(ctx: interactions.ComponentContext):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     try:
-        logger.info(f'Developer tag maintenance requested by {ctx.author.username}.')
+        logger.info(f"Developer tag maintenance requested by {ctx.author.username}.")
         await ctx.send("Developer tag maintained!")
-        logger.info("Developer tag maintenance has been successfully completed.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        logger.info("Developer tag maintenance completed.")
+    except Exception:
+        logger.exception("Error in /dev command.")
+        await ctx.send("An error occurred while maintaining developer tag.", ephemeral=True)
 
 @interactions.slash_command(name="source", description="Get links for the bot's resources.")
 async def source(ctx: interactions.ComponentContext):
@@ -667,13 +656,15 @@ async def source(ctx: interactions.ComponentContext):
             color=0x00ff00,
         )
         embed.add_field(name="GitHub Repository", value="https://github.com/doubleangels/Nova", inline=False)
-        embed.add_field(name="Supabase Database", value="https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public", inline=False)
-
+        embed.add_field(
+            name="Supabase Database",
+            value="https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public",
+            inline=False
+        )
         await ctx.send(embeds=[embed])
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+    except Exception:
+        logger.exception("Error in /source command.")
         await ctx.send("An error occurred while processing your request.", ephemeral=True)
-
 
 @interactions.slash_command(name="togglebackupmode", description="Toggle role assignment for new members.")
 @interactions.slash_option(
@@ -692,10 +683,11 @@ async def toggle_backup_mode(ctx: interactions.ComponentContext, enabled: bool):
     try:
         set_value("backup_mode_enabled", enabled)
         status = "enabled" if enabled else "disabled"
-        await ctx.send(f"Backup mode for new members has been {status}.")
-        logger.info(f"Backup mode has been {status} by {ctx.author.username}.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        await ctx.send(f"Backup mode has been {status}.")
+        logger.info(f"Backup mode {status} by {ctx.author.username}.")
+    except Exception:
+        logger.exception("Error in /togglebackupmode command.")
+        await ctx.send("An error occurred while toggling backup mode.", ephemeral=True)
 
 @interactions.slash_command(name="backupmode", description="Configure the role/channel used by backup mode.")
 @interactions.slash_option(
@@ -718,14 +710,15 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
     try:
-        channel_id = channel.id
-        role_id = role.id
-        set_value("backup_mode_id", role_id)
-        set_value("backup_mode_channel", channel_id)
-        await ctx.send(f"Channel to welcome new members set to <#{channel_id}>. Role to assign is <@&{role_id}>.")
-        logger.info(f"Backup mode channel set to {channel_id} and role set to {role_id} by {ctx.author}.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        set_value("backup_mode_id", role.id)
+        set_value("backup_mode_channel", channel.id)
+        await ctx.send(
+            f"Channel set to <#{channel.id}>. Role to assign: <@&{role.id}>. Backup mode will take effect if enabled."
+        )
+        logger.info(f"Backup mode setup by {ctx.author.username}: channel={channel.id}, role={role.id}")
+    except Exception:
+        logger.exception("Error in /backupmode command.")
+        await ctx.send("An error occurred while configuring backup mode.", ephemeral=True)
 
 @interactions.slash_command(name="trollmode", description="Toggle kicking of accounts younger than a specified age.")
 @interactions.slash_option(
@@ -751,10 +744,11 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
         set_value("troll_mode_enabled", enabled)
         set_value("troll_mode_account_age", age)
         status = "enabled" if enabled else "disabled"
-        await ctx.send(f"Troll mode for new members has been {status}. Minimum account age: {age} days.")
-        logger.info(f"Troll mode for new members has been {status}. Account age threshold set to {age} days.")
-    except Exception as e:
-        logger.error(f"An unexpected error occurred: {e}")
+        await ctx.send(f"Troll mode has been {status}. Minimum account age: {age} days.")
+        logger.info(f"Troll mode {status} by {ctx.author.username}; account age threshold={age} days.")
+    except Exception:
+        logger.exception("Error in /trollmode command.")
+        await ctx.send("An error occurred while toggling troll mode.", ephemeral=True)
 
 @interactions.slash_command(
     name="fix",
@@ -767,22 +761,25 @@ async def fix_command(ctx: interactions.ComponentContext):
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
+    try:
+        existing_data = get_reminder_data("fix") or {}
+        if existing_data:
+            await ctx.send("The 'fix' key already exists in the database.", ephemeral=True)
+            return
 
-    existing_data = get_reminder_data("fix") or {}
-    if existing_data:
-        await ctx.send("The 'fix' key already exists in the database.", ephemeral=True)
-        return
+        reminder_id = str(uuid.uuid4())
+        reminder_data = {
+            "state": True,
+            "reminder_id": reminder_id
+        }
+        set_reminder_data("fix", reminder_data)
+        await ctx.send("Fix logic applied! A new entry was created under the key 'fix'.")
+        logger.info("Fix key created in reminders table.")
+    except Exception:
+        logger.exception("Error in /fix command.")
+        await ctx.send("An error occurred while applying fix logic.", ephemeral=True)
 
-    reminder_id = str(uuid.uuid4())
-    reminder_data = {
-        "state": True,
-        "reminder_id": reminder_id
-    }
-    set_reminder_data("fix", reminder_data)
-
-    await ctx.send("Fix logic has been applied! A new entry was created under the key 'fix'.")
-
-@interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to their default values.")
+@interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to default values.")
 async def reset_reminders(ctx: interactions.ComponentContext):
     """
     Resets all reminders in the 'reminders' table to their default values.
@@ -790,26 +787,22 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("You do not have permission to use this command.", ephemeral=True)
         return
-
     try:
         default_data = {
             "state": False,
             "scheduled_time": None,
             "reminder_id": None
         }
-
         reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
-
         for key in reminder_keys:
             set_reminder_data(key, default_data)
             logger.info(f"Reset reminder data for key: {key}")
 
-        await ctx.send("All reminders have been reset to their default values.")
+        await ctx.send("All reminders have been reset to default values.")
         logger.info("All reminders successfully reset.")
-
-    except Exception as e:
-        logger.error(f"Error occurred while resetting reminders: {e}")
-        await ctx.send("An error occurred while resetting reminders. Please try again later.")
+    except Exception:
+        logger.exception("Error in /resetreminders command.")
+        await ctx.send("An error occurred while resetting reminders. Please try again later.", ephemeral=True)
 
 # -------------------------
 # Search / AI Commands
@@ -830,7 +823,7 @@ async def reset_reminders(ctx: interactions.ComponentContext):
 async def google_search(ctx: interactions.ComponentContext, query: str, results: int = 1):
     """
     Uses the Google Custom Search API to return top text results.
-    You can specify how many results to display (between 1 and 10).
+    You can specify how many results to display (1-10).
     """
     try:
         await ctx.defer()
@@ -842,10 +835,9 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
             async with session.get(search_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if "items" in data and len(data["items"]) > 0:
-                        items = data["items"]
+                    if "items" in data and data["items"]:
                         embeds = []
-                        for item in items:
+                        for item in data["items"]:
                             title = item.get("title", "No Title Found")
                             link = item.get("link", "No Link Found")
                             snippet = item.get("snippet", "No Description Found")
@@ -855,15 +847,18 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
                                 color=0x1A73E8
                             )
                             embeds.append(embed)
-                        await ctx.send(embeds=embeds if embeds else None)
+                        if embeds:
+                            await ctx.send(embeds=embeds)
+                        else:
+                            await ctx.send("No results found for your query.")
                     else:
-                        await ctx.send("No results found for your query. Try refining it.")
+                        await ctx.send("No results found for your query.")
                 else:
                     logger.warning(f"Google API error: {response.status}")
                     await ctx.send(f"Error: Google API returned status code {response.status}.")
-    except Exception as e:
-        logger.error(f"Error in /search command: {e}")
-        await ctx.send("An unexpected error occurred. Please try again later.")
+    except Exception:
+        logger.exception("Error in /search command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="imagesearch", description="Search Google for images and return the top results.")
 @interactions.slash_option(
@@ -881,7 +876,7 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
 async def google_image_search(ctx: interactions.ComponentContext, query: str, results: int = 1):
     """
     Uses the Google Custom Search API (Image mode) to return top image results.
-    You can specify how many results to display (between 1 and 10).
+    You can specify how many results to display (1-10).
     """
     try:
         await ctx.defer()
@@ -909,7 +904,6 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
                             )
                             embed.set_image(url=item.get("link", ""))
                             embeds.append(embed)
-
                         if embeds:
                             await ctx.send(embeds=embeds)
                         else:
@@ -919,9 +913,9 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
                 else:
                     logger.warning(f"Google API error: {response.status}")
                     await ctx.send(f"Error: Google API returned status code {response.status}.")
-    except Exception as e:
-        logger.error(f"Error in /imagesearch: {e}")
-        await ctx.send("An unexpected error occurred. Please try again later.")
+    except Exception:
+        logger.exception("Error in /imagesearch command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="youtube", description="Search YouTube for videos and return the top result.")
 @interactions.slash_option(
@@ -968,15 +962,18 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
                                 embed.set_thumbnail(url=thumbnail)
                             embeds.append(embed)
 
-                        await ctx.send(embeds=embeds if embeds else None)
+                        if embeds:
+                            await ctx.send(embeds=embeds)
+                        else:
+                            await ctx.send("No video results found for your query.")
                     else:
                         await ctx.send("No video results found for your query.")
                 else:
                     logger.warning(f"YouTube API error: {response.status}")
                     await ctx.send(f"Error: YouTube API returned status code {response.status}.")
-    except Exception as e:
-        logger.error(f"Error in /youtube: {e}")
-        await ctx.send("An unexpected error occurred. Please try again later.")
+    except Exception:
+        logger.exception("Error in /youtube command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="wikipedia", description="Search Wikipedia for articles and return the top result.")
 @interactions.slash_option(
@@ -1005,7 +1002,7 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
             async with session.get(search_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if "query" in data and "search" in data["query"] and data["query"]["search"]:
+                    if data.get("query", {}).get("search"):
                         top_result = data["query"]["search"][0]
                         title = top_result.get("title", "No Title")
                         snippet = top_result.get("snippet", "No snippet available.")
@@ -1024,9 +1021,9 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
                 else:
                     logger.warning(f"Wikipedia API error: {response.status}")
                     await ctx.send(f"Error: Wikipedia API returned status code {response.status}.")
-    except Exception as e:
-        logger.error(f"Error in /wikipedia: {e}")
-        await ctx.send("An unexpected error occurred. Please try again later.")
+    except Exception:
+        logger.exception("Error in /wikipedia command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="urban", description="Search Urban Dictionary for definitions.")
 @interactions.slash_option(
@@ -1037,8 +1034,8 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
 )
 async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str):
     """
-    Searches Urban Dictionary for the given term and displays the top result's definition, example,
-    and vote counts. If no entries are found, it notifies the user.
+    Searches Urban Dictionary for the given term and displays the top result's definition,
+    example, and vote counts. If no entries are found, it notifies the user.
     """
     try:
         await ctx.defer()
@@ -1057,7 +1054,7 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                         thumbs_up = top_result.get("thumbs_up", 0)
                         thumbs_down = top_result.get("thumbs_down", 0)
 
-                        example = example if example else "No example available."
+                        example = example or "No example available."
 
                         embed = interactions.Embed(
                             title=f"Definition: {word}",
@@ -1074,15 +1071,15 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                 else:
                     logger.warning(f"Urban Dictionary API error: {response.status}")
                     await ctx.send(f"Error: Urban Dictionary API returned status code {response.status}.")
-    except Exception as e:
-        logger.error(f"Error in /urban: {e}")
-        await ctx.send("An unexpected error occurred. Please try again later.")
+    except Exception:
+        logger.exception("Error in /urban command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
 # Bot Startup
 # -------------------------
 try:
     bot.start(TOKEN)
-except Exception as e:
-    logger.error("Exception occurred during bot startup!", exc_info=True)
+except Exception:
+    logger.exception("Exception occurred during bot startup!")
     sys.exit(1)
