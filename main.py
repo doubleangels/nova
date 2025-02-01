@@ -779,7 +779,7 @@ async def reset_reminders(ctx: interactions.ComponentContext):
 # -------------------------
 # Search / AI Commands
 # -------------------------
-@interactions.slash_command(name="search", description="Search Google and return the top results.")
+@interactions.slash_command(name="google", description="Search Google and return the top results.")
 @interactions.slash_option(
     name="query",
     description="What do you want to search for?",
@@ -830,7 +830,7 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
         logger.exception("Error in /search command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="imagesearch", description="Search Google for images and return the top results.")
+@interactions.slash_command(name="googleimage", description="Search Google for images and return the top results.")
 @interactions.slash_option(
     name="query",
     description="What images do you want to search for?",
