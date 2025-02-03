@@ -311,6 +311,23 @@ async def reschedule_reminder(key, role):
     except Exception:
         logger.exception("Error while attempting to reschedule a reminder.")
 
+async def get_coordinates(city: str):
+    """
+    Fetch latitude and longitude for a given city using OpenStreetMap (Nominatim).
+    """
+    try:
+        url = f"https://nominatim.openstreetmap.org/search"
+        params = {"q": city, "format": "json"}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                data = await response.json()
+                if data:
+                    return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception:
+        logger.exception("Error fetching city coordinates.")
+    return None, None
+z
 # -------------------------
 # Specific Bump/Boop Handlers
 # -------------------------
@@ -1102,40 +1119,47 @@ async def dictionary_search(ctx: interactions.ComponentContext, word: str):
 )
 async def weather_search(ctx: interactions.ComponentContext, city: str):
     """
-    Searches for the current weather in a given city using OpenWeather API.
+    Fetches the current weather from PirateWeather using city coordinates.
     """
     try:
         await ctx.defer()
-        url = f"https://api.openweathermap.org/data/2.5/weather"
-        params = {"q": city, "appid": OPENWEATHER_API_KEY, "units": "metric"}
+
+        # Get coordinates
+        lat, lon = await get_coordinates(city)
+        if lat is None or lon is None:
+            await ctx.send(f"Could not find the location for '{city}'. Try another city.")
+            return
+
+        # PirateWeather API request
+        url = f"https://api.pirateweather.net/forecast/{PIRATEWEATHER_API_KEY}/{lat},{lon}"
+        params = {"units": "si"}  # "si" gives Celsius, "us" gives Fahrenheit
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    
-                    weather = data["weather"][0]["description"].title()
-                    temp = data["main"]["temp"]
-                    feels_like = data["main"]["feels_like"]
-                    humidity = data["main"]["humidity"]
-                    wind_speed = data["wind"]["speed"]
-                    city_name = data["name"]
-                    country = data["sys"]["country"]
+
+                    # Extract weather data
+                    weather = data["currently"]["summary"]
+                    temp = data["currently"]["temperature"]
+                    feels_like = data["currently"]["apparentTemperature"]
+                    humidity = data["currently"]["humidity"] * 100
+                    wind_speed = data["currently"]["windSpeed"]
 
                     embed = interactions.Embed(
-                        title=f"Weather in {city_name}, {country}",
+                        title=f"Weather in {city}",
                         description=f"**{weather}**",
                         color=0x1E90FF
                     )
                     embed.add_field(name="Temperature", value=f"{temp}°C (Feels like {feels_like}°C)", inline=True)
                     embed.add_field(name="Humidity", value=f"{humidity}%", inline=True)
                     embed.add_field(name="Wind Speed", value=f"{wind_speed} m/s", inline=True)
-                    embed.set_footer(text="Powered by OpenWeather")
+                    embed.set_footer(text="Powered by PirateWeather")
 
                     await ctx.send(embed=embed)
                 else:
-                    logger.warning(f"OpenWeather API error: {response.status}")
-                    await ctx.send(f"Error: OpenWeather API returned status code {response.status}.")
+                    logger.warning(f"PirateWeather API error: {response.status}")
+                    await ctx.send(f"Error: PirateWeather API returned status code {response.status}.")
     except Exception:
         logger.exception("Error in /weather command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
