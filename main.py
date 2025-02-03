@@ -55,6 +55,7 @@ required_env_vars = {
     "SEARCH_ENGINE_ID": os.getenv("SEARCH_ENGINE_ID"),
     "IMAGE_SEARCH_ENGINE_ID": os.getenv("IMAGE_SEARCH_ENGINE_ID"),
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
+    "OPENWEATHER_API_KEY": os.getenv("OPENWEATHER_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -70,6 +71,7 @@ GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
 IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
+OPENWEATHER_API_KEY = required_env_vars["OPENWEATHER_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1089,6 +1091,53 @@ async def dictionary_search(ctx: interactions.ComponentContext, word: str):
                     await ctx.send(f"Error: Dictionary API returned status code {response.status}.")
     except Exception:
         logger.exception("Error in /define command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="weather", description="Get the current weather for a city.")
+@interactions.slash_option(
+    name="city",
+    description="Enter the city name.",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def weather_search(ctx: interactions.ComponentContext, city: str):
+    """
+    Searches for the current weather in a given city using OpenWeather API.
+    """
+    try:
+        await ctx.defer()
+        url = f"https://api.openweathermap.org/data/2.5/weather"
+        params = {"q": city, "appid": OPENWEATHER_API_KEY, "units": "metric"}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    weather = data["weather"][0]["description"].title()
+                    temp = data["main"]["temp"]
+                    feels_like = data["main"]["feels_like"]
+                    humidity = data["main"]["humidity"]
+                    wind_speed = data["wind"]["speed"]
+                    city_name = data["name"]
+                    country = data["sys"]["country"]
+
+                    embed = interactions.Embed(
+                        title=f"Weather in {city_name}, {country}",
+                        description=f"**{weather}**",
+                        color=0x1E90FF
+                    )
+                    embed.add_field(name="Temperature", value=f"{temp}°C (Feels like {feels_like}°C)", inline=True)
+                    embed.add_field(name="Humidity", value=f"{humidity}%", inline=True)
+                    embed.add_field(name="Wind Speed", value=f"{wind_speed} m/s", inline=True)
+                    embed.set_footer(text="Powered by OpenWeather")
+
+                    await ctx.send(embed=embed)
+                else:
+                    logger.warning(f"OpenWeather API error: {response.status}")
+                    await ctx.send(f"Error: OpenWeather API returned status code {response.status}.")
+    except Exception:
+        logger.exception("Error in /weather command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
