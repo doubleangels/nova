@@ -55,7 +55,7 @@ required_env_vars = {
     "SEARCH_ENGINE_ID": os.getenv("SEARCH_ENGINE_ID"),
     "IMAGE_SEARCH_ENGINE_ID": os.getenv("IMAGE_SEARCH_ENGINE_ID"),
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
-    "OPENWEATHER_API_KEY": os.getenv("OPENWEATHER_API_KEY"),
+    "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -71,7 +71,7 @@ GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
 IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
-OPENWEATHER_API_KEY = required_env_vars["OPENWEATHER_API_KEY"]
+PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
