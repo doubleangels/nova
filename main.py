@@ -54,6 +54,7 @@ required_env_vars = {
     "GOOGLE_API_KEY": os.getenv("GOOGLE_API_KEY"),
     "SEARCH_ENGINE_ID": os.getenv("SEARCH_ENGINE_ID"),
     "IMAGE_SEARCH_ENGINE_ID": os.getenv("IMAGE_SEARCH_ENGINE_ID"),
+    "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -68,6 +69,7 @@ TOKEN = required_env_vars["DISCORD_BOT_TOKEN"]
 GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
 IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
+OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -987,50 +989,60 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
         logger.exception("Error in /wikipedia command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="urban", description="Search Urban Dictionary for definitions.")
+@interactions.slash_command(name="imdb", description="Search for a movie or TV show on IMDB.")
 @interactions.slash_option(
-    name="query",
-    description="What term do you want to search for?",
+    name="title",
+    description="Enter the movie or TV show title.",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
-async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str):
+async def imdb_search(ctx: interactions.ComponentContext, title: str):
     """
-    Searches Urban Dictionary for the given term and displays the top result's definition.
+    Searches OMDb for the given movie or TV show title and displays relevant information.
     """
     try:
         await ctx.defer()
-        search_url = "https://api.urbandictionary.com/v0/define"
-        params = {"term": query}
+        search_url = "http://www.omdbapi.com/"
+        params = {"t": title, "apikey": OMDB_API_KEY}
+
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    if data.get("list"):
-                        top_result = data["list"][0]
-                        word = top_result.get("word", "No Word")
-                        definition = top_result.get("definition", "No Definition Available.").replace("\r\n", "\n")
-                        example = top_result.get("example", "").replace("\r\n", "\n")
-                        thumbs_up = top_result.get("thumbs_up", 0)
-                        thumbs_down = top_result.get("thumbs_down", 0)
-                        example = example or "No example available."
+
+                    if data.get("Response") == "True":
+                        title = data.get("Title", "Unknown")
+                        year = data.get("Year", "Unknown")
+                        genre = data.get("Genre", "Unknown")
+                        imdb_rating = data.get("imdbRating", "N/A")
+                        plot = data.get("Plot", "No plot available.")
+                        poster = data.get("Poster", None)
+                        imdb_id = data.get("imdbID", None)
+
+                        imdb_link = f"https://www.imdb.com/title/{imdb_id}" if imdb_id else "N/A"
+
                         embed = interactions.Embed(
-                            title=f"Definition: {word}",
-                            description=definition,
-                            color=0x1D2439
+                            title=f"{title} ({year})",
+                            description=plot,
+                            color=0xFFD700
                         )
-                        embed.add_field(name="Example", value=example, inline=False)
-                        embed.add_field(name="Thumbs Up", value=str(thumbs_up), inline=True)
-                        embed.add_field(name="Thumbs Down", value=str(thumbs_down), inline=True)
-                        embed.set_footer(text="Powered by Urban Dictionary")
+                        embed.add_field(name="Genre", value=genre, inline=True)
+                        embed.add_field(name="IMDB Rating", value=imdb_rating, inline=True)
+                        embed.add_field(name="IMDB Link", value=f"[Click Here]({imdb_link})", inline=False)
+
+                        if poster and poster != "N/A":
+                            embed.set_thumbnail(url=poster)
+
+                        embed.set_footer(text="Powered by OMDb API")
+
                         await ctx.send(embed=embed)
                     else:
-                        await ctx.send("No definitions found for your query. Try refining it.")
+                        await ctx.send("No results found for that title. Try a different one!")
                 else:
-                    logger.warning(f"Urban Dictionary API error: {response.status}")
-                    await ctx.send(f"Error: Urban Dictionary API returned status code {response.status}.")
+                    logger.warning(f"OMDb API error: {response.status}")
+                    await ctx.send(f"Error: OMDb API returned status code {response.status}.")
     except Exception:
-        logger.exception("Error in /urban command.")
+        logger.exception("Error in /imdb command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
