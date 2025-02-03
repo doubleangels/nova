@@ -327,7 +327,7 @@ async def get_coordinates(city: str):
     except Exception:
         logger.exception("Error fetching city coordinates.")
     return None, None
-z
+
 # -------------------------
 # Specific Bump/Boop Handlers
 # -------------------------
