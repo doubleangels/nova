@@ -1045,6 +1045,52 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
         logger.exception("Error in /imdb command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
+@interactions.slash_command(name="define", description="Get the definition and synonyms of a word.")
+@interactions.slash_option(
+    name="word",
+    description="Enter the word you want to look up.",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def dictionary_search(ctx: interactions.ComponentContext, word: str):
+    """
+    Searches for a word's definition and synonyms using the Free Dictionary API.
+    """
+    try:
+        await ctx.defer()
+        url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    if isinstance(data, list) and data:
+                        entry = data[0]
+                        definitions = entry["meanings"][0]["definitions"]
+                        definition_text = definitions[0]["definition"] if definitions else "No definition found."
+                        synonyms = entry["meanings"][0].get("synonyms", [])
+
+                        synonyms_text = ", ".join(synonyms[:5]) if synonyms else "No synonyms available."
+
+                        embed = interactions.Embed(
+                            title=f"Definition of {word}",
+                            description=definition_text,
+                            color=0x007BFF
+                        )
+                        embed.add_field(name="Synonyms", value=synonyms_text, inline=False)
+                        embed.set_footer(text="Powered by Free Dictionary API")
+
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send(f"No definition found for '{word}'.")
+                else:
+                    logger.warning(f"Dictionary API error: {response.status}")
+                    await ctx.send(f"Error: Dictionary API returned status code {response.status}.")
+    except Exception:
+        logger.exception("Error in /define command.")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+
 # -------------------------
 # Bot Startup
 # -------------------------
