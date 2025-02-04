@@ -430,7 +430,9 @@ async def on_ready():
     Sets custom presence and attempts to reschedule existing reminders.
     """
     try:
-        logger.info("Bot is online. Setting up status and activity...")
+        logger.info("✅ Bot is online! Setting up status and activity...")
+
+        # Set bot presence
         await bot.change_presence(
             status=interactions.Status.ONLINE,
             activity=interactions.Activity(
@@ -438,17 +440,28 @@ async def on_ready():
                 type=interactions.ActivityType.WATCHING,
             ),
         )
+        logger.debug("🎭 Bot presence and activity set.")
+
+        # Initialize reminders
         initialize_reminders_table()
-        logger.debug("Checking for active reminders...")
+        logger.debug("🛠️ Checking for active reminders...")
+
+        # Fetch role for reminders
         role = get_role()
         if not role:
-            logger.debug("No role set; skipping reminder reschedule.")
+            logger.warning("⚠️ No role set for reminders; skipping reminder reschedule.")
             return
+
+        # Reschedule reminders
         for key in ["disboard", "dsme", "unfocused", "discadia"]:
+            logger.debug(f"🔄 Attempting to reschedule {key} reminder...")
             await reschedule_reminder(key, role)
-        logger.info("Reminders checked and rescheduled. Bot is ready!")
-    except Exception:
-        logger.exception("An unexpected error occurred during on_ready.")
+            logger.debug(f"✅ Reminder {key} successfully rescheduled.")
+
+        logger.info("🎯 All reminders checked and rescheduled. Bot is ready!")
+
+    except Exception as e:
+        logger.exception(f"⚠️ An unexpected error occurred during on_ready: {e}")
 
 @interactions.listen()
 async def on_message_create(event: interactions.api.events.MessageCreate):
@@ -459,23 +472,38 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
+        logger.debug(f"💬 Message received from {event.message.author.username} (ID: {bot_id})")
+
+        # Check if the message is from a known bump bot
         if bot_id in bot_ids:
-            logger.debug(f"Detected message from {bot_ids[bot_id]}.")
+            logger.debug(f"🤖 Detected message from **{bot_ids[bot_id]}**.")
+
+        # Check for embeds
         if event.message.embeds:
             embed = event.message.embeds[0]
             embed_description = embed.description or ""
+            logger.debug(f"📜 Embed detected: {embed_description[:100]}...")  # Logs first 100 chars for debugging
+
             if "Bump done" in embed_description:
+                logger.debug("🔔 Triggering Disboard reminder...")
                 await disboard()
             elif "Your vote streak for this server" in embed_description:
+                logger.debug("🔔 Triggering DSME reminder...")
                 await dsme()
+
         else:
             # Plain text checks
+            logger.debug(f"📄 Checking message content: {message_content[:100]}...")  # Logs first 100 chars for debugging
+
             if "Your server has been booped" in message_content:
+                logger.debug("🔔 Triggering Unfocused reminder...")
                 await unfocused()
             elif "has been successfully bumped" in message_content:
+                logger.debug("🔔 Triggering Discadia reminder...")
                 await discadia()
-    except Exception:
-        logger.exception("Error processing on_message_create event.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error processing on_message_create event: {e}")
 
 @interactions.listen()
 async def on_member_join(event: interactions.api.events.MemberAdd):
@@ -484,49 +512,65 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     Handles troll mode (kicking new accounts) and backup mode (role assignment & welcome).
     """
     try:
+        # Retrieve settings
         assign_role = get_value("backup_mode_enabled")
         role_id = get_value("backup_mode_id")
         channel_id = get_value("backup_mode_channel")
         kick_users = get_value("troll_mode_enabled")
         kick_users_age_limit = get_value("troll_mode_account_age")
+
         member = event.member
+        guild = event.guild
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
+
         if kick_users_age_limit is None:
-            kick_users_age_limit = 14  # default if not set
+            kick_users_age_limit = 14  # Default if not set
+
+        logger.debug(f"👤 New member joined: {member.username} (Guild ID: {guild.id}) | Account Age: {account_age.days} days")
+
+        # Troll Mode: Kick if account is too new
         if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
             await member.kick(reason="Account is too new!")
-            logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
+            logger.debug(f"❌ Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
             return
-        # If no backup mode, exit
+
+        # Backup Mode: Assign role & send welcome message
         if not (assign_role and role_id and channel_id):
+            logger.debug("⚠️ Backup mode is not fully configured. Skipping role assignment and welcome message.")
             return
-        guild = event.guild
-        logger.debug(f"New member {member.username} joined the guild (ID: {guild.id}).")
-        if assign_role and role_id:
-            channel = guild.get_channel(channel_id)
-            embed = interactions.Embed(
-                title=f"Welcome {member.username}!",
-                description=(
-                    "• **How old are you?**\n"
-                    "• Where are you from?\n"
-                    "• What do you do in your free time?\n"
-                    "• What is your address?\n"
-                    "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
-                    "• What's your blood type?\n"
-                    "• What's your shoe size?\n"
-                    "• Can we donate your organs to ... \"charity\"?\n"
-                ),
-                color=0xCD41FF,
-            )
-            await channel.send(embeds=[embed])
-            role_obj = guild.get_role(role_id)
-            if role_obj:
-                await member.add_role(role_obj)
-                logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
-            else:
-                logger.warning(f"Role with ID {role_id} not found in the guild.")
-    except Exception:
-        logger.exception("Error during on_member_join event.")
+
+        channel = guild.get_channel(channel_id)
+        if not channel:
+            logger.warning(f"⚠️ Channel with ID {channel_id} not found. Welcome message skipped.")
+            return
+
+        embed = interactions.Embed(
+            title=f"🎉 Welcome {member.username}!",
+            description=(
+                "• **How old are you?**\n"
+                "• Where are you from?\n"
+                "• What do you do in your free time?\n"
+                "• What is your address?\n"
+                "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
+                "• What's your blood type?\n"
+                "• What's your shoe size?\n"
+                "• Can we donate your organs to ... \"charity\"?\n"
+            ),
+            color=0xCD41FF,
+        )
+        await channel.send(embeds=[embed])
+        logger.debug(f"📢 Sent welcome message in <#{channel_id}> for {member.username}.")
+
+        # Assign role
+        role_obj = guild.get_role(role_id)
+        if role_obj:
+            await member.add_role(role_obj)
+            logger.debug(f"✅ Assigned role '{role_obj.name}' to {member.username}.")
+        else:
+            logger.warning(f"⚠️ Role with ID {role_id} not found in the guild. Role assignment skipped.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error during on_member_join event: {e}")
 
 # -------------------------
 # Slash Commands
