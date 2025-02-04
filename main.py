@@ -1536,6 +1536,62 @@ async def weather_search(ctx: interactions.ComponentContext, city: str):
         logger.exception(f"Error in /weather command: {e}")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
+@interactions.slash_command(name="urban", description="Search Urban Dictionary for definitions.")
+@interactions.slash_option(
+    name="query",
+    description="What term do you want to search for?",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str):
+    """
+    Searches Urban Dictionary for the given term and displays the top result's definition.
+    """
+    try:
+        logger.debug(f"📖 User '{ctx.author.username}' (ID: {ctx.author.id}) searched for '{query}' on Urban Dictionary.")
+
+        await ctx.defer()
+        search_url = "https://api.urbandictionary.com/v0/define"
+        params = {"term": query}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(search_url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    if data.get("list"):
+                        top_result = data["list"][0]
+                        word = top_result.get("word", "No Word")
+                        definition = top_result.get("definition", "No Definition Available.").replace("\r\n", "\n")
+                        example = top_result.get("example", "").replace("\r\n", "\n") or "No example available."
+                        thumbs_up = top_result.get("thumbs_up", 0)
+                        thumbs_down = top_result.get("thumbs_down", 0)
+
+                        logger.debug(f"✅ Found definition for '{word}': {definition[:100]}... 👍 {thumbs_up} 👎 {thumbs_down}")
+
+                        embed = interactions.Embed(
+                            title=f"📖 Definition: {word}",
+                            description=definition,
+                            color=0x1D2439
+                        )
+                        embed.add_field(name="📝 Example", value=example, inline=False)
+                        embed.add_field(name="👍 Thumbs Up", value=str(thumbs_up), inline=True)
+                        embed.add_field(name="👎 Thumbs Down", value=str(thumbs_down), inline=True)
+                        embed.set_footer(text="🔍 Powered by Urban Dictionary")
+
+                        await ctx.send(embed=embed)
+                    else:
+                        logger.debug(f"⚠️ No definitions found for '{query}'.")
+                        await ctx.send("⚠️ No definitions found for your query. Try refining it.")
+
+                else:
+                    logger.warning(f"⚠️ Urban Dictionary API error: {response.status}")
+                    await ctx.send(f"⚠️ Error: Urban Dictionary API returned status code {response.status}.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /urban command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 # -------------------------
 # Bot Startup
 # -------------------------
