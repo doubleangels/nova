@@ -974,6 +974,15 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
     """
     try:
         await ctx.defer()
+
+        logger.debug(f"Received /wikipedia command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for query: '{query}'")
+
+        # Format query (capitalize first letter for consistency)
+        formatted_query = query.title()
+        logger.debug(f"Formatted query: '{formatted_query}'")
+
+        # Wikipedia API request
         search_url = "https://en.wikipedia.org/w/api.php"
         params = {
             "action": "query",
@@ -982,31 +991,49 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
             "srsearch": query,
             "utf8": 1
         }
+        logger.debug(f"Making API request to: {search_url} with params {params}")
+
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
                 if response.status == 200:
                     data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received Wikipedia data: {json.dumps(data, indent=2)}")
+
                     if data.get("query", {}).get("search"):
                         top_result = data["query"]["search"][0]
                         title = top_result.get("title", "No Title")
                         snippet = top_result.get("snippet", "No snippet available.")
                         snippet = snippet.replace("<span class=\"searchmatch\">", "**").replace("</span>", "**")
                         page_id = top_result.get("pageid")
+                        wiki_url = f"https://en.wikipedia.org/?curid={page_id}"
+
+                        # Log extracted data
+                        logger.debug(f"Extracted Wikipedia Data - Title: {title}, Page ID: {page_id}")
+
+                        # Create embed with emojis
                         embed = interactions.Embed(
-                            title=title,
-                            description=f"{snippet}...",
-                            url=f"https://en.wikipedia.org/?curid={page_id}",
+                            title=f"📖 **{title}**",
+                            description=f"📜 **Summary:** {snippet}...",
+                            url=wiki_url,
                             color=0xFFFFFF
                         )
+                        embed.add_field(name="🔗 Wikipedia Link", value=f"[Click Here]({wiki_url})", inline=False)
+                        embed.set_footer(text="Powered by Wikipedia API")
+
                         await ctx.send(embed=embed)
                     else:
-                        await ctx.send("No results found for your query. Try refining it.")
+                        logger.warning(f"No results found for query: '{formatted_query}'.")
+                        await ctx.send(f"❌ No results found for '**{formatted_query}**'. Try refining your search!")
                 else:
                     logger.warning(f"Wikipedia API error: {response.status}")
-                    await ctx.send(f"Error: Wikipedia API returned status code {response.status}.")
-    except Exception:
-        logger.exception("Error in /wikipedia command.")
-        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+                    await ctx.send(f"⚠️ Error: Wikipedia API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /wikipedia command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="imdb", description="Search for a movie or TV show on IMDB.")
 @interactions.slash_option(
