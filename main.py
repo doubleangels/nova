@@ -549,17 +549,23 @@ async def reminder_setup(ctx: interactions.ComponentContext, channel, role: inte
     Sets up the reminder channel and role in the database.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /remindersetup attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
-        logger.debug(f"Reminder setup requested by {ctx.author.username}. Channel: {channel.id}, Role: {role.id}")
+        logger.debug(f"⏰ Reminder setup requested by {ctx.author.username} ({ctx.author.id}). Channel: {channel.id}, Role: {role.id}")
+
+        # Store settings
         set_value("reminder_channel", channel.id)
         set_value("role", role.id)
-        await ctx.send(f"Reminder setup complete! Will use <#{channel.id}> for reminders and role <@&{role.id}>.")
-        logger.debug("Reminder setup successfully completed.")
-    except Exception:
-        logger.exception("Error in /remindersetup command.")
-        await ctx.send("An error occurred while setting up reminders.", ephemeral=True)
+
+        await ctx.send(f"✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#{channel.id}>.\n🎭 The role to be pinged is <@&{role.id}>.")
+        logger.debug("✅ Reminder setup successfully completed.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /remindersetup command: {e}")
+        await ctx.send("⚠️ An error occurred while setting up reminders. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="status", description="Check the current status of all reminders.")
 async def check_status(ctx: interactions.ComponentContext):
@@ -567,27 +573,41 @@ async def check_status(ctx: interactions.ComponentContext):
     Shows the channel/role set for reminders and how much time remains for each reminder.
     """
     try:
-        logger.debug(f"Status check requested by {ctx.author.username}.")
+        logger.debug(f"📊 Status check requested by {ctx.author.username} ({ctx.author.id}).")
+
+        # Fetch stored values
         channel_id = get_value("reminder_channel")
         role_id = get_value("role")
-        channel_str = f"<#{channel_id}>" if channel_id else "Not set!"
-        role_str = f"<@&{role_id}>" if role_id else "Not set!"
+
+        channel_str = f"📢 <#{channel_id}>" if channel_id else "⚠️ Not set!"
+        role_str = f"🎭 <@&{role_id}>" if role_id else "⚠️ Not set!"
+
+        logger.debug(f"Reminder Channel: {channel_id if channel_id else 'Not Set'}")
+        logger.debug(f"Reminder Role: {role_id if role_id else 'Not Set'}")
+
+        # Fetch reminder statuses
         reminders_info = []
         for reminder_key in ["disboard", "discadia", "dsme", "unfocused"]:
             data = get_reminder_data(reminder_key)
-            time_str = calculate_remaining_time(data.get("scheduled_time")) if data else "Not set!"
-            reminders_info.append(f"{reminder_key.capitalize()}: {time_str}")
+            time_str = calculate_remaining_time(data.get("scheduled_time")) if data else "⚠️ Not set!"
+            reminders_info.append(f"⏳ **{reminder_key.capitalize()}**: {time_str}")
+
+            logger.debug(f"Reminder {reminder_key}: {time_str}")
+
+        # Format the response
         summary = (
-            f"**Reminder Status:**\n"
-            f"Channel: {channel_str}\n"
-            f"Role: {role_str}\n\n"
+            f"📌 **Reminder Status:**\n"
+            f"📢 **Channel:** {channel_str}\n"
+            f"🎭 **Role:** {role_str}\n\n"
             + "\n".join(reminders_info)
         )
+
         await ctx.send(summary)
-        logger.debug("Status check completed.")
-    except Exception:
-        logger.exception("Error in /status command.")
-        await ctx.send("An error occurred while fetching status.", ephemeral=True)
+        logger.debug("✅ Status check completed successfully.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /status command: {e}")
+        await ctx.send("⚠️ An error occurred while fetching status. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
 async def test_reminders(ctx: interactions.ComponentContext):
@@ -595,19 +615,25 @@ async def test_reminders(ctx: interactions.ComponentContext):
     Sends a quick test ping to confirm the reminder channel/role setup works.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /testmessage attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
-        logger.debug(f"Test message requested by {ctx.author.username}.")
+        logger.debug(f"🔔 Test message requested by {ctx.author.username} ({ctx.author.id}).")
+
         role_id = get_value("role")
         if not role_id:
-            await ctx.send("No role has been set up for reminders.", ephemeral=True)
+            logger.warning("⚠️ No role has been set up for reminders.")
+            await ctx.send("⚠️ No role has been set up for reminders.", ephemeral=True)
             return
-        await ctx.send(f"<@&{role_id}> This is a test message!")
-        logger.debug("Test reminder message sent.")
-    except Exception:
-        logger.exception("Error in /testmessage command.")
-        await ctx.send("Could not send test message.", ephemeral=True)
+
+        await ctx.send(f"🔔 <@&{role_id}> This is a test reminder message!")
+        logger.debug("✅ Test reminder message successfully sent.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /testmessage command: {e}")
+        await ctx.send("⚠️ Could not send test message. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="dev", description="Maintain developer tag.")
 async def dev(ctx: interactions.ComponentContext):
@@ -615,15 +641,19 @@ async def dev(ctx: interactions.ComponentContext):
     A placeholder command for developer maintenance.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /dev attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
-        logger.debug(f"Developer tag maintenance requested by {ctx.author.username}.")
-        await ctx.send("Developer tag maintained!")
-        logger.debug("Developer tag maintenance completed.")
-    except Exception:
-        logger.exception("Error in /dev command.")
-        await ctx.send("An error occurred while maintaining developer tag.", ephemeral=True)
+        logger.debug(f"👨‍💻 Developer tag maintenance requested by {ctx.author.username} ({ctx.author.id}).")
+
+        await ctx.send("🛠️ Developer tag maintained!")
+        logger.debug("✅ Developer tag maintenance completed.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /dev command: {e}")
+        await ctx.send("⚠️ An error occurred while maintaining the developer tag. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="source", description="Get links for the bot's resources.")
 async def source(ctx: interactions.ComponentContext):
@@ -631,21 +661,26 @@ async def source(ctx: interactions.ComponentContext):
     Responds with an embed containing links for the bot's resources.
     """
     try:
+        logger.debug(f"Received /source command from {ctx.author.username} ({ctx.author.id})")
+
         embed = interactions.Embed(
-            title="Bot Resources",
+            title="📜 **Bot Resources**",
             description="Here are the links for the bot's resources:",
             color=0x00ff00,
         )
-        embed.add_field(name="GitHub Repository", value="https://github.com/doubleangels/Nova", inline=False)
+        embed.add_field(name="🖥️ GitHub Repository", value="[🔗 Click Here](https://github.com/doubleangels/Nova)", inline=False)
         embed.add_field(
-            name="Supabase Database",
-            value="https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public",
+            name="🗄️ Supabase Database",
+            value="[🔗 Click Here](https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public)",
             inline=False
         )
+
         await ctx.send(embeds=[embed])
-    except Exception:
-        logger.exception("Error in /source command.")
-        await ctx.send("An error occurred while processing your request.", ephemeral=True)
+        logger.debug(f"✅ Successfully sent bot resources embed to {ctx.author.username}.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /source command: {e}")
+        await ctx.send("⚠️ An error occurred while processing your request.", ephemeral=True)
 
 @interactions.slash_command(name="togglebackupmode", description="Toggle role assignment for new members.")
 @interactions.slash_option(
@@ -659,16 +694,24 @@ async def toggle_backup_mode(ctx: interactions.ComponentContext, enabled: bool):
     Enables or disables backup mode for auto-role assignment.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /togglebackupmode attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
+        logger.debug(f"Received /togglebackupmode command from {ctx.author.username} ({ctx.author.id})")
+        logger.debug(f"Backup mode toggle: {'Enabled' if enabled else 'Disabled'}")
+
+        # Update backup mode setting
         set_value("backup_mode_enabled", enabled)
-        status = "enabled" if enabled else "disabled"
-        await ctx.send(f"Backup mode has been {status}.")
-        logger.debug(f"Backup mode {status} by {ctx.author.username}.")
-    except Exception:
-        logger.exception("Error in /togglebackupmode command.")
-        await ctx.send("An error occurred while toggling backup mode.", ephemeral=True)
+        status = "✅ **enabled**" if enabled else "❌ **disabled**"
+
+        await ctx.send(f"🔄 Backup mode has been {status}.")
+        logger.debug(f"Backup mode successfully {status} by {ctx.author.username}.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /togglebackupmode command: {e}")
+        await ctx.send("⚠️ An error occurred while toggling backup mode. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="backupmode", description="Configure the role/channel used by backup mode.")
 @interactions.slash_option(
@@ -688,18 +731,26 @@ async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: i
     Sets which channel to welcome new members in and which role to assign them.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /backupmode attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
+        logger.debug(f"Received /backupmode command from {ctx.author.username} ({ctx.author.id})")
+        logger.debug(f"Setting backup mode: Channel=<#{channel.id}>, Role=<@&{role.id}>")
+
+        # Store settings
         set_value("backup_mode_id", role.id)
         set_value("backup_mode_channel", channel.id)
+
         await ctx.send(
-            f"Channel set to <#{channel.id}>. Role to assign: <@&{role.id}>. Backup mode will take effect if enabled."
+            f"🔄 **Backup Mode Configured!**\n📢 Welcome messages will be sent in <#{channel.id}>.\n🎭 New members will be assigned the role: <@&{role.id}>."
         )
-        logger.debug(f"Backup mode setup by {ctx.author.username}: channel={channel.id}, role={role.id}")
-    except Exception:
-        logger.exception("Error in /backupmode command.")
-        await ctx.send("An error occurred while configuring backup mode.", ephemeral=True)
+        logger.debug(f"✅ Backup mode successfully set: Channel={channel.id}, Role={role.id}")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /backupmode command: {e}")
+        await ctx.send("⚠️ An error occurred while configuring backup mode. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="trollmode", description="Toggle kicking of accounts younger than a specified age.")
 @interactions.slash_option(
@@ -719,17 +770,25 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     Kicks new members if their account is under the specified age when troll mode is enabled.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /trollmode attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
+        logger.debug(f"Received /trollmode command from {ctx.author.username} ({ctx.author.id})")
+        logger.debug(f"Troll mode toggle: {'Enabled' if enabled else 'Disabled'}, Minimum age: {age} days")
+
+        # Update troll mode settings
         set_value("troll_mode_enabled", enabled)
         set_value("troll_mode_account_age", age)
-        status = "enabled" if enabled else "disabled"
-        await ctx.send(f"Troll mode has been {status}. Minimum account age: {age} days.")
+
+        status = "✅ **enabled**" if enabled else "❌ **disabled**"
+        await ctx.send(f"👹 Troll mode has been {status}. Minimum account age: **{age}** days.")
         logger.debug(f"Troll mode {status} by {ctx.author.username}; account age threshold={age} days.")
-    except Exception:
-        logger.exception("Error in /trollmode command.")
-        await ctx.send("An error occurred while toggling troll mode.", ephemeral=True)
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /trollmode command: {e}")
+        await ctx.send("⚠️ An error occurred while toggling troll mode. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(
     name="fix",
@@ -746,32 +805,49 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
     Mimics logic to write reminder data to the database and fix broken entries.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /fix attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
-        if service == "disboard":
-            seconds = 7200  # 2 hours
-        elif service == "dsme":
-            seconds = 43200  # 12 hours
-        elif service == "unfocused":
-            seconds = 21600  # 6 hours
-        elif service == "discadia":
-            seconds = 43200  # 12 hours
-        else:
-            await ctx.send("Invalid service name provided. Please use one of: disboard, dsme, unfocused, discadia.", ephemeral=True)
+        logger.debug(f"Received /fix command from {ctx.author.username} ({ctx.author.id}) for service: {service}")
+
+        # Determine delay based on service
+        service_delays = {
+            "disboard": 7200,  # 2 hours
+            "dsme": 43200,  # 12 hours
+            "unfocused": 21600,  # 6 hours
+            "discadia": 43200  # 12 hours
+        }
+
+        if service not in service_delays:
+            logger.warning(f"Invalid service name provided: {service}")
+            await ctx.send("⚠️ Invalid service name provided. Please use one of: **disboard, dsme, unfocused, discadia**.", ephemeral=True)
             return
+
+        seconds = service_delays[service]
+        logger.debug(f"Service '{service}' selected with a delay of {seconds} seconds.")
+
+        # Generate unique reminder ID and timestamp
         reminder_id = str(uuid.uuid4())
+        scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat()
+
         reminder_data = {
             "state": True,
-            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(),
+            "scheduled_time": scheduled_time,
             "reminder_id": reminder_id
         }
+
+        # Save to database
         set_reminder_data(service, reminder_data)
-        await ctx.send("Fix logic applied!.")
-        logger.debug("Fix key created in reminders table.")
-    except Exception:
-        logger.exception("Error in /fix command.")
-        await ctx.send("An error occurred while applying fix logic.", ephemeral=True)
+        logger.debug(f"🔧 Fix logic applied: {reminder_data}")
+
+        await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
+        logger.debug(f"✅ Fix logic successfully applied for service: {service}")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /fix command: {e}")
+        await ctx.send("⚠️ An error occurred while applying fix logic. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to default values.")
 async def reset_reminders(ctx: interactions.ComponentContext):
@@ -779,23 +855,29 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     Resets all reminders in the 'reminders' table to their default values.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("You do not have permission to use this command.", ephemeral=True)
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username} ({ctx.author.id})")
         return
+
     try:
+        logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
+
         default_data = {
             "state": False,
             "scheduled_time": None,
             "reminder_id": None
         }
         reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
+
         for key in reminder_keys:
             set_reminder_data(key, default_data)
-            logger.debug(f"Reset reminder data for key: {key}")
-        await ctx.send("All reminders have been reset to default values.")
-        logger.debug("All reminders successfully reset.")
-    except Exception:
-        logger.exception("Error in /resetreminders command.")
-        await ctx.send("An error occurred while resetting reminders. Please try again later.", ephemeral=True)
+            logger.debug(f"🔄 Reset reminder data for key: {key}")
+
+        await ctx.send("✅ All reminders have been reset to default values.")
+        logger.debug("✅ All reminders successfully reset.")
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /resetreminders command: {e}")
+        await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
 
 # -------------------------
 # Search / AI Commands
