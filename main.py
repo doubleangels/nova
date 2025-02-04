@@ -819,37 +819,69 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
     """
     try:
         await ctx.defer()
-        results = max(1, min(results, 10))
+
+        logger.debug(f"Received /google command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for query: '{query}', requested results: {results}")
+
+        # Format query (capitalize first letter for consistency)
+        formatted_query = query.title()
+        results = max(1, min(results, 10))  # Ensure results are within 1-10
+        logger.debug(f"Formatted query: '{formatted_query}', adjusted results: {results}")
+
+        # Google API request
         search_url = "https://www.googleapis.com/customsearch/v1"
-        params = {"key": GOOGLE_API_KEY, "cx": SEARCH_ENGINE_ID, "q": query, "num": results}
+        params = {
+            "key": GOOGLE_API_KEY,
+            "cx": SEARCH_ENGINE_ID,
+            "q": query,
+            "num": results
+        }
+        logger.debug(f"Making API request to: {search_url} with params {params}")
+
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
                 if response.status == 200:
                     data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received Google Search data: {json.dumps(data, indent=2)}")
+
                     if "items" in data and data["items"]:
                         embeds = []
                         for item in data["items"]:
                             title = item.get("title", "No Title Found")
                             link = item.get("link", "No Link Found")
                             snippet = item.get("snippet", "No Description Found")
+
+                            # Log extracted data
+                            logger.debug(f"Extracted Google Search Result - Title: {title}, Link: {link}")
+
+                            # Create embed with emojis
                             embed = interactions.Embed(
-                                title=title,
-                                description=f"{snippet}\n[Link]({link})",
+                                title=f"🔍 **{title}**",
+                                description=f"📜 **Summary:** {snippet}\n🔗 [Read More]({link})",
                                 color=0x1A73E8
                             )
+                            embed.set_footer(text="Powered by Google Search")
+
                             embeds.append(embed)
+
                         if embeds:
                             await ctx.send(embeds=embeds)
                         else:
-                            await ctx.send("No results found for your query.")
+                            logger.warning(f"No search results found for query: '{formatted_query}'.")
+                            await ctx.send(f"❌ No search results found for '**{formatted_query}**'. Try refining your query!")
                     else:
-                        await ctx.send("No results found for your query.")
+                        logger.warning(f"No search results found for query: '{formatted_query}'.")
+                        await ctx.send(f"❌ No search results found for '**{formatted_query}**'. Try refining your search!")
                 else:
                     logger.warning(f"Google API error: {response.status}")
-                    await ctx.send(f"Error: Google API returned status code {response.status}.")
-    except Exception:
-        logger.exception("Error in /search command.")
-        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+                    await ctx.send(f"⚠️ Error: Google API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /google command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="googleimage", description="Search Google for images and return the top results.")
 @interactions.slash_option(
