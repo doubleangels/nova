@@ -1064,6 +1064,8 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
         logger.exception("Error in /imdb command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
+import json  # Import json for pretty-printing API response
+
 @interactions.slash_command(name="define", description="Get the definition and synonyms of a word.")
 @interactions.slash_option(
     name="word",
@@ -1077,38 +1079,66 @@ async def dictionary_search(ctx: interactions.ComponentContext, word: str):
     """
     try:
         await ctx.defer()
+
+        logger.debug(f"Received /define command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for word: '{word}'")
+
+        # Format word (capitalize for consistency)
+        word = word.lower()
+        logger.debug(f"Formatted word: '{word}'")
+
+        # Dictionary API request
         url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+        logger.debug(f"Making API request to: {url}")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
                 if response.status == 200:
                     data = await response.json()
 
+                    # Log the full API response for debugging
+                    logger.debug(f"Received dictionary data: {json.dumps(data, indent=2)}")
+
                     if isinstance(data, list) and data:
                         entry = data[0]
-                        definitions = entry["meanings"][0]["definitions"]
-                        definition_text = definitions[0]["definition"] if definitions else "No definition found."
-                        synonyms = entry["meanings"][0].get("synonyms", [])
+                        meanings = entry.get("meanings", [])
+                        
+                        if meanings:
+                            definitions = meanings[0].get("definitions", [])
+                            definition_text = definitions[0].get("definition", "No definition found.") if definitions else "No definition available."
 
-                        synonyms_text = ", ".join(synonyms[:5]) if synonyms else "No synonyms available."
+                            synonyms = meanings[0].get("synonyms", [])
+                            synonyms_text = ", ".join(synonyms[:5]) if synonyms else "No synonyms available."
 
-                        embed = interactions.Embed(
-                            title=f"Definition of {word}",
-                            description=definition_text,
-                            color=0xD3D3D3
-                        )
-                        embed.add_field(name="Synonyms", value=synonyms_text, inline=False)
-                        embed.set_footer(text="Powered by Free Dictionary API")
+                            # Log extracted data
+                            logger.debug(f"Extracted definition: {definition_text}")
+                            logger.debug(f"Extracted synonyms: {synonyms_text}")
 
-                        await ctx.send(embed=embed)
+                            # Create embed with emojis
+                            embed = interactions.Embed(
+                                title=f"📖 Definition of **{word.capitalize()}**",
+                                description=f"📜 **Definition:** {definition_text}",
+                                color=0xD3D3D3
+                            )
+                            embed.add_field(name="🟢 Synonyms", value=f"📌 {synonyms_text}", inline=False)
+                            embed.set_footer(text="Powered by Free Dictionary API")
+
+                            await ctx.send(embed=embed)
+                        else:
+                            logger.warning(f"No definitions found for '{word}'.")
+                            await ctx.send(f"❌ No definition found for '**{word}**'.")
                     else:
-                        await ctx.send(f"No definition found for '{word}'.")
+                        logger.warning(f"API returned empty response for '{word}'.")
+                        await ctx.send(f"❌ No definition found for '**{word}**'.")
                 else:
                     logger.warning(f"Dictionary API error: {response.status}")
-                    await ctx.send(f"Error: Dictionary API returned status code {response.status}.")
-    except Exception:
-        logger.exception("Error in /define command.")
-        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+                    await ctx.send(f"⚠️ Error: Dictionary API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /define command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 
 @interactions.slash_command(name="weather", description="Get the current weather for a city.")
 @interactions.slash_option(
