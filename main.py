@@ -378,20 +378,28 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
     try:
         channel = await get_channel("reminder_channel")
         if not channel:
-            logger.warning("No valid reminder channel found; cannot send scheduled message.")
+            logger.warning("⚠️ No valid reminder channel found; cannot send scheduled message.")
             return
+
         if initial_message:
-            logger.debug(f"Sending initial message for '{key}': {initial_message}")
+            logger.debug(f"📢 Sending initial message for '{key}': {initial_message}")
             await channel.send(initial_message)
+
+        logger.debug(f"⏳ Waiting {interval} seconds before sending reminder for '{key}'...")
         await asyncio.sleep(interval)
-        logger.debug(f"Sending reminder message for '{key}': {reminder_message}")
+
+        logger.debug(f"🔔 Sending reminder message for '{key}': {reminder_message}")
         await channel.send(reminder_message)
+
+        # Cleanup reminder
         reminder_data = get_reminder_data(key)
         if reminder_data:
             delete_reminder_data(key)
-            logger.debug(f"Reminder {reminder_data['reminder_id']} for {key.title()} has been cleaned up.")
-    except Exception:
-        logger.exception("Error in send_scheduled_message.")
+            logger.debug(f"✅ Reminder {reminder_data['reminder_id']} for '{key.title()}' has been cleaned up.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in send_scheduled_message: {e}")
+
 
 async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
     """
@@ -400,8 +408,9 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
     try:
         existing_data = get_reminder_data(key)
         if existing_data and existing_data.get("scheduled_time"):
-            logger.debug(f"{key.capitalize()} already has a timer set.")
+            logger.debug(f"⏳ {key.capitalize()} already has a timer set. Skipping new reminder.")
             return
+
         reminder_id = str(uuid.uuid4())
         reminder_data = {
             "state": True,
@@ -409,16 +418,19 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
             "reminder_id": reminder_id
         }
         set_reminder_data(key, reminder_data)
+        logger.debug(f"📝 Scheduled new reminder: {key.capitalize()} | ID: {reminder_id} | Interval: {interval} seconds")
+
         role = get_role()
         if role:
             await send_scheduled_message(
                 initial_message,
-                f"<@&{role}> {reminder_message}",
+                f"🔔 <@&{role}> {reminder_message}",
                 interval,
                 key
             )
-    except Exception:
-        logger.exception(f"Error handling reminder for key '{key}'.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error handling reminder for key '{key}': {e}")
 
 # -------------------------
 # Event Listeners
