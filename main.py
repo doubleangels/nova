@@ -1095,7 +1095,7 @@ async def dictionary_search(ctx: interactions.ComponentContext, word: str):
                         embed = interactions.Embed(
                             title=f"Definition of {word}",
                             description=definition_text,
-                            color=0x007BFF
+                            color=0xD3D3D3
                         )
                         embed.add_field(name="Synonyms", value=synonyms_text, inline=False)
                         embed.set_footer(text="Powered by Free Dictionary API")
@@ -1149,7 +1149,7 @@ async def weather_search(ctx: interactions.ComponentContext, city: str):
                     embed = interactions.Embed(
                         title=f"Weather in {city}",
                         description=f"**{weather}**",
-                        color=0x1E90FF
+                        color=0xFF6E42
                     )
                     embed.add_field(name="Temperature", value=f"{temp}°C (Feels like {feels_like}°C)", inline=True)
                     embed.add_field(name="Humidity", value=f"{humidity}%", inline=True)
