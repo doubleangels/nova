@@ -919,6 +919,15 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
     """
     try:
         await ctx.defer()
+
+        logger.debug(f"Received /youtube command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for query: '{query}'")
+
+        # Format query (capitalize first letter for consistency)
+        formatted_query = query.title()
+        logger.debug(f"Formatted query: '{formatted_query}'")
+
+        # YouTube API request
         search_url = "https://www.googleapis.com/youtube/v3/search"
         params = {
             "key": GOOGLE_API_KEY,
@@ -927,39 +936,55 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
             "type": "video",
             "maxResults": 1
         }
+        logger.debug(f"Making API request to: {search_url} with params {params}")
+
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
                 if response.status == 200:
                     data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received YouTube data: {json.dumps(data, indent=2)}")
+
                     if "items" in data and data["items"]:
-                        embeds = []
-                        for item in data["items"]:
-                            video_id = item["id"].get("videoId", "")
-                            snippet = item["snippet"]
-                            title = snippet.get("title", "No Title")
-                            description = snippet.get("description", "No Description")
-                            thumbnail = snippet.get("thumbnails", {}).get("high", {}).get("url", "")
-                            embed = interactions.Embed(
-                                title=title,
-                                description=description,
-                                url=f"https://www.youtube.com/watch?v={video_id}",
-                                color=0xFF0000
-                            )
-                            if thumbnail:
-                                embed.set_thumbnail(url=thumbnail)
-                            embeds.append(embed)
-                        if embeds:
-                            await ctx.send(embeds=embeds)
-                        else:
-                            await ctx.send("No video results found for your query.")
+                        item = data["items"][0]
+                        video_id = item["id"].get("videoId", "")
+                        snippet = item["snippet"]
+                        title = snippet.get("title", "No Title")
+                        description = snippet.get("description", "No Description")
+                        thumbnail = snippet.get("thumbnails", {}).get("high", {}).get("url", "")
+
+                        video_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else "N/A"
+
+                        # Log extracted data
+                        logger.debug(f"Extracted YouTube Video - Title: {title}, Video ID: {video_id}")
+
+                        # Create embed with emojis
+                        embed = interactions.Embed(
+                            title=f"🎬 **{title}**",
+                            description=f"📜 **Description:** {description}",
+                            url=video_url,
+                            color=0xFF0000
+                        )
+                        embed.add_field(name="🔗 Watch on YouTube", value=f"[Click Here]({video_url})", inline=False)
+
+                        if thumbnail:
+                            embed.set_thumbnail(url=thumbnail)
+
+                        embed.set_footer(text="Powered by YouTube Data API")
+
+                        await ctx.send(embed=embed)
                     else:
-                        await ctx.send("No video results found for your query.")
+                        logger.warning(f"No video results found for query: '{formatted_query}'.")
+                        await ctx.send(f"❌ No video results found for '**{formatted_query}**'. Try another search!")
                 else:
                     logger.warning(f"YouTube API error: {response.status}")
-                    await ctx.send(f"Error: YouTube API returned status code {response.status}.")
-    except Exception:
-        logger.exception("Error in /youtube command.")
-        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+                    await ctx.send(f"⚠️ Error: YouTube API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /youtube command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="wikipedia", description="Search Wikipedia for articles and return the top result.")
 @interactions.slash_option(
