@@ -208,11 +208,18 @@ bot_ids = {
 
 logger.info("Starting the bot...")
 
+import signal
+import sys
+import datetime
+import asyncio
+import aiohttp
+import pytz
+
 def handle_interrupt(signal_num, frame):
     """
     Handles shutdown signals (SIGINT, SIGTERM) gracefully.
     """
-    logger.info("Gracefully shutting down.")
+    logger.info("⚠️ Gracefully shutting down.")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_interrupt)
@@ -225,11 +232,12 @@ def get_role():
     try:
         role = get_value("role")
         if not role:
-            logger.debug("No role has been set up for reminders.")
+            logger.warning("⚠️ No role has been set up for reminders.")
             return None
+        logger.debug(f"🎭 Retrieved reminder role: {role}")
         return role
-    except Exception:
-        logger.exception("An error occurred while fetching the reminder role.")
+    except Exception as e:
+        logger.exception(f"⚠️ Error while fetching the reminder role: {e}")
         return None
 
 async def get_channel(channel_key):
@@ -239,11 +247,12 @@ async def get_channel(channel_key):
     try:
         channel_id = get_value(channel_key)
         if not channel_id:
-            logger.debug(f"No channel has been set for '{channel_key}'.")
+            logger.warning(f"⚠️ No channel has been set for '{channel_key}'.")
             return None
+        logger.debug(f"📢 Retrieved reminder channel: {channel_id}")
         return bot.get_channel(channel_id)
-    except Exception:
-        logger.exception("An error occurred while fetching the reminder channel.")
+    except Exception as e:
+        logger.exception(f"⚠️ Error while fetching the reminder channel: {e}")
         return None
 
 def calculate_remaining_time(scheduled_time):
@@ -251,19 +260,21 @@ def calculate_remaining_time(scheduled_time):
     Calculate the remaining time until the scheduled time.
     """
     if not scheduled_time:
-        return "Not set!"
+        return "⏳ Not set!"
     try:
         now = datetime.datetime.now(tz=pytz.UTC)
         scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
         remaining_time = scheduled_dt - now
         if remaining_time <= datetime.timedelta(seconds=0):
-            return "Expired!"
+            return "⏰ Expired!"
         hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
-        return f"{hours:02}:{minutes:02}:{seconds:02}"
-    except Exception:
-        logger.exception("An error occurred while calculating remaining time.")
-        return "Error calculating time!"
+        time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+        logger.debug(f"🕒 Remaining time calculated: {time_str}")
+        return time_str
+    except Exception as e:
+        logger.exception(f"⚠️ Error calculating remaining time: {e}")
+        return "⚠️ Error calculating time!"
 
 async def safe_task(task):
     """
@@ -271,8 +282,8 @@ async def safe_task(task):
     """
     try:
         await task
-    except Exception:
-        logger.exception("Exception in scheduled task.")
+    except Exception as e:
+        logger.exception(f"⚠️ Exception in scheduled task: {e}")
 
 async def reschedule_reminder(key, role):
     """
@@ -281,51 +292,59 @@ async def reschedule_reminder(key, role):
     try:
         reminder_data = get_reminder_data(key)
         if not reminder_data:
-            logger.debug(f"No reminder data found for {key.title()}.")
+            logger.debug(f"⚠️ No reminder data found for {key.title()}.")
             return
+        
         scheduled_time = reminder_data.get("scheduled_time")
         reminder_id = reminder_data.get("reminder_id")
+
         if scheduled_time and reminder_id:
             scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
             now = datetime.datetime.now(tz=pytz.UTC)
+
             if scheduled_dt <= now:
-                logger.debug(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
+                logger.debug(f"❌ Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
                 delete_reminder_data(key)
                 return
+
             remaining_time = scheduled_dt - now
-            logger.debug(f"Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
+            logger.debug(f"🔄 Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
+            
             asyncio.create_task(
                 safe_task(
                     send_scheduled_message(
                         initial_message=None,
                         reminder_message=(
-                            f"<@&{role}> It's time to bump on {key.title()}!"
+                            f"🔔 <@&{role}> It's time to bump on {key.title()}!"
                             if key in ["disboard", "dsme", "discadia"]
-                            else f"<@&{role}> It's time to boop on {key.title()}!"
+                            else f"🔔 <@&{role}> It's time to boop on {key.title()}!"
                         ),
                         interval=remaining_time.total_seconds(),
                         key=key
                     )
                 )
             )
-    except Exception:
-        logger.exception("Error while attempting to reschedule a reminder.")
+    except Exception as e:
+        logger.exception(f"⚠️ Error while attempting to reschedule a reminder: {e}")
 
 async def get_coordinates(city: str):
     """
     Fetch latitude and longitude for a given city using OpenStreetMap (Nominatim).
     """
     try:
-        url = f"https://nominatim.openstreetmap.org/search"
+        url = "https://nominatim.openstreetmap.org/search"
         params = {"q": city, "format": "json"}
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 data = await response.json()
                 if data:
-                    return float(data[0]["lat"]), float(data[0]["lon"])
-    except Exception:
-        logger.exception("Error fetching city coordinates.")
+                    lat, lon = float(data[0]["lat"]), float(data[0]["lon"])
+                    logger.debug(f"🌍 Retrieved coordinates for {city}: ({lat}, {lon})")
+                    return lat, lon
+    except Exception as e:
+        logger.exception(f"⚠️ Error fetching city coordinates: {e}")
+
     return None, None
 
 # -------------------------
