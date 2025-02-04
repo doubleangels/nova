@@ -1064,8 +1064,6 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
         logger.exception("Error in /imdb command.")
         await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
 
-import json  # Import json for pretty-printing API response
-
 @interactions.slash_command(name="define", description="Get the definition and synonyms of a word.")
 @interactions.slash_option(
     name="word",
