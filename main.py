@@ -1021,13 +1021,28 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
     """
     try:
         await ctx.defer()
+
+        logger.debug(f"Received /imdb command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for title: '{title}'")
+
+        # Format title (capitalize for consistency)
+        formatted_title = title.title()
+        logger.debug(f"Formatted title: '{formatted_title}'")
+
+        # OMDb API request
         search_url = "http://www.omdbapi.com/"
         params = {"t": title, "apikey": OMDB_API_KEY}
+        logger.debug(f"Making API request to: {search_url} with params {params}")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
                 if response.status == 200:
                     data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received IMDb data: {json.dumps(data, indent=2)}")
 
                     if data.get("Response") == "True":
                         title = data.get("Title", "Unknown")
@@ -1040,14 +1055,18 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
 
                         imdb_link = f"https://www.imdb.com/title/{imdb_id}" if imdb_id else "N/A"
 
+                        # Log extracted data
+                        logger.debug(f"Extracted IMDb Data - Title: {title}, Year: {year}, Genre: {genre}, IMDb Rating: {imdb_rating}")
+
+                        # Create embed with emojis
                         embed = interactions.Embed(
-                            title=f"{title} ({year})",
-                            description=plot,
+                            title=f"🎬 **{title} ({year})**",
+                            description=f"📜 **Plot:** {plot}",
                             color=0xFFD700
                         )
-                        embed.add_field(name="Genre", value=genre, inline=True)
-                        embed.add_field(name="IMDB Rating", value=imdb_rating, inline=True)
-                        embed.add_field(name="IMDB Link", value=f"[Click Here]({imdb_link})", inline=False)
+                        embed.add_field(name="🎭 Genre", value=f"🎞 {genre}", inline=True)
+                        embed.add_field(name="⭐ IMDB Rating", value=f"🌟 {imdb_rating}", inline=True)
+                        embed.add_field(name="🔗 IMDB Link", value=f"[Click Here]({imdb_link})", inline=False)
 
                         if poster and poster != "N/A":
                             embed.set_thumbnail(url=poster)
@@ -1056,13 +1075,15 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
 
                         await ctx.send(embed=embed)
                     else:
-                        await ctx.send("No results found for that title. Try a different one!")
+                        logger.warning(f"No results found for title: '{formatted_title}'.")
+                        await ctx.send(f"❌ No results found for '**{formatted_title}**'. Try another title!")
                 else:
                     logger.warning(f"OMDb API error: {response.status}")
-                    await ctx.send(f"Error: OMDb API returned status code {response.status}.")
-    except Exception:
-        logger.exception("Error in /imdb command.")
-        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+                    await ctx.send(f"⚠️ Error: OMDb API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /imdb command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 
 @interactions.slash_command(name="define", description="Get the definition and synonyms of a word.")
 @interactions.slash_option(
