@@ -1894,7 +1894,6 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
 # -------------------------
 try:
     bot.start(TOKEN)
-    run_healthcheck()
 except Exception:
     logger.exception("Exception occurred during bot startup!")
     sys.exit(1)
