@@ -1699,7 +1699,7 @@ async def news_search(ctx: interactions.ComponentContext, topic: str):
         logger.debug(f"User input for topic: '{topic}'")
 
         # Calculate date from 3 days ago
-        three_days_ago = (datetime.utcnow() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+        three_days_ago = (datetime.datetime.utcnow() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
 
         # Construct NewsAPI request URL
         news_url = f"https://newsapi.org/v2/everything"
