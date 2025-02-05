@@ -263,7 +263,7 @@ def calculate_remaining_time(scheduled_time):
     Calculate the remaining time until the scheduled time.
     """
     if not scheduled_time:
-        return "⏳ Not set!"
+        return "Not set!"
     try:
         now = datetime.datetime.now(tz=pytz.UTC)
         scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
