@@ -16,6 +16,7 @@ services:
        - IMAGE_SEARCH_ENGINE_ID=
        - OMDB_API_KEY=
        - PIRATEWEATHER_API_KEY=
+       - MAL_CLIENT_ID=
        - SUPABASE_URL=
        - SUPABASE_KEY=
 

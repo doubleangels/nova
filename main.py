@@ -56,6 +56,7 @@ required_env_vars = {
     "IMAGE_SEARCH_ENGINE_ID": os.getenv("IMAGE_SEARCH_ENGINE_ID"),
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
+    "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -72,6 +73,7 @@ SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
 IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
+MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1589,6 +1591,101 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /urban command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+import aiohttp
+import interactions
+import logging
+
+# Replace with your MAL API Client ID
+MAL_CLIENT_ID = "your_mal_client_id"
+
+logger = logging.getLogger(__name__)
+
+@interactions.slash_command(name="mal", description="Search for an anime on MyAnimeList.")
+@interactions.slash_option(
+    name="title",
+    description="Enter the anime title.",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def mal_search(ctx: interactions.ComponentContext, title: str):
+    """
+    Searches MyAnimeList for the given anime title and displays relevant information.
+    """
+    try:
+        await ctx.defer()
+
+        logger.debug(f"Received /mal command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for title: '{title}'")
+
+        # Format title for consistency
+        formatted_title = title.title()
+        logger.debug(f"Formatted title: '{formatted_title}'")
+
+        # MyAnimeList API request
+        search_url = f"https://api.myanimelist.net/v2/anime?q={title}&limit=1"
+        headers = {"X-MAL-CLIENT-ID": MAL_CLIENT_ID}
+        logger.debug(f"Making API request to: {search_url} with headers {headers}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(search_url, headers=headers) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
+                if response.status == 200:
+                    data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received MAL data: {data}")
+
+                    if "data" in data and data["data"]:
+                        anime = data["data"][0]["node"]
+                        anime_id = anime.get("id", None)
+                        title = anime.get("title", "Unknown")
+                        image_url = anime.get("main_picture", {}).get("medium", None)
+                        mal_link = f"https://myanimelist.net/anime/{anime_id}" if anime_id else "N/A"
+
+                        # Fetching more details
+                        details_url = f"https://api.myanimelist.net/v2/anime/{anime_id}?fields=id,title,synopsis,mean,genres,start_date"
+                        async with session.get(details_url, headers=headers) as details_response:
+                            if details_response.status == 200:
+                                details_data = await details_response.json()
+                                synopsis = details_data.get("synopsis", "No synopsis available.")
+                                rating = details_data.get("mean", "N/A")
+                                genres = ", ".join([g["name"] for g in details_data.get("genres", [])]) or "Unknown"
+                                release_date = details_data.get("start_date", "Unknown")
+
+                                # Log extracted data
+                                logger.debug(f"Extracted MAL Data - Title: {title}, Rating: {rating}, Genres: {genres}")
+
+                                # Create embed with emojis
+                                embed = interactions.Embed(
+                                    title=f"📺 **{title}**",
+                                    description=f"📜 **Synopsis:** {synopsis[:500]}...",  # Truncate long descriptions
+                                    color=0x2E51A2
+                                )
+                                embed.add_field(name="🎭 Genre", value=f"🎞 {genres}", inline=True)
+                                embed.add_field(name="⭐ MAL Rating", value=f"🌟 {rating}", inline=True)
+                                embed.add_field(name="📅 Release Date", value=f"📆 {release_date}", inline=True)
+                                embed.add_field(name="🔗 MAL Link", value=f"[Click Here]({mal_link})", inline=False)
+
+                                if image_url:
+                                    embed.set_thumbnail(url=image_url)
+
+                                embed.set_footer(text="Powered by MyAnimeList API")
+
+                                await ctx.send(embed=embed)
+                            else:
+                                logger.warning(f"Error fetching extra details from MAL: {details_response.status}")
+                                await ctx.send("⚠️ Error fetching additional anime details. Please try again later.")
+                    else:
+                        logger.warning(f"No results found for title: '{formatted_title}'.")
+                        await ctx.send(f"❌ No anime found for '**{formatted_title}**'. Try another title!")
+                else:
+                    logger.warning(f"MyAnimeList API error: {response.status}")
+                    await ctx.send(f"⚠️ Error: MAL API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /mal command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
