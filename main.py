@@ -10,7 +10,6 @@ import logging
 import json
 import aiohttp
 import sentry_sdk
-from html.parser import HTMLParser
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -453,53 +452,6 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
 
     except Exception as e:
         logger.exception(f"⚠️ Error handling reminder for key '{key}': {e}")
-
-# -------------------------
-# SteamDB data class
-# -------------------------
-class SteamDBParser(HTMLParser):
-    """
-    Custom HTML parser to extract SteamDB stats from raw HTML.
-    """
-    def __init__(self):
-        super().__init__()
-        self.in_stat_div = False
-        self.stat_labels = []
-        self.stat_values = []
-        self.current_tag = ""
-
-    def handle_starttag(self, tag, attrs):
-        attrs = dict(attrs)
-        if "class" in attrs:
-            if "app-stat" in attrs["class"]:  # Identify stat divs
-                self.in_stat_div = True
-            elif "price-table__row-data price-table__row-data--price" in attrs["class"]:
-                self.current_tag = "price"
-
-    def handle_endtag(self, tag):
-        if self.in_stat_div and tag == "div":
-            self.in_stat_div = False
-        if tag == "td":
-            self.current_tag = ""
-
-    def handle_data(self, data):
-        if self.in_stat_div:
-            if not self.stat_labels:
-                self.stat_labels.append(data.strip())
-            else:
-                self.stat_values.append(data.strip())
-        elif self.current_tag == "price":
-            self.stat_values.append(data.strip())
-
-    def get_stats(self):
-        if len(self.stat_values) >= 3:
-            return {
-                "current_players": self.stat_values[0],
-                "peak_24h": self.stat_values[1],
-                "all_time_peak": self.stat_values[2],
-                "price": self.stat_values[3] if len(self.stat_values) > 3 else "No price data"
-            }
-        return None
 
 # -------------------------
 # Event Listeners
@@ -1725,78 +1677,6 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                     await ctx.send(f"⚠️ Error: MAL API returned status code {response.status}.")
     except Exception as e:
         logger.exception(f"Error in /mal command: {e}")
-        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
-
-@interactions.slash_command(name="steamdb", description="Get SteamDB stats for a game.")
-@interactions.slash_option(
-    name="title",
-    description="Enter the game title.",
-    required=True,
-    opt_type=interactions.OptionType.STRING
-)
-async def steamdb_search(ctx: interactions.ComponentContext, title: str):
-    """
-    Searches Steam for the given game title, retrieves its AppID,
-    and fetches stats from SteamDB.
-    """
-    try:
-        await ctx.defer()
-
-        logger.debug(f"Received /steamdb command from user: {ctx.author.id} (User: {ctx.author.username})")
-        logger.debug(f"User input for title: '{title}'")
-
-        # Fetch the full Steam game list to find AppID
-        games_list_url = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(games_list_url) as response:
-                if response.status == 200:
-                    game_data = await response.json()
-                    games = game_data.get("applist", {}).get("apps", [])
-
-                    # Find the closest match
-                    matched_game = next((g for g in games if title.lower() in g["name"].lower()), None)
-
-                    if matched_game:
-                        game_id = matched_game["appid"]
-                        game_name = matched_game["name"]
-                        logger.debug(f"Matched Game - Name: {game_name}, App ID: {game_id}")
-
-                        # Fetch stats from SteamDB
-                        steamdb_url = f"https://steamdb.info/app/{game_id}/"
-                        async with session.get(steamdb_url) as db_response:
-                            if db_response.status == 200:
-                                html_content = await db_response.text()
-
-                                # Parse the HTML manually
-                                parser = SteamDBParser()
-                                parser.feed(html_content)
-                                stats = parser.get_stats()
-
-                                if stats:
-                                    embed = interactions.Embed(
-                                        title=f"📊 **SteamDB Stats for {game_name}**",
-                                        description=f"🔗 [View on SteamDB]({steamdb_url})",
-                                        color=0x1B2838
-                                    )
-                                    embed.add_field(name="🎮 Current Players", value=stats["current_players"], inline=True)
-                                    embed.add_field(name="📈 24h Peak Players", value=stats["peak_24h"], inline=True)
-                                    embed.add_field(name="🏆 All-Time Peak Players", value=stats["all_time_peak"], inline=True)
-                                    embed.add_field(name="💰 Price", value=stats["price"], inline=False)
-
-                                    embed.set_footer(text="Powered by SteamDB")
-
-                                    await ctx.send(embed=embed)
-                                else:
-                                    await ctx.send(f"❌ No data found for '{game_name}' on SteamDB.")
-                            else:
-                                await ctx.send(f"❌ Error: Couldn't fetch data from SteamDB.")
-                    else:
-                        await ctx.send(f"❌ No game found for '**{title}**'. Try another title!")
-                else:
-                    await ctx.send(f"⚠️ Steam API error. Status code: {response.status}.")
-    except Exception as e:
-        logger.exception(f"Error in /steamdb command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
