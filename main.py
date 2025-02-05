@@ -1576,7 +1576,7 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                         thumbs_up = top_result.get("thumbs_up", 0)
                         thumbs_down = top_result.get("thumbs_down", 0)
 
-                        logger.debug(f"✅ Found definition for '{word}': {definition[:100]}... 👍 {thumbs_up} 👎 {thumbs_down}")
+                        logger.debug(f"✅ Found definition for '{word}': {definition}... 👍 {thumbs_up} 👎 {thumbs_down}")
 
                         embed = interactions.Embed(
                             title=f"📖 Definition: {word}",
