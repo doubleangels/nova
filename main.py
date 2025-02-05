@@ -1883,7 +1883,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
 
         time_difference = abs(offset1 - offset2)
 
-        await ctx.send(f"⏳ The time difference between **{place1}** and **{place2}** is **{time_difference} hours**.")
+        await ctx.send(f"⏳ The time difference between **{place1.title()}** and **{place2.title()}** is **{time_difference} hours**.")
 
     except Exception as e:
         logger.exception(f"Error in /timedifference command: {e}")
