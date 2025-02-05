@@ -524,7 +524,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
         if event.message.embeds:
             embed = event.message.embeds[0]
             embed_description = embed.description or ""
-            logger.debug(f"📜 Embed detected: {embed_description[:100]}...")  # Logs first 100 chars for debugging
+            logger.debug(f"📜 Embed detected: {embed_description}...")
 
             if "Bump done" in embed_description:
                 logger.debug("🔔 Triggering Disboard reminder...")
@@ -535,8 +535,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
 
         else:
             # Plain text checks
-            logger.debug(f"📄 Checking message content: {message_content[:100]}...")  # Logs first 100 chars for debugging
-
+            logger.debug(f"📄 Checking message content: {message_content}...")
             if "Your server has been booped" in message_content:
                 logger.debug("🔔 Triggering Unfocused reminder...")
                 await unfocused()
