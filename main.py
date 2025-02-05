@@ -9,6 +9,7 @@ import signal
 import logging
 import json
 import aiohttp
+import time
 import sentry_sdk
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -1826,18 +1827,29 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
 @interactions.slash_command(name="cat", description="Get a random cat picture!")
 async def cat_image(ctx: interactions.ComponentContext):
     """
-    Fetches a random cat image from the Cataas API.
+    Fetches a random cat image from the Cataas API without caching issues.
     """
     try:
         await ctx.defer()
 
-        cat_url = "https://cataas.com/cat"
-        logger.debug(f"Fetching random cat image from {cat_url}")
+        # Fetch a random cat image URL from Cataas API
+        cat_api_url = "https://cataas.com/cat?json=true"
+        logger.debug(f"Fetching random cat image from {cat_api_url}")
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(cat_url) as response:
+            async with session.get(cat_api_url) as response:
                 if response.status == 200:
-                    await ctx.send(cat_url)  # Send the direct link to the image
+                    data = await response.json()
+                    image_id = data.get("_id", None)
+
+                    if image_id:
+                        # Generate a unique image URL with a timestamp to avoid caching
+                        timestamp = int(time.time())  # Current time to bust cache
+                        image_url = f"https://cataas.com/cat/{image_id}?t={timestamp}"
+
+                        await ctx.send(image_url)  # Send the fresh image URL
+                    else:
+                        await ctx.send("😿 Couldn't find a cat picture. Try again later.")
                 else:
                     logger.warning(f"Cataas API error: {response.status}")
                     await ctx.send("😿 Couldn't fetch a cat picture. Try again later.")
@@ -1848,12 +1860,14 @@ async def cat_image(ctx: interactions.ComponentContext):
 @interactions.slash_command(name="dog", description="Get a random dog picture!")
 async def dog_image(ctx: interactions.ComponentContext):
     """
-    Fetches a random dog image from the Dog CEO API.
+    Fetches a random dog image from the Dog CEO API with a cache-busting trick.
     """
     try:
         await ctx.defer()
 
-        dog_url = "https://dog.ceo/api/breeds/image/random"
+        # Add a timestamp query parameter to prevent caching
+        timestamp = int(time.time())  # Current timestamp in seconds
+        dog_url = f"https://dog.ceo/api/breeds/image/random?t={timestamp}"
         logger.debug(f"Fetching random dog image from {dog_url}")
 
         async with aiohttp.ClientSession() as session:
