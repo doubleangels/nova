@@ -57,7 +57,7 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
-    "GEO_API_KEY": os.getenv("GEO_API_KEY"),
+    "TIMEZONEDB_API_KEY": os.getenv("TIMEZONEDB_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -75,7 +75,7 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
-GEO_API_KEY = required_env_vars["GEO_API_KEY"]
+TIMEZONEDB_API_KEY = required_env_vars["TIMEZONEDB_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1681,203 +1681,146 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
         logger.exception(f"Error in /mal command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="timezone", description="Get the current time by city name or timezone.")
+@interactions.slash_command(name="timezone", description="Get the current time by city name.")
 @interactions.slash_option(
-    name="location",
-    description="Enter a city name (e.g., New York) or timezone (e.g., America/New_York).",
+    name="city",
+    description="Enter a city name (e.g., New York, London, Tokyo).",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
-async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
+async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
     """
-    Fetches the current time in a city or timezone.
+    Fetches the current time in a given city using TimeZoneDB.
     """
     try:
         await ctx.defer()
 
         logger.debug(f"Received /timezone command from user: {ctx.author.id} (User: {ctx.author.username})")
-        logger.debug(f"User input for location: '{location}'")
+        logger.debug(f"User input for city: '{city}'")
 
         async with aiohttp.ClientSession() as session:
-            # Function to resolve a city to its timezone using authenticated GeoDB API
-            async def get_timezone(place):
-                if "/" not in place:  # Assume it's a city name, not a timezone
-                    logger.debug(f"Fetching timezone for city: {place}")
+            # Fetch timezone info from TimeZoneDB API
+            timezone_url = f"http://api.timezonedb.com/v2.1/get-time-zone"
+            params = {
+                "key": TIMEZONEDB_API_KEY,
+                "format": "json",
+                "by": "city",
+                "city": city
+            }
 
-                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/places"
-                    params = {"namePrefix": place, "limit": 1}
-                    headers = {
-                        "x-rapidapi-host": "wtf-geo-db.p.rapidapi.com",
-                        "x-rapidapi-key": GEO_API_KEY
-                    }
+            logger.debug(f"Making request to TimeZoneDB API: {timezone_url} with params {params}")
 
-                    async with session.get(geo_url, params=params, headers=headers) as geo_response:
-                        if geo_response.status == 200:
-                            geo_data = await geo_response.json()
-                            logger.debug(f"Received GeoDB API response: {json.dumps(geo_data, indent=2)[:500]}...")
+            async with session.get(timezone_url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"Received TimeZoneDB API response: {json.dumps(data, indent=2)[:500]}...")
 
-                            if geo_data.get("data"):
-                                return geo_data["data"][0]["timezone"]
-                            else:
-                                return None
-                        else:
-                            return None
-                return place  # If already a valid timezone, return as is
+                    if data.get("status") == "OK":
+                        timezone_name = data.get("zoneName", "Unknown")
+                        utc_offset = data.get("gmtOffset", 0) / 3600  # Convert seconds to hours
+                        local_time = data.get("formatted", "Unknown")  # Pre-formatted time
+                        is_dst = "Yes" if data.get("dst") == 1 else "No"
 
-            # Resolve the timezone
-            timezone = await get_timezone(location)
+                        # Create embed
+                        embed = interactions.Embed(
+                            title=f"🕒 Current Time in {city}",
+                            description=f"⏰ **{local_time}** (UTC {utc_offset:+})",
+                            color=0x1D4ED8
+                        )
+                        embed.add_field(name="🌍 Timezone", value=timezone_name, inline=True)
+                        embed.add_field(name="🕰️ UTC Offset", value=f"UTC {utc_offset:+}", inline=True)
+                        embed.add_field(name="🌞 Daylight Savings", value=is_dst, inline=True)
+                        embed.set_footer(text="Powered by TimeZoneDB")
 
-            if not timezone:
-                await ctx.send(f"❌ Could not find timezone for '{location}'. Check your spelling.")
-                return
-
-            logger.debug(f"Resolved '{location}' to timezone: {timezone}")
-
-            # Fetch the current time for the resolved timezone
-            timezone_url = f"http://worldtimeapi.org/api/timezone/{timezone}"
-            logger.debug(f"Fetching current time for timezone: {timezone}")
-
-            async with session.get(timezone_url) as time_response:
-                logger.debug(f"API Response Status: {time_response.status}")
-
-                if time_response.status == 200:
-                    time_data = await time_response.json()
-                    logger.debug(f"Received WorldTimeAPI response: {json.dumps(time_data, indent=2)[:500]}...")
-
-                    # Extract time details
-                    timezone_name = time_data.get("timezone", "Unknown")
-                    datetime_str = time_data.get("datetime", "Unknown").split(".")[0]  # Remove milliseconds
-                    utc_offset = time_data.get("utc_offset", "Unknown")
-                    is_dst = "Yes" if time_data.get("dst", False) else "No"
-
-                    # Format time
-                    formatted_time = datetime_str.replace("T", " ")
-
-                    # Create embed
-                    embed = interactions.Embed(
-                        title=f"🕒 Current Time in {timezone_name}",
-                        description=f"⏰ **{formatted_time}** (UTC {utc_offset})",
-                        color=0x1D4ED8
-                    )
-                    embed.add_field(name="🌍 Timezone", value=timezone_name, inline=True)
-                    embed.add_field(name="🕰️ UTC Offset", value=utc_offset, inline=True)
-                    embed.add_field(name="🌞 Daylight Savings", value=is_dst, inline=True)
-                    embed.set_footer(text="Powered by GeoDB & WorldTimeAPI")
-
-                    await ctx.send(embed=embed)
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send(f"❌ Could not find timezone for '{city}'. Check the spelling.")
                 else:
-                    logger.error(f"WorldTimeAPI Error: Status Code {time_response.status}")
-                    await ctx.send(f"⚠️ Error: Unable to fetch time for '{timezone}'.")
+                    logger.error(f"TimeZoneDB API Error: Status Code {response.status}")
+                    await ctx.send(f"⚠️ Error: Unable to fetch time for '{city}'.")
     except Exception as e:
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="timedifference", description="Get the time difference between two places.")
+@interactions.slash_command(name="time_difference", description="Get the time difference between two places.")
 @interactions.slash_option(
     name="place1",
-    description="Enter the first city or timezone (e.g., New York or America/New_York).",
+    description="Enter the first city name (e.g., New York).",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
 @interactions.slash_option(
     name="place2",
-    description="Enter the second city or timezone (e.g., London or Europe/London).",
+    description="Enter the second city name (e.g., London).",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
 async def time_difference(ctx: interactions.ComponentContext, place1: str, place2: str):
     """
-    Calculates the time difference between two cities or time zones.
+    Calculates the time difference between two cities using TimeZoneDB.
     """
     try:
         await ctx.defer()
 
-        logger.debug(f"Received /timedifference command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"Received /time_difference command from user: {ctx.author.id} (User: {ctx.author.username})")
         logger.debug(f"User input: Place 1 = '{place1}', Place 2 = '{place2}'")
 
         async with aiohttp.ClientSession() as session:
-            # Function to resolve a city to its timezone using authenticated GeoDB API
-            async def get_timezone(place):
-                if "/" not in place:  # Assume it's a city name, not a timezone
-                    logger.debug(f"Fetching timezone for city: {place}")
+            # Function to fetch timezone info from TimeZoneDB
+            async def get_timezone_data(city):
+                timezone_url = f"http://api.timezonedb.com/v2.1/get-time-zone"
+                params = {
+                    "key": TIMEZONEDB_API_KEY,
+                    "format": "json",
+                    "by": "city",
+                    "city": city
+                }
 
-                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/places"
-                    params = {"namePrefix": place, "limit": 1}
-                    headers = {
-                        "x-rapidapi-host": "wtf-geo-db.p.rapidapi.com",
-                        "x-rapidapi-key": GEO_API_KEY
-                    }
+                async with session.get(timezone_url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        logger.debug(f"Received TimeZoneDB response for {city}: {json.dumps(data, indent=2)[:500]}...")
 
-                    async with session.get(geo_url, params=params, headers=headers) as geo_response:
-                        if geo_response.status == 200:
-                            geo_data = await geo_response.json()
-                            logger.debug(f"Received GeoDB response: {json.dumps(geo_data, indent=2)[:500]}...")
+                        if data.get("status") == "OK":
+                            return {
+                                "timezone": data.get("zoneName"),
+                                "utc_offset": data.get("gmtOffset") / 3600,  # Convert seconds to hours
+                                "formatted_time": data.get("formatted"),
+                                "is_dst": "Yes" if data.get("dst") == 1 else "No"
+                            }
+                    return None
 
-                            if geo_data.get("data"):
-                                return geo_data["data"][0]["timezone"]
-                            else:
-                                return None
-                        else:
-                            return None
-                return place  # If already a valid timezone, return as is
+            # Fetch timezone info for both places
+            tz1_data = await get_timezone_data(place1)
+            tz2_data = await get_timezone_data(place2)
 
-            # Resolve time zones
-            timezone1 = await get_timezone(place1)
-            timezone2 = await get_timezone(place2)
-
-            if not timezone1 or not timezone2:
-                await ctx.send(f"❌ Could not find timezones for '{place1}' or '{place2}'. Check your spelling.")
+            if not tz1_data or not tz2_data:
+                await ctx.send(f"❌ Could not find timezones for '{place1}' or '{place2}'. Check spelling.")
                 return
 
-            logger.debug(f"Resolved '{place1}' to timezone: {timezone1}")
-            logger.debug(f"Resolved '{place2}' to timezone: {timezone2}")
-
-            # Function to get UTC offset
-            async def get_utc_offset(timezone):
-                time_url = f"http://worldtimeapi.org/api/timezone/{timezone}"
-                async with session.get(time_url) as time_response:
-                    if time_response.status == 200:
-                        time_data = await time_response.json()
-                        logger.debug(f"Received WorldTimeAPI response for {timezone}: {json.dumps(time_data, indent=2)[:500]}...")
-                        return time_data.get("utc_offset", "Unknown")
-                    else:
-                        return None
-
-            # Fetch UTC offsets
-            offset1 = await get_utc_offset(timezone1)
-            offset2 = await get_utc_offset(timezone2)
-
-            if not offset1 or not offset2:
-                await ctx.send(f"❌ Could not retrieve time data for '{timezone1}' or '{timezone2}'.")
-                return
-
-            # Convert UTC offsets to hours
-            def parse_utc_offset(offset):
-                sign = -1 if offset[0] == "-" else 1
-                hours, minutes = map(int, offset[1:].split(":"))
-                return sign * (hours + minutes / 60)
-
-            offset1_hours = parse_utc_offset(offset1)
-            offset2_hours = parse_utc_offset(offset2)
+            logger.debug(f"Resolved '{place1}' to timezone: {tz1_data['timezone']} (UTC {tz1_data['utc_offset']:+})")
+            logger.debug(f"Resolved '{place2}' to timezone: {tz2_data['timezone']} (UTC {tz2_data['utc_offset']:+})")
 
             # Calculate time difference
-            time_difference = abs(offset1_hours - offset2_hours)
+            time_difference = abs(tz1_data["utc_offset"] - tz2_data["utc_offset"])
 
             # Create embed
             embed = interactions.Embed(
                 title="⏳ Time Difference",
-                description=f"📍 **{place1} ({timezone1})** → **{place2} ({timezone2})**",
+                description=f"📍 **{place1} ({tz1_data['timezone']})** → **{place2} ({tz2_data['timezone']})**",
                 color=0x1D4ED8
             )
-            embed.add_field(name="🕰️ UTC Offset (Place 1)", value=f"UTC {offset1}", inline=True)
-            embed.add_field(name="🕰️ UTC Offset (Place 2)", value=f"UTC {offset2}", inline=True)
+            embed.add_field(name="🕰️ Current Time (Place 1)", value=f"⏰ {tz1_data['formatted_time']}", inline=False)
+            embed.add_field(name="🕰️ Current Time (Place 2)", value=f"⏰ {tz2_data['formatted_time']}", inline=False)
+            embed.add_field(name="🕰️ UTC Offset (Place 1)", value=f"UTC {tz1_data['utc_offset']:+}", inline=True)
+            embed.add_field(name="🕰️ UTC Offset (Place 2)", value=f"UTC {tz2_data['utc_offset']:+}", inline=True)
             embed.add_field(name="⏰ Time Difference", value=f"⌛ **{time_difference} hours**", inline=False)
-            embed.set_footer(text="Powered by GeoDB & WorldTimeAPI")
+            embed.set_footer(text="Powered by TimeZoneDB")
 
             await ctx.send(embed=embed)
 
     except Exception as e:
-        logger.exception(f"Error in /timedifference command: {e}")
+        logger.exception(f"Error in /time_difference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="cat", description="Get a random cat picture!")
