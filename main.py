@@ -1355,7 +1355,6 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
         logger.exception(f"Error in /imdb command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-
 @interactions.slash_command(name="define", description="Get the definition and synonyms of a word.")
 @interactions.slash_option(
     name="word",
