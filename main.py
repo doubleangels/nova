@@ -1681,7 +1681,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
         logger.exception(f"Error in /mal command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="news", description="Get the latest news on a topic.")
+@interactions.slash_command(name="news", description="Get the latest news on a topic from the last 3 days.")
 @interactions.slash_option(
     name="topic",
     description="Enter the topic to search for.",
@@ -1690,7 +1690,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
 )
 async def news_search(ctx: interactions.ComponentContext, topic: str):
     """
-    Fetches the latest news articles based on a given topic.
+    Fetches the latest news articles from the last 3 days based on a given topic.
     """
     try:
         await ctx.defer()
@@ -1698,20 +1698,38 @@ async def news_search(ctx: interactions.ComponentContext, topic: str):
         logger.debug(f"Received /news command from user: {ctx.author.id} (User: {ctx.author.username})")
         logger.debug(f"User input for topic: '{topic}'")
 
-        # NewsAPI request URL
-        news_url = f"https://newsapi.org/v2/everything?q={topic}&sortBy=publishedAt&pageSize=5&apiKey={NEWS_API_KEY}"
+        # Calculate date from 3 days ago
+        three_days_ago = (datetime.utcnow() - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
+
+        # Construct NewsAPI request URL
+        news_url = f"https://newsapi.org/v2/everything"
+        params = {
+            "q": topic,
+            "from": three_days_ago,
+            "sortBy": "publishedAt",
+            "pageSize": 5,
+            "apiKey": NEWS_API_KEY
+        }
+
+        logger.debug(f"Making request to NewsAPI: {news_url}")
+        logger.debug(f"Request parameters: {json.dumps(params, indent=2)}")
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(news_url) as response:
+            async with session.get(news_url, params=params) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
                 if response.status == 200:
                     data = await response.json()
+                    
+                    # Log full response (truncate if too large)
+                    logger.debug(f"Received API response: {json.dumps(data, indent=2)[:1000]}...")  # Truncate long output
 
                     if "articles" in data and data["articles"]:
                         articles = data["articles"][:5]  # Get top 5 articles
 
                         # Create embed
                         embed = interactions.Embed(
-                            title=f"📰 Latest News on '{topic}'",
+                            title=f"📰 Latest News on '{topic}' (Last 3 Days)",
                             color=0x1D4ED8
                         )
 
@@ -1719,14 +1737,17 @@ async def news_search(ctx: interactions.ComponentContext, topic: str):
                             title = article["title"]
                             url = article["url"]
                             source = article["source"]["name"]
-                            embed.add_field(name=f"📰 {title}", value=f"🔗 [Read More]({url}) | 🏢 {source}", inline=False)
+                            published_date = article["publishedAt"].split("T")[0]  # Extract date only
+                            embed.add_field(name=f"📰 {title}", value=f"📅 {published_date} | 🏢 {source} | 🔗 [Read More]({url})", inline=False)
 
                         embed.set_footer(text="Powered by NewsAPI")
 
                         await ctx.send(embed=embed)
                     else:
-                        await ctx.send(f"❌ No news articles found for '{topic}'.")
+                        logger.warning(f"No articles found for '{topic}' in the last 3 days.")
+                        await ctx.send(f"❌ No news articles found for '{topic}' in the last 3 days.")
                 else:
+                    logger.error(f"NewsAPI Error: Status Code {response.status}")
                     await ctx.send(f"⚠️ Error: NewsAPI returned status code {response.status}.")
     except Exception as e:
         logger.exception(f"Error in /news command: {e}")
