@@ -57,7 +57,6 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
-    "NEWS_API_KEY": os.getenv("NEWS_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -75,7 +74,6 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
-NEWS_API_KEY = required_env_vars["NEWS_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1679,6 +1677,66 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                     await ctx.send(f"⚠️ Error: MAL API returned status code {response.status}.")
     except Exception as e:
         logger.exception(f"Error in /mal command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="timezone", description="Get the current time in a city or region.")
+@interactions.slash_option(
+    name="location",
+    description="Enter a city or region (e.g., America/New_York, Europe/London).",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
+    """
+    Fetches the current time in a given city or region.
+    """
+    try:
+        await ctx.defer()
+
+        logger.debug(f"Received /timezone command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for location: '{location}'")
+
+        # WorldTimeAPI request URL
+        timezone_url = f"http://worldtimeapi.org/api/timezone/{location}"
+
+        logger.debug(f"Making request to WorldTimeAPI: {timezone_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(timezone_url) as response:
+                logger.debug(f"API Response Status: {response.status}")
+
+                if response.status == 200:
+                    data = await response.json()
+                    
+                    # Log full response
+                    logger.debug(f"Received API response: {data}")
+
+                    # Extract time data
+                    timezone_name = data.get("timezone", "Unknown")
+                    datetime_str = data.get("datetime", "Unknown").split(".")[0]  # Remove milliseconds
+                    utc_offset = data.get("utc_offset", "Unknown")
+                    is_dst = "Yes" if data.get("dst", False) else "No"
+
+                    # Format time
+                    formatted_time = datetime_str.replace("T", " ")
+
+                    # Create embed
+                    embed = interactions.Embed(
+                        title=f"🕒 Current Time in {timezone_name}",
+                        description=f"⏰ **{formatted_time}** (UTC {utc_offset})",
+                        color=0x1D4ED8
+                    )
+                    embed.add_field(name="🌍 Timezone", value=timezone_name, inline=True)
+                    embed.add_field(name="🕰️ UTC Offset", value=utc_offset, inline=True)
+                    embed.add_field(name="🌞 Daylight Savings", value=is_dst, inline=True)
+                    embed.set_footer(text="Powered by WorldTimeAPI")
+
+                    await ctx.send(embed=embed)
+                else:
+                    logger.error(f"WorldTimeAPI Error: Status Code {response.status}")
+                    await ctx.send(f"⚠️ Error: Unable to fetch time for '{location}'. Ensure the format is correct (e.g., America/New_York).")
+    except Exception as e:
+        logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
