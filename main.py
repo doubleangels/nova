@@ -57,6 +57,7 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
+    "GEO_API_KEY": os.getenv("GEO_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -74,6 +75,7 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
+GEO_API_KEY = required_env_vars["GEO_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1679,7 +1681,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
         logger.exception(f"Error in /mal command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="timezone", description="Get the current time by city name or region.")
+@interactions.slash_command(name="timezone", description="Get the current time by city name or timezone.")
 @interactions.slash_option(
     name="location",
     description="Enter a city name (e.g., New York) or timezone (e.g., America/New_York).",
@@ -1697,34 +1699,41 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
         logger.debug(f"User input for location: '{location}'")
 
         async with aiohttp.ClientSession() as session:
-            # Check if the input is a city name (not a valid timezone format)
-            if "/" not in location:
-                logger.debug(f"Assuming input '{location}' is a city name, fetching timezone.")
+            # Function to resolve a city to its timezone using authenticated GeoDB API
+            async def get_timezone(place):
+                if "/" not in place:  # Assume it's a city name, not a timezone
+                    logger.debug(f"Fetching timezone for city: {place}")
 
-                geo_url = f"https://geodb-free-service.wirefreethought.com/v1/geo/cities"
-                params = {"namePrefix": location, "limit": 1}
+                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/cities"
+                    params = {"namePrefix": place, "limit": 1}
+                    headers = {
+                        "x-rapidapi-host": "wtf-geo-db.p.rapidapi.com",
+                        "x-rapidapi-key": GEO_API_KEY
+                    }
 
-                logger.debug(f"Making request to GeoDB Cities API: {geo_url} with params {params}")
+                    async with session.get(geo_url, params=params, headers=headers) as geo_response:
+                        if geo_response.status == 200:
+                            geo_data = await geo_response.json()
+                            logger.debug(f"Received GeoDB API response: {json.dumps(geo_data, indent=2)[:500]}...")
 
-                async with session.get(geo_url, params=params) as geo_response:
-                    if geo_response.status == 200:
-                        geo_data = await geo_response.json()
-                        logger.debug(f"Received GeoDB API response: {json.dumps(geo_data, indent=2)[:500]}...")
-
-                        if geo_data.get("data"):
-                            timezone = geo_data["data"][0]["timezone"]
-                            logger.debug(f"City '{location}' resolved to timezone: {timezone}")
+                            if geo_data.get("data"):
+                                return geo_data["data"][0]["timezone"]
+                            else:
+                                return None
                         else:
-                            await ctx.send(f"❌ No timezone found for city '{location}'. Please check the spelling.")
-                            return
-                    else:
-                        logger.error(f"GeoDB API Error: Status Code {geo_response.status}")
-                        await ctx.send(f"⚠️ Error fetching timezone for '{location}'.")
-                        return
-            else:
-                timezone = location
+                            return None
+                return place  # If already a valid timezone, return as is
 
-            # Fetch current time for the resolved timezone
+            # Resolve the timezone
+            timezone = await get_timezone(location)
+
+            if not timezone:
+                await ctx.send(f"❌ Could not find timezone for '{location}'. Check your spelling.")
+                return
+
+            logger.debug(f"Resolved '{location}' to timezone: {timezone}")
+
+            # Fetch the current time for the resolved timezone
             timezone_url = f"http://worldtimeapi.org/api/timezone/{timezone}"
             logger.debug(f"Fetching current time for timezone: {timezone}")
 
@@ -1763,7 +1772,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="timedifference", description="Get the time difference between two places.")
+@interactions.slash_command(name="time_difference", description="Get the time difference between two places.")
 @interactions.slash_option(
     name="place1",
     description="Enter the first city or timezone (e.g., New York or America/New_York).",
@@ -1783,19 +1792,23 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
     try:
         await ctx.defer()
 
-        logger.debug(f"Received /timedifference command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"Received /time_difference command from user: {ctx.author.id} (User: {ctx.author.username})")
         logger.debug(f"User input: Place 1 = '{place1}', Place 2 = '{place2}'")
 
         async with aiohttp.ClientSession() as session:
-            # Function to resolve a city to its timezone
+            # Function to resolve a city to its timezone using authenticated GeoDB API
             async def get_timezone(place):
                 if "/" not in place:  # Assume it's a city name, not a timezone
                     logger.debug(f"Fetching timezone for city: {place}")
 
-                    geo_url = "https://geodb-free-service.wirefreethought.com/v1/geo/cities"
+                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/cities"
                     params = {"namePrefix": place, "limit": 1}
+                    headers = {
+                        "x-rapidapi-host": "wtf-geo-db.p.rapidapi.com",
+                        "x-rapidapi-key": GEO_API_KEY
+                    }
 
-                    async with session.get(geo_url, params=params) as geo_response:
+                    async with session.get(geo_url, params=params, headers=headers) as geo_response:
                         if geo_response.status == 200:
                             geo_data = await geo_response.json()
                             logger.debug(f"Received GeoDB response: {json.dumps(geo_data, indent=2)[:500]}...")
@@ -1864,7 +1877,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
             await ctx.send(embed=embed)
 
     except Exception as e:
-        logger.exception(f"Error in /timedifference command: {e}")
+        logger.exception(f"Error in /time_difference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="cat", description="Get a random cat picture!")
