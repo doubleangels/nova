@@ -1679,16 +1679,16 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
         logger.exception(f"Error in /mal command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="timezone", description="Get the current time in a city or region.")
+@interactions.slash_command(name="timezone", description="Get the current time by city name or region.")
 @interactions.slash_option(
     name="location",
-    description="Enter a city or region (e.g., America/New_York, Europe/London).",
+    description="Enter a city name (e.g., New York) or timezone (e.g., America/New_York).",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
 async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
     """
-    Fetches the current time in a given city or region.
+    Fetches the current time in a city or timezone.
     """
     try:
         await ctx.defer()
@@ -1696,26 +1696,50 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
         logger.debug(f"Received /timezone command from user: {ctx.author.id} (User: {ctx.author.username})")
         logger.debug(f"User input for location: '{location}'")
 
-        # WorldTimeAPI request URL
-        timezone_url = f"http://worldtimeapi.org/api/timezone/{location}"
-
-        logger.debug(f"Making request to WorldTimeAPI: {timezone_url}")
-
         async with aiohttp.ClientSession() as session:
-            async with session.get(timezone_url) as response:
-                logger.debug(f"API Response Status: {response.status}")
+            # Check if the input is a city name (not a valid timezone format)
+            if "/" not in location:
+                logger.debug(f"Assuming input '{location}' is a city name, fetching timezone.")
 
-                if response.status == 200:
-                    data = await response.json()
-                    
-                    # Log full response
-                    logger.debug(f"Received API response: {data}")
+                geo_url = f"https://geodb-free-service.wirefreethought.com/v1/geo/cities"
+                params = {"namePrefix": location, "limit": 1}
 
-                    # Extract time data
-                    timezone_name = data.get("timezone", "Unknown")
-                    datetime_str = data.get("datetime", "Unknown").split(".")[0]  # Remove milliseconds
-                    utc_offset = data.get("utc_offset", "Unknown")
-                    is_dst = "Yes" if data.get("dst", False) else "No"
+                logger.debug(f"Making request to GeoDB Cities API: {geo_url} with params {params}")
+
+                async with session.get(geo_url, params=params) as geo_response:
+                    if geo_response.status == 200:
+                        geo_data = await geo_response.json()
+                        logger.debug(f"Received GeoDB API response: {json.dumps(geo_data, indent=2)[:500]}...")
+
+                        if geo_data.get("data"):
+                            timezone = geo_data["data"][0]["timezone"]
+                            logger.debug(f"City '{location}' resolved to timezone: {timezone}")
+                        else:
+                            await ctx.send(f"❌ No timezone found for city '{location}'. Please check the spelling.")
+                            return
+                    else:
+                        logger.error(f"GeoDB API Error: Status Code {geo_response.status}")
+                        await ctx.send(f"⚠️ Error fetching timezone for '{location}'.")
+                        return
+            else:
+                timezone = location
+
+            # Fetch current time for the resolved timezone
+            timezone_url = f"http://worldtimeapi.org/api/timezone/{timezone}"
+            logger.debug(f"Fetching current time for timezone: {timezone}")
+
+            async with session.get(timezone_url) as time_response:
+                logger.debug(f"API Response Status: {time_response.status}")
+
+                if time_response.status == 200:
+                    time_data = await time_response.json()
+                    logger.debug(f"Received WorldTimeAPI response: {json.dumps(time_data, indent=2)[:500]}...")
+
+                    # Extract time details
+                    timezone_name = time_data.get("timezone", "Unknown")
+                    datetime_str = time_data.get("datetime", "Unknown").split(".")[0]  # Remove milliseconds
+                    utc_offset = time_data.get("utc_offset", "Unknown")
+                    is_dst = "Yes" if time_data.get("dst", False) else "No"
 
                     # Format time
                     formatted_time = datetime_str.replace("T", " ")
@@ -1729,12 +1753,12 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
                     embed.add_field(name="🌍 Timezone", value=timezone_name, inline=True)
                     embed.add_field(name="🕰️ UTC Offset", value=utc_offset, inline=True)
                     embed.add_field(name="🌞 Daylight Savings", value=is_dst, inline=True)
-                    embed.set_footer(text="Powered by WorldTimeAPI")
+                    embed.set_footer(text="Powered by GeoDB & WorldTimeAPI")
 
                     await ctx.send(embed=embed)
                 else:
-                    logger.error(f"WorldTimeAPI Error: Status Code {response.status}")
-                    await ctx.send(f"⚠️ Error: Unable to fetch time for '{location}'. Ensure the format is correct (e.g., America/New_York).")
+                    logger.error(f"WorldTimeAPI Error: Status Code {time_response.status}")
+                    await ctx.send(f"⚠️ Error: Unable to fetch time for '{timezone}'.")
     except Exception as e:
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
