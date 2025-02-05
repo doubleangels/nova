@@ -665,8 +665,8 @@ async def check_status(ctx: interactions.ComponentContext):
         channel_id = get_value("reminder_channel")
         role_id = get_value("role")
 
-        channel_str = f"📢 <#{channel_id}>" if channel_id else "⚠️ Not set!"
-        role_str = f"🎭 <@&{role_id}>" if role_id else "⚠️ Not set!"
+        channel_str = f"📢 <#{channel_id}>" if channel_id else "Not set!"
+        role_str = f"🎭 <@&{role_id}>" if role_id else "Not set!"
 
         logger.debug(f"Reminder Channel: {channel_id if channel_id else 'Not Set'}")
         logger.debug(f"Reminder Role: {role_id if role_id else 'Not Set'}")
