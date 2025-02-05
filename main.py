@@ -1704,7 +1704,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
                 if "/" not in place:  # Assume it's a city name, not a timezone
                     logger.debug(f"Fetching timezone for city: {place}")
 
-                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/cities"
+                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/places"
                     params = {"namePrefix": place, "limit": 1}
                     headers = {
                         "x-rapidapi-host": "wtf-geo-db.p.rapidapi.com",
@@ -1772,7 +1772,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="time_difference", description="Get the time difference between two places.")
+@interactions.slash_command(name="timedifference", description="Get the time difference between two places.")
 @interactions.slash_option(
     name="place1",
     description="Enter the first city or timezone (e.g., New York or America/New_York).",
@@ -1792,7 +1792,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
     try:
         await ctx.defer()
 
-        logger.debug(f"Received /time_difference command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"Received /timedifference command from user: {ctx.author.id} (User: {ctx.author.username})")
         logger.debug(f"User input: Place 1 = '{place1}', Place 2 = '{place2}'")
 
         async with aiohttp.ClientSession() as session:
@@ -1801,7 +1801,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
                 if "/" not in place:  # Assume it's a city name, not a timezone
                     logger.debug(f"Fetching timezone for city: {place}")
 
-                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/cities"
+                    geo_url = "https://wft-geo-db.p.rapidapi.com/v1/geo/places"
                     params = {"namePrefix": place, "limit": 1}
                     headers = {
                         "x-rapidapi-host": "wtf-geo-db.p.rapidapi.com",
@@ -1877,7 +1877,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
             await ctx.send(embed=embed)
 
     except Exception as e:
-        logger.exception(f"Error in /time_difference command: {e}")
+        logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="cat", description="Get a random cat picture!")
