@@ -342,7 +342,7 @@ async def get_coordinates(city: str):
             async with session.get(geocode_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"📍 Google Geocoding API response: {json.dumps(data, indent=2)[:500]}...")
+                    logger.debug(f"📍 Google Geocoding API response: {json.dumps(data, indent=2)}...")
 
                     if data.get("results"):
                         location = data["results"][0]["geometry"]["location"]
@@ -1660,7 +1660,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                                 # Create embed with emojis
                                 embed = interactions.Embed(
                                     title=f"📺 **{title}**",
-                                    description=f"📜 **Synopsis:** {synopsis[:500]}...",  # Truncate long descriptions
+                                    description=f"📜 **Synopsis:** {synopsis}...",  # Truncate long descriptions
                                     color=0x2E51A2
                                 )
                                 embed.add_field(name="🎭 Genre", value=f"🎞 {genres}", inline=True)
@@ -1774,7 +1774,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
             async with session.get(geocode_url, params=geocode_params) as response:
                 if response.status == 200:
                     geo_data = await response.json()
-                    logger.debug(f"Received Google Geocoding API response: {json.dumps(geo_data, indent=2)[:500]}...")
+                    logger.debug(f"Received Google Geocoding API response: {json.dumps(geo_data, indent=2)}...")
 
                     if geo_data.get("results"):
                         location = geo_data["results"][0]["geometry"]["location"]
@@ -1794,7 +1794,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
             async with session.get(timezone_url, params=timezone_params) as response:
                 if response.status == 200:
                     tz_data = await response.json()
-                    logger.debug(f"Received Google Time Zone API response: {json.dumps(tz_data, indent=2)[:500]}...")
+                    logger.debug(f"Received Google Time Zone API response: {json.dumps(tz_data, indent=2)}...")
 
                     if tz_data.get("status") == "OK":
                         timezone_name = tz_data["timeZoneId"]
