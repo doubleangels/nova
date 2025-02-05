@@ -13,3 +13,6 @@ COPY main.py .
 
 # Define the default command
 CMD ["python", "-u", "main.py"]
+
+# Check to make sure the container is healthy
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 CMD curl -f http://localhost:8080/health || exit 1
