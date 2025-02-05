@@ -58,7 +58,6 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
-    "STEAM_API_KEY": os.getenv("STEAM_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -76,7 +75,6 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
-STEAM_API_KEY = required_env_vars["STEAM_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
