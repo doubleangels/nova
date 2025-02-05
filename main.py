@@ -13,7 +13,6 @@ import time
 import sentry_sdk
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
-from aiohttp import web
 
 # -------------------------
 # Sentry Setup with Logging Integration
@@ -28,22 +27,6 @@ sentry_sdk.init(
     traces_sample_rate=1.0,
     profiles_sample_rate=1.0,
 )
-
-
-# -------------------------
-# Healthcheck
-# -------------------------
-async def healthcheck(request):
-    return web.Response(text="OK")
-
-app = web.Application()
-app.router.add_get("/health", healthcheck)
-
-async def run_healthcheck():
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
-    await site.start()
 
 # -------------------------
 # Logger Configuration (Console Only)
