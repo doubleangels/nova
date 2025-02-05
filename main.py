@@ -1876,6 +1876,56 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
         logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+@interactions.slash_command(name="cat", description="Get a random cat picture!")
+async def cat_image(ctx: interactions.ComponentContext):
+    """
+    Fetches a random cat image from the Cataas API.
+    """
+    try:
+        await ctx.defer()
+
+        cat_url = "https://cataas.com/cat"
+        logger.debug(f"Fetching random cat image from {cat_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(cat_url) as response:
+                if response.status == 200:
+                    await ctx.send(cat_url)  # Send the direct link to the image
+                else:
+                    logger.warning(f"Cataas API error: {response.status}")
+                    await ctx.send("😿 Couldn't fetch a cat picture. Try again later.")
+    except Exception as e:
+        logger.exception(f"Error in /cat command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="dog", description="Get a random dog picture!")
+async def dog_image(ctx: interactions.ComponentContext):
+    """
+    Fetches a random dog image from the Dog CEO API.
+    """
+    try:
+        await ctx.defer()
+
+        dog_url = "https://dog.ceo/api/breeds/image/random"
+        logger.debug(f"Fetching random dog image from {dog_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(dog_url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    image_url = data.get("message", None)
+
+                    if image_url:
+                        await ctx.send(image_url)  # Send the direct link to the image
+                    else:
+                        await ctx.send("🐶 Couldn't find a dog picture. Try again later.")
+                else:
+                    logger.warning(f"Dog CEO API error: {response.status}")
+                    await ctx.send("🐕 Couldn't fetch a dog picture. Try again later.")
+    except Exception as e:
+        logger.exception(f"Error in /dog command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 # -------------------------
 # Bot Startup
 # -------------------------
