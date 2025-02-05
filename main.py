@@ -1788,7 +1788,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
                     return
 
             # Step 2: Get timezone details using Google Maps Time Zone API
-            timestamp = int(datetime.now().timestamp())  # Current UNIX timestamp
+            timestamp = int(datetime.datetime.now().timestamp())  # Current UNIX timestamp
             timezone_url = f"https://maps.googleapis.com/maps/api/timezone/json"
             timezone_params = {"location": f"{lat},{lng}", "timestamp": timestamp, "key": GOOGLE_API_KEY}
 
