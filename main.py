@@ -1763,6 +1763,119 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+import aiohttp
+import interactions
+import logging
+import json
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+@interactions.slash_command(name="timedifference", description="Get the time difference between two places.")
+@interactions.slash_option(
+    name="place1",
+    description="Enter the first city or timezone (e.g., New York or America/New_York).",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+@interactions.slash_option(
+    name="place2",
+    description="Enter the second city or timezone (e.g., London or Europe/London).",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def time_difference(ctx: interactions.ComponentContext, place1: str, place2: str):
+    """
+    Calculates the time difference between two cities or time zones.
+    """
+    try:
+        await ctx.defer()
+
+        logger.debug(f"Received /timedifference command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input: Place 1 = '{place1}', Place 2 = '{place2}'")
+
+        async with aiohttp.ClientSession() as session:
+            # Function to resolve a city to its timezone
+            async def get_timezone(place):
+                if "/" not in place:  # Assume it's a city name, not a timezone
+                    logger.debug(f"Fetching timezone for city: {place}")
+
+                    geo_url = "https://geodb-free-service.wirefreethought.com/v1/geo/cities"
+                    params = {"namePrefix": place, "limit": 1}
+
+                    async with session.get(geo_url, params=params) as geo_response:
+                        if geo_response.status == 200:
+                            geo_data = await geo_response.json()
+                            logger.debug(f"Received GeoDB response: {json.dumps(geo_data, indent=2)[:500]}...")
+
+                            if geo_data.get("data"):
+                                return geo_data["data"][0]["timezone"]
+                            else:
+                                return None
+                        else:
+                            return None
+                return place  # If already a valid timezone, return as is
+
+            # Resolve time zones
+            timezone1 = await get_timezone(place1)
+            timezone2 = await get_timezone(place2)
+
+            if not timezone1 or not timezone2:
+                await ctx.send(f"❌ Could not find timezones for '{place1}' or '{place2}'. Check your spelling.")
+                return
+
+            logger.debug(f"Resolved '{place1}' to timezone: {timezone1}")
+            logger.debug(f"Resolved '{place2}' to timezone: {timezone2}")
+
+            # Function to get UTC offset
+            async def get_utc_offset(timezone):
+                time_url = f"http://worldtimeapi.org/api/timezone/{timezone}"
+                async with session.get(time_url) as time_response:
+                    if time_response.status == 200:
+                        time_data = await time_response.json()
+                        logger.debug(f"Received WorldTimeAPI response for {timezone}: {json.dumps(time_data, indent=2)[:500]}...")
+                        return time_data.get("utc_offset", "Unknown")
+                    else:
+                        return None
+
+            # Fetch UTC offsets
+            offset1 = await get_utc_offset(timezone1)
+            offset2 = await get_utc_offset(timezone2)
+
+            if not offset1 or not offset2:
+                await ctx.send(f"❌ Could not retrieve time data for '{timezone1}' or '{timezone2}'.")
+                return
+
+            # Convert UTC offsets to hours
+            def parse_utc_offset(offset):
+                sign = -1 if offset[0] == "-" else 1
+                hours, minutes = map(int, offset[1:].split(":"))
+                return sign * (hours + minutes / 60)
+
+            offset1_hours = parse_utc_offset(offset1)
+            offset2_hours = parse_utc_offset(offset2)
+
+            # Calculate time difference
+            time_difference = abs(offset1_hours - offset2_hours)
+
+            # Create embed
+            embed = interactions.Embed(
+                title="⏳ Time Difference",
+                description=f"📍 **{place1} ({timezone1})** → **{place2} ({timezone2})**",
+                color=0x1D4ED8
+            )
+            embed.add_field(name="🕰️ UTC Offset (Place 1)", value=f"UTC {offset1}", inline=True)
+            embed.add_field(name="🕰️ UTC Offset (Place 2)", value=f"UTC {offset2}", inline=True)
+            embed.add_field(name="⏰ Time Difference", value=f"⌛ **{time_difference} hours**", inline=False)
+            embed.set_footer(text="Powered by GeoDB & WorldTimeAPI")
+
+            await ctx.send(embed=embed)
+
+    except Exception as e:
+        logger.exception(f"Error in /timedifference command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 # -------------------------
 # Bot Startup
 # -------------------------
