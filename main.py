@@ -57,6 +57,7 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
+    "NEWS_API_KEY": os.getenv("NEWS_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -74,6 +75,7 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
+NEWS_API_KEY = required_env_vars["NEWS_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1677,6 +1679,57 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                     await ctx.send(f"⚠️ Error: MAL API returned status code {response.status}.")
     except Exception as e:
         logger.exception(f"Error in /mal command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="news", description="Get the latest news on a topic.")
+@interactions.slash_option(
+    name="topic",
+    description="Enter the topic to search for.",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def news_search(ctx: interactions.ComponentContext, topic: str):
+    """
+    Fetches the latest news articles based on a given topic.
+    """
+    try:
+        await ctx.defer()
+
+        logger.debug(f"Received /news command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for topic: '{topic}'")
+
+        # NewsAPI request URL
+        news_url = f"https://newsapi.org/v2/everything?q={topic}&sortBy=publishedAt&pageSize=5&apiKey={NEWS_API_KEY}"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(news_url) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    if "articles" in data and data["articles"]:
+                        articles = data["articles"][:5]  # Get top 5 articles
+
+                        # Create embed
+                        embed = interactions.Embed(
+                            title=f"📰 Latest News on '{topic}'",
+                            color=0x1D4ED8
+                        )
+
+                        for article in articles:
+                            title = article["title"]
+                            url = article["url"]
+                            source = article["source"]["name"]
+                            embed.add_field(name=f"📰 {title}", value=f"🔗 [Read More]({url}) | 🏢 {source}", inline=False)
+
+                        embed.set_footer(text="Powered by NewsAPI")
+
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send(f"❌ No news articles found for '{topic}'.")
+                else:
+                    await ctx.send(f"⚠️ Error: NewsAPI returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /news command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
