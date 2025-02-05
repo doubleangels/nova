@@ -1821,7 +1821,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="time_difference", description="Get the time difference between two places.")
+@interactions.slash_command(name="timedifference", description="Get the time difference between two places.")
 @interactions.slash_option(
     name="place1",
     description="Enter the first city name (e.g., New York).",
@@ -1841,7 +1841,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
     try:
         await ctx.defer()
 
-        logger.debug(f"Received /time_difference command: '{place1}' and '{place2}'")
+        logger.debug(f"Received /timedifference command: '{place1}' and '{place2}'")
 
         async def get_utc_offset(city):
             geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json"
@@ -1856,7 +1856,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
                     else:
                         return None
 
-                timestamp = int(datetime.now().timestamp())
+                timestamp = int(datetime.datetime.now().timestamp())
                 async with session.get(timezone_url, params={"location": f"{lat},{lng}", "timestamp": timestamp, "key": GOOGLE_API_KEY}) as response:
                     tz_data = await response.json()
                     if tz_data.get("status") == "OK":
@@ -1878,7 +1878,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
         await ctx.send(f"⏳ The time difference between **{place1}** and **{place2}** is **{time_difference} hours**.")
 
     except Exception as e:
-        logger.exception(f"Error in /time_difference command: {e}")
+        logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
