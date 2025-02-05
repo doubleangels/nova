@@ -1763,15 +1763,6 @@ async def timezone_lookup(ctx: interactions.ComponentContext, location: str):
         logger.exception(f"Error in /timezone command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-import aiohttp
-import interactions
-import logging
-import json
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 @interactions.slash_command(name="timedifference", description="Get the time difference between two places.")
 @interactions.slash_option(
     name="place1",
