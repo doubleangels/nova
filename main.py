@@ -332,19 +332,27 @@ async def reschedule_reminder(key, role):
 
 async def get_coordinates(city: str):
     """
-    Fetch latitude and longitude for a given city using OpenStreetMap (Nominatim).
+    Fetch latitude and longitude for a given city using Google Maps Geocoding API.
     """
     try:
-        url = "https://nominatim.openstreetmap.org/search"
-        params = {"q": city, "format": "json"}
+        geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {"address": city, "key": GOOGLE_API_KEY}
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(url, params=params) as response:
-                data = await response.json()
-                if data:
-                    lat, lon = float(data[0]["lat"]), float(data[0]["lon"])
-                    logger.debug(f"🌍 Retrieved coordinates for {city}: ({lat}, {lon})")
-                    return lat, lon
+            async with session.get(geocode_url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"📍 Google Geocoding API response: {json.dumps(data, indent=2)[:500]}...")
+
+                    if data.get("results"):
+                        location = data["results"][0]["geometry"]["location"]
+                        lat, lon = location["lat"], location["lng"]
+                        logger.debug(f"🌍 Retrieved coordinates for {city}: ({lat}, {lon})")
+                        return lat, lon
+                    else:
+                        logger.warning(f"❌ No results found for city: {city}")
+                else:
+                    logger.error(f"⚠️ Google Geocoding API error: Status {response.status}")
     except Exception as e:
         logger.exception(f"⚠️ Error fetching city coordinates: {e}")
 
