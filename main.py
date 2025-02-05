@@ -1681,7 +1681,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
         logger.exception(f"Error in /mal command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="news", description="Get the latest news on a topic from the last 3 days.")
+@interactions.slash_command(name="news", description="Get the latest news on a topic from the last 7 days.")
 @interactions.slash_option(
     name="topic",
     description="Enter the topic to search for.",
@@ -1690,7 +1690,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
 )
 async def news_search(ctx: interactions.ComponentContext, topic: str):
     """
-    Fetches the latest news articles from the last 3 days based on a given topic.
+    Fetches the latest news articles from the last 7 days based on a given topic.
     """
     try:
         await ctx.defer()
@@ -1699,7 +1699,7 @@ async def news_search(ctx: interactions.ComponentContext, topic: str):
         logger.debug(f"User input for topic: '{topic}'")
 
         # Calculate date from 3 days ago
-        three_days_ago = (datetime.utcnow() - datetime.timedelta(days=3)).strftime('%Y-%m-%d')
+        three_days_ago = (datetime.utcnow() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')
 
         # Construct NewsAPI request URL
         news_url = f"https://newsapi.org/v2/everything"
