@@ -675,7 +675,7 @@ async def check_status(ctx: interactions.ComponentContext):
         reminders_info = []
         for reminder_key in ["disboard", "discadia", "dsme", "unfocused"]:
             data = get_reminder_data(reminder_key)
-            time_str = calculate_remaining_time(data.get("scheduled_time")) if data else "⚠️ Not set!"
+            time_str = calculate_remaining_time(data.get("scheduled_time")) if data else "Not set!"
             reminders_info.append(f"⏳ **{reminder_key.capitalize()}**: {time_str}")
 
             logger.debug(f"Reminder {reminder_key}: {time_str}")
