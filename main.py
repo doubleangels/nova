@@ -1797,7 +1797,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
                         is_dst = "Yes" if dst_offset > 0 else "No"
 
                         # Calculate local time
-                        current_utc_time = datetime.now(datetime.timezone.utc)
+                        current_utc_time = datetime.datetime.now(datetime.timezone.utc)
                         local_time = current_utc_time + datetime.timedelta(hours=utc_offset)
                         formatted_time = local_time.strftime("%Y-%m-%d %H:%M:%S")
 
