@@ -57,6 +57,7 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
+    "STEAM_API_KEY": os.getenv("STEAM_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -74,6 +75,7 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
+STEAM_API_KEY = required_env_vars["STEAM_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1686,6 +1688,101 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                     await ctx.send(f"⚠️ Error: MAL API returned status code {response.status}.")
     except Exception as e:
         logger.exception(f"Error in /mal command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+import aiohttp
+import interactions
+import logging
+
+# Replace with your Steam API key
+STEAM_API_KEY = "your_steam_api_key"
+
+logger = logging.getLogger(__name__)
+
+@interactions.slash_command(name="steam", description="Search for a game on Steam.")
+@interactions.slash_option(
+    name="title",
+    description="Enter the game title.",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def steam_search(ctx: interactions.ComponentContext, title: str):
+    """
+    Searches Steam for the given game title and displays relevant information.
+    """
+    try:
+        await ctx.defer()
+
+        logger.debug(f"Received /steam command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for title: '{title}'")
+
+        # Fetch the complete list of Steam games
+        games_list_url = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(games_list_url) as response:
+                if response.status == 200:
+                    game_data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received Steam games list.")
+
+                    games = game_data.get("applist", {}).get("apps", [])
+                    matched_game = next((g for g in games if title.lower() in g["name"].lower()), None)
+
+                    if matched_game:
+                        game_id = matched_game["appid"]
+                        game_name = matched_game["name"]
+                        logger.debug(f"Matched Game - Name: {game_name}, App ID: {game_id}")
+
+                        # Fetch game details from Steam Store API
+                        game_details_url = f"https://store.steampowered.com/api/appdetails?appids={game_id}"
+                        async with session.get(game_details_url) as details_response:
+                            if details_response.status == 200:
+                                details_data = await details_response.json()
+
+                                if str(game_id) in details_data and details_data[str(game_id)]["success"]:
+                                    game_info = details_data[str(game_id)]["data"]
+
+                                    release_date = game_info.get("release_date", {}).get("date", "Unknown")
+                                    price_info = game_info.get("price_overview", {}).get("final_formatted", "Free")
+                                    metacritic = game_info.get("metacritic", {}).get("score", "N/A")
+                                    steam_link = f"https://store.steampowered.com/app/{game_id}"
+                                    image_url = game_info.get("header_image", None)
+
+                                    # Log extracted data
+                                    logger.debug(f"Extracted Steam Data - Title: {game_name}, Price: {price_info}, Release: {release_date}")
+
+                                    # Create embed with emojis
+                                    embed = interactions.Embed(
+                                        title=f"🎮 **{game_name}**",
+                                        description=f"🗓 **Release Date:** {release_date}",
+                                        color=0x1B2838
+                                    )
+                                    embed.add_field(name="💰 Price", value=f"💵 {price_info}", inline=True)
+                                    embed.add_field(name="🎯 Metacritic Score", value=f"⭐ {metacritic}", inline=True)
+                                    embed.add_field(name="🔗 Steam Store", value=f"[Click Here]({steam_link})", inline=False)
+
+                                    if image_url:
+                                        embed.set_thumbnail(url=image_url)
+
+                                    embed.set_footer(text="Powered by Steam API")
+
+                                    await ctx.send(embed=embed)
+                                else:
+                                    logger.warning(f"No details found for game ID: {game_id}")
+                                    await ctx.send(f"❌ No additional details found for '**{game_name}**'.")
+                            else:
+                                logger.warning(f"Steam API error: {details_response.status}")
+                                await ctx.send(f"⚠️ Error: Steam API returned status code {details_response.status}.")
+                    else:
+                        logger.warning(f"No matching game found for title: '{title}'.")
+                        await ctx.send(f"❌ No game found for '**{title}**'. Try another title!")
+                else:
+                    logger.warning(f"Steam API error: {response.status}")
+                    await ctx.send(f"⚠️ Error: Steam API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /steam command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
