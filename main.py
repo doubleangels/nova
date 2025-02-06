@@ -10,6 +10,7 @@ import logging
 import json
 import aiohttp
 import sentry_sdk
+import io
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
 
