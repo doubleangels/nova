@@ -59,6 +59,7 @@ required_env_vars = {
     "OMDB_API_KEY": os.getenv("OMDB_API_KEY"),
     "PIRATEWEATHER_API_KEY": os.getenv("PIRATEWEATHER_API_KEY"),
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
+    "NASA_API_KEY": os.getenv("NASA_API_KEY"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
 }
@@ -76,6 +77,7 @@ IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
 PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
+NASA_API_KEY = required_env_vars["NASA_API_KEY"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
@@ -1927,6 +1929,50 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
 
     except Exception as e:
         logger.exception(f"Error in /timedifference command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="space", description="Get NASA's Astronomy Picture of the Day (APOD).")
+async def space_image(ctx: interactions.ComponentContext):
+    """
+    Fetches NASA's Astronomy Picture of the Day (APOD).
+    """
+    try:
+        await ctx.defer()
+
+        nasa_url = f"https://api.nasa.gov/planetary/apod?api_key={NASA_API_KEY}"
+        logger.debug(f"Fetching Astronomy Picture of the Day from {nasa_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(nasa_url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"Received NASA API response: {json.dumps(data, indent=2)[:500]}...")
+
+                    title = data.get("title", "Unknown Title")
+                    explanation = data.get("explanation", "No description available.")
+                    image_url = data.get("hdurl") or data.get("url")  # Prefer HD image if available
+                    media_type = data.get("media_type", "image")
+                    date = data.get("date", "Unknown Date")
+
+                    # Embed for image or video
+                    embed = interactions.Embed(
+                        title=f"🚀 NASA Astronomy Picture of the Day",
+                        description=f"**{title}**\n📅 {date}\n\n{explanation[:500]}...",  # Limit description size
+                        color=0x1D4ED8
+                    )
+                    embed.set_footer(text="Powered by NASA APOD API")
+
+                    if media_type == "image":
+                        embed.set_image(url=image_url)
+                    elif media_type == "video":
+                        embed.add_field(name="🎥 Video", value=f"[Watch Here]({image_url})", inline=False)
+
+                    await ctx.send(embed=embed)
+                else:
+                    logger.warning(f"NASA API error: {response.status}")
+                    await ctx.send("🌌 Couldn't fetch NASA's Astronomy Picture of the Day. Try again later.")
+    except Exception as e:
+        logger.exception(f"Error in /space command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------

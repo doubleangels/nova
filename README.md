@@ -17,6 +17,7 @@ services:
        - OMDB_API_KEY=
        - PIRATEWEATHER_API_KEY=
        - MAL_CLIENT_ID=
+       - NASA_API_KEY=
        - SUPABASE_URL=
        - SUPABASE_KEY=
 
