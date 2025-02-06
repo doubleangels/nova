@@ -1773,7 +1773,7 @@ async def dog_image(ctx: interactions.ComponentContext):
                                     color=0xD3D3D3
                                 )
                                 embed.set_image(url=f"attachment://{filename}")
-
+                                embed.set_footer(text="Powered by Dog CEO API")
                                 # Send the embed along with the file attachment
                                 await ctx.send(embeds=[embed], files=[file])
                             else:
