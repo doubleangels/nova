@@ -1689,28 +1689,39 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
 @interactions.slash_command(name="cat", description="Get a random cat picture!")
 async def cat_image(ctx: interactions.ComponentContext):
     """
-    Fetches a random cat image from the Cataas API without caching issues.
+    Fetches a random cat image from the Cataas API and sends it embedded in a message.
     """
     try:
         await ctx.defer()
 
-        # Fetch a random cat image URL from Cataas API
-        cat_api_url = "https://cataas.com/cat"
-        logger.debug(f"Fetching random cat image from {cat_api_url}")
+        # Append a timestamp to avoid caching issues.
+        cat_api_url = f"https://cataas.com/cat?timestamp={int(time.time())}"
+        logger.debug(f"Fetching cat image from {cat_api_url}")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(cat_api_url) as response:
                 if response.status == 200:
-                    data = await response.json()
-                    image_id = data.get("_id", None)
+                    # Read the raw image bytes from the response.
+                    image_bytes = await response.read()
 
-                    if image_id:
-                        # Generate a unique image URL with a timestamp to avoid caching
-                        image_url = f"https://cataas.com/cat"
+                    # Wrap the image bytes in a file-like object.
+                    file_obj = io.BytesIO(image_bytes)
+                    file_obj.seek(0)
+                    
+                    # Define a filename. This will be used both for the attachment and within the embed.
+                    filename = "cat.jpg"
+                    file = interactions.File(filename=filename, fp=file_obj)
 
-                        await ctx.send(image_url)  # Send the fresh image URL
-                    else:
-                        await ctx.send("😿 Couldn't find a cat picture. Try again later.")
+                    # Create an embed and set the image to reference the attachment.
+                    embed = interactions.Embed(
+                        title="Random Cat Picture",
+                        description="Here's a cute cat for you!",
+                        color=0x00FF00
+                    )
+                    embed.set_image(url=f"attachment://{filename}")
+
+                    # Send the embed along with the file attachment.
+                    await ctx.send(embeds=[embed], files=[file])
                 else:
                     logger.warning(f"Cataas API error: {response.status}")
                     await ctx.send("😿 Couldn't fetch a cat picture. Try again later.")
