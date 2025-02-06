@@ -1763,8 +1763,8 @@ async def dog_image(ctx: interactions.ComponentContext):
                                 file_obj = io.BytesIO(image_bytes)
                                 file_obj.seek(0)
                                 filename = "dog.jpg"
-                                # Use file_name instead of filename per the interactions API
-                                file = interactions.File(file_name=filename, fp=file_obj)
+                                # Use the keyword 'file' (not 'fp') to pass the file-like object.
+                                file = interactions.File(file_name=filename, file=file_obj)
 
                                 # Create an embed and set its image to reference the attachment
                                 embed = interactions.Embed(
