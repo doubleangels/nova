@@ -346,7 +346,7 @@ async def get_coordinates(city: str):
             async with session.get(geocode_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"📍 Google Geocoding API response: {json.dumps(data, indent=2)}...")
+                    logger.debug(f"📍 Google Geocoding API response: {json.dumps(data, indent=2)}")
 
                     if data.get("results"):
                         location = data["results"][0]["geometry"]["location"]
@@ -419,7 +419,7 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
             logger.debug(f"📢 Sending initial message for '{key}': {initial_message}")
             await channel.send(initial_message)
 
-        logger.debug(f"⏳ Waiting {interval} seconds before sending reminder for '{key}'...")
+        logger.debug(f"⏳ Waiting {interval} seconds before sending reminder for '{key}'.")
         await asyncio.sleep(interval)
 
         logger.debug(f"🔔 Sending reminder message for '{key}': {reminder_message}")
@@ -490,7 +490,7 @@ async def on_ready():
 
         # Initialize reminders
         initialize_reminders_table()
-        logger.debug("🛠️ Checking for active reminders...")
+        logger.debug("🛠️ Checking for active reminders.")
 
         # Fetch role for reminders
         role = get_role()
@@ -500,7 +500,7 @@ async def on_ready():
 
         # Reschedule reminders
         for key in ["disboard", "dsme", "unfocused", "discadia"]:
-            logger.debug(f"🔄 Attempting to reschedule {key} reminder...")
+            logger.debug(f"🔄 Attempting to reschedule {key} reminder.")
             await reschedule_reminder(key, role)
             logger.debug(f"✅ Reminder {key} successfully rescheduled.")
 
@@ -528,23 +528,23 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
         if event.message.embeds:
             embed = event.message.embeds[0]
             embed_description = embed.description or ""
-            logger.debug(f"📜 Embed detected: {embed_description}...")
+            logger.debug(f"📜 Embed detected: {embed_description}")
 
             if "Bump done" in embed_description:
-                logger.debug("🔔 Triggering Disboard reminder...")
+                logger.debug("🔔 Triggering Disboard reminder.")
                 await disboard()
             elif "Your vote streak for this server" in embed_description:
-                logger.debug("🔔 Triggering DSME reminder...")
+                logger.debug("🔔 Triggering DSME reminder.")
                 await dsme()
 
         else:
             # Plain text checks
-            logger.debug(f"📄 Checking message content: {message_content}...")
+            logger.debug(f"📄 Checking message content: {message_content}")
             if "Your server has been booped" in message_content:
-                logger.debug("🔔 Triggering Unfocused reminder...")
+                logger.debug("🔔 Triggering Unfocused reminder.")
                 await unfocused()
             elif "has been successfully bumped" in message_content:
-                logger.debug("🔔 Triggering Discadia reminder...")
+                logger.debug("🔔 Triggering Discadia reminder.")
                 await discadia()
 
     except Exception as e:
@@ -1276,7 +1276,7 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
                         # Create embed with emojis
                         embed = interactions.Embed(
                             title=f"📖 **{title}**",
-                            description=f"📜 **Summary:** {snippet}...",
+                            description=f"📜 **Summary:** {snippet}",
                             url=wiki_url,
                             color=0xFFFFFF
                         )
@@ -1581,7 +1581,7 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                         thumbs_up = top_result.get("thumbs_up", 0)
                         thumbs_down = top_result.get("thumbs_down", 0)
 
-                        logger.debug(f"✅ Found definition for '{word}': {definition}... 👍 {thumbs_up} 👎 {thumbs_down}")
+                        logger.debug(f"✅ Found definition for '{word}': {definition} 👍 {thumbs_up} 👎 {thumbs_down}")
 
                         embed = interactions.Embed(
                             title=f"📖 Definition: {word}",
@@ -1665,7 +1665,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                                 # Create embed with emojis
                                 embed = interactions.Embed(
                                     title=f"📺 **{title}**",
-                                    description=f"📜 **Synopsis:** {synopsis}...",  # Truncate long descriptions
+                                    description=f"📜 **Synopsis:** {synopsis}...",
                                     color=0x2E51A2
                                 )
                                 embed.add_field(name="🎭 Genre", value=f"🎞 {genres}", inline=True)
@@ -1819,7 +1819,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
             async with session.get(geocode_url, params=geocode_params) as response:
                 if response.status == 200:
                     geo_data = await response.json()
-                    logger.debug(f"Received Google Geocoding API response: {json.dumps(geo_data, indent=2)}...")
+                    logger.debug(f"Received Google Geocoding API response: {json.dumps(geo_data, indent=2)}")
 
                     if geo_data.get("results"):
                         location = geo_data["results"][0]["geometry"]["location"]
@@ -1839,7 +1839,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
             async with session.get(timezone_url, params=timezone_params) as response:
                 if response.status == 200:
                     tz_data = await response.json()
-                    logger.debug(f"Received Google Time Zone API response: {json.dumps(tz_data, indent=2)}...")
+                    logger.debug(f"Received Google Time Zone API response: {json.dumps(tz_data, indent=2)}")
 
                     if tz_data.get("status") == "OK":
                         timezone_name = tz_data["timeZoneId"]
@@ -1966,7 +1966,7 @@ async def space_image(ctx: interactions.ComponentContext, date: str = None):
             async with session.get(nasa_url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"Received NASA API response: {json.dumps(data, indent=2)}...")
+                    logger.debug(f"Received NASA API response: {json.dumps(data, indent=2)}")
 
                     title = data.get("title", "Unknown Title")
                     explanation = data.get("explanation", "No description available.")
@@ -1977,7 +1977,7 @@ async def space_image(ctx: interactions.ComponentContext, date: str = None):
                     # Embed for image or video
                     embed = interactions.Embed(
                         title=f"🚀 NASA Astronomy Picture of the Day",
-                        description=f"**{title}**\n📅 {apod_date}\n\n{explanation}...",
+                        description=f"**{title}**\n📅 {apod_date}\n\n{explanation}",
                         color=0x1D4ED8
                     )
                     embed.set_footer(text="Powered by NASA APOD API")
@@ -2010,7 +2010,7 @@ async def random_joke(ctx: interactions.ComponentContext):
             async with session.get(joke_url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"Received JokeAPI response: {json.dumps(data, indent=2)[:500]}...")
+                    logger.debug(f"Received JokeAPI response: {json.dumps(data, indent=2)}")
 
                     joke = data.get("joke") or f"**{data.get('setup')}**\n{data.get('delivery')}"
                     category = data.get("category", "Unknown")
@@ -2044,7 +2044,7 @@ async def random_fact(ctx: interactions.ComponentContext):
             async with session.get(fact_url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"Received Useless Facts API response: {json.dumps(data, indent=2)[:500]}...")
+                    logger.debug(f"Received Useless Facts API response: {json.dumps(data, indent=2)}...")
 
                     fact = data.get("text", "No fact found.")
 
@@ -2077,7 +2077,7 @@ async def random_meme(ctx: interactions.ComponentContext):
             async with session.get(meme_url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"Received Imgflip API response: {json.dumps(data, indent=2)[:500]}...")
+                    logger.debug(f"Received Imgflip API response: {json.dumps(data, indent=2)}")
 
                     if data.get("success"):
                         memes = data["data"]["memes"]
