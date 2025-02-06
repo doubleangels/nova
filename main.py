@@ -9,7 +9,6 @@ import signal
 import logging
 import json
 import aiohttp
-import time
 import sentry_sdk
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
@@ -1696,7 +1695,7 @@ async def cat_image(ctx: interactions.ComponentContext):
         await ctx.defer()
 
         # Fetch a random cat image URL from Cataas API
-        cat_api_url = "https://cataas.com/cat?json=true"
+        cat_api_url = "https://cataas.com/cat"
         logger.debug(f"Fetching random cat image from {cat_api_url}")
 
         async with aiohttp.ClientSession() as session:
@@ -1707,8 +1706,7 @@ async def cat_image(ctx: interactions.ComponentContext):
 
                     if image_id:
                         # Generate a unique image URL with a timestamp to avoid caching
-                        timestamp = int(time.time())  # Current time to bust cache
-                        image_url = f"https://cataas.com/cat/{image_id}?t={timestamp}"
+                        image_url = f"https://cataas.com/cat"
 
                         await ctx.send(image_url)  # Send the fresh image URL
                     else:
