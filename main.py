@@ -765,75 +765,82 @@ async def source(ctx: interactions.ComponentContext):
         logger.exception(f"⚠️ Error in /source command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request.", ephemeral=True)
 
-@interactions.slash_command(name="togglebackupmode", description="Toggle role assignment for new members.")
-@interactions.slash_option(
-    name="enabled",
-    description="Enable (true) or Disable (false) auto-role assignment",
-    required=True,
-    opt_type=interactions.OptionType.BOOLEAN
-)
-async def toggle_backup_mode(ctx: interactions.ComponentContext, enabled: bool):
-    """
-    Enables or disables backup mode for auto-role assignment.
-    """
-    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
-        logger.warning(f"Unauthorized /togglebackupmode attempt by {ctx.author.username} ({ctx.author.id})")
-        return
-
-    try:
-        logger.debug(f"Received /togglebackupmode command from {ctx.author.username} ({ctx.author.id})")
-        logger.debug(f"Backup mode toggle: {'Enabled' if enabled else 'Disabled'}")
-
-        # Update backup mode setting
-        set_value("backup_mode_enabled", enabled)
-        status = "✅ **enabled**" if enabled else "❌ **disabled**"
-
-        await ctx.send(f"🔄 Backup mode has been {status}.")
-        logger.debug(f"Backup mode successfully {status} by {ctx.author.username}.")
-
-    except Exception as e:
-        logger.exception(f"⚠️ Error in /togglebackupmode command: {e}")
-        await ctx.send("⚠️ An error occurred while toggling backup mode. Please try again later.", ephemeral=True)
-
-@interactions.slash_command(name="backupmode", description="Configure the role/channel used by backup mode.")
+@interactions.slash_command(name="backupmode", description="Configure and toggle backup mode for new members.")
 @interactions.slash_option(
     name="channel",
-    description="Channel to send welcome messages for new members",
-    required=True,
+    description="Channel to send welcome messages for new members (leave empty to check status)",
+    required=False,
     opt_type=interactions.OptionType.CHANNEL
 )
 @interactions.slash_option(
     name="role",
-    description="Role to assign to new members",
-    required=True,
+    description="Role to assign to new members (leave empty to check status)",
+    required=False,
     opt_type=interactions.OptionType.ROLE
 )
-async def backup_mode_setup(ctx: interactions.ComponentContext, channel, role: interactions.Role):
+@interactions.slash_option(
+    name="enabled",
+    description="Enable (true) or Disable (false) auto-role assignment (leave empty to check status)",
+    required=False,
+    opt_type=interactions.OptionType.BOOLEAN
+)
+async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: interactions.Role = None, enabled: bool = None):
     """
-    Sets which channel to welcome new members in and which role to assign them.
+    Configures the backup mode channel, role, and toggle status, or checks the current settings.
     """
-    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
-        logger.warning(f"Unauthorized /backupmode attempt by {ctx.author.username} ({ctx.author.id})")
-        return
-
     try:
-        logger.debug(f"Received /backupmode command from {ctx.author.username} ({ctx.author.id})")
-        logger.debug(f"Setting backup mode: Channel=<#{channel.id}>, Role=<@&{role.id}>")
+        if channel or role or enabled is not None:
+            if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+                logger.warning(f"Unauthorized /backupmode setup attempt by {ctx.author.username} ({ctx.author.id})")
+                return
+            
+            logger.debug(f"Received /backupmode command from {ctx.author.username} ({ctx.author.id})")
+            
+            if channel:
+                set_value("backup_mode_channel", channel.id)
+                logger.debug(f"Backup mode channel set to {channel.id}")
+            
+            if role:
+                set_value("backup_mode_id", role.id)
+                logger.debug(f"Backup mode role set to {role.id}")
+            
+            if enabled is not None:
+                set_value("backup_mode_enabled", enabled)
+                logger.debug(f"Backup mode {'enabled' if enabled else 'disabled'}")
+            
+            await ctx.send(
+                f"🔄 **Backup Mode Configured!**\n"
+                f"📢 Welcome messages will be sent in {f'<#{channel.id}>' if channel else 'Not changed'}\n"
+                f"🎭 New members will be assigned the role: {f'<@&{role.id}>' if role else 'Not changed'}\n"
+                f"🔘 Auto-role assignment: {'✅ **Enabled**' if enabled else '❌ **Disabled**' if enabled is not None else 'Not changed'}"
+            )
+            return
+        
+        logger.debug(f"📊 Backup mode status check requested by {ctx.author.username} ({ctx.author.id})")
 
-        # Store settings
-        set_value("backup_mode_id", role.id)
-        set_value("backup_mode_channel", channel.id)
+        # Fetch stored values
+        channel_id = get_value("backup_mode_channel")
+        role_id = get_value("backup_mode_id")
+        enabled_status = get_value("backup_mode_enabled")
 
-        await ctx.send(
-            f"🔄 **Backup Mode Configured!**\n📢 Welcome messages will be sent in <#{channel.id}>.\n🎭 New members will be assigned the role: <@&{role.id}>."
+        channel_str = f"📢 <#{channel_id}>" if channel_id else "Not set!"
+        role_str = f"🎭 <@&{role_id}>" if role_id else "Not set!"
+        enabled_str = "✅ **Enabled**" if enabled_status else "❌ **Disabled**"
+
+        summary = (
+            f"📌 **Backup Mode Status:**\n"
+            f"📢 **Channel:** {channel_str}\n"
+            f"🎭 **Role:** {role_str}\n"
+            f"🔘 **Auto-role assignment:** {enabled_str}"
         )
-        logger.debug(f"✅ Backup mode successfully set: Channel={channel.id}, Role={role.id}")
 
+        await ctx.send(summary)
+        logger.debug("✅ Backup mode status check completed successfully.")
+    
     except Exception as e:
         logger.exception(f"⚠️ Error in /backupmode command: {e}")
-        await ctx.send("⚠️ An error occurred while configuring backup mode. Please try again later.", ephemeral=True)
+        await ctx.send("⚠️ An error occurred while processing your request. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="trollmode", description="Toggle kicking of accounts younger than a specified age.")
 @interactions.slash_option(
