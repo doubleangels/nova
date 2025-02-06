@@ -1932,16 +1932,47 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
         logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+import aiohttp
+import interactions
+import logging
+import json
+from datetime import datetime
+
+# Replace with your NASA API key
+NASA_API_KEY = "your_nasa_api_key"
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 @interactions.slash_command(name="space", description="Get NASA's Astronomy Picture of the Day (APOD).")
-async def space_image(ctx: interactions.ComponentContext):
+@interactions.slash_option(
+    name="date",
+    description="Enter a date (YYYY-MM-DD) or leave blank for today's image.",
+    required=False,
+    opt_type=interactions.OptionType.STRING
+)
+async def space_image(ctx: interactions.ComponentContext, date: str = None):
     """
-    Fetches NASA's Astronomy Picture of the Day (APOD).
+    Fetches NASA's Astronomy Picture of the Day (APOD) for a specific date or today.
     """
     try:
         await ctx.defer()
 
+        # Validate date format if provided
+        if date:
+            try:
+                datetime.strptime(date, "%Y-%m-%d")
+            except ValueError:
+                await ctx.send("⚠️ Invalid date format! Please use `YYYY-MM-DD`.")
+                return
+
+        # Construct API URL
         nasa_url = f"https://api.nasa.gov/planetary/apod?api_key={NASA_API_KEY}"
-        logger.debug(f"Fetching Astronomy Picture of the Day from {nasa_url}")
+        if date:
+            nasa_url += f"&date={date}"
+
+        logger.debug(f"Fetching APOD from {nasa_url}")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(nasa_url) as response:
@@ -1953,13 +1984,13 @@ async def space_image(ctx: interactions.ComponentContext):
                     explanation = data.get("explanation", "No description available.")
                     image_url = data.get("hdurl") or data.get("url")  # Prefer HD image if available
                     media_type = data.get("media_type", "image")
-                    date = data.get("date", "Unknown Date")
+                    apod_date = data.get("date", "Unknown Date")
 
                     # Embed for image or video
                     embed = interactions.Embed(
                         title=f"🚀 NASA Astronomy Picture of the Day",
-                        description=f"**{title}**\n📅 {date}\n\n{explanation[:500]}...",  # Limit description size
-                        color=0x000000
+                        description=f"**{title}**\n📅 {apod_date}\n\n{explanation[:500]}...",  # Limit description size
+                        color=0x1D4ED8
                     )
                     embed.set_footer(text="Powered by NASA APOD API")
 
