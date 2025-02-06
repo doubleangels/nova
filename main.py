@@ -1976,59 +1976,6 @@ async def space_image(ctx: interactions.ComponentContext):
         logger.exception(f"Error in /space command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="mars", description="Get the latest Mars Rover images.")
-@interactions.slash_option(
-    name="rover",
-    description="Choose a Mars rover (Curiosity, Perseverance, Opportunity, Spirit).",
-    required=False,
-    opt_type=interactions.OptionType.STRING,
-    choices=["Curiosity", "Perseverance", "Opportunity", "Spirit"]
-)
-async def mars_rover_image(ctx: interactions.ComponentContext, rover: str = "Curiosity"):
-    """
-    Fetches the latest available image from the selected Mars Rover.
-    """
-    try:
-        await ctx.defer()
-
-        nasa_url = f"https://api.nasa.gov/mars-photos/api/v1/rovers/{rover.lower()}/latest_photos?api_key={NASA_API_KEY}"
-        logger.debug(f"Fetching Mars Rover images from {nasa_url}")
-
-        async with aiohttp.ClientSession() as session:
-            async with session.get(nasa_url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    logger.debug(f"Received NASA Mars Rover API response: {json.dumps(data, indent=2)[:500]}...")
-
-                    photos = data.get("latest_photos", [])
-
-                    if not photos:
-                        await ctx.send(f"🚀 No recent photos found for **{rover}**. Try again later.")
-                        return
-
-                    # Select a random image from the latest available photos
-                    photo = random.choice(photos)
-                    image_url = photo["img_src"]
-                    camera_name = photo["camera"]["full_name"]
-                    earth_date = photo["earth_date"]
-
-                    # Create embed
-                    embed = interactions.Embed(
-                        title=f"📸 Latest {rover} Rover Image",
-                        description=f"📅 Captured on: {earth_date}\n🎥 Camera: {camera_name}",
-                        color=0x000000
-                    )
-                    embed.set_image(url=image_url)
-                    embed.set_footer(text="Powered by NASA Mars Rover API")
-
-                    await ctx.send(embed=embed)
-                else:
-                    logger.warning(f"NASA API error: {response.status}")
-                    await ctx.send("🛸 Couldn't fetch Mars images. Try again later.")
-    except Exception as e:
-        logger.exception(f"Error in /mars command: {e}")
-        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
-
 @interactions.slash_command(name="joke", description="Get a random joke.")
 async def random_joke(ctx: interactions.ComponentContext):
     """
