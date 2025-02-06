@@ -1975,6 +1975,40 @@ async def space_image(ctx: interactions.ComponentContext):
         logger.exception(f"Error in /space command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+@interactions.slash_command(name="joke", description="Get a random joke.")
+async def random_joke(ctx: interactions.ComponentContext):
+    """
+    Fetches a random joke from JokeAPI.
+    """
+    try:
+        await ctx.defer()
+
+        joke_url = "https://v2.jokeapi.dev/joke/Any"
+        logger.debug(f"Fetching joke from {joke_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(joke_url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"Received JokeAPI response: {json.dumps(data, indent=2)[:500]}...")
+
+                    joke = data.get("joke") or f"**{data.get('setup')}**\n{data.get('delivery')}"
+                    category = data.get("category", "Unknown")
+
+                    embed = interactions.Embed(
+                        title=f"😂 Random Joke ({category})",
+                        description=joke,
+                        color=0xF4A261
+                    )
+
+                    await ctx.send(embed=embed)
+                else:
+                    logger.warning(f"JokeAPI error: {response.status}")
+                    await ctx.send("🤷 Couldn't fetch a joke. Try again later.")
+    except Exception as e:
+        logger.exception(f"Error in /joke command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 # -------------------------
 # Bot Startup
 # -------------------------
