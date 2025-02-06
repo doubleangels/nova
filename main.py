@@ -1729,8 +1729,7 @@ async def dog_image(ctx: interactions.ComponentContext):
         await ctx.defer()
 
         # Add a timestamp query parameter to prevent caching
-        timestamp = int(time.time())  # Current timestamp in seconds
-        dog_url = f"https://dog.ceo/api/breeds/image/random?t={timestamp}"
+        dog_url = f"https://dog.ceo/api/breeds/image/random"
         logger.debug(f"Fetching random dog image from {dog_url}")
 
         async with aiohttp.ClientSession() as session:
