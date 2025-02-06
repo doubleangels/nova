@@ -692,6 +692,95 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         logger.exception(f"⚠️ Error in /reminder command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request. Please try again later.", ephemeral=True)
 
+@interactions.slash_command(
+    name="fix",
+    description="Runs the logic to add service data to the database under the key name of 'fix'."
+)
+@interactions.slash_option(
+    name="service",
+    description="Service to generate fix for in the database",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def fix_command(ctx: interactions.ComponentContext, service: str):
+    """
+    Mimics logic to write reminder data to the database and fix broken entries.
+    """
+    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /fix attempt by {ctx.author.username} ({ctx.author.id})")
+        return
+
+    try:
+        logger.debug(f"Received /fix command from {ctx.author.username} ({ctx.author.id}) for service: {service}")
+
+        # Determine delay based on service
+        service_delays = {
+            "disboard": 7200,  # 2 hours
+            "dsme": 43200,  # 12 hours
+            "unfocused": 21600,  # 6 hours
+            "discadia": 43200  # 12 hours
+        }
+
+        if service not in service_delays:
+            logger.warning(f"Invalid service name provided: {service}")
+            await ctx.send("⚠️ Invalid service name provided. Please use one of: **disboard, dsme, unfocused, discadia**.", ephemeral=True)
+            return
+
+        seconds = service_delays[service]
+        logger.debug(f"Service '{service}' selected with a delay of {seconds} seconds.")
+
+        # Generate unique reminder ID and timestamp
+        reminder_id = str(uuid.uuid4())
+        scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat()
+
+        reminder_data = {
+            "state": True,
+            "scheduled_time": scheduled_time,
+            "reminder_id": reminder_id
+        }
+
+        # Save to database
+        set_reminder_data(service, reminder_data)
+        logger.debug(f"🔧 Fix logic applied: {reminder_data}")
+
+        await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
+        logger.debug(f"✅ Fix logic successfully applied for service: {service}")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /fix command: {e}")
+        await ctx.send("⚠️ An error occurred while applying fix logic. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to default values.")
+async def reset_reminders(ctx: interactions.ComponentContext):
+    """
+    Resets all reminders in the 'reminders' table to their default values.
+    """
+    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username} ({ctx.author.id})")
+        return
+
+    try:
+        logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
+
+        default_data = {
+            "state": False,
+            "scheduled_time": None,
+            "reminder_id": None
+        }
+        reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
+
+        for key in reminder_keys:
+            set_reminder_data(key, default_data)
+            logger.debug(f"🔄 Reset reminder data for key: {key}")
+
+        await ctx.send("✅ All reminders have been reset to default values.")
+        logger.debug("✅ All reminders successfully reset.")
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /resetreminders command: {e}")
+        await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
+
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
 async def test_reminders(ctx: interactions.ComponentContext):
     """
@@ -879,95 +968,6 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     except Exception as e:
         logger.exception(f"⚠️ Error in /trollmode command: {e}")
         await ctx.send("⚠️ An error occurred while toggling troll mode. Please try again later.", ephemeral=True)
-
-@interactions.slash_command(
-    name="fix",
-    description="Runs the logic to add service data to the database under the key name of 'fix'."
-)
-@interactions.slash_option(
-    name="service",
-    description="Service to generate fix for in the database",
-    required=True,
-    opt_type=interactions.OptionType.STRING
-)
-async def fix_command(ctx: interactions.ComponentContext, service: str):
-    """
-    Mimics logic to write reminder data to the database and fix broken entries.
-    """
-    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
-        logger.warning(f"Unauthorized /fix attempt by {ctx.author.username} ({ctx.author.id})")
-        return
-
-    try:
-        logger.debug(f"Received /fix command from {ctx.author.username} ({ctx.author.id}) for service: {service}")
-
-        # Determine delay based on service
-        service_delays = {
-            "disboard": 7200,  # 2 hours
-            "dsme": 43200,  # 12 hours
-            "unfocused": 21600,  # 6 hours
-            "discadia": 43200  # 12 hours
-        }
-
-        if service not in service_delays:
-            logger.warning(f"Invalid service name provided: {service}")
-            await ctx.send("⚠️ Invalid service name provided. Please use one of: **disboard, dsme, unfocused, discadia**.", ephemeral=True)
-            return
-
-        seconds = service_delays[service]
-        logger.debug(f"Service '{service}' selected with a delay of {seconds} seconds.")
-
-        # Generate unique reminder ID and timestamp
-        reminder_id = str(uuid.uuid4())
-        scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat()
-
-        reminder_data = {
-            "state": True,
-            "scheduled_time": scheduled_time,
-            "reminder_id": reminder_id
-        }
-
-        # Save to database
-        set_reminder_data(service, reminder_data)
-        logger.debug(f"🔧 Fix logic applied: {reminder_data}")
-
-        await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
-        logger.debug(f"✅ Fix logic successfully applied for service: {service}")
-
-    except Exception as e:
-        logger.exception(f"⚠️ Error in /fix command: {e}")
-        await ctx.send("⚠️ An error occurred while applying fix logic. Please try again later.", ephemeral=True)
-
-@interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to default values.")
-async def reset_reminders(ctx: interactions.ComponentContext):
-    """
-    Resets all reminders in the 'reminders' table to their default values.
-    """
-    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
-        logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username} ({ctx.author.id})")
-        return
-
-    try:
-        logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
-
-        default_data = {
-            "state": False,
-            "scheduled_time": None,
-            "reminder_id": None
-        }
-        reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
-
-        for key in reminder_keys:
-            set_reminder_data(key, default_data)
-            logger.debug(f"🔄 Reset reminder data for key: {key}")
-
-        await ctx.send("✅ All reminders have been reset to default values.")
-        logger.debug("✅ All reminders successfully reset.")
-    except Exception as e:
-        logger.exception(f"⚠️ Error in /resetreminders command: {e}")
-        await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
 
 # -------------------------
 # Search / AI Commands
