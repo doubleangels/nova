@@ -1770,7 +1770,7 @@ async def dog_image(ctx: interactions.ComponentContext):
                                 embed = interactions.Embed(
                                     title="Random Dog Picture",
                                     description="Here's a doggo for you!",
-                                    color=0x00FF00
+                                    color=0xD3D3D3
                                 )
                                 embed.set_image(url=f"attachment://{filename}")
 
