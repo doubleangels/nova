@@ -1950,7 +1950,7 @@ async def space_image(ctx: interactions.ComponentContext, date: str = None):
         # Validate date format if provided
         if date:
             try:
-                datetime.strptime(date, "%Y-%m-%d")
+                datetime.datetime.strptime(date, "%Y-%m-%d")
             except ValueError:
                 await ctx.send("⚠️ Invalid date format! Please use `YYYY-MM-DD`.")
                 return
