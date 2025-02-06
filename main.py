@@ -2042,6 +2042,43 @@ async def random_fact(ctx: interactions.ComponentContext):
         logger.exception(f"Error in /fact command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+@interactions.slash_command(name="meme", description="Get a random meme.")
+async def random_meme(ctx: interactions.ComponentContext):
+    """
+    Fetches a random meme from Imgflip API.
+    """
+    try:
+        await ctx.defer()
+
+        meme_url = "https://api.imgflip.com/get_memes"
+        logger.debug(f"Fetching meme from {meme_url}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(meme_url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"Received Imgflip API response: {json.dumps(data, indent=2)[:500]}...")
+
+                    if data.get("success"):
+                        memes = data["data"]["memes"]
+                        meme = random.choice(memes)  # Pick a random meme
+
+                        embed = interactions.Embed(
+                            title=f"🤣 Random Meme: {meme['name']}",
+                            color=0xE76F51
+                        )
+                        embed.set_image(url=meme["url"])
+
+                        await ctx.send(embed=embed)
+                    else:
+                        await ctx.send("🤷 Couldn't find a meme. Try again later.")
+                else:
+                    logger.warning(f"Imgflip API error: {response.status}")
+                    await ctx.send("🤣 Couldn't fetch a meme. Try again later.")
+    except Exception as e:
+        logger.exception(f"Error in /meme command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 # -------------------------
 # Bot Startup
 # -------------------------
