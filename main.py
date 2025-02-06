@@ -1966,7 +1966,7 @@ async def space_image(ctx: interactions.ComponentContext, date: str = None):
             async with session.get(nasa_url) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"Received NASA API response: {json.dumps(data, indent=2)[:500]}...")
+                    logger.debug(f"Received NASA API response: {json.dumps(data, indent=2)}...")
 
                     title = data.get("title", "Unknown Title")
                     explanation = data.get("explanation", "No description available.")
@@ -1977,7 +1977,7 @@ async def space_image(ctx: interactions.ComponentContext, date: str = None):
                     # Embed for image or video
                     embed = interactions.Embed(
                         title=f"🚀 NASA Astronomy Picture of the Day",
-                        description=f"**{title}**\n📅 {apod_date}\n\n{explanation[:500]}...",  # Limit description size
+                        description=f"**{title}**\n📅 {apod_date}\n\n{explanation}...",  # Limit description size
                         color=0x1D4ED8
                     )
                     embed.set_footer(text="Powered by NASA APOD API")
