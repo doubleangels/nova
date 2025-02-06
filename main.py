@@ -1933,19 +1933,6 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
         logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-import aiohttp
-import interactions
-import logging
-import json
-from datetime import datetime
-
-# Replace with your NASA API key
-NASA_API_KEY = "your_nasa_api_key"
-
-# Set up logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 @interactions.slash_command(name="space", description="Get NASA's Astronomy Picture of the Day (APOD).")
 @interactions.slash_option(
     name="date",
