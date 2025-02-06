@@ -620,48 +620,42 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
 # -------------------------
 # Slash Commands
 # -------------------------
-@interactions.slash_command(name="remindersetup", description="Setup bump and boop reminders.")
+@interactions.slash_command(name="reminder", description="Setup and check the status of bump and boop reminders.")
 @interactions.slash_option(
     name="channel",
-    description="Channel to send reminders in",
-    required=True,
+    description="Channel to send reminders in (leave empty to check status)",
+    required=False,
     opt_type=interactions.OptionType.CHANNEL
 )
 @interactions.slash_option(
     name="role",
-    description="Role to ping in reminders",
-    required=True,
+    description="Role to ping in reminders (leave empty to check status)",
+    required=False,
     opt_type=interactions.OptionType.ROLE
 )
-async def reminder_setup(ctx: interactions.ComponentContext, channel, role: interactions.Role):
+async def reminder(ctx: interactions.ComponentContext, channel=None, role: interactions.Role = None):
     """
-    Sets up the reminder channel and role in the database.
-    """
-    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
-        logger.warning(f"Unauthorized /remindersetup attempt by {ctx.author.username} ({ctx.author.id})")
-        return
-
-    try:
-        logger.debug(f"⏰ Reminder setup requested by {ctx.author.username} ({ctx.author.id}). Channel: {channel.id}, Role: {role.id}")
-
-        # Store settings
-        set_value("reminder_channel", channel.id)
-        set_value("role", role.id)
-
-        await ctx.send(f"✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#{channel.id}>.\n🎭 The role to be pinged is <@&{role.id}>.")
-        logger.debug("✅ Reminder setup successfully completed.")
-
-    except Exception as e:
-        logger.exception(f"⚠️ Error in /remindersetup command: {e}")
-        await ctx.send("⚠️ An error occurred while setting up reminders. Please try again later.", ephemeral=True)
-
-@interactions.slash_command(name="status", description="Check the current status of all reminders.")
-async def check_status(ctx: interactions.ComponentContext):
-    """
-    Shows the channel/role set for reminders and how much time remains for each reminder.
+    Sets up the reminder channel and role in the database or checks the status.
     """
     try:
+        if channel and role:
+            # Ensure the user has admin permissions to modify settings
+            if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+                logger.warning(f"Unauthorized /reminder setup attempt by {ctx.author.username} ({ctx.author.id})")
+                return
+
+            logger.debug(f"⏰ Reminder setup requested by {ctx.author.username} ({ctx.author.id}). Channel: {channel.id}, Role: {role.id}")
+            
+            # Store settings
+            set_value("reminder_channel", channel.id)
+            set_value("role", role.id)
+            
+            await ctx.send(f"✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#{channel.id}>.\n🎭 The role to be pinged is <@&{role.id}>.")
+            logger.debug("✅ Reminder setup successfully completed.")
+            return
+        
+        # If no arguments provided, fetch and display current status
         logger.debug(f"📊 Status check requested by {ctx.author.username} ({ctx.author.id}).")
 
         # Fetch stored values
@@ -693,10 +687,10 @@ async def check_status(ctx: interactions.ComponentContext):
 
         await ctx.send(summary)
         logger.debug("✅ Status check completed successfully.")
-
+    
     except Exception as e:
-        logger.exception(f"⚠️ Error in /status command: {e}")
-        await ctx.send("⚠️ An error occurred while fetching status. Please try again later.", ephemeral=True)
+        logger.exception(f"⚠️ Error in /reminder command: {e}")
+        await ctx.send("⚠️ An error occurred while processing your request. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
 async def test_reminders(ctx: interactions.ComponentContext):
