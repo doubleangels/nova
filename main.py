@@ -1712,7 +1712,8 @@ async def cat_image(ctx: interactions.ComponentContext):
                     
                     # Define a filename. This will be used both for the attachment and within the embed.
                     filename = "cat.jpg"
-                    file = interactions.File(filename=filename, fp=file_obj)
+                    # Use the correct keyword arguments: file_name and file.
+                    file = interactions.File(file_name=filename, file=file_obj)
 
                     # Create an embed and set the image to reference the attachment.
                     embed = interactions.Embed(
@@ -1721,6 +1722,7 @@ async def cat_image(ctx: interactions.ComponentContext):
                         color=0xD3D3D3
                     )
                     embed.set_image(url=f"attachment://{filename}")
+                    embed.set_footer(text="Powered by Cataas API")
 
                     # Send the embed along with the file attachment.
                     await ctx.send(embeds=[embed], files=[file])
@@ -1730,6 +1732,7 @@ async def cat_image(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.exception(f"Error in /cat command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
 
 @interactions.slash_command(name="dog", description="Get a random dog picture!")
 async def dog_image(ctx: interactions.ComponentContext):
