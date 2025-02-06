@@ -1716,7 +1716,7 @@ async def cat_image(ctx: interactions.ComponentContext):
                     embed = interactions.Embed(
                         title="Random Cat Picture",
                         description="Here's a cute cat for you!",
-                        color=0x00FF00
+                        color=0xD3D3D3
                     )
                     embed.set_image(url=f"attachment://{filename}")
 
@@ -1732,23 +1732,50 @@ async def cat_image(ctx: interactions.ComponentContext):
 @interactions.slash_command(name="dog", description="Get a random dog picture!")
 async def dog_image(ctx: interactions.ComponentContext):
     """
-    Fetches a random dog image from the Dog CEO API with a cache-busting trick.
+    Fetches a random dog image from the Dog CEO API and sends it embedded in a message.
     """
     try:
         await ctx.defer()
 
-        # Add a timestamp query parameter to prevent caching
-        dog_url = f"https://dog.ceo/api/breeds/image/random"
-        logger.debug(f"Fetching random dog image from {dog_url}")
+        # Fetch the JSON data from the Dog CEO API
+        dog_api_url = "https://dog.ceo/api/breeds/image/random"
+        logger.debug(f"Fetching random dog image data from {dog_api_url}")
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(dog_url) as response:
+            async with session.get(dog_api_url) as response:
                 if response.status == 200:
                     data = await response.json()
                     image_url = data.get("message", None)
 
                     if image_url:
-                        await ctx.send(image_url)  # Send the direct link to the image
+                        # Optionally, add a timestamp to bust caching (if the image host supports extra query parameters)
+                        image_url_with_timestamp = f"{image_url}?timestamp={int(time.time())}"
+                        logger.debug(f"Fetching dog image from {image_url_with_timestamp}")
+
+                        # Now fetch the actual image bytes
+                        async with session.get(image_url_with_timestamp) as image_response:
+                            if image_response.status == 200:
+                                image_bytes = await image_response.read()
+
+                                # Wrap the image bytes in a file-like object
+                                file_obj = io.BytesIO(image_bytes)
+                                file_obj.seek(0)
+                                filename = "dog.jpg"
+                                file = interactions.File(filename=filename, fp=file_obj)
+
+                                # Create an embed and set its image to reference the attachment
+                                embed = interactions.Embed(
+                                    title="Random Dog Picture",
+                                    description="Here's a doggo for you!",
+                                    color=0xD3D3D3
+                                )
+                                embed.set_image(url=f"attachment://{filename}")
+
+                                # Send the embed along with the file attachment
+                                await ctx.send(embeds=[embed], files=[file])
+                            else:
+                                logger.warning(f"Error fetching dog image file: {image_response.status}")
+                                await ctx.send("🐶 Couldn't fetch a dog picture. Try again later.")
                     else:
                         await ctx.send("🐶 Couldn't find a dog picture. Try again later.")
                 else:
