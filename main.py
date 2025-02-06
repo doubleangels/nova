@@ -1958,7 +1958,7 @@ async def space_image(ctx: interactions.ComponentContext):
                     embed = interactions.Embed(
                         title=f"🚀 NASA Astronomy Picture of the Day",
                         description=f"**{title}**\n📅 {date}\n\n{explanation[:500]}...",  # Limit description size
-                        color=0x1D4ED8
+                        color=0x000000
                     )
                     embed.set_footer(text="Powered by NASA APOD API")
 
