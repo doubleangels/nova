@@ -2013,7 +2013,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             async with session.get(avatar_url) as resp:
                 if resp.status != 200:
                     await ctx.send("❌ Failed to fetch profile picture.", ephemeral=True)
-                    logger.error(f"🚨 Failed to download avatar for **{user.username}** (HTTP {resp.status})")
+                    logger.error(f"👤 Failed to download avatar for **{user.username}** (HTTP {resp.status})")
                     return
                 image_bytes = await resp.read()
 
@@ -2094,8 +2094,9 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         logger.info(f"✅ Successfully applied **{mode} effect** with **strength {strength}** for **{user.username}**!")
 
     except Exception as e:
-        await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
         logger.error(f"Error in /warp command: {e}", exc_info=True)
+        await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
+
 
 # -------------------------
 # Bot Startup
