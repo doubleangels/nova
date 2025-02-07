@@ -2009,8 +2009,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
     try:
         # Fetch the user's avatar URL with high resolution
-        avatar_url = f"{user.avatar_url}?size=4096"
-        logger.debug(f"🔗 **Avatar URL for {user.username}:** {avatar_url}")
+        avatar_url = f"{user.avatar.as_url(format='png')}?size=4096"
+        logger.debug(f"🔗 **Avatar PNG URL for {user.username}:** {avatar_url}")
 
         if not avatar_url:
             await ctx.send("❌ This user has no profile picture.", ephemeral=True)
