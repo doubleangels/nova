@@ -948,7 +948,8 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
         logger.debug(f"Mute mode toggle: {'Enabled' if enabled else 'Disabled'}, Kick Time: {kick_time} hours")
 
         # Store settings in Supabase (config table)
-        set_mute_mode_settings(enabled, kick_time)
+        set_value("mute_mode", enabled)
+        set_value("mute_mode_kick_time_hours", kick_time)
 
         # Create appropriate response message
         if enabled:
