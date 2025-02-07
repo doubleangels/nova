@@ -1999,7 +1999,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         center_x, center_y = width // 2, height // 2
 
         # Swirl intensity and radius
-        swirl_strength = 4  # Higher value = stronger swirl
+        swirl_strength = 2  # Higher value = stronger swirl
         swirl_radius = min(width, height) // 2  # The area affected by the swirl
 
         # Generate coordinate grids
@@ -2040,7 +2040,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
     except Exception as e:
         await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
         print(f"Error in /warp command: {e}")
-        
+
 # -------------------------
 # Bot Startup
 # -------------------------
