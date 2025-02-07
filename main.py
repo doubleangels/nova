@@ -2074,7 +2074,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
         
         elif mode == "pinch":
-            logger.info("➿ Applying **pinch effect**.")
+            logger.info("👌 Applying **pinch effect**.")
             
             # Normalized distance from center
             normalized_distance = distance / effect_radius
