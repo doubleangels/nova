@@ -701,18 +701,16 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
     opt_type=interactions.OptionType.STRING
 )
 async def fix_command(ctx: interactions.ComponentContext, service: str):
-    """
-    Mimics logic to write reminder data to the database and fix broken entries.
-    """
+    """Mimics logic to write reminder data to the database and fix broken entries."""
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /fix attempt by {ctx.author.username} ({ctx.author.id})")
         return
 
     try:
+        await ctx.defer()
         logger.debug(f"Received /fix command from {ctx.author.username} ({ctx.author.id}) for service: {service}")
 
-        # Determine delay based on service
         service_delays = {
             "disboard": 7200,  # 2 hours
             "dsme": 43200,  # 12 hours
@@ -728,7 +726,6 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
         seconds = service_delays[service]
         logger.debug(f"Service '{service}' selected with a delay of {seconds} seconds.")
 
-        # Generate unique reminder ID and timestamp
         reminder_id = str(uuid.uuid4())
         scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat()
 
@@ -738,7 +735,6 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
             "reminder_id": reminder_id
         }
 
-        # Save to database
         set_reminder_data(service, reminder_data)
         logger.debug(f"🔧 Fix logic applied: {reminder_data}")
 
@@ -751,15 +747,14 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
 
 @interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to default values.")
 async def reset_reminders(ctx: interactions.ComponentContext):
-    """
-    Resets all reminders in the 'reminders' table to their default values.
-    """
+    """Resets all reminders in the 'reminders' table to their default values."""
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username} ({ctx.author.id})")
         return
 
     try:
+        await ctx.defer()
         logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
 
         default_data = {
