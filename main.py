@@ -1961,17 +1961,6 @@ async def random_joke(ctx: interactions.ComponentContext):
         logger.exception(f"Error in /joke command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-import logging
-import aiohttp
-import io
-import numpy as np
-from PIL import Image
-import interactions
-
-# Configure Logger
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
-
 @interactions.slash_command(
     name="warp",
     description="Apply a warp effect to a user's profile picture."
