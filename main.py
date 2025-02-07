@@ -1963,7 +1963,7 @@ async def random_joke(ctx: interactions.ComponentContext):
 
 @interactions.slash_command(
     name="warp",
-    description="Apply a swirling vortex warp to a user's profile picture."
+    description="Apply a warp effect to a user's profile picture."
 )
 @interactions.slash_option(
     name="user",
@@ -1971,8 +1971,23 @@ async def random_joke(ctx: interactions.ComponentContext):
     required=True,
     opt_type=interactions.OptionType.USER
 )
-async def warp(ctx: interactions.ComponentContext, user: interactions.User):
-    """Fetches a user's profile picture and applies a swirl distortion effect."""
+@interactions.slash_option(
+    name="mode",
+    description="Select the warp mode (swirl or bulge).",
+    required=True,
+    opt_type=interactions.OptionType.STRING,
+    choices=["swirl", "bulge"]
+)
+@interactions.slash_option(
+    name="strength",
+    description="Warp strength (1 = light, 5 = extreme).",
+    required=False,
+    opt_type=interactions.OptionType.INTEGER,
+    min_value=1,
+    max_value=5
+)
+async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode: str, strength: int = 3):
+    """Fetches a user's profile picture and applies a warp effect based on the selected mode."""
     await ctx.defer()
 
     try:
@@ -1995,12 +2010,13 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         width, height = img.size
         img_np = np.array(img)
 
-        # Define the center of the swirl effect
+        # Define the center of the warp effect
         center_x, center_y = width // 2, height // 2
 
-        # Swirl intensity and radius
-        swirl_strength = 2  # Higher value = stronger swirl
-        swirl_radius = min(width, height) // 2  # The area affected by the swirl
+        # Map strength (1-5) to appropriate intensities
+        strength_map = {1: 2, 2: 3, 3: 4, 4: 6, 5: 8}
+        effect_strength = strength_map.get(strength, 4)  # Default to 4 if out of range
+        effect_radius = min(width, height) // 2  # Area affected by the warp
 
         # Generate coordinate grids
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
@@ -2011,12 +2027,17 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         distance = np.sqrt(dx**2 + dy**2)
         angle = np.arctan2(dy, dx)
 
-        # Apply the swirl effect: The closer to the center, the stronger the rotation
-        swirled_angle = angle + (swirl_strength * np.exp(-distance / swirl_radius))
+        if mode == "swirl":
+            # 🌀 Swirl Mode: Apply a rotational distortion
+            warped_angle = angle + (effect_strength * np.exp(-distance / effect_radius))
+            new_x_coords = (center_x + distance * np.cos(warped_angle)).astype(int)
+            new_y_coords = (center_y + distance * np.sin(warped_angle)).astype(int)
 
-        # Convert back to Cartesian coordinates
-        new_x_coords = (center_x + distance * np.cos(swirled_angle)).astype(int)
-        new_y_coords = (center_y + distance * np.sin(swirled_angle)).astype(int)
+        elif mode == "bulge":
+            # 🔆 Bulge Mode: Expand pixels outward for a convex effect
+            bulge_factor = 1 + (effect_strength / 10) * np.exp(-distance / effect_radius)
+            new_x_coords = (center_x + bulge_factor * dx).astype(int)
+            new_y_coords = (center_y + bulge_factor * dy).astype(int)
 
         # Clip coordinates to stay within image bounds
         new_x_coords = np.clip(new_x_coords, 0, width - 1)
@@ -2034,7 +2055,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         output_buffer.seek(0)
 
         # Send only the warped image (no success message)
-        file = interactions.File(file=output_buffer, file_name="swirled_avatar.png")
+        file = interactions.File(file=output_buffer, file_name=f"{mode}_warp.png")
         await ctx.send(files=[file])
 
     except Exception as e:
