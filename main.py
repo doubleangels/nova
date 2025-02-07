@@ -1950,7 +1950,7 @@ async def random_joke(ctx: interactions.ComponentContext):
                     embed = interactions.Embed(
                         title=f"😂 Random Joke ({category})",
                         description=joke,
-                        color=0xF4A261
+                        color=0xD3D3D3
                     )
 
                     await ctx.send(embed=embed)
