@@ -1998,8 +1998,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     logger.info(f"🌀 **Mode:** {mode}, **Strength:** {strength}")
 
     try:
-        # Fetch the user's avatar URL with high resolution
-        avatar_url = f"{user.avatar_url}?size=4096"
+        # Fetch the user's avatar URL
+        avatar_url = f"{user.avatar_url}"
         logger.debug(f"🔗 **Avatar URL for {user.username}:** {avatar_url}")
 
         if not avatar_url:
@@ -2007,7 +2007,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             logger.warning(f"⚠️ **{user.username}** has no profile picture.")
             return
 
-        logger.info(f"📷 Fetching high-res avatar for **{user.username}**.")
+        logger.info(f"📷 Fetching high-res avatar for **{user.username}**...")
 
         # Download the image
         async with aiohttp.ClientSession() as session:
@@ -2065,27 +2065,27 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             logger.info("🔆 Applying **bulge effect**.")
             # Bulge Mode: True fisheye distortion
             normalized_distance = distance / effect_radius
-            bulge_factor = 1 + effect_strength * (normalized_distance**2 - 1)  # Quadratic scaling for stronger bulge
+            bulge_factor = 1 + effect_strength * (normalized_distance**2 - 1)  # Expands pixels outward
 
-            # Ensure bulge effect stays within bounds and doesn't create extreme distortions
+            # Ensure bulge effect stays within bounds
             bulge_factor = np.clip(bulge_factor, 0.5, 3.0)
 
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
         
         elif mode == "pinch":
-            logger.info("👌 Applying **pinch effect**.")
+            logger.info("👌 Applying **pinch effect**...")
             
-            # Normalized distance from center
+            # Normalized distance from center (0 at center, 1 at edge of effect radius)
             normalized_distance = distance / effect_radius
             
-            # Pinch factor: Opposite of bulge, pulling pixels inward
-            pinch_factor = 1 - effect_strength * (1 - normalized_distance**2)  
+            # Pinch factor: Compressing pixels inward (opposite of bulge)
+            pinch_factor = 1 - effect_strength * (normalized_distance**2)  
             
-            # Ensure pinch effect doesn't go out of bounds
-            pinch_factor = np.clip(pinch_factor, 0.5, 1.0)
-            
-            # Adjust pixel positions based on pinch factor
+            # Ensure pinch effect doesn't go negative and stays within valid range
+            pinch_factor = np.clip(pinch_factor, 0.3, 1.0)
+
+            # Move pixels closer to the center
             new_x_coords = (center_x + pinch_factor * dx).astype(int)
             new_y_coords = (center_y + pinch_factor * dy).astype(int)
 
