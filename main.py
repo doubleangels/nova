@@ -2017,8 +2017,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         center_x, center_y = width // 2, height // 2
 
         # Map strength (1-5) to appropriate intensities
-        strength_map = {1: 2, 2: 3, 3: 4, 4: 6, 5: 8}
-        effect_strength = strength_map.get(strength, 4)  # Default to 4 if out of range
+        strength_map = {1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5}  # Stronger scaling for bulge
+        effect_strength = strength_map.get(strength, 0.2)  # Default to medium strength
         effect_radius = min(width, height) // 2  # Area affected by the warp
 
         # Generate coordinate grids
@@ -2032,13 +2032,13 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
         if mode == "swirl":
             # 🌀 Swirl Mode: Apply a rotational distortion
-            warped_angle = angle + (effect_strength * np.exp(-distance / effect_radius))
+            warped_angle = angle + (5 * effect_strength * np.exp(-distance / effect_radius))
             new_x_coords = (center_x + distance * np.cos(warped_angle)).astype(int)
             new_y_coords = (center_y + distance * np.sin(warped_angle)).astype(int)
 
         elif mode == "bulge":
             # 🔆 Bulge Mode: Expand pixels outward for a convex effect
-            bulge_factor = 1 + (effect_strength / 10) * np.exp(-distance / effect_radius)
+            bulge_factor = 1 + (effect_strength * (1 - np.exp(-distance / effect_radius)))  # Exponential decay for smooth bulge
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
 
