@@ -13,7 +13,7 @@ import sentry_sdk
 import io
 import time
 import numpy as np
-from PIL import Image, ImageFilter, ImageOps
+from PIL import Image
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -1990,29 +1990,27 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
                     return
                 image_bytes = await resp.read()
 
-        # Open the image
+        # Open the image and convert to RGB
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-
-        # Apply a warp distortion using a sine wave transformation
         width, height = img.size
         img_np = np.array(img)
 
-        # Create a sine wave distortion map
+        # Apply a sine wave warp transformation
         def sine_warp(x, y):
-            new_x = x + 10 * np.sin(2 * np.pi * y / 50)
-            new_y = y + 10 * np.sin(2 * np.pi * x / 50)
+            new_x = x + int(10 * np.sin(2 * np.pi * y / 50))
+            new_y = y + int(10 * np.sin(2 * np.pi * x / 50))
             return new_x, new_y
 
-        # Create a new empty image
+        # Create a new blank image
         warped_img = Image.new("RGB", (width, height))
 
-        # Apply the transformation
         for y in range(height):
             for x in range(width):
                 new_x, new_y = sine_warp(x, y)
-                new_x = int(np.clip(new_x, 0, width - 1))
-                new_y = int(np.clip(new_y, 0, height - 1))
-                warped_img.putpixel((x, y), img_np[new_y, new_x])
+                new_x = np.clip(new_x, 0, width - 1)
+                new_y = np.clip(new_y, 0, height - 1)
+                pixel_value = tuple(img_np[new_y, new_x])  # ✅ Convert NumPy array to tuple
+                warped_img.putpixel((x, y), pixel_value)
 
         # Convert back to bytes
         output_buffer = io.BytesIO()
