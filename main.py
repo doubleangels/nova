@@ -1961,6 +1961,17 @@ async def random_joke(ctx: interactions.ComponentContext):
         logger.exception(f"Error in /joke command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+import logging
+import aiohttp
+import io
+import numpy as np
+from PIL import Image
+import interactions
+
+# Configure Logger
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
 @interactions.slash_command(
     name="warp",
     description="Apply a warp effect to a user's profile picture."
@@ -1993,18 +2004,27 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     """Fetches a user's profile picture and applies a warp effect based on the selected mode."""
     await ctx.defer()
 
+    logger.info(f"🎭 Received /warp command from **{ctx.author.username}** for **{user.username}**")
+    logger.info(f"🌀 **Mode:** {mode}, **Strength:** {strength}")
+
     try:
-        # Fetch the user's avatar URL
+        # Fetch the user's avatar URL with high resolution
         avatar_url = f"{user.avatar_url}?size=4096"
+        logger.debug(f"🔗 **Avatar URL for {user.username}:** {avatar_url}")
+
         if not avatar_url:
             await ctx.send("❌ This user has no profile picture.", ephemeral=True)
+            logger.warning(f"⚠️ **{user.username}** has no profile picture.")
             return
+
+        logger.info(f"📷 Fetching high-res avatar for **{user.username}**...")
 
         # Download the image
         async with aiohttp.ClientSession() as session:
             async with session.get(avatar_url) as resp:
                 if resp.status != 200:
                     await ctx.send("❌ Failed to fetch profile picture.", ephemeral=True)
+                    logger.error(f"🚨 Failed to download avatar for **{user.username}** (HTTP {resp.status})")
                     return
                 image_bytes = await resp.read()
 
@@ -2013,6 +2033,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         width, height = img.size
         img_np = np.array(img)
 
+        logger.debug(f"📏 **Image dimensions:** {width}x{height}")
+
         # If strength is 0, return the original image
         if strength == 0:
             output_buffer = io.BytesIO()
@@ -2020,6 +2042,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             output_buffer.seek(0)
             file = interactions.File(file=output_buffer, file_name="original.png")
             await ctx.send(files=[file])
+            logger.info("✅ Sent **unmodified image** (Strength 0)")
             return
 
         # Define the center of the warp effect
@@ -2029,6 +2052,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         strength_map = {0: 0, 1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5, 6: 0.7}
         effect_strength = strength_map.get(strength, 0.3)  # Default to medium strength
         effect_radius = min(width, height) // 2  # Area affected by the warp
+
+        logger.debug(f"🎯 **Warp Center:** ({center_x}, {center_y}), **Effect Strength:** {effect_strength}")
 
         # Generate coordinate grids
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
@@ -2040,13 +2065,15 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         angle = np.arctan2(dy, dx)
 
         if mode == "swirl":
-            # 🌀 Swirl Mode: Apply a rotational distortion
+            logger.info("🌀 Applying **swirl effect**...")
+            # Swirl Mode: Apply a rotational distortion
             warped_angle = angle + (7 * effect_strength * np.exp(-distance / effect_radius))
             new_x_coords = (center_x + distance * np.cos(warped_angle)).astype(int)
             new_y_coords = (center_y + distance * np.sin(warped_angle)).astype(int)
 
         elif mode == "bulge":
-            # 🔆 Bulge Mode: True fisheye distortion
+            logger.info("🔆 Applying **bulge effect**...")
+            # Bulge Mode: True fisheye distortion
             normalized_distance = distance / effect_radius
             bulge_factor = 1 + effect_strength * (normalized_distance**2 - 1)  # Quadratic scaling for stronger bulge
 
@@ -2075,9 +2102,11 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         file = interactions.File(file=output_buffer, file_name=f"{mode}_warp.png")
         await ctx.send(files=[file])
 
+        logger.info(f"✅ Successfully applied **{mode} effect** with **strength {strength}** for **{user.username}**!")
+
     except Exception as e:
-        await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
-        print(f"Error in /warp command: {e}")
+        await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
+        logger.error(f"Error in /warp command: {e}", exc_info=True)
 
 # -------------------------
 # Bot Startup
