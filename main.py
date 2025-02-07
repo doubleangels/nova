@@ -475,7 +475,7 @@ async def on_ready():
     Sets custom presence and attempts to reschedule existing reminders.
     """
     try:
-        logger.info("✅ Bot is online! Setting up status and activity...")
+        logger.info("✅ Bot is online! Setting up status and activity.")
 
         # Set bot presence
         await bot.change_presence(
@@ -1659,7 +1659,7 @@ async def mal_search(ctx: interactions.ComponentContext, title: str):
                                 # Create embed with emojis
                                 embed = interactions.Embed(
                                     title=f"📺 **{title}**",
-                                    description=f"📜 **Synopsis:** {synopsis}...",
+                                    description=f"📜 **Synopsis:** {synopsis}",
                                     color=0x2E51A2
                                 )
                                 embed.add_field(name="🎭 Genre", value=f"🎞 {genres}", inline=True)
@@ -1978,7 +1978,8 @@ async def random_joke(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.STRING,
     choices=[
         {"name": "Swirl", "value": "swirl"},
-        {"name": "Bulge", "value": "bulge"}
+        {"name": "Bulge", "value": "bulge"},
+        {"name": "Pinch", "value": "pinch"}
     ]
 )
 @interactions.slash_option(
@@ -2006,7 +2007,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             logger.warning(f"⚠️ **{user.username}** has no profile picture.")
             return
 
-        logger.info(f"📷 Fetching high-res avatar for **{user.username}**...")
+        logger.info(f"📷 Fetching high-res avatar for **{user.username}**.")
 
         # Download the image
         async with aiohttp.ClientSession() as session:
@@ -2054,14 +2055,14 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         angle = np.arctan2(dy, dx)
 
         if mode == "swirl":
-            logger.info("🌀 Applying **swirl effect**...")
+            logger.info("🌀 Applying **swirl effect**.")
             # Swirl Mode: Apply a rotational distortion
             warped_angle = angle + (7 * effect_strength * np.exp(-distance / effect_radius))
             new_x_coords = (center_x + distance * np.cos(warped_angle)).astype(int)
             new_y_coords = (center_y + distance * np.sin(warped_angle)).astype(int)
 
         elif mode == "bulge":
-            logger.info("🔆 Applying **bulge effect**...")
+            logger.info("🔆 Applying **bulge effect**.")
             # Bulge Mode: True fisheye distortion
             normalized_distance = distance / effect_radius
             bulge_factor = 1 + effect_strength * (normalized_distance**2 - 1)  # Quadratic scaling for stronger bulge
@@ -2071,6 +2072,22 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
+        
+        elif mode == "pinch":
+            logger.info("➿ Applying **pinch effect**.")
+            
+            # Normalized distance from center
+            normalized_distance = distance / effect_radius
+            
+            # Pinch factor: Opposite of bulge, pulling pixels inward
+            pinch_factor = 1 - effect_strength * (1 - normalized_distance**2)  
+            
+            # Ensure pinch effect doesn't go out of bounds
+            pinch_factor = np.clip(pinch_factor, 0.5, 1.0)
+            
+            # Adjust pixel positions based on pinch factor
+            new_x_coords = (center_x + pinch_factor * dx).astype(int)
+            new_y_coords = (center_y + pinch_factor * dy).astype(int)
 
         # Clip coordinates to stay within image bounds
         new_x_coords = np.clip(new_x_coords, 0, width - 1)
