@@ -194,6 +194,86 @@ def initialize_reminders_table():
             set_reminder_data(k, default_data)
             logger.debug(f"Inserted default reminder_data for key: {k}")
 
+# ----------------------
+# "mute_mode" Table Helpers
+# ----------------------
+
+def get_mute_mode_settings():
+    """
+    Retrieve mute mode settings from the 'mute_mode' table in Supabase.
+    Returns a dictionary with mute mode settings, or default values if not found.
+    """
+    try:
+        response = supabase.table("mute_mode").select("settings").eq("key", "global").maybe_single().execute()
+        if response and response.data:
+            settings = response.data.get("settings")
+            if settings:
+                return json.loads(settings)
+
+        # Default settings if none exist
+        return {"enabled": False, "kick_time_hours": 4}
+    except Exception:
+        logger.exception("Error getting mute mode settings.")
+        return {"enabled": False, "kick_time_hours": 4}
+
+def set_mute_mode_settings(enabled: bool, kick_time_hours: int = 4):
+    """
+    Upsert mute mode settings into the 'mute_mode' table in Supabase.
+    """
+    try:
+        serialized = json.dumps({"enabled": enabled, "kick_time_hours": kick_time_hours})
+        supabase.table("mute_mode").upsert({"key": "global", "settings": serialized}).execute()
+        logger.debug(f"Updated mute mode settings: Enabled={enabled}, Kick Time={kick_time_hours} hours.")
+    except Exception:
+        logger.exception("Error setting mute mode settings.")
+
+def delete_mute_mode_settings():
+    """
+    Delete mute mode settings from the 'mute_mode' table in Supabase.
+    """
+    try:
+        supabase.table("mute_mode").delete().eq("key", "global").execute()
+        logger.debug("Deleted mute mode settings.")
+    except Exception:
+        logger.exception("Error deleting mute mode settings.")
+
+# ----------------------
+# "tracked_members" Table Helpers
+# ----------------------
+
+def track_new_member(member_id: int, join_time: str):
+    """
+    Store a new member's join timestamp in the 'tracked_members' table.
+    """
+    try:
+        supabase.table("tracked_members").upsert({"member_id": member_id, "join_time": join_time}).execute()
+        logger.debug(f"Tracked join time for member {member_id}: {join_time}")
+    except Exception:
+        logger.exception(f"Error tracking new member {member_id}.")
+
+def get_tracked_member(member_id: int):
+    """
+    Retrieve the join timestamp of a tracked member.
+    """
+    try:
+        response = supabase.table("tracked_members").select("join_time").eq("member_id", member_id).maybe_single().execute()
+        if response and response.data:
+            return response.data.get("join_time")
+        return None
+    except Exception:
+        logger.exception(f"Error retrieving tracked data for member {member_id}.")
+        return None
+
+def remove_tracked_member(member_id: int):
+    """
+    Remove a member from the tracking system once they send a message or leave.
+    """
+    try:
+        supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
+        logger.debug(f"Removed tracked data for member {member_id}.")
+    except Exception:
+        logger.exception(f"Error removing tracked data for member {member_id}.")
+
 # -------------------------
 # Discord Bot Setup
 # -------------------------
@@ -213,13 +293,6 @@ bot_ids = {
 }
 
 logger.info("Starting the bot...")
-
-import signal
-import sys
-import datetime
-import asyncio
-import aiohttp
-import pytz
 
 def handle_interrupt(signal_num, frame):
     """
@@ -513,17 +586,24 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     """
     Fired whenever a new message is created.
     Checks if it's from known bump bots and triggers reminders accordingly.
+    Also removes users from mute tracking if they send a message.
     """
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
+        author_id = event.message.author.id
         logger.debug(f"💬 Message received from {event.message.author.username} (ID: {bot_id})")
 
-        # Check if the message is from a known bump bot
+        # 🔇 Mute Mode: Remove user from tracking if they send a message
+        if get_tracked_member(author_id):
+            remove_tracked_member(author_id)
+            logger.debug(f"💬 User {event.message.author.username} ({author_id}) sent a message and was removed from mute tracking.")
+
+        # 🤖 Check if the message is from a known bump bot
         if bot_id in bot_ids:
             logger.debug(f"🤖 Detected message from **{bot_ids[bot_id]}**.")
 
-        # Check for embeds
+        # 📜 Check for embeds in the message
         if event.message.embeds:
             embed = event.message.embeds[0]
             embed_description = embed.description or ""
@@ -537,7 +617,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
                 await dsme()
 
         else:
-            # Plain text checks
+            # 📄 Plain text checks
             logger.debug(f"📄 Checking message content: {message_content}")
             if "Your server has been booped" in message_content:
                 logger.debug("🔔 Triggering Unfocused reminder.")
@@ -553,15 +633,19 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
 async def on_member_join(event: interactions.api.events.MemberAdd):
     """
     Fired when a new user joins the server.
-    Handles troll mode (kicking new accounts) and backup mode (role assignment & welcome).
+    Handles troll mode (kicking new accounts), backup mode (role assignment & welcome),
+    and mute mode (kicking silent users).
     """
     try:
-        # Retrieve settings
+        # Retrieve settings from Supabase
         assign_role = get_value("backup_mode_enabled")
         role_id = get_value("backup_mode_id")
         channel_id = get_value("backup_mode_channel")
         kick_users = get_value("troll_mode_enabled")
         kick_users_age_limit = get_value("troll_mode_account_age")
+        mute_settings = get_mute_mode_settings()
+        mute_mode_enabled = mute_settings["enabled"]
+        mute_kick_time = mute_settings["kick_time_hours"]
 
         member = event.member
         guild = event.guild
@@ -577,6 +661,26 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             await member.kick(reason="Account is too new!")
             logger.debug(f"❌ Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
             return
+
+        # Mute Mode: Track new members
+        if mute_mode_enabled:
+            join_time = datetime.datetime.utcnow().isoformat()
+            track_new_member(member.id, join_time)
+
+            async def mute_kick_task():
+                await asyncio.sleep(mute_kick_time * 60 * 60)  # Wait for configured hours
+
+                # Check Supabase to see if the user is still in the tracker
+                if get_tracked_member(member.id):
+                    try:
+                        await member.kick(reason="Muted user did not send a message within time limit.")
+                        remove_tracked_member(member.id)
+                        logger.info(f"🔇 Kicked {member.username} ({member.id}) for being inactive.")
+                    except Exception as e:
+                        logger.error(f"⚠️ Failed to kick {member.username} ({member.id}): {e}")
+
+            # Run the kick check in the background
+            asyncio.create_task(mute_kick_task())
 
         # Backup Mode: Assign role & send welcome message
         if not (assign_role and role_id and channel_id):
@@ -774,6 +878,44 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.exception(f"⚠️ Error in /resetreminders command: {e}")
         await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(name="mutemode", description="Toggle auto-kicking of users who don't send a message within a time limit.")
+@interactions.slash_option(
+    name="enabled",
+    description="Enable or disable mute mode",
+    required=True,
+    opt_type=interactions.OptionType.BOOLEAN
+)
+@interactions.slash_option(
+    name="kick_time",
+    description="Time limit in hours before a silent user is kicked (Default: 4)",
+    required=False,
+    opt_type=interactions.OptionType.INTEGER
+)
+async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, kick_time: int = 4):
+    """
+    Enables or disables mute mode and sets the time threshold before a user is kicked.
+    """
+    if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
+        logger.warning(f"Unauthorized /mutemode attempt by {ctx.author.username} ({ctx.author.id})")
+        return
+
+    try:
+        logger.debug(f"Received /mutemode command from {ctx.author.username} ({ctx.author.id})")
+        logger.debug(f"Mute mode toggle: {'Enabled' if enabled else 'Disabled'}, Kick Time: {kick_time} hours")
+
+        # Store settings in Supabase
+        set_mute_mode_settings(enabled, kick_time)
+
+        status = "✅ **enabled**" if enabled else "❌ **disabled**"
+        await ctx.send(f"🔇 Mute mode has been {status}. Users must send a message within **{kick_time}** hours or be kicked.")
+        logger.debug(f"Mute mode {status} by {ctx.author.username}, kick time set to {kick_time} hours.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /mutemode command: {e}")
+        await ctx.send("⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral=True)
+
 
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
 async def test_reminders(ctx: interactions.ComponentContext):
