@@ -274,7 +274,7 @@ bot = interactions.Client(
 bot_ids = {
     "302050872383242240": "Disboard",
     "1222548162741538938": "Discadia",
-    "493224032167002123": "DS.me",
+    "493224033067003023": "DS.me",
     "835255643157168168": "Unfocused",
 }
 
@@ -447,7 +447,7 @@ async def unfocused():
         key="unfocused",
         initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
         reminder_message="It's time to boop the server on Unfocused again!",
-        interval=21600  # 6 hours
+        interval=30600  # 6 hours
     )
 
 async def discadia():
@@ -551,7 +551,7 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
             try:
                 guild = await interactions.get_guild(guild_id)
                 member = await guild.fetch_member(member_id)
-                await member.kick(reason="Muted user did not send a message in time.")
+                await member.kick(reason="User did not send a message in time.")
                 remove_tracked_member(member_id)
                 logger.info(f"🔇 Kicked {username} ({member_id}) immediately due to bot restart.")
             except Exception as e:
@@ -567,7 +567,7 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
                 try:
                     guild = await interactions.get_guild(guild_id)
                     member = await guild.fetch_member(member_id)
-                    await member.kick(reason="Muted user did not send a message in time.")
+                    await member.kick(reason="User did not send a message in time.")
                     remove_tracked_member(member_id)
                     logger.info(f"🔇 Kicked {username} ({member_id}) after scheduled time.")
                 except Exception as e:
@@ -632,7 +632,7 @@ async def on_ready():
         if get_value("troll_mode") is None:
             set_value("troll_mode", False)
         if get_value("troll_mode_account_age") is None:
-            set_value("troll_mode_account_age", 14)
+            set_value("troll_mode_account_age", 30)
 
         # Get mute mode settings (convert safely)
         mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
@@ -723,7 +723,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         role_id = int(get_value("backup_mode_id") or 0)
         channel_id = int(get_value("backup_mode_channel") or 0)
         kick_users = get_value("troll_mode") == "true"
-        kick_users_age_limit = int(get_value("troll_mode_account_age") or 14)
+        kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
         mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
 
@@ -897,7 +897,7 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
         service_delays = {
             "disboard": 7200,  # 2 hours
             "dsme": 43200,  # 12 hours
-            "unfocused": 21600,  # 6 hours
+            "unfocused": 30600,  # 6 hours
             "discadia": 43200  # 12 hours
         }
 
@@ -1162,11 +1162,11 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
 )
 @interactions.slash_option(
     name="age",
-    description="Minimum account age in days (Default: 14)",
+    description="Minimum account age in days (Default: 30)",
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
-async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, age: int = 14):
+async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, age: int = 30):
     """
     Kicks new members if their account is under the specified age when troll mode is enabled.
     """
