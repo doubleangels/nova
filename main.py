@@ -259,16 +259,17 @@ def get_tracked_member(member_id: int):
     try:
         response = supabase.table("tracked_members").select("join_time").eq("member_id", member_id).maybe_single().execute()
         
-        # Check if response or response.data is None
-        if not response or not response.data:
-            logger.debug(f"🔍 No tracked data found for member {member_id}.")
+        # Ensure the response contains data before accessing it
+        if not response or response.data is None:
+            logger.debug(f"🔍 No tracked data found for member {member_id}. Returning None.")
             return None
 
         return response.data.get("join_time")
-    
+
     except Exception as e:
         logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}: {e}")
         return None
+
 
 def remove_tracked_member(member_id: int):
     """
