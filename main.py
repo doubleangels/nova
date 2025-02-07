@@ -577,12 +577,8 @@ async def on_ready():
             set_value("troll_mode_account_age", 14)
 
         # Get mute mode settings
-        mute_mode_enabled = get_value("mute_mode")
-        mute_kick_time = get_value("mute_mode_kick_time_hours")
-
-        # Get troll mode settings
-        troll_mode_enabled = get_value("troll_mode")
-        troll_account_age = get_value("troll_mode_account_age")
+        mute_mode_enabled = get_value("mute_mode") == "true"
+        mute_kick_time = int(get_value("mute_mode_kick_time_hours"))
 
         # 🔄 Reschedule Mute Mode Kicks
         if not mute_mode_enabled:
@@ -690,21 +686,17 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     """
     try:
         # Retrieve settings from Supabase
-        assign_role = get_value("backup_mode_enabled")
-        role_id = get_value("backup_mode_id")
-        channel_id = get_value("backup_mode_channel")
-        kick_users = get_value("troll_mode")
-        kick_users_age_limit = get_value("troll_mode_account_age")
-        mute_settings = get_mute_mode_settings()
-        mute_mode_enabled = mute_settings["enabled"]
-        mute_kick_time = mute_settings["kick_time_hours"]
+        assign_role = get_value("backup_mode_enabled") == "true"
+        role_id = int(get_value("backup_mode_id") or 0)
+        channel_id = int(get_value("backup_mode_channel") or 0)
+        kick_users = get_value("troll_mode") == "true"
+        kick_users_age_limit = int(get_value("troll_mode_account_age") or 14)
+        mute_mode_enabled = get_value("mute_mode") == "true"
+        mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
 
         member = event.member
         guild = event.guild
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
-
-        if kick_users_age_limit is None:
-            kick_users_age_limit = 14  # Default if not set
 
         logger.debug(f"👤 New member joined: {member.username} (Guild ID: {guild.id}) | Account Age: {account_age.days} days")
 
@@ -748,7 +740,8 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             logger.debug("⚠️ Backup mode is not fully configured. Skipping role assignment and welcome message.")
             return
 
-        channel = guild.get_channel(channel_id)
+        # Convert to integer before lookup
+        channel = guild.get_channel(int(channel_id)) if channel_id else None
         if not channel:
             logger.warning(f"⚠️ Channel with ID {channel_id} not found. Welcome message skipped.")
             return
@@ -771,7 +764,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         logger.debug(f"📢 Sent welcome message in <#{channel_id}> for {member.username}.")
 
         # Assign role
-        role_obj = guild.get_role(role_id)
+        role_obj = guild.get_role(int(role_id)) if role_id else None
         if role_obj:
             await member.add_role(role_obj)
             logger.debug(f"✅ Assigned role '{role_obj.name}' to {member.username}.")
