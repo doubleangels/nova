@@ -640,7 +640,7 @@ async def on_ready():
             # Fetch all tracked members from Supabase
             tracked_users = get_all_tracked_members()
 
-            now = datetime.datetime.utcnow()
+            now = datetime.datetime.now(datetime.UTC)
 
             for user in tracked_users:
                 member_id = user["member_id"]
@@ -776,7 +776,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
 
         # 🔇 Mute Mode: Track new members & reschedule kicks
         if mute_mode_enabled:
-            join_time = datetime.datetime.utcnow().isoformat()
+            join_time = datetime.datetime.now(datetime.UTC).isoformat()
             track_new_member(member.id, member.username, join_time, is_bot=False)
 
             async def delayed_kick(member_id, username, delay_seconds):
