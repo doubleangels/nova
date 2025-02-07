@@ -6,7 +6,7 @@ FROM python:alpine
 
 # Upgrade pip and install dependencies without cache
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir discord-py-interactions pytz aiohttp sentry-sdk supabase
+    pip install --no-cache-dir discord-py-interactions pytz aiohttp sentry-sdk supabase numpy opencv-python pillow
 
 # Copy the application code into the container
 COPY main.py .
