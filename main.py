@@ -1994,7 +1994,7 @@ logger = logging.getLogger(__name__)
 )
 @interactions.slash_option(
     name="strength",
-    description="Warp strength (0 = none, 6 = extreme).",
+    description="Warp strength (0 = none, 6 = extreme, default = 6).",
     required=False,
     opt_type=interactions.OptionType.INTEGER,
     min_value=0,
@@ -2009,8 +2009,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
     try:
         # Fetch the user's avatar URL with high resolution
-        avatar_url = f"{user.avatar.as_url(format='png')}?size=4096"
-        logger.debug(f"🔗 **Avatar PNG URL for {user.username}:** {avatar_url}")
+        avatar_url = f"{user.avatar_url}?size=4096"
+        logger.debug(f"🔗 **Avatar URL for {user.username}:** {avatar_url}")
 
         if not avatar_url:
             await ctx.send("❌ This user has no profile picture.", ephemeral=True)
