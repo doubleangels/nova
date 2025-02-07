@@ -195,65 +195,6 @@ def initialize_reminders_table():
             logger.debug(f"Inserted default reminder_data for key: {k}")
 
 # ----------------------
-# "mute_mode" Table Helpers
-# ----------------------
-def get_mute_mode_settings():
-    """
-    Retrieve mute mode settings from the 'config' table in Supabase.
-    Returns a dictionary with mute mode settings.
-    """
-    try:
-        response = supabase.table("config").select("mute_mode", "mute_mode_kick_time_hours").maybe_single().execute()
-        
-        if response and response.data:
-            return {
-                "enabled": response.data.get("mute_mode", False),
-                "kick_time_hours": response.data.get("mute_mode_kick_time_hours", 4)
-            }
-
-        # Default settings if no record is found
-        return {"enabled": False, "kick_time_hours": 4}
-
-    except Exception:
-        logger.exception("⚠️ Error retrieving mute mode settings from config table.")
-        return {"enabled": False, "kick_time_hours": 4}
-
-
-def set_mute_mode_settings(enabled: bool, kick_time_hours: int = 4):
-    """
-    Updates mute mode settings in the 'config' table in Supabase.
-    """
-    try:
-        # Ensure only one row exists in config table
-        supabase.table("config").delete().execute()  # Clear table before inserting new values
-
-        # Insert new settings
-        supabase.table("config").insert({
-            "mute_mode": enabled,
-            "mute_mode_kick_time_hours": kick_time_hours
-        }).execute()
-
-        logger.debug(f"🔄 Updated mute mode settings: Enabled={enabled}, Kick Time={kick_time_hours} hours.")
-
-    except Exception:
-        logger.exception("⚠️ Error setting mute mode settings in config table.")
-
-def delete_mute_mode_settings():
-    """
-    Resets mute mode settings in the 'config' table in Supabase.
-    """
-    try:
-        supabase.table("config").update({
-            "mute_mode": False,
-            "mute_mode_kick_time_hours": 4
-        }).execute()
-
-        logger.debug("🗑️ Reset mute mode settings in config table.")
-
-    except Exception:
-        logger.exception("⚠️ Error resetting mute mode settings in config table.")
-
-# ----------------------
 # "tracked_members" Table Helpers
 # ----------------------
 def track_new_member(member_id: int, username: str, join_time: str):
@@ -319,7 +260,6 @@ def get_all_tracked_members():
     except Exception:
         logger.exception("⚠️ Error retrieving all tracked members from Supabase.")
         return []
-
 
 # -------------------------
 # Discord Bot Setup
@@ -588,15 +528,12 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
 # -------------------------
 # Event Listeners
 # -------------------------
-import asyncio
-import datetime
-
 @interactions.listen()
 async def on_ready():
     """
     Fired once the bot is fully online and ready.
     Sets custom presence, attempts to reschedule existing reminders,
-    and reschedules mute mode kicks for pending users.
+    and reschedules mute mode and troll mode settings.
     """
     try:
         logger.info("✅ Bot is online! Setting up status and activity.")
@@ -626,20 +563,32 @@ async def on_ready():
                 await reschedule_reminder(key, role)
                 logger.debug(f"✅ Reminder {key} successfully rescheduled.")
 
-        # 🔄 Reschedule Mute Mode Kicks After Restart
-        logger.info("🔄 Checking for pending mute mode kicks...")
+        # 🔄 Ensure Mute Mode & Troll Mode Settings Exist
+        logger.info("🔄 Ensuring mute mode and troll mode settings exist...")
+
+        # Set default values if missing
+        if get_value("mute_mode") is None:
+            set_value("mute_mode", False)
+        if get_value("mute_mode_kick_time_hours") is None:
+            set_value("mute_mode_kick_time_hours", 4)
+        if get_value("troll_mode") is None:
+            set_value("troll_mode", False)
+        if get_value("troll_mode_account_age") is None:
+            set_value("troll_mode_account_age", 14)
 
         # Get mute mode settings
-        mute_settings = get_mute_mode_settings()
-        mute_mode_enabled = mute_settings["enabled"]
-        mute_kick_time = mute_settings["kick_time_hours"]
+        mute_mode_enabled = get_value("mute_mode")
+        mute_kick_time = get_value("mute_mode_kick_time_hours")
 
+        # Get troll mode settings
+        troll_mode_enabled = get_value("troll_mode")
+        troll_account_age = get_value("troll_mode_account_age")
+
+        # 🔄 Reschedule Mute Mode Kicks
         if not mute_mode_enabled:
             logger.info("🔇 Mute mode is disabled. Skipping rescheduling.")
         else:
-            # Fetch all tracked members from Supabase
             tracked_users = get_all_tracked_members()
-
             now = datetime.datetime.now(datetime.UTC)
 
             for user in tracked_users:
@@ -647,11 +596,9 @@ async def on_ready():
                 username = user["username"]
                 join_time = datetime.datetime.fromisoformat(user["join_time"])
 
-                # Calculate time left before the user should be kicked
                 elapsed_time = (now - join_time).total_seconds()
                 remaining_time = (mute_kick_time * 3600) - elapsed_time
 
-                # If the user’s time has already expired, kick immediately
                 if remaining_time <= 0:
                     try:
                         guild = await interactions.get_guild(bot.guild_id)
@@ -663,11 +610,9 @@ async def on_ready():
                         logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after bot restart: {e}")
                     continue
 
-                # Schedule the kick for the remaining time
                 async def delayed_kick(member_id, username, remaining_time):
-                    await asyncio.sleep(remaining_time)  # Wait the remaining time
+                    await asyncio.sleep(remaining_time)
 
-                    # Check if the user is still in the tracking database
                     if get_tracked_member(member_id):
                         try:
                             guild = await interactions.get_guild(bot.guild_id)
@@ -683,7 +628,7 @@ async def on_ready():
 
             logger.info("✅ All pending mute mode kicks have been rescheduled.")
 
-        logger.info("🎯 All reminders checked and mute mode rescheduling completed. Bot is ready!")
+        logger.info("🎯 All reminders checked and settings verified. Bot is ready!")
 
     except Exception as e:
         logger.exception(f"⚠️ An unexpected error occurred during on_ready: {e}")
@@ -748,7 +693,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         assign_role = get_value("backup_mode_enabled")
         role_id = get_value("backup_mode_id")
         channel_id = get_value("backup_mode_channel")
-        kick_users = get_value("troll_mode_enabled")
+        kick_users = get_value("troll_mode")
         kick_users_age_limit = get_value("troll_mode_account_age")
         mute_settings = get_mute_mode_settings()
         mute_mode_enabled = mute_settings["enabled"]
@@ -1217,7 +1162,7 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
         logger.debug(f"Troll mode toggle: {'Enabled' if enabled else 'Disabled'}, Minimum age: {age} days")
 
         # Update troll mode settings
-        set_value("troll_mode_enabled", enabled)
+        set_value("troll_mode", enabled)
         set_value("troll_mode_account_age", age)
 
         # Create appropriate response message
