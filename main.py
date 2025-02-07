@@ -692,8 +692,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         channel_id = int(get_value("backup_mode_channel") or 0)
         kick_users = get_value("troll_mode") == "true"
         kick_users_age_limit = int(get_value("troll_mode_account_age") or 14)
-        mute_mode_enabled = get_value("mute_mode") == "true"
-        mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
+        mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
 
         member = event.member
         guild = event.guild
