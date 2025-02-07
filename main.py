@@ -303,6 +303,24 @@ def remove_tracked_member(member_id: int):
     except Exception:
         logger.exception(f"⚠️ Error removing tracked data for member {member_id}.")
 
+def get_all_tracked_members():
+    """
+    Retrieve all tracked members from the 'tracked_members' table in Supabase.
+    Returns a list of dictionaries with member_id, username, and join_time.
+    """
+    try:
+        response = supabase.table("tracked_members").select("member_id", "username", "join_time").execute()
+        
+        if response and response.data:
+            return response.data
+
+        return []  # Return empty list if no tracked members
+
+    except Exception:
+        logger.exception("⚠️ Error retrieving all tracked members from Supabase.")
+        return []
+
+
 # -------------------------
 # Discord Bot Setup
 # -------------------------
@@ -570,11 +588,15 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
 # -------------------------
 # Event Listeners
 # -------------------------
+import asyncio
+import datetime
+
 @interactions.listen()
 async def on_ready():
     """
     Fired once the bot is fully online and ready.
-    Sets custom presence and attempts to reschedule existing reminders.
+    Sets custom presence, attempts to reschedule existing reminders,
+    and reschedules mute mode kicks for pending users.
     """
     try:
         logger.info("✅ Bot is online! Setting up status and activity.")
@@ -597,15 +619,71 @@ async def on_ready():
         role = get_role()
         if not role:
             logger.warning("⚠️ No role set for reminders; skipping reminder reschedule.")
-            return
+        else:
+            # Reschedule reminders
+            for key in ["disboard", "dsme", "unfocused", "discadia"]:
+                logger.debug(f"🔄 Attempting to reschedule {key} reminder.")
+                await reschedule_reminder(key, role)
+                logger.debug(f"✅ Reminder {key} successfully rescheduled.")
 
-        # Reschedule reminders
-        for key in ["disboard", "dsme", "unfocused", "discadia"]:
-            logger.debug(f"🔄 Attempting to reschedule {key} reminder.")
-            await reschedule_reminder(key, role)
-            logger.debug(f"✅ Reminder {key} successfully rescheduled.")
+        # 🔄 Reschedule Mute Mode Kicks After Restart
+        logger.info("🔄 Checking for pending mute mode kicks...")
 
-        logger.info("🎯 All reminders checked and rescheduled. Bot is ready!")
+        # Get mute mode settings
+        mute_settings = get_mute_mode_settings()
+        mute_mode_enabled = mute_settings["enabled"]
+        mute_kick_time = mute_settings["kick_time_hours"]
+
+        if not mute_mode_enabled:
+            logger.info("🔇 Mute mode is disabled. Skipping rescheduling.")
+        else:
+            # Fetch all tracked members from Supabase
+            tracked_users = get_all_tracked_members()
+
+            now = datetime.datetime.utcnow()
+
+            for user in tracked_users:
+                member_id = user["member_id"]
+                username = user["username"]
+                join_time = datetime.datetime.fromisoformat(user["join_time"])
+
+                # Calculate time left before the user should be kicked
+                elapsed_time = (now - join_time).total_seconds()
+                remaining_time = (mute_kick_time * 3600) - elapsed_time
+
+                # If the user’s time has already expired, kick immediately
+                if remaining_time <= 0:
+                    try:
+                        guild = await interactions.get_guild(bot.guild_id)
+                        member = await guild.fetch_member(member_id)
+                        await member.kick(reason="Muted user did not send a message in time (bot restarted).")
+                        remove_tracked_member(member_id)
+                        logger.info(f"🔇 Kicked {username} ({member_id}) immediately due to bot restart.")
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after bot restart: {e}")
+                    continue
+
+                # Schedule the kick for the remaining time
+                async def delayed_kick(member_id, username, remaining_time):
+                    await asyncio.sleep(remaining_time)  # Wait the remaining time
+
+                    # Check if the user is still in the tracking database
+                    if get_tracked_member(member_id):
+                        try:
+                            guild = await interactions.get_guild(bot.guild_id)
+                            member = await guild.fetch_member(member_id)
+                            await member.kick(reason="Muted user did not send a message in time.")
+                            remove_tracked_member(member_id)
+                            logger.info(f"🔇 Kicked {username} ({member_id}) after bot restart.")
+                        except Exception as e:
+                            logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after rescheduled time: {e}")
+
+                asyncio.create_task(delayed_kick(member_id, username, remaining_time))
+                logger.debug(f"⏳ Rescheduled kick for {username} ({member_id}) in {remaining_time:.2f} seconds.")
+
+            logger.info("✅ All pending mute mode kicks have been rescheduled.")
+
+        logger.info("🎯 All reminders checked and mute mode rescheduling completed. Bot is ready!")
 
     except Exception as e:
         logger.exception(f"⚠️ An unexpected error occurred during on_ready: {e}")
@@ -663,7 +741,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     """
     Fired when a new user joins the server.
     Handles troll mode (kicking new accounts), backup mode (role assignment & welcome),
-    and mute mode (kicking silent users).
+    and mute mode (kicking silent users with rescheduled kicks after bot restarts).
     """
     try:
         # Retrieve settings from Supabase
@@ -685,33 +763,42 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
 
         logger.debug(f"👤 New member joined: {member.username} (Guild ID: {guild.id}) | Account Age: {account_age.days} days")
 
-        # Troll Mode: Kick if account is too new
+        # 🛑 Ignore Bots (They are immune from Mute Mode)
+        if member.bot:
+            logger.debug(f"🤖 Skipping mute tracking for bot {member.username} ({member.id})")
+            return  # Skip bots
+
+        # ❌ Troll Mode: Kick if account is too new
         if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
             await member.kick(reason="Account is too new!")
             logger.debug(f"❌ Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
             return
 
-        # Mute Mode: Track new members
+        # 🔇 Mute Mode: Track new members & reschedule kicks
         if mute_mode_enabled:
             join_time = datetime.datetime.utcnow().isoformat()
-            track_new_member(member.id, join_time)
+            track_new_member(member.id, member.username, join_time, is_bot=False)
 
-            async def mute_kick_task():
-                await asyncio.sleep(mute_kick_time * 60 * 60)  # Wait for configured hours
+            async def delayed_kick(member_id, username, delay_seconds):
+                """
+                Delays a mute mode kick for the given number of seconds.
+                """
+                await asyncio.sleep(delay_seconds)  # Wait for the remaining time
 
-                # Check Supabase to see if the user is still in the tracker
-                if get_tracked_member(member.id):
+                # Check if the user is still in the tracking system
+                if get_tracked_member(member_id):
                     try:
-                        await member.kick(reason="Muted user did not send a message within time limit.")
-                        remove_tracked_member(member.id)
-                        logger.info(f"🔇 Kicked {member.username} ({member.id}) for being inactive.")
+                        guild = await interactions.get_guild(event.guild_id)
+                        member = await guild.fetch_member(member_id)
+                        await member.kick(reason="Muted user did not send a message in time.")
+                        remove_tracked_member(member_id)
+                        logger.info(f"🔇 Kicked {username} ({member_id}) after waiting {delay_seconds} seconds.")
                     except Exception as e:
-                        logger.error(f"⚠️ Failed to kick {member.username} ({member.id}): {e}")
+                        logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after scheduled mute time: {e}")
 
-            # Run the kick check in the background
-            asyncio.create_task(mute_kick_task())
+            asyncio.create_task(delayed_kick(member.id, member.username, mute_kick_time * 3600))
 
-        # Backup Mode: Assign role & send welcome message
+        # 🎭 Backup Mode: Assign role & send welcome message
         if not (assign_role and role_id and channel_id):
             logger.debug("⚠️ Backup mode is not fully configured. Skipping role assignment and welcome message.")
             return
