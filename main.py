@@ -948,7 +948,7 @@ async def track_all_members(ctx: interactions.ComponentContext):
             logger.debug(f"🔍 Checking member: {member.username} ({member.id})")
             existing_record = get_tracked_member(member.id)
             if not existing_record:  # Only track if they aren't already tracked
-                join_time = datetime.datetime.utcnow().isoformat()
+                join_time = datetime.datetime.now(datetime.UTC).isoformat()
                 track_new_member(member.id, join_time)
                 new_tracks += 1
 
