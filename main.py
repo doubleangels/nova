@@ -954,7 +954,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
 )
 async def track_all_members(ctx: interactions.ComponentContext):
     """
-    Tracks all members in the server, including offline ones, by fetching the full member list via API.
+    Tracks all members in the server, including offline ones, by fetching the full member list via Discord's REST API.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
@@ -965,22 +965,31 @@ async def track_all_members(ctx: interactions.ComponentContext):
         await ctx.defer()  # ✅ Prevents timeout by deferring response
 
         guild = ctx.guild
-        bot = ctx.client  # Get bot instance for API requests
+        bot_token = ctx.client.http.token  # Get bot token for API requests
         logger.debug(f"🔍 Fetching all members from {guild.name} (ID: {guild.id})...")
 
         all_members = []
         limit = 1000  # Max number of members per request
         after = None  # Used for pagination
+        headers = {"Authorization": f"Bot {bot_token}"}
 
-        while True:
-            # Fetch members using Discord's API
-            batch = await bot.http.get_guild_members(guild_id=guild.id, limit=limit, after=after)
+        async with aiohttp.ClientSession() as session:
+            while True:
+                url = f"https://discord.com/api/v10/guilds/{guild.id}/members?limit={limit}"
+                if after:
+                    url += f"&after={after}"
 
-            if not batch:
-                break  # No more members to fetch
+                async with session.get(url, headers=headers) as response:
+                    if response.status != 200:
+                        logger.error(f"⚠️ Failed to fetch members. HTTP {response.status}")
+                        break
 
-            all_members.extend(batch)
-            after = batch[-1]["user"]["id"]  # Use the last member ID for pagination
+                    batch = await response.json()
+                    if not batch:
+                        break  # No more members to fetch
+
+                    all_members.extend(batch)
+                    after = batch[-1]["user"]["id"]  # Use the last member ID for pagination
 
         logger.debug(f"🔍 Retrieved {len(all_members)} members from {guild.name}")
 
@@ -998,10 +1007,6 @@ async def track_all_members(ctx: interactions.ComponentContext):
 
         await ctx.send(f"✅ Successfully tracked **{new_tracks}** new members out of {len(all_members)} total members.")
         logger.debug(f"📝 Added tracking records for {new_tracks} members.")
-
-    except Exception as e:
-        logger.exception(f"⚠️ Error in /trackall command: {e}")
-        await ctx.send("⚠️ An error occurred while tracking members.", ephemeral=True)
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /trackall command: {e}")
