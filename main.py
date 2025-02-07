@@ -1983,13 +1983,13 @@ async def random_joke(ctx: interactions.ComponentContext):
 )
 @interactions.slash_option(
     name="strength",
-    description="Warp strength (1 = light, 5 = extreme).",
+    description="Warp strength (0 = none, 10 = extreme).",
     required=False,
     opt_type=interactions.OptionType.INTEGER,
-    min_value=1,
-    max_value=5
+    min_value=0,
+    max_value=10
 )
-async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode: str, strength: int = 3):
+async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode: str, strength: int = 4):
     """Fetches a user's profile picture and applies a warp effect based on the selected mode."""
     await ctx.defer()
 
@@ -2013,12 +2013,21 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         width, height = img.size
         img_np = np.array(img)
 
+        # If strength is 0, return the original image
+        if strength == 0:
+            output_buffer = io.BytesIO()
+            img.save(output_buffer, format="PNG")
+            output_buffer.seek(0)
+            file = interactions.File(file=output_buffer, file_name="original.png")
+            await ctx.send(files=[file])
+            return
+
         # Define the center of the warp effect
         center_x, center_y = width // 2, height // 2
 
-        # Map strength (1-5) to appropriate intensities
-        strength_map = {1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5}  # Stronger scaling for bulge
-        effect_strength = strength_map.get(strength, 0.2)  # Default to medium strength
+        # Map strength (0-10) to appropriate intensities
+        strength_map = {0: 0, 1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5, 6: 0.7, 7: 1.0, 8: 1.3, 9: 1.7, 10: 2.2}
+        effect_strength = strength_map.get(strength, 0.3)  # Default to medium strength
         effect_radius = min(width, height) // 2  # Area affected by the warp
 
         # Generate coordinate grids
@@ -2032,13 +2041,18 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
         if mode == "swirl":
             # 🌀 Swirl Mode: Apply a rotational distortion
-            warped_angle = angle + (5 * effect_strength * np.exp(-distance / effect_radius))
+            warped_angle = angle + (7 * effect_strength * np.exp(-distance / effect_radius))
             new_x_coords = (center_x + distance * np.cos(warped_angle)).astype(int)
             new_y_coords = (center_y + distance * np.sin(warped_angle)).astype(int)
 
         elif mode == "bulge":
-            # 🔆 Bulge Mode: Expand pixels outward for a convex effect
-            bulge_factor = 1 + (effect_strength * (1 - np.exp(-distance / effect_radius)))  # Exponential decay for smooth bulge
+            # 🔆 Bulge Mode: True fisheye distortion
+            normalized_distance = distance / effect_radius
+            bulge_factor = 1 + effect_strength * (normalized_distance**2 - 1)  # Quadratic scaling for stronger bulge
+
+            # Ensure bulge effect stays within bounds and doesn't create extreme distortions
+            bulge_factor = np.clip(bulge_factor, 0.5, 3.0)
+
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
 
