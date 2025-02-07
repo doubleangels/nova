@@ -270,7 +270,6 @@ def get_tracked_member(member_id: int):
         logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}: {e}")
         return None
 
-
 def remove_tracked_member(member_id: int):
     """
     Remove a member from the tracking system once they send a message or leave.
@@ -937,12 +936,13 @@ async def track_all_members(ctx: interactions.ComponentContext):
         return
 
     try:
+        await ctx.defer()  # ✅ Prevents timeout by deferring the response
+
         guild = ctx.guild
         members = guild.members
 
         logger.debug(f"🔍 Tracking all {len(members)} members in {guild.name} (ID: {guild.id})...")
 
-        # Count how many were added
         new_tracks = 0
 
         for member in members:
