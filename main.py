@@ -1027,9 +1027,14 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
         # Store settings in Supabase (config table)
         set_mute_mode_settings(enabled, kick_time)
 
-        status = "✅ **enabled**" if enabled else "❌ **disabled**"
-        await ctx.send(f"🔇 Mute mode has been {status}. Users must send a message within **{kick_time}** hours or be kicked.")
-        logger.debug(f"Mute mode {status} by {ctx.author.username}, kick time set to {kick_time} hours.")
+        # Create appropriate response message
+        if enabled:
+            response_message = f"🔇 Mute mode has been ✅ **enabled**. Users must send a message within **{kick_time}** hours or be kicked."
+        else:
+            response_message = "🔇 Mute mode has been ❌ **disabled**."
+
+        await ctx.send(response_message)
+        logger.debug(f"Mute mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}, kick time set to {kick_time} hours.")
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /mutemode command: {e}")
@@ -1215,9 +1220,14 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
         set_value("troll_mode_enabled", enabled)
         set_value("troll_mode_account_age", age)
 
-        status = "✅ **enabled**" if enabled else "❌ **disabled**"
-        await ctx.send(f"👹 Troll mode has been {status}. Minimum account age: **{age}** days.")
-        logger.debug(f"Troll mode {status} by {ctx.author.username}; account age threshold={age} days.")
+        # Create appropriate response message
+        if enabled:
+            response_message = f"👹 Troll mode has been ✅ **enabled**. Minimum account age: **{age}** days."
+        else:
+            response_message = "👹 Troll mode has been ❌ **disabled**."
+
+        await ctx.send(response_message)
+        logger.debug(f"Troll mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}; account age threshold={age} days.")
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /trollmode command: {e}")
