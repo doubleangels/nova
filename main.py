@@ -968,12 +968,12 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.BOOLEAN
 )
 @interactions.slash_option(
-    name="kick_time",
-    description="Time limit in hours before a silent user is kicked (Default: 4)",
+    name="time",
+    description="Time limit in hours before a silent user is kicked (Default: 2)",
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
-async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, kick_time: int = 4):
+async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, time: int = 2):
     """
     Enables or disables mute mode and sets the time threshold before a user is kicked.
     """
@@ -984,20 +984,20 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
 
     try:
         logger.debug(f"Received /mutemode command from {ctx.author.username} ({ctx.author.id})")
-        logger.debug(f"Mute mode toggle: {'Enabled' if enabled else 'Disabled'}, Kick Time: {kick_time} hours")
+        logger.debug(f"Mute mode toggle: {'Enabled' if enabled else 'Disabled'}, Kick Time: {time} hours")
 
         # Store settings in Supabase (config table)
         set_value("mute_mode", enabled)
-        set_value("mute_mode_kick_time_hours", kick_time)
+        set_value("mute_mode_kick_time_hours", time)
 
         # Create appropriate response message
         if enabled:
-            response_message = f"🔇 Mute mode has been ✅ **enabled**. Users must send a message within **{kick_time}** hours or be kicked."
+            response_message = f"🔇 Mute mode has been ✅ **enabled**. Users must send a message within **{time}** hours or be kicked."
         else:
             response_message = "🔇 Mute mode has been ❌ **disabled**."
 
         await ctx.send(response_message)
-        logger.debug(f"Mute mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}, kick time set to {kick_time} hours.")
+        logger.debug(f"Mute mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}, kick time set to {time} hours.")
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /mutemode command: {e}")
