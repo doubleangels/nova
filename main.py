@@ -254,14 +254,20 @@ def track_new_member(member_id: int, join_time: str):
 def get_tracked_member(member_id: int):
     """
     Retrieve the join timestamp of a tracked member.
+    Returns None if no data exists.
     """
     try:
         response = supabase.table("tracked_members").select("join_time").eq("member_id", member_id).maybe_single().execute()
-        if response and response.data:
-            return response.data.get("join_time")
-        return None
-    except Exception:
-        logger.exception(f"Error retrieving tracked data for member {member_id}.")
+        
+        # Check if response or response.data is None
+        if not response or not response.data:
+            logger.debug(f"🔍 No tracked data found for member {member_id}.")
+            return None
+
+        return response.data.get("join_time")
+    
+    except Exception as e:
+        logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}: {e}")
         return None
 
 def remove_tracked_member(member_id: int):
