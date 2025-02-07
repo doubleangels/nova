@@ -12,9 +12,6 @@ import aiohttp
 import sentry_sdk
 import io
 import time
-import cv2
-import numpy as np
-from PIL import Image
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -1961,60 +1958,6 @@ async def random_joke(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.exception(f"Error in /joke command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
-
-@interactions.slash_command(
-    name="warpimage",
-    description="Warp an image with a distortion effect."
-)
-@interactions.slash_option(
-    name="image",
-    description="Upload an image to warp.",
-    required=True,
-    opt_type=interactions.OptionType.ATTACHMENT
-)
-async def warp_image(ctx: interactions.ComponentContext, image: interactions.Attachment):
-    """Applies a warp distortion effect to an uploaded image."""
-    await ctx.defer()
-
-    try:
-        # Download the image
-        async with aiohttp.ClientSession() as session:
-            async with session.get(image.url) as resp:
-                if resp.status != 200:
-                    await ctx.send("❌ Failed to download the image. Please try again.", ephemeral=True)
-                    return
-                image_bytes = await resp.read()
-
-        # Convert image to OpenCV format
-        img = np.array(Image.open(io.BytesIO(image_bytes)))
-        if len(img.shape) == 3 and img.shape[2] == 4:
-            img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)  # Convert RGBA to RGB if needed
-
-        height, width = img.shape[:2]
-
-        # Warp transformation matrix (randomized for effect)
-        src_pts = np.float32([
-            [0, 0], [width - 1, 0], [0, height - 1], [width - 1, height - 1]
-        ])
-        dst_pts = np.float32([
-            [0, height * 0.33], [width - 1, height * 0.66],
-            [width * 0.25, height - 1], [width * 0.75, height - 1]
-        ])
-        matrix = cv2.getPerspectiveTransform(src_pts, dst_pts)
-        warped_img = cv2.warpPerspective(img, matrix, (width, height))
-
-        # Convert back to bytes
-        _, buffer = cv2.imencode(".png", warped_img)
-        image_bytes_io = io.BytesIO(buffer)
-        image_bytes_io.seek(0)
-
-        # Send the image
-        file = interactions.File(file=image_bytes_io, file_name="warped.png")
-        await ctx.send("✅ **Here is your warped image:**", files=[file])
-
-    except Exception as e:
-        await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
-        print(f"Error in /warpimage: {e}")
 
 # -------------------------
 # Bot Startup
