@@ -197,88 +197,111 @@ def initialize_reminders_table():
 # ----------------------
 # "mute_mode" Table Helpers
 # ----------------------
-
 def get_mute_mode_settings():
     """
-    Retrieve mute mode settings from the 'mute_mode' table in Supabase.
-    Returns a dictionary with mute mode settings, or default values if not found.
+    Retrieve mute mode settings from the 'config' table in Supabase.
+    Returns a dictionary with mute mode settings.
     """
     try:
-        response = supabase.table("mute_mode").select("settings").eq("key", "global").maybe_single().execute()
+        response = supabase.table("config").select("mute_mode", "mute_mode_kick_time_hours").maybe_single().execute()
+        
         if response and response.data:
-            settings = response.data.get("settings")
-            if settings:
-                return json.loads(settings)
+            return {
+                "enabled": response.data.get("mute_mode", False),
+                "kick_time_hours": response.data.get("mute_mode_kick_time_hours", 4)
+            }
 
-        # Default settings if none exist
+        # Default settings if no record is found
         return {"enabled": False, "kick_time_hours": 4}
+
     except Exception:
-        logger.exception("Error getting mute mode settings.")
+        logger.exception("⚠️ Error retrieving mute mode settings from config table.")
         return {"enabled": False, "kick_time_hours": 4}
+
 
 def set_mute_mode_settings(enabled: bool, kick_time_hours: int = 4):
     """
-    Upsert mute mode settings into the 'mute_mode' table in Supabase.
+    Updates mute mode settings in the 'config' table in Supabase.
     """
     try:
-        serialized = json.dumps({"enabled": enabled, "kick_time_hours": kick_time_hours})
-        supabase.table("mute_mode").upsert({"key": "global", "settings": serialized}).execute()
-        logger.debug(f"Updated mute mode settings: Enabled={enabled}, Kick Time={kick_time_hours} hours.")
+        # Ensure only one row exists in config table
+        supabase.table("config").delete().execute()  # Clear table before inserting new values
+
+        # Insert new settings
+        supabase.table("config").insert({
+            "mute_mode": enabled,
+            "mute_mode_kick_time_hours": kick_time_hours
+        }).execute()
+
+        logger.debug(f"🔄 Updated mute mode settings: Enabled={enabled}, Kick Time={kick_time_hours} hours.")
+
     except Exception:
-        logger.exception("Error setting mute mode settings.")
+        logger.exception("⚠️ Error setting mute mode settings in config table.")
 
 def delete_mute_mode_settings():
     """
-    Delete mute mode settings from the 'mute_mode' table in Supabase.
+    Resets mute mode settings in the 'config' table in Supabase.
     """
     try:
-        supabase.table("mute_mode").delete().eq("key", "global").execute()
-        logger.debug("Deleted mute mode settings.")
+        supabase.table("config").update({
+            "mute_mode": False,
+            "mute_mode_kick_time_hours": 4
+        }).execute()
+
+        logger.debug("🗑️ Reset mute mode settings in config table.")
+
     except Exception:
-        logger.exception("Error deleting mute mode settings.")
+        logger.exception("⚠️ Error resetting mute mode settings in config table.")
 
 # ----------------------
 # "tracked_members" Table Helpers
 # ----------------------
-
-def track_new_member(member_id: int, join_time: str):
+def track_new_member(member_id: int, username: str, join_time: str):
     """
-    Store a new member's join timestamp in the 'tracked_members' table.
+    Store a new member's join timestamp and username in the 'tracked_members' table.
     """
     try:
-        supabase.table("tracked_members").upsert({"member_id": member_id, "join_time": join_time}).execute()
-        logger.debug(f"Tracked join time for member {member_id}: {join_time}")
+        supabase.table("tracked_members").upsert({
+            "member_id": member_id,
+            "username": username,
+            "join_time": join_time
+        }).execute()
+
+        logger.debug(f"📝 Tracked join time for member {member_id} ({username}): {join_time}")
+
     except Exception:
-        logger.exception(f"Error tracking new member {member_id}.")
+        logger.exception(f"⚠️ Error tracking new member {member_id}.")
 
 def get_tracked_member(member_id: int):
     """
-    Retrieve the join timestamp of a tracked member.
+    Retrieve the join timestamp and username of a tracked member.
     Returns None if no data exists.
     """
     try:
-        response = supabase.table("tracked_members").select("join_time").eq("member_id", member_id).maybe_single().execute()
+        response = supabase.table("tracked_members").select("username", "join_time").eq("member_id", member_id).maybe_single().execute()
         
-        # Ensure the response contains data before accessing it
-        if not response or response.data is None:
-            logger.debug(f"🔍 No tracked data found for member {member_id}. Returning None.")
-            return None
+        if response and response.data:
+            return {
+                "username": response.data.get("username", "Unknown"),
+                "join_time": response.data.get("join_time")
+            }
 
-        return response.data.get("join_time")
+        return None  # No data found
 
-    except Exception as e:
-        logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}: {e}")
+    except Exception:
+        logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}.")
         return None
 
 def remove_tracked_member(member_id: int):
     """
-    Remove a member from the tracking system once they send a message or leave.
+    Remove a member from the tracking system.
     """
     try:
         supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
-        logger.debug(f"Removed tracked data for member {member_id}.")
+        logger.debug(f"🗑️ Removed tracked data for member {member_id}.")
+    
     except Exception:
-        logger.exception(f"Error removing tracked data for member {member_id}.")
+        logger.exception(f"⚠️ Error removing tracked data for member {member_id}.")
 
 # -------------------------
 # Discord Bot Setup
@@ -885,7 +908,10 @@ async def reset_reminders(ctx: interactions.ComponentContext):
         logger.exception(f"⚠️ Error in /resetreminders command: {e}")
         await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="mutemode", description="Toggle auto-kicking of users who don't send a message within a time limit.")
+@interactions.slash_command(
+    name="mutemode",
+    description="Toggle auto-kicking of users who don't send a message within a time limit."
+)
 @interactions.slash_option(
     name="enabled",
     description="Enable or disable mute mode",
@@ -911,7 +937,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
         logger.debug(f"Received /mutemode command from {ctx.author.username} ({ctx.author.id})")
         logger.debug(f"Mute mode toggle: {'Enabled' if enabled else 'Disabled'}, Kick Time: {kick_time} hours")
 
-        # Store settings in Supabase
+        # Store settings in Supabase (config table)
         set_mute_mode_settings(enabled, kick_time)
 
         status = "✅ **enabled**" if enabled else "❌ **disabled**"
@@ -924,11 +950,11 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
 
 @interactions.slash_command(
     name="trackall",
-    description="Create a mute mode track record for every current member in the server."
+    description="Create a mute mode track record for every member in the server."
 )
 async def track_all_members(ctx: interactions.ComponentContext):
     """
-    Tracks all current members in the server by adding them to the mute mode tracking system.
+    Tracks all members in the server, including offline ones, by fetching the full member list.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
@@ -936,29 +962,31 @@ async def track_all_members(ctx: interactions.ComponentContext):
         return
 
     try:
-        await ctx.defer()  # ✅ Prevents timeout by deferring the response
+        await ctx.defer()  # ✅ Prevents timeout by deferring response
 
         guild = ctx.guild
-        members = guild.members
-        logger.debug(f"🔍 Tracking all {len(members)} members in {guild.name} (ID: {guild.id}).")
+        logger.debug(f"🔍 Fetching all members from {guild.name} (ID: {guild.id})...")
+
+        # Fetch full member list (pagination if needed)
+        all_members = await guild.fetch_all_members()  # ✅ Fetches ALL members, including offline users
+
+        logger.debug(f"🔍 Retrieved {len(all_members)} members from {guild.name}")
 
         new_tracks = 0
 
-        for member in members:
-            logger.debug(f"🔍 Checking member: {member.username} ({member.id})")
+        for member in all_members:
             existing_record = get_tracked_member(member.id)
             if not existing_record:  # Only track if they aren't already tracked
-                join_time = datetime.datetime.now(datetime.UTC).isoformat()
-                track_new_member(member.id, join_time)
+                join_time = datetime.datetime.utcnow().isoformat()
+                track_new_member(member.id, member.username, join_time)
                 new_tracks += 1
 
-        await ctx.send(f"✅ Successfully tracked **{new_tracks}** new members.")
+        await ctx.send(f"✅ Successfully tracked **{new_tracks}** new members out of {len(all_members)} total members.")
         logger.debug(f"📝 Added tracking records for {new_tracks} members.")
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /trackall command: {e}")
         await ctx.send("⚠️ An error occurred while tracking members.", ephemeral=True)
-
 
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
 async def test_reminders(ctx: interactions.ComponentContext):
