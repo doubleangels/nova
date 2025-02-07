@@ -12,6 +12,8 @@ import aiohttp
 import sentry_sdk
 import io
 import time
+import numpy as np
+from PIL import Image, ImageFilter, ImageOps
 from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -1958,6 +1960,72 @@ async def random_joke(ctx: interactions.ComponentContext):
     except Exception as e:
         logger.exception(f"Error in /joke command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
+@interactions.slash_command(
+    name="warp",
+    description="Warp a user's profile picture."
+)
+@interactions.slash_option(
+    name="user",
+    description="Select a user to warp their profile picture.",
+    required=True,
+    opt_type=interactions.OptionType.USER
+)
+async def warp(ctx: interactions.ComponentContext, user: interactions.User):
+    """Fetches a user's profile picture and applies a warp effect without OpenCV."""
+    await ctx.defer()
+
+    try:
+        # Fetch the user's avatar URL
+        avatar_url = user.avatar_url
+        if not avatar_url:
+            await ctx.send("❌ This user has no profile picture.", ephemeral=True)
+            return
+
+        # Download the image
+        async with aiohttp.ClientSession() as session:
+            async with session.get(avatar_url) as resp:
+                if resp.status != 200:
+                    await ctx.send("❌ Failed to fetch profile picture.", ephemeral=True)
+                    return
+                image_bytes = await resp.read()
+
+        # Open the image
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+        # Apply a warp distortion using a sine wave transformation
+        width, height = img.size
+        img_np = np.array(img)
+
+        # Create a sine wave distortion map
+        def sine_warp(x, y):
+            new_x = x + 10 * np.sin(2 * np.pi * y / 50)
+            new_y = y + 10 * np.sin(2 * np.pi * x / 50)
+            return new_x, new_y
+
+        # Create a new empty image
+        warped_img = Image.new("RGB", (width, height))
+
+        # Apply the transformation
+        for y in range(height):
+            for x in range(width):
+                new_x, new_y = sine_warp(x, y)
+                new_x = int(np.clip(new_x, 0, width - 1))
+                new_y = int(np.clip(new_y, 0, height - 1))
+                warped_img.putpixel((x, y), img_np[new_y, new_x])
+
+        # Convert back to bytes
+        output_buffer = io.BytesIO()
+        warped_img.save(output_buffer, format="PNG")
+        output_buffer.seek(0)
+
+        # Send the warped image
+        file = interactions.File(file=output_buffer, file_name="warped_avatar.png")
+        await ctx.send(f"✅ **Here's the warped avatar of {user.username}:**", files=[file])
+
+    except Exception as e:
+        await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
+        print(f"Error in /warp command: {e}")
 
 # -------------------------
 # Bot Startup
