@@ -528,19 +528,45 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
 # -------------------------
 # Event Listeners
 # -------------------------
-import asyncio
-import datetime
-
 @interactions.listen()
 async def on_ready():
     """
     Fired once the bot is fully online and ready.
-    Ensures settings exist and reschedules mute mode kicks.
+    Sets custom presence, attempts to reschedule existing reminders,
+    and reschedules mute mode and troll mode settings.
     """
     try:
         logger.info("✅ Bot is online! Setting up status and activity.")
 
-        # Ensure default settings exist
+        # Set bot presence
+        await bot.change_presence(
+            status=interactions.Status.ONLINE,
+            activity=interactions.Activity(
+                name="for ways to assist!",
+                type=interactions.ActivityType.WATCHING,
+            ),
+        )
+        logger.debug("🎭 Bot presence and activity set.")
+
+        # Initialize reminders
+        initialize_reminders_table()
+        logger.debug("🛠️ Checking for active reminders.")
+
+        # Fetch role for reminders
+        role = get_role()
+        if not role:
+            logger.warning("⚠️ No role set for reminders; skipping reminder reschedule.")
+        else:
+            # Reschedule reminders
+            for key in ["disboard", "dsme", "unfocused", "discadia"]:
+                logger.debug(f"🔄 Attempting to reschedule {key} reminder.")
+                await reschedule_reminder(key, role)
+                logger.debug(f"✅ Reminder {key} successfully rescheduled.")
+
+        # 🔄 Ensure Mute Mode & Troll Mode Settings Exist
+        logger.info("🔄 Ensuring mute mode and troll mode settings exist...")
+
+        # Set default values if missing
         if get_value("mute_mode") is None:
             set_value("mute_mode", False)
         if get_value("mute_mode_kick_time_hours") is None:
@@ -550,13 +576,9 @@ async def on_ready():
         if get_value("troll_mode_account_age") is None:
             set_value("troll_mode_account_age", 14)
 
-        # Get mute mode settings (convert from string)
-        mute_mode_enabled = get_value("mute_mode") == "true"
+        # Get mute mode settings (convert safely)
+        mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
-
-        # Get troll mode settings (convert from string)
-        troll_mode_enabled = get_value("troll_mode") == "true"
-        troll_account_age = int(get_value("troll_mode_account_age") or 14)
 
         # 🔄 Reschedule Mute Mode Kicks
         if not mute_mode_enabled:
@@ -604,7 +626,7 @@ async def on_ready():
 
             logger.info("✅ All pending mute mode kicks have been rescheduled.")
 
-        logger.info("🎯 All settings verified. Bot is ready!")
+        logger.info("🎯 All reminders checked and settings verified. Bot is ready!")
 
     except Exception as e:
         logger.exception(f"⚠️ An unexpected error occurred during on_ready: {e}")
