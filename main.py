@@ -954,7 +954,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ki
 )
 async def track_all_members(ctx: interactions.ComponentContext):
     """
-    Tracks all members in the server, including offline ones, by fetching the full member list.
+    Tracks all members in the server, including offline ones, by fetching the full member list via API.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
@@ -965,24 +965,43 @@ async def track_all_members(ctx: interactions.ComponentContext):
         await ctx.defer()  # ✅ Prevents timeout by deferring response
 
         guild = ctx.guild
+        bot = ctx.client  # Get bot instance for API requests
         logger.debug(f"🔍 Fetching all members from {guild.name} (ID: {guild.id})...")
 
-        # Fetch full member list (pagination if needed)
-        all_members = await guild.fetch_all_members()  # ✅ Fetches ALL members, including offline users
+        all_members = []
+        limit = 1000  # Max number of members per request
+        after = None  # Used for pagination
+
+        while True:
+            # Fetch members using Discord's API
+            batch = await bot.http.get_guild_members(guild_id=guild.id, limit=limit, after=after)
+
+            if not batch:
+                break  # No more members to fetch
+
+            all_members.extend(batch)
+            after = batch[-1]["user"]["id"]  # Use the last member ID for pagination
 
         logger.debug(f"🔍 Retrieved {len(all_members)} members from {guild.name}")
 
         new_tracks = 0
 
         for member in all_members:
-            existing_record = get_tracked_member(member.id)
+            member_id = int(member["user"]["id"])
+            username = member["user"]["username"]
+
+            existing_record = get_tracked_member(member_id)
             if not existing_record:  # Only track if they aren't already tracked
                 join_time = datetime.datetime.utcnow().isoformat()
-                track_new_member(member.id, member.username, join_time)
+                track_new_member(member_id, username, join_time)
                 new_tracks += 1
 
         await ctx.send(f"✅ Successfully tracked **{new_tracks}** new members out of {len(all_members)} total members.")
         logger.debug(f"📝 Added tracking records for {new_tracks} members.")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error in /trackall command: {e}")
+        await ctx.send("⚠️ An error occurred while tracking members.", ephemeral=True)
 
     except Exception as e:
         logger.exception(f"⚠️ Error in /trackall command: {e}")
