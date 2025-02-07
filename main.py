@@ -199,35 +199,34 @@ def initialize_reminders_table():
 # ----------------------
 def track_new_member(member_id: int, username: str, join_time: str):
     """
-    Store a new member's join timestamp and username in the 'tracked_members' table.
+    Inserts or updates a new member in the 'tracked_members' table in Supabase.
     """
     try:
-        supabase.table("tracked_members").upsert({
+        response = supabase.table("tracked_members").upsert({
             "member_id": member_id,
-            "username": username,
-            "join_time": join_time
+            "join_time": join_time,
+            "username": username
         }).execute()
 
-        logger.debug(f"📝 Tracked join time for member {member_id} ({username}): {join_time}")
+        if response:
+            logger.debug(f"✅ Tracked new member: {username} ({member_id}) at {join_time}.")
+        else:
+            logger.warning(f"⚠️ Failed to track {username} ({member_id}) - No response from Supabase.")
 
-    except Exception:
-        logger.exception(f"⚠️ Error tracking new member {member_id}.")
+    except Exception as e:
+        logger.exception(f"⚠️ Error tracking new member {username} ({member_id}): {e}")
 
 def get_tracked_member(member_id: int):
     """
-    Retrieve the join timestamp and username of a tracked member.
-    Returns None if no data exists.
+    Retrieves a tracked member from the 'tracked_members' table in Supabase.
+    Returns the member's data if found, otherwise None.
     """
     try:
-        response = supabase.table("tracked_members").select("username", "join_time").eq("member_id", member_id).maybe_single().execute()
-        
-        if response and response.data:
-            return {
-                "username": response.data.get("username", "Unknown"),
-                "join_time": response.data.get("join_time")
-            }
+        response = supabase.table("tracked_members").select("*").eq("member_id", member_id).maybe_single().execute()
 
-        return None  # No data found
+        if response and response.data:
+            return response.data
+        return None
 
     except Exception:
         logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}.")
@@ -235,14 +234,14 @@ def get_tracked_member(member_id: int):
 
 def remove_tracked_member(member_id: int):
     """
-    Remove a member from the tracking system.
+    Removes a tracked member from the 'tracked_members' table in Supabase.
     """
     try:
         supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
-        logger.debug(f"🗑️ Removed tracked data for member {member_id}.")
-    
+        logger.debug(f"🗑️ Removed tracked member: {member_id}")
+
     except Exception:
-        logger.exception(f"⚠️ Error removing tracked data for member {member_id}.")
+        logger.exception(f"⚠️ Error removing tracked member {member_id}.")
 
 def get_all_tracked_members():
     """
