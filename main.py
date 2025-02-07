@@ -1963,7 +1963,7 @@ async def random_joke(ctx: interactions.ComponentContext):
 
 @interactions.slash_command(
     name="warp",
-    description="Warp a user's profile picture in a silly way."
+    description="Warp a user's profile picture in a fun and exaggerated way."
 )
 @interactions.slash_option(
     name="user",
@@ -1972,7 +1972,7 @@ async def random_joke(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.USER
 )
 async def warp(ctx: interactions.ComponentContext, user: interactions.User):
-    """Fetches a user's profile picture and applies a funny, silly warp effect."""
+    """Fetches a user's profile picture and applies a funny, exaggerated warp effect."""
     await ctx.defer()
 
     try:
@@ -1998,17 +1998,43 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         # Generate coordinate grids
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
 
-        # Apply randomized warp effect using Perlin-like noise
-        randomness = np.random.uniform(-20, 20, (height, width))  # Adds chaotic distortions
+        # Define warp intensities for different facial regions
+        eye_warp_intensity = 25  # Stronger distortion around eyes
+        mouth_warp_intensity = 20  # Stretch and squish mouth
+        chin_warp_intensity = 15  # Pull chin downward
+        general_warp_intensity = 8  # Subtle background warping
 
-        x_offsets = (15 * np.sin(2 * np.pi * y_coords / 40) + randomness).astype(int)
-        y_offsets = (15 * np.cos(2 * np.pi * x_coords / 40) + randomness).astype(int)
+        # Create localized distortions
+        x_offsets = np.zeros_like(x_coords, dtype=np.int32)
+        y_offsets = np.zeros_like(y_coords, dtype=np.int32)
 
-        # Apply warping with clipping to stay within image bounds
+        # Apply different levels of warping to facial areas
+        for y in range(height):
+            for x in range(width):
+                # Eyes Region (Upper face, exaggerated stretch)
+                if height * 0.2 < y < height * 0.4:
+                    x_offsets[y, x] = int(eye_warp_intensity * np.sin(2 * np.pi * y / 50))
+                    y_offsets[y, x] = int(eye_warp_intensity * np.cos(2 * np.pi * x / 90))
+
+                # Mouth Region (Pull sideways and stretch down)
+                elif height * 0.6 < y < height * 0.75:
+                    x_offsets[y, x] = int(mouth_warp_intensity * np.sin(2 * np.pi * x / 40))
+                    y_offsets[y, x] = int(mouth_warp_intensity * np.cos(2 * np.pi * y / 60))
+
+                # Chin Region (Pull downward)
+                elif height * 0.75 < y < height * 0.9:
+                    y_offsets[y, x] = int(chin_warp_intensity * np.sin(2 * np.pi * y / 30))
+
+                # Background warping (subtle)
+                else:
+                    x_offsets[y, x] = int(general_warp_intensity * np.sin(2 * np.pi * y / 100))
+                    y_offsets[y, x] = int(general_warp_intensity * np.cos(2 * np.pi * x / 120))
+
+        # Apply warping with clipping to keep values within bounds
         new_x_coords = np.clip(x_coords + x_offsets, 0, width - 1)
         new_y_coords = np.clip(y_coords + y_offsets, 0, height - 1)
 
-        # Apply the transformation in one operation
+        # Transform the image all at once
         warped_img_np = img_np[new_y_coords, new_x_coords]
 
         # Convert back to PIL image
@@ -2019,14 +2045,14 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         warped_img.save(output_buffer, format="PNG")
         output_buffer.seek(0)
 
-        # Send only the warped image (without text)
-        file = interactions.File(file=output_buffer, file_name="silly_warped_avatar.png")
-        await ctx.send(files=[file])  # ⬅ No success message, just the image
+        # Send only the warped image (no success message)
+        file = interactions.File(file=output_buffer, file_name="exaggerated_warp.png")
+        await ctx.send(files=[file])
 
     except Exception as e:
         await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
         print(f"Error in /warp command: {e}")
-        
+
 # -------------------------
 # Bot Startup
 # -------------------------
