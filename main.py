@@ -994,7 +994,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ti
 
         # Create appropriate response message
         if enabled:
-            response_message = f"🔇 Mute mode has been ✅ **enabled**. Users must send a message within **{time}** hours or be kicked."
+            response_message = f"🔇 Mute mode has been ✅ **enabled**. New users must send a message within **{time}** hours or be kicked."
         else:
             response_message = "🔇 Mute mode has been ❌ **disabled**."
 
