@@ -940,8 +940,8 @@ async def track_all_members(ctx: interactions.ComponentContext):
 
         guild = ctx.guild
         members = guild.members
-
-        logger.debug(f"🔍 Tracking all {len(members)} members in {guild.name} (ID: {guild.id})...")
+        logger.debug(f"Found members: {members}")
+        logger.debug(f"🔍 Tracking all {len(members)} members in {guild.name} (ID: {guild.id}).")
 
         new_tracks = 0
 
