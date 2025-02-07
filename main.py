@@ -1973,10 +1973,13 @@ async def random_joke(ctx: interactions.ComponentContext):
 )
 @interactions.slash_option(
     name="mode",
-    description="Select the warp mode (swirl or bulge).",
+    description="Select the warp mode.",
     required=True,
     opt_type=interactions.OptionType.STRING,
-    choices=["swirl", "bulge"]
+    choices=[
+        {"name": "Swirl", "value": "swirl"},
+        {"name": "Bulge", "value": "bulge"}
+    ]
 )
 @interactions.slash_option(
     name="strength",
