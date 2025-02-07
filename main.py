@@ -713,28 +713,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             return
 
         # 🔇 Mute Mode: Track new members & reschedule kicks
+        logger.debug(f"🔇 Mute Mode: {mute_mode_enabled}")
         if mute_mode_enabled:
             join_time = datetime.datetime.now(datetime.UTC).isoformat()
             track_new_member(member.id, member.username, join_time, is_bot=False)
-
-            async def delayed_kick(member_id, username, delay_seconds):
-                """
-                Delays a mute mode kick for the given number of seconds.
-                """
-                await asyncio.sleep(delay_seconds)  # Wait for the remaining time
-
-                # Check if the user is still in the tracking system
-                if get_tracked_member(member_id):
-                    try:
-                        guild = await interactions.get_guild(event.guild_id)
-                        member = await guild.fetch_member(member_id)
-                        await member.kick(reason="Muted user did not send a message in time.")
-                        remove_tracked_member(member_id)
-                        logger.info(f"🔇 Kicked {username} ({member_id}) after waiting {delay_seconds} seconds.")
-                    except Exception as e:
-                        logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after scheduled mute time: {e}")
-
-            asyncio.create_task(delayed_kick(member.id, member.username, mute_kick_time * 3600))
+            logger.debug(f"🔇 Tracked new member: {member.username} ({member.id}) at {join_time}")
+            logger.debug(f"{get_all_tracked_members()}")
 
         # 🎭 Backup Mode: Assign role & send welcome message
         if not (assign_role and role_id and channel_id):
