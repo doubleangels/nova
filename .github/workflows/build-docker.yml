@@ -43,7 +43,7 @@ jobs:
           with:
             token: ${{ github.token }}
             repository: ${{ github.repository }}
-            retain_days: 3
+            retain_days: 7
             keep_minimum_runs: 1
   
   create-sentry-release:
