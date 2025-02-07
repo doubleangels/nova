@@ -2114,7 +2114,6 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         logger.error(f"Error in /warp command: {e}", exc_info=True)
         await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
 
-
 # -------------------------
 # Bot Startup
 # -------------------------
