@@ -1983,13 +1983,13 @@ async def random_joke(ctx: interactions.ComponentContext):
 )
 @interactions.slash_option(
     name="strength",
-    description="Warp strength (0 = none, 10 = extreme).",
+    description="Warp strength (0 = none, 6 = extreme).",
     required=False,
     opt_type=interactions.OptionType.INTEGER,
     min_value=0,
-    max_value=10
+    max_value=6
 )
-async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode: str, strength: int = 4):
+async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode: str, strength: int = 6):
     """Fetches a user's profile picture and applies a warp effect based on the selected mode."""
     await ctx.defer()
 
@@ -2025,8 +2025,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         # Define the center of the warp effect
         center_x, center_y = width // 2, height // 2
 
-        # Map strength (0-10) to appropriate intensities
-        strength_map = {0: 0, 1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5, 6: 0.7, 7: 1.0, 8: 1.3, 9: 1.7, 10: 2.2}
+        # Map strength (0-6) to appropriate intensities
+        strength_map = {0: 0, 1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5, 6: 0.7}
         effect_strength = strength_map.get(strength, 0.3)  # Default to medium strength
         effect_radius = min(width, height) // 2  # Area affected by the warp
 
