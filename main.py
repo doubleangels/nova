@@ -781,6 +781,8 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
                 "• What's your blood type?\n"
                 "• What's your shoe size?\n"
                 "• Can we donate your organs to ... \"charity\"?\n"
+                "\n"
+                "Please tell us how old you are at least - this is a 21+ server! If you don't send at least one message, you might get automatically kicked.\n"
             ),
             color=0xCD41FF,
         )
