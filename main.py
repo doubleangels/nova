@@ -1963,7 +1963,7 @@ async def random_joke(ctx: interactions.ComponentContext):
 
 @interactions.slash_command(
     name="warp",
-    description="Warp a user's profile picture."
+    description="Warp a user's profile picture in a silly way."
 )
 @interactions.slash_option(
     name="user",
@@ -1972,7 +1972,7 @@ async def random_joke(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.USER
 )
 async def warp(ctx: interactions.ComponentContext, user: interactions.User):
-    """Fetches a user's profile picture and applies a warp effect using a fast NumPy transformation."""
+    """Fetches a user's profile picture and applies a funny, silly warp effect."""
     await ctx.defer()
 
     try:
@@ -1998,9 +1998,11 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         # Generate coordinate grids
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
 
-        # Apply a sine wave distortion efficiently using NumPy
-        x_offsets = (10 * np.sin(2 * np.pi * y_coords / 50)).astype(int)
-        y_offsets = (10 * np.sin(2 * np.pi * x_coords / 50)).astype(int)
+        # Apply randomized warp effect using Perlin-like noise
+        randomness = np.random.uniform(-20, 20, (height, width))  # Adds chaotic distortions
+
+        x_offsets = (15 * np.sin(2 * np.pi * y_coords / 40) + randomness).astype(int)
+        y_offsets = (15 * np.cos(2 * np.pi * x_coords / 40) + randomness).astype(int)
 
         # Apply warping with clipping to stay within image bounds
         new_x_coords = np.clip(x_coords + x_offsets, 0, width - 1)
@@ -2017,14 +2019,14 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         warped_img.save(output_buffer, format="PNG")
         output_buffer.seek(0)
 
-        # Send the warped image
-        file = interactions.File(file=output_buffer, file_name="warped_avatar.png")
-        await ctx.send(f"✅ **Here's the warped avatar of {user.username}:**", files=[file])
+        # Send only the warped image (without text)
+        file = interactions.File(file=output_buffer, file_name="silly_warped_avatar.png")
+        await ctx.send(files=[file])  # ⬅ No success message, just the image
 
     except Exception as e:
         await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
         print(f"Error in /warp command: {e}")
-
+        
 # -------------------------
 # Bot Startup
 # -------------------------
