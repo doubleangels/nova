@@ -1972,7 +1972,7 @@ async def random_joke(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.USER
 )
 async def warp(ctx: interactions.ComponentContext, user: interactions.User):
-    """Fetches a user's profile picture and applies a warp effect without OpenCV."""
+    """Fetches a user's profile picture and applies a warp effect using a fast NumPy transformation."""
     await ctx.defer()
 
     try:
@@ -1995,22 +1995,22 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         width, height = img.size
         img_np = np.array(img)
 
-        # Apply a sine wave warp transformation
-        def sine_warp(x, y):
-            new_x = x + int(10 * np.sin(2 * np.pi * y / 50))
-            new_y = y + int(10 * np.sin(2 * np.pi * x / 50))
-            return new_x, new_y
+        # Generate coordinate grids
+        x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
 
-        # Create a new blank image
-        warped_img = Image.new("RGB", (width, height))
+        # Apply a sine wave distortion efficiently using NumPy
+        x_offsets = (10 * np.sin(2 * np.pi * y_coords / 50)).astype(int)
+        y_offsets = (10 * np.sin(2 * np.pi * x_coords / 50)).astype(int)
 
-        for y in range(height):
-            for x in range(width):
-                new_x, new_y = sine_warp(x, y)
-                new_x = np.clip(new_x, 0, width - 1)
-                new_y = np.clip(new_y, 0, height - 1)
-                pixel_value = tuple(img_np[new_y, new_x])  # ✅ Convert NumPy array to tuple
-                warped_img.putpixel((x, y), pixel_value)
+        # Apply warping with clipping to stay within image bounds
+        new_x_coords = np.clip(x_coords + x_offsets, 0, width - 1)
+        new_y_coords = np.clip(y_coords + y_offsets, 0, height - 1)
+
+        # Apply the transformation in one operation
+        warped_img_np = img_np[new_y_coords, new_x_coords]
+
+        # Convert back to PIL image
+        warped_img = Image.fromarray(warped_img_np)
 
         # Convert back to bytes
         output_buffer = io.BytesIO()
