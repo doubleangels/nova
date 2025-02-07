@@ -2075,17 +2075,17 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         
         elif mode == "pinch":
             logger.info("👌 Applying **pinch effect**...")
-            
-            # Normalized distance from center (0 at center, 1 at edge of effect radius)
-            normalized_distance = distance / effect_radius
-            
-            # Pinch factor: Compressing pixels inward (opposite of bulge)
-            pinch_factor = 1 - effect_strength * (normalized_distance**2)  
-            
-            # Ensure pinch effect doesn't go negative and stays within valid range
-            pinch_factor = np.clip(pinch_factor, 0.3, 1.0)
 
-            # Move pixels closer to the center
+            # Normalized distance from center
+            normalized_distance = distance / effect_radius
+
+            # Pinch factor: Uses logarithmic compression for stronger inward pull
+            pinch_factor = 1 - effect_strength * np.exp(-normalized_distance**2)
+
+            # Clip values to avoid artifacts
+            pinch_factor = np.clip(pinch_factor, 0.1, 1.0)
+
+            # Move pixels toward the center
             new_x_coords = (center_x + pinch_factor * dx).astype(int)
             new_y_coords = (center_y + pinch_factor * dy).astype(int)
 
