@@ -1939,7 +1939,7 @@ async def random_joke(ctx: interactions.ComponentContext):
     try:
         await ctx.defer()
 
-        joke_url = "https://v2.jokeapi.dev/joke/Any"
+        joke_url = "https://v2.jokeapi.dev/joke/Dark"
         logger.debug(f"Fetching joke from {joke_url}")
 
         async with aiohttp.ClientSession() as session:
