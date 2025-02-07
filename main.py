@@ -1963,7 +1963,7 @@ async def random_joke(ctx: interactions.ComponentContext):
 
 @interactions.slash_command(
     name="warp",
-    description="Warp a user's profile picture in a fun and exaggerated way."
+    description="Apply a swirling vortex warp to a user's profile picture."
 )
 @interactions.slash_option(
     name="user",
@@ -1972,7 +1972,7 @@ async def random_joke(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.USER
 )
 async def warp(ctx: interactions.ComponentContext, user: interactions.User):
-    """Fetches a user's profile picture and applies a funny, exaggerated warp effect."""
+    """Fetches a user's profile picture and applies a swirl distortion effect."""
     await ctx.defer()
 
     try:
@@ -1995,46 +1995,34 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         width, height = img.size
         img_np = np.array(img)
 
+        # Define the center of the swirl effect
+        center_x, center_y = width // 2, height // 2
+
+        # Swirl intensity and radius
+        swirl_strength = 4  # Higher value = stronger swirl
+        swirl_radius = min(width, height) // 2  # The area affected by the swirl
+
         # Generate coordinate grids
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
 
-        # Define warp intensities for different facial regions
-        eye_warp_intensity = 25  # Stronger distortion around eyes
-        mouth_warp_intensity = 20  # Stretch and squish mouth
-        chin_warp_intensity = 15  # Pull chin downward
-        general_warp_intensity = 8  # Subtle background warping
+        # Convert coordinates to polar system centered at (center_x, center_y)
+        dx = x_coords - center_x
+        dy = y_coords - center_y
+        distance = np.sqrt(dx**2 + dy**2)
+        angle = np.arctan2(dy, dx)
 
-        # Create localized distortions
-        x_offsets = np.zeros_like(x_coords, dtype=np.int32)
-        y_offsets = np.zeros_like(y_coords, dtype=np.int32)
+        # Apply the swirl effect: The closer to the center, the stronger the rotation
+        swirled_angle = angle + (swirl_strength * np.exp(-distance / swirl_radius))
 
-        # Apply different levels of warping to facial areas
-        for y in range(height):
-            for x in range(width):
-                # Eyes Region (Upper face, exaggerated stretch)
-                if height * 0.2 < y < height * 0.4:
-                    x_offsets[y, x] = int(eye_warp_intensity * np.sin(2 * np.pi * y / 50))
-                    y_offsets[y, x] = int(eye_warp_intensity * np.cos(2 * np.pi * x / 90))
+        # Convert back to Cartesian coordinates
+        new_x_coords = (center_x + distance * np.cos(swirled_angle)).astype(int)
+        new_y_coords = (center_y + distance * np.sin(swirled_angle)).astype(int)
 
-                # Mouth Region (Pull sideways and stretch down)
-                elif height * 0.6 < y < height * 0.75:
-                    x_offsets[y, x] = int(mouth_warp_intensity * np.sin(2 * np.pi * x / 40))
-                    y_offsets[y, x] = int(mouth_warp_intensity * np.cos(2 * np.pi * y / 60))
+        # Clip coordinates to stay within image bounds
+        new_x_coords = np.clip(new_x_coords, 0, width - 1)
+        new_y_coords = np.clip(new_y_coords, 0, height - 1)
 
-                # Chin Region (Pull downward)
-                elif height * 0.75 < y < height * 0.9:
-                    y_offsets[y, x] = int(chin_warp_intensity * np.sin(2 * np.pi * y / 30))
-
-                # Background warping (subtle)
-                else:
-                    x_offsets[y, x] = int(general_warp_intensity * np.sin(2 * np.pi * y / 100))
-                    y_offsets[y, x] = int(general_warp_intensity * np.cos(2 * np.pi * x / 120))
-
-        # Apply warping with clipping to keep values within bounds
-        new_x_coords = np.clip(x_coords + x_offsets, 0, width - 1)
-        new_y_coords = np.clip(y_coords + y_offsets, 0, height - 1)
-
-        # Transform the image all at once
+        # Apply the transformation in one operation
         warped_img_np = img_np[new_y_coords, new_x_coords]
 
         # Convert back to PIL image
@@ -2046,13 +2034,13 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User):
         output_buffer.seek(0)
 
         # Send only the warped image (no success message)
-        file = interactions.File(file=output_buffer, file_name="exaggerated_warp.png")
+        file = interactions.File(file=output_buffer, file_name="swirled_avatar.png")
         await ctx.send(files=[file])
 
     except Exception as e:
         await ctx.send("⚠️ An error occurred while processing the image. Please try again.", ephemeral=True)
         print(f"Error in /warp command: {e}")
-
+        
 # -------------------------
 # Bot Startup
 # -------------------------
