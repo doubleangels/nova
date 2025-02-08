@@ -549,8 +549,7 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
         # If the user’s mute time has already expired, kick immediately
         if remaining_time <= 0:
             try:
-                guild = await interactions.get_guild(guild_id)
-                member = await guild.fetch_member(member_id)
+                member = bot.get_member(guild_id, member_id)
                 await member.kick(reason="User did not send a message in time.")
                 remove_tracked_member(member_id)
                 logger.info(f"🔇 Kicked {username} ({member_id}) immediately due to bot restart.")
