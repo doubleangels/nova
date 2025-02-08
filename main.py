@@ -2272,7 +2272,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
         # Map strength (0-6) to appropriate intensities
         strength_map = {0: 0, 1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5, 6: 0.7}
-        effect_strength = strength_map.get(strength, 0.3)  # Default to medium strength
+        effect_strength = strength_map.get(strength, 0.3)  # Default to medium if out of range
         effect_radius = min(width, height) // 2  # Area affected by the warp
 
         logger.debug(f"🎯 **Warp Center:** ({center_x}, {center_y}), **Effect Strength:** {effect_strength}")
@@ -2286,6 +2286,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         distance = np.sqrt(dx**2 + dy**2)
         angle = np.arctan2(dy, dx)
 
+        # Check the mode
         if mode == "swirl":
             logger.info("🌀 Applying **swirl effect**.")
             # Swirl Mode: Apply a rotational distortion
@@ -2304,6 +2305,12 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
+
+        else:
+            # If mode is invalid, inform the user and return
+            await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
+            logger.warning(f"❌ Invalid warp mode: {mode}")
+            return
 
         # Clip coordinates to stay within image bounds
         new_x_coords = np.clip(new_x_coords, 0, width - 1)
