@@ -1,21 +1,22 @@
-import interactions
 import asyncio
-import os
 import datetime
-import pytz
-import uuid
-import sys
-import signal
-import logging
-import json
-import aiohttp
-import sentry_sdk
 import io
+import json
+import logging
+import os
+import signal
+import sys
 import time
+import uuid
+
+import aiohttp
+import interactions
 import numpy as np
+import pytz
+import sentry_sdk
 from PIL import Image
-from supabase import create_client, Client
 from sentry_sdk.integrations.logging import LoggingIntegration
+from supabase import Client, create_client
 
 # -------------------------
 # Sentry Setup with Logging Integration
@@ -581,9 +582,6 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
 # -------------------------
 # Event Listeners
 # -------------------------
-import asyncio
-import datetime
-
 @interactions.listen()
 async def on_ready():
     """
