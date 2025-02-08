@@ -6,7 +6,6 @@ on:
       - dev
 
 jobs:
-  # 1) Lint job to ensure code quality
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -47,7 +46,7 @@ jobs:
   build-and-push:
     name: build-and-push-dev-image
     runs-on: ubuntu-latest
-    needs: [lint]  # <-- Dependent on lint job passing
+    needs: [lint]
     concurrency: build-${{ github.ref_name }}
     permissions:
       contents: read
