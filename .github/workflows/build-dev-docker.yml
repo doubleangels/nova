@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-push:
-    name: Build and Push Docker Image
+    name: build-and-push-dev-image
     runs-on: ubuntu-latest
     # Prevent overlapping builds on the same branch
     concurrency: build-${{ github.ref_name }}
@@ -46,7 +46,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      - name: Build and push Docker Image
         uses: docker/build-push-action@v6
         with:
           context: .
