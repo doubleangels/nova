@@ -1947,7 +1947,7 @@ async def cat_image(ctx: interactions.ComponentContext):
                     # Create an embed and set the image to reference the attachment.
                     embed = interactions.Embed(
                         title="Random Cat Picture",
-                        description="Here's a cute cat for you!",
+                        description="😺 Here's a cat for you!",
                         color=0xD3D3D3
                     )
                     embed.set_image(url=f"attachment://{filename}")
