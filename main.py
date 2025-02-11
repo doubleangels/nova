@@ -308,7 +308,7 @@ def get_role():
         if not role:
             logger.warning("No role has been set up for reminders.")
             return None
-        logger.debug(f"🎭 Retrieved reminder role: {role}")
+        logger.debug(f"Retrieved reminder role: {role}")
         return role
     except Exception as e:
         logger.exception(f"Error while fetching the reminder role: {e}")
@@ -323,7 +323,7 @@ async def get_channel(channel_key):
         if not channel_id:
             logger.warning(f"No channel has been set for '{channel_key}'.")
             return None
-        logger.debug(f"📢 Retrieved reminder channel: {channel_id}")
+        logger.debug(f"Retrieved reminder channel: {channel_id}")
         return bot.get_channel(channel_id)
     except Exception as e:
         logger.exception(f"Error while fetching the reminder channel: {e}")
