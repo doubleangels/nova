@@ -1,0 +1,7 @@
+aiohttp
+discord-py-interactions
+numpy
+pytz
+sentry-sdk
+pillow
+supabase
