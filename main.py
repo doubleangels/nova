@@ -210,12 +210,12 @@ def track_new_member(member_id: int, username: str, join_time: str):
         }).execute()
 
         if response:
-            logger.debug(f"✅ Tracked new member: {username} ({member_id}) at {join_time}.")
+            logger.debug(f"Tracked new member: {username} ({member_id}) at {join_time}.")
         else:
-            logger.warning(f"⚠️ Failed to track {username} ({member_id}) - No response from Supabase.")
+            logger.warning(f"Failed to track {username} ({member_id}) - No response from Supabase.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error tracking new member {username} ({member_id}): {e}")
+        logger.exception(f"Error tracking new member {username} ({member_id}): {e}")
 
 def get_tracked_member(member_id: int):
     """
@@ -230,7 +230,7 @@ def get_tracked_member(member_id: int):
         return None
 
     except Exception:
-        logger.exception(f"⚠️ Error retrieving tracked data for member {member_id}.")
+        logger.exception(f"Error retrieving tracked data for member {member_id}.")
         return None
 
 def remove_tracked_member(member_id: int):
@@ -247,10 +247,10 @@ def remove_tracked_member(member_id: int):
         elif not resp_dict.get("data"):
             logger.debug(f"No tracked member with ID {member_id} found. Nothing to remove.")
         else:
-            logger.debug(f"🗑️ Removed tracked member: {member_id}")
+            logger.debug(f"Removed tracked member: {member_id}")
             
     except Exception as e:
-        logger.exception(f"⚠️ Error removing tracked member {member_id}: {e}")
+        logger.exception(f"Error removing tracked member {member_id}: {e}")
 
 def get_all_tracked_members():
     """
@@ -266,7 +266,7 @@ def get_all_tracked_members():
         return []  # Return empty list if no tracked members
 
     except Exception:
-        logger.exception("⚠️ Error retrieving all tracked members from Supabase.")
+        logger.exception("Error retrieving all tracked members from Supabase.")
         return []
 
 # -------------------------
@@ -293,7 +293,7 @@ def handle_interrupt(signal_num, frame):
     """
     Handles shutdown signals (SIGINT, SIGTERM) gracefully.
     """
-    logger.info("⚠️ Gracefully shutting down.")
+    logger.info("Gracefully shutting down.")
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_interrupt)
@@ -306,12 +306,12 @@ def get_role():
     try:
         role = get_value("role")
         if not role:
-            logger.warning("⚠️ No role has been set up for reminders.")
+            logger.warning("No role has been set up for reminders.")
             return None
         logger.debug(f"🎭 Retrieved reminder role: {role}")
         return role
     except Exception as e:
-        logger.exception(f"⚠️ Error while fetching the reminder role: {e}")
+        logger.exception(f"Error while fetching the reminder role: {e}")
         return None
 
 async def get_channel(channel_key):
@@ -321,12 +321,12 @@ async def get_channel(channel_key):
     try:
         channel_id = get_value(channel_key)
         if not channel_id:
-            logger.warning(f"⚠️ No channel has been set for '{channel_key}'.")
+            logger.warning(f"No channel has been set for '{channel_key}'.")
             return None
         logger.debug(f"📢 Retrieved reminder channel: {channel_id}")
         return bot.get_channel(channel_id)
     except Exception as e:
-        logger.exception(f"⚠️ Error while fetching the reminder channel: {e}")
+        logger.exception(f"Error while fetching the reminder channel: {e}")
         return None
 
 def calculate_remaining_time(scheduled_time):
@@ -344,10 +344,10 @@ def calculate_remaining_time(scheduled_time):
         hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
         time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
-        logger.debug(f"🕒 Remaining time calculated: {time_str}")
+        logger.debug(f"Remaining time calculated: {time_str}")
         return time_str
     except Exception as e:
-        logger.exception(f"⚠️ Error calculating remaining time: {e}")
+        logger.exception(f"Error calculating remaining time: {e}")
         return "⚠️ Error calculating time!"
 
 async def safe_task(task):
@@ -357,7 +357,7 @@ async def safe_task(task):
     try:
         await task
     except Exception as e:
-        logger.exception(f"⚠️ Exception in scheduled task: {e}")
+        logger.exception(f"Exception in scheduled task: {e}")
 
 async def reschedule_reminder(key, role):
     """
@@ -366,7 +366,7 @@ async def reschedule_reminder(key, role):
     try:
         reminder_data = get_reminder_data(key)
         if not reminder_data:
-            logger.debug(f"⚠️ No reminder data found for {key.title()}.")
+            logger.debug(f"No reminder data found for {key.title()}.")
             return
         
         scheduled_time = reminder_data.get("scheduled_time")
@@ -377,12 +377,12 @@ async def reschedule_reminder(key, role):
             now = datetime.datetime.now(tz=pytz.UTC)
 
             if scheduled_dt <= now:
-                logger.debug(f"❌ Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
+                logger.debug(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
                 delete_reminder_data(key)
                 return
 
             remaining_time = scheduled_dt - now
-            logger.debug(f"🔄 Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
+            logger.debug(f"Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
             
             asyncio.create_task(
                 safe_task(
@@ -399,7 +399,7 @@ async def reschedule_reminder(key, role):
                 )
             )
     except Exception as e:
-        logger.exception(f"⚠️ Error while attempting to reschedule a reminder: {e}")
+        logger.exception(f"Error while attempting to reschedule a reminder: {e}")
 
 async def get_coordinates(city: str):
     """
@@ -413,19 +413,19 @@ async def get_coordinates(city: str):
             async with session.get(geocode_url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"📍 Google Geocoding API response: {json.dumps(data, indent=2)}")
+                    logger.debug(f"Google Geocoding API response: {json.dumps(data, indent=2)}")
 
                     if data.get("results"):
                         location = data["results"][0]["geometry"]["location"]
                         lat, lon = location["lat"], location["lng"]
-                        logger.debug(f"🌍 Retrieved coordinates for {city}: ({lat}, {lon})")
+                        logger.debug(f"Retrieved coordinates for {city}: ({lat}, {lon})")
                         return lat, lon
                     else:
-                        logger.warning(f"❌ No results found for city: {city}")
+                        logger.warning(f"No results found for city: {city}")
                 else:
-                    logger.error(f"⚠️ Google Geocoding API error: Status {response.status}")
+                    logger.error(f"Google Geocoding API error: Status {response.status}")
     except Exception as e:
-        logger.exception(f"⚠️ Error fetching city coordinates: {e}")
+        logger.exception(f"Error fetching city coordinates: {e}")
 
     return None, None
 
@@ -479,27 +479,27 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
     try:
         channel = await get_channel("reminder_channel")
         if not channel:
-            logger.warning("⚠️ No valid reminder channel found; cannot send scheduled message.")
+            logger.warning("No valid reminder channel found; cannot send scheduled message.")
             return
 
         if initial_message:
-            logger.debug(f"📢 Sending initial message for '{key}': {initial_message}")
+            logger.debug(f"Sending initial message for '{key}': {initial_message}")
             await channel.send(initial_message)
 
-        logger.debug(f"⏳ Waiting {interval} seconds before sending reminder for '{key}'.")
+        logger.debug(f"Waiting {interval} seconds before sending reminder for '{key}'.")
         await asyncio.sleep(interval)
 
-        logger.debug(f"🔔 Sending reminder message for '{key}': {reminder_message}")
+        logger.debug(f"Sending reminder message for '{key}': {reminder_message}")
         await channel.send(reminder_message)
 
         # Cleanup reminder
         reminder_data = get_reminder_data(key)
         if reminder_data:
             delete_reminder_data(key)
-            logger.debug(f"✅ Reminder {reminder_data['reminder_id']} for '{key.title()}' has been cleaned up.")
+            logger.debug(f"Reminder {reminder_data['reminder_id']} for '{key.title()}' has been cleaned up.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in send_scheduled_message: {e}")
+        logger.exception(f"Error in send_scheduled_message: {e}")
 
 
 async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
@@ -509,7 +509,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
     try:
         existing_data = get_reminder_data(key)
         if existing_data and existing_data.get("scheduled_time"):
-            logger.debug(f"⏳ {key.capitalize()} already has a timer set. Skipping new reminder.")
+            logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
             return
 
         reminder_id = str(uuid.uuid4())
@@ -519,7 +519,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
             "reminder_id": reminder_id
         }
         set_reminder_data(key, reminder_data)
-        logger.debug(f"📝 Scheduled new reminder: {key.capitalize()} | ID: {reminder_id} | Interval: {interval} seconds")
+        logger.debug(f"Scheduled new reminder: {key.capitalize()} | ID: {reminder_id} | Interval: {interval} seconds")
 
         role = get_role()
         if role:
@@ -531,7 +531,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
             )
 
     except Exception as e:
-        logger.exception(f"⚠️ Error handling reminder for key '{key}': {e}")
+        logger.exception(f"Error handling reminder for key '{key}': {e}")
 
 # -------------------------
 # Mute Mode Kick Scheduling
@@ -565,9 +565,9 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
             try:
                 await member.kick(reason="User did not send a message in time.")
                 remove_tracked_member(member_id)
-                logger.info(f"🔇 Kicked {username} ({member_id}) immediately due to bot restart.")
+                logger.info(f"Kicked {username} ({member_id}) immediately due to bot restart.")
             except Exception as e:
-                logger.warning(f"⚠️ Failed to kick {username} ({member_id}) immediately after bot restart: {e}")
+                logger.warning(f"Failed to kick {username} ({member_id}) immediately after bot restart: {e}")
             return
 
         # Schedule the kick for the remaining time
@@ -584,15 +584,15 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
                 try:
                     await member.kick(reason="User did not send a message in time.")
                     remove_tracked_member(member_id)
-                    logger.info(f"🔇 Kicked {username} ({member_id}) after scheduled time.")
+                    logger.info(f"Kicked {username} ({member_id}) after scheduled time.")
                 except Exception as e:
-                    logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after scheduled time: {e}")
+                    logger.warning(f"Failed to kick {username} ({member_id}) after scheduled time: {e}")
 
         asyncio.create_task(delayed_kick())
-        logger.debug(f"⏳ Scheduled kick for {username} ({member_id}) in {remaining_time:.2f} seconds.")
+        logger.debug(f"Scheduled kick for {username} ({member_id}) in {remaining_time:.2f} seconds.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error scheduling mute mode kick for {username} ({member_id}): {e}")
+        logger.exception(f"Error scheduling mute mode kick for {username} ({member_id}): {e}")
         
 # -------------------------
 # Event Listeners
@@ -605,7 +605,7 @@ async def on_ready():
     and reschedules mute mode and troll mode settings.
     """
     try:
-        logger.info("✅ Bot is online! Setting up status and activity.")
+        logger.info("Bot is online! Setting up status and activity.")
 
         # Set bot presence
         await bot.change_presence(
@@ -615,25 +615,25 @@ async def on_ready():
                 type=interactions.ActivityType.WATCHING,
             ),
         )
-        logger.debug("🎭 Bot presence and activity set.")
+        logger.debug("Bot presence and activity set.")
 
         # Initialize reminders
         initialize_reminders_table()
-        logger.debug("🛠️ Checking for active reminders.")
+        logger.debug("Checking for active reminders.")
 
         # Fetch role for reminders
         role = get_role()
         if not role:
-            logger.warning("⚠️ No role set for reminders; skipping reminder reschedule.")
+            logger.warning("No role set for reminders; skipping reminder reschedule.")
         else:
             # Reschedule reminders
             for key in ["disboard", "dsme", "unfocused", "discadia"]:
-                logger.debug(f"🔄 Attempting to reschedule {key} reminder.")
+                logger.debug(f"Attempting to reschedule {key} reminder.")
                 await reschedule_reminder(key, role)
-                logger.debug(f"✅ Reminder {key} successfully rescheduled.")
+                logger.debug(f"Reminder {key} successfully rescheduled.")
 
         # 🔄 Ensure Mute Mode & Troll Mode Settings Exist
-        logger.info("🔄 Ensuring mute mode and troll mode settings exist...")
+        logger.info("Ensuring mute mode and troll mode settings exist...")
 
         # Set default values if missing
         if get_value("mute_mode") is None:
@@ -651,9 +651,9 @@ async def on_ready():
 
         # 🔄 Reschedule Mute Mode Kicks
         if not mute_mode_enabled:
-            logger.info("🔇 Mute mode is disabled. Skipping rescheduling.")
+            logger.info("Mute mode is disabled. Skipping rescheduling.")
         else:
-            logger.info("🔄 Rescheduling mute mode kicks...")
+            logger.info("Rescheduling mute mode kicks...")
 
             tracked_users = get_all_tracked_members()
             now = datetime.datetime.now(datetime.UTC)
@@ -666,12 +666,12 @@ async def on_ready():
                 # Use the new schedule_mute_kick() function
                 await schedule_mute_kick(member_id, username, join_time, mute_kick_time, bot.guilds[0].id)
 
-            logger.info("✅ All pending mute mode kicks have been rescheduled.")
+            logger.info("All pending mute mode kicks have been rescheduled.")
 
-        logger.info("🎯 All reminders checked and settings verified. Bot is ready!")
+        logger.info("All reminders checked and settings verified. Bot is ready!")
 
     except Exception as e:
-        logger.exception(f"⚠️ An unexpected error occurred during on_ready: {e}")
+        logger.exception(f"An unexpected error occurred during on_ready: {e}")
 
 @interactions.listen()
 async def on_message_create(event: interactions.api.events.MessageCreate):
@@ -684,42 +684,42 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
         bot_id = str(event.message.author.id)
         message_content = event.message.content
         author_id = event.message.author.id
-        logger.debug(f"💬 Message received from {event.message.author.username} (ID: {bot_id})")
+        logger.debug(f"Message received from {event.message.author.username} (ID: {bot_id})")
 
         # 🔇 Mute Mode: Remove user from tracking if they send a message
         if get_tracked_member(author_id):
             remove_tracked_member(author_id)
-            logger.debug(f"💬 User {event.message.author.username} ({author_id}) sent a message and was removed from mute tracking.")
+            logger.debug(f"User {event.message.author.username} ({author_id}) sent a message and was removed from mute tracking.")
 
         # 🤖 Check if the message is from a known bump bot
         if bot_id in bot_ids:
-            logger.debug(f"🤖 Detected message from **{bot_ids[bot_id]}**.")
+            logger.debug(f"Detected message from **{bot_ids[bot_id]}**.")
 
         # 📜 Check for embeds in the message
         if event.message.embeds:
             embed = event.message.embeds[0]
             embed_description = embed.description or ""
-            logger.debug(f"📜 Embed detected: {embed_description}")
+            logger.debug(f"Embed detected: {embed_description}")
 
             if "Bump done" in embed_description:
-                logger.debug("🔔 Triggering Disboard reminder.")
+                logger.debug("Triggering Disboard reminder.")
                 await disboard()
             elif "Your vote streak for this server" in embed_description:
-                logger.debug("🔔 Triggering DSME reminder.")
+                logger.debug("Triggering DSME reminder.")
                 await dsme()
 
         else:
             # 📄 Plain text checks
-            logger.debug(f"📄 Checking message content: {message_content}")
+            logger.debug(f"Checking message content: {message_content}")
             if "Your server has been booped" in message_content:
-                logger.debug("🔔 Triggering Unfocused reminder.")
+                logger.debug("Triggering Unfocused reminder.")
                 await unfocused()
             elif "has been successfully bumped" in message_content:
-                logger.debug("🔔 Triggering Discadia reminder.")
+                logger.debug("Triggering Discadia reminder.")
                 await discadia()
 
     except Exception as e:
-        logger.exception(f"⚠️ Error processing on_message_create event: {e}")
+        logger.exception(f"Error processing on_message_create event: {e}")
 
 @interactions.listen()
 async def on_member_join(event: interactions.api.events.MemberAdd):
@@ -742,43 +742,43 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         guild = event.guild
         account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
 
-        logger.debug(f"👤 New member joined: {member.username} (Guild ID: {guild.id}) | Account Age: {account_age.days} days")
+        logger.debug(f"New member joined: {member.username} (Guild ID: {guild.id}) | Account Age: {account_age.days} days")
 
         # 🛑 Ignore Bots (They are immune from Mute Mode)
         if member.bot:
-            logger.debug(f"🤖 Skipping mute tracking for bot {member.username} ({member.id})")
+            logger.debug(f"Skipping mute tracking for bot {member.username} ({member.id})")
             return  # Skip bots
 
         # ❌ Troll Mode: Kick if account is too new
         if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
             await member.kick(reason="Account is too new!")
-            logger.debug(f"❌ Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
+            logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
             return
 
         # 🔇 Mute Mode: Track new members & reschedule kicks
         if mute_mode_enabled:
             join_time = datetime.datetime.now(datetime.UTC).isoformat()
-            logger.debug(f"🔄 Attempting to track {member.username} ({member.id}) for mute mode.")
+            logger.debug(f"Attempting to track {member.username} ({member.id}) for mute mode.")
 
             try:
                 track_new_member(member.id, member.username, join_time)
-                logger.debug(f"✅ Successfully tracked {member.username} ({member.id}) for mute mode.")
+                logger.debug(f"Successfully tracked {member.username} ({member.id}) for mute mode.")
 
                 # Schedule the kick
                 await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
 
             except Exception as e:
-                logger.error(f"⚠️ Failed to track {member.username} ({member.id}): {e}")
+                logger.error(f"Failed to track {member.username} ({member.id}): {e}")
 
         # 🎭 Backup Mode: Assign role & send welcome message
         if not (assign_role and role_id and channel_id):
-            logger.debug("⚠️ Backup mode is not fully configured. Skipping role assignment and welcome message.")
+            logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
             return
 
         # Convert to integer before lookup
         channel = guild.get_channel(int(channel_id)) if channel_id else None
         if not channel:
-            logger.warning(f"⚠️ Channel with ID {channel_id} not found. Welcome message skipped.")
+            logger.warning(f"Channel with ID {channel_id} not found. Welcome message skipped.")
             return
 
         embed = interactions.Embed(
@@ -798,18 +798,18 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             color=0xCD41FF,
         )
         await channel.send(embeds=[embed])
-        logger.debug(f"📢 Sent welcome message in <#{channel_id}> for {member.username}.")
+        logger.debug(f"Sent welcome message in <#{channel_id}> for {member.username}.")
 
         # Assign role
         role_obj = guild.get_role(int(role_id)) if role_id else None
         if role_obj:
             await member.add_role(role_obj)
-            logger.debug(f"✅ Assigned role '{role_obj.name}' to {member.username}.")
+            logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
         else:
-            logger.warning(f"⚠️ Role with ID {role_id} not found in the guild. Role assignment skipped.")
+            logger.warning(f"Role with ID {role_id} not found in the guild. Role assignment skipped.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error during on_member_join event: {e}")
+        logger.exception(f"Error during on_member_join event: {e}")
 
 @interactions.listen()
 async def on_member_remove(event: interactions.api.events.MemberRemove):
@@ -821,13 +821,14 @@ async def on_member_remove(event: interactions.api.events.MemberRemove):
         member = event.member
         guild = event.guild
 
-        logger.debug(f"👤 Member left: {member.username} (ID: {member.id}) from Guild {guild.id}. Removing from mute tracking.")
+        logger.debug(f"Member left: {member.username} (ID: {member.id}) from Guild {guild.id}. Removing from mute tracking.")
 
         remove_tracked_member(member.id)
-        logger.debug(f"✅ Successfully processed removal for {member.username} ({member.id}).")
+        logger.debug(f"Successfully processed removal for {member.username} ({member.id}).")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error during on_member_remove event: {e}")
+        logger.exception(f"Error during on_member_remove event: {e}")
+
 # -------------------------
 # Slash Commands
 # -------------------------
@@ -852,8 +853,8 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         if channel and role:
             # Ensure the user has admin permissions to modify settings
             if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 logger.warning(f"Unauthorized /reminder setup attempt by {ctx.author.username} ({ctx.author.id})")
+                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 return
 
             logger.debug(f"⏰ Reminder setup requested by {ctx.author.username} ({ctx.author.id}). Channel: {channel.id}, Role: {role.id}")
@@ -862,19 +863,19 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
             set_value("reminder_channel", channel.id)
             set_value("role", role.id)
             
+            logger.debug("Reminder setup successfully completed.")
             await ctx.send(f"✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#{channel.id}>.\n🎭 The role to be pinged is <@&{role.id}>.")
-            logger.debug("✅ Reminder setup successfully completed.")
             return
         
         # If no arguments provided, fetch and display current status
-        logger.debug(f"📊 Status check requested by {ctx.author.username} ({ctx.author.id}).")
+        logger.debug(f"Status check requested by {ctx.author.username} ({ctx.author.id}).")
 
         # Fetch stored values
         channel_id = get_value("reminder_channel")
         role_id = get_value("role")
 
-        channel_str = f"📢 <#{channel_id}>" if channel_id else "Not set!"
-        role_str = f"🎭 <@&{role_id}>" if role_id else "Not set!"
+        channel_str = f"<#{channel_id}>" if channel_id else "Not set!"
+        role_str = f"<@&{role_id}>" if role_id else "Not set!"
 
         logger.debug(f"Reminder Channel: {channel_id if channel_id else 'Not Set'}")
         logger.debug(f"Reminder Role: {role_id if role_id else 'Not Set'}")
@@ -897,10 +898,9 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         )
 
         await ctx.send(summary)
-        logger.debug("✅ Status check completed successfully.")
     
     except Exception as e:
-        logger.exception(f"⚠️ Error in /reminder command: {e}")
+        logger.exception(f"Error in /reminder command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(
@@ -949,26 +949,24 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
         }
 
         set_reminder_data(service, reminder_data)
-        logger.debug(f"🔧 Fix logic applied: {reminder_data}")
-
+        logger.debug(f"Fix logic applied: {reminder_data}")
         await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
-        logger.debug(f"✅ Fix logic successfully applied for service: {service}")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /fix command: {e}")
+        logger.exception(f"Error in /fix command: {e}")
         await ctx.send("⚠️ An error occurred while applying fix logic. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="resetreminders", description="Reset all reminders in the database to default values.")
 async def reset_reminders(ctx: interactions.ComponentContext):
     """Resets all reminders in the 'reminders' table to their default values."""
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        await ctx.defer()
         logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
+        await ctx.defer()
 
         default_data = {
             "state": False,
@@ -979,12 +977,12 @@ async def reset_reminders(ctx: interactions.ComponentContext):
 
         for key in reminder_keys:
             set_reminder_data(key, default_data)
-            logger.debug(f"🔄 Reset reminder data for key: {key}")
+            logger.debug(f"Reset reminder data for key: {key}")
 
+        logger.debug("All reminders successfully reset.")
         await ctx.send("✅ All reminders have been reset to default values.")
-        logger.debug("✅ All reminders successfully reset.")
     except Exception as e:
-        logger.exception(f"⚠️ Error in /resetreminders command: {e}")
+        logger.exception(f"Error in /resetreminders command: {e}")
         await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(
@@ -1008,8 +1006,8 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ti
     Enables or disables mute mode and sets the time threshold before a user is kicked.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /mutemode attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
@@ -1030,7 +1028,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ti
         logger.debug(f"Mute mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}, kick time set to {time} hours.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /mutemode command: {e}")
+        logger.exception(f"Error in /mutemode command: {e}")
         await ctx.send("⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="testmessage", description="Send a test message to the reminder channel.")
@@ -1039,24 +1037,24 @@ async def test_reminders(ctx: interactions.ComponentContext):
     Sends a quick test ping to confirm the reminder channel/role setup works.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /testmessage attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        logger.debug(f"🔔 Test message requested by {ctx.author.username} ({ctx.author.id}).")
+        logger.debug(f"Test message requested by {ctx.author.username} ({ctx.author.id}).")
 
         role_id = get_value("role")
         if not role_id:
-            logger.warning("⚠️ No role has been set up for reminders.")
+            logger.warning("No role has been set up for reminders.")
             await ctx.send("⚠️ No role has been set up for reminders.", ephemeral=True)
             return
 
+        logger.debug("Test reminder message successfully sent.")
         await ctx.send(f"🔔 <@&{role_id}> This is a test reminder message!")
-        logger.debug("✅ Test reminder message successfully sent.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /testmessage command: {e}")
+        logger.exception(f"Error in /testmessage command: {e}")
         await ctx.send("⚠️ Could not send test message. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="dev", description="Maintain developer tag.")
@@ -1065,18 +1063,17 @@ async def dev(ctx: interactions.ComponentContext):
     A placeholder command for developer maintenance.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /dev attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        logger.debug(f"👨‍💻 Developer tag maintenance requested by {ctx.author.username} ({ctx.author.id}).")
-
+        logger.debug(f"Developer tag maintenance requested by {ctx.author.username} ({ctx.author.id}).")
+        logger.debug("Developer tag maintenance completed.")
         await ctx.send("🛠️ Developer tag maintained!")
-        logger.debug("✅ Developer tag maintenance completed.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /dev command: {e}")
+        logger.exception(f"Error in /dev command: {e}")
         await ctx.send("⚠️ An error occurred while maintaining the developer tag. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="source", description="Get links for the bot's resources.")
@@ -1099,11 +1096,11 @@ async def source(ctx: interactions.ComponentContext):
             inline=False
         )
 
+        logger.debug(f"Successfully sent bot resources embed to {ctx.author.username}.")
         await ctx.send(embeds=[embed])
-        logger.debug(f"✅ Successfully sent bot resources embed to {ctx.author.username}.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /source command: {e}")
+        logger.exception(f"Error in /source command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request.", ephemeral=True)
 
 @interactions.slash_command(name="backupmode", description="Configure and toggle backup mode for new members.")
@@ -1132,8 +1129,8 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
     try:
         if channel or role or enabled is not None:
             if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 logger.warning(f"Unauthorized /backupmode setup attempt by {ctx.author.username} ({ctx.author.id})")
+                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 return
             
             logger.debug(f"Received /backupmode command from {ctx.author.username} ({ctx.author.id})")
@@ -1158,7 +1155,7 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
             )
             return
         
-        logger.debug(f"📊 Backup mode status check requested by {ctx.author.username} ({ctx.author.id})")
+        logger.debug(f"Backup mode status check requested by {ctx.author.username} ({ctx.author.id})")
 
         # Fetch stored values
         channel_id = get_value("backup_mode_channel")
@@ -1177,10 +1174,10 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
         )
 
         await ctx.send(summary)
-        logger.debug("✅ Backup mode status check completed successfully.")
+        logger.debug("Backup mode status check completed successfully.")
     
     except Exception as e:
-        logger.exception(f"⚠️ Error in /backupmode command: {e}")
+        logger.exception(f"Error in /backupmode command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="trollmode", description="Toggle kicking of accounts younger than a specified age.")
@@ -1201,8 +1198,8 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     Kicks new members if their account is under the specified age when troll mode is enabled.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /trollmode attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
@@ -1219,11 +1216,11 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
         else:
             response_message = "👹 Troll mode has been ❌ **disabled**."
 
-        await ctx.send(response_message)
         logger.debug(f"Troll mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}; account age threshold={age} days.")
+        await ctx.send(response_message)
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /trollmode command: {e}")
+        logger.exception(f"Error in /trollmode command: {e}")
         await ctx.send("⚠️ An error occurred while toggling troll mode. Please try again later.", ephemeral=True)
 
 # -------------------------
@@ -1819,7 +1816,7 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
     Searches Urban Dictionary for the given term and displays the top result's definition.
     """
     try:
-        logger.debug(f"📖 User '{ctx.author.username}' (ID: {ctx.author.id}) searched for '{query}' on Urban Dictionary.")
+        logger.debug(f"User '{ctx.author.username}' (ID: {ctx.author.id}) searched for '{query}' on Urban Dictionary.")
 
         await ctx.defer()
         search_url = "https://api.urbandictionary.com/v0/define"
@@ -1838,7 +1835,7 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                         thumbs_up = top_result.get("thumbs_up", 0)
                         thumbs_down = top_result.get("thumbs_down", 0)
 
-                        logger.debug(f"✅ Found definition for '{word}': {definition} 👍 {thumbs_up} 👎 {thumbs_down}")
+                        logger.debug(f"Found definition for '{word}': {definition} ({thumbs_up}/{thumbs_down})")
 
                         embed = interactions.Embed(
                             title=f"📖 Definition: {word}",
@@ -1852,15 +1849,15 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
 
                         await ctx.send(embed=embed)
                     else:
-                        logger.debug(f"⚠️ No definitions found for '{query}'.")
+                        logger.debug(f"No definitions found for '{query}'.")
                         await ctx.send("⚠️ No definitions found for your query. Try refining it.")
 
                 else:
-                    logger.warning(f"⚠️ Urban Dictionary API error: {response.status}")
+                    logger.warning(f"Urban Dictionary API error: {response.status}")
                     await ctx.send(f"⚠️ Error: Urban Dictionary API returned status code {response.status}.")
 
     except Exception as e:
-        logger.exception(f"⚠️ Error in /urban command: {e}")
+        logger.exception(f"Error in /urban command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 @interactions.slash_command(name="mal", description="Search for an anime on MyAnimeList.")
@@ -2256,27 +2253,27 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     """Fetches a user's profile picture and applies a warp effect based on the selected mode."""
     await ctx.defer()
 
-    logger.info(f"🎭 Received /warp command from **{ctx.author.username}** for **{user.username}**")
-    logger.info(f"🌀 **Mode:** {mode}, **Strength:** {strength}")
+    logger.info(f"Received /warp command from **{ctx.author.username}** for **{user.username}**")
+    logger.info(f"**Mode:** {mode}, **Strength:** {strength}")
 
     try:
         # Fetch the user's avatar URL
         avatar_url = f"{user.avatar_url}"
-        logger.debug(f"🔗 **Avatar URL for {user.username}:** {avatar_url}")
+        logger.debug(f"**Avatar URL for {user.username}:** {avatar_url}")
 
         if not avatar_url:
+            logger.warning(f"**{user.username}** has no profile picture.")
             await ctx.send("❌ This user has no profile picture.", ephemeral=True)
-            logger.warning(f"⚠️ **{user.username}** has no profile picture.")
             return
 
-        logger.info(f"📷 Fetching high-res avatar for **{user.username}**...")
+        logger.info(f"Fetching high-res avatar for **{user.username}**...")
 
         # Download the image
         async with aiohttp.ClientSession() as session:
             async with session.get(avatar_url) as resp:
                 if resp.status != 200:
                     await ctx.send("❌ Failed to fetch profile picture.", ephemeral=True)
-                    logger.error(f"👤 Failed to download avatar for **{user.username}** (HTTP {resp.status})")
+                    logger.error(f"Failed to download avatar for **{user.username}** (HTTP {resp.status})")
                     return
                 image_bytes = await resp.read()
 
@@ -2285,7 +2282,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         width, height = img.size
         img_np = np.array(img)
 
-        logger.debug(f"📏 **Image dimensions:** {width}x{height}")
+        logger.debug(f"**Image dimensions:** {width}x{height}")
 
         # If strength is 0, return the original image
         if strength == 0:
@@ -2294,7 +2291,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             output_buffer.seek(0)
             file = interactions.File(file=output_buffer, file_name="original.png")
             await ctx.send(files=[file])
-            logger.info("✅ Sent **unmodified image** (Strength 0)")
+            logger.info("Sent **unmodified image** (Strength 0)")
             return
 
         # Define the center of the warp effect
@@ -2305,7 +2302,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         effect_strength = strength_map.get(strength, 0.3)  # Default to medium if out of range
         effect_radius = min(width, height) // 2  # Area affected by the warp
 
-        logger.debug(f"🎯 **Warp Center:** ({center_x}, {center_y}), **Effect Strength:** {effect_strength}")
+        logger.debug(f"**Warp Center:** ({center_x}, {center_y}), **Effect Strength:** {effect_strength}")
 
         # Generate coordinate grids
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
@@ -2318,14 +2315,14 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
         # Check the mode
         if mode == "swirl":
-            logger.info("🌀 Applying **swirl effect**.")
+            logger.info("Applying **swirl effect**.")
             # Swirl Mode: Apply a rotational distortion
             warped_angle = angle + (7 * effect_strength * np.exp(-distance / effect_radius))
             new_x_coords = (center_x + distance * np.cos(warped_angle)).astype(int)
             new_y_coords = (center_y + distance * np.sin(warped_angle)).astype(int)
 
         elif mode == "bulge":
-            logger.info("🔆 Applying **bulge effect**.")
+            logger.info("Applying **bulge effect**.")
             # Bulge Mode: True fisheye distortion
             normalized_distance = distance / effect_radius
             bulge_factor = 1 + effect_strength * (normalized_distance**2 - 1)  # Expands pixels outward
@@ -2338,8 +2335,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
         else:
             # If mode is invalid, inform the user and return
+            logger.warning(f"Invalid warp mode: {mode}")
             await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
-            logger.warning(f"❌ Invalid warp mode: {mode}")
             return
 
         # Clip coordinates to stay within image bounds
@@ -2361,7 +2358,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         file = interactions.File(file=output_buffer, file_name=f"{mode}_warp.png")
         await ctx.send(files=[file])
 
-        logger.info(f"✅ Successfully applied **{mode} effect** with **strength {strength}** for **{user.username}**!")
+        logger.info(f"Successfully applied **{mode} effect** with **strength {strength}** for **{user.username}**!")
 
     except Exception as e:
         logger.error(f"Error in /warp command: {e}", exc_info=True)
