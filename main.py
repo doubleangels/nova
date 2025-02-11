@@ -828,6 +828,7 @@ async def on_member_remove(event: interactions.api.events.MemberRemove):
 
     except Exception as e:
         logger.exception(f"Error during on_member_remove event: {e}")
+
 # -------------------------
 # Slash Commands
 # -------------------------
