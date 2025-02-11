@@ -550,42 +550,49 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
         now = datetime.datetime.now(datetime.UTC)
         join_time_dt = datetime.datetime.fromisoformat(join_time)
         
-        # Calculate remaining time before kicking
+        # Calculate remaining time before kicking (in seconds)
         elapsed_time = (now - join_time_dt).total_seconds()
         remaining_time = (mute_kick_time * 3600) - elapsed_time
 
-        # If the user’s mute time has already expired, kick immediately
+        # If the user’s mute time has already expired, attempt to kick immediately
         if remaining_time <= 0:
+            member = bot.get_member(guild_id, member_id)
+            if not member:
+                logger.info(f"Member {username} ({member_id}) not found in guild {guild_id} (possibly already left). Removing from tracking.")
+                remove_tracked_member(member_id)
+                return
             try:
-                member = bot.get_member(guild_id, member_id)
                 await member.kick(reason="User did not send a message in time.")
                 remove_tracked_member(member_id)
                 logger.info(f"🔇 Kicked {username} ({member_id}) immediately due to bot restart.")
             except Exception as e:
-                logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after bot restart: {e}")
+                logger.warning(f"⚠️ Failed to kick {username} ({member_id}) immediately after bot restart: {e}")
             return
 
         # Schedule the kick for the remaining time
         async def delayed_kick():
             await asyncio.sleep(remaining_time)
-
-            # Check if the user is still in the tracking database
+            
+            # Check if the user is still tracked before attempting to kick
             if get_tracked_member(member_id):
+                member = bot.get_member(guild_id, member_id)
+                if not member:
+                    logger.info(f"Member {username} ({member_id}) not found in guild {guild_id} during scheduled kick. Removing from tracking.")
+                    remove_tracked_member(member_id)
+                    return
                 try:
-                    member = bot.get_member(guild_id, member_id)
                     await member.kick(reason="User did not send a message in time.")
                     remove_tracked_member(member_id)
                     logger.info(f"🔇 Kicked {username} ({member_id}) after scheduled time.")
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to kick {username} ({member_id}) after scheduled time: {e}")
 
-        # Start the async task
         asyncio.create_task(delayed_kick())
         logger.debug(f"⏳ Scheduled kick for {username} ({member_id}) in {remaining_time:.2f} seconds.")
 
     except Exception as e:
         logger.exception(f"⚠️ Error scheduling mute mode kick for {username} ({member_id}): {e}")
-
+        
 # -------------------------
 # Event Listeners
 # -------------------------
