@@ -236,13 +236,20 @@ def get_tracked_member(member_id: int):
 def remove_tracked_member(member_id: int):
     """
     Removes a tracked member from the 'tracked_members' table in Supabase.
+    Logs appropriately if the member is not found or if an error occurs.
     """
     try:
-        supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
-        logger.debug(f"🗑️ Removed tracked member: {member_id}")
-
-    except Exception:
-        logger.exception(f"⚠️ Error removing tracked member {member_id}.")
+        response = supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
+        
+        if response.error:
+            logger.error(f"Failed to remove tracked member {member_id}: {response.error}")
+        elif not response.data:
+            logger.debug(f"No tracked member with ID {member_id} found. Nothing to remove.")
+        else:
+            logger.debug(f"🗑️ Removed tracked member: {member_id}")
+            
+    except Exception as e:
+        logger.exception(f"⚠️ Error removing tracked member {member_id}: {e}")
 
 def get_all_tracked_members():
     """
@@ -796,6 +803,23 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     except Exception as e:
         logger.exception(f"⚠️ Error during on_member_join event: {e}")
 
+@interactions.listen()
+async def on_member_remove(event: interactions.api.events.MemberRemove):
+    """
+    Fired when a member leaves the server.
+    Removes the member from the mute tracking database.
+    """
+    try:
+        member = event.member
+        guild = event.guild
+
+        logger.debug(f"👤 Member left: {member.username} (ID: {member.id}) from Guild {guild.id}. Removing from mute tracking.")
+
+        remove_tracked_member(member.id)
+        logger.debug(f"✅ Successfully processed removal for {member.username} ({member.id}).")
+
+    except Exception as e:
+        logger.exception(f"⚠️ Error during on_member_remove event: {e}")
 # -------------------------
 # Slash Commands
 # -------------------------
