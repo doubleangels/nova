@@ -852,8 +852,8 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         if channel and role:
             # Ensure the user has admin permissions to modify settings
             if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 logger.warning(f"Unauthorized /reminder setup attempt by {ctx.author.username} ({ctx.author.id})")
+                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 return
 
             logger.debug(f"⏰ Reminder setup requested by {ctx.author.username} ({ctx.author.id}). Channel: {channel.id}, Role: {role.id}")
@@ -862,8 +862,8 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
             set_value("reminder_channel", channel.id)
             set_value("role", role.id)
             
-            await ctx.send(f"✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#{channel.id}>.\n🎭 The role to be pinged is <@&{role.id}>.")
             logger.debug("Reminder setup successfully completed.")
+            await ctx.send(f"✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#{channel.id}>.\n🎭 The role to be pinged is <@&{role.id}>.")
             return
         
         # If no arguments provided, fetch and display current status
@@ -897,7 +897,6 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         )
 
         await ctx.send(summary)
-        logger.debug("Status check completed successfully.")
     
     except Exception as e:
         logger.exception(f"Error in /reminder command: {e}")
@@ -950,9 +949,7 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
 
         set_reminder_data(service, reminder_data)
         logger.debug(f"Fix logic applied: {reminder_data}")
-
         await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
-        logger.debug(f"Fix logic successfully applied for service: {service}")
 
     except Exception as e:
         logger.exception(f"Error in /fix command: {e}")
@@ -962,13 +959,13 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
 async def reset_reminders(ctx: interactions.ComponentContext):
     """Resets all reminders in the 'reminders' table to their default values."""
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        await ctx.defer()
         logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
+        await ctx.defer()
 
         default_data = {
             "state": False,
@@ -981,8 +978,8 @@ async def reset_reminders(ctx: interactions.ComponentContext):
             set_reminder_data(key, default_data)
             logger.debug(f"Reset reminder data for key: {key}")
 
-        await ctx.send("✅ All reminders have been reset to default values.")
         logger.debug("All reminders successfully reset.")
+        await ctx.send("✅ All reminders have been reset to default values.")
     except Exception as e:
         logger.exception(f"Error in /resetreminders command: {e}")
         await ctx.send("⚠️ An error occurred while resetting reminders. Please try again later.", ephemeral=True)
@@ -1008,8 +1005,8 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ti
     Enables or disables mute mode and sets the time threshold before a user is kicked.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /mutemode attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
@@ -1039,8 +1036,8 @@ async def test_reminders(ctx: interactions.ComponentContext):
     Sends a quick test ping to confirm the reminder channel/role setup works.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /testmessage attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
@@ -1052,8 +1049,8 @@ async def test_reminders(ctx: interactions.ComponentContext):
             await ctx.send("⚠️ No role has been set up for reminders.", ephemeral=True)
             return
 
-        await ctx.send(f"🔔 <@&{role_id}> This is a test reminder message!")
         logger.debug("Test reminder message successfully sent.")
+        await ctx.send(f"🔔 <@&{role_id}> This is a test reminder message!")
 
     except Exception as e:
         logger.exception(f"Error in /testmessage command: {e}")
@@ -1065,15 +1062,14 @@ async def dev(ctx: interactions.ComponentContext):
     A placeholder command for developer maintenance.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /dev attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
         logger.debug(f"Developer tag maintenance requested by {ctx.author.username} ({ctx.author.id}).")
-
-        await ctx.send("🛠️ Developer tag maintained!")
         logger.debug("Developer tag maintenance completed.")
+        await ctx.send("🛠️ Developer tag maintained!")
 
     except Exception as e:
         logger.exception(f"Error in /dev command: {e}")
@@ -1099,8 +1095,8 @@ async def source(ctx: interactions.ComponentContext):
             inline=False
         )
 
-        await ctx.send(embeds=[embed])
         logger.debug(f"Successfully sent bot resources embed to {ctx.author.username}.")
+        await ctx.send(embeds=[embed])
 
     except Exception as e:
         logger.exception(f"Error in /source command: {e}")
@@ -1132,8 +1128,8 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
     try:
         if channel or role or enabled is not None:
             if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 logger.warning(f"Unauthorized /backupmode setup attempt by {ctx.author.username} ({ctx.author.id})")
+                await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 return
             
             logger.debug(f"Received /backupmode command from {ctx.author.username} ({ctx.author.id})")
@@ -1201,8 +1197,8 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
     Kicks new members if their account is under the specified age when troll mode is enabled.
     """
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /trollmode attempt by {ctx.author.username} ({ctx.author.id})")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
@@ -1219,8 +1215,8 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
         else:
             response_message = "👹 Troll mode has been ❌ **disabled**."
 
-        await ctx.send(response_message)
         logger.debug(f"Troll mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}; account age threshold={age} days.")
+        await ctx.send(response_message)
 
     except Exception as e:
         logger.exception(f"Error in /trollmode command: {e}")
@@ -2265,8 +2261,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         logger.debug(f"**Avatar URL for {user.username}:** {avatar_url}")
 
         if not avatar_url:
-            await ctx.send("❌ This user has no profile picture.", ephemeral=True)
             logger.warning(f"**{user.username}** has no profile picture.")
+            await ctx.send("❌ This user has no profile picture.", ephemeral=True)
             return
 
         logger.info(f"Fetching high-res avatar for **{user.username}**...")
@@ -2338,8 +2334,8 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 
         else:
             # If mode is invalid, inform the user and return
-            await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
             logger.warning(f"Invalid warp mode: {mode}")
+            await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
             return
 
         # Clip coordinates to stay within image bounds
