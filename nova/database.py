@@ -6,6 +6,21 @@ import logging
 from .bot_client import bot
 from . import database as db
 
+__all__ = [
+    "get_value",
+    "set_value",
+    "delete_value",
+    "get_reminder_data",
+    "set_reminder_data",
+    "delete_reminder_data",
+    "initialize_reminders_table",
+    "track_new_member",
+    "get_tracked_member",
+    "remove_tracked_member",
+    "get_all_tracked_members",
+    "update_bump_stats",
+]
+
 logger = logging.getLogger("Nova")
 
 def get_role():
