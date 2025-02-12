@@ -137,23 +137,33 @@ def delete_value(key: str):
 # -------------------------
 # "reminders" Table Helpers
 # -------------------------
-
 def get_reminder_data(key: str):
     """
     Retrieve reminder data from the 'reminders' table in Supabase for the given key.
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id").eq("key", key).maybe_single().execute()
-        if response and response.data:
-            return {
-                "state": response.data.get("state", False),
-                "scheduled_time": response.data.get("scheduled_time"),
-                "reminder_id": response.data.get("reminder_id")
-            }
-        return None
-    except Exception:
-        logger.exception(f"Error getting reminder data for key '{key}'.")
+        response = supabase.table("reminders") \
+            .select("state", "scheduled_time", "reminder_id") \
+            .eq("key", key) \
+            .maybe_single() \
+            .execute()
+
+        # Handle case where no data is found
+        if not response or not response.get("data"):
+            logger.warning(f"No reminder data found for key '{key}'. Returning None.")
+            return None
+
+        # Extract data safely
+        data = response["data"]
+        return {
+            "state": data.get("state", False),
+            "scheduled_time": data.get("scheduled_time"),
+            "reminder_id": data.get("reminder_id")
+        }
+
+    except Exception as e:
+        logger.exception(f"Error getting reminder data for key '{key}': {e}")
         return None
 
 
