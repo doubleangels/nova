@@ -143,27 +143,16 @@ def get_reminder_data(key: str):
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders") \
-            .select("state", "scheduled_time", "reminder_id") \
-            .eq("key", key) \
-            .maybe_single() \
-            .execute()
-
-        # Handle case where no data is found
-        if not response or not response.get("data"):
-            logger.warning(f"No reminder data found for key '{key}'. Returning None.")
-            return None
-
-        # Extract data safely
-        data = response["data"]
-        return {
-            "state": data.get("state", False),
-            "scheduled_time": data.get("scheduled_time"),
-            "reminder_id": data.get("reminder_id")
-        }
-
-    except Exception as e:
-        logger.exception(f"Error getting reminder data for key '{key}': {e}")
+        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id").eq("key", key).maybe_single().execute()
+        if response and response.data:
+            return {
+                "state": response.data.get("state", False),
+                "scheduled_time": response.data.get("scheduled_time"),
+                "reminder_id": response.data.get("reminder_id")
+            }
+        return None
+    except Exception:
+        logger.exception(f"Error getting reminder data for key '{key}'.")
         return None
 
 
@@ -207,7 +196,7 @@ def initialize_reminders_table():
     """
     default_keys = ["disboard", "discadia", "dsme", "unfocused"]
     for key in default_keys:
-        existing = get_reminder_data(k)
+        existing = get_reminder_data(key)
         if existing is None:
             set_reminder_data(key, False, None, None)
             logger.debug(f"Inserted default reminder_data for key: {key}")
@@ -528,7 +517,8 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
         if existing_data and existing_data.get("scheduled_time"):
             logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
             return
-
+        
+        reminder_id = str(uuid.uuid4())
         set_reminder_data(key, True, (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(), reminder_id)
         role = get_role()
         if role:
