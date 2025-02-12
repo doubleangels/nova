@@ -592,6 +592,57 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
 
     except Exception as e:
         logger.exception(f"Error scheduling mute mode kick for {username} ({member_id}): {e}")
+
+# -------------------------
+# Bump Stats Tracking
+# -------------------------
+def update_bump_stats(user_id: int, username: str):
+    """
+    Updates the bump count for a user in the 'bump_stats' table.
+    - If the user exists, it increments their bump count and updates the last bump timestamp.
+    - If the user does not exist, it inserts a new record with their username and first bump.
+    """
+    try:
+        now = datetime.datetime.now(datetime.UTC).isoformat()  # Current timestamp in UTC format
+
+        # Try fetching existing record
+        response = supabase.table("bump_stats") \
+            .select("total_bumps") \
+            .eq("user_id", user_id) \
+            .maybe_single() \
+            .execute()
+
+        existing_data = response.get("data")
+
+        if existing_data:
+            # User exists: increment bump count and update timestamp & username
+            new_bumps = existing_data["total_bumps"] + 1
+            supabase.table("bump_stats") \
+                .update({
+                    "total_bumps": new_bumps,
+                    "last_bump": now,
+                    "updated_at": now,
+                    "username": username  # Update username to reflect latest
+                }) \
+                .eq("user_id", user_id) \
+                .execute()
+            logger.info(f"Updated bump count for user {user_id} ({username}) to {new_bumps}")
+        else:
+            # User does not exist: insert a new record
+            supabase.table("bump_stats") \
+                .insert({
+                    "user_id": user_id,
+                    "username": username,
+                    "total_bumps": 1,
+                    "last_bump": now,
+                    "created_at": now,
+                    "updated_at": now
+                }) \
+                .execute()
+            logger.info(f"Inserted new bump record for user {user_id} ({username}) with total_bumps = 1")
+
+    except Exception as e:
+        logger.exception(f"Error updating bump stats for user {user_id} ({username}): {e}")
         
 # -------------------------
 # Event Listeners
@@ -678,17 +729,20 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     Fired whenever a new message is created.
     Checks if it's from known bump bots and triggers reminders accordingly.
     Also removes users from mute tracking if they send a message.
+    Tracks user bumps and updates bump stats in Supabase.
     """
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
         author_id = event.message.author.id
-        logger.debug(f"Message received from {event.message.author.username} (ID: {bot_id})")
+        author_username = event.message.author.username  # Get the user's latest username
+
+        logger.debug(f"Message received from {author_username} (ID: {bot_id})")
 
         # 🔇 Mute Mode: Remove user from tracking if they send a message
         if get_tracked_member(author_id):
             remove_tracked_member(author_id)
-            logger.debug(f"User {event.message.author.username} ({author_id}) sent a message and was removed from mute tracking.")
+            logger.debug(f"User {author_username} ({author_id}) sent a message and was removed from mute tracking.")
 
         # 🤖 Check if the message is from a known bump bot
         if bot_id in bot_ids:
@@ -703,19 +757,24 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
             if "Bump done" in embed_description:
                 logger.debug("Triggering Disboard reminder.")
                 await disboard()
+                update_bump_stats(author_id, author_username)
             elif "Your vote streak for this server" in embed_description:
                 logger.debug("Triggering DSME reminder.")
                 await dsme()
+                update_bump_stats(author_id, author_username)
 
         else:
             # 📄 Plain text checks
             logger.debug(f"Checking message content: {message_content}")
+
             if "Your server has been booped" in message_content:
                 logger.debug("Triggering Unfocused reminder.")
                 await unfocused()
+                update_bump_stats(author_id, author_username)
             elif "has been successfully bumped" in message_content:
                 logger.debug("Triggering Discadia reminder.")
                 await discadia()
+                update_bump_stats(author_id, author_username)
 
     except Exception as e:
         logger.exception(f"Error processing on_message_create event: {e}")
