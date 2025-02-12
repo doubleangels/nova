@@ -143,31 +143,41 @@ def get_reminder_data(key: str):
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders").select("reminder_data").eq("key", key).maybe_single().execute()
+        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id").eq("key", key).maybe_single().execute()
         if response and response.data:
-            reminder_data = response.data.get("reminder_data")
-            if reminder_data:
-                return json.loads(reminder_data)
+            return {
+                "state": response.data.get("state", False),
+                "scheduled_time": response.data.get("scheduled_time"),
+                "reminder_id": response.data.get("reminder_id")
+            }
         return None
     except Exception:
         logger.exception(f"Error getting reminder data for key '{key}'.")
         return None
 
-def set_reminder_data(key: str, data: dict):
+
+def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_id: str):
     """
-    Upsert a JSON value in the 'reminders' table in Supabase.
+    Upsert a reminder in the 'reminders' table.
     """
     try:
-        serialized = json.dumps(data)
         existing = get_reminder_data(key)
+        data = {
+            "key": key,
+            "state": state,
+            "scheduled_time": scheduled_time,
+            "reminder_id": reminder_id
+        }
+
         if existing is None:
-            supabase.table("reminders").insert({"key": key, "reminder_data": serialized}).execute()
+            supabase.table("reminders").insert(data).execute()
             logger.debug(f"Inserted new reminder entry for key '{key}'.")
         else:
-            supabase.table("reminders").update({"reminder_data": serialized}).eq("key", key).execute()
+            supabase.table("reminders").update(data).eq("key", key).execute()
             logger.debug(f"Updated reminder entry for key '{key}'.")
     except Exception:
         logger.exception(f"Error setting reminder data for key '{key}'.")
+
 
 def delete_reminder_data(key: str):
     """
@@ -179,21 +189,17 @@ def delete_reminder_data(key: str):
     except Exception:
         logger.exception(f"Error deleting reminder data for key '{key}'.")
 
+
 def initialize_reminders_table():
     """
     Ensures that each known reminder key has a default row in the 'reminders' table.
     """
     default_keys = ["disboard", "discadia", "dsme", "unfocused"]
-    for k in default_keys:
-        existing = get_reminder_data(k)
+    for key in default_keys:
+        existing = get_reminder_data(key)
         if existing is None:
-            default_data = {
-                "state": False,
-                "scheduled_time": None,
-                "reminder_id": None
-            }
-            set_reminder_data(k, default_data)
-            logger.debug(f"Inserted default reminder_data for key: {k}")
+            set_reminder_data(key, False, None, None)
+            logger.debug(f"Inserted default reminder_data for key: {key}")
 
 # ----------------------
 # "tracked_members" Table Helpers
@@ -511,16 +517,9 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
         if existing_data and existing_data.get("scheduled_time"):
             logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
             return
-
+        
         reminder_id = str(uuid.uuid4())
-        reminder_data = {
-            "state": True,
-            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
-            "reminder_id": reminder_id
-        }
-        set_reminder_data(key, reminder_data)
-        logger.debug(f"Scheduled new reminder: {key.capitalize()} | ID: {reminder_id} | Interval: {interval} seconds")
-
+        set_reminder_data(key, True, (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(), reminder_id)
         role = get_role()
         if role:
             await send_scheduled_message(
@@ -940,15 +939,14 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
         logger.debug(f"Service '{service}' selected with a delay of {seconds} seconds.")
 
         reminder_id = str(uuid.uuid4())
-        scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat()
 
         reminder_data = {
             "state": True,
-            "scheduled_time": scheduled_time,
+            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(),
             "reminder_id": reminder_id
         }
 
-        set_reminder_data(service, reminder_data)
+        set_reminder_data(service, True, (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(), reminder_id)
         logger.debug(f"Fix logic applied: {reminder_data}")
         await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
 
@@ -968,15 +966,10 @@ async def reset_reminders(ctx: interactions.ComponentContext):
         logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
         await ctx.defer()
 
-        default_data = {
-            "state": False,
-            "scheduled_time": None,
-            "reminder_id": None
-        }
         reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
 
         for key in reminder_keys:
-            set_reminder_data(key, default_data)
+            set_reminder_data(key, False, None, None)
             logger.debug(f"Reset reminder data for key: {key}")
 
         logger.debug("All reminders successfully reset.")
