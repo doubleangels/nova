@@ -38,7 +38,7 @@ sentry_sdk.init(
 # Set log level from environment variable (default is INFO)
 LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG").upper()
 
-global logger = logging.getLogger("Nova")
+logger = logging.getLogger("Nova")
 logger.setLevel(LOG_LEVEL)
 
 # Enhanced formatter: includes timestamp, logger name, level, filename, and line number.
@@ -77,7 +77,7 @@ GOOGLE_API_KEY = required_env_vars["GOOGLE_API_KEY"]
 SEARCH_ENGINE_ID = required_env_vars["SEARCH_ENGINE_ID"]
 IMAGE_SEARCH_ENGINE_ID = required_env_vars["IMAGE_SEARCH_ENGINE_ID"]
 OMDB_API_KEY = required_env_vars["OMDB_API_KEY"]
-global PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
+PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]

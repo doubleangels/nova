@@ -1,5 +1,7 @@
 import interactions
 
+from main import logger, PIRATEWEATHER_API_KEY
+
 class WeatherExtension(interactions.Extension):
     @interactions.slash_command(name="weather", description="Get the current weather for a city.")
     @interactions.slash_option(
