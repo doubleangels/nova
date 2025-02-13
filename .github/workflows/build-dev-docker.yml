@@ -15,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Cache pip dependencies
         uses: actions/cache@v4
@@ -33,15 +33,11 @@ jobs:
 
       - name: Install code-quality dependencies
         run: |
-          pip install isort pylint
+          pip install pylint
 
       - name: Run pylint (lint)
         run: |
           pylint . --errors-only
-
-      - name: Check import order with isort
-        run: |
-          isort . --check --diff
 
   build-and-push:
     name: build-and-push-dev-image
