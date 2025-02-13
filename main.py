@@ -673,15 +673,12 @@ async def on_ready():
         logger.exception(f"An unexpected error occurred during on_ready: {e}")
 
 @interactions.listen()
-async def on_message_create(event: interactions.api.events.MessageCreate):
+async def on_message_create(event):
     """
     Fired whenever a new message is created.
     Checks if it's from known bump bots and triggers reminders accordingly.
     Also removes users from mute tracking if they send a message.
     """
-    # Skip messages from bots
-    if event.message.author.bot:
-        return
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
@@ -724,7 +721,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
         logger.exception(f"Error processing on_message_create event: {e}")
 
 @interactions.listen()
-async def on_member_join(event: interactions.api.events.MemberAdd):
+async def on_member_join(event):
     """
     Fired when a new user joins the server.
     Handles troll mode (kicking new accounts), backup mode (role assignment & welcome),
@@ -814,7 +811,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         logger.exception(f"Error during on_member_join event: {e}")
 
 @interactions.listen()
-async def on_member_remove(event: interactions.api.events.MemberRemove):
+async def on_member_remove(event):
     """
     Fired when a member leaves the server.
     Removes the member from the mute tracking database.
