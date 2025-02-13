@@ -679,6 +679,9 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     Checks if it's from known bump bots and triggers reminders accordingly.
     Also removes users from mute tracking if they send a message.
     """
+    # Skip messages from bots
+    if event.message.author.bot:
+        return
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
