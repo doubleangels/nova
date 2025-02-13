@@ -1,6 +1,8 @@
+import aiohttp
 import interactions
+import json
 
-from main import logger, PIRATEWEATHER_API_KEY, GOOGLE_API_KEY
+from main import logger, PIRATEWEATHER_API_KEY
 from nova.helper import get_coordinates
 
 class WeatherExtension(interactions.Extension):
@@ -22,7 +24,7 @@ class WeatherExtension(interactions.Extension):
             logger.debug(f"User input for city: '{city}'")
 
             # Get coordinates
-            lat, lon = await self.get_coordinates(city)
+            lat, lon = await get_coordinates(city)
             if lat is None or lon is None:
                 logger.warning(f"Failed to get coordinates for '{city}'.")
                 await ctx.send(f"Could not find the location for '{city}'. Try another city.")

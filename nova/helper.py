@@ -1,6 +1,8 @@
 import aiohttp
 import json
 
+from main import logger, GOOGLE_API_KEY
+
 async def get_coordinates(city: str):
     """
     Fetch latitude and longitude for a given city using Google Maps Geocoding API.

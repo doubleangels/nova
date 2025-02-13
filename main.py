@@ -22,8 +22,8 @@ from supabase import Client, create_client
 # Sentry Setup with Logging Integration
 # -------------------------
 sentry_logging = LoggingIntegration(
-    level=logging.DEBUG,        # Capture info and above as breadcrumbs
-    event_level=logging.ERROR  # Send errors as events
+    level=logging.DEBUG,
+    event_level=logging.ERROR
 )
 sentry_sdk.init(
     dsn="https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
@@ -2227,6 +2227,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 try:
     bot.start(TOKEN)
+    bot.load_extension("nova.wikipedia")
     bot.load_extension("nova.weather")
 except Exception:
     logger.exception("Exception occurred during bot startup!")
