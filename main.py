@@ -22,8 +22,8 @@ from supabase import Client, create_client
 # Sentry Setup with Logging Integration
 # -------------------------
 sentry_logging = LoggingIntegration(
-    level=logging.DEBUG,
-    event_level=logging.ERROR
+    level=logging.DEBUG,        # Capture info and above as breadcrumbs
+    event_level=logging.ERROR  # Send errors as events
 )
 sentry_sdk.init(
     dsn="https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
@@ -143,41 +143,31 @@ def get_reminder_data(key: str):
     Returns a dictionary if found, otherwise None.
     """
     try:
-        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id").eq("key", key).maybe_single().execute()
+        response = supabase.table("reminders").select("reminder_data").eq("key", key).maybe_single().execute()
         if response and response.data:
-            return {
-                "state": response.data.get("state", False),
-                "scheduled_time": response.data.get("scheduled_time"),
-                "reminder_id": response.data.get("reminder_id")
-            }
+            reminder_data = response.data.get("reminder_data")
+            if reminder_data:
+                return json.loads(reminder_data)
         return None
     except Exception:
         logger.exception(f"Error getting reminder data for key '{key}'.")
         return None
 
-
-def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_id: str):
+def set_reminder_data(key: str, data: dict):
     """
-    Upsert a reminder in the 'reminders' table.
+    Upsert a JSON value in the 'reminders' table in Supabase.
     """
     try:
+        serialized = json.dumps(data)
         existing = get_reminder_data(key)
-        data = {
-            "key": key,
-            "state": state,
-            "scheduled_time": scheduled_time,
-            "reminder_id": reminder_id
-        }
-
         if existing is None:
-            supabase.table("reminders").insert(data).execute()
+            supabase.table("reminders").insert({"key": key, "reminder_data": serialized}).execute()
             logger.debug(f"Inserted new reminder entry for key '{key}'.")
         else:
-            supabase.table("reminders").update(data).eq("key", key).execute()
+            supabase.table("reminders").update({"reminder_data": serialized}).eq("key", key).execute()
             logger.debug(f"Updated reminder entry for key '{key}'.")
     except Exception:
         logger.exception(f"Error setting reminder data for key '{key}'.")
-
 
 def delete_reminder_data(key: str):
     """
@@ -189,17 +179,21 @@ def delete_reminder_data(key: str):
     except Exception:
         logger.exception(f"Error deleting reminder data for key '{key}'.")
 
-
 def initialize_reminders_table():
     """
     Ensures that each known reminder key has a default row in the 'reminders' table.
     """
     default_keys = ["disboard", "discadia", "dsme", "unfocused"]
-    for key in default_keys:
-        existing = get_reminder_data(key)
+    for k in default_keys:
+        existing = get_reminder_data(k)
         if existing is None:
-            set_reminder_data(key, False, None, None)
-            logger.debug(f"Inserted default reminder_data for key: {key}")
+            default_data = {
+                "state": False,
+                "scheduled_time": None,
+                "reminder_id": None
+            }
+            set_reminder_data(k, default_data)
+            logger.debug(f"Inserted default reminder_data for key: {k}")
 
 # ----------------------
 # "tracked_members" Table Helpers
@@ -517,9 +511,16 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
         if existing_data and existing_data.get("scheduled_time"):
             logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
             return
-        
+
         reminder_id = str(uuid.uuid4())
-        set_reminder_data(key, True, (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(), reminder_id)
+        reminder_data = {
+            "state": True,
+            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
+            "reminder_id": reminder_id
+        }
+        set_reminder_data(key, reminder_data)
+        logger.debug(f"Scheduled new reminder: {key.capitalize()} | ID: {reminder_id} | Interval: {interval} seconds")
+
         role = get_role()
         if role:
             await send_scheduled_message(
@@ -939,14 +940,15 @@ async def fix_command(ctx: interactions.ComponentContext, service: str):
         logger.debug(f"Service '{service}' selected with a delay of {seconds} seconds.")
 
         reminder_id = str(uuid.uuid4())
+        scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat()
 
         reminder_data = {
             "state": True,
-            "scheduled_time": (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(),
+            "scheduled_time": scheduled_time,
             "reminder_id": reminder_id
         }
 
-        set_reminder_data(service, True, (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=seconds)).isoformat(), reminder_id)
+        set_reminder_data(service, reminder_data)
         logger.debug(f"Fix logic applied: {reminder_data}")
         await ctx.send(f"✅ Fix logic successfully applied for **{service}**!")
 
@@ -966,10 +968,15 @@ async def reset_reminders(ctx: interactions.ComponentContext):
         logger.debug(f"Received /resetreminders command from {ctx.author.username} ({ctx.author.id})")
         await ctx.defer()
 
+        default_data = {
+            "state": False,
+            "scheduled_time": None,
+            "reminder_id": None
+        }
         reminder_keys = ["disboard", "dsme", "unfocused", "discadia"]
 
         for key in reminder_keys:
-            set_reminder_data(key, False, None, None)
+            set_reminder_data(key, default_data)
             logger.debug(f"Reset reminder data for key: {key}")
 
         logger.debug("All reminders successfully reset.")
@@ -1690,6 +1697,113 @@ async def dictionary_search(ctx: interactions.ComponentContext, word: str):
         logger.exception(f"Error in /define command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+
+@interactions.slash_command(name="weather", description="Get the current weather for a city.")
+@interactions.slash_option(
+    name="city",
+    description="Enter the city name.",
+    required=True,
+    opt_type=interactions.OptionType.STRING
+)
+async def weather_search(ctx: interactions.ComponentContext, city: str):
+    """
+    Fetches the current weather and 3-day forecast from PirateWeather using city coordinates.
+    """
+    try:
+        await ctx.defer()
+
+        logger.debug(f"Received weather command from user: {ctx.author.id} (User: {ctx.author.username})")
+        logger.debug(f"User input for city: '{city}'")
+
+        # Get coordinates
+        lat, lon = await get_coordinates(city)
+        if lat is None or lon is None:
+            logger.warning(f"Failed to get coordinates for '{city}'.")
+            await ctx.send(f"Could not find the location for '{city}'. Try another city.")
+            return
+        
+        # Capitalize city name
+        city = city.title()
+        logger.debug(f"Formatted city name: '{city}' (Lat: {lat}, Lon: {lon})")
+
+        # PirateWeather API request
+        url = f"https://api.pirateweather.net/forecast/{PIRATEWEATHER_API_KEY}/{lat},{lon}"
+        params = {"units": "si"}  # SI for Celsius
+        logger.debug(f"Making API request to: {url} with params {params}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+
+                    # Log the full API response for debugging
+                    logger.debug(f"Received weather data: {json.dumps(data, indent=2)}")
+
+                    currently = data["currently"]
+                    daily = data["daily"]["data"]
+
+                    # Extract current weather data
+                    weather = currently.get("summary", "Unknown")
+                    temp_c = currently.get("temperature", 0)
+                    temp_f = round((temp_c * 9/5) + 32, 1)
+                    feels_like_c = currently.get("apparentTemperature", 0)
+                    feels_like_f = round((feels_like_c * 9/5) + 32, 1)
+                    humidity = currently.get("humidity", 0) * 100
+                    wind_speed = currently.get("windSpeed", 0)
+                    uv_index = currently.get("uvIndex", "N/A")
+                    visibility = currently.get("visibility", "N/A")
+                    pressure = currently.get("pressure", "N/A")
+                    dew_point_c = currently.get("dewPoint", "N/A")
+                    dew_point_f = round((dew_point_c * 9/5) + 32, 1) if isinstance(dew_point_c, (int, float)) else "N/A"
+                    cloud_cover = currently.get("cloudCover", 0) * 100
+                    precip_intensity = currently.get("precipIntensity", 0)
+                    precip_prob = currently.get("precipProbability", 0) * 100
+
+                    # Extract 3-day forecast
+                    forecast_text = ""
+                    for i in range(3):
+                        day = daily[i]
+                        day_summary = day.get("summary", "No data")
+                        high_c = day.get("temperatureHigh", "N/A")
+                        high_f = round((high_c * 9/5) + 32, 1) if isinstance(high_c, (int, float)) else "N/A"
+                        low_c = day.get("temperatureLow", "N/A")
+                        low_f = round((low_c * 9/5) + 32, 1) if isinstance(low_c, (int, float)) else "N/A"
+                        forecast_text += f"**Day {i+1}:** {day_summary}\n🌡 High: {high_c}°C / {high_f}°F, Low: {low_c}°C / {low_f}°F\n\n"
+
+                    # Log extracted weather data
+                    logger.debug(f"Extracted weather data for {city}: Temp {temp_c}°C, Feels Like {feels_like_c}°C, Humidity {humidity}%")
+
+                    # Create embed
+                    embed = interactions.Embed(
+                        title=f"Weather in {city}",
+                        description=f"**{weather}**",
+                        color=0xFF6E42
+                    )
+                    embed.add_field(name="🌍 Location", value=f"📍 {city}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
+                    embed.add_field(name="🌡 Temperature", value=f"{temp_c}°C / {temp_f}°F", inline=True)
+                    embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C / {feels_like_f}°F", inline=True)
+                    embed.add_field(name="💧 Humidity", value=f"{humidity}%", inline=True)
+                    embed.add_field(name="💨 Wind Speed", value=f"{wind_speed} m/s", inline=True)
+                    embed.add_field(name="🌞 UV Index", value=f"{uv_index}", inline=True)
+                    embed.add_field(name="👀 Visibility", value=f"{visibility} km", inline=True)
+                    embed.add_field(name="🛰 Pressure", value=f"{pressure} hPa", inline=True)
+                    embed.add_field(name="🌫 Dew Point", value=f"{dew_point_c}°C / {dew_point_f}°F", inline=True)
+                    embed.add_field(name="☁ Cloud Cover", value=f"{cloud_cover}%", inline=True)
+                    embed.add_field(name="🌧 Precipitation", value=f"{precip_intensity} mm/hr", inline=True)
+                    embed.add_field(name="🌧 Precip. Probability", value=f"{precip_prob}%", inline=True)
+
+                    # Add forecast
+                    embed.add_field(name="📅 3-Day Forecast", value=forecast_text, inline=False)
+                    embed.set_footer(text="Powered by PirateWeather")
+
+                    await ctx.send(embed=embed)
+                else:
+                    logger.warning(f"PirateWeather API error: {response.status}")
+                    await ctx.send(f"Error: PirateWeather API returned status code {response.status}.")
+    except Exception as e:
+        logger.exception(f"Error in /weather command: {e}")
+        await ctx.send("An unexpected error occurred. Please try again later.", ephemeral=True)
+
 @interactions.slash_command(name="urban", description="Search Urban Dictionary for definitions.")
 @interactions.slash_option(
     name="query",
@@ -2255,8 +2369,6 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 try:
     bot.start(TOKEN)
-    bot.load_extension("nova.wikipedia")
-    bot.load_extension("nova.weather")
 except Exception:
     logger.exception("Exception occurred during bot startup!")
     sys.exit(1)
