@@ -10,7 +10,6 @@ RUN pip install --upgrade pip && \
 
 # Copy the application code into the container
 COPY main.py .
-COPY nova/* ./nova/
 
 # Define the default command
 CMD ["python", "-u", "main.py"]
