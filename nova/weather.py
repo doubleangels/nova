@@ -3,7 +3,7 @@ import interactions
 from main import logger, PIRATEWEATHER_API_KEY, GOOGLE_API_KEY
 
 class WeatherExtension(interactions.Extension):
-    async def get_coordinates(city: str):
+    async def get_coordinates(self, city: str):
         """
         Fetch latitude and longitude for a given city using Google Maps Geocoding API.
         """
@@ -38,7 +38,7 @@ class WeatherExtension(interactions.Extension):
         required=True,
         opt_type=interactions.OptionType.STRING
     )
-    async def weather_search(ctx: interactions.ComponentContext, city: str):
+    async def weather_search(self, ctx: interactions.ComponentContext, city: str):
         """
         Fetches the current weather and 3-day forecast from PirateWeather using city coordinates.
         """
