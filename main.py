@@ -682,6 +682,8 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     try:
         bot_id = str(event.message.author.id)
         message_content = event.message.content
+        if message_content is None:
+            return
         author_id = event.message.author.id
         logger.debug(f"Message received from {event.message.author.username} (ID: {bot_id})")
 
