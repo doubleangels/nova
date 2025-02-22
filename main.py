@@ -2137,7 +2137,7 @@ async def random_joke(ctx: interactions.ComponentContext):
 )
 @interactions.slash_option(
     name="strength",
-    description="Warp strength (0 = none, 6 = extreme, default = 6).",
+    description="Warp strength (0-6, Default: 6).",
     required=False,
     opt_type=interactions.OptionType.INTEGER,
     min_value=0,
