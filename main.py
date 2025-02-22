@@ -2245,7 +2245,14 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 # Graceful Shutdown Routine
 # -------------------------
-async def shutdown(loop, signal=None):
+async def shutdown(loop, sig=None):
+    """
+    Cancels outstanding tasks, flushes Sentry, and logs the shutdown.
+    
+    Args:
+        loop: The current event loop.
+        sig: Optional signal that triggered the shutdown.
+    """
     if signal:
         logger.info(f"Received exit signal {signal.name}...")
     logger.info("Cancelling outstanding tasks")
@@ -2259,7 +2266,11 @@ async def shutdown(loop, signal=None):
 
 def handle_interrupt(sig, frame):
     """
-    Synchronous signal handler that schedules the async shutdown.
+    Synchronous signal handler that schedules the asynchronous shutdown.
+    
+    Args:
+        sig: The signal received.
+        frame: The current stack frame.
     """
     loop = asyncio.get_event_loop()
     loop.create_task(shutdown(loop, signal=sig))
@@ -2274,7 +2285,6 @@ signal.signal(signal.SIGTERM, handle_interrupt)
 async def main():
     try:
         logger.info("Starting the bot...")
-        # Use the asynchronous start method so we don't call asyncio.run() from within a running loop.
         await bot.astart(TOKEN)
     except Exception:
         logger.exception("Exception occurred during bot startup!")
