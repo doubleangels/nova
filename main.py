@@ -2253,8 +2253,8 @@ async def shutdown(loop, sig=None):
         loop: The current event loop.
         sig: Optional signal that triggered the shutdown.
     """
-    if signal:
-        logger.info(f"Received exit signal {signal.name}...")
+    if sig:
+        logger.info(f"Received exit signal {sig.name}...")
     logger.info("Cancelling outstanding tasks")
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
     [task.cancel() for task in tasks]
