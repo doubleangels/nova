@@ -312,12 +312,23 @@ bot_ids = {
 
 logger.info("Starting the bot...")
 
+async def shutdown(loop, signal=None):
+    """Gracefully shutdown the bot when receiving an exit signal."""
+    if signal:
+        logger.info(f"Received exit signal {signal.name}...")
+    logger.info("Cancelling outstanding tasks")
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
+    [task.cancel() for task in tasks]
+    await asyncio.gather(*tasks, return_exceptions=True)
+    logger.info("Flushing Sentry events...")
+    sentry_sdk.flush(timeout=2)
+    logger.info("Shutdown complete. Stopping loop.")
+    loop.stop()
+
 def handle_interrupt(signal_num, frame):
-    """
-    Gracefully shutdown the bot on interrupt signals.
-    """
-    logger.info("Gracefully shutting down.")
-    sys.exit(0)
+    """Synchronous signal handler that schedules the async shutdown."""
+    loop = asyncio.get_event_loop()
+    loop.create_task(shutdown(loop, signal=signal.Signals(signal_num)))
 
 # Bind the interrupt handlers.
 signal.signal(signal.SIGINT, handle_interrupt)
@@ -2256,8 +2267,22 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 # Bot Startup
 # -------------------------
-try:
-    bot.start(TOKEN)
-except Exception:
-    logger.exception("Exception occurred during bot startup!")
-    sys.exit(1)
+async def main():
+    try:
+        # Start your bot (this call is assumed to be awaitable or run in the loop)
+        await bot.start(TOKEN)
+    except Exception:
+        logger.exception("Exception occurred during bot startup!")
+    finally:
+        # Ensure that if the bot stops running for any reason, we do a shutdown.
+        await shutdown(asyncio.get_event_loop())
+
+if __name__ == "__main__":
+    try:
+        # Use asyncio.run() to manage the event loop lifecycle.
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("KeyboardInterrupt received. Exiting.")
+    finally:
+        logging.shutdown()
+        sys.exit(0)
