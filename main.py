@@ -1958,10 +1958,10 @@ async def dog_image(ctx: interactions.ComponentContext):
         logger.exception(f"Error in /dog command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="timezone", description="Get the current time in a city.")
+@interactions.slash_command(name="timezone", description="Get the current time in a place.")
 @interactions.slash_option(
     name="place",
-    description="Enter a place name (e.g., New York, Germany).",
+    description="Enter a place name.",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
