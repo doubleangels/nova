@@ -2224,20 +2224,25 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
         elif mode == "ripple":
-            logger.info("Applying ripple effect.")
-            # Adjust wavelength and amplitude based on image size and effect strength.
-            wavelength = effect_radius / 2
-            amplitude = effect_strength * 5  # amplitude in pixels
+            logger.info("Applying enhanced ripple effect.")
+            # Adjust wavelength and amplitude relative to image size for a more visible effect.
+            wavelength = effect_radius / 5  # Smaller wavelength for more frequent ripples.
+            amplitude = effect_strength * effect_radius * 0.1  # Scale amplitude by image size.
             new_x_coords = (x_coords + amplitude * np.sin(2 * np.pi * y_coords / wavelength)).astype(int)
             new_y_coords = (y_coords + amplitude * np.sin(2 * np.pi * x_coords / wavelength)).astype(int)
         elif mode == "fisheye":
-            logger.info("Applying fisheye effect.")
-            # Apply a fisheye distortion using an arctan mapping.
-            factor = np.ones_like(distance)
-            nonzero = distance > 0
-            factor[nonzero] = np.arctan(distance[nonzero] * effect_strength / effect_radius) / (distance[nonzero] * effect_strength / effect_radius)
-            new_x_coords = (center_x + dx * factor).astype(int)
-            new_y_coords = (center_y + dy * factor).astype(int)
+            logger.info("Applying enhanced fisheye effect.")
+            # Normalize coordinates to [-1, 1] relative to the center.
+            norm_x = (x_coords - center_x) / effect_radius
+            norm_y = (y_coords - center_y) / effect_radius
+            r = np.sqrt(norm_x**2 + norm_y**2)
+            # Prevent division by zero.
+            r_safe = np.where(r == 0, 1e-6, r)
+            # Apply an arctan-based remapping for a stronger fisheye distortion.
+            theta = np.arctan(r * effect_strength * 2)  # Multiply effect_strength to enhance the distortion.
+            factor = np.where(r > 0, theta / r_safe, 1)
+            new_x_coords = (center_x + norm_x * factor * effect_radius).astype(int)
+            new_y_coords = (center_y + norm_y * factor * effect_radius).astype(int)
         else:
             logger.warning(f"Invalid warp mode: {mode}")
             await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
