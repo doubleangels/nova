@@ -2132,7 +2132,9 @@ async def random_joke(ctx: interactions.ComponentContext):
     opt_type=interactions.OptionType.STRING,
     choices=[
         {"name": "Swirl", "value": "swirl"},
-        {"name": "Bulge", "value": "bulge"}
+        {"name": "Bulge", "value": "bulge"},
+        {"name": "Ripple", "value": "ripple"},
+        {"name": "Fisheye", "value": "fisheye"}
     ]
 )
 @interactions.slash_option(
@@ -2145,10 +2147,10 @@ async def random_joke(ctx: interactions.ComponentContext):
 )
 async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode: str, strength: int = 6):
     """
-    Apply a warp effect (swirl or bulge) to a user's profile picture.
+    Apply a warp effect (swirl, bulge, ripple or fisheye) to a user's profile picture.
     
     :param user: The target user.
-    :param mode: The warp mode ("swirl" or "bulge").
+    :param mode: The warp mode ("swirl", "bulge", "ripple", or "fisheye").
     :param strength: Intensity of the warp effect (0 to 6).
     """
     await ctx.defer()
@@ -2214,6 +2216,21 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             bulge_factor = np.clip(bulge_factor, 0.5, 3.0)
             new_x_coords = (center_x + bulge_factor * dx).astype(int)
             new_y_coords = (center_y + bulge_factor * dy).astype(int)
+        elif mode == "ripple":
+            logger.info("Applying ripple effect.")
+            # Adjust wavelength and amplitude based on image size and effect strength.
+            wavelength = effect_radius / 2
+            amplitude = effect_strength * 5  # amplitude in pixels
+            new_x_coords = (x_coords + amplitude * np.sin(2 * np.pi * y_coords / wavelength)).astype(int)
+            new_y_coords = (y_coords + amplitude * np.sin(2 * np.pi * x_coords / wavelength)).astype(int)
+        elif mode == "fisheye":
+            logger.info("Applying fisheye effect.")
+            # Apply a fisheye distortion using an arctan mapping.
+            factor = np.ones_like(distance)
+            nonzero = distance > 0
+            factor[nonzero] = np.arctan(distance[nonzero] * effect_strength / effect_radius) / (distance[nonzero] * effect_strength / effect_radius)
+            new_x_coords = (center_x + dx * factor).astype(int)
+            new_y_coords = (center_y + dy * factor).astype(int)
         else:
             logger.warning(f"Invalid warp mode: {mode}")
             await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
