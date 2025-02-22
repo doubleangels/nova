@@ -1670,14 +1670,14 @@ async def dictionary_search(ctx: interactions.ComponentContext, word: str):
         logger.exception(f"Error in /define command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
-@interactions.slash_command(name="weather", description="Get the current weather for a city.")
+@interactions.slash_command(name="weather", description="Get the current weather for a place.")
 @interactions.slash_option(
-    name="city",
-    description="Enter the city name.",
+    name="place",
+    description="Enter the place name.",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
-async def weather_search(ctx: interactions.ComponentContext, city: str):
+async def weather_search(ctx: interactions.ComponentContext, place: str):
     """
     Fetch the current weather and 3-day forecast using PirateWeather API.
     
@@ -1686,16 +1686,16 @@ async def weather_search(ctx: interactions.ComponentContext, city: str):
     try:
         await ctx.defer()
         logger.debug(f"Received weather command from {ctx.author.username}")
-        logger.debug(f"User input for city: '{city}'")
+        logger.debug(f"User input for city: '{place}'")
 
-        lat, lon = await get_coordinates(city)
+        lat, lon = await get_coordinates(place)
         if lat is None or lon is None:
-            logger.warning(f"Failed to get coordinates for '{city}'.")
-            await ctx.send(f"Could not find the location for '{city}'. Try another city.")
+            logger.warning(f"Failed to get coordinates for '{place}'.")
+            await ctx.send(f"Could not find the location for '{place}'. Try another city.")
             return
         
-        city = city.title()
-        logger.debug(f"Formatted city name: '{city}' (Lat: {lat}, Lon: {lon})")
+        place = place.title()
+        logger.debug(f"Formatted city name: '{place}' (Lat: {lat}, Lon: {lon})")
 
         url = f"https://api.pirateweather.net/forecast/{PIRATEWEATHER_API_KEY}/{lat},{lon}"
         params = {"units": "si"}
@@ -1734,13 +1734,13 @@ async def weather_search(ctx: interactions.ComponentContext, city: str):
                         low_f = round((low_c * 9/5) + 32, 1) if isinstance(low_c, (int, float)) else "N/A"
                         forecast_text += f"**Day {i+1}:** {day_summary}\n🌡 High: {high_c}°C / {high_f}°F, Low: {low_c}°C / {low_f}°F\n\n"
 
-                    logger.debug(f"Extracted weather data for {city}: Temp {temp_c}°C, Feels Like {feels_like_c}°C, Humidity {humidity}%")
+                    logger.debug(f"Extracted weather data for {place}: Temp {temp_c}°C, Feels Like {feels_like_c}°C, Humidity {humidity}%")
                     embed = interactions.Embed(
-                        title=f"Weather in {city}",
+                        title=f"Weather in {place}",
                         description=f"**{weather}**",
                         color=0xFF6E42
                     )
-                    embed.add_field(name="🌍 Location", value=f"📍 {city}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
+                    embed.add_field(name="🌍 Location", value=f"📍 {place}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
                     embed.add_field(name="🌡 Temperature", value=f"{temp_c}°C / {temp_f}°F", inline=True)
                     embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C / {feels_like_f}°F", inline=True)
                     embed.add_field(name="💧 Humidity", value=f"{humidity}%", inline=True)
