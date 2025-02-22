@@ -102,6 +102,7 @@ def get_value(key: str):
     """
     try:
         response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
+        # Check if response is valid and contains data
         if response is None:
             logger.warning(f"Supabase query for key '{key}' returned None.")
             return None
@@ -121,6 +122,7 @@ def set_value(key: str, value):
     :param value: The value to serialize and store.
     """
     try:
+        # Serialize the value to JSON format
         serialized = json.dumps(value)
         existing = get_value(key)
         if existing is None:
@@ -177,11 +179,13 @@ def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_
     :param reminder_id: The unique reminder identifier.
     """
     try:
+        # Prepare data for insertion or update
+        serialized_time = scheduled_time
         existing = get_reminder_data(key)
         data = {
             "key": key,
             "state": state,
-            "scheduled_time": scheduled_time,
+            "scheduled_time": serialized_time,
             "reminder_id": reminder_id
         }
 
@@ -340,6 +344,7 @@ async def get_channel(channel_key):
         if not channel_id:
             logger.warning(f"No channel has been set for '{channel_key}'.")
             return None
+        # Retrieve channel from the bot's cache
         channel_obj = bot.get_channel(channel_id)
         if channel_obj:
             logger.debug(f"Retrieved reminder channel: {channel_obj.name}")
@@ -355,12 +360,13 @@ def calculate_remaining_time(scheduled_time):
     Calculate the remaining time until the scheduled reminder.
     
     :param scheduled_time: The ISO-formatted scheduled time.
-    :return: A string representing the remaining time in HH:MM:SS format.
+    :return: A string representing the remaining time in HH:MM:SS format or an error message.
     """
     if not scheduled_time:
         return "Not set!"
     try:
         now = datetime.datetime.now(tz=pytz.UTC)
+        # Convert scheduled_time string into a datetime object
         scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
         remaining_time = scheduled_dt - now
         if remaining_time <= datetime.timedelta(seconds=0):
@@ -376,7 +382,7 @@ def calculate_remaining_time(scheduled_time):
 
 async def safe_task(task):
     """
-    Run a given asynchronous task safely, logging exceptions.
+    Run a given asynchronous task safely, logging any exceptions.
     
     :param task: The coroutine to execute.
     """
@@ -403,6 +409,7 @@ async def reschedule_reminder(key, role):
         if scheduled_time and reminder_id:
             scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
             now = datetime.datetime.now(tz=pytz.UTC)
+            # If the scheduled time has already passed, remove the reminder
             if scheduled_dt <= now:
                 logger.debug(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
                 delete_reminder_data(key)
@@ -411,6 +418,7 @@ async def reschedule_reminder(key, role):
             remaining_time = scheduled_dt - now
             logger.debug(f"Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
             
+            # Schedule the reminder message to be sent after the remaining time
             asyncio.create_task(
                 safe_task(
                     send_scheduled_message(
@@ -430,7 +438,7 @@ async def reschedule_reminder(key, role):
 
 async def get_coordinates(city: str):
     """
-    Get latitude and longitude for a given city using Google Geocoding API.
+    Get latitude and longitude for a given city using the Google Geocoding API.
     
     :param city: The city name.
     :return: Tuple of (lat, lon) if found, else (None, None).
@@ -489,7 +497,7 @@ async def unfocused():
         key="unfocused",
         initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
         reminder_message="It's time to boop the server on Unfocused again!",
-        interval=30600  # 6 hours 50 minutes approx.
+        interval=30600  # Approximately 6 hours 50 minutes
     )
 
 async def discadia():
@@ -517,6 +525,7 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
     :param key: The reminder key.
     """
     try:
+        # Retrieve the channel from the stored configuration
         channel = await get_channel("reminder_channel")
         if not channel:
             logger.warning("No valid reminder channel found; cannot send scheduled message.")
@@ -527,12 +536,13 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
             await channel.send(initial_message)
 
         logger.debug(f"Waiting {interval} seconds before sending reminder for '{key}'.")
+        # Wait for the delay
         await asyncio.sleep(interval)
 
         logger.debug(f"Sending reminder message for '{key}': {reminder_message}")
         await channel.send(reminder_message)
 
-        # Clean up the reminder from the database.
+        # Clean up the reminder data from the database after sending the message.
         reminder_data = get_reminder_data(key)
         if reminder_data:
             delete_reminder_data(key)
@@ -552,11 +562,12 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
     """
     try:
         existing_data = get_reminder_data(key)
+        # If a reminder is already scheduled, skip setting a new one
         if existing_data and existing_data.get("scheduled_time"):
             logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
             return
         
-        # Generate a unique reminder ID.
+        # Generate a unique reminder ID and schedule the reminder
         reminder_id = str(uuid.uuid4())
         set_reminder_data(
             key,
@@ -593,7 +604,7 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
         now = datetime.datetime.now(datetime.UTC)
         join_time_dt = datetime.datetime.fromisoformat(join_time)
         
-        # Calculate how many seconds have elapsed since the join time.
+        # Calculate elapsed time since the user joined
         elapsed_time = (now - join_time_dt).total_seconds()
         remaining_time = (mute_kick_time * 3600) - elapsed_time
 
@@ -613,7 +624,7 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
             return
 
         async def delayed_kick():
-            # Wait for the remaining time before kicking.
+            # Wait for the remaining time before kicking the user
             await asyncio.sleep(remaining_time)
             if get_tracked_member(member_id):
                 member = bot.get_member(guild_id, member_id)
@@ -628,6 +639,7 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
                 except Exception as e:
                     logger.warning(f"Failed to kick {username} after scheduled time: {e}")
 
+        # Schedule the delayed kick as an asynchronous task.
         asyncio.create_task(delayed_kick())
         logger.debug(f"Scheduled kick for {username} in {remaining_time:.2f} seconds.")
 
@@ -818,6 +830,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             ),
             color=0xCD41FF,
         )
+        # Send the welcome message in the designated channel.
         await channel.send(embeds=[embed])
         logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
 
@@ -1510,6 +1523,7 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
                         top_result = data["query"]["search"][0]
                         title = top_result.get("title", "No Title")
                         snippet = top_result.get("snippet", "No snippet available.")
+                        # Format the snippet to bold search matches.
                         snippet = snippet.replace("<span class=\"searchmatch\">", "**").replace("</span>", "**")
                         page_id = top_result.get("pageid")
                         wiki_url = f"https://en.wikipedia.org/?curid={page_id}"
@@ -1668,13 +1682,14 @@ async def weather_search(ctx: interactions.ComponentContext, place: str):
     """
     Fetch the current weather and 3-day forecast using PirateWeather API.
     
-    :param city: The city name.
+    :param place: The place name.
     """
     try:
         await ctx.defer()
         logger.debug(f"Received weather command from {ctx.author.username}")
         logger.debug(f"User input for city: '{place}'")
 
+        # Get latitude and longitude for the given place.
         lat, lon = await get_coordinates(place)
         if lat is None or lon is None:
             logger.warning(f"Failed to get coordinates for '{place}'.")
@@ -1882,6 +1897,7 @@ async def cat_image(ctx: interactions.ComponentContext):
             async with session.get(cat_api_url) as response:
                 if response.status == 200:
                     image_bytes = await response.read()
+                    # Create a BytesIO object from the image bytes.
                     file_obj = io.BytesIO(image_bytes)
                     file_obj.seek(0)
                     filename = "cat.jpg"
@@ -1916,6 +1932,7 @@ async def dog_image(ctx: interactions.ComponentContext):
                     data = await response.json()
                     image_url = data.get("message", None)
                     if image_url:
+                        # Append a timestamp to the image URL to prevent caching.
                         image_url_with_timestamp = f"{image_url}?timestamp={int(time.time())}"
                         logger.debug(f"Fetching dog image from {image_url_with_timestamp}")
                         async with session.get(image_url_with_timestamp) as image_response:
@@ -1956,12 +1973,13 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
     """
     Fetch and display the current time for a specified city using Google Maps Time Zone API.
     
-    :param city: The city name.
+    :param place: The city name.
     """
     try:
         await ctx.defer()
         logger.debug(f"Received /timezone command for city: '{place}'")
         async with aiohttp.ClientSession() as session:
+            # Get location coordinates from the Google Geocoding API.
             geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json"
             geocode_params = {"address": place, "key": GOOGLE_API_KEY}
             async with session.get(geocode_url, params=geocode_params) as response:
@@ -1978,6 +1996,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
                     await ctx.send(f"⚠️ Google Geocoding API error. Try again later.")
                     return
             timestamp = int(datetime.datetime.now().timestamp())
+            # Get time zone information from Google Time Zone API.
             timezone_url = f"https://maps.googleapis.com/maps/api/timezone/json"
             timezone_params = {"location": f"{lat},{lng}", "timestamp": timestamp, "key": GOOGLE_API_KEY}
             async with session.get(timezone_url, params=timezone_params) as response:
@@ -2087,6 +2106,7 @@ async def random_joke(ctx: interactions.ComponentContext):
                 if response.status == 200:
                     data = await response.json()
                     logger.debug(f"Received JokeAPI response: {json.dumps(data, indent=2)}")
+                    # Check if the joke is a single-line joke or a two-part joke.
                     joke = data.get("joke") or f"**{data.get('setup')}**\n{data.get('delivery')}"
                     category = data.get("category", "Unknown")
                     embed = interactions.Embed(
@@ -2227,7 +2247,7 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         new_x_coords = np.clip(new_x_coords, 0, width - 1)
         new_y_coords = np.clip(new_y_coords, 0, height - 1)
 
-        # Apply the transformation.
+        # Apply the coordinate transformation to create the warped image.
         warped_img_np = img_np[new_y_coords, new_x_coords]
         warped_img = Image.fromarray(warped_img_np)
         output_buffer = io.BytesIO()
@@ -2245,11 +2265,10 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 async def shutdown(loop, signal=None):
     """
-    Cancels outstanding tasks and flushes Sentry.
+    Cancel outstanding tasks and flush Sentry logs before shutting down.
     
-    Args:
-        loop: The current event loop.
-        signal: Optional signal that triggered the shutdown.
+    :param loop: The current event loop.
+    :param signal: Optional signal that triggered the shutdown.
     """
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
     [task.cancel() for task in tasks]
@@ -2261,9 +2280,8 @@ def handle_interrupt(signal, frame):
     """
     Synchronous signal handler that schedules the asynchronous shutdown.
     
-    Args:
-        signal: The signal received.
-        frame: The current stack frame.
+    :param signal: The signal received.
+    :param frame: The current stack frame.
     """
     loop = asyncio.get_event_loop()
     loop.create_task(shutdown(loop, signal=signal))
@@ -2276,6 +2294,9 @@ signal.signal(signal.SIGTERM, handle_interrupt)
 # Main Startup Routine
 # -------------------------
 async def main():
+    """
+    Main entry point to start the bot.
+    """
     try:
         logger.info("Starting the bot...")
         await bot.astart(TOKEN)
