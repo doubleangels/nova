@@ -312,28 +312,6 @@ bot_ids = {
 
 logger.info("Starting the bot...")
 
-async def shutdown(loop, signal=None):
-    """Gracefully shutdown the bot when receiving an exit signal."""
-    if signal:
-        logger.info(f"Received exit signal {signal.name}...")
-    logger.info("Cancelling outstanding tasks")
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
-    [task.cancel() for task in tasks]
-    await asyncio.gather(*tasks, return_exceptions=True)
-    logger.info("Flushing Sentry events...")
-    sentry_sdk.flush(timeout=2)
-    logger.info("Shutdown complete. Stopping loop.")
-    loop.stop()
-
-def handle_interrupt(signal_num, frame):
-    """Synchronous signal handler that schedules the async shutdown."""
-    loop = asyncio.get_event_loop()
-    loop.create_task(shutdown(loop, signal=signal.Signals(signal_num)))
-
-# Bind the interrupt handlers.
-signal.signal(signal.SIGINT, handle_interrupt)
-signal.signal(signal.SIGTERM, handle_interrupt)
-
 def get_role():
     """
     Retrieve the role ID stored in the 'role' key from Supabase.
@@ -2265,21 +2243,50 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
 
 # -------------------------
-# Bot Startup
+# Graceful Shutdown Routine
+# -------------------------
+async def shutdown(loop, signal=None):
+    if signal:
+        logger.info(f"Received exit signal {signal.name}...")
+    logger.info("Cancelling outstanding tasks")
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
+    [task.cancel() for task in tasks]
+    await asyncio.gather(*tasks, return_exceptions=True)
+    logger.info("Flushing Sentry events...")
+    sentry_sdk.flush(timeout=2)
+    logger.info("Shutdown complete. Stopping loop.")
+    loop.stop()
+
+def handle_interrupt(sig, frame):
+    """
+    Synchronous signal handler that schedules the async shutdown.
+    """
+    loop = asyncio.get_event_loop()
+    loop.create_task(shutdown(loop, signal=sig))
+
+# Bind the interrupt handlers.
+signal.signal(signal.SIGINT, handle_interrupt)
+signal.signal(signal.SIGTERM, handle_interrupt)
+
+# -------------------------
+# Main Startup Routine
 # -------------------------
 async def main():
     try:
-        # Start your bot (this call is assumed to be awaitable or run in the loop)
-        await bot.start(TOKEN)
+        logger.info("Starting the bot...")
+        # Use the asynchronous start method so we don't call asyncio.run() from within a running loop.
+        await bot.astart(TOKEN)
     except Exception:
         logger.exception("Exception occurred during bot startup!")
     finally:
-        # Ensure that if the bot stops running for any reason, we do a shutdown.
+        # Ensure graceful shutdown on exit.
         await shutdown(asyncio.get_event_loop())
 
+# -------------------------
+# Entry Point
+# -------------------------
 if __name__ == "__main__":
     try:
-        # Use asyncio.run() to manage the event loop lifecycle.
         asyncio.run(main())
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt received. Exiting.")
