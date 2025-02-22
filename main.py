@@ -1349,11 +1349,11 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
 )
 @interactions.slash_option(
     name="results",
-    description="How many results do you want? (1-10)",
+    description="How many results do you want? (1-10, Default: 5)",
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
-async def google_image_search(ctx: interactions.ComponentContext, query: str, results: int = 1):
+async def google_image_search(ctx: interactions.ComponentContext, query: str, results: int = 5):
     """
     Search Google Images using the Google Custom Search API (Image mode).
     
