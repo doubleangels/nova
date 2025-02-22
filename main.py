@@ -2245,21 +2245,16 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 async def shutdown(loop, signal=None):
     """
-    Cancels outstanding tasks, flushes Sentry, and logs the shutdown.
+    Cancels outstanding tasks and flushes Sentry.
     
     Args:
         loop: The current event loop.
         signal: Optional signal that triggered the shutdown.
     """
-    if signal:
-        logger.info(f"Received exit signal {signal.name}...")
-    logger.info("Cancelling outstanding tasks")
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
     [task.cancel() for task in tasks]
     await asyncio.gather(*tasks, return_exceptions=True)
-    logger.info("Flushing Sentry events...")
     sentry_sdk.flush(timeout=2)
-    logger.info("Shutdown complete. Stopping loop.")
     loop.stop()
 
 def handle_interrupt(signal, frame):
