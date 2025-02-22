@@ -1960,12 +1960,12 @@ async def dog_image(ctx: interactions.ComponentContext):
 
 @interactions.slash_command(name="timezone", description="Get the current time in a city.")
 @interactions.slash_option(
-    name="city",
-    description="Enter a city name (e.g., New York, London, Tokyo).",
+    name="place",
+    description="Enter a place name (e.g., New York, Germany).",
     required=True,
     opt_type=interactions.OptionType.STRING
 )
-async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
+async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
     """
     Fetch and display the current time for a specified city using Google Maps Time Zone API.
     
@@ -1973,10 +1973,10 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
     """
     try:
         await ctx.defer()
-        logger.debug(f"Received /timezone command for city: '{city}'")
+        logger.debug(f"Received /timezone command for city: '{place}'")
         async with aiohttp.ClientSession() as session:
             geocode_url = f"https://maps.googleapis.com/maps/api/geocode/json"
-            geocode_params = {"address": city, "key": GOOGLE_API_KEY}
+            geocode_params = {"address": place, "key": GOOGLE_API_KEY}
             async with session.get(geocode_url, params=geocode_params) as response:
                 if response.status == 200:
                     geo_data = await response.json()
@@ -1985,7 +1985,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
                         location = geo_data["results"][0]["geometry"]["location"]
                         lat, lng = location["lat"], location["lng"]
                     else:
-                        await ctx.send(f"❌ Could not find the city '{city}'. Check spelling.")
+                        await ctx.send(f"❌ Could not find the city '{place}'. Check spelling.")
                         return
                 else:
                     await ctx.send(f"⚠️ Google Geocoding API error. Try again later.")
@@ -2007,7 +2007,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
                         local_time = current_utc_time + datetime.timedelta(hours=utc_offset)
                         formatted_time = local_time.strftime("%Y-%m-%d %H:%M:%S")
                         embed = interactions.Embed(
-                            title=f"🕒 Current Time in {city}",
+                            title=f"🕒 Current Time in {place}",
                             description=f"⏰ **{formatted_time}** (UTC {utc_offset:+})",
                             color=0x1D4ED8
                         )
@@ -2017,7 +2017,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, city: str):
                         embed.set_footer(text="Powered by Google Maps Time Zone API")
                         await ctx.send(embed=embed)
                     else:
-                        await ctx.send(f"❌ Error retrieving timezone info for '{city}'.")
+                        await ctx.send(f"❌ Error retrieving timezone info for '{place}'.")
                 else:
                     await ctx.send(f"⚠️ Google Time Zone API error. Try again later.")
     except Exception as e:
