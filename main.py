@@ -310,8 +310,6 @@ bot_ids = {
     "835255643157168168": "Unfocused",
 }
 
-logger.info("Starting the bot...")
-
 def get_role():
     """
     Retrieve the role ID stored in the 'role' key from Supabase.
