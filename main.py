@@ -2245,16 +2245,16 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 # -------------------------
 # Graceful Shutdown Routine
 # -------------------------
-async def shutdown(loop, sig=None):
+async def shutdown(loop, signal=None):
     """
     Cancels outstanding tasks, flushes Sentry, and logs the shutdown.
     
     Args:
         loop: The current event loop.
-        sig: Optional signal that triggered the shutdown.
+        signal: Optional signal that triggered the shutdown.
     """
-    if sig:
-        logger.info(f"Received exit signal {sig.name}...")
+    if signal:
+        logger.info(f"Received exit signal {signal.name}...")
     logger.info("Cancelling outstanding tasks")
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
     [task.cancel() for task in tasks]
@@ -2264,16 +2264,16 @@ async def shutdown(loop, sig=None):
     logger.info("Shutdown complete. Stopping loop.")
     loop.stop()
 
-def handle_interrupt(sig, frame):
+def handle_interrupt(signal, frame):
     """
     Synchronous signal handler that schedules the asynchronous shutdown.
     
     Args:
-        sig: The signal received.
+        signal: The signal received.
         frame: The current stack frame.
     """
     loop = asyncio.get_event_loop()
-    loop.create_task(shutdown(loop, signal=sig))
+    loop.create_task(shutdown(loop, signal=signal))
 
 # Bind the interrupt handlers.
 signal.signal(signal.SIGINT, handle_interrupt)
