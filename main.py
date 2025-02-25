@@ -84,11 +84,30 @@ MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
+# Dictionary mapping known bot IDs to their names.
+bot_ids = {
+    "302050872383242240": "Disboard",
+    "1222548162741538938": "Discadia",
+    "493224033067003023": "DS.me",
+    "835255643157168168": "Unfocused",
+}
+
 # -------------------------
 # Supabase Client
 # -------------------------
 # Create a Supabase client instance to interact with the database.
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# -------------------------
+# Discord Bot Setup
+# -------------------------
+bot = interactions.Client(
+    intents=(
+        interactions.Intents.DEFAULT
+        | interactions.Intents.MESSAGE_CONTENT
+        | interactions.Intents.GUILD_MEMBERS
+    )
+)
 
 # -------------------------
 # "config" Table Helpers
@@ -294,25 +313,6 @@ def get_all_tracked_members():
     except Exception:
         logger.exception("Error retrieving all tracked members from Supabase.")
         return []
-
-# -------------------------
-# Discord Bot Setup
-# -------------------------
-bot = interactions.Client(
-    intents=(
-        interactions.Intents.DEFAULT
-        | interactions.Intents.MESSAGE_CONTENT
-        | interactions.Intents.GUILD_MEMBERS
-    )
-)
-
-# Dictionary mapping known bot IDs to their names.
-bot_ids = {
-    "302050872383242240": "Disboard",
-    "1222548162741538938": "Discadia",
-    "493224033067003023": "DS.me",
-    "835255643157168168": "Unfocused",
-}
 
 def get_role():
     """
