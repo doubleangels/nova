@@ -64,6 +64,7 @@ required_env_vars = {
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
+    "GUILD_ID": os.getenv("GUILD_ID"),
 }
 
 # Exit if any required environment variable is missing.
@@ -83,6 +84,7 @@ PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
+GUILD_ID = required_env_vars["GUILD_ID"]
 
 # Dictionary mapping known bot IDs to their names.
 bot_ids = {
@@ -637,7 +639,8 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
         elapsed_time = (now - join_time_dt).total_seconds()
 
         # Calculate the remaining time (in seconds) before the kick is due.
-        remaining_time = (mute_kick_time * 3600) - elapsed_time
+        #remaining_time = (mute_kick_time * 3600) - elapsed_time
+        remaining_time = 15
 
         # Retrieve the guild object using its ID.
         guild = bot.get_guild(guild_id)
@@ -649,13 +652,17 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
                 remove_tracked_member(member_id)
                 return
 
+            # Try to retrieve the member from the cache, then via API if necessary.
             member = guild.get_member(member_id)
             if not member:
-                logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
-                remove_tracked_member(member_id)
-                return
+                try:
+                    member = await guild.fetch_member(member_id)
+                except Exception as e:
+                    logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
+                    remove_tracked_member(member_id)
+                    return
+
             try:
-                # Attempt to kick the member immediately.
                 await member.kick(reason="User did not send a message in time.")
                 remove_tracked_member(member_id)
                 logger.info(f"Kicked {username} immediately due to bot restart.")
@@ -676,14 +683,13 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
                 member = guild.get_member(member_id)
                 if not member:
                     try:
-                        # Try fetching the member if not found in the current cache.
-                        member = await bot.fetch_member(guild_id, member_id)
+                        member = await guild.fetch_member(member_id)
+                        logger.debug(f"Member {username} fetched for scheduled kick.")
                     except Exception as e:
                         logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
                         remove_tracked_member(member_id)
                         return
                 try:
-                    # Attempt to kick the member and remove them from tracking.
                     await member.kick(reason="User did not send a message in time.")
                     remove_tracked_member(member_id)
                     logger.info(f"Kicked {username} after scheduled time.")
@@ -2625,69 +2631,6 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     except Exception as e:
         logger.error(f"Error in /warp command: {e}", exc_info=True)
         await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
-
-# -------------------------
-# TESTING
-# -------------------------
-
-@interactions.slash_command(
-    name="kick",
-    description="Kick a user from a specified guild using guild ID and member ID."
-)
-@interactions.slash_option(
-    name="guild_id",
-    description="The ID of the guild from which to kick the user.",
-    required=True,
-    opt_type=interactions.OptionType.STRING
-)
-@interactions.slash_option(
-    name="member_id",
-    description="The ID of the member to kick.",
-    required=True,
-    opt_type=interactions.OptionType.STRING
-)
-async def kick_user(ctx: interactions.ComponentContext, guild_id: str, member_id: str):
-    """
-    Kick a user from a specified guild using their member ID.
-
-    This command attempts to retrieve the guild and the member using the provided IDs.
-    If both are found, the member is kicked from the guild with a preset reason.
-
-    :param ctx: The context of the slash command.
-    :param guild_id: The ID of the guild from which to kick the user.
-    :param member_id: The ID of the member to kick.
-    """
-    try:
-        # Defer the response to allow time for processing.
-        await ctx.defer(ephemeral=True)
-        logger.debug(f"Received /kick command from {ctx.author.username} for guild_id={guild_id}, member_id={member_id}")
-
-        # Retrieve the guild using the provided guild ID.
-        guild = bot.get_guild(int(guild_id))
-        if not guild:
-            await ctx.send(f"❌ Guild with ID {guild_id} not found.", ephemeral=True)
-            return
-
-        # Attempt to retrieve the member from the guild.
-        try:
-            member = guild.get_member(int(member_id)) or await guild.fetch_member(int(member_id))
-            logger.debug(f"Found member: {member}")
-        except Exception as e:
-            logger.exception(f"Error fetching member with ID {member_id}: {e}")
-            await ctx.send(f"❌ Failed to fetch member with ID {member_id}.", ephemeral=True)
-            return
-
-        if not member:
-            await ctx.send(f"❌ Member with ID {member_id} not found in the guild.", ephemeral=True)
-            return
-
-        # Kick the member from the guild with a preset reason.
-        await member.kick(reason="Kicked via slash command.")
-        logger.info(f"Member {member.username} (ID: {member_id}) was kicked from guild {guild.name} (ID: {guild_id}).")
-        await ctx.send(f"✅ Member {member.username} has been kicked from the guild.")
-    except Exception as e:
-        logger.exception(f"Error in /kick command: {e}")
-        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
 # -------------------------
 # Graceful Shutdown Routine
