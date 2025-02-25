@@ -2716,3 +2716,66 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     except Exception as e:
         logger.error(f"Error in /warp command: {e}", exc_info=True)
         await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
+
+# -------------------------
+# TESTING
+# -------------------------
+
+@interactions.slash_command(
+    name="kick",
+    description="Kick a user from a specified guild using guild ID and member ID."
+)
+@interactions.slash_option(
+    name="guild_id",
+    description="The ID of the guild from which to kick the user.",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER
+)
+@interactions.slash_option(
+    name="member_id",
+    description="The ID of the member to kick.",
+    required=True,
+    opt_type=interactions.OptionType.INTEGER
+)
+async def kick_user(ctx: interactions.ComponentContext, guild_id: int, member_id: int):
+    """
+    Kick a user from a specified guild using their member ID.
+
+    This command attempts to retrieve the guild and the member using the provided IDs.
+    If both are found, the member is kicked from the guild with a preset reason.
+
+    :param ctx: The context of the slash command.
+    :param guild_id: The ID of the guild from which to kick the user.
+    :param member_id: The ID of the member to kick.
+    """
+    try:
+        # Defer the response to allow time for processing.
+        await ctx.defer(ephemeral=True)
+        logger.debug(f"Received /kick command from {ctx.author.username} for guild_id={guild_id}, member_id={member_id}")
+
+        # Retrieve the guild using the provided guild ID.
+        guild = bot.get_guild(guild_id)
+        if not guild:
+            await ctx.send(f"❌ Guild with ID {guild_id} not found.", ephemeral=True)
+            return
+
+        # Attempt to retrieve the member from the guild.
+        try:
+            member = guild.get_member(member_id) or await guild.fetch_member(member_id)
+        except Exception as e:
+            logger.exception(f"Error fetching member with ID {member_id}: {e}")
+            await ctx.send(f"❌ Failed to fetch member with ID {member_id}.", ephemeral=True)
+            return
+
+        if not member:
+            await ctx.send(f"❌ Member with ID {member_id} not found in the guild.", ephemeral=True)
+            return
+
+        # Kick the member from the guild with a preset reason.
+        await member.kick(reason="Kicked via slash command.")
+        logger.info(f"Member {member.username} (ID: {member_id}) was kicked from guild {guild.name} (ID: {guild_id}).")
+        await ctx.send(f"✅ Member {member.username} has been kicked from the guild.")
+    except Exception as e:
+        logger.exception(f"Error in /kick command: {e}")
+        await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
+
