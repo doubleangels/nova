@@ -1894,8 +1894,8 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
     required=False,
     opt_type=interactions.OptionType.STRING,
     choices=[
-        {"name": "Yes", "value": "yes"},
-        {"name": "No", "value": "no"}
+        {"name": "Yes", "value": True},
+        {"name": "No", "value": False}
     ]
 )
 async def weather_search(ctx: interactions.ComponentContext, place: str, private: str = "no"):
@@ -1977,10 +1977,7 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                         color=0xFF6E42
                     )
 
-                    # Add location field only if private is not set to "yes".
-                    if private.lower() != "yes":
-                        embed.add_field(name="🌍 Location", value=f"📍 {formatted_place}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
-
+                    embed.add_field(name="🌍 Location", value=f"📍 {formatted_place}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
                     embed.add_field(name="🌡 Temperature", value=f"{temp_c}°C / {temp_f}°F", inline=True)
                     embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C / {feels_like_f}°F", inline=True)
                     embed.add_field(name="💧 Humidity", value=f"{humidity}%", inline=True)
@@ -1996,7 +1993,10 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                     embed.set_footer(text="Powered by PirateWeather")
 
                     # Send the embed with weather details.
-                    await ctx.send(embed=embed)
+                    if private:
+                        await ctx.send(embed=embed, ephemeral=True)
+                    else:
+                        await ctx.send(embed=embed)
                 else:
                     logger.warning(f"PirateWeather API error: {response.status}")
                     await ctx.send(f"Error: PirateWeather API returned status code {response.status}.")
