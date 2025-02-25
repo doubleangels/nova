@@ -760,7 +760,7 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     """
     try:
         # Log the received message's author for debugging purposes
-        logger.debug(f"Message received from {event.message.author.username}")
+        logger.debug(f"Message received from {event.message.author.username}: {event.message.content}")
 
         # Process the message if it contains embeds
         if event.message.embeds:
