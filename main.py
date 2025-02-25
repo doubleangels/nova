@@ -64,7 +64,6 @@ required_env_vars = {
     "MAL_CLIENT_ID": os.getenv("MAL_CLIENT_ID"),
     "SUPABASE_URL": os.getenv("SUPABASE_URL"),
     "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
-    "GUILD_ID": os.getenv("GUILD_ID"),
 }
 
 # Exit if any required environment variable is missing.
@@ -84,7 +83,6 @@ PIRATEWEATHER_API_KEY = required_env_vars["PIRATEWEATHER_API_KEY"]
 MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
-GUILD_ID = required_env_vars["GUILD_ID"]
 
 # Dictionary mapping known bot IDs to their names.
 bot_ids = {
