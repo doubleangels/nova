@@ -890,97 +890,6 @@ async def on_member_remove(event: interactions.api.events.MemberRemove):
         # Catch and log any errors that occur during the removal process
         logger.exception(f"Error during on_member_remove event: {e}")
 
-
-# -------------------------
-# Graceful Shutdown Routine
-# -------------------------
-async def shutdown(loop, signal=None):
-    """
-    ! CANCEL OUTSTANDING TASKS AND FLUSH SENTRY LOGS BEFORE SHUTTING DOWN
-    * Cancels all running tasks except the current one.
-    * Waits for these tasks to finish, handling any exceptions that arise.
-    * Flushes Sentry logs to ensure any pending logs are sent before exit.
-    * Stops the event loop to complete the shutdown process.
-    ? PARAMETERS:
-    ? loop   - The current asyncio event loop.
-    ? signal - Optional signal that triggered the shutdown.
-    """
-    # Retrieve all tasks in the event loop except the current one.
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
-    
-    # Cancel each of the gathered tasks.
-    [task.cancel() for task in tasks]
-    
-    # Wait for all cancelled tasks to complete, capturing exceptions if any.
-    await asyncio.gather(*tasks, return_exceptions=True)
-    
-    # Flush Sentry logs with a timeout of 2 seconds to ensure all logs are sent.
-    sentry_sdk.flush(timeout=2)
-    
-    # Stop the event loop.
-    loop.stop()
-
-def handle_interrupt(signal, frame):
-    """
-    Synchronous signal handler that schedules the asynchronous shutdown.
-
-    When a SIGINT or SIGTERM is received, this function gets the current
-    event loop and schedules the shutdown coroutine.
-
-    :param signal: The signal received (e.g., SIGINT, SIGTERM).
-    :param frame: The current stack frame (unused but required by signal handler signature).
-    """
-    # Get the current event loop.
-    loop = asyncio.get_event_loop()
-    
-    # Schedule the shutdown coroutine on the event loop, passing the signal.
-    loop.create_task(shutdown(loop, signal=signal))
-
-# Register the signal handlers to catch SIGINT and SIGTERM for graceful shutdown.
-signal.signal(signal.SIGINT, handle_interrupt)
-signal.signal(signal.SIGTERM, handle_interrupt)
-
-# -------------------------
-# Main Startup Routine
-# -------------------------
-async def main():
-    """
-    ! MAIN ENTRY POINT TO START THE BOT
-    * Logs the startup process, attempts to start the bot asynchronously, and ensures a graceful shutdown by cleaning up tasks and flushing logs,
-    * regardless of whether an exception occurs during startup.
-    """
-    try:
-        # Log the beginning of the bot startup sequence.
-        logger.info("Starting the bot...")
-        
-        # Asynchronously start the bot using the provided TOKEN.
-        await bot.astart(TOKEN)
-    
-    except Exception:
-        # Log any exception that occurs during the bot startup.
-        logger.exception("Exception occurred during bot startup!")
-    
-    finally:
-        # Ensure a graceful shutdown by cleaning up tasks and flushing any pending logs.
-        await shutdown(asyncio.get_event_loop())
-
-
-# -------------------------
-# Entry Point
-# -------------------------
-if __name__ == "__main__":
-    try:
-        # Run the main asynchronous startup routine.
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        # Handle a keyboard interruption gracefully.
-        logger.info("KeyboardInterrupt received. Exiting.")
-    finally:
-        # Ensure all logging resources are flushed and shut down before exiting.
-        logging.shutdown()
-        # Exit the program with a success status code.
-        sys.exit(0)
-
 # -------------------------
 # reminder Slash Command
 # -------------------------
@@ -2779,3 +2688,92 @@ async def kick_user(ctx: interactions.ComponentContext, guild_id: int, member_id
         logger.exception(f"Error in /kick command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
+# -------------------------
+# Graceful Shutdown Routine
+# -------------------------
+async def shutdown(loop, signal=None):
+    """
+    ! CANCEL OUTSTANDING TASKS AND FLUSH SENTRY LOGS BEFORE SHUTTING DOWN
+    * Cancels all running tasks except the current one.
+    * Waits for these tasks to finish, handling any exceptions that arise.
+    * Flushes Sentry logs to ensure any pending logs are sent before exit.
+    * Stops the event loop to complete the shutdown process.
+    ? PARAMETERS:
+    ? loop   - The current asyncio event loop.
+    ? signal - Optional signal that triggered the shutdown.
+    """
+    # Retrieve all tasks in the event loop except the current one.
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
+    
+    # Cancel each of the gathered tasks.
+    [task.cancel() for task in tasks]
+    
+    # Wait for all cancelled tasks to complete, capturing exceptions if any.
+    await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Flush Sentry logs with a timeout of 2 seconds to ensure all logs are sent.
+    sentry_sdk.flush(timeout=2)
+    
+    # Stop the event loop.
+    loop.stop()
+
+def handle_interrupt(signal, frame):
+    """
+    Synchronous signal handler that schedules the asynchronous shutdown.
+
+    When a SIGINT or SIGTERM is received, this function gets the current
+    event loop and schedules the shutdown coroutine.
+
+    :param signal: The signal received (e.g., SIGINT, SIGTERM).
+    :param frame: The current stack frame (unused but required by signal handler signature).
+    """
+    # Get the current event loop.
+    loop = asyncio.get_event_loop()
+    
+    # Schedule the shutdown coroutine on the event loop, passing the signal.
+    loop.create_task(shutdown(loop, signal=signal))
+
+# Register the signal handlers to catch SIGINT and SIGTERM for graceful shutdown.
+signal.signal(signal.SIGINT, handle_interrupt)
+signal.signal(signal.SIGTERM, handle_interrupt)
+
+# -------------------------
+# Main Startup Routine
+# -------------------------
+async def main():
+    """
+    ! MAIN ENTRY POINT TO START THE BOT
+    * Logs the startup process, attempts to start the bot asynchronously, and ensures a graceful shutdown by cleaning up tasks and flushing logs,
+    * regardless of whether an exception occurs during startup.
+    """
+    try:
+        # Log the beginning of the bot startup sequence.
+        logger.info("Starting the bot...")
+        
+        # Asynchronously start the bot using the provided TOKEN.
+        await bot.astart(TOKEN)
+    
+    except Exception:
+        # Log any exception that occurs during the bot startup.
+        logger.exception("Exception occurred during bot startup!")
+    
+    finally:
+        # Ensure a graceful shutdown by cleaning up tasks and flushing any pending logs.
+        await shutdown(asyncio.get_event_loop())
+
+
+# -------------------------
+# Entry Point
+# -------------------------
+if __name__ == "__main__":
+    try:
+        # Run the main asynchronous startup routine.
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # Handle a keyboard interruption gracefully.
+        logger.info("KeyboardInterrupt received. Exiting.")
+    finally:
+        # Ensure all logging resources are flushed and shut down before exiting.
+        logging.shutdown()
+        # Exit the program with a success status code.
+        sys.exit(0)
