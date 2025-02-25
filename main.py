@@ -1804,7 +1804,7 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
     opt_type=interactions.OptionType.STRING
 )
 async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
-"""
+    """
     ! SEARCH WIKIPEDIA FOR A TOPIC
     * Defers the response, sends a request to Wikipedia with the provided query, processes the search results,
     * and constructs an embed with the article's title, snippet, and link.
