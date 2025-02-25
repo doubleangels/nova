@@ -109,8 +109,30 @@ bot = interactions.Client(
         interactions.Intents.DEFAULT
         | interactions.Intents.MESSAGE_CONTENT
         | interactions.Intents.GUILD_MEMBERS
-    )
+    ),
+    sync_commands=True,
 )
+
+# -------------------------
+# Graceful Shutdown Handling
+# -------------------------
+def handle_interrupt(signal_num, frame):
+    """
+    ! HANDLE SHUTDOWN SIGNALS AND GRACEFULLY CLOSE RESOURCES
+    * Handles shutdown signals and gracefully closes resources.
+    ? PARAMETERS:
+    ? signal_num - The signal number.
+    ? frame      - The current stack frame.
+    """
+    logger.info("Shutdown signal received. Cleaning up and shutting down gracefully.")
+    global aiohttp_session
+    if aiohttp_session:
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(aiohttp_session.close())
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handle_interrupt)
+signal.signal(signal.SIGTERM, handle_interrupt)
 
 # -------------------------
 # Database Table Helpers
@@ -2635,81 +2657,10 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
         await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
 
 # -------------------------
-# Graceful Shutdown Routine
+# Bot Startup
 # -------------------------
-async def shutdown(loop, signal=None):
-    """
-    ! CANCEL OUTSTANDING TASKS AND FLUSH SENTRY LOGS BEFORE SHUTTING DOWN
-    * Cancels all running tasks except the current one.
-    * Waits for these tasks to finish, handling any exceptions that arise.
-    * Flushes Sentry logs to ensure any pending logs are sent before exit.
-    * Stops the event loop to complete the shutdown process.
-    ? PARAMETERS:
-    ? loop   - The current asyncio event loop.
-    ? signal - Optional signal that triggered the shutdown.
-    """
-    global shutting_down
-    if shutting_down:
-        return
-    shutting_down = True
-
-    # Retrieve all tasks in the event loop except the current one.
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
-    
-    # Cancel each gathered task.
-    for task in tasks:
-        task.cancel()
-    
-    # Wait for all cancelled tasks to complete, capturing exceptions if any.
-    await asyncio.gather(*tasks, return_exceptions=True)
-    
-    # Flush Sentry logs with a timeout of 2 seconds.
-    sentry_sdk.flush(timeout=2)
-    
-    # Note: No need to call loop.stop() when using asyncio.run().
-    logger.info("Shutdown complete.")
-
-def handle_interrupt(sig, frame):
-    """
-    ! SYNCHRONOUS SIGNAL HANDLER THAT SCHEDULES THE ASYNCHRONOUS SHUTDOWN
-    * When a SIGINT or SIGTERM is received, this function retrieves the current event loop and schedules the shutdown coroutine.
-    ? PARAMETERS:
-    ? signal - The signal received (e.g., SIGINT, SIGTERM).
-    ? frame  - The current stack frame (unused but required by the signal handler signature).
-    """
-    loop = asyncio.get_event_loop()
-    loop.create_task(shutdown(loop, signal=sig))
-
-# Register the signal handlers to catch SIGINT and SIGTERM for graceful shutdown.
-signal.signal(signal.SIGINT, handle_interrupt)
-signal.signal(signal.SIGTERM, handle_interrupt)
-
-# -------------------------
-# Main Startup Routine
-# -------------------------
-async def main():
-    """
-    ! MAIN ENTRY POINT TO START THE BOT
-    * Logs the startup process, attempts to start the bot asynchronously, and ensures a graceful shutdown by cleaning up tasks and flushing logs,
-    * regardless of whether an exception occurs during startup.
-    """
-    try:
-        logger.info("Starting the bot...")
-        await bot.astart(TOKEN)
-    except Exception:
-        logger.exception("Exception occurred during bot startup!")
-    finally:
-        # Ensure a graceful shutdown.
-        await shutdown(asyncio.get_event_loop())
-
-# -------------------------
-# Entry Point
-# -------------------------
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("KeyboardInterrupt received. Exiting.")
-    finally:
-        logging.shutdown()
-        sys.exit(0)
+try:
+    bot.start(TOKEN)
+except Exception as e:
+    handle_exception(e, "Exception occurred during bot startup")
+    sys.exit(1)
