@@ -1890,24 +1890,25 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
 )
 @interactions.slash_option(
     name="private",
-    description="Keep your location private? (Yes/No)",
+    description="Send the response privately? (Yes/No)",
     required=False,
     opt_type=interactions.OptionType.STRING,
     choices=[
-        {"name": "Yes", "value": True},
-        {"name": "No", "value": False}
+        {"name": "Yes", "value": "yes"},
+        {"name": "No", "value": "no"}
     ]
 )
 async def weather_search(ctx: interactions.ComponentContext, place: str, private: str = "no"):
     """
     ! GET CURRENT WEATHER FOR A GIVEN PLACE
     * Retrieves coordinates using the `get_coordinates` helper, fetches current weather and a 3-day forecast
-    * from the PirateWeather API, and sends the results in an embed. If `private` is set to "Yes",
-    * location details (place name, latitude, longitude) are omitted.
+    * from the PirateWeather API, and sends the results in an embed. Regardless of the private option,
+    * location details (place name, latitude, longitude) are always shown; if `private` is set to "Yes",
+    * the response is sent ephemerally.
     ? PARAMETERS:
     ? ctx     - The context of the slash command.
     ? place   - The place name for which to retrieve the weather.
-    ? private - (Optional) "yes" to hide location details, "no" (default) to show them.
+    ? private - (Optional) "yes" to send the response privately (ephemeral), "no" (default) for a public reply.
     """
     try:
         # Defer the response to allow time for processing.
@@ -1977,6 +1978,7 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                         color=0xFF6E42
                     )
 
+                    # Always include location details in the embed.
                     embed.add_field(name="🌍 Location", value=f"📍 {formatted_place}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
                     embed.add_field(name="🌡 Temperature", value=f"{temp_c}°C / {temp_f}°F", inline=True)
                     embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C / {feels_like_f}°F", inline=True)
@@ -1992,8 +1994,8 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                     embed.add_field(name="📅 3-Day Forecast", value=forecast_text, inline=False)
                     embed.set_footer(text="Powered by PirateWeather")
 
-                    # Send the embed with weather details.
-                    if private:
+                    # Send the embed; if private is "yes", the response is ephemeral.
+                    if private.lower() == "yes":
                         await ctx.send(embed=embed, ephemeral=True)
                     else:
                         await ctx.send(embed=embed)
@@ -2398,7 +2400,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
 )
 @interactions.slash_option(
     name="private",
-    description="Keep the city names private? (Yes/No)",
+    description="Send the response privately? (Yes/No)",
     required=False,
     opt_type=interactions.OptionType.STRING,
     choices=[
@@ -2411,12 +2413,12 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
     ! CALCULATE TIME DIFFERENCE BETWEEN TWO CITIES
     * Uses Google Maps Time Zone API: Retrieves geographic coordinates via the Google Geocoding API,
     * then looks up timezone info via the Google Time Zone API, computes the absolute time difference,
-    * and outputs the result. City names are omitted if the private option is set to "Yes".
+    * and outputs the result.
     ? PARAMETERS:
     ? ctx    - The context of the slash command.
     ? place1 - The first city.
     ? place2 - The second city.
-    ? private - (Optional) "yes" to hide the city names in the output, "no" (default) to display them.
+    ? private - (Optional) "yes" to send the response privately (ephemeral), "no" (default) for a public reply.
     """
     try:
         # Defer the response to allow for processing time.
@@ -2465,17 +2467,17 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
         # Calculate the absolute time difference.
         time_diff = abs(offset1 - offset2)
 
-        # Format the output based on the privacy option.
-        if private.lower() == "yes":
-            message = f"⏳ The time difference is **{time_diff} hours**."
-        else:
-            message = (
-                f"⏳ The time difference between **{place1.title()}** and **{place2.title()}** "
-                f"is **{time_diff} hours**."
-            )
+        # Prepare the output message including the city names.
+        message = (
+            f"⏳ The time difference between **{place1.title()}** and **{place2.title()}** "
+            f"is **{time_diff} hours**."
+        )
+
+        # Determine if the response should be ephemeral.
+        ephemeral = True if private.lower() == "yes" else False
 
         # Send the result.
-        await ctx.send(message)
+        await ctx.send(message, ephemeral=ephemeral)
     except Exception as e:
         logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
