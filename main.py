@@ -1865,27 +1865,14 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
     required=True,
     opt_type=interactions.OptionType.STRING
 )
-@interactions.slash_option(
-    name="private",
-    description="Send the response privately? (Yes/No)",
-    required=False,
-    opt_type=interactions.OptionType.STRING,
-    choices=[
-        {"name": "Yes", "value": "yes"},
-        {"name": "No", "value": "no"}
-    ]
-)
-async def weather_search(ctx: interactions.ComponentContext, place: str, private: str = "no"):
+async def weather_search(ctx: interactions.ComponentContext, place: str):
     """
     ! GET CURRENT WEATHER FOR A GIVEN PLACE
     * Retrieves coordinates using the `get_coordinates` helper, fetches current weather and a 3-day forecast
-    * from the PirateWeather API, and sends the results in an embed. Regardless of the private option,
-    * location details (place name, latitude, longitude) are always shown; if `private` is set to "Yes",
-    * the response is sent ephemerally.
+    * from the PirateWeather API, and sends the results in an embed.
     ? PARAMETERS:
     ? ctx     - The context of the slash command.
     ? place   - The place name for which to retrieve the weather.
-    ? private - (Optional) "yes" to send the response privately (ephemeral), "no" (default) for a public reply.
     """
     try:
         await ctx.defer()
@@ -1961,8 +1948,7 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                     embed.add_field(name="📅 3-Day Forecast", value=forecast_text, inline=False)
                     embed.set_footer(text="Powered by PirateWeather")
 
-                    ephemeral = True if private.lower() == "yes" else False
-                    await ctx.send(embed=embed, ephemeral=ephemeral)
+                    await ctx.send(embed=embed)
                 else:
                     logger.warning(f"PirateWeather API error: {response.status}")
                     await ctx.send(f"Error: PirateWeather API returned status code {response.status}.")
@@ -2325,17 +2311,7 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
     required=True,
     opt_type=interactions.OptionType.STRING
 )
-@interactions.slash_option(
-    name="private",
-    description="Send the response privately? (Yes/No)",
-    required=False,
-    opt_type=interactions.OptionType.STRING,
-    choices=[
-        {"name": "Yes", "value": "yes"},
-        {"name": "No", "value": "no"}
-    ]
-)
-async def time_difference(ctx: interactions.ComponentContext, place1: str, place2: str, private: str = "no"):
+async def time_difference(ctx: interactions.ComponentContext, place1: str, place2: str):
     """
     ! CALCULATE TIME DIFFERENCE BETWEEN TWO CITIES
     * Uses Google Maps Time Zone API: Retrieves geographic coordinates via the Google Geocoding API,
@@ -2345,11 +2321,10 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
     ? ctx    - The context of the slash command.
     ? place1 - The first city.
     ? place2 - The second city.
-    ? private - (Optional) "yes" to send the response privately (ephemeral), "no" (default) for a public reply.
     """
     try:
         await ctx.defer()
-        logger.debug(f"/timedifference command received with place1: '{place1}', place2: '{place2}', private: '{private}'")
+        logger.debug(f"/timedifference command received with place1: '{place1}', place2: '{place2}'")
 
         async def get_utc_offset(city: str):
             geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
@@ -2387,8 +2362,7 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
             f"⏳ The time difference between **{place1.title()}** and **{place2.title()}** "
             f"is **{time_diff} hours**."
         )
-        ephemeral = True if private.lower() == "yes" else False
-        await ctx.send(message, ephemeral=ephemeral)
+        await ctx.send(message)
         logger.debug("Time difference calculation completed successfully.")
     except Exception as e:
         logger.exception(f"Error in /timedifference command: {e}")
