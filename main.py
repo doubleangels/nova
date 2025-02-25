@@ -126,10 +126,6 @@ def handle_interrupt(signal_num, frame):
     ? frame      - The current stack frame.
     """
     logger.info("Shutdown signal received. Cleaning up and shutting down gracefully.")
-    global aiohttp_session
-    if aiohttp_session:
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(aiohttp_session.close())
     sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_interrupt)
