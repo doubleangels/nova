@@ -105,6 +105,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # Discord Bot Setup
 # -------------------------
 bot = interactions.Client(
+    token = TOKEN,
     intents=(
         interactions.Intents.DEFAULT
         | interactions.Intents.MESSAGE_CONTENT
