@@ -2644,6 +2644,8 @@ async def test_schedule_mute_kick(member_id: int, username: str, join_time: str,
     ? mute_kick_time - The allowed time in hours before the member is kicked.
     ? guild_id       - The ID of the guild where the kick should occur.
     """
+    logger.debug(f"Testing kick of {member_id} from guild {guild_id}.")
+
     try:
         # Retrieve the guild object using its ID.
         guild = bot.get_guild(guild_id)
