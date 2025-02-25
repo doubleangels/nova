@@ -821,8 +821,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             try:
                 track_new_member(member.id, member.username, join_time)
                 logger.debug(f"Successfully tracked {member.username} for mute mode.")
-                #await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
-                await test_schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
+                await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
             except Exception as e:
                 logger.error(f"Failed to track {member.username}: {e}")
 
@@ -2629,75 +2628,6 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     except Exception as e:
         logger.error(f"Error in /warp command: {e}", exc_info=True)
         await ctx.send("⚠️ An error occurred while processing the image. Please try again later.", ephemeral=True)
-
-async def test_schedule_mute_kick(member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
-    """
-    ! SCHEDULE A KICK FOR A MEMBER UNDER MUTE MODE
-    * Calculates elapsed time since the member joined and determines the remaining time before a kick should occur.
-    * If the remaining time is ≤ 0, attempts an immediate kick; otherwise, schedules a delayed kick using an asynchronous task.
-    ? PARAMETERS:
-    ? member_id      - The unique ID of the member.
-    ? username       - The member's username.
-    ? join_time      - The time the member joined (ISO-formatted string).
-    ? mute_kick_time - The allowed time in hours before the member is kicked.
-    ? guild_id       - The ID of the guild where the kick should occur.
-    """
-    logger.debug(f"Testing kick of {member_id} from guild {guild_id}.")
-
-    try:
-        # Retrieve the guild object using its ID.
-        guild = bot.get_guild(guild_id)
-
-        if not guild:
-            logger.info(f"Guild {guild_id} not found. Removing {username} from tracking.")
-            remove_tracked_member(member_id)
-            return
-
-        # Try to retrieve the member from the cache, then via API if necessary.
-        member = guild.get_member(member_id)
-        if not member:
-            try:
-                member = await guild.fetch_member(member_id)
-            except Exception as e:
-                logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
-                remove_tracked_member(member_id)
-                return
-
-        try:
-            await member.kick(reason="User did not send a message in time.")
-            remove_tracked_member(member_id)
-            logger.info(f"Kicked {username} immediately due to bot restart.")
-        except Exception as e:
-            logger.warning(f"Failed to kick {username} immediately after bot restart: {e}")
-        return
-
-        await time.sleep(15)
-
-        # Verify that the member is still tracked before proceeding.
-        if get_tracked_member(member_id):
-            guild = bot.get_guild(guild_id)
-            if not guild:
-                logger.warning(f"Guild {guild_id} not found. Cannot kick {username}.")
-                return
-            member = guild.get_member(member_id)
-            if not member:
-                try:
-                    member = await guild.fetch_member(member_id)
-                    logger.debug(f"Member {username} fetched for scheduled kick.")
-                except Exception as e:
-                    logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
-                    remove_tracked_member(member_id)
-                    return
-            try:
-                await member.kick(reason="User did not send a message in time.")
-                remove_tracked_member(member_id)
-                logger.info(f"Kicked {username} after scheduled time.")
-            except Exception as e:
-                logger.warning(f"Failed to kick {username} after scheduled time: {e}")
-
-    except Exception as e:
-        logger.exception(f"Error scheduling mute mode kick for {username}: {e}")
-
 
 # -------------------------
 # Graceful Shutdown Routine
