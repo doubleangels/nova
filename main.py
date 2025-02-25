@@ -110,291 +110,6 @@ bot = interactions.Client(
 )
 
 # -------------------------
-# Event Listeners
-# -------------------------
-@interactions.listen()
-async def on_ready():
-    """
-    ! EVENT HANDLER CALLED WHEN THE BOT IS READY
-    * Sets up bot presence and activity, initializes the reminders table,
-    * and reschedules the Disboard reminder if a valid role is present.
-    """
-    logger.info("Bot is online! Setting up status and activity.")
-
-    # Set bot presence and activity
-    try:
-        await bot.change_presence(
-            status=interactions.Status.ONLINE,
-            activity=interactions.Activity(
-                name="for ways to assist!",
-                type=interactions.ActivityType.WATCHING,
-            ),
-        )
-        logger.debug("Bot presence and activity set.")
-    except Exception as e:
-        logger.exception(f"Failed to set bot presence: {e}")
-
-    # Initialize the reminders table
-    try:
-        initialize_reminders_table()
-        logger.debug("Reminders table initialized.")
-    except Exception as e:
-        logger.exception(f"Error initializing reminders table: {e}")
-
-    # Reschedule only the Disboard reminder based on a specific role
-    try:
-        role = get_role()
-        if not role:
-            logger.warning("No role set for reminders; skipping Disboard reminder reschedule.")
-        else:
-            try:
-                logger.debug("Attempting to reschedule Disboard reminder.")
-                await reschedule_reminder("disboard", role)
-                logger.debug("Disboard reminder successfully rescheduled.")
-            except Exception as inner_e:
-                logger.exception(f"Failed to reschedule Disboard reminder: {inner_e}")
-    except Exception as e:
-        logger.exception(f"Error during Disboard reminder rescheduling: {e}")
-
-    logger.info("Bot is ready!")
-
-@interactions.listen()
-async def on_message_create(event: interactions.api.events.MessageCreate):
-    """
-    ! EVENT HANDLER TRIGGERED WHEN A NEW MESSAGE IS CREATED
-    * Processes incoming messages to check if an embed contains "Bump done"
-    * and triggers the Disboard reminder if found.
-    """
-    try:
-        # Log the received message's author for debugging purposes
-        logger.debug(f"Message received from {event.message.author.username}")
-
-        # Process the message if it contains embeds
-        if event.message.embeds:
-            try:
-                embed = event.message.embeds[0]
-                embed_description = embed.description or ""
-                logger.debug(f"Embed detected: {embed_description}")
-                if "Bump done" in embed_description:
-                    logger.debug("Triggering Disboard reminder.")
-                    await disboard()
-            except Exception as e:
-                logger.exception(f"Error processing embed content: {e}")
-    except Exception as e:
-        logger.exception(f"Error processing on_message_create event: {e}")
-
-@interactions.listen()
-async def on_member_join(event: interactions.api.events.MemberAdd):
-    """
-    ! EVENT HANDLER TRIGGERED WHEN A NEW MEMBER JOINS THE GUILD
-    * Retrieves configuration settings for backup mode, troll mode, and mute mode.
-    * Calculates the new member's account age and logs join details.
-    * Skips processing if the member is a bot.
-    * Kicks the member if troll mode is enabled and their account is too new.
-    * If mute mode is enabled, tracks the member and schedules a mute kick.
-    * If backup mode is fully configured, sends a welcome message in a specified channel and assigns a backup role.
-    * Each major operation is wrapped with error handling to ensure that any exception does not stop the entire join process.
-    """
-    try:
-        # Retrieve configuration settings
-        assign_role = get_value("backup_mode_enabled") == "true"
-        role_id = int(get_value("backup_mode_id") or 0)
-        channel_id = int(get_value("backup_mode_channel") or 0)
-        kick_users = get_value("troll_mode") == "true"
-        kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
-        mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
-        mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
-
-        # Get member and guild objects from the event
-        member = event.member
-        guild = event.guild
-
-        # Calculate the member's account age in days
-        account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
-        logger.debug(f"New member joined: {member.username} in guild {guild.name} | Account Age: {account_age.days} days")
-
-        # Skip processing for bots
-        if member.bot:
-            logger.debug(f"Skipping mute tracking for bot {member.username}")
-            return
-
-        # Kick new members if troll mode is enabled and the account is too new
-        if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
-            await member.kick(reason="Account is too new!")
-            logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
-            return
-
-        # If mute mode is enabled, track the member and schedule a mute kick
-        if mute_mode_enabled:
-            join_time = datetime.datetime.now(datetime.UTC).isoformat()
-            logger.debug(f"Attempting to track {member.username} for mute mode.")
-            try:
-                track_new_member(member.id, member.username, join_time)
-                logger.debug(f"Successfully tracked {member.username} for mute mode.")
-                await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
-            except Exception as e:
-                logger.error(f"Failed to track {member.username}: {e}")
-
-        # Check if backup mode is fully configured before sending welcome messages and assigning roles
-        if not (assign_role and role_id and channel_id):
-            logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
-            return
-
-        # Retrieve the designated channel for welcome messages
-        channel = guild.get_channel(int(channel_id)) if channel_id else None
-        if not channel:
-            logger.warning(f"Channel with ID {channel_id} not found. Welcome message skipped.")
-            return
-
-        # Create the welcome embed with instructions and details for the new member
-        embed = interactions.Embed(
-            title=f"🎉 Welcome {member.username}!",
-            description=(
-                "• **How old are you?**\n"
-                "• Where are you from?\n"
-                "• What do you do in your free time?\n"
-                "• What is your address?\n"
-                "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
-                "• What's your blood type?\n"
-                "• What's your shoe size?\n"
-                "• Can we donate your organs to ... \"charity\"?\n"
-                "\n"
-                "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**\n"
-            ),
-            color=0xCD41FF,
-        )
-        # Send the welcome message in the designated channel
-        await channel.send(embeds=[embed])
-        logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
-
-        # Retrieve the role object from the guild and assign it to the new member
-        role_obj = guild.get_role(int(role_id)) if role_id else None
-        if role_obj:
-            await member.add_role(role_obj)
-            logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
-        else:
-            logger.warning(f"Role with ID {role_id} not found in the guild. Role assignment skipped.")
-
-    except Exception as e:
-        logger.exception(f"Error during on_member_join event: {e}")
-
-@interactions.listen()
-async def on_member_remove(event: interactions.api.events.MemberRemove):
-    """
-    ! EVENT HANDLER TRIGGERED WHEN A MEMBER LEAVES THE GUILD
-    * Logs the member's departure, removes the member from mute tracking, and ensures that the removal process is logged for debugging.
-    * Exceptions are caught and logged to avoid interruption of the event flow.
-    """
-    try:
-        # Retrieve the member and guild information from the event
-        member = event.member
-        guild = event.guild
-
-        # Log the member's departure with details for debugging
-        logger.debug(f"Member left: {member.username} from Guild {guild.name}. Removing from mute tracking.")
-
-        # Remove the member from the mute tracking system
-        remove_tracked_member(member.id)
-
-        # Log successful removal for further traceability
-        logger.debug(f"Successfully processed removal for {member.username}.")
-
-    except Exception as e:
-        # Catch and log any errors that occur during the removal process
-        logger.exception(f"Error during on_member_remove event: {e}")
-
-
-# -------------------------
-# Graceful Shutdown Routine
-# -------------------------
-async def shutdown(loop, signal=None):
-    """
-    ! CANCEL OUTSTANDING TASKS AND FLUSH SENTRY LOGS BEFORE SHUTTING DOWN
-    * Cancels all running tasks except the current one.
-    * Waits for these tasks to finish, handling any exceptions that arise.
-    * Flushes Sentry logs to ensure any pending logs are sent before exit.
-    * Stops the event loop to complete the shutdown process.
-    ? PARAMETERS:
-    ? loop   - The current asyncio event loop.
-    ? signal - Optional signal that triggered the shutdown.
-    """
-    # Retrieve all tasks in the event loop except the current one.
-    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
-    
-    # Cancel each of the gathered tasks.
-    [task.cancel() for task in tasks]
-    
-    # Wait for all cancelled tasks to complete, capturing exceptions if any.
-    await asyncio.gather(*tasks, return_exceptions=True)
-    
-    # Flush Sentry logs with a timeout of 2 seconds to ensure all logs are sent.
-    sentry_sdk.flush(timeout=2)
-    
-    # Stop the event loop.
-    loop.stop()
-
-def handle_interrupt(signal, frame):
-    """
-    Synchronous signal handler that schedules the asynchronous shutdown.
-
-    When a SIGINT or SIGTERM is received, this function gets the current
-    event loop and schedules the shutdown coroutine.
-
-    :param signal: The signal received (e.g., SIGINT, SIGTERM).
-    :param frame: The current stack frame (unused but required by signal handler signature).
-    """
-    # Get the current event loop.
-    loop = asyncio.get_event_loop()
-    
-    # Schedule the shutdown coroutine on the event loop, passing the signal.
-    loop.create_task(shutdown(loop, signal=signal))
-
-# Register the signal handlers to catch SIGINT and SIGTERM for graceful shutdown.
-signal.signal(signal.SIGINT, handle_interrupt)
-signal.signal(signal.SIGTERM, handle_interrupt)
-
-# -------------------------
-# Main Startup Routine
-# -------------------------
-async def main():
-    """
-    ! MAIN ENTRY POINT TO START THE BOT
-    * Logs the startup process, attempts to start the bot asynchronously, and ensures a graceful shutdown by cleaning up tasks and flushing logs,
-    * regardless of whether an exception occurs during startup.
-    """
-    try:
-        # Log the beginning of the bot startup sequence.
-        logger.info("Starting the bot...")
-        
-        # Asynchronously start the bot using the provided TOKEN.
-        await bot.astart(TOKEN)
-    
-    except Exception:
-        # Log any exception that occurs during the bot startup.
-        logger.exception("Exception occurred during bot startup!")
-    
-    finally:
-        # Ensure a graceful shutdown by cleaning up tasks and flushing any pending logs.
-        await shutdown(asyncio.get_event_loop())
-
-
-# -------------------------
-# Entry Point
-# -------------------------
-if __name__ == "__main__":
-    try:
-        # Run the main asynchronous startup routine.
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        # Handle a keyboard interruption gracefully.
-        logger.info("KeyboardInterrupt received. Exiting.")
-    finally:
-        # Ensure all logging resources are flushed and shut down before exiting.
-        logging.shutdown()
-        # Exit the program with a success status code.
-        sys.exit(0)
-
-# -------------------------
 # Database Table Helpers
 # -------------------------
 
@@ -980,6 +695,291 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
         logger.debug(f"Scheduled kick for {username} in {remaining_time:.2f} seconds.")
     except Exception as e:
         logger.exception(f"Error scheduling mute mode kick for {username}: {e}")
+
+# -------------------------
+# Event Listeners
+# -------------------------
+@interactions.listen()
+async def on_ready():
+    """
+    ! EVENT HANDLER CALLED WHEN THE BOT IS READY
+    * Sets up bot presence and activity, initializes the reminders table,
+    * and reschedules the Disboard reminder if a valid role is present.
+    """
+    logger.info("Bot is online! Setting up status and activity.")
+
+    # Set bot presence and activity
+    try:
+        await bot.change_presence(
+            status=interactions.Status.ONLINE,
+            activity=interactions.Activity(
+                name="for ways to assist!",
+                type=interactions.ActivityType.WATCHING,
+            ),
+        )
+        logger.debug("Bot presence and activity set.")
+    except Exception as e:
+        logger.exception(f"Failed to set bot presence: {e}")
+
+    # Initialize the reminders table
+    try:
+        initialize_reminders_table()
+        logger.debug("Reminders table initialized.")
+    except Exception as e:
+        logger.exception(f"Error initializing reminders table: {e}")
+
+    # Reschedule only the Disboard reminder based on a specific role
+    try:
+        role = get_role()
+        if not role:
+            logger.warning("No role set for reminders; skipping Disboard reminder reschedule.")
+        else:
+            try:
+                logger.debug("Attempting to reschedule Disboard reminder.")
+                await reschedule_reminder("disboard", role)
+                logger.debug("Disboard reminder successfully rescheduled.")
+            except Exception as inner_e:
+                logger.exception(f"Failed to reschedule Disboard reminder: {inner_e}")
+    except Exception as e:
+        logger.exception(f"Error during Disboard reminder rescheduling: {e}")
+
+    logger.info("Bot is ready!")
+
+@interactions.listen()
+async def on_message_create(event: interactions.api.events.MessageCreate):
+    """
+    ! EVENT HANDLER TRIGGERED WHEN A NEW MESSAGE IS CREATED
+    * Processes incoming messages to check if an embed contains "Bump done"
+    * and triggers the Disboard reminder if found.
+    """
+    try:
+        # Log the received message's author for debugging purposes
+        logger.debug(f"Message received from {event.message.author.username}")
+
+        # Process the message if it contains embeds
+        if event.message.embeds:
+            try:
+                embed = event.message.embeds[0]
+                embed_description = embed.description or ""
+                logger.debug(f"Embed detected: {embed_description}")
+                if "Bump done" in embed_description:
+                    logger.debug("Triggering Disboard reminder.")
+                    await disboard()
+            except Exception as e:
+                logger.exception(f"Error processing embed content: {e}")
+    except Exception as e:
+        logger.exception(f"Error processing on_message_create event: {e}")
+
+@interactions.listen()
+async def on_member_join(event: interactions.api.events.MemberAdd):
+    """
+    ! EVENT HANDLER TRIGGERED WHEN A NEW MEMBER JOINS THE GUILD
+    * Retrieves configuration settings for backup mode, troll mode, and mute mode.
+    * Calculates the new member's account age and logs join details.
+    * Skips processing if the member is a bot.
+    * Kicks the member if troll mode is enabled and their account is too new.
+    * If mute mode is enabled, tracks the member and schedules a mute kick.
+    * If backup mode is fully configured, sends a welcome message in a specified channel and assigns a backup role.
+    * Each major operation is wrapped with error handling to ensure that any exception does not stop the entire join process.
+    """
+    try:
+        # Retrieve configuration settings
+        assign_role = get_value("backup_mode_enabled") == "true"
+        role_id = int(get_value("backup_mode_id") or 0)
+        channel_id = int(get_value("backup_mode_channel") or 0)
+        kick_users = get_value("troll_mode") == "true"
+        kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
+        mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
+        mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
+
+        # Get member and guild objects from the event
+        member = event.member
+        guild = event.guild
+
+        # Calculate the member's account age in days
+        account_age = datetime.datetime.now(datetime.timezone.utc) - member.created_at
+        logger.debug(f"New member joined: {member.username} in guild {guild.name} | Account Age: {account_age.days} days")
+
+        # Skip processing for bots
+        if member.bot:
+            logger.debug(f"Skipping mute tracking for bot {member.username}")
+            return
+
+        # Kick new members if troll mode is enabled and the account is too new
+        if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
+            await member.kick(reason="Account is too new!")
+            logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
+            return
+
+        # If mute mode is enabled, track the member and schedule a mute kick
+        if mute_mode_enabled:
+            join_time = datetime.datetime.now(datetime.UTC).isoformat()
+            logger.debug(f"Attempting to track {member.username} for mute mode.")
+            try:
+                track_new_member(member.id, member.username, join_time)
+                logger.debug(f"Successfully tracked {member.username} for mute mode.")
+                await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
+            except Exception as e:
+                logger.error(f"Failed to track {member.username}: {e}")
+
+        # Check if backup mode is fully configured before sending welcome messages and assigning roles
+        if not (assign_role and role_id and channel_id):
+            logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
+            return
+
+        # Retrieve the designated channel for welcome messages
+        channel = guild.get_channel(int(channel_id)) if channel_id else None
+        if not channel:
+            logger.warning(f"Channel with ID {channel_id} not found. Welcome message skipped.")
+            return
+
+        # Create the welcome embed with instructions and details for the new member
+        embed = interactions.Embed(
+            title=f"🎉 Welcome {member.username}!",
+            description=(
+                "• **How old are you?**\n"
+                "• Where are you from?\n"
+                "• What do you do in your free time?\n"
+                "• What is your address?\n"
+                "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
+                "• What's your blood type?\n"
+                "• What's your shoe size?\n"
+                "• Can we donate your organs to ... \"charity\"?\n"
+                "\n"
+                "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**\n"
+            ),
+            color=0xCD41FF,
+        )
+        # Send the welcome message in the designated channel
+        await channel.send(embeds=[embed])
+        logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
+
+        # Retrieve the role object from the guild and assign it to the new member
+        role_obj = guild.get_role(int(role_id)) if role_id else None
+        if role_obj:
+            await member.add_role(role_obj)
+            logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
+        else:
+            logger.warning(f"Role with ID {role_id} not found in the guild. Role assignment skipped.")
+
+    except Exception as e:
+        logger.exception(f"Error during on_member_join event: {e}")
+
+@interactions.listen()
+async def on_member_remove(event: interactions.api.events.MemberRemove):
+    """
+    ! EVENT HANDLER TRIGGERED WHEN A MEMBER LEAVES THE GUILD
+    * Logs the member's departure, removes the member from mute tracking, and ensures that the removal process is logged for debugging.
+    * Exceptions are caught and logged to avoid interruption of the event flow.
+    """
+    try:
+        # Retrieve the member and guild information from the event
+        member = event.member
+        guild = event.guild
+
+        # Log the member's departure with details for debugging
+        logger.debug(f"Member left: {member.username} from Guild {guild.name}. Removing from mute tracking.")
+
+        # Remove the member from the mute tracking system
+        remove_tracked_member(member.id)
+
+        # Log successful removal for further traceability
+        logger.debug(f"Successfully processed removal for {member.username}.")
+
+    except Exception as e:
+        # Catch and log any errors that occur during the removal process
+        logger.exception(f"Error during on_member_remove event: {e}")
+
+
+# -------------------------
+# Graceful Shutdown Routine
+# -------------------------
+async def shutdown(loop, signal=None):
+    """
+    ! CANCEL OUTSTANDING TASKS AND FLUSH SENTRY LOGS BEFORE SHUTTING DOWN
+    * Cancels all running tasks except the current one.
+    * Waits for these tasks to finish, handling any exceptions that arise.
+    * Flushes Sentry logs to ensure any pending logs are sent before exit.
+    * Stops the event loop to complete the shutdown process.
+    ? PARAMETERS:
+    ? loop   - The current asyncio event loop.
+    ? signal - Optional signal that triggered the shutdown.
+    """
+    # Retrieve all tasks in the event loop except the current one.
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
+    
+    # Cancel each of the gathered tasks.
+    [task.cancel() for task in tasks]
+    
+    # Wait for all cancelled tasks to complete, capturing exceptions if any.
+    await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Flush Sentry logs with a timeout of 2 seconds to ensure all logs are sent.
+    sentry_sdk.flush(timeout=2)
+    
+    # Stop the event loop.
+    loop.stop()
+
+def handle_interrupt(signal, frame):
+    """
+    Synchronous signal handler that schedules the asynchronous shutdown.
+
+    When a SIGINT or SIGTERM is received, this function gets the current
+    event loop and schedules the shutdown coroutine.
+
+    :param signal: The signal received (e.g., SIGINT, SIGTERM).
+    :param frame: The current stack frame (unused but required by signal handler signature).
+    """
+    # Get the current event loop.
+    loop = asyncio.get_event_loop()
+    
+    # Schedule the shutdown coroutine on the event loop, passing the signal.
+    loop.create_task(shutdown(loop, signal=signal))
+
+# Register the signal handlers to catch SIGINT and SIGTERM for graceful shutdown.
+signal.signal(signal.SIGINT, handle_interrupt)
+signal.signal(signal.SIGTERM, handle_interrupt)
+
+# -------------------------
+# Main Startup Routine
+# -------------------------
+async def main():
+    """
+    ! MAIN ENTRY POINT TO START THE BOT
+    * Logs the startup process, attempts to start the bot asynchronously, and ensures a graceful shutdown by cleaning up tasks and flushing logs,
+    * regardless of whether an exception occurs during startup.
+    """
+    try:
+        # Log the beginning of the bot startup sequence.
+        logger.info("Starting the bot...")
+        
+        # Asynchronously start the bot using the provided TOKEN.
+        await bot.astart(TOKEN)
+    
+    except Exception:
+        # Log any exception that occurs during the bot startup.
+        logger.exception("Exception occurred during bot startup!")
+    
+    finally:
+        # Ensure a graceful shutdown by cleaning up tasks and flushing any pending logs.
+        await shutdown(asyncio.get_event_loop())
+
+
+# -------------------------
+# Entry Point
+# -------------------------
+if __name__ == "__main__":
+    try:
+        # Run the main asynchronous startup routine.
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        # Handle a keyboard interruption gracefully.
+        logger.info("KeyboardInterrupt received. Exiting.")
+    finally:
+        # Ensure all logging resources are flushed and shut down before exiting.
+        logging.shutdown()
+        # Exit the program with a success status code.
+        sys.exit(0)
 
 # -------------------------
 # reminder Slash Command
