@@ -110,560 +110,6 @@ bot = interactions.Client(
 )
 
 # -------------------------
-# "config" Table Helpers
-# -------------------------
-def get_value(key: str):
-    """
-    Retrieve a JSON value from the 'config' table in Supabase for the provided key.
-    
-    :param key: The key to look up.
-    :return: The parsed JSON value, or None if not found or on error.
-    """
-    try:
-        response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
-        # Check if response is valid and contains data
-        if response is None:
-            logger.warning(f"Supabase query for key '{key}' returned None.")
-            return None
-        if response.data and isinstance(response.data, dict) and "value" in response.data:
-            return json.loads(response.data["value"])
-        logger.warning(f"Key '{key}' not found in Supabase or data missing.")
-        return None
-    except Exception:
-        logger.exception(f"Error getting key '{key}' in Supabase.")
-        return None
-
-def set_value(key: str, value):
-    """
-    Insert or update a JSON value in the 'config' table in Supabase.
-    
-    :param key: The key to set.
-    :param value: The value to serialize and store.
-    """
-    try:
-        # Serialize the value to JSON format
-        serialized = json.dumps(value)
-        existing = get_value(key)
-        if existing is None:
-            supabase.table("config").insert({"id": key, "value": serialized}).execute()
-            logger.debug(f"Inserted new config entry for key '{key}'.")
-        else:
-            supabase.table("config").update({"value": serialized}).eq("id", key).execute()
-            logger.debug(f"Updated config entry for key '{key}'.")
-    except Exception:
-        logger.exception(f"Error setting key '{key}' in Supabase.")
-
-def delete_value(key: str):
-    """
-    Delete a key/value pair from the 'config' table in Supabase.
-    
-    :param key: The key to delete.
-    """
-    try:
-        supabase.table("config").delete().eq("id", key).execute()
-        logger.debug(f"Deleted config entry for key '{key}'.")
-    except Exception:
-        logger.exception(f"Error deleting key '{key}' in Supabase.")
-
-# -------------------------
-# "reminders" Table Helpers
-# -------------------------
-def get_reminder_data(key: str):
-    """
-    Retrieve reminder data from the 'reminders' table in Supabase for the given key.
-    
-    :param key: The reminder key (e.g., "disboard").
-    :return: A dictionary with reminder data or None if not found.
-    """
-    try:
-        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id").eq("key", key).maybe_single().execute()
-        if response and response.data:
-            return {
-                "state": response.data.get("state", False),
-                "scheduled_time": response.data.get("scheduled_time"),
-                "reminder_id": response.data.get("reminder_id")
-            }
-        return None
-    except Exception:
-        logger.exception(f"Error getting reminder data for key '{key}'.")
-        return None
-
-def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_id: str):
-    """
-    Insert or update reminder data in the 'reminders' table.
-    
-    :param key: The reminder key.
-    :param state: Whether the reminder is active.
-    :param scheduled_time: The ISO-formatted scheduled time.
-    :param reminder_id: The unique reminder identifier.
-    """
-    try:
-        # Prepare data for insertion or update
-        serialized_time = scheduled_time
-        existing = get_reminder_data(key)
-        data = {
-            "key": key,
-            "state": state,
-            "scheduled_time": serialized_time,
-            "reminder_id": reminder_id
-        }
-
-        if existing is None:
-            supabase.table("reminders").insert(data).execute()
-            logger.debug(f"Inserted new reminder entry for key '{key}'.")
-        else:
-            supabase.table("reminders").update(data).eq("key", key).execute()
-            logger.debug(f"Updated reminder entry for key '{key}'.")
-    except Exception:
-        logger.exception(f"Error setting reminder data for key '{key}'.")
-
-def delete_reminder_data(key: str):
-    """
-    Delete reminder data for the given key from the 'reminders' table.
-    
-    :param key: The reminder key to delete.
-    """
-    try:
-        supabase.table("reminders").delete().eq("key", key).execute()
-        logger.debug(f"Deleted reminder data for key '{key}'.")
-    except Exception:
-        logger.exception(f"Error deleting reminder data for key '{key}'.")
-
-def initialize_reminders_table():
-    """
-    Ensure that default reminder keys exist in the 'reminders' table.
-    """
-    default_keys = ["disboard", "discadia", "dsme", "unfocused"]
-    for key in default_keys:
-        existing = get_reminder_data(key)
-        if existing is None:
-            set_reminder_data(key, False, None, None)
-            logger.debug(f"Inserted default reminder_data for key: {key}")
-
-# ----------------------
-# "tracked_members" Table Helpers
-# ----------------------
-def track_new_member(member_id: int, username: str, join_time: str):
-    """
-    Insert or update a tracked member in the 'tracked_members' table.
-    
-    :param member_id: The Discord user ID.
-    :param username: The user's name.
-    :param join_time: The time the user joined (ISO format).
-    """
-    try:
-        response = supabase.table("tracked_members").upsert({
-            "member_id": member_id,
-            "join_time": join_time,
-            "username": username
-        }).execute()
-
-        if response:
-            logger.debug(f"Tracked new member: {username} at {join_time}.")
-        else:
-            logger.warning(f"Failed to track {username} - No response from Supabase.")
-    except Exception as e:
-        logger.exception(f"Error tracking new member {username}: {e}")
-
-def get_tracked_member(member_id: int):
-    """
-    Retrieve tracked member data from the 'tracked_members' table.
-    
-    :param member_id: The Discord user ID.
-    :return: The tracked member data or None if not found.
-    """
-    try:
-        response = supabase.table("tracked_members").select("*").eq("member_id", member_id).maybe_single().execute()
-        if response and response.data:
-            return response.data
-        return None
-    except Exception:
-        logger.exception(f"Error retrieving tracked data for a member.")
-        return None
-
-def remove_tracked_member(member_id: int):
-    """
-    Remove a tracked member from the 'tracked_members' table.
-    
-    :param member_id: The Discord user ID.
-    """
-    try:
-        response = supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
-        resp_dict = response.dict()
-        if resp_dict.get("error"):
-            logger.error(f"Failed to remove tracked member.")
-        elif not resp_dict.get("data"):
-            logger.debug(f"No tracked member found. Nothing to remove.")
-        else:
-            logger.debug(f"Removed tracked member.")
-    except Exception as e:
-        logger.exception(f"Error removing tracked member: {e}")
-
-def get_all_tracked_members():
-    """
-    Retrieve all tracked members from the 'tracked_members' table.
-    
-    :return: A list of tracked member records.
-    """
-    try:
-        response = supabase.table("tracked_members").select("member_id", "username", "join_time").execute()
-        if response and response.data:
-            return response.data
-        return []
-    except Exception:
-        logger.exception("Error retrieving all tracked members from Supabase.")
-        return []
-
-def get_role():
-    """
-    Retrieve the role ID stored in the 'role' key from Supabase.
-    This function may be expanded to resolve the role name.
-    
-    :return: The role identifier, or None if not set.
-    """
-    try:
-        role = get_value("role")
-        if not role:
-            logger.warning("No role has been set up for reminders.")
-            return None
-        logger.debug(f"Retrieved reminder role: {role}")
-        return role
-    except Exception as e:
-        logger.exception(f"Error while fetching the reminder role: {e}")
-        return None
-
-async def get_channel(channel_key):
-    """
-    Fetch the channel object from the stored channel ID in Supabase.
-    
-    :param channel_key: The key in Supabase storing the channel ID.
-    :return: The channel object if found, otherwise None.
-    """
-    try:
-        channel_id = get_value(channel_key)
-        if not channel_id:
-            logger.warning(f"No channel has been set for '{channel_key}'.")
-            return None
-        # Retrieve channel from the bot's cache
-        channel_obj = bot.get_channel(channel_id)
-        if channel_obj:
-            logger.debug(f"Retrieved reminder channel: {channel_obj.name}")
-        else:
-            logger.debug("Channel not found.")
-        return channel_obj
-    except Exception as e:
-        logger.exception(f"Error while fetching the reminder channel: {e}")
-        return None
-
-def calculate_remaining_time(scheduled_time):
-    """
-    Calculate the remaining time until the scheduled reminder.
-    
-    :param scheduled_time: The ISO-formatted scheduled time.
-    :return: A string representing the remaining time in HH:MM:SS format or an error message.
-    """
-    if not scheduled_time:
-        return "Not set!"
-    try:
-        now = datetime.datetime.now(tz=pytz.UTC)
-        # Convert scheduled_time string into a datetime object
-        scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
-        remaining_time = scheduled_dt - now
-        if remaining_time <= datetime.timedelta(seconds=0):
-            return "⏰ Expired!"
-        hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
-        minutes, seconds = divmod(remainder, 60)
-        time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
-        logger.debug(f"Remaining time calculated: {time_str}")
-        return time_str
-    except Exception as e:
-        logger.exception(f"Error calculating remaining time: {e}")
-        return "⚠️ Error calculating time!"
-
-async def safe_task(task):
-    """
-    Run a given asynchronous task safely, logging any exceptions.
-    
-    :param task: The coroutine to execute.
-    """
-    try:
-        await task
-    except Exception as e:
-        logger.exception(f"Exception in scheduled task: {e}")
-
-async def reschedule_reminder(key, role):
-    """
-    Reschedule a reminder if its scheduled time is still in the future.
-    
-    :param key: The reminder key.
-    :param role: The role to ping.
-    """
-    try:
-        reminder_data = get_reminder_data(key)
-        if not reminder_data:
-            logger.debug(f"No reminder data found for {key.title()}.")
-            return
-        
-        scheduled_time = reminder_data.get("scheduled_time")
-        reminder_id = reminder_data.get("reminder_id")
-        if scheduled_time and reminder_id:
-            scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
-            now = datetime.datetime.now(tz=pytz.UTC)
-            # If the scheduled time has already passed, remove the reminder
-            if scheduled_dt <= now:
-                logger.debug(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
-                delete_reminder_data(key)
-                return
-
-            remaining_time = scheduled_dt - now
-            logger.debug(f"Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
-            
-            # Schedule the reminder message to be sent after the remaining time
-            asyncio.create_task(
-                safe_task(
-                    send_scheduled_message(
-                        initial_message=None,
-                        reminder_message=(
-                            f"🔔 <@&{role}> It's time to bump on {key.title()}!"
-                            if key in ["disboard", "dsme", "discadia"]
-                            else f"🔔 <@&{role}> It's time to boop on {key.title()}!"
-                        ),
-                        interval=remaining_time.total_seconds(),
-                        key=key
-                    )
-                )
-            )
-    except Exception as e:
-        logger.exception(f"Error while attempting to reschedule a reminder: {e}")
-
-async def get_coordinates(city: str):
-    """
-    Get latitude and longitude for a given city using the Google Geocoding API.
-    
-    :param city: The city name.
-    :return: Tuple of (lat, lon) if found, else (None, None).
-    """
-    try:
-        geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
-        params = {"address": city, "key": GOOGLE_API_KEY}
-        async with aiohttp.ClientSession() as session:
-            async with session.get(geocode_url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    logger.debug(f"Google Geocoding API response: {json.dumps(data, indent=2)}")
-                    if data.get("results"):
-                        location = data["results"][0]["geometry"]["location"]
-                        lat, lon = location["lat"], location["lng"]
-                        logger.debug(f"Retrieved coordinates for {city}: ({lat}, {lon})")
-                        return lat, lon
-                    else:
-                        logger.warning(f"No results found for city: {city}")
-                else:
-                    logger.error(f"Google Geocoding API error: Status {response.status}")
-    except Exception as e:
-        logger.exception(f"Error fetching city coordinates: {e}")
-    return None, None
-
-# -------------------------
-# Specific Bump/Boop Handlers
-# -------------------------
-async def disboard():
-    """
-    Trigger Disboard bump reminder logic.
-    """
-    await handle_reminder(
-        key="disboard",
-        initial_message="Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.",
-        reminder_message="It's time to bump the server on Disboard again!",
-        interval=7200  # 2 hours
-    )
-
-async def dsme():
-    """
-    Trigger DS.me vote reminder logic.
-    """
-    await handle_reminder(
-        key="dsme",
-        initial_message="Thanks for voting for the server on DS.me! I'll remind you when it's time to vote again.",
-        reminder_message="It's time to vote for the server on DS.me again!",
-        interval=43200  # 12 hours
-    )
-
-async def unfocused():
-    """
-    Trigger Unfocused boop reminder logic.
-    """
-    await handle_reminder(
-        key="unfocused",
-        initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
-        reminder_message="It's time to boop the server on Unfocused again!",
-        interval=30600  # Approximately 6 hours 50 minutes
-    )
-
-async def discadia():
-    """
-    Trigger Discadia bump reminder logic.
-    """
-    await handle_reminder(
-        key="discadia",
-        initial_message="Thanks for bumping the server on Discadia! I'll remind you when it's time to bump again.",
-        reminder_message="It's time to bump the server on Discadia again!",
-        interval=43200  # 12 hours
-    )
-
-# -------------------------
-# Reminder Scheduling
-# -------------------------
-async def send_scheduled_message(initial_message: str, reminder_message: str, interval: int, key: str):
-    """
-    Send an initial message (if provided), wait for the specified interval,
-    then send a reminder message and clean up the reminder data.
-    
-    :param initial_message: Message to send immediately.
-    :param reminder_message: Reminder message to send after delay.
-    :param interval: Delay in seconds before sending the reminder.
-    :param key: The reminder key.
-    """
-    try:
-        # Retrieve the channel from the stored configuration
-        channel = await get_channel("reminder_channel")
-        if not channel:
-            logger.warning("No valid reminder channel found; cannot send scheduled message.")
-            return
-
-        if initial_message:
-            logger.debug(f"Sending initial message for '{key}': {initial_message}")
-            await channel.send(initial_message)
-
-        logger.debug(f"Waiting {interval} seconds before sending reminder for '{key}'.")
-        # Wait for the delay
-        await asyncio.sleep(interval)
-
-        logger.debug(f"Sending reminder message for '{key}': {reminder_message}")
-        await channel.send(reminder_message)
-
-        # Clean up the reminder data from the database after sending the message.
-        reminder_data = get_reminder_data(key)
-        if reminder_data:
-            delete_reminder_data(key)
-            logger.debug(f"Reminder {reminder_data['reminder_id']} for '{key.title()}' has been cleaned up.")
-
-    except Exception as e:
-        logger.exception(f"Error in send_scheduled_message: {e}")
-
-async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
-    """
-    Handle setting up a new reminder if one isn't already active.
-    
-    :param key: The reminder key.
-    :param initial_message: The initial confirmation message.
-    :param reminder_message: The message to send when the reminder triggers.
-    :param interval: The delay in seconds before the reminder.
-    """
-    try:
-        existing_data = get_reminder_data(key)
-        # If a reminder is already scheduled, skip setting a new one
-        if existing_data and existing_data.get("scheduled_time"):
-            logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
-            return
-        
-        # Generate a unique reminder ID and schedule the reminder
-        reminder_id = str(uuid.uuid4())
-        set_reminder_data(
-            key,
-            True,
-            (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
-            reminder_id
-        )
-        role = get_role()
-        if role:
-            await send_scheduled_message(
-                initial_message,
-                f"🔔 <@&{role}> {reminder_message}",
-                interval,
-                key
-            )
-
-    except Exception as e:
-        logger.exception(f"Error handling reminder for key '{key}': {e}")
-
-# -------------------------
-# Mute Mode Kick Scheduling
-# -------------------------
-async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
-    """
-    Schedule a mute mode kick for a user, calculating remaining time based on join_time.
-    
-    :param member_id: Discord user ID.
-    :param username: The username.
-    :param join_time: ISO formatted join time.
-    :param mute_kick_time: Total time in hours allowed before kick.
-    :param guild_id: The guild (server) ID.
-    """
-    try:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        join_time_dt = datetime.datetime.fromisoformat(join_time)
-        
-        # Calculate elapsed time since the user joined
-        elapsed_time = (now - join_time_dt).total_seconds()
-        remaining_time = (mute_kick_time * 3600) - elapsed_time
-
-        guild = bot.get_guild(guild_id)
-        # If the remaining time is less than or equal to zero, kick immediately.
-        if remaining_time <= 0:
-            if not guild:
-                logger.info(f"Guild {guild_id} not found. Removing {username} from tracking.")
-                remove_tracked_member(member_id)
-                return
-            
-            member = guild.get_member(member_id)
-            if not member:
-                logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
-                remove_tracked_member(member_id)
-                return
-            try:
-                await member.kick(reason="User did not send a message in time.")
-                remove_tracked_member(member_id)
-                logger.info(f"Kicked {username} immediately due to bot restart.")
-            except Exception as e:
-                logger.warning(f"Failed to kick {username} immediately after bot restart: {e}")
-            return
-
-        async def delayed_kick():
-            # Wait for the remaining time before kicking the user
-            await asyncio.sleep(remaining_time)
-            if get_tracked_member(member_id):
-                guild = bot.get_guild(guild_id)
-                if not guild:
-                    logger.warning(f"Guild {guild_id} not found. Cannot kick {username}.")
-                    return
-
-                # Attempt to get the member from the guild's cache
-                member = guild.get_member(member_id)
-                if not member:
-                    try:
-                        # If not found in cache, fetch the member from Discord
-                        member = await bot.fetch_member(guild_id, member_id)
-                    except Exception as e:
-                        logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
-                        remove_tracked_member(member_id)
-                        return
-
-                try:
-                    await member.kick(reason="User did not send a message in time.")
-                    remove_tracked_member(member_id)
-                    logger.info(f"Kicked {username} after scheduled time.")
-                except Exception as e:
-                    logger.warning(f"Failed to kick {username} after scheduled time: {e}")
-
-        # Schedule the delayed kick as an asynchronous task.
-        asyncio.create_task(delayed_kick())
-        logger.debug(f"Scheduled kick for {username} in {remaining_time:.2f} seconds.")
-
-    except Exception as e:
-        logger.exception(f"Error scheduling mute mode kick for {username}: {e}")
-        
-# -------------------------
 # Event Listeners
 # -------------------------
 @interactions.listen()
@@ -875,6 +321,549 @@ async def on_member_remove(event: interactions.api.events.MemberRemove):
         logger.debug(f"Successfully processed removal for {member.username}.")
     except Exception as e:
         logger.exception(f"Error during on_member_remove event: {e}")
+
+# -------------------------
+# Database Table Helpers
+# -------------------------
+def get_value(key: str):
+    """
+    Retrieve a JSON value from the 'config' table in Supabase for the provided key.
+    
+    :param key: The key to look up.
+    :return: The parsed JSON value, or None if not found or on error.
+    """
+    try:
+        response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
+        if response is None:
+            logger.warning(f"Supabase query for key '{key}' returned None.")
+            return None
+        if response.data and isinstance(response.data, dict) and "value" in response.data:
+            return json.loads(response.data["value"])
+        logger.warning(f"Key '{key}' not found in Supabase or data missing.")
+        return None
+    except Exception:
+        logger.exception(f"Error getting key '{key}' in Supabase.")
+        return None
+
+def set_value(key: str, value):
+    """
+    Insert or update a JSON value in the 'config' table in Supabase.
+    
+    :param key: The key to set.
+    :param value: The value to serialize and store.
+    """
+    try:
+        serialized = json.dumps(value)
+        existing = get_value(key)
+        if existing is None:
+            supabase.table("config").insert({"id": key, "value": serialized}).execute()
+            logger.debug(f"Inserted new config entry for key '{key}'.")
+        else:
+            supabase.table("config").update({"value": serialized}).eq("id", key).execute()
+            logger.debug(f"Updated config entry for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error setting key '{key}' in Supabase.")
+
+def delete_value(key: str):
+    """
+    Delete a key/value pair from the 'config' table in Supabase.
+    
+    :param key: The key to delete.
+    """
+    try:
+        supabase.table("config").delete().eq("id", key).execute()
+        logger.debug(f"Deleted config entry for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error deleting key '{key}' in Supabase.")
+
+def get_reminder_data(key: str):
+    """
+    Retrieve reminder data from the 'reminders' table in Supabase for the given key.
+    
+    :param key: The reminder key (e.g., "disboard").
+    :return: A dictionary with reminder data or None if not found.
+    """
+    try:
+        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id").eq("key", key).maybe_single().execute()
+        if response and response.data:
+            return {
+                "state": response.data.get("state", False),
+                "scheduled_time": response.data.get("scheduled_time"),
+                "reminder_id": response.data.get("reminder_id")
+            }
+        return None
+    except Exception:
+        logger.exception(f"Error getting reminder data for key '{key}'.")
+        return None
+
+def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_id: str):
+    """
+    Insert or update reminder data in the 'reminders' table.
+    
+    :param key: The reminder key.
+    :param state: Whether the reminder is active.
+    :param scheduled_time: The ISO-formatted scheduled time.
+    :param reminder_id: The unique reminder identifier.
+    """
+    try:
+        serialized_time = scheduled_time
+        existing = get_reminder_data(key)
+        data = {
+            "key": key,
+            "state": state,
+            "scheduled_time": serialized_time,
+            "reminder_id": reminder_id
+        }
+
+        if existing is None:
+            supabase.table("reminders").insert(data).execute()
+            logger.debug(f"Inserted new reminder entry for key '{key}'.")
+        else:
+            supabase.table("reminders").update(data).eq("key", key).execute()
+            logger.debug(f"Updated reminder entry for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error setting reminder data for key '{key}'.")
+
+def delete_reminder_data(key: str):
+    """
+    Delete reminder data for the given key from the 'reminders' table.
+    
+    :param key: The reminder key to delete.
+    """
+    try:
+        supabase.table("reminders").delete().eq("key", key).execute()
+        logger.debug(f"Deleted reminder data for key '{key}'.")
+    except Exception:
+        logger.exception(f"Error deleting reminder data for key '{key}'.")
+
+def initialize_reminders_table():
+    """
+    Ensure that default reminder keys exist in the 'reminders' table.
+    """
+    default_keys = ["disboard", "discadia", "dsme", "unfocused"]
+    for key in default_keys:
+        existing = get_reminder_data(key)
+        if existing is None:
+            set_reminder_data(key, False, None, None)
+            logger.debug(f"Inserted default reminder_data for key: {key}")
+
+def track_new_member(member_id: int, username: str, join_time: str):
+    """
+    Insert or update a tracked member in the 'tracked_members' table.
+    
+    :param member_id: The Discord user ID.
+    :param username: The user's name.
+    :param join_time: The time the user joined (ISO format).
+    """
+    try:
+        response = supabase.table("tracked_members").upsert({
+            "member_id": member_id,
+            "join_time": join_time,
+            "username": username
+        }).execute()
+
+        if response:
+            logger.debug(f"Tracked new member: {username} at {join_time}.")
+        else:
+            logger.warning(f"Failed to track {username} - No response from Supabase.")
+    except Exception as e:
+        logger.exception(f"Error tracking new member {username}: {e}")
+
+def get_tracked_member(member_id: int):
+    """
+    Retrieve tracked member data from the 'tracked_members' table.
+    
+    :param member_id: The Discord user ID.
+    :return: The tracked member data or None if not found.
+    """
+    try:
+        response = supabase.table("tracked_members").select("*").eq("member_id", member_id).maybe_single().execute()
+        if response and response.data:
+            return response.data
+        return None
+    except Exception:
+        logger.exception(f"Error retrieving tracked data for a member.")
+        return None
+
+def remove_tracked_member(member_id: int):
+    """
+    Remove a tracked member from the 'tracked_members' table.
+    
+    :param member_id: The Discord user ID.
+    """
+    try:
+        response = supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
+        resp_dict = response.dict()
+        if resp_dict.get("error"):
+            logger.error(f"Failed to remove tracked member.")
+        elif not resp_dict.get("data"):
+            logger.debug(f"No tracked member found. Nothing to remove.")
+        else:
+            logger.debug(f"Removed tracked member.")
+    except Exception as e:
+        logger.exception(f"Error removing tracked member: {e}")
+
+def get_all_tracked_members():
+    """
+    Retrieve all tracked members from the 'tracked_members' table.
+    
+    :return: A list of tracked member records.
+    """
+    try:
+        response = supabase.table("tracked_members").select("member_id", "username", "join_time").execute()
+        if response and response.data:
+            return response.data
+        return []
+    except Exception:
+        logger.exception("Error retrieving all tracked members from Supabase.")
+        return []
+
+def get_role():
+    """
+    Retrieve the role ID stored in the 'role' key from Supabase.
+    This function may be expanded to resolve the role name.
+    
+    :return: The role identifier, or None if not set.
+    """
+    try:
+        role = get_value("role")
+        if not role:
+            logger.warning("No role has been set up for reminders.")
+            return None
+        logger.debug(f"Retrieved reminder role: {role}")
+        return role
+    except Exception as e:
+        logger.exception(f"Error while fetching the reminder role: {e}")
+        return None
+
+async def get_channel(channel_key):
+    """
+    Fetch the channel object from the stored channel ID in Supabase.
+    
+    :param channel_key: The key in Supabase storing the channel ID.
+    :return: The channel object if found, otherwise None.
+    """
+    try:
+        channel_id = get_value(channel_key)
+        if not channel_id:
+            logger.warning(f"No channel has been set for '{channel_key}'.")
+            return None
+        channel_obj = bot.get_channel(channel_id)
+        if channel_obj:
+            logger.debug(f"Retrieved reminder channel: {channel_obj.name}")
+        else:
+            logger.debug("Channel not found.")
+        return channel_obj
+    except Exception as e:
+        logger.exception(f"Error while fetching the reminder channel: {e}")
+        return None
+
+# -------------------------
+# Miscellaneous Helpers
+# -------------------------
+def calculate_remaining_time(scheduled_time):
+    """
+    Calculate the remaining time until the scheduled reminder.
+    
+    :param scheduled_time: The ISO-formatted scheduled time.
+    :return: A string representing the remaining time in HH:MM:SS format or an error message.
+    """
+    if not scheduled_time:
+        return "Not set!"
+    try:
+        now = datetime.datetime.now(tz=pytz.UTC)
+        scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
+        remaining_time = scheduled_dt - now
+        if remaining_time <= datetime.timedelta(seconds=0):
+            return "⏰ Expired!"
+        hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
+        minutes, seconds = divmod(remainder, 60)
+        time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
+        logger.debug(f"Remaining time calculated: {time_str}")
+        return time_str
+    except Exception as e:
+        logger.exception(f"Error calculating remaining time: {e}")
+        return "⚠️ Error calculating time!"
+
+async def safe_task(task):
+    """
+    Run a given asynchronous task safely, logging any exceptions.
+    
+    :param task: The coroutine to execute.
+    """
+    try:
+        await task
+    except Exception as e:
+        logger.exception(f"Exception in scheduled task: {e}")
+
+async def get_coordinates(city: str):
+    """
+    Get latitude and longitude for a given city using the Google Geocoding API.
+    
+    :param city: The city name.
+    :return: Tuple of (lat, lon) if found, else (None, None).
+    """
+    try:
+        geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
+        params = {"address": city, "key": GOOGLE_API_KEY}
+        async with aiohttp.ClientSession() as session:
+            async with session.get(geocode_url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"Google Geocoding API response: {json.dumps(data, indent=2)}")
+                    if data.get("results"):
+                        location = data["results"][0]["geometry"]["location"]
+                        lat, lon = location["lat"], location["lng"]
+                        logger.debug(f"Retrieved coordinates for {city}: ({lat}, {lon})")
+                        return lat, lon
+                    else:
+                        logger.warning(f"No results found for city: {city}")
+                else:
+                    logger.error(f"Google Geocoding API error: Status {response.status}")
+    except Exception as e:
+        logger.exception(f"Error fetching city coordinates: {e}")
+    return None, None
+
+# -------------------------
+# Specific Bump/Boop Handlers
+# -------------------------
+async def disboard():
+    """
+    Trigger Disboard bump reminder logic.
+    """
+    await handle_reminder(
+        key="disboard",
+        initial_message="Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.",
+        reminder_message="It's time to bump the server on Disboard again!",
+        interval=7200  # 2 hours
+    )
+
+async def dsme():
+    """
+    Trigger DS.me vote reminder logic.
+    """
+    await handle_reminder(
+        key="dsme",
+        initial_message="Thanks for voting for the server on DS.me! I'll remind you when it's time to vote again.",
+        reminder_message="It's time to vote for the server on DS.me again!",
+        interval=43200  # 12 hours
+    )
+
+async def unfocused():
+    """
+    Trigger Unfocused boop reminder logic.
+    """
+    await handle_reminder(
+        key="unfocused",
+        initial_message="Thanks for booping the server on Unfocused! I'll remind you when it's time to boop again.",
+        reminder_message="It's time to boop the server on Unfocused again!",
+        interval=30600  # Approximately 6 hours 50 minutes
+    )
+
+async def discadia():
+    """
+    Trigger Discadia bump reminder logic.
+    """
+    await handle_reminder(
+        key="discadia",
+        initial_message="Thanks for bumping the server on Discadia! I'll remind you when it's time to bump again.",
+        reminder_message="It's time to bump the server on Discadia again!",
+        interval=43200  # 12 hours
+    )
+
+# -------------------------
+# Reminder Scheduling
+# -------------------------
+async def send_scheduled_message(initial_message: str, reminder_message: str, interval: int, key: str):
+    """
+    Send an initial message (if provided), wait for the specified interval,
+    then send a reminder message and clean up the reminder data.
+    
+    :param initial_message: Message to send immediately.
+    :param reminder_message: Reminder message to send after delay.
+    :param interval: Delay in seconds before sending the reminder.
+    :param key: The reminder key.
+    """
+    try:
+        # Retrieve the channel from the stored configuration
+        channel = await get_channel("reminder_channel")
+        if not channel:
+            logger.warning("No valid reminder channel found; cannot send scheduled message.")
+            return
+
+        if initial_message:
+            logger.debug(f"Sending initial message for '{key}': {initial_message}")
+            await channel.send(initial_message)
+
+        logger.debug(f"Waiting {interval} seconds before sending reminder for '{key}'.")
+        # Wait for the delay
+        await asyncio.sleep(interval)
+
+        logger.debug(f"Sending reminder message for '{key}': {reminder_message}")
+        await channel.send(reminder_message)
+
+        # Clean up the reminder data from the database after sending the message.
+        reminder_data = get_reminder_data(key)
+        if reminder_data:
+            delete_reminder_data(key)
+            logger.debug(f"Reminder {reminder_data['reminder_id']} for '{key.title()}' has been cleaned up.")
+
+    except Exception as e:
+        logger.exception(f"Error in send_scheduled_message: {e}")
+
+async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
+    """
+    Handle setting up a new reminder if one isn't already active.
+    
+    :param key: The reminder key.
+    :param initial_message: The initial confirmation message.
+    :param reminder_message: The message to send when the reminder triggers.
+    :param interval: The delay in seconds before the reminder.
+    """
+    try:
+        existing_data = get_reminder_data(key)
+        # If a reminder is already scheduled, skip setting a new one
+        if existing_data and existing_data.get("scheduled_time"):
+            logger.debug(f"{key.capitalize()} already has a timer set. Skipping new reminder.")
+            return
+        
+        # Generate a unique reminder ID and schedule the reminder
+        reminder_id = str(uuid.uuid4())
+        set_reminder_data(
+            key,
+            True,
+            (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
+            reminder_id
+        )
+        role = get_role()
+        if role:
+            await send_scheduled_message(
+                initial_message,
+                f"🔔 <@&{role}> {reminder_message}",
+                interval,
+                key
+            )
+
+    except Exception as e:
+        logger.exception(f"Error handling reminder for key '{key}': {e}")
+
+async def reschedule_reminder(key, role):
+    """
+    Reschedule a reminder if its scheduled time is still in the future.
+    
+    :param key: The reminder key.
+    :param role: The role to ping.
+    """
+    try:
+        reminder_data = get_reminder_data(key)
+        if not reminder_data:
+            logger.debug(f"No reminder data found for {key.title()}.")
+            return
+        
+        scheduled_time = reminder_data.get("scheduled_time")
+        reminder_id = reminder_data.get("reminder_id")
+        if scheduled_time and reminder_id:
+            scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
+            now = datetime.datetime.now(tz=pytz.UTC)
+            if scheduled_dt <= now:
+                logger.debug(f"Reminder {reminder_id} for {key.title()} has already expired. Removing it.")
+                delete_reminder_data(key)
+                return
+
+            remaining_time = scheduled_dt - now
+            logger.debug(f"Rescheduling reminder {reminder_id} for {key.title()} in {remaining_time}.")
+            asyncio.create_task(
+                safe_task(
+                    send_scheduled_message(
+                        initial_message=None,
+                        reminder_message=(
+                            f"🔔 <@&{role}> It's time to bump on {key.title()}!"
+                            if key in ["disboard", "dsme", "discadia"]
+                            else f"🔔 <@&{role}> It's time to boop on {key.title()}!"
+                        ),
+                        interval=remaining_time.total_seconds(),
+                        key=key
+                    )
+                )
+            )
+    except Exception as e:
+        logger.exception(f"Error while attempting to reschedule a reminder: {e}")
+
+# -------------------------
+# Mute Mode Kick Scheduling
+# -------------------------
+async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
+    """
+    Schedule a mute mode kick for a user, calculating remaining time based on join_time.
+    
+    :param member_id: Discord user ID.
+    :param username: The username.
+    :param join_time: ISO formatted join time.
+    :param mute_kick_time: Total time in hours allowed before kick.
+    :param guild_id: The guild (server) ID.
+    """
+    try:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        join_time_dt = datetime.datetime.fromisoformat(join_time)
+        
+        # Calculate elapsed time since the user joined
+        elapsed_time = (now - join_time_dt).total_seconds()
+        remaining_time = (mute_kick_time * 3600) - elapsed_time
+
+        guild = bot.get_guild(guild_id)
+        # If the remaining time is less than or equal to zero, kick immediately.
+        if remaining_time <= 0:
+            if not guild:
+                logger.info(f"Guild {guild_id} not found. Removing {username} from tracking.")
+                remove_tracked_member(member_id)
+                return
+            
+            member = guild.get_member(member_id)
+            if not member:
+                logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
+                remove_tracked_member(member_id)
+                return
+            try:
+                await member.kick(reason="User did not send a message in time.")
+                remove_tracked_member(member_id)
+                logger.info(f"Kicked {username} immediately due to bot restart.")
+            except Exception as e:
+                logger.warning(f"Failed to kick {username} immediately after bot restart: {e}")
+            return
+
+        async def delayed_kick():
+            # Wait for the remaining time before kicking the user
+            await asyncio.sleep(remaining_time)
+            if get_tracked_member(member_id):
+                guild = bot.get_guild(guild_id)
+                if not guild:
+                    logger.warning(f"Guild {guild_id} not found. Cannot kick {username}.")
+                    return
+
+                # Attempt to get the member from the guild's cache
+                member = guild.get_member(member_id)
+                if not member:
+                    try:
+                        # If not found in cache, fetch the member from Discord
+                        member = await bot.fetch_member(guild_id, member_id)
+                    except Exception as e:
+                        logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
+                        remove_tracked_member(member_id)
+                        return
+
+                try:
+                    await member.kick(reason="User did not send a message in time.")
+                    remove_tracked_member(member_id)
+                    logger.info(f"Kicked {username} after scheduled time.")
+                except Exception as e:
+                    logger.warning(f"Failed to kick {username} after scheduled time: {e}")
+
+        # Schedule the delayed kick as an asynchronous task.
+        asyncio.create_task(delayed_kick())
+        logger.debug(f"Scheduled kick for {username} in {remaining_time:.2f} seconds.")
+
+    except Exception as e:
+        logger.exception(f"Error scheduling mute mode kick for {username}: {e}")
 
 # -------------------------
 # Slash Commands
