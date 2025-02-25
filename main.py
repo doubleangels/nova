@@ -1043,7 +1043,11 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     name="enabled",
     description="Enable or disable mute mode",
     required=True,
-    opt_type=interactions.OptionType.BOOLEAN
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.Choice(name="Enabled", value="enabled"),
+        interactions.Choice(name="Disabled", value="disabled")
+    ]
 )
 @interactions.slash_option(
     name="time",
@@ -1051,13 +1055,10 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
-async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, time: int = 2):
-    """
-    Toggle the mute mode setting and set the kick time threshold.
-    
-    :param enabled: True to enable mute mode, False to disable.
-    :param time: Time in hours before a silent user is kicked.
-    """
+async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: str, time: int = 2):
+    # Convert the string input into a boolean
+    is_enabled = True if enabled.lower() == "enabled" else False
+
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /mutemode attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
@@ -1065,18 +1066,18 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: bool, ti
 
     try:
         logger.debug(f"Received /mutemode command from {ctx.author.username}")
-        logger.debug(f"Mute mode toggle: {'Enabled' if enabled else 'Disabled'}, Kick Time: {time} hours")
+        logger.debug(f"Mute mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Kick Time: {time} hours")
 
-        set_value("mute_mode", enabled)
+        set_value("mute_mode", is_enabled)
         set_value("mute_mode_kick_time_hours", time)
 
         response_message = (
             f"🔇 Mute mode has been ✅ **enabled**. New users must send a message within **{time}** hours or be kicked."
-            if enabled else "🔇 Mute mode has been ❌ **disabled**."
+            if is_enabled else "🔇 Mute mode has been ❌ **disabled**."
         )
 
         await ctx.send(response_message)
-        logger.debug(f"Mute mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}, kick time set to {time} hours.")
+        logger.debug(f"Mute mode {'enabled' if is_enabled else 'disabled'} by {ctx.author.username}, kick time set to {time} hours.")
 
     except Exception as e:
         logger.exception(f"Error in /mutemode command: {e}")
@@ -1242,7 +1243,11 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
     name="enabled",
     description="Enable or disable troll mode",
     required=True,
-    opt_type=interactions.OptionType.BOOLEAN
+    opt_type=interactions.OptionType.STRING,
+    choices=[
+        interactions.Choice(name="Enabled", value="enabled"),
+        interactions.Choice(name="Disabled", value="disabled")
+    ]
 )
 @interactions.slash_option(
     name="age",
@@ -1250,13 +1255,16 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
     required=False,
     opt_type=interactions.OptionType.INTEGER
 )
-async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, age: int = 30):
+async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: str, age: int = 30):
     """
     Toggle troll mode to kick new accounts below a specified age.
     
-    :param enabled: True to enable troll mode.
+    :param enabled: 'enabled' to enable troll mode, 'disabled' to disable.
     :param age: Minimum account age in days required.
     """
+    # Convert the string input into a boolean
+    is_enabled = True if enabled.lower() == "enabled" else False
+
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /trollmode attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
@@ -1264,17 +1272,17 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: bool, a
 
     try:
         logger.debug(f"Received /trollmode command from {ctx.author.username}")
-        logger.debug(f"Troll mode toggle: {'Enabled' if enabled else 'Disabled'}, Minimum age: {age} days")
+        logger.debug(f"Troll mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Minimum age: {age} days")
 
-        set_value("troll_mode", enabled)
+        set_value("troll_mode", is_enabled)
         set_value("troll_mode_account_age", age)
 
         response_message = (
             f"👹 Troll mode has been ✅ **enabled**. Minimum account age: **{age}** days."
-            if enabled else "👹 Troll mode has been ❌ **disabled**."
+            if is_enabled else "👹 Troll mode has been ❌ **disabled**."
         )
 
-        logger.debug(f"Troll mode {'enabled' if enabled else 'disabled'} by {ctx.author.username}; account age threshold={age} days.")
+        logger.debug(f"Troll mode {'enabled' if is_enabled else 'disabled'} by {ctx.author.username}; account age threshold={age} days.")
         await ctx.send(response_message)
 
     except Exception as e:
