@@ -2659,5 +2659,5 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
 try:
     bot.start(TOKEN)
 except Exception as e:
-    handle_exception(e, "Exception occurred during bot startup")
+    logger.error(f"Error starting the bot: {e}", exc_info=True)
     sys.exit(1)
