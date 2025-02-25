@@ -601,16 +601,22 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
     :param guild_id: The guild (server) ID.
     """
     try:
-        now = datetime.datetime.now(datetime.UTC)
+        now = datetime.datetime.now(datetime.timezone.utc)
         join_time_dt = datetime.datetime.fromisoformat(join_time)
         
         # Calculate elapsed time since the user joined
         elapsed_time = (now - join_time_dt).total_seconds()
         remaining_time = (mute_kick_time * 3600) - elapsed_time
 
+        guild = bot.get_guild(guild_id)
         # If the remaining time is less than or equal to zero, kick immediately.
         if remaining_time <= 0:
-            member = bot.get_member(guild_id, member_id)
+            if not guild:
+                logger.info(f"Guild {guild_id} not found. Removing {username} from tracking.")
+                remove_tracked_member(member_id)
+                return
+            
+            member = guild.get_member(member_id)
             if not member:
                 logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
                 remove_tracked_member(member_id)
@@ -627,11 +633,22 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
             # Wait for the remaining time before kicking the user
             await asyncio.sleep(remaining_time)
             if get_tracked_member(member_id):
-                member = bot.get_member(guild_id, member_id)
-                if not member:
-                    logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
-                    remove_tracked_member(member_id)
+                guild = bot.get_guild(guild_id)
+                if not guild:
+                    logger.warning(f"Guild {guild_id} not found. Cannot kick {username}.")
                     return
+
+                # Attempt to get the member from the guild's cache
+                member = guild.get_member(member_id)
+                if not member:
+                    try:
+                        # If not found in cache, fetch the member from Discord
+                        member = await bot.fetch_member(guild_id, member_id)
+                    except Exception as e:
+                        logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
+                        remove_tracked_member(member_id)
+                        return
+
                 try:
                     await member.kick(reason="User did not send a message in time.")
                     remove_tracked_member(member_id)
