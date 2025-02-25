@@ -2638,15 +2638,15 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     name="guild_id",
     description="The ID of the guild from which to kick the user.",
     required=True,
-    opt_type=interactions.OptionType.INTEGER
+    opt_type=interactions.OptionType.STRING
 )
 @interactions.slash_option(
     name="member_id",
     description="The ID of the member to kick.",
     required=True,
-    opt_type=interactions.OptionType.INTEGER
+    opt_type=interactions.OptionType.STRING
 )
-async def kick_user(ctx: interactions.ComponentContext, guild_id: int, member_id: int):
+async def kick_user(ctx: interactions.ComponentContext, guild_id: str, member_id: str):
     """
     Kick a user from a specified guild using their member ID.
 
@@ -2663,14 +2663,15 @@ async def kick_user(ctx: interactions.ComponentContext, guild_id: int, member_id
         logger.debug(f"Received /kick command from {ctx.author.username} for guild_id={guild_id}, member_id={member_id}")
 
         # Retrieve the guild using the provided guild ID.
-        guild = bot.get_guild(guild_id)
+        guild = bot.get_guild(int(guild_id))
         if not guild:
             await ctx.send(f"❌ Guild with ID {guild_id} not found.", ephemeral=True)
             return
 
         # Attempt to retrieve the member from the guild.
         try:
-            member = guild.get_member(member_id) or await guild.fetch_member(member_id)
+            member = guild.get_member(int(member_id)) or await guild.fetch_member(int(member_id))
+            logger.debug(f"Found member: {member}")
         except Exception as e:
             logger.exception(f"Error fetching member with ID {member_id}: {e}")
             await ctx.send(f"❌ Failed to fetch member with ID {member_id}.", ephemeral=True)
