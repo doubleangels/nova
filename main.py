@@ -92,6 +92,9 @@ bot_ids = {
     "835255643157168168": "Unfocused",
 }
 
+# Variable to make sure shutdown is only called once.
+shutting_down = False
+
 # -------------------------
 # Supabase Client
 # -------------------------
@@ -2645,36 +2648,37 @@ async def shutdown(loop, signal=None):
     ? loop   - The current asyncio event loop.
     ? signal - Optional signal that triggered the shutdown.
     """
+    global shutting_down
+    if shutting_down:
+        return
+    shutting_down = True
+
     # Retrieve all tasks in the event loop except the current one.
     tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task(loop)]
     
-    # Cancel each of the gathered tasks.
-    [task.cancel() for task in tasks]
+    # Cancel each gathered task.
+    for task in tasks:
+        task.cancel()
     
     # Wait for all cancelled tasks to complete, capturing exceptions if any.
     await asyncio.gather(*tasks, return_exceptions=True)
     
-    # Flush Sentry logs with a timeout of 2 seconds to ensure all logs are sent.
+    # Flush Sentry logs with a timeout of 2 seconds.
     sentry_sdk.flush(timeout=2)
     
-    # Stop the event loop.
-    loop.stop()
+    # Note: No need to call loop.stop() when using asyncio.run().
+    logger.info("Shutdown complete.")
 
-def handle_interrupt(signal, frame):
+def handle_interrupt(sig, frame):
     """
-    Synchronous signal handler that schedules the asynchronous shutdown.
-
-    When a SIGINT or SIGTERM is received, this function gets the current
-    event loop and schedules the shutdown coroutine.
-
-    :param signal: The signal received (e.g., SIGINT, SIGTERM).
-    :param frame: The current stack frame (unused but required by signal handler signature).
+    ! SYNCHRONOUS SIGNAL HANDLER THAT SCHEDULES THE ASYNCHRONOUS SHUTDOWN
+    * When a SIGINT or SIGTERM is received, this function retrieves the current event loop and schedules the shutdown coroutine.
+    ? PARAMETERS:
+    ? signal - The signal received (e.g., SIGINT, SIGTERM).
+    ? frame  - The current stack frame (unused but required by the signal handler signature).
     """
-    # Get the current event loop.
     loop = asyncio.get_event_loop()
-    
-    # Schedule the shutdown coroutine on the event loop, passing the signal.
-    loop.create_task(shutdown(loop, signal=signal))
+    loop.create_task(shutdown(loop, signal=sig))
 
 # Register the signal handlers to catch SIGINT and SIGTERM for graceful shutdown.
 signal.signal(signal.SIGINT, handle_interrupt)
@@ -2690,33 +2694,22 @@ async def main():
     * regardless of whether an exception occurs during startup.
     """
     try:
-        # Log the beginning of the bot startup sequence.
         logger.info("Starting the bot...")
-        
-        # Asynchronously start the bot using the provided TOKEN.
         await bot.astart(TOKEN)
-    
     except Exception:
-        # Log any exception that occurs during the bot startup.
         logger.exception("Exception occurred during bot startup!")
-    
     finally:
-        # Ensure a graceful shutdown by cleaning up tasks and flushing any pending logs.
+        # Ensure a graceful shutdown.
         await shutdown(asyncio.get_event_loop())
-
 
 # -------------------------
 # Entry Point
 # -------------------------
 if __name__ == "__main__":
     try:
-        # Run the main asynchronous startup routine.
         asyncio.run(main())
     except KeyboardInterrupt:
-        # Handle a keyboard interruption gracefully.
         logger.info("KeyboardInterrupt received. Exiting.")
     finally:
-        # Ensure all logging resources are flushed and shut down before exiting.
         logging.shutdown()
-        # Exit the program with a success status code.
         sys.exit(0)
