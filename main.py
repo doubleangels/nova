@@ -2016,11 +2016,11 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                     embed.add_field(name="📅 3-Day Forecast", value=forecast_text, inline=False)
                     embed.set_footer(text="Powered by PirateWeather")
 
-                    # Send the embed; if private is "yes", the response is ephemeral.
-                    if private.lower() == "yes":
-                        await ctx.send(embed=embed, ephemeral=True)
-                    else:
-                        await ctx.send(embed=embed)
+                    # Determine if the response should be ephemeral.
+                    ephemeral = True if private.lower() == "yes" else False
+
+                    # Send the result.
+                    await ctx.send(embed=embed, ephemeral=ephemeral)
                 else:
                     logger.warning(f"PirateWeather API error: {response.status}")
                     await ctx.send(f"Error: PirateWeather API returned status code {response.status}.")
