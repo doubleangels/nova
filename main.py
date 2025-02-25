@@ -128,13 +128,13 @@ def handle_interrupt(signal_num, frame):
     logger.info("Shutdown signal received. Cleaning up and shutting down gracefully.")
     sys.exit(0)
 
+# Register the signal handlers for graceful shutdown.
 signal.signal(signal.SIGINT, handle_interrupt)
 signal.signal(signal.SIGTERM, handle_interrupt)
 
 # -------------------------
 # Database Table Helpers
 # -------------------------
-
 def get_value(key: str):
     """
     ! RETRIEVE A CONFIGURATION VALUE FROM THE 'CONFIG' TABLE IN SUPABASE
@@ -145,6 +145,7 @@ def get_value(key: str):
     * The deserialized value if found; otherwise, None.
     """
     try:
+        logger.debug(f"Fetching configuration value for key: '{key}'.")
         # Execute a query to select the 'value' for the given key
         response = supabase.table("config").select("value").eq("id", key).maybe_single().execute()
         if response is None:
@@ -152,7 +153,9 @@ def get_value(key: str):
             return None
         # If data exists and contains the 'value' field, deserialize it
         if response.data and isinstance(response.data, dict) and "value" in response.data:
-            return json.loads(response.data["value"])
+            value = json.loads(response.data["value"])
+            logger.debug(f"Configuration value for key '{key}' retrieved successfully: {value}")
+            return value
         logger.warning(f"Key '{key}' not found in Supabase or data missing.")
         return None
     except Exception:
@@ -168,16 +171,17 @@ def set_value(key: str, value):
     ? value - The value to store; it will be serialized to JSON.
     """
     try:
+        logger.debug(f"Attempting to set configuration value for key '{key}'.")
         # Serialize the value to a JSON string
         serialized = json.dumps(value)
         # Check if the key already exists
         existing = get_value(key)
         if existing is None:
-            # Insert a new config entry if the key does not exist
+            logger.debug(f"No existing configuration for key '{key}', inserting new record.")
             supabase.table("config").insert({"id": key, "value": serialized}).execute()
             logger.debug(f"Inserted new config entry for key '{key}'.")
         else:
-            # Update the existing config entry
+            logger.debug(f"Existing configuration for key '{key}' found, updating record.")
             supabase.table("config").update({"value": serialized}).eq("id", key).execute()
             logger.debug(f"Updated config entry for key '{key}'.")
     except Exception:
@@ -191,6 +195,7 @@ def delete_value(key: str):
     ? key - The key to be deleted.
     """
     try:
+        logger.debug(f"Attempting to delete configuration for key '{key}'.")
         supabase.table("config").delete().eq("id", key).execute()
         logger.debug(f"Deleted config entry for key '{key}'.")
     except Exception:
@@ -206,14 +211,17 @@ def get_reminder_data(key: str):
     ? A dictionary with reminder data (state, scheduled_time, reminder_id) if found; otherwise, None.
     """
     try:
+        logger.debug(f"Fetching reminder data for key '{key}'.")
         response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id") \
             .eq("key", key).maybe_single().execute()
         if response and response.data:
+            logger.debug(f"Reminder data for key '{key}' retrieved: {response.data}")
             return {
                 "state": response.data.get("state", False),
                 "scheduled_time": response.data.get("scheduled_time"),
                 "reminder_id": response.data.get("reminder_id")
             }
+        logger.debug(f"No reminder data found for key '{key}'.")
         return None
     except Exception:
         logger.exception(f"Error getting reminder data for key '{key}'.")
@@ -230,6 +238,7 @@ def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_
     ? reminder_id    - The unique identifier for the reminder.
     """
     try:
+        logger.debug(f"Setting reminder data for key '{key}' with state: {state}, scheduled_time: {scheduled_time}, reminder_id: {reminder_id}.")
         # Use the scheduled_time as-is; ensure it's in a proper format if needed
         serialized_time = scheduled_time
         existing = get_reminder_data(key)
@@ -240,11 +249,11 @@ def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_
             "reminder_id": reminder_id
         }
         if existing is None:
-            # Insert new reminder data if it does not exist
+            logger.debug(f"No existing reminder data for key '{key}', inserting new record.")
             supabase.table("reminders").insert(data).execute()
             logger.debug(f"Inserted new reminder entry for key '{key}'.")
         else:
-            # Update existing reminder data
+            logger.debug(f"Existing reminder data for key '{key}' found, updating record.")
             supabase.table("reminders").update(data).eq("key", key).execute()
             logger.debug(f"Updated reminder entry for key '{key}'.")
     except Exception:
@@ -258,6 +267,7 @@ def delete_reminder_data(key: str):
     ? key - The reminder key to delete.
     """
     try:
+        logger.debug(f"Attempting to delete reminder data for key '{key}'.")
         supabase.table("reminders").delete().eq("key", key).execute()
         logger.debug(f"Deleted reminder data for key '{key}'.")
     except Exception:
@@ -270,18 +280,19 @@ def initialize_reminders_table():
     * If a key is missing, inserts a default reminder entry with state set to False, scheduled_time as None, and reminder_id as None.
     """
     default_keys = ["disboard"]
+    logger.debug("Initializing reminders table with default keys if missing.")
     for key in default_keys:
         try:
+            logger.debug(f"Checking existence of reminder data for key '{key}'.")
             existing = get_reminder_data(key)
             if existing is None:
-                # Insert default reminder data with default values.
+                logger.debug(f"No reminder data for key '{key}', initializing default record.")
                 set_reminder_data(key, False, None, None)
                 logger.debug(f"Inserted default reminder data for key: {key}")
             else:
                 logger.debug(f"Reminder data for key '{key}' already exists. Skipping initialization.")
         except Exception as e:
             logger.exception(f"Failed to initialize reminder for key '{key}': {e}")
-
 
 def track_new_member(member_id: int, username: str, join_time: str):
     """
@@ -293,6 +304,7 @@ def track_new_member(member_id: int, username: str, join_time: str):
     ? join_time - The join time of the member (in ISO format).
     """
     try:
+        logger.debug(f"Tracking new member '{username}' with ID {member_id} joining at {join_time}.")
         response = supabase.table("tracked_members").upsert({
             "member_id": member_id,
             "join_time": join_time,
@@ -316,9 +328,12 @@ def get_tracked_member(member_id: int):
     ? The tracked member data if found; otherwise, None.
     """
     try:
+        logger.debug(f"Retrieving tracking information for member with ID {member_id}.")
         response = supabase.table("tracked_members").select("*").eq("member_id", member_id).maybe_single().execute()
         if response and response.data:
+            logger.debug(f"Tracking data for member {member_id} retrieved: {response.data}")
             return response.data
+        logger.debug(f"No tracking data found for member {member_id}.")
         return None
     except Exception:
         logger.exception("Error retrieving tracked data for a member.")
@@ -332,14 +347,15 @@ def remove_tracked_member(member_id: int):
     ? member_id - The unique ID of the member to remove.
     """
     try:
+        logger.debug(f"Attempting to remove tracking information for member ID {member_id}.")
         response = supabase.table("tracked_members").delete().eq("member_id", member_id).execute()
         resp_dict = response.dict()
         if resp_dict.get("error"):
-            logger.error("Failed to remove tracked member.")
+            logger.error(f"Failed to remove tracked member with ID {member_id}. Error: {resp_dict.get('error')}")
         elif not resp_dict.get("data"):
-            logger.debug("No tracked member found. Nothing to remove.")
+            logger.debug(f"No tracked member found for ID {member_id}. Nothing to remove.")
         else:
-            logger.debug("Removed tracked member.")
+            logger.debug(f"Successfully removed tracked member with ID {member_id}.")
     except Exception as e:
         logger.exception(f"Error removing tracked member: {e}")
 
@@ -351,9 +367,12 @@ def get_all_tracked_members():
     ? A list of tracked member records; returns an empty list if none found or on error.
     """
     try:
+        logger.debug("Retrieving all tracked members from the database.")
         response = supabase.table("tracked_members").select("member_id", "username", "join_time").execute()
         if response and response.data:
+            logger.debug(f"Retrieved {len(response.data)} tracked members.")
             return response.data
+        logger.debug("No tracked members found.")
         return []
     except Exception:
         logger.exception("Error retrieving all tracked members from Supabase.")
@@ -367,6 +386,7 @@ def get_role():
     ? The role if set; otherwise, None.
     """
     try:
+        logger.debug("Fetching reminder role configuration.")
         role = get_value("role")
         if not role:
             logger.warning("No role has been set up for reminders.")
@@ -387,6 +407,7 @@ async def get_channel(channel_key):
     ? The channel object if found; otherwise, None.
     """
     try:
+        logger.debug(f"Fetching channel configuration for key '{channel_key}'.")
         channel_id = get_value(channel_key)
         if not channel_id:
             logger.warning(f"No channel has been set for '{channel_key}'.")
@@ -395,16 +416,16 @@ async def get_channel(channel_key):
         if channel_obj:
             logger.debug(f"Retrieved reminder channel: {channel_obj.name}")
         else:
-            logger.debug("Channel not found.")
+            logger.debug(f"Channel with ID {channel_id} not found.")
         return channel_obj
     except Exception as e:
-        logger.exception(f"Error while fetching the reminder channel: {e}")
+        logger.exception(f"Error while fetching the reminder channel for key '{channel_key}': {e}")
         return None
+
 
 # -------------------------
 # Miscellaneous Helpers
 # -------------------------
-
 def calculate_remaining_time(scheduled_time):
     """
     ! CALCULATE AND FORMAT THE REMAINING TIME UNTIL THE SCHEDULED TIME
@@ -416,6 +437,7 @@ def calculate_remaining_time(scheduled_time):
     ? A formatted string representing the remaining time, "⏰ Expired!" if the time has passed, or an error message.
     """
     if not scheduled_time:
+        logger.info("Scheduled time not set; returning default message.")
         return "Not set!"
     try:
         # Get the current time in UTC
@@ -423,17 +445,19 @@ def calculate_remaining_time(scheduled_time):
         # Convert the scheduled time from ISO format to a timezone-aware datetime object in UTC
         scheduled_dt = datetime.datetime.fromisoformat(scheduled_time).astimezone(pytz.UTC)
         remaining_time = scheduled_dt - now
+        logger.debug(f"Calculating remaining time: now={now.isoformat()}, scheduled_dt={scheduled_dt.isoformat()}, remaining_time={remaining_time}")
         # Check if the remaining time has expired
         if remaining_time <= datetime.timedelta(seconds=0):
+            logger.info(f"Scheduled time {scheduled_dt.isoformat()} has already passed.")
             return "⏰ Expired!"
         # Calculate hours, minutes, and seconds
         hours, remainder = divmod(int(remaining_time.total_seconds()), 3600)
         minutes, seconds = divmod(remainder, 60)
         time_str = f"{hours:02}:{minutes:02}:{seconds:02}"
-        logger.debug(f"Remaining time calculated: {time_str}")
+        logger.debug(f"Remaining time successfully calculated for scheduled_time '{scheduled_time}': {time_str}")
         return time_str
     except Exception as e:
-        logger.exception(f"Error calculating remaining time: {e}")
+        logger.exception(f"Error calculating remaining time for scheduled_time '{scheduled_time}': {e}")
         return "⚠️ Error calculating time!"
 
 
@@ -444,10 +468,12 @@ async def safe_task(task):
     ? PARAMETERS:
     ? task - An awaitable task.
     """
+    logger.debug("Starting safe_task execution.")
     try:
         await task
+        logger.debug("safe_task executed successfully.")
     except Exception as e:
-        logger.exception(f"Exception in scheduled task: {e}")
+        logger.exception(f"Exception occurred during safe_task execution: {e}")
 
 
 async def get_coordinates(city: str):
@@ -462,24 +488,26 @@ async def get_coordinates(city: str):
     try:
         geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
         params = {"address": city, "key": GOOGLE_API_KEY}
+        logger.debug(f"Requesting geocoding for city: {city} with URL: {geocode_url} and params: [REDACTED API KEY]")
         # Create an asynchronous HTTP session
         async with aiohttp.ClientSession() as session:
             async with session.get(geocode_url, params=params) as response:
+                logger.debug(f"Received response from Google Geocoding API with status code: {response.status}")
                 if response.status == 200:
                     data = await response.json()
-                    logger.debug(f"Google Geocoding API response: {json.dumps(data, indent=2)}")
+                    logger.debug(f"Google Geocoding API response for city '{city}': {json.dumps(data, indent=2)}")
                     # Check if results were returned
                     if data.get("results"):
                         location = data["results"][0]["geometry"]["location"]
                         lat, lon = location["lat"], location["lng"]
-                        logger.debug(f"Retrieved coordinates for {city}: ({lat}, {lon})")
+                        logger.debug(f"Coordinates for city '{city}' retrieved: lat={lat}, lon={lon}")
                         return lat, lon
                     else:
-                        logger.warning(f"No results found for city: {city}")
+                        logger.warning(f"No geocoding results found for city: '{city}'.")
                 else:
-                    logger.error(f"Google Geocoding API error: Status {response.status}")
+                    logger.error(f"Google Geocoding API returned non-200 status code: {response.status} for city: '{city}'.")
     except Exception as e:
-        logger.exception(f"Error fetching city coordinates: {e}")
+        logger.exception(f"Error fetching coordinates for city '{city}': {e}")
     return None, None
 
 # -------------------------
@@ -504,7 +532,6 @@ async def disboard():
 # -------------------------
 # Reminder Scheduling
 # -------------------------
-
 async def send_scheduled_message(initial_message: str, reminder_message: str, interval: int, key: str):
     """
     ! SEND INITIAL AND REMINDER MESSAGE
@@ -517,6 +544,7 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
     ? key              - The reminder key used to fetch and delete reminder data.
     """
     try:
+        logger.debug(f"send_scheduled_message called with key '{key}', interval {interval}, initial_message: {initial_message}, reminder_message: {reminder_message}")
         # Retrieve the reminder channel from configuration
         channel = await get_channel("reminder_channel")
         if not channel:
@@ -541,8 +569,10 @@ async def send_scheduled_message(initial_message: str, reminder_message: str, in
         if reminder_data:
             delete_reminder_data(key)
             logger.debug(f"Reminder {reminder_data['reminder_id']} for '{key.title()}' has been cleaned up.")
+        else:
+            logger.debug(f"No reminder data to clean up for key '{key}'.")
     except Exception as e:
-        logger.exception(f"Error in send_scheduled_message: {e}")
+        logger.exception(f"Error in send_scheduled_message for key '{key}': {e}")
 
 
 async def handle_reminder(key: str, initial_message: str, reminder_message: str, interval: int):
@@ -557,6 +587,7 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
     ? interval         - The delay (in seconds) before sending the reminder.
     """
     try:
+        logger.debug(f"handle_reminder invoked for key '{key}' with interval {interval}.")
         # Check if a reminder is already scheduled for this key
         existing_data = get_reminder_data(key)
         if existing_data and existing_data.get("scheduled_time"):
@@ -565,22 +596,27 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
 
         # Generate a unique reminder ID and set the reminder data
         reminder_id = str(uuid.uuid4())
+        scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat()
         set_reminder_data(
             key,
             True,
-            (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat(),
+            scheduled_time,
             reminder_id
         )
+        logger.debug(f"Reminder data set for key '{key}' with reminder_id '{reminder_id}' and scheduled_time '{scheduled_time}'.")
 
         # Get the role for mentions in the reminder message
         role = get_role()
         if role:
+            logger.debug(f"Role '{role}' retrieved for reminder key '{key}'. Scheduling send_scheduled_message.")
             await send_scheduled_message(
                 initial_message,
                 f"🔔 <@&{role}> {reminder_message}",
                 interval,
                 key
             )
+        else:
+            logger.warning(f"No role found for reminder key '{key}'; cannot mention in reminder message.")
     except Exception as e:
         logger.exception(f"Error handling reminder for key '{key}': {e}")
 
@@ -596,6 +632,7 @@ async def reschedule_reminder(key, role):
     ? role - The role ID to mention in the reminder message.
     """
     try:
+        logger.debug(f"Attempting to reschedule reminder for key '{key}' with role '{role}'.")
         # Only proceed if the key is "disboard"
         if key != "disboard":
             logger.debug(f"Reminder key '{key}' is not supported. Only 'disboard' is handled.")
@@ -634,6 +671,9 @@ async def reschedule_reminder(key, role):
                     )
                 )
             )
+            logger.debug(f"Reschedule task created for reminder {reminder_id} with a delay of {remaining_time.total_seconds()} seconds.")
+        else:
+            logger.warning(f"Insufficient reminder data for key '{key}'; cannot reschedule.")
     except Exception as e:
         logger.exception(f"Error while attempting to reschedule the Disboard reminder: {e}")
 
@@ -653,21 +693,28 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
     ? guild_id       - The ID of the guild where the kick should occur.
     """
     try:
+        logger.debug(f"Scheduling mute kick for member '{username}' (ID: {member_id}) in guild {guild_id}. Join time: {join_time}, allowed mute time: {mute_kick_time} hours.")
         # Calculate the current time and the time elapsed since the member joined.
         now = datetime.datetime.now(datetime.timezone.utc)
         join_time_dt = datetime.datetime.fromisoformat(join_time)
         elapsed_time = (now - join_time_dt).total_seconds()
+        logger.debug(f"Current time: {now.isoformat()}, Join time: {join_time_dt.isoformat()}, Elapsed time: {elapsed_time:.2f} seconds.")
 
         # Calculate the remaining time (in seconds) before the kick is due.
         remaining_time = (mute_kick_time * 3600) - elapsed_time 
+        logger.debug(f"Calculated remaining time before kick: {remaining_time:.2f} seconds.")
 
         # Retrieve the guild object using its ID.
         guild = bot.get_guild(guild_id)
+        if guild:
+            logger.debug(f"Retrieved guild '{guild.name}' for guild_id {guild_id}.")
+        else:
+            logger.warning(f"Guild {guild_id} not found.")
 
         # If the remaining time is up or negative, attempt an immediate kick.
         if remaining_time <= 0:
             if not guild:
-                logger.info(f"Guild {guild_id} not found. Removing {username} from tracking.")
+                logger.info(f"Guild {guild_id} not found. Removing {username} (ID: {member_id}) from tracking.")
                 remove_tracked_member(member_id)
                 return
 
@@ -676,50 +723,54 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
             if not member:
                 try:
                     member = await guild.fetch_member(member_id)
+                    logger.debug(f"Member '{username}' fetched from API for immediate kick.")
                 except Exception as e:
-                    logger.info(f"Member {username} not found in the guild (possibly already left). Removing from tracking.")
+                    logger.info(f"Member '{username}' not found in the guild (possibly already left). Removing from tracking. Error: {e}")
                     remove_tracked_member(member_id)
                     return
 
             try:
                 await member.kick(reason="User did not send a message in time.")
                 remove_tracked_member(member_id)
-                logger.info(f"Kicked {username} immediately due to bot restart.")
+                logger.info(f"Member '{username}' (ID: {member_id}) kicked immediately due to mute timeout.")
             except Exception as e:
-                logger.warning(f"Failed to kick {username} immediately after bot restart: {e}")
+                logger.warning(f"Failed to kick member '{username}' immediately after bot restart: {e}")
             return
 
         # Define an asynchronous function to perform the delayed kick.
         async def delayed_kick():
+            logger.debug(f"Delayed kick scheduled to occur in {remaining_time:.2f} seconds for member '{username}' (ID: {member_id}).")
             # Wait for the remaining time before executing the kick.
             await asyncio.sleep(remaining_time)
             # Verify that the member is still tracked before proceeding.
             if get_tracked_member(member_id):
                 guild = bot.get_guild(guild_id)
                 if not guild:
-                    logger.warning(f"Guild {guild_id} not found. Cannot kick {username}.")
+                    logger.warning(f"Guild {guild_id} not found at delayed kick time. Cannot kick member '{username}'.")
                     return
                 member = guild.get_member(member_id)
                 if not member:
                     try:
                         member = await guild.fetch_member(member_id)
-                        logger.debug(f"Member {username} fetched for scheduled kick.")
+                        logger.debug(f"Member '{username}' fetched during scheduled kick.")
                     except Exception as e:
-                        logger.info(f"Member {username} not found during scheduled kick. Removing from tracking.")
+                        logger.info(f"Member '{username}' not found during scheduled kick. Removing from tracking. Error: {e}")
                         remove_tracked_member(member_id)
                         return
                 try:
                     await member.kick(reason="User did not send a message in time.")
                     remove_tracked_member(member_id)
-                    logger.info(f"Kicked {username} after scheduled time.")
+                    logger.info(f"Member '{username}' (ID: {member_id}) kicked after scheduled delay.")
                 except Exception as e:
-                    logger.warning(f"Failed to kick {username} after scheduled time: {e}")
+                    logger.warning(f"Failed to kick member '{username}' after scheduled delay: {e}")
+            else:
+                logger.debug(f"Member '{username}' (ID: {member_id}) is no longer tracked at delayed kick time.")
 
         # Schedule the delayed kick as a background task.
         asyncio.create_task(delayed_kick())
-        logger.debug(f"Scheduled kick for {username} in {remaining_time:.2f} seconds.")
+        logger.debug(f"Scheduled delayed kick for member '{username}' in {remaining_time:.2f} seconds.")
     except Exception as e:
-        logger.exception(f"Error scheduling mute mode kick for {username}: {e}")
+        logger.exception(f"Error scheduling mute mode kick for member '{username}' (ID: {member_id}): {e}")
 
 # -------------------------
 # Event Listeners
@@ -742,14 +793,14 @@ async def on_ready():
                 type=interactions.ActivityType.WATCHING,
             ),
         )
-        logger.debug("Bot presence and activity set.")
+        logger.debug("Bot presence and activity set successfully.")
     except Exception as e:
         logger.exception(f"Failed to set bot presence: {e}")
 
     # Initialize the reminders table
     try:
         initialize_reminders_table()
-        logger.debug("Reminders table initialized.")
+        logger.debug("Reminders table initialized successfully.")
     except Exception as e:
         logger.exception(f"Error initializing reminders table: {e}")
 
@@ -778,20 +829,22 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     * and triggers the Disboard reminder if found.
     """
     try:
-        # Log the received message's author for debugging purposes
         logger.debug(f"Message received from {event.message.author.username}: {event.message.content}")
-
         # Process the message if it contains embeds
         if event.message.embeds:
             try:
                 embed = event.message.embeds[0]
                 embed_description = embed.description or ""
-                logger.debug(f"Embed detected: {embed_description}")
+                logger.debug(f"Embed detected with description: {embed_description}")
                 if "Bump done" in embed_description:
-                    logger.debug("Triggering Disboard reminder.")
+                    logger.debug("Triggering Disboard reminder based on embed content.")
                     await disboard()
+                else:
+                    logger.debug("Embed does not contain 'Bump done'; no action taken.")
             except Exception as e:
                 logger.exception(f"Error processing embed content: {e}")
+        else:
+            logger.debug("No embeds found in message; skipping embed processing.")
     except Exception as e:
         logger.exception(f"Error processing on_message_create event: {e}")
 
@@ -808,6 +861,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     * Each major operation is wrapped with error handling to ensure that any exception does not stop the entire join process.
     """
     try:
+        logger.debug("Processing on_member_join event.")
         # Retrieve configuration settings
         assign_role = get_value("backup_mode_enabled") == "true"
         role_id = int(get_value("backup_mode_id") or 0)
@@ -816,6 +870,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
         mute_mode_enabled = str(get_value("mute_mode")).lower() == "true"
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
+        logger.debug(f"Configuration settings retrieved: assign_role={assign_role}, role_id={role_id}, channel_id={channel_id}, kick_users={kick_users}, kick_users_age_limit={kick_users_age_limit}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
 
         # Get member and guild objects from the event
         member = event.member
@@ -827,11 +882,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
 
         # Skip processing for bots
         if member.bot:
-            logger.debug(f"Skipping mute tracking for bot {member.username}")
+            logger.debug(f"Member {member.username} is a bot; skipping further processing.")
             return
 
         # Kick new members if troll mode is enabled and the account is too new
         if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
+            logger.debug(f"Member {member.username} account age {account_age.days} days is below threshold of {kick_users_age_limit} days; attempting kick.")
             await member.kick(reason="Account is too new!")
             logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
             return
@@ -839,13 +895,14 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         # If mute mode is enabled, track the member and schedule a mute kick
         if mute_mode_enabled:
             join_time = datetime.datetime.now(datetime.UTC).isoformat()
-            logger.debug(f"Attempting to track {member.username} for mute mode.")
+            logger.debug(f"Attempting to track {member.username} for mute mode. Join time: {join_time}")
             try:
                 track_new_member(member.id, member.username, join_time)
                 logger.debug(f"Successfully tracked {member.username} for mute mode.")
                 await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
+                logger.debug(f"Scheduled mute kick for {member.username}.")
             except Exception as e:
-                logger.error(f"Failed to track {member.username}: {e}")
+                logger.error(f"Failed to track {member.username} for mute mode: {e}")
 
         # Check if backup mode is fully configured before sending welcome messages and assigning roles
         if not (assign_role and role_id and channel_id):
@@ -898,6 +955,7 @@ async def on_member_remove(event: interactions.api.events.MemberRemove):
     * Exceptions are caught and logged to avoid interruption of the event flow.
     """
     try:
+        logger.debug(f"Processing on_member_remove event for member ID {event.member.id}.")
         # Retrieve the member and guild information from the event
         member = event.member
         guild = event.guild
@@ -910,9 +968,7 @@ async def on_member_remove(event: interactions.api.events.MemberRemove):
 
         # Log successful removal for further traceability
         logger.debug(f"Successfully processed removal for {member.username}.")
-
     except Exception as e:
-        # Catch and log any errors that occur during the removal process
         logger.exception(f"Error during on_member_remove event: {e}")
 
 # -------------------------
@@ -946,6 +1002,7 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
     ? role    - (Optional) Role to ping in reminder messages.
     """
     try:
+        logger.debug(f"/reminder command invoked by {ctx.author.username}")
         # Check if both channel and role are provided for setup.
         if channel and role:
             # Validate that the user has administrator permissions.
@@ -954,7 +1011,6 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
                 await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 return
 
-            # Log the reminder setup details.
             logger.debug(f"⏰ Disboard reminder setup requested by {ctx.author.username}. Channel: {channel.name}, Role: {role.id}")
 
             # Save the channel and role configuration.
@@ -1004,7 +1060,6 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         # Send the summary back to the user.
         await ctx.send(summary)
     except Exception as e:
-        # Log any errors and notify the user of an error.
         logger.exception(f"Error in /reminder command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request. Please try again later.", ephemeral=True)
 
@@ -1022,17 +1077,14 @@ async def fix_command(ctx: interactions.ComponentContext):
     ? PARAMETERS:
     ? ctx - The context of the command.
     """
-    # Ensure the user has administrator permissions.
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
-        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         logger.warning(f"Unauthorized /fix attempt by {ctx.author.username}")
+        await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        # Defer the response to allow time for processing.
+        logger.debug(f"/fix command received from {ctx.author.username} for service: disboard")
         await ctx.defer()
-        logger.debug(f"Received /fix command from {ctx.author.username} for service: disboard")
-
         # Set the delay for Disboard (2 hours = 7200 seconds).
         seconds = 7200
         logger.debug(f"Service 'disboard' selected with a delay of {seconds} seconds.")
@@ -1071,14 +1123,13 @@ async def reset_reminders(ctx: interactions.ComponentContext):
     ? PARAMETERS:
     ? ctx - The context of the command.
     """
-    # Verify that the user has administrator permissions.
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /resetreminders attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        logger.debug(f"Received /resetreminders command from {ctx.author.username}")
+        logger.debug(f"/resetreminders command received from {ctx.author.username}")
         await ctx.defer()
 
         # Reset only the 'disboard' reminder data.
@@ -1124,34 +1175,27 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: str, tim
     ? enabled - A string value ("enabled" or "disabled") indicating whether to enable mute mode.
     ? time    - (Optional) The time limit in hours before a silent user is kicked. Defaults to 2 hours.
     """
-    # Determine if mute mode should be enabled based on the provided option.
     is_enabled = True if enabled.lower() == "enabled" else False
 
-    # Check if the user has administrator permissions.
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /mutemode attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        # Log the receipt of the command with details.
-        logger.debug(f"Received /mutemode command from {ctx.author.username}")
+        logger.debug(f"/mutemode command received from {ctx.author.username}")
         logger.debug(f"Mute mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Kick Time: {time} hours")
         
-        # Update the configuration values in the database.
         set_value("mute_mode", is_enabled)
         set_value("mute_mode_kick_time_hours", time)
 
-        # Build the response message based on whether mute mode is enabled or disabled.
         response_message = (
             f"🔇 Mute mode has been ✅ **enabled**. New users must send a message within **{time}** hours or be kicked."
             if is_enabled else "🔇 Mute mode has been ❌ **disabled**."
         )
-        # Send the response to the user.
         await ctx.send(response_message)
         logger.debug(f"Mute mode {'enabled' if is_enabled else 'disabled'} by {ctx.author.username}, kick time set to {time} hours.")
     except Exception as e:
-        # Log any exceptions and notify the user.
         logger.exception(f"Error in /mutemode command: {e}")
         await ctx.send("⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral=True)
 
@@ -1169,32 +1213,24 @@ async def test_reminders(ctx: interactions.ComponentContext):
     ? PARAMETERS:
     ? ctx - The context of the slash command.
     """
-    # Check if the user has administrator permissions.
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /testmessage attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        # Log the request for a test message.
-        logger.debug(f"Test message requested by {ctx.author.username}.")
-
-        # Retrieve the role ID from the database/configuration.
+        logger.debug(f"/testmessage command invoked by {ctx.author.username}")
         role_id = get_value("role")
         if not role_id:
             logger.warning("No role has been set up for reminders.")
             await ctx.send("⚠️ No role has been set up for reminders.", ephemeral=True)
             return
 
-        # Log that the test message is about to be sent.
         logger.debug("Sending test reminder message.")
-        
-        # Send a test message that pings the configured role.
         await ctx.send(f"🔔 <@&{role_id}> This is a test reminder message!")
         logger.debug("Test reminder message successfully sent.")
         
     except Exception as e:
-        # Log any exception and notify the user of the error.
         logger.exception(f"Error in /testmessage command: {e}")
         await ctx.send("⚠️ Could not send test message. Please try again later.", ephemeral=True)
 
@@ -1212,24 +1248,17 @@ async def dev(ctx: interactions.ComponentContext):
     ? PARAMETERS:
     ? ctx - The context of the slash command.
     """
-    # Check if the user has administrator permissions.
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /dev attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        # Log the start of the developer tag maintenance process.
-        logger.debug(f"Developer tag maintenance requested by {ctx.author.username}.")
-        
-        # Perform any developer tag maintenance logic here.
-        # (Currently, no maintenance logic is implemented beyond logging.)
+        logger.debug(f"/dev command received from {ctx.author.username}")
+        # Developer tag maintenance logic would be here.
         logger.debug("Developer tag maintenance completed.")
-        
-        # Send a confirmation message to the user.
         await ctx.send("🛠️ Developer tag maintained!")
     except Exception as e:
-        # Log any errors and inform the user of the error.
         logger.exception(f"Error in /dev command: {e}")
         await ctx.send("⚠️ An error occurred while maintaining the developer tag. Please try again later.", ephemeral=True)
 
@@ -1248,10 +1277,7 @@ async def source(ctx: interactions.ComponentContext):
     ? ctx - The context of the slash command.
     """
     try:
-        # Log the receipt of the /source command
-        logger.debug(f"Received /source command from {ctx.author.username}")
-
-        # Create an embed containing resource links
+        logger.debug(f"/source command received from {ctx.author.username}")
         embed = interactions.Embed(
             title="📜 **Bot Resources**",
             description="Here are the links for the bot's resources:",
@@ -1268,13 +1294,9 @@ async def source(ctx: interactions.ComponentContext):
             inline=False
         )
         
-        # Log that the embed was created successfully
-        logger.debug(f"Successfully created bot resources embed for {ctx.author.username}.")
-
-        # Send the embed as a response to the command
+        logger.debug(f"Bot resources embed created successfully for {ctx.author.username}.")
         await ctx.send(embeds=[embed])
     except Exception as e:
-        # Log any exceptions and inform the user of an error
         logger.exception(f"Error in /source command: {e}")
         await ctx.send("⚠️ An error occurred while processing your request.", ephemeral=True)
 
@@ -1319,34 +1341,24 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
     ? enabled - Optional string ("enabled" or "disabled") to toggle auto-role assignment.
     """
     try:
-        # Check if any configuration options were provided.
+        logger.debug(f"/backupmode command invoked by {ctx.author.username}")
         if channel or role or enabled is not None:
-            # Ensure that the user has administrator permissions.
             if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
                 logger.warning(f"Unauthorized /backupmode setup attempt by {ctx.author.username}")
                 await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
                 return
 
-            logger.debug(f"Received /backupmode command from {ctx.author.username}")
-
-            # Update the backup mode channel if provided.
             if channel:
                 set_value("backup_mode_channel", channel.id)
                 logger.debug(f"Backup mode channel set to {channel.name}")
-
-            # Update the backup mode role if provided.
             if role:
                 set_value("backup_mode_id", role.id)
                 logger.debug(f"Backup mode role set to {role.id}")
-
-            # Update the enabled status if provided.
             if enabled is not None:
-                # Convert enabled string to boolean: "enabled" -> True, "disabled" -> False.
                 is_enabled = True if enabled.lower() == "enabled" else False
                 set_value("backup_mode_enabled", is_enabled)
                 logger.debug(f"Backup mode {'enabled' if is_enabled else 'disabled'}")
 
-            # Send confirmation of the updated configuration.
             await ctx.send(
                 f"🔄 **Backup Mode Configured!**\n"
                 f"📢 Welcome messages will be sent in {channel.name if channel else 'Not changed'}\n"
@@ -1355,24 +1367,20 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
             )
             return
 
-        # If no configuration options were provided, perform a status check.
         logger.debug(f"Backup mode status check requested by {ctx.author.username}")
         channel_id = get_value("backup_mode_channel")
         role_id = get_value("backup_mode_id")
         enabled_status = get_value("backup_mode_enabled")
 
-        # Retrieve the channel name from the guild.
         if channel_id:
             channel_obj = ctx.guild.get_channel(channel_id)
             channel_str = channel_obj.name if channel_obj else "Not set!"
         else:
             channel_str = "Not set!"
 
-        # Format the role display string.
         role_str = f"<@&{role_id}>" if role_id else "Not set!"
         enabled_str = "✅ **Enabled**" if enabled_status else "❌ **Disabled**"
 
-        # Build the summary message.
         summary = (
             f"📌 **Backup Mode Status:**\n"
             f"📢 **Channel:** {channel_str}\n"
@@ -1417,35 +1425,28 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: str, ag
     ? enabled - A string value ("enabled" or "disabled") to toggle troll mode.
     ? age     - The minimum account age in days required to bypass kicking. Defaults to 30.
     """
-    # Determine if troll mode should be enabled.
     is_enabled = True if enabled.lower() == "enabled" else False
 
-    # Check if the user has administrator permissions.
     if not ctx.author.has_permission(interactions.Permissions.ADMINISTRATOR):
         logger.warning(f"Unauthorized /trollmode attempt by {ctx.author.username}")
         await ctx.send("❌ You do not have permission to use this command.", ephemeral=True)
         return
 
     try:
-        # Log the receipt and details of the command.
-        logger.debug(f"Received /trollmode command from {ctx.author.username}")
+        logger.debug(f"/trollmode command received from {ctx.author.username}")
         logger.debug(f"Troll mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Minimum age: {age} days")
-
-        # Update the configuration values in the database.
+        
         set_value("troll_mode", is_enabled)
         set_value("troll_mode_account_age", age)
 
-        # Build the response message based on whether troll mode is enabled or disabled.
         response_message = (
             f"👹 Troll mode has been ✅ **enabled**. Minimum account age: **{age}** days."
             if is_enabled else "👹 Troll mode has been ❌ **disabled**."
         )
 
-        # Send the response message to the user.
         await ctx.send(response_message)
         logger.debug(f"Troll mode {'enabled' if is_enabled else 'disabled'} by {ctx.author.username}; account age threshold = {age} days.")
     except Exception as e:
-        # Log any errors and send an error message to the user.
         logger.exception(f"Error in /trollmode command: {e}")
         await ctx.send("⚠️ An error occurred while toggling troll mode. Please try again later.", ephemeral=True)
 
@@ -1478,17 +1479,14 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
     ? results - The number of search results to return (must be between 1 and 10, defaults to 5).
     """
     try:
-        # Defer the response to allow time for processing.
         await ctx.defer()
-        logger.debug(f"Received /google command from {ctx.author.username}")
-        logger.debug(f"User input for query: '{query}', requested results: {results}")
+        logger.debug(f"/google command received from {ctx.author.username}")
+        logger.debug(f"User input: query='{query}', requested results={results}")
 
-        # Format the query (capitalized) and ensure the results count is within the valid range.
         formatted_query = query.title()
         results = max(1, min(results, 10))
-        logger.debug(f"Formatted query: '{formatted_query}', adjusted results: {results}")
+        logger.debug(f"Formatted query: '{formatted_query}', adjusted results count: {results}")
 
-        # Define the Google Custom Search API URL and parameters.
         search_url = "https://www.googleapis.com/customsearch/v1"
         params = {
             "key": GOOGLE_API_KEY,
@@ -1496,26 +1494,22 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
             "q": query,
             "num": results
         }
-        logger.debug(f"Making API request to: {search_url} with params {params}")
+        logger.debug(f"Making Google API request to: {search_url} with params {params}")
 
-        # Make the API request using an asynchronous HTTP session.
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
-                logger.debug(f"API Response Status: {response.status}")
+                logger.debug(f"Google API Response Status: {response.status}")
                 if response.status == 200:
-                    # Parse the JSON response from the API.
                     data = await response.json()
                     logger.debug(f"Received Google Search data: {json.dumps(data, indent=2)}")
 
-                    # Check if search results were returned.
                     if "items" in data and data["items"]:
                         embeds = []
-                        # Loop through each search result and create an embed.
                         for item in data["items"]:
                             title = item.get("title", "No Title Found")
                             link = item.get("link", "No Link Found")
                             snippet = item.get("snippet", "No Description Found")
-                            logger.debug(f"Extracted Google Search Result - Title: {title}, Link: {link}")
+                            logger.debug(f"Search result - Title: {title}, Link: {link}")
 
                             embed = interactions.Embed(
                                 title=f"🔍 **{title}**",
@@ -1525,14 +1519,13 @@ async def google_search(ctx: interactions.ComponentContext, query: str, results:
                             embed.set_footer(text="Powered by Google Search")
                             embeds.append(embed)
 
-                        # Send the embeds if there are any search results.
                         if embeds:
                             await ctx.send(embeds=embeds)
                         else:
-                            logger.warning(f"No search results found for query: '{formatted_query}'.")
+                            logger.warning(f"No search results found for query: '{formatted_query}'")
                             await ctx.send(f"❌ No search results found for '**{formatted_query}**'. Try refining your query!")
                     else:
-                        logger.warning(f"No search results found for query: '{formatted_query}'.")
+                        logger.warning(f"No search results found for query: '{formatted_query}'")
                         await ctx.send(f"❌ No search results found for '**{formatted_query}**'. Try refining your search!")
                 else:
                     logger.warning(f"Google API error: {response.status}")
@@ -1570,47 +1563,39 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
     ? results - The number of image results to return (between 1 and 10, defaults to 5).
     """
     try:
-        # Defer the response to allow time for processing.
         await ctx.defer()
-        logger.debug(f"Received /googleimage command from {ctx.author.username}")
-        logger.debug(f"User input for query: '{query}', requested results: {results}")
+        logger.debug(f"/googleimage command received from {ctx.author.username}")
+        logger.debug(f"User input: query='{query}', requested results={results}")
 
-        # Format the query (capitalize words) and clamp the results count between 1 and 10.
         formatted_query = query.title()
         results = max(1, min(results, 10))
-        logger.debug(f"Formatted query: '{formatted_query}', adjusted results: {results}")
+        logger.debug(f"Formatted query: '{formatted_query}', adjusted results count: {results}")
 
-        # Set up the Google Custom Search API URL and parameters for an image search.
         search_url = "https://www.googleapis.com/customsearch/v1"
         params = {
             "key": GOOGLE_API_KEY,
             "cx": IMAGE_SEARCH_ENGINE_ID,
             "q": query,
-            "searchType": "image",  # Specify image search.
+            "searchType": "image",
             "num": results
         }
-        logger.debug(f"Making API request to: {search_url} with params {params}")
+        logger.debug(f"Making Google Image API request to: {search_url} with params {params}")
 
-        # Make the API request using an asynchronous HTTP session.
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
-                logger.debug(f"API Response Status: {response.status}")
+                logger.debug(f"Google Image API Response Status: {response.status}")
                 if response.status == 200:
-                    # Parse the JSON response.
                     data = await response.json()
                     logger.debug(f"Received Google Image data: {json.dumps(data, indent=2)}")
 
-                    # Check if any image items were returned.
                     if "items" in data and data["items"]:
                         embeds = []
                         for item in data["items"]:
-                            # Extract the title, image URL, and the context (page) link.
                             title = item.get("title", "No Title")
                             image_link = item.get("link", "")
                             page_link = item.get("image", {}).get("contextLink", image_link)
-                            logger.debug(f"Extracted Image - Title: {title}, Image Link: {image_link}")
+                            logger.debug(f"Image result - Title: {title}, Image Link: {image_link}")
 
-                            # Create an embed for each image result.
                             embed = interactions.Embed(
                                 title=f"🖼️ **{title}**",
                                 description=f"🔗 **[View Image]({image_link})**",
@@ -1620,14 +1605,13 @@ async def google_image_search(ctx: interactions.ComponentContext, query: str, re
                             embed.set_footer(text="Powered by Google Image Search")
                             embeds.append(embed)
 
-                        # Send the embeds if available, otherwise inform the user.
                         if embeds:
                             await ctx.send(embeds=embeds)
                         else:
-                            logger.warning(f"No images found for query: '{formatted_query}'.")
+                            logger.warning(f"No images found for query: '{formatted_query}'")
                             await ctx.send(f"❌ No images found for '**{formatted_query}**'. Try refining your query!")
                     else:
-                        logger.warning(f"No image results found for query: '{formatted_query}'.")
+                        logger.warning(f"No image results found for query: '{formatted_query}'")
                         await ctx.send(f"❌ No image results found for '**{formatted_query}**'. Try refining your search!")
                 else:
                     logger.warning(f"Google API error: {response.status}")
@@ -1659,48 +1643,40 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
     ? query - The search query provided by the user.
     """
     try:
-        # Defer the response to allow for processing time.
         await ctx.defer()
-        logger.debug(f"Received /youtube command from {ctx.author.username}")
+        logger.debug(f"/youtube command received from {ctx.author.username}")
         logger.debug(f"User input for query: '{query}'")
         
-        # Format the query for display purposes.
         formatted_query = query.title()
         logger.debug(f"Formatted query: '{formatted_query}'")
 
-        # Define the YouTube Data API endpoint and parameters.
         search_url = "https://www.googleapis.com/youtube/v3/search"
         params = {
             "key": GOOGLE_API_KEY,
             "part": "snippet",
             "q": query,
             "type": "video",
-            "maxResults": 1  # Return only the top result.
+            "maxResults": 1
         }
-        logger.debug(f"Making API request to: {search_url} with params {params}")
+        logger.debug(f"Making YouTube API request to: {search_url} with params {params}")
 
-        # Make the API request using an asynchronous HTTP session.
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
-                logger.debug(f"API Response Status: {response.status}")
+                logger.debug(f"YouTube API Response Status: {response.status}")
                 if response.status == 200:
-                    # Parse the JSON response.
                     data = await response.json()
                     logger.debug(f"Received YouTube data: {json.dumps(data, indent=2)}")
 
-                    # Check if any video items were returned.
                     if "items" in data and data["items"]:
                         item = data["items"][0]
                         video_id = item["id"].get("videoId", "")
                         snippet = item["snippet"]
                         title = snippet.get("title", "No Title")
                         description = snippet.get("description", "No Description")
-                        # Get the high-quality thumbnail if available.
                         thumbnail = snippet.get("thumbnails", {}).get("high", {}).get("url", "")
                         video_url = f"https://www.youtube.com/watch?v={video_id}" if video_id else "N/A"
                         logger.debug(f"Extracted YouTube Video - Title: {title}, Video ID: {video_id}")
 
-                        # Create an embed to display the video information.
                         embed = interactions.Embed(
                             title=f"🎬 **{title}**",
                             description=f"📜 **Description:** {description}",
@@ -1712,10 +1688,9 @@ async def youtube_video_search(ctx: interactions.ComponentContext, query: str):
                             embed.set_thumbnail(url=thumbnail)
                         embed.set_footer(text="Powered by YouTube Data API")
                         
-                        # Send the embed to the user.
                         await ctx.send(embed=embed)
                     else:
-                        logger.warning(f"No video results found for query: '{formatted_query}'.")
+                        logger.warning(f"No video results found for query: '{formatted_query}'")
                         await ctx.send(f"❌ No video results found for '**{formatted_query}**'. Try another search!")
                 else:
                     logger.warning(f"YouTube API error: {response.status}")
@@ -1747,16 +1722,13 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
     ? query - The topic to search for on Wikipedia.
     """
     try:
-        # Defer the response to allow for processing time.
         await ctx.defer()
-        logger.debug(f"Received /wikipedia command from {ctx.author.username}")
+        logger.debug(f"/wikipedia command received from {ctx.author.username}")
         logger.debug(f"User input for query: '{query}'")
 
-        # Format the query for display purposes.
         formatted_query = query.title()
         logger.debug(f"Formatted query: '{formatted_query}'")
 
-        # Set up the Wikipedia API URL and parameters.
         search_url = "https://en.wikipedia.org/w/api.php"
         params = {
             "action": "query",
@@ -1765,32 +1737,26 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
             "srsearch": query,
             "utf8": 1
         }
-        logger.debug(f"Making API request to: {search_url} with params {params}")
+        logger.debug(f"Making Wikipedia API request to: {search_url} with params {params}")
 
-        # Perform the API request using an asynchronous HTTP session.
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
-                logger.debug(f"API Response Status: {response.status}")
+                logger.debug(f"Wikipedia API Response Status: {response.status}")
                 if response.status == 200:
-                    # Parse the JSON response from Wikipedia.
                     data = await response.json()
                     logger.debug(f"Received Wikipedia data: {json.dumps(data, indent=2)}")
 
-                    # Check if the response contains search results.
                     if data.get("query", {}).get("search"):
-                        # Get the top search result.
                         top_result = data["query"]["search"][0]
                         title = top_result.get("title", "No Title")
                         snippet = top_result.get("snippet", "No snippet available.")
 
-                        # Replace HTML span tags used for highlighting with markdown bold syntax.
                         snippet = snippet.replace("<span class=\"searchmatch\">", "**").replace("</span>", "**")
                         page_id = top_result.get("pageid")
                         wiki_url = f"https://en.wikipedia.org/?curid={page_id}"
 
                         logger.debug(f"Extracted Wikipedia Data - Title: {title}, Page ID: {page_id}")
 
-                        # Create an embed to display the Wikipedia result.
                         embed = interactions.Embed(
                             title=f"📖 **{title}**",
                             description=f"📜 **Summary:** {snippet}",
@@ -1800,10 +1766,9 @@ async def wikipedia_search(ctx: interactions.ComponentContext, query: str):
                         embed.add_field(name="🔗 Wikipedia Link", value=f"[Click Here]({wiki_url})", inline=False)
                         embed.set_footer(text="Powered by Wikipedia API")
 
-                        # Send the embed with the top search result.
                         await ctx.send(embed=embed)
                     else:
-                        logger.warning(f"No results found for query: '{formatted_query}'.")
+                        logger.warning(f"No results found for query: '{formatted_query}'")
                         await ctx.send(f"❌ No results found for '**{formatted_query}**'. Try refining your search!")
                 else:
                     logger.warning(f"Wikipedia API error: {response.status}")
@@ -1835,32 +1800,25 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
     ? title - The movie or TV show title to search for.
     """
     try:
-        # Defer the response to allow for processing time.
         await ctx.defer()
-        logger.debug(f"Received /imdb command from {ctx.author.username}")
+        logger.debug(f"/imdb command received from {ctx.author.username}")
         logger.debug(f"User input for title: '{title}'")
 
-        # Format the title for display purposes.
         formatted_title = title.title()
         logger.debug(f"Formatted title: '{formatted_title}'")
 
-        # Define the OMDb API endpoint and parameters.
         search_url = "http://www.omdbapi.com/"
         params = {"t": title, "apikey": OMDB_API_KEY}
-        logger.debug(f"Making API request to: {search_url} with params {params}")
+        logger.debug(f"Making OMDb API request to: {search_url} with params {params}")
 
-        # Make the API request using an asynchronous HTTP session.
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
-                logger.debug(f"API Response Status: {response.status}")
+                logger.debug(f"OMDb API Response Status: {response.status}")
                 if response.status == 200:
-                    # Parse the JSON response.
                     data = await response.json()
                     logger.debug(f"Received IMDb data: {json.dumps(data, indent=2)}")
 
-                    # Check if the API response is successful.
                     if data.get("Response") == "True":
-                        # Extract relevant data from the API response.
                         title = data.get("Title", "Unknown")
                         year = data.get("Year", "Unknown")
                         genre = data.get("Genre", "Unknown")
@@ -1871,7 +1829,6 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
                         imdb_link = f"https://www.imdb.com/title/{imdb_id}" if imdb_id else "N/A"
                         logger.debug(f"Extracted IMDb Data - Title: {title}, Year: {year}, Genre: {genre}, IMDb Rating: {imdb_rating}")
 
-                        # Create an embed with the movie/TV show details.
                         embed = interactions.Embed(
                             title=f"🎬 **{title} ({year})**",
                             description=f"📜 **Plot:** {plot}",
@@ -1884,16 +1841,14 @@ async def imdb_search(ctx: interactions.ComponentContext, title: str):
                             embed.set_thumbnail(url=poster)
                         embed.set_footer(text="Powered by OMDb API")
 
-                        # Send the embed as the response.
                         await ctx.send(embed=embed)
                     else:
-                        logger.warning(f"No results found for title: '{formatted_title}'.")
+                        logger.warning(f"No results found for title: '{formatted_title}'")
                         await ctx.send(f"❌ No results found for '**{formatted_title}**'. Try another title!")
                 else:
                     logger.warning(f"OMDb API error: {response.status}")
                     await ctx.send(f"⚠️ Error: OMDb API returned status code {response.status}.")
     except Exception as e:
-        # Log any exceptions and notify the user of an error.
         logger.exception(f"Error in /imdb command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
@@ -1933,35 +1888,29 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
     ? private - (Optional) "yes" to send the response privately (ephemeral), "no" (default) for a public reply.
     """
     try:
-        # Defer the response to allow time for processing.
         await ctx.defer()
-        logger.debug(f"Received weather command from {ctx.author.username}")
-        logger.debug(f"User input for city: '{place}'")
+        logger.debug(f"/weather command received from {ctx.author.username}")
+        logger.debug(f"User input for place: '{place}'")
 
-        # Retrieve the latitude and longitude for the given place.
         lat, lon = await get_coordinates(place)
         if lat is None or lon is None:
-            logger.warning(f"Failed to get coordinates for '{place}'.")
+            logger.warning(f"Failed to get coordinates for '{place}'")
             await ctx.send(f"Could not find the location for '{place}'. Try another city.")
             return
 
-        # Format the place name.
         formatted_place = place.title()
-        logger.debug(f"Formatted city name: '{formatted_place}' (Lat: {lat}, Lon: {lon})")
+        logger.debug(f"Formatted place: '{formatted_place}' (Lat: {lat}, Lon: {lon})")
 
-        # Construct the API URL and parameters for PirateWeather.
         url = f"https://api.pirateweather.net/forecast/{PIRATEWEATHER_API_KEY}/{lat},{lon}"
         params = {"units": "si"}
-        logger.debug(f"Making API request to: {url} with params {params}")
+        logger.debug(f"Making PirateWeather API request to: {url} with params {params}")
 
-        # Make the API request using an asynchronous HTTP session.
         async with aiohttp.ClientSession() as session:
             async with session.get(url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
                     logger.debug(f"Received weather data: {json.dumps(data, indent=2)}")
 
-                    # Extract current weather and daily forecast details.
                     currently = data["currently"]
                     daily = data["daily"]["data"]
                     weather = currently.get("summary", "Unknown")
@@ -1980,7 +1929,6 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                     precip_intensity = currently.get("precipIntensity", 0)
                     precip_prob = currently.get("precipProbability", 0) * 100
 
-                    # Build a 3-day forecast string.
                     forecast_text = ""
                     for i in range(3):
                         day = daily[i]
@@ -1993,14 +1941,11 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
 
                     logger.debug(f"Extracted weather data for {formatted_place}: Temp {temp_c}°C, Feels Like {feels_like_c}°C, Humidity {humidity}%")
 
-                    # Create the weather embed.
                     embed = interactions.Embed(
                         title=f"Weather in {formatted_place}",
                         description=f"**{weather}**",
                         color=0xFF6E42
                     )
-
-                    # Always include location details in the embed.
                     embed.add_field(name="🌍 Location", value=f"📍 {formatted_place}\n📍 Lat: {lat}, Lon: {lon}", inline=False)
                     embed.add_field(name="🌡 Temperature", value=f"{temp_c}°C / {temp_f}°F", inline=True)
                     embed.add_field(name="🤔 Feels Like", value=f"{feels_like_c}°C / {feels_like_f}°F", inline=True)
@@ -2016,10 +1961,7 @@ async def weather_search(ctx: interactions.ComponentContext, place: str, private
                     embed.add_field(name="📅 3-Day Forecast", value=forecast_text, inline=False)
                     embed.set_footer(text="Powered by PirateWeather")
 
-                    # Determine if the response should be ephemeral.
                     ephemeral = True if private.lower() == "yes" else False
-
-                    # Send the result.
                     await ctx.send(embed=embed, ephemeral=ephemeral)
                 else:
                     logger.warning(f"PirateWeather API error: {response.status}")
@@ -2051,33 +1993,24 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
     ? query - The term to search for on Urban Dictionary.
     """
     try:
-        # Log the search request.
-        logger.debug(f"User '{ctx.author.username}' searched for '{query}' on Urban Dictionary.")
-        # Defer the response to allow for processing time.
+        logger.debug(f"/urban command invoked by {ctx.author.username} for query: '{query}'")
         await ctx.defer()
-
-        # Set up the Urban Dictionary API endpoint and parameters.
         search_url = "https://api.urbandictionary.com/v0/define"
         params = {"term": query}
         
-        # Make an asynchronous HTTP request to Urban Dictionary.
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, params=params) as response:
                 if response.status == 200:
-                    # Parse the JSON response.
                     data = await response.json()
-                    # Check if any definitions were returned.
                     if data.get("list"):
                         top_result = data["list"][0]
                         word = top_result.get("word", "No Word")
-                        # Clean up the definition and example strings.
                         definition = top_result.get("definition", "No Definition Available.").replace("\r\n", "\n")
                         example = top_result.get("example", "").replace("\r\n", "\n") or "No example available."
                         thumbs_up = top_result.get("thumbs_up", 0)
                         thumbs_down = top_result.get("thumbs_down", 0)
                         logger.debug(f"Found definition for '{word}': {definition} ({thumbs_up}/{thumbs_down})")
                         
-                        # Create an embed to display the definition.
                         embed = interactions.Embed(
                             title=f"📖 Definition: {word}",
                             description=definition,
@@ -2088,16 +2021,14 @@ async def urban_dictionary_search(ctx: interactions.ComponentContext, query: str
                         embed.add_field(name="👎 Thumbs Down", value=str(thumbs_down), inline=True)
                         embed.set_footer(text="🔍 Powered by Urban Dictionary")
                         
-                        # Send the embed to the user.
                         await ctx.send(embed=embed)
                     else:
-                        logger.debug(f"No definitions found for '{query}'.")
+                        logger.debug(f"No definitions found for '{query}'")
                         await ctx.send("⚠️ No definitions found for your query. Try refining it.")
                 else:
                     logger.warning(f"Urban Dictionary API error: {response.status}")
                     await ctx.send(f"⚠️ Error: Urban Dictionary API returned status code {response.status}.")
     except Exception as e:
-        # Log any exceptions and notify the user with an error message.
         logger.exception(f"Error in /urban command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
 
@@ -2122,23 +2053,20 @@ async def anime_search(ctx: interactions.ComponentContext, title: str):
     ? title - The anime title to search for.
     """
     try:
-        # Defer the response to allow time for processing.
         await ctx.defer()
-        logger.debug(f"Received /anime command from {ctx.author.username}")
+        logger.debug(f"/anime command received from {ctx.author.username}")
         logger.debug(f"User input for title: '{title}'")
 
-        # Format the title for display purposes.
         formatted_title = title.title()
         logger.debug(f"Formatted title: '{formatted_title}'")
 
-        # Construct the search URL for MyAnimeList API.
         search_url = f"https://api.myanimelist.net/v2/anime?q={title}&limit=1"
         headers = {"X-MAL-CLIENT-ID": MAL_CLIENT_ID}
-        logger.debug(f"Making API request to: {search_url} with headers {headers}")
+        logger.debug(f"Making MyAnimeList API request to: {search_url} with headers {headers}")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(search_url, headers=headers) as response:
-                logger.debug(f"API Response Status: {response.status}")
+                logger.debug(f"MyAnimeList API Response Status: {response.status}")
                 if response.status == 200:
                     data = await response.json()
                     logger.debug(f"Received MAL data: {data}")
@@ -2158,7 +2086,6 @@ async def anime_search(ctx: interactions.ComponentContext, title: str):
                                 release_date = details_data.get("start_date", "Unknown")
                                 logger.debug(f"Extracted MAL Data - Title: {title}, Rating: {rating}, Genres: {genres}")
 
-                                # Create an embed with the retrieved anime details.
                                 embed = interactions.Embed(
                                     title=f"📺 **{title}**",
                                     description=f"📜 **Synopsis:** {synopsis}",
@@ -2176,7 +2103,7 @@ async def anime_search(ctx: interactions.ComponentContext, title: str):
                                 logger.warning(f"Error fetching extra details from MAL: {details_response.status}")
                                 await ctx.send("⚠️ Error fetching additional anime details. Please try again later.")
                     else:
-                        logger.warning(f"No results found for title: '{formatted_title}'.")
+                        logger.warning(f"No results found for title: '{formatted_title}'")
                         await ctx.send(f"❌ No anime found for '**{formatted_title}**'. Try another title!")
                 else:
                     logger.warning(f"MyAnimeList API error: {response.status}")
@@ -2201,29 +2128,19 @@ async def cat_image(ctx: interactions.ComponentContext):
     ? ctx - The context of the slash command.
     """
     try:
-        # Defer the response to allow time for processing.
         await ctx.defer()
-
-        # Build the URL with a timestamp to avoid caching issues.
         cat_api_url = f"https://cataas.com/cat?timestamp={int(time.time())}"
         logger.debug(f"Fetching cat image from {cat_api_url}")
 
-        # Create an asynchronous HTTP session to fetch the cat image.
         async with aiohttp.ClientSession() as session:
             async with session.get(cat_api_url) as response:
                 if response.status == 200:
-                    # Read the image bytes from the response.
                     image_bytes = await response.read()
-                    
-                    # Create a BytesIO object to hold the image data.
                     file_obj = io.BytesIO(image_bytes)
                     file_obj.seek(0)
                     filename = "cat.jpg"
-                    
-                    # Create an interactions.File object with the image data.
                     file = interactions.File(file_name=filename, file=file_obj)
                     
-                    # Build the embed that will display the cat image.
                     embed = interactions.Embed(
                         title="Random Cat Picture",
                         description="😺 Here's a cat for you!",
@@ -2232,8 +2149,8 @@ async def cat_image(ctx: interactions.ComponentContext):
                     embed.set_image(url=f"attachment://{filename}")
                     embed.set_footer(text="Powered by Cataas API")
                     
-                    # Send the embed and the file as an attachment.
                     await ctx.send(embeds=[embed], files=[file])
+                    logger.debug("Cat image sent successfully.")
                 else:
                     logger.warning(f"Cataas API error: {response.status}")
                     await ctx.send("😿 Couldn't fetch a cat picture. Try again later.")
@@ -2257,37 +2174,29 @@ async def dog_image(ctx: interactions.ComponentContext):
     ? ctx - The context of the slash command.
     """
     try:
-        # Defer the response to allow time for processing.
         await ctx.defer()
         dog_api_url = "https://dog.ceo/api/breeds/image/random"
         logger.debug(f"Fetching random dog image data from {dog_api_url}")
         
-        # Create an asynchronous HTTP session to make the API request.
         async with aiohttp.ClientSession() as session:
             async with session.get(dog_api_url) as response:
                 if response.status == 200:
-                    # Parse the JSON response.
                     data = await response.json()
                     image_url = data.get("message", None)
                     
                     if image_url:
-                        # Append a timestamp to the image URL to prevent caching.
                         image_url_with_timestamp = f"{image_url}?timestamp={int(time.time())}"
                         logger.debug(f"Fetching dog image from {image_url_with_timestamp}")
                         
-                        # Fetch the actual image file.
                         async with session.get(image_url_with_timestamp) as image_response:
                             if image_response.status == 200:
-                                # Read the image bytes.
                                 image_bytes = await image_response.read()
                                 file_obj = io.BytesIO(image_bytes)
                                 file_obj.seek(0)
                                 filename = "dog.jpg"
                                 
-                                # Create a file object to send as an attachment.
                                 file = interactions.File(file_name=filename, file=file_obj)
                                 
-                                # Build the embed to display the dog image.
                                 embed = interactions.Embed(
                                     title="Random Dog Picture",
                                     description="🐶 Here's a doggo for you!",
@@ -2296,8 +2205,8 @@ async def dog_image(ctx: interactions.ComponentContext):
                                 embed.set_image(url=f"attachment://{filename}")
                                 embed.set_footer(text="Powered by Dog CEO API")
                                 
-                                # Send the embed along with the image file.
                                 await ctx.send(embeds=[embed], files=[file])
+                                logger.debug("Dog image sent successfully.")
                             else:
                                 logger.warning(f"Error fetching dog image file: {image_response.status}")
                                 await ctx.send("🐶 Couldn't fetch a dog picture. Try again later.")
@@ -2334,13 +2243,10 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
     ? place - The place name to lookup the current time for.
     """
     try:
-        # Defer the response to allow processing time.
         await ctx.defer()
-        logger.debug(f"Received /timezone command for city: '{place}'")
+        logger.debug(f"/timezone command received for place: '{place}'")
         
-        # Initialize an HTTP session.
         async with aiohttp.ClientSession() as session:
-            # Build URL and parameters for the Google Geocoding API.
             geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
             geocode_params = {"address": place, "key": GOOGLE_API_KEY}
             async with session.get(geocode_url, params=geocode_params) as response:
@@ -2348,20 +2254,19 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
                     geo_data = await response.json()
                     logger.debug(f"Received Google Geocoding API response: {json.dumps(geo_data, indent=2)}")
                     
-                    # Check if any results were returned.
                     if geo_data.get("results"):
                         location = geo_data["results"][0]["geometry"]["location"]
                         lat, lng = location["lat"], location["lng"]
                     else:
+                        logger.warning(f"No results found for city '{place}' in Geocoding API.")
                         await ctx.send(f"❌ Could not find the city '{place}'. Check spelling.")
                         return
                 else:
+                    logger.warning(f"Google Geocoding API error: {response.status}")
                     await ctx.send("⚠️ Google Geocoding API error. Try again later.")
                     return
 
-            # Get current timestamp for timezone lookup.
             timestamp = int(datetime.datetime.now().timestamp())
-            # Build URL and parameters for the Google Time Zone API.
             timezone_url = "https://maps.googleapis.com/maps/api/timezone/json"
             timezone_params = {"location": f"{lat},{lng}", "timestamp": timestamp, "key": GOOGLE_API_KEY}
             async with session.get(timezone_url, params=timezone_params) as response:
@@ -2369,20 +2274,17 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
                     tz_data = await response.json()
                     logger.debug(f"Received Google Time Zone API response: {json.dumps(tz_data, indent=2)}")
                     
-                    # Check if the API call was successful.
                     if tz_data.get("status") == "OK":
                         timezone_name = tz_data["timeZoneId"]
-                        raw_offset = tz_data["rawOffset"] / 3600  # convert seconds to hours
-                        dst_offset = tz_data["dstOffset"] / 3600      # convert seconds to hours
+                        raw_offset = tz_data["rawOffset"] / 3600
+                        dst_offset = tz_data["dstOffset"] / 3600
                         utc_offset = raw_offset + dst_offset
                         is_dst = "Yes" if dst_offset > 0 else "No"
                         
-                        # Calculate local time by adding the UTC offset to current UTC time.
                         current_utc_time = datetime.datetime.now(datetime.timezone.utc)
                         local_time = current_utc_time + datetime.timedelta(hours=utc_offset)
                         formatted_time = local_time.strftime("%Y-%m-%d %H:%M:%S")
                         
-                        # Build the embed with the time details.
                         embed = interactions.Embed(
                             title=f"🕒 Current Time in {place.title()}",
                             description=f"⏰ **{formatted_time}** (UTC {utc_offset:+})",
@@ -2393,9 +2295,12 @@ async def timezone_lookup(ctx: interactions.ComponentContext, place: str):
                         embed.add_field(name="🌞 Daylight Savings", value=is_dst, inline=True)
                         embed.set_footer(text="Powered by Google Maps Time Zone API")
                         await ctx.send(embed=embed)
+                        logger.debug("Timezone lookup successful.")
                     else:
+                        logger.warning(f"Error retrieving timezone info for '{place}': {tz_data.get('status')}")
                         await ctx.send(f"❌ Error retrieving timezone info for '{place}'.")
                 else:
+                    logger.warning(f"Google Time Zone API error: {response.status}")
                     await ctx.send("⚠️ Google Time Zone API error. Try again later.")
     except Exception as e:
         logger.exception(f"Error in /timezone command: {e}")
@@ -2443,31 +2348,21 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
     ? private - (Optional) "yes" to send the response privately (ephemeral), "no" (default) for a public reply.
     """
     try:
-        # Defer the response to allow for processing time.
         await ctx.defer()
-        logger.debug(f"Received /timedifference command: '{place1}' and '{place2}' with private={private}")
+        logger.debug(f"/timedifference command received with place1: '{place1}', place2: '{place2}', private: '{private}'")
 
         async def get_utc_offset(city: str):
-            """
-            ! HELPER FUNCTION: Retrieve UTC offset for a given city.
-            * Uses the Google Geocoding API to get latitude and longitude, then the Google Time Zone API to compute the UTC offset.
-            ? PARAMETERS:
-            ? city - The city name to lookup.
-            ? RETURNS:
-            ? Total UTC offset in hours, or None if retrieval fails.
-            """
             geocode_url = "https://maps.googleapis.com/maps/api/geocode/json"
             timezone_url = "https://maps.googleapis.com/maps/api/timezone/json"
             async with aiohttp.ClientSession() as session:
-                # Get geographic coordinates for the city.
                 async with session.get(geocode_url, params={"address": city, "key": GOOGLE_API_KEY}) as response:
                     geo_data = await response.json()
                     if geo_data.get("results"):
                         location = geo_data["results"][0]["geometry"]["location"]
                         lat, lng = location["lat"], location["lng"]
                     else:
+                        logger.warning(f"Geocoding failed for city '{city}'")
                         return None
-                # Get timezone info using the coordinates.
                 timestamp = int(datetime.datetime.now().timestamp())
                 async with session.get(timezone_url, params={"location": f"{lat},{lng}", "timestamp": timestamp, "key": GOOGLE_API_KEY}) as response:
                     tz_data = await response.json()
@@ -2476,30 +2371,25 @@ async def time_difference(ctx: interactions.ComponentContext, place1: str, place
                         dst_offset = tz_data["dstOffset"] / 3600
                         return raw_offset + dst_offset
                     else:
+                        logger.warning(f"Timezone lookup failed for city '{city}': {tz_data.get('status')}")
                         return None
 
-        # Retrieve UTC offsets for both cities.
         offset1 = await get_utc_offset(place1)
         offset2 = await get_utc_offset(place2)
 
         if offset1 is None or offset2 is None:
+            logger.warning(f"Could not retrieve timezones for '{place1}' or '{place2}'")
             await ctx.send(f"❌ Could not retrieve timezones for '{place1}' or '{place2}'.")
             return
 
-        # Calculate the absolute time difference.
         time_diff = abs(offset1 - offset2)
-
-        # Prepare the output message including the city names.
         message = (
             f"⏳ The time difference between **{place1.title()}** and **{place2.title()}** "
             f"is **{time_diff} hours**."
         )
-
-        # Determine if the response should be ephemeral.
         ephemeral = True if private.lower() == "yes" else False
-
-        # Send the result.
         await ctx.send(message, ephemeral=ephemeral)
+        logger.debug("Time difference calculation completed successfully.")
     except Exception as e:
         logger.exception(f"Error in /timedifference command: {e}")
         await ctx.send("⚠️ An unexpected error occurred. Please try again later.", ephemeral=True)
@@ -2549,11 +2439,10 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
     ? strength  - The intensity of the warp effect (from 0 to 6). If set to 0, the original image is returned.
     """
     await ctx.defer()
-    logger.info(f"Received /warp command from {ctx.author.username} for {user.username}")
-    logger.info(f"Mode: {mode}, Strength: {strength}")
+    logger.info(f"/warp command received from {ctx.author.username} for user {user.username}")
+    logger.info(f"Warp mode: {mode}, Strength: {strength}")
     
     try:
-        # Retrieve the target user's avatar URL.
         avatar_url = f"{user.avatar_url}"
         logger.debug(f"Avatar URL for {user.username}: {avatar_url}")
         if not avatar_url:
@@ -2570,13 +2459,11 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
                     return
                 image_bytes = await resp.read()
 
-        # Open the image using PIL and convert it to RGB.
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         width, height = img.size
         img_np = np.array(img)
-        logger.debug(f"Image dimensions: {width}x{height}")
+        logger.debug(f"Image dimensions for {user.username}: {width}x{height}")
 
-        # If strength is 0, return the original image.
         if strength == 0:
             output_buffer = io.BytesIO()
             img.save(output_buffer, format="PNG")
@@ -2586,21 +2473,18 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             logger.info("Sent unmodified image (Strength 0)")
             return
 
-        # Determine the warp effect parameters.
         center_x, center_y = width // 2, height // 2
         strength_map = {0: 0, 1: 0.05, 2: 0.1, 3: 0.2, 4: 0.3, 5: 0.5, 6: 0.7}
         effect_strength = strength_map.get(strength, 0.3)
         effect_radius = min(width, height) // 2
-        logger.debug(f"Warp Center: ({center_x}, {center_y}), Effect Strength: {effect_strength}")
+        logger.debug(f"Warp center: ({center_x}, {center_y}), Effect strength: {effect_strength}")
 
-        # Create a coordinate grid.
         x_coords, y_coords = np.meshgrid(np.arange(width), np.arange(height))
         dx = x_coords - center_x
         dy = y_coords - center_y
         distance = np.sqrt(dx**2 + dy**2)
         angle = np.arctan2(dy, dx)
 
-        # Apply the selected warp effect.
         if mode == "swirl":
             logger.info("Applying swirl effect.")
             warped_angle = angle + (7 * effect_strength * np.exp(-distance / effect_radius))
@@ -2630,22 +2514,19 @@ async def warp(ctx: interactions.ComponentContext, user: interactions.User, mode
             new_x_coords = (center_x + norm_x * factor * effect_radius).astype(int)
             new_y_coords = (center_y + norm_y * factor * effect_radius).astype(int)
         else:
-            logger.warning(f"Invalid warp mode: {mode}")
+            logger.warning(f"Invalid warp mode selected: {mode}")
             await ctx.send("❌ Invalid warp mode selected.", ephemeral=True)
             return
 
-        # Ensure the new coordinates are within image bounds.
         new_x_coords = np.clip(new_x_coords, 0, width - 1)
         new_y_coords = np.clip(new_y_coords, 0, height - 1)
         
-        # Create the warped image from the modified coordinates.
         warped_img_np = img_np[new_y_coords, new_x_coords]
         warped_img = Image.fromarray(warped_img_np)
         output_buffer = io.BytesIO()
         warped_img.save(output_buffer, format="PNG")
         output_buffer.seek(0)
         
-        # Prepare the file to send.
         file = interactions.File(file=output_buffer, file_name=f"{mode}_warp.png")
         await ctx.send(files=[file])
         logger.info(f"Successfully applied {mode} effect with strength {strength} for {user.username}!")
