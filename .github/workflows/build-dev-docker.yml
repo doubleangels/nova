@@ -33,11 +33,15 @@ jobs:
 
       - name: Install code-quality dependencies
         run: |
-          pip install pylint
+          pip install pylint isort
 
       - name: Run pylint (lint)
         run: |
           pylint . --errors-only
+  
+      - name: Check import order with isort
+        run: |
+          isort . --check --diff
 
   build-and-push:
     name: build-and-push-dev-image
