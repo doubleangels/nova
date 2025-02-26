@@ -770,7 +770,7 @@ async def schedule_mute_kick(mute_mode_enabled:str, member_id: int, username: st
                     logger.debug(f"Skipping kick of '{username}' (ID: {member_id}) because mute mode is not enabled.")
 
         # Schedule the delayed kick as a background task.
-        asyncio.create_task(mdelayed_kick(mute_mode_enabled))
+        asyncio.create_task(delayed_kick(mute_mode_enabled))
         logger.debug(f"Scheduled delayed kick for member '{username}' in {remaining_time:.2f} seconds.")
     except Exception as e:
         logger.exception(f"Error scheduling mute mode kick for member '{username}' (ID: {member_id}): {e}")
