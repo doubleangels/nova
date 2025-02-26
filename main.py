@@ -901,45 +901,46 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             except Exception as e:
                 logger.error(f"Failed to track {member.username} for mute mode: {e}")
 
-        # Check if backup mode is fully configured before sending welcome messages and assigning roles
-        if not (backup_mode_enabled and backup_mode_id and backup_mode_channel):
-            logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
-            return
+        if backup_mode_enabled == "true":
+            # Check if backup mode is fully configured before sending welcome messages and assigning roles
+            if not (backup_mode_id and backup_mode_channel):
+                logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
+                return
 
-        # Retrieve the designated channel for welcome messages
-        channel = guild.get_channel(int(backup_mode_channel)) if backup_mode_channel else None
-        if not channel:
-            logger.warning(f"Channel with ID {backup_mode_channel} not found. Welcome message skipped.")
-            return
+            # Retrieve the designated channel for welcome messages
+            channel = guild.get_channel(int(backup_mode_channel)) if backup_mode_channel else None
+            if not channel:
+                logger.warning(f"Channel with ID {backup_mode_channel} not found. Welcome message skipped.")
+                return
 
-        # Create the welcome embed with instructions and details for the new member
-        embed = interactions.Embed(
-            title=f"🎉 Welcome {member.username}!",
-            description=(
-                "• **How old are you?**\n"
-                "• Where are you from?\n"
-                "• What do you do in your free time?\n"
-                "• What is your address?\n"
-                "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
-                "• What's your blood type?\n"
-                "• What's your shoe size?\n"
-                "• Can we donate your organs to ... \"charity\"?\n"
-                "\n"
-                "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**\n"
-            ),
-            color=0xCD41FF,
-        )
-        # Send the welcome message in the designated channel
-        await channel.send(embeds=[embed])
-        logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
+            # Create the welcome embed with instructions and details for the new member
+            embed = interactions.Embed(
+                title=f"🎉 Welcome {member.username}!",
+                description=(
+                    "• **How old are you?**\n"
+                    "• Where are you from?\n"
+                    "• What do you do in your free time?\n"
+                    "• What is your address?\n"
+                    "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
+                    "• What's your blood type?\n"
+                    "• What's your shoe size?\n"
+                    "• Can we donate your organs to ... \"charity\"?\n"
+                    "\n"
+                    "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**\n"
+                ),
+                color=0xCD41FF,
+            )
+            # Send the welcome message in the designated channel
+            await channel.send(embeds=[embed])
+            logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
 
-        # Retrieve the role object from the guild and assign it to the new member
-        role_obj = guild.get_role(int(backup_mode_id)) if backup_mode_id else None
-        if role_obj:
-            await member.add_role(role_obj)
-            logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
-        else:
-            logger.warning(f"Role with ID {backup_mode_id} not found in the guild. Role assignment skipped.")
+            # Retrieve the role object from the guild and assign it to the new member
+            role_obj = guild.get_role(int(backup_mode_id)) if backup_mode_id else None
+            if role_obj:
+                await member.add_role(role_obj)
+                logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
+            else:
+                logger.warning(f"Role with ID {backup_mode_id} not found in the guild. Role assignment skipped.")
 
     except Exception as e:
         logger.exception(f"Error during on_member_join event: {e}")
