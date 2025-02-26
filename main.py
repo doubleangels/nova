@@ -861,13 +861,13 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         logger.debug("Processing on_member_join event.")
         # Retrieve configuration settings
         backup_mode_enabled = str(get_value("backup_mode_enabled") or "false")
-        backup_mode_id = int(get_value("backup_mode_id") or 0)
-        backup_mode_channel = int(get_value("backup_mode_channel") or 0)
+        backup_mode_role = int(get_value("backup_mode_role") or None)
+        backup_mode_channel = int(get_value("backup_mode_channel") or None)
         troll_mode_enabled = str(get_value("troll_mode_enabled") or "false")
         troll_mode_account_age = int(get_value("troll_mode_account_age") or 30)
         mute_mode_enabled = str(get_value("mute_mode_enabled") or "false")
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
-        logger.debug(f"Configuration settings retrieved: assign_role={backup_mode_enabled}, role_id={backup_mode_id}, channel_id={backup_mode_channel}, kick_users={troll_mode_enabled}, kick_users_age_limit={troll_mode_account_age}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
+        logger.debug(f"Configuration settings retrieved: assign_role={backup_mode_enabled}, role_id={backup_mode_role}, channel_id={backup_mode_channel}, kick_users={troll_mode_enabled}, kick_users_age_limit={troll_mode_account_age}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
 
         # Get member and guild objects from the event
         member = event.member
@@ -901,45 +901,46 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             except Exception as e:
                 logger.error(f"Failed to track {member.username} for mute mode: {e}")
 
-        # Check if backup mode is fully configured before sending welcome messages and assigning roles
-        if not (backup_mode_enabled and backup_mode_id and backup_mode_channel):
-            logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
-            return
+        if backup_mode_enabled == "true":
+            # Check if backup mode is fully configured before sending welcome messages and assigning roles
+            if backup_mode_role is None or backup_mode_channel is None:
+                logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
+                return
 
-        # Retrieve the designated channel for welcome messages
-        channel = guild.get_channel(int(backup_mode_channel)) if backup_mode_channel else None
-        if not channel:
-            logger.warning(f"Channel with ID {backup_mode_channel} not found. Welcome message skipped.")
-            return
+            # Retrieve the designated channel for welcome messages
+            channel = guild.get_channel(int(backup_mode_channel)) if backup_mode_channel else None
+            if not channel:
+                logger.warning(f"Channel with ID {backup_mode_channel} not found. Welcome message skipped.")
+                return
 
-        # Create the welcome embed with instructions and details for the new member
-        embed = interactions.Embed(
-            title=f"🎉 Welcome {member.username}!",
-            description=(
-                "• **How old are you?**\n"
-                "• Where are you from?\n"
-                "• What do you do in your free time?\n"
-                "• What is your address?\n"
-                "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
-                "• What's your blood type?\n"
-                "• What's your shoe size?\n"
-                "• Can we donate your organs to ... \"charity\"?\n"
-                "\n"
-                "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**\n"
-            ),
-            color=0xCD41FF,
-        )
-        # Send the welcome message in the designated channel
-        await channel.send(embeds=[embed])
-        logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
+            # Create the welcome embed with instructions and details for the new member
+            embed = interactions.Embed(
+                title=f"🎉 Welcome {member.username}!",
+                description=(
+                    "• **How old are you?**\n"
+                    "• Where are you from?\n"
+                    "• What do you do in your free time?\n"
+                    "• What is your address?\n"
+                    "• What do you do to earn your daily bread in the holy church of our lord and savior Cheesus Driftus?\n"
+                    "• What's your blood type?\n"
+                    "• What's your shoe size?\n"
+                    "• Can we donate your organs to ... \"charity\"?\n"
+                    "\n"
+                    "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**\n"
+                ),
+                color=0xCD41FF,
+            )
+            # Send the welcome message in the designated channel
+            await channel.send(embeds=[embed])
+            logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
 
-        # Retrieve the role object from the guild and assign it to the new member
-        role_obj = guild.get_role(int(backup_mode_id)) if backup_mode_id else None
-        if role_obj:
-            await member.add_role(role_obj)
-            logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
-        else:
-            logger.warning(f"Role with ID {backup_mode_id} not found in the guild. Role assignment skipped.")
+            # Retrieve the role object from the guild and assign it to the new member
+            role_obj = guild.get_role(int(backup_mode_role)) if backup_mode_role else None
+            if role_obj:
+                await member.add_role(role_obj)
+                logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
+            else:
+                logger.warning(f"Role with ID {backup_mode_role} not found in the guild. Role assignment skipped.")
 
     except Exception as e:
         logger.exception(f"Error during on_member_join event: {e}")
@@ -1347,7 +1348,7 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
                 set_value("backup_mode_channel", channel.id)
                 logger.debug(f"Backup mode channel set to {channel.name}")
             if role:
-                set_value("backup_mode_id", role.id)
+                set_value("backup_mode_role", role.id)
                 logger.debug(f"Backup mode role set to {role.id}")
             if enabled is not None:
                 is_enabled = True if enabled.lower() == "enabled" else False
@@ -1364,7 +1365,7 @@ async def backup_mode(ctx: interactions.ComponentContext, channel=None, role: in
 
         logger.debug(f"Backup mode status check requested by {ctx.author.username}")
         channel_id = get_value("backup_mode_channel")
-        role_id = get_value("backup_mode_id")
+        role_id = get_value("backup_mode_role")
         enabled_status = get_value("backup_mode_enabled")
 
         if channel_id:
