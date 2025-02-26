@@ -381,12 +381,12 @@ def get_role():
     """
     try:
         logger.debug("Fetching reminder role configuration.")
-        role = get_value("role")
-        if not role:
+        reminder_role = get_value("reminder_role")
+        if not reminder_role:
             logger.warning("No role has been set up for reminders.")
             return None
-        logger.debug(f"Retrieved reminder role: {role}")
-        return role
+        logger.debug(f"Retrieved reminder role: {reminder_role}")
+        return reminder_role
     except Exception as e:
         logger.exception(f"Error while fetching the reminder role: {e}")
         return None
@@ -1012,7 +1012,7 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
 
             # Save the channel and role configuration.
             set_value("reminder_channel", channel.id)
-            set_value("role", role.id)
+            set_value("reminder_role", role.id)
             logger.debug("Disboard reminder setup successfully completed.")
 
             # Confirm successful setup to the user.
@@ -1026,7 +1026,7 @@ async def reminder(ctx: interactions.ComponentContext, channel=None, role: inter
         # If channel and role are not provided, perform a status check.
         logger.debug(f"Disboard reminder status check requested by {ctx.author.username}.")
         channel_id = get_value("reminder_channel")
-        role_id = get_value("role")
+        role_id = get_value("reminder_role")
 
         # Retrieve channel name if configured; otherwise, mark as not set.
         if channel_id:
@@ -1215,14 +1215,14 @@ async def test_reminders(ctx: interactions.ComponentContext):
 
     try:
         logger.debug(f"/testmessage command invoked by {ctx.author.username}")
-        role_id = get_value("role")
-        if not role_id:
+        reminder_role = get_value("reminder_role")
+        if not reminder_role:
             logger.warning("No role has been set up for reminders.")
             await ctx.send("⚠️ No role has been set up for reminders.", ephemeral=True)
             return
 
         logger.debug("Sending test reminder message.")
-        await ctx.send(f"🔔 <@&{role_id}> This is a test reminder message!")
+        await ctx.send(f"🔔 <@&{reminder_role}> This is a test reminder message!")
         logger.debug("Test reminder message successfully sent.")
         
     except Exception as e:
