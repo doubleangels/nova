@@ -84,12 +84,9 @@ MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
-# Dictionary mapping known bot IDs to their names.
+# Dictionary mapping Disboard bot IDs to their names.
 bot_ids = {
     "302050872383242240": "Disboard",
-    "1222548162741538938": "Discadia",
-    "493224033067003023": "DS.me",
-    "835255643157168168": "Unfocused",
 }
 
 # Variable to make sure shutdown is only called once.
@@ -208,16 +205,15 @@ def get_reminder_data(key: str):
     ? PARAMETERS:
     ? key - The reminder key.
     ? RETURNS:
-    ? A dictionary with reminder data (state, scheduled_time, reminder_id) if found; otherwise, None.
+    ? A dictionary with reminder data (scheduled_time, reminder_id) if found; otherwise, None.
     """
     try:
         logger.debug(f"Fetching reminder data for key '{key}'.")
-        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id") \
+        response = supabase.table("reminders").select("scheduled_time", "reminder_id") \
             .eq("key", key).maybe_single().execute()
         if response and response.data:
             logger.debug(f"Reminder data for key '{key}' retrieved: {response.data}")
             return {
-                "state": response.data.get("state", False),
                 "scheduled_time": response.data.get("scheduled_time"),
                 "reminder_id": response.data.get("reminder_id")
             }
@@ -227,24 +223,22 @@ def get_reminder_data(key: str):
         logger.exception(f"Error getting reminder data for key '{key}'.")
         return None
 
-def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_id: str):
+def set_reminder_data(key: str, scheduled_time: datetime, reminder_id: str):
     """
     ! INSERT OR UPDATE REMINDER DATA IN THE 'REMINDERS' TABLE IN SUPABASE
     * Inserts or updates reminder data in the 'reminders' table in Supabase.
     ? PARAMETERS:
     ? key            - The reminder key.
-    ? state          - The state of the reminder (active/inactive).
     ? scheduled_time - The scheduled time for the reminder.
     ? reminder_id    - The unique identifier for the reminder.
     """
     try:
-        logger.debug(f"Setting reminder data for key '{key}' with state: {state}, scheduled_time: {scheduled_time}, reminder_id: {reminder_id}.")
+        logger.debug(f"Setting reminder data for key '{key}' with scheduled_time: {scheduled_time}, reminder_id: {reminder_id}.")
         # Use the scheduled_time as-is; ensure it's in a proper format if needed
         serialized_time = scheduled_time
         existing = get_reminder_data(key)
         data = {
             "key": key,
-            "state": state,
             "scheduled_time": serialized_time,
             "reminder_id": reminder_id
         }
@@ -277,7 +271,7 @@ def initialize_reminders_table():
     """
     ! INITIALIZE THE REMINDERS TABLE WITH DEFAULT KEYS IF THEY DO NOT ALREADY EXIST
     * Checks for the presence of each default key in the reminders table.
-    * If a key is missing, inserts a default reminder entry with state set to False, scheduled_time as None, and reminder_id as None.
+    * If a key is missing, inserts a default reminder entry with scheduled_time as None, and reminder_id as None.
     """
     default_keys = ["disboard"]
     logger.debug("Initializing reminders table with default keys if missing.")
@@ -287,7 +281,7 @@ def initialize_reminders_table():
             existing = get_reminder_data(key)
             if existing is None:
                 logger.debug(f"No reminder data for key '{key}', initializing default record.")
-                set_reminder_data(key, False, None, None)
+                set_reminder_data(key, None, None)
                 logger.debug(f"Inserted default reminder data for key: {key}")
             else:
                 logger.debug(f"Reminder data for key '{key}' already exists. Skipping initialization.")
@@ -599,7 +593,6 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
         scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat()
         set_reminder_data(
             key,
-            True,
             scheduled_time,
             reminder_id
         )
@@ -680,7 +673,7 @@ async def reschedule_reminder(key, role):
 # -------------------------
 # Mute Mode Kick Scheduling
 # -------------------------
-async def schedule_mute_kick(mute_mode_enabled:str, member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
+async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
     """
     ! SCHEDULE A KICK FOR A MEMBER UNDER MUTE MODE
     * Calculates elapsed time since the member joined and determines the remaining time before a kick should occur.
@@ -738,39 +731,36 @@ async def schedule_mute_kick(mute_mode_enabled:str, member_id: int, username: st
             return
 
         # Define an asynchronous function to perform the delayed kick.
-        async def delayed_kick(mute_mode_enabled: str):
+        async def delayed_kick():
             logger.debug(f"Delayed kick scheduled to occur in {remaining_time:.2f} seconds for member '{username}' (ID: {member_id}).")
             # Wait for the remaining time before executing the kick.
             await asyncio.sleep(remaining_time)
-            # Verify that the member is still tracked and that mute mode is enabled before proceeding.
-            if mute_mode_enabled:
-                if get_tracked_member(member_id):
-                    guild = bot.get_guild(guild_id)
-                    if not guild:
-                        logger.warning(f"Guild {guild_id} not found at delayed kick time. Cannot kick member '{username}'.")
-                        return
-                    member = guild.get_member(member_id)
-                    if not member:
-                        try:
-                            member = await guild.fetch_member(member_id)
-                            logger.debug(f"Member '{username}' fetched during scheduled kick.")
-                        except Exception as e:
-                            logger.info(f"Member '{username}' not found during scheduled kick. Removing from tracking. Error: {e}")
-                            remove_tracked_member(member_id)
-                            return
+            # Verify that the member is still tracked before proceeding.
+            if get_tracked_member(member_id):
+                guild = bot.get_guild(guild_id)
+                if not guild:
+                    logger.warning(f"Guild {guild_id} not found at delayed kick time. Cannot kick member '{username}'.")
+                    return
+                member = guild.get_member(member_id)
+                if not member:
                     try:
-                        await member.kick(reason="User did not send a message in time.")
-                        remove_tracked_member(member_id)
-                        logger.info(f"Member '{username}' (ID: {member_id}) kicked after scheduled delay.")
+                        member = await guild.fetch_member(member_id)
+                        logger.debug(f"Member '{username}' fetched during scheduled kick.")
                     except Exception as e:
-                        logger.warning(f"Failed to kick member '{username}' after scheduled delay: {e}")
-                else:
-                    logger.debug(f"Member '{username}' (ID: {member_id}) is no longer tracked at delayed kick time.")
+                        logger.info(f"Member '{username}' not found during scheduled kick. Removing from tracking. Error: {e}")
+                        remove_tracked_member(member_id)
+                        return
+                try:
+                    await member.kick(reason="User did not send a message in time.")
+                    remove_tracked_member(member_id)
+                    logger.info(f"Member '{username}' (ID: {member_id}) kicked after scheduled delay.")
+                except Exception as e:
+                    logger.warning(f"Failed to kick member '{username}' after scheduled delay: {e}")
             else:
-                    logger.debug(f"Skipping kick of '{username}' (ID: {member_id}) because mute mode is not enabled.")
+                logger.debug(f"Member '{username}' (ID: {member_id}) is no longer tracked at delayed kick time.")
 
         # Schedule the delayed kick as a background task.
-        asyncio.create_task(delayed_kick(mute_mode_enabled))
+        asyncio.create_task(delayed_kick())
         logger.debug(f"Scheduled delayed kick for member '{username}' in {remaining_time:.2f} seconds.")
     except Exception as e:
         logger.exception(f"Error scheduling mute mode kick for member '{username}' (ID: {member_id}): {e}")
@@ -870,12 +860,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     try:
         logger.debug("Processing on_member_join event.")
         # Retrieve configuration settings
-        assign_role = get_value("backup_mode_enabled") == "false"
+        assign_role = str(get_value("backup_mode_enabled") or "false")
         role_id = int(get_value("backup_mode_id") or 0)
         channel_id = int(get_value("backup_mode_channel") or 0)
-        kick_users = get_value("troll_mode") == "false"
+        kick_users = str(get_value("troll_mode_enabled") or "false")
         kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
-        mute_mode_enabled = get_value("mute_mode") == "false"
+        mute_mode_enabled = str(get_value("mute_mode_enabled") or "false")
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
         logger.debug(f"Configuration settings retrieved: assign_role={assign_role}, role_id={role_id}, channel_id={channel_id}, kick_users={kick_users}, kick_users_age_limit={kick_users_age_limit}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
 
@@ -900,13 +890,13 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             return
 
         # If mute mode is enabled, track the member and schedule a mute kick
-        if mute_mode_enabled:
+        if mute_mode_enabled == "true":
             join_time = datetime.datetime.now(datetime.UTC).isoformat()
             logger.debug(f"Attempting to track {member.username} for mute mode. Join time: {join_time}")
             try:
                 track_new_member(member.id, member.username, join_time)
                 logger.debug(f"Successfully tracked {member.username} for mute mode.")
-                await schedule_mute_kick(mute_mode_enabled, member.id, member.username, join_time, mute_kick_time, guild.id)
+                await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
                 logger.debug(f"Scheduled mute kick for {member.username}.")
             except Exception as e:
                 logger.error(f"Failed to track {member.username} for mute mode: {e}")
@@ -1102,11 +1092,10 @@ async def fix_command(ctx: interactions.ComponentContext):
 
         # Prepare and store the reminder data for Disboard.
         reminder_data = {
-            "state": True,
             "scheduled_time": scheduled_time,
             "reminder_id": reminder_id
         }
-        set_reminder_data("disboard", True, scheduled_time, reminder_id)
+        set_reminder_data("disboard", scheduled_time, reminder_id)
         logger.debug(f"Fix logic applied: {reminder_data}")
 
         # Confirm the successful application of the fix logic.
@@ -1125,8 +1114,7 @@ async def fix_command(ctx: interactions.ComponentContext):
 async def reset_reminders(ctx: interactions.ComponentContext):
     """
     ! RESET DISBOARD REMINDER
-    * Restricted to administrators. Resets the Disboard reminder in the database to its default value by setting its state to
-    * False and clearing any scheduled time or reminder ID.
+    * Restricted to administrators. Resets the Disboard reminder in the database to its default value by clearing any scheduled time or reminder ID.
     ? PARAMETERS:
     ? ctx - The context of the command.
     """
@@ -1140,7 +1128,7 @@ async def reset_reminders(ctx: interactions.ComponentContext):
         await ctx.defer()
 
         # Reset only the 'disboard' reminder data.
-        set_reminder_data("disboard", False, None, None)
+        set_reminder_data("disboard", None, None)
         logger.debug("Reset reminder data for disboard")
 
         logger.debug("Disboard reminder successfully reset.")
@@ -1193,7 +1181,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: str, tim
         logger.debug(f"/mutemode command received from {ctx.author.username}")
         logger.debug(f"Mute mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Kick Time: {time} hours")
         
-        set_value("mute_mode", is_enabled)
+        set_value("mute_mode_enabled", is_enabled)
         set_value("mute_mode_kick_time_hours", time)
 
         response_message = (
@@ -1443,7 +1431,7 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: str, ag
         logger.debug(f"/trollmode command received from {ctx.author.username}")
         logger.debug(f"Troll mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Minimum age: {age} days")
         
-        set_value("troll_mode", is_enabled)
+        set_value("troll_mode_enabled", is_enabled)
         set_value("troll_mode_account_age", age)
 
         response_message = (
