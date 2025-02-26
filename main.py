@@ -205,16 +205,15 @@ def get_reminder_data(key: str):
     ? PARAMETERS:
     ? key - The reminder key.
     ? RETURNS:
-    ? A dictionary with reminder data (state, scheduled_time, reminder_id) if found; otherwise, None.
+    ? A dictionary with reminder data (scheduled_time, reminder_id) if found; otherwise, None.
     """
     try:
         logger.debug(f"Fetching reminder data for key '{key}'.")
-        response = supabase.table("reminders").select("state", "scheduled_time", "reminder_id") \
+        response = supabase.table("reminders").select("scheduled_time", "reminder_id") \
             .eq("key", key).maybe_single().execute()
         if response and response.data:
             logger.debug(f"Reminder data for key '{key}' retrieved: {response.data}")
             return {
-                "state": response.data.get("state", False),
                 "scheduled_time": response.data.get("scheduled_time"),
                 "reminder_id": response.data.get("reminder_id")
             }
@@ -224,24 +223,22 @@ def get_reminder_data(key: str):
         logger.exception(f"Error getting reminder data for key '{key}'.")
         return None
 
-def set_reminder_data(key: str, state: bool, scheduled_time: datetime, reminder_id: str):
+def set_reminder_data(key: str, scheduled_time: datetime, reminder_id: str):
     """
     ! INSERT OR UPDATE REMINDER DATA IN THE 'REMINDERS' TABLE IN SUPABASE
     * Inserts or updates reminder data in the 'reminders' table in Supabase.
     ? PARAMETERS:
     ? key            - The reminder key.
-    ? state          - The state of the reminder (active/inactive).
     ? scheduled_time - The scheduled time for the reminder.
     ? reminder_id    - The unique identifier for the reminder.
     """
     try:
-        logger.debug(f"Setting reminder data for key '{key}' with state: {state}, scheduled_time: {scheduled_time}, reminder_id: {reminder_id}.")
+        logger.debug(f"Setting reminder data for key '{key}' with scheduled_time: {scheduled_time}, reminder_id: {reminder_id}.")
         # Use the scheduled_time as-is; ensure it's in a proper format if needed
         serialized_time = scheduled_time
         existing = get_reminder_data(key)
         data = {
             "key": key,
-            "state": state,
             "scheduled_time": serialized_time,
             "reminder_id": reminder_id
         }
@@ -274,7 +271,7 @@ def initialize_reminders_table():
     """
     ! INITIALIZE THE REMINDERS TABLE WITH DEFAULT KEYS IF THEY DO NOT ALREADY EXIST
     * Checks for the presence of each default key in the reminders table.
-    * If a key is missing, inserts a default reminder entry with state set to False, scheduled_time as None, and reminder_id as None.
+    * If a key is missing, inserts a default reminder entry with scheduled_time as None, and reminder_id as None.
     """
     default_keys = ["disboard"]
     logger.debug("Initializing reminders table with default keys if missing.")
@@ -284,7 +281,7 @@ def initialize_reminders_table():
             existing = get_reminder_data(key)
             if existing is None:
                 logger.debug(f"No reminder data for key '{key}', initializing default record.")
-                set_reminder_data(key, False, None, None)
+                set_reminder_data(key, None, None)
                 logger.debug(f"Inserted default reminder data for key: {key}")
             else:
                 logger.debug(f"Reminder data for key '{key}' already exists. Skipping initialization.")
@@ -596,7 +593,6 @@ async def handle_reminder(key: str, initial_message: str, reminder_message: str,
         scheduled_time = (datetime.datetime.now(tz=pytz.UTC) + datetime.timedelta(seconds=interval)).isoformat()
         set_reminder_data(
             key,
-            True,
             scheduled_time,
             reminder_id
         )
@@ -1096,11 +1092,10 @@ async def fix_command(ctx: interactions.ComponentContext):
 
         # Prepare and store the reminder data for Disboard.
         reminder_data = {
-            "state": True,
             "scheduled_time": scheduled_time,
             "reminder_id": reminder_id
         }
-        set_reminder_data("disboard", True, scheduled_time, reminder_id)
+        set_reminder_data("disboard", scheduled_time, reminder_id)
         logger.debug(f"Fix logic applied: {reminder_data}")
 
         # Confirm the successful application of the fix logic.
@@ -1119,8 +1114,7 @@ async def fix_command(ctx: interactions.ComponentContext):
 async def reset_reminders(ctx: interactions.ComponentContext):
     """
     ! RESET DISBOARD REMINDER
-    * Restricted to administrators. Resets the Disboard reminder in the database to its default value by setting its state to
-    * False and clearing any scheduled time or reminder ID.
+    * Restricted to administrators. Resets the Disboard reminder in the database to its default value by clearing any scheduled time or reminder ID.
     ? PARAMETERS:
     ? ctx - The context of the command.
     """
@@ -1134,7 +1128,7 @@ async def reset_reminders(ctx: interactions.ComponentContext):
         await ctx.defer()
 
         # Reset only the 'disboard' reminder data.
-        set_reminder_data("disboard", False, None, None)
+        set_reminder_data("disboard", None, None)
         logger.debug("Reset reminder data for disboard")
 
         logger.debug("Disboard reminder successfully reset.")
