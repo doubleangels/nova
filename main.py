@@ -860,14 +860,14 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     try:
         logger.debug("Processing on_member_join event.")
         # Retrieve configuration settings
-        assign_role = str(get_value("backup_mode_enabled") or "false")
-        role_id = int(get_value("backup_mode_id") or 0)
-        channel_id = int(get_value("backup_mode_channel") or 0)
-        kick_users = str(get_value("troll_mode_enabled") or "false")
-        kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
+        backup_mode_enabled = str(get_value("backup_mode_enabled") or "false")
+        backup_mode_id = int(get_value("backup_mode_id") or 0)
+        backup_mode_channel = int(get_value("backup_mode_channel") or 0)
+        troll_mode_enabled = str(get_value("troll_mode_enabled") or "false")
+        troll_mode_account_age = int(get_value("troll_mode_account_age") or 30)
         mute_mode_enabled = str(get_value("mute_mode_enabled") or "false")
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
-        logger.debug(f"Configuration settings retrieved: assign_role={assign_role}, role_id={role_id}, channel_id={channel_id}, kick_users={kick_users}, kick_users_age_limit={kick_users_age_limit}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
+        logger.debug(f"Configuration settings retrieved: assign_role={backup_mode_enabled}, role_id={backup_mode_id}, channel_id={backup_mode_channel}, kick_users={troll_mode_enabled}, kick_users_age_limit={troll_mode_account_age}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
 
         # Get member and guild objects from the event
         member = event.member
@@ -883,10 +883,10 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             return
 
         # Kick new members if troll mode is enabled and the account is too new
-        if kick_users == "true" and account_age < datetime.timedelta(days=kick_users_age_limit):
-            logger.debug(f"Member {member.username} account age {account_age.days} days is below threshold of {kick_users_age_limit} days; attempting kick.")
+        if troll_mode_enabled == "true" and account_age < datetime.timedelta(days=troll_mode_account_age):
+            logger.debug(f"Member {member.username} account age {account_age.days} days is below threshold of {troll_mode_account_age} days; attempting kick.")
             await member.kick(reason="Account is too new!")
-            logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
+            logger.debug(f"Kicked {member.username} for having an account younger than {troll_mode_account_age} days.")
             return
 
         # If mute mode is enabled, track the member and schedule a mute kick
@@ -902,14 +902,14 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
                 logger.error(f"Failed to track {member.username} for mute mode: {e}")
 
         # Check if backup mode is fully configured before sending welcome messages and assigning roles
-        if not (assign_role and role_id and channel_id):
+        if not (backup_mode_enabled and backup_mode_id and backup_mode_channel):
             logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.")
             return
 
         # Retrieve the designated channel for welcome messages
-        channel = guild.get_channel(int(channel_id)) if channel_id else None
+        channel = guild.get_channel(int(backup_mode_channel)) if backup_mode_channel else None
         if not channel:
-            logger.warning(f"Channel with ID {channel_id} not found. Welcome message skipped.")
+            logger.warning(f"Channel with ID {backup_mode_channel} not found. Welcome message skipped.")
             return
 
         # Create the welcome embed with instructions and details for the new member
@@ -934,12 +934,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
         logger.debug(f"Sent welcome message in {channel.name} for {member.username}.")
 
         # Retrieve the role object from the guild and assign it to the new member
-        role_obj = guild.get_role(int(role_id)) if role_id else None
+        role_obj = guild.get_role(int(backup_mode_id)) if backup_mode_id else None
         if role_obj:
             await member.add_role(role_obj)
             logger.debug(f"Assigned role '{role_obj.name}' to {member.username}.")
         else:
-            logger.warning(f"Role with ID {role_id} not found in the guild. Role assignment skipped.")
+            logger.warning(f"Role with ID {backup_mode_id} not found in the guild. Role assignment skipped.")
 
     except Exception as e:
         logger.exception(f"Error during on_member_join event: {e}")
