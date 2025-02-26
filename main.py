@@ -680,7 +680,7 @@ async def reschedule_reminder(key, role):
 # -------------------------
 # Mute Mode Kick Scheduling
 # -------------------------
-async def schedule_mute_kick(mute_mode_enabled:str, member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
+async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute_kick_time: int, guild_id: int):
     """
     ! SCHEDULE A KICK FOR A MEMBER UNDER MUTE MODE
     * Calculates elapsed time since the member joined and determines the remaining time before a kick should occur.
@@ -738,39 +738,36 @@ async def schedule_mute_kick(mute_mode_enabled:str, member_id: int, username: st
             return
 
         # Define an asynchronous function to perform the delayed kick.
-        async def delayed_kick(mute_mode_enabled: str):
+        async def delayed_kick():
             logger.debug(f"Delayed kick scheduled to occur in {remaining_time:.2f} seconds for member '{username}' (ID: {member_id}).")
             # Wait for the remaining time before executing the kick.
             await asyncio.sleep(remaining_time)
-            # Verify that the member is still tracked and that mute mode is enabled before proceeding.
-            if mute_mode_enabled:
-                if get_tracked_member(member_id):
-                    guild = bot.get_guild(guild_id)
-                    if not guild:
-                        logger.warning(f"Guild {guild_id} not found at delayed kick time. Cannot kick member '{username}'.")
-                        return
-                    member = guild.get_member(member_id)
-                    if not member:
-                        try:
-                            member = await guild.fetch_member(member_id)
-                            logger.debug(f"Member '{username}' fetched during scheduled kick.")
-                        except Exception as e:
-                            logger.info(f"Member '{username}' not found during scheduled kick. Removing from tracking. Error: {e}")
-                            remove_tracked_member(member_id)
-                            return
+            # Verify that the member is still tracked before proceeding.
+            if get_tracked_member(member_id):
+                guild = bot.get_guild(guild_id)
+                if not guild:
+                    logger.warning(f"Guild {guild_id} not found at delayed kick time. Cannot kick member '{username}'.")
+                    return
+                member = guild.get_member(member_id)
+                if not member:
                     try:
-                        await member.kick(reason="User did not send a message in time.")
-                        remove_tracked_member(member_id)
-                        logger.info(f"Member '{username}' (ID: {member_id}) kicked after scheduled delay.")
+                        member = await guild.fetch_member(member_id)
+                        logger.debug(f"Member '{username}' fetched during scheduled kick.")
                     except Exception as e:
-                        logger.warning(f"Failed to kick member '{username}' after scheduled delay: {e}")
-                else:
-                    logger.debug(f"Member '{username}' (ID: {member_id}) is no longer tracked at delayed kick time.")
+                        logger.info(f"Member '{username}' not found during scheduled kick. Removing from tracking. Error: {e}")
+                        remove_tracked_member(member_id)
+                        return
+                try:
+                    await member.kick(reason="User did not send a message in time.")
+                    remove_tracked_member(member_id)
+                    logger.info(f"Member '{username}' (ID: {member_id}) kicked after scheduled delay.")
+                except Exception as e:
+                    logger.warning(f"Failed to kick member '{username}' after scheduled delay: {e}")
             else:
-                    logger.debug(f"Skipping kick of '{username}' (ID: {member_id}) because mute mode is not enabled.")
+                logger.debug(f"Member '{username}' (ID: {member_id}) is no longer tracked at delayed kick time.")
 
         # Schedule the delayed kick as a background task.
-        asyncio.create_task(delayed_kick(mute_mode_enabled))
+        asyncio.create_task(delayed_kick())
         logger.debug(f"Scheduled delayed kick for member '{username}' in {remaining_time:.2f} seconds.")
     except Exception as e:
         logger.exception(f"Error scheduling mute mode kick for member '{username}' (ID: {member_id}): {e}")
@@ -870,12 +867,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     try:
         logger.debug("Processing on_member_join event.")
         # Retrieve configuration settings
-        assign_role = get_value("backup_mode_enabled") == "false"
+        assign_role = str(get_value("backup_mode_enabled") or "false")
         role_id = int(get_value("backup_mode_id") or 0)
         channel_id = int(get_value("backup_mode_channel") or 0)
-        kick_users = get_value("troll_mode") == "false"
+        kick_users = str(get_value("troll_mode_enabled") or "false")
         kick_users_age_limit = int(get_value("troll_mode_account_age") or 30)
-        mute_mode_enabled = get_value("mute_mode") == "false"
+        mute_mode_enabled = str(get_value("mute_mode_enabled") or "false")
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
         logger.debug(f"Configuration settings retrieved: assign_role={assign_role}, role_id={role_id}, channel_id={channel_id}, kick_users={kick_users}, kick_users_age_limit={kick_users_age_limit}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
 
@@ -900,13 +897,13 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             return
 
         # If mute mode is enabled, track the member and schedule a mute kick
-        if mute_mode_enabled:
+        if mute_mode_enabled == "true":
             join_time = datetime.datetime.now(datetime.UTC).isoformat()
             logger.debug(f"Attempting to track {member.username} for mute mode. Join time: {join_time}")
             try:
                 track_new_member(member.id, member.username, join_time)
                 logger.debug(f"Successfully tracked {member.username} for mute mode.")
-                await schedule_mute_kick(mute_mode_enabled, member.id, member.username, join_time, mute_kick_time, guild.id)
+                await schedule_mute_kick(member.id, member.username, join_time, mute_kick_time, guild.id)
                 logger.debug(f"Scheduled mute kick for {member.username}.")
             except Exception as e:
                 logger.error(f"Failed to track {member.username} for mute mode: {e}")
@@ -1193,7 +1190,7 @@ async def toggle_mute_mode(ctx: interactions.ComponentContext, enabled: str, tim
         logger.debug(f"/mutemode command received from {ctx.author.username}")
         logger.debug(f"Mute mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Kick Time: {time} hours")
         
-        set_value("mute_mode", is_enabled)
+        set_value("mute_mode_enabled", is_enabled)
         set_value("mute_mode_kick_time_hours", time)
 
         response_message = (
@@ -1443,7 +1440,7 @@ async def toggle_troll_mode(ctx: interactions.ComponentContext, enabled: str, ag
         logger.debug(f"/trollmode command received from {ctx.author.username}")
         logger.debug(f"Troll mode toggle: {'Enabled' if is_enabled else 'Disabled'}, Minimum age: {age} days")
         
-        set_value("troll_mode", is_enabled)
+        set_value("troll_mode_enabled", is_enabled)
         set_value("troll_mode_account_age", age)
 
         response_message = (
