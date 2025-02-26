@@ -883,7 +883,7 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
             return
 
         # Kick new members if troll mode is enabled and the account is too new
-        if kick_users and account_age < datetime.timedelta(days=kick_users_age_limit):
+        if kick_users == "true" and account_age < datetime.timedelta(days=kick_users_age_limit):
             logger.debug(f"Member {member.username} account age {account_age.days} days is below threshold of {kick_users_age_limit} days; attempting kick.")
             await member.kick(reason="Account is too new!")
             logger.debug(f"Kicked {member.username} for having an account younger than {kick_users_age_limit} days.")
