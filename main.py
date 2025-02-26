@@ -860,12 +860,12 @@ async def on_member_join(event: interactions.api.events.MemberAdd):
     try:
         logger.debug("Processing on_member_join event.")
         # Retrieve configuration settings
-        backup_mode_enabled = str(get_value("backup_mode_enabled").lower() or "false")
+        backup_mode_enabled = str(get_value("backup_mode_enabled") or "false").lower()
         backup_mode_role = int(get_value("backup_mode_role") or None)
         backup_mode_channel = int(get_value("backup_mode_channel") or None)
-        troll_mode_enabled = str(get_value("troll_mode_enabled").lower() or "false")
+        troll_mode_enabled = str(get_value("troll_mode_enabled") or "false").lower()
         troll_mode_account_age = int(get_value("troll_mode_account_age") or 30)
-        mute_mode_enabled = str(get_value("mute_mode_enabled").lower() or "false")
+        mute_mode_enabled = str(get_value("mute_mode_enabled") or "false").lower()
         mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
         logger.debug(f"Configuration settings retrieved: assign_role={backup_mode_enabled}, role_id={backup_mode_role}, channel_id={backup_mode_channel}, kick_users={troll_mode_enabled}, kick_users_age_limit={troll_mode_account_age}, mute_mode_enabled={mute_mode_enabled}, mute_kick_time={mute_kick_time}")
 
