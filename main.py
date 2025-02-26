@@ -830,6 +830,10 @@ async def on_message_create(event: interactions.api.events.MessageCreate):
     """
     try:
         logger.debug(f"Message received from {event.message.author.username}: {event.message.content}")
+        # Remove user from mute tracking if they send a message.
+        if get_tracked_member(event.message.author.id):
+            remove_tracked_member(event.message.author.id)
+            logger.debug(f"User {event.message.author.username} sent a message and was removed from mute tracking.")
         # Process the message if it contains embeds
         if event.message.embeds:
             try:
