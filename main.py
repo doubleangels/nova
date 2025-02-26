@@ -84,12 +84,9 @@ MAL_CLIENT_ID = required_env_vars["MAL_CLIENT_ID"]
 SUPABASE_URL = required_env_vars["SUPABASE_URL"]
 SUPABASE_KEY = required_env_vars["SUPABASE_KEY"]
 
-# Dictionary mapping known bot IDs to their names.
+# Dictionary mapping Disboard bot IDs to their names.
 bot_ids = {
     "302050872383242240": "Disboard",
-    "1222548162741538938": "Discadia",
-    "493224033067003023": "DS.me",
-    "835255643157168168": "Unfocused",
 }
 
 # Variable to make sure shutdown is only called once.
