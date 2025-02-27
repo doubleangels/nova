@@ -16,6 +16,14 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('backupmode')
     .setDescription('Configure and toggle backup mode for new members.')
+    .addStringOption(option =>
+      option.setName('enabled')
+        .setDescription('Toggle auto-role assignment ("enabled" or "disabled") (leave empty to check status)')
+        .setRequired(true)
+        .addChoices(
+          { name: 'Enabled', value: 'enabled' },
+          { name: 'Disabled', value: 'disabled' }
+        )
     .addChannelOption(option =>
       option.setName('channel')
         .setDescription('Channel to send welcome messages (leave empty to check status)')
@@ -26,14 +34,6 @@ module.exports = {
         .setDescription('Role to assign to new members (leave empty to check status)')
         .setRequired(false)
     )
-    .addStringOption(option =>
-      option.setName('enabled')
-        .setDescription('Toggle auto-role assignment ("enabled" or "disabled") (leave empty to check status)')
-        .setRequired(false)
-        .addChoices(
-          { name: 'Enabled', value: 'enabled' },
-          { name: 'Disabled', value: 'disabled' }
-        )
     ),
     
   /**
