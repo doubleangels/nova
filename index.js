@@ -1,10 +1,10 @@
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const config = require('./config'); // Contains your bot token and other config values
-const logger = require('./logger'); // Your logging module
+const logger = require('./logger')(path.basename(__filename));
+const config = require('./config');
 
-// Create a new Discord client instance
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -14,7 +14,6 @@ const client = new Client({
   ]
 });
 
-// (Optional) Load commands if needed
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -24,7 +23,6 @@ for (const file of commandFiles) {
   logger.info(`Loaded command: ${command.data.name}`);
 }
 
-// Load events from the "events" folder
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 for (const file of eventFiles) {
@@ -37,12 +35,10 @@ for (const file of eventFiles) {
   logger.info(`Loaded event: ${event.name}`);
 }
 
-// When the bot is ready, log the event and test Supabase connectivity
 client.once('ready', async () => {
   logger.info(`Bot is online as ${client.user.tag}`);
 });
 
-// Handle interactions for slash commands
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
   const command = client.commands.get(interaction.commandName);
@@ -59,12 +55,10 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// Log in to Discord
 client.login(config.token).catch(err => {
   logger.error('Error logging in:', err);
 });
 
-// Graceful shutdown handling
 process.on('SIGINT', () => {
   logger.info("Shutdown signal received. Exiting...");
   process.exit(0);

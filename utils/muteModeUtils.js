@@ -1,8 +1,6 @@
-const logger = require('../logger');
-const { 
-  getValue,
-  getAllTrackedMembers
-} = require('../utils/supabase');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
+const { getValue, getAllTrackedMembers } = require('../utils/supabase');
 
 async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guildId, client) {
   try {

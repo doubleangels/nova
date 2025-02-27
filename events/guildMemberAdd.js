@@ -1,8 +1,8 @@
-const logger = require('../logger');
-const { getValue } = require('../utils/supabase');
-const { trackNewMember } = require('../utils/supabase');
-const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { EmbedBuilder } = require('discord.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
+const { getValue, trackNewMember } = require('../utils/supabase');
+const { scheduleMuteKick } = require('../utils/muteModeUtils');
 
 module.exports = {
   name: 'guildMemberAdd',

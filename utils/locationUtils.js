@@ -1,5 +1,6 @@
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
-const logger = require('../logger');
 const config = require('../config');
 
 async function getCoordinates(city) {

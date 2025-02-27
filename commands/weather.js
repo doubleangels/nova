@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
-const logger = require('../logger');
 const config = require('../config');
 const { getCoordinates } = require('../utils/locationUtils');
 

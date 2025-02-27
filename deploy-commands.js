@@ -18,9 +18,8 @@ const rest = new REST({ version: '10' }).setToken(config.token);
   try {
     console.log('Started refreshing application (/) commands.');
 
-    // For guild commands (updates instantly)
-    const guildId = '1307236666989346837'; // Replace with your guild ID
-    const clientId = '1343753891338129520'; // Replace with your bot's application client ID
+    const guildId = '1307236666989346837';
+    const clientId = '1343753891338129520';
 
     await rest.put(
       Routes.applicationGuildCommands(clientId, guildId),

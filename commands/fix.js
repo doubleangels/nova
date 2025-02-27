@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const { setReminderData } = require('../utils/supabase');
-const logger = require('../logger');
 const { randomUUID } = require('crypto');
 
 module.exports = {

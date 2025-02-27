@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue, getReminderData } = require('../utils/supabase');
-const { calculateRemainingTime, rescheduleReminder, sendScheduledMessage, safeTask } = require('../utils/reminderUtils');
-const logger = require('../logger');
+const { calculateRemainingTime } = require('../utils/reminderUtils');
 
 module.exports = {
   data: new SlashCommandBuilder()

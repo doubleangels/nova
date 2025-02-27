@@ -1,4 +1,5 @@
-const logger = require('../logger');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const { removeTrackedMember } = require('../utils/supabase');
 
 module.exports = {

@@ -1,11 +1,6 @@
-const logger = require('../logger');
-const { 
-  getReminderData, 
-  deleteReminderData, 
-  setReminderData, 
-  getValue,
-  getAllTrackedMembers,
-} = require('../utils/supabase');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
+const { getReminderData, deleteReminderData, setReminderData, getValue } = require('../utils/supabase');
 
 function calculateRemainingTime(scheduledTime) {
   if (!scheduledTime) return 'Not set!';

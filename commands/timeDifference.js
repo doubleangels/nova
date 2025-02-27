@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const fetch = require('node-fetch').default; // For node-fetch v3 in CommonJS environments
-const logger = require('../logger');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
+const fetch = require('node-fetch').default;
 const config = require('../config');
 
 module.exports = {
