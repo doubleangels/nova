@@ -7,7 +7,7 @@ const config = require('../config');
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
 /**
- * Retrieves a value from the 'config_test' table based on a given key.
+ * Retrieves a value from the 'config' table based on a given key.
  *
  * @param {string} key - The key to retrieve.
  * @returns {Promise<any|null>} The parsed value if found, otherwise null.
@@ -15,7 +15,7 @@ const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 async function getValue(key) {
   try {
     const { data, error } = await supabase
-      .from('config_test')
+      .from('config')
       .select('value')
       .eq('id', key)
       .maybeSingle();
@@ -28,7 +28,7 @@ async function getValue(key) {
 }
 
 /**
- * Sets a value in the 'config_test' table for a given key.
+ * Sets a value in the 'config' table for a given key.
  * Inserts a new record if the key does not exist; otherwise, updates the existing record.
  *
  * @param {string} key - The key to set.
@@ -39,10 +39,10 @@ async function setValue(key, value) {
     const serialized = JSON.stringify(value);
     const existing = await getValue(key);
     if (existing === null) {
-      const { error } = await supabase.from('config_test').insert([{ id: key, value: serialized }]);
+      const { error } = await supabase.from('config').insert([{ id: key, value: serialized }]);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from('config_test').update({ value: serialized }).eq('id', key);
+      const { error } = await supabase.from('config').update({ value: serialized }).eq('id', key);
       if (error) throw error;
     }
   } catch (err) {
@@ -51,13 +51,13 @@ async function setValue(key, value) {
 }
 
 /**
- * Deletes a value from the 'config_test' table for a given key.
+ * Deletes a value from the 'config' table for a given key.
  *
  * @param {string} key - The key to delete.
  */
 async function deleteValue(key) {
   try {
-    const { error } = await supabase.from('config_test').delete().eq('id', key);
+    const { error } = await supabase.from('config').delete().eq('id', key);
     if (error) throw error;
   } catch (err) {
     logger.error(`Error deleting key ${key}:`, err);
@@ -65,13 +65,13 @@ async function deleteValue(key) {
 }
 
 /**
- * Retrieves all configuration records from the 'config_test' table.
+ * Retrieves all configuration records from the 'config' table.
  *
  * @returns {Promise<Array<Object>>} An array of config objects.
  */
 async function getAllConfigs() {
   try {
-    const { data, error } = await supabase.from('config_test').select('*');
+    const { data, error } = await supabase.from('config').select('*');
     if (error) throw error;
     return data;
   } catch (err) {
@@ -81,7 +81,7 @@ async function getAllConfigs() {
 }
 
 /**
- * Retrieves reminder data from the 'reminders_test' table for a given key.
+ * Retrieves reminder data from the 'reminders' table for a given key.
  *
  * @param {string} key - The reminder key.
  * @returns {Promise<Object|null>} The reminder data if found, otherwise null.
@@ -89,7 +89,7 @@ async function getAllConfigs() {
 async function getReminderData(key) {
   try {
     const { data, error } = await supabase
-      .from('reminders_test')
+      .from('reminders')
       .select('scheduled_time, reminder_id')
       .eq('key', key)
       .maybeSingle();
@@ -102,7 +102,7 @@ async function getReminderData(key) {
 }
 
 /**
- * Sets reminder data in the 'reminders_test' table for a given key.
+ * Sets reminder data in the 'reminders' table for a given key.
  * Inserts a new record if none exists; otherwise, updates the existing record.
  *
  * @param {string} key - The reminder key.
@@ -114,12 +114,12 @@ async function setReminderData(key, scheduled_time, reminder_id) {
     const existing = await getReminderData(key);
     if (!existing) {
       const { error } = await supabase
-        .from('reminders_test')
+        .from('reminders')
         .insert([{ key, scheduled_time, reminder_id }]);
       if (error) throw error;
     } else {
       const { error } = await supabase
-        .from('reminders_test')
+        .from('reminders')
         .update({ scheduled_time, reminder_id })
         .eq('key', key);
       if (error) throw error;
@@ -130,13 +130,13 @@ async function setReminderData(key, scheduled_time, reminder_id) {
 }
 
 /**
- * Deletes reminder data from the 'reminders_test' table for a given key.
+ * Deletes reminder data from the 'reminders' table for a given key.
  *
  * @param {string} key - The reminder key.
  */
 async function deleteReminderData(key) {
   try {
-    const { error } = await supabase.from('reminders_test').delete().eq('key', key);
+    const { error } = await supabase.from('reminders').delete().eq('key', key);
     if (error) throw error;
   } catch (err) {
     logger.error(`Error deleting reminder data for key ${key}:`, err);
@@ -144,7 +144,7 @@ async function deleteReminderData(key) {
 }
 
 /**
- * Tracks a new member by inserting or updating their information in the 'tracked_members_test' table.
+ * Tracks a new member by inserting or updating their information in the 'tracked_members' table.
  *
  * @param {string} memberId - The Discord member ID.
  * @param {string} username - The username of the member.
@@ -154,7 +154,7 @@ async function trackNewMember(memberId, username, joinTime) {
   try {
     logger.debug(`Tracking new member '${username}' with ID ${memberId} joining at ${joinTime}.`);
     const { data, error } = await supabase
-      .from('tracked_members_test')
+      .from('tracked_members')
       .upsert({ member_id: memberId, join_time: joinTime, username: username });
     if (error) {
       logger.warn(`Failed to track ${username} - ${error.message || error}`);
@@ -167,7 +167,7 @@ async function trackNewMember(memberId, username, joinTime) {
 }
 
 /**
- * Retrieves tracking data for a specific member from the 'tracked_members_test' table.
+ * Retrieves tracking data for a specific member from the 'tracked_members' table.
  *
  * @param {string} memberId - The Discord member ID.
  * @returns {Promise<Object|null>} The tracking data if found, otherwise null.
@@ -176,7 +176,7 @@ async function getTrackedMember(memberId) {
   try {
     logger.debug(`Retrieving tracking information for member with ID ${memberId}.`);
     const { data, error } = await supabase
-      .from('tracked_members_test')
+      .from('tracked_members')
       .select('*')
       .eq('member_id', memberId)
       .maybeSingle();
@@ -194,7 +194,7 @@ async function getTrackedMember(memberId) {
 }
 
 /**
- * Removes tracking data for a specific member from the 'tracked_members_test' table.
+ * Removes tracking data for a specific member from the 'tracked_members' table.
  *
  * @param {string} memberId - The Discord member ID.
  */
@@ -202,7 +202,7 @@ async function removeTrackedMember(memberId) {
   try {
     logger.debug(`Attempting to remove tracking information for member ID ${memberId}.`);
     const { data, error } = await supabase
-      .from('tracked_members_test')
+      .from('tracked_members')
       .delete()
       .eq('member_id', memberId);
     if (error) {
@@ -218,7 +218,7 @@ async function removeTrackedMember(memberId) {
 }
 
 /**
- * Retrieves all tracked members from the 'tracked_members_test' table.
+ * Retrieves all tracked members from the 'tracked_members' table.
  *
  * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time.
  */
@@ -226,7 +226,7 @@ async function getAllTrackedMembers() {
   try {
     logger.debug("Retrieving all tracked members from the database.");
     const { data, error } = await supabase
-      .from('tracked_members_test')
+      .from('tracked_members')
       .select('member_id, username, join_time');
     if (error) throw error;
     if (data) {
