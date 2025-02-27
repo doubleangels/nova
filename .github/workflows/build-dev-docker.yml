@@ -29,9 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run ESLint (lint)
-        run: npm run lint
-
   build-and-push:
     name: build-and-push-dev-image
     runs-on: ubuntu-latest

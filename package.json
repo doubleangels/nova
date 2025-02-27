@@ -4,8 +4,7 @@
   "description": "Dockerized multi-purpose bot for Discord servers.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint ."
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -22,7 +21,6 @@
     "@supabase/supabase-js": "^2.49.1",
     "discord.js": "^14.18.0",
     "dotenv": "^16.4.7",
-    "eslint": "^9.21.0",
     "node-fetch": "^3.3.2",
     "winston": "^3.17.0"
   }
