@@ -2,6 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+dayjs.extend(utc);
 const config = require('../config');
 
 /**
@@ -67,8 +70,8 @@ module.exports = {
       const lng = location.lng;
       logger.debug("Extracted coordinates:", { place, lat, lng });
 
-      // Get the current timestamp in seconds.
-      const timestamp = Math.floor(Date.now() / 1000);
+      // Get the current timestamp in seconds using day.js.
+      const timestamp = dayjs().unix();
       
       // Construct the URL for the Google Time Zone API.
       const timezoneUrl = "https://maps.googleapis.com/maps/api/timezone/json";
@@ -106,10 +109,9 @@ module.exports = {
       const utcOffset = rawOffset + dstOffset;       // Total UTC offset in hours.
       const isDST = dstOffset > 0 ? "Yes" : "No";
       
-      // Calculate the local time by adding the UTC offset to the current UTC time.
-      const currentUTC = new Date();
-      const localTime = new Date(currentUTC.getTime() + utcOffset * 3600000);
-      const formattedTime = localTime.toISOString().replace('T', ' ').split('.')[0];
+      // Calculate the local time by adding the UTC offset (in hours) to the current UTC time using day.js.
+      const localTime = dayjs.utc().add(utcOffset, 'hour');
+      const formattedTime = localTime.format('YYYY-MM-DD HH:mm:ss');
       
       // Build the embed message with timezone information.
       const embed = new EmbedBuilder()

@@ -1,8 +1,9 @@
 const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { setReminderData } = require('../utils/supabase');
+const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
+const { setReminderData } = require('../utils/supabase');
 
 /**
  * Module for the /fix command.
@@ -38,10 +39,11 @@ module.exports = {
       // Define delay (in seconds) and generate unique reminder data.
       const seconds = 7200;
       const reminderId = randomUUID();
-      const scheduledTime = new Date(Date.now() + seconds * 1000).toISOString();
+      // Use day.js to calculate the scheduled time.
+      const scheduledTime = dayjs().add(seconds, 'second').toISOString();
       
       // Save the reminder data to the database.
-      await setReminderData("disboard", scheduledTime, reminderId);
+      await setReminderData('bump', scheduledTime, reminderId);
       logger.debug("Fix applied:", { scheduledTime, reminderId });
       
       // Inform the user that the fix logic was successfully applied.

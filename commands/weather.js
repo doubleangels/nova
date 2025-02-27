@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
+const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates } = require('../utils/locationUtils');
 
@@ -86,12 +87,14 @@ module.exports = {
         let forecastText = "";
         for (let i = 0; i < 3 && i < daily.length; i++) {
           const day = daily[i];
+          // Format the day's date using day.js (assuming day.time is in Unix seconds).
+          const forecastDate = dayjs.unix(day.time).format('MM/DD/YYYY');
           const daySummary = day.summary || "No data";
           const highC = (typeof day.temperatureHigh === "number") ? day.temperatureHigh : "N/A";
           const highF = (typeof highC === "number") ? Math.round((highC * 9/5) + 32) : "N/A";
           const lowC = (typeof day.temperatureLow === "number") ? day.temperatureLow : "N/A";
           const lowF = (typeof lowC === "number") ? Math.round((lowC * 9/5) + 32) : "N/A";
-          forecastText += `**Day ${i+1}:** ${daySummary}\n🌡 High: ${highC}°C / ${highF}°F, Low: ${lowC}°C / ${lowF}°F\n\n`;
+          forecastText += `**${forecastDate}**\n**${daySummary}**\n🌡 High: ${highC}°C / ${highF}°F, Low: ${lowC}°C / ${lowF}°F\n\n`;
         }
         
         logger.debug("Extracted weather details:", {

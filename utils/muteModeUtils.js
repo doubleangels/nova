@@ -2,7 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
 const config = require('../config');
-// Import additional functions from supabase for member tracking.
+const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/supabase');
 
 /**
@@ -25,11 +25,13 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
       `Scheduling mute kick for member '${username}' (ID: ${memberId}) in guild ${guildId}. Join time: ${joinTime}, allowed mute time: ${muteKickTime} hour(s).`
     );
     
-    const now = new Date();
-    const joinTimeDt = new Date(joinTime);
-    const elapsedTime = (now - joinTimeDt) / 1000; // Elapsed time in seconds.
+    // Use day.js for current time and join time.
+    const now = dayjs();
+    const joinTimeDt = dayjs(joinTime);
+    // Calculate elapsed time in seconds.
+    const elapsedTime = now.diff(joinTimeDt, 'second');
     logger.debug(
-      `Current time: ${now.toISOString()}, Join time: ${joinTimeDt.toISOString()}, Elapsed time: ${elapsedTime.toFixed(2)} second(s).`
+      `Current time: ${now.toISOString()}, Join time: ${joinTimeDt.toISOString()}, Elapsed time: ${elapsedTime} second(s).`
     );
     
     // Calculate remaining time (in seconds) before the kick should occur.
@@ -79,7 +81,7 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
       logger.debug(
         `Delayed kick initiated for member '${username}' (ID: ${memberId}). Scheduled in ${remainingTime.toFixed(2)} second(s).`
       );
-      // Wait for the remaining time.
+      // Wait for the remaining time (converted to milliseconds).
       await new Promise(resolve => setTimeout(resolve, remainingTime * 1000));
       
       // Check if the member is still being tracked.

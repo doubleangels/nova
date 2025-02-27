@@ -1,15 +1,11 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const dayjs = require('dayjs');
+const duration = require('dayjs/plugin/duration');
+dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/supabase');
-const { calculateRemainingTime } = require('../utils/reminderUtils');
 
-/**
- * Module for the /reminder command.
- * This command is used to setup and check the status of bump reminders.
- * - When both channel and role options are provided, it sets up the reminder configuration.
- * - When no options are provided, it returns the current reminder status.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
@@ -85,12 +81,25 @@ module.exports = {
       // Format the role for display.
       const roleStr = roleId ? `<@&${roleId}>` : 'Not set!';
 
-      // Retrieve the current reminder data for the 'disboard' service.
+      // Retrieve the current reminder data for the 'bump' service.
       const reminderData = await getReminderData('bump');
-      // Calculate the remaining time until the next reminder if available.
+
+      // Calculate the remaining time until the next reminder using day.js.
       const timeStr = reminderData && reminderData.scheduled_time
-        ? calculateRemainingTime(reminderData.scheduled_time)
+        ? (() => {
+            const now = dayjs();
+            const scheduled = dayjs(reminderData.scheduled_time);
+            const diffMs = scheduled.diff(now);
+            if (diffMs <= 0) return "Reminder is overdue";
+            const diffDuration = dayjs.duration(diffMs);
+            // Format as "Xh Ym Zs" (hours, minutes, seconds)
+            const hours = diffDuration.hours();
+            const minutes = diffDuration.minutes();
+            const seconds = diffDuration.seconds();
+            return `${hours}h ${minutes}m ${seconds}s`;
+          })()
         : 'Not set!';
+
       const reminderInfo = `⏳ **Disboard**: ${timeStr}`;
 
       // Build the summary message with the current reminder settings.

@@ -1,5 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/supabase');
 
@@ -7,7 +8,7 @@ const { getValue, setReminderData, getReminderData, deleteReminderData } = requi
  * Schedules a bump reminder and stores it in the database.
  *
  * This function retrieves necessary configuration values (role and channel IDs) from the database,
- * calculates a scheduled time based on the provided delay, stores the reminder data, and sends an immediate
+ * calculates a scheduled time using day.js based on the provided delay, stores the reminder data, and sends an immediate
  * confirmation message in the designated channel. It then schedules a final reminder message to be sent after the delay.
  *
  * @param {Message} message - The Discord message object from which to access the client.
@@ -29,21 +30,22 @@ async function handleReminder(message, delay) {
       return;
     }
 
-    // Calculate the scheduled time by adding the delay to the current time.
-    const scheduledTime = new Date(Date.now() + delay);
+    // Calculate the scheduled time by adding the delay to the current time using day.js.
+    const scheduledTime = dayjs().add(delay, 'millisecond');
 
     // Generate a unique identifier for the reminder.
     const reminderId = randomUUID(); // Alternatively, use uuidv4() if preferred.
 
     // Store the reminder data in the database under the key "bump".
-    await setReminderData('bump', scheduledTime, reminderId);
+    // Convert the day.js object to an ISO string for storage.
+    await setReminderData('bump', scheduledTime.toISOString(), reminderId);
     logger.debug("Inserted reminder data into database:", {
       key: "bump",
       scheduled_time: scheduledTime.toISOString(),
       reminder_id: reminderId
     });
 
-    // Attempt to retrieve the channel object using the cached channels or fetching it.
+    // Attempt to retrieve the channel object using the cached channels or by fetching it.
     const channel = message.client.channels.cache.get(reminderChannelId) ||
       await message.client.channels.fetch(reminderChannelId);
 
@@ -77,8 +79,8 @@ async function handleReminder(message, delay) {
 /**
  * Reschedules stored bump reminders after a potential downtime or restart.
  *
- * This function retrieves all stored reminders for the key "bump" from the database.
- * It then checks each reminder's scheduled time and calculates the delay until it should be sent.
+ * This function retrieves the stored reminder for the key "bump" from the database.
+ * It then checks the reminder's scheduled time using day.js and calculates the delay until it should be sent.
  * If the scheduled time has already passed, it removes the reminder from the database.
  * Otherwise, it sets up a timeout to send the reminder message at the appropriate time.
  *
@@ -109,10 +111,10 @@ async function rescheduleReminder(client) {
       return;
     }
     
-    // Parse the scheduled time and compute the remaining delay.
-    const scheduledTime = new Date(reminder.scheduled_time);
-    let delay = scheduledTime.getTime() - Date.now();
-    logger.debug("Calculated scheduled time and delay for reminder:", { scheduledTime, delay });
+    // Parse the scheduled time using day.js and compute the remaining delay.
+    const scheduledTime = dayjs(reminder.scheduled_time);
+    const delay = scheduledTime.diff(dayjs(), 'millisecond');
+    logger.debug("Calculated scheduled time and delay for reminder:", { scheduledTime: scheduledTime.toISOString(), delay });
     
     // If the scheduled time has passed, remove the overdue reminder.
     if (delay < 0) {

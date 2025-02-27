@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
+const dayjs = require('dayjs');
 const config = require('../config');
 
 /**
@@ -60,8 +61,8 @@ module.exports = {
           const lng = location.lng;
           logger.debug("Geocoding success:", { city, lat, lng });
 
-          // Get the current timestamp in seconds.
-          const timestamp = Math.floor(Date.now() / 1000);
+          // Get the current timestamp in seconds using day.js.
+          const timestamp = dayjs().unix();
           // Build the Timezone API URL.
           const timezoneUrl = "https://maps.googleapis.com/maps/api/timezone/json";
           const timezoneParams = new URLSearchParams({

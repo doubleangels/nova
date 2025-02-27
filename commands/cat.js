@@ -2,6 +2,7 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
+const dayjs = require('dayjs');
 
 /**
  * Module for the /cat command.
@@ -22,8 +23,8 @@ module.exports = {
       await interaction.deferReply();
       logger.debug("/cat command received:", { user: interaction.user.tag });
 
-      // Create a unique timestamp to avoid cached images.
-      const timestamp = Math.floor(Date.now() / 1000);
+      // Create a unique timestamp to avoid cached images using day.js.
+      const timestamp = dayjs().unix();
       const catApiUrl = `https://cataas.com/cat?timestamp=${timestamp}`;
       logger.debug("Fetching cat image:", { catApiUrl });
 

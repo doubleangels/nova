@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
+const dayjs = require('dayjs');
 const config = require('../config');
 
 /**
@@ -70,7 +71,8 @@ module.exports = {
             const rating = detailsData.mean || "N/A";
             const genresArray = detailsData.genres || [];
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
-            const releaseDate = detailsData.start_date || "Unknown";
+            // Use day.js to format the release date (displaying only the year).
+            const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
             
             logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });
 

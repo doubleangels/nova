@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/supabase');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 
@@ -32,10 +33,10 @@ module.exports = {
         return;
       }
 
-      // Calculate account age in days.
-      const now = Date.now();
-      const created = member.user.createdTimestamp;
-      const accountAgeDays = Math.floor((now - created) / (1000 * 3600 * 24));
+      // Calculate account age in days using day.js.
+      const now = dayjs();
+      const created = dayjs(member.user.createdTimestamp);
+      const accountAgeDays = now.diff(created, 'day');
       logger.debug("New member joined:", {
         memberTag: member.user.tag,
         guildName: member.guild.name,
@@ -60,7 +61,7 @@ module.exports = {
 
       // Mute mode: Track new member and schedule a mute kick.
       if (muteModeEnabled === "true") {
-        const joinTime = new Date().toISOString();
+        const joinTime = dayjs().toISOString();
         logger.debug("Mute mode active; tracking new member:", {
           memberTag: member.user.tag,
           joinTime

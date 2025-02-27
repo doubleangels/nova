@@ -1,9 +1,10 @@
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const dayjs = require('dayjs');
 const config = require('../config');
 
-// Initialize the Supabase client with the URL and Key from the config.
+// Initialize the Supabase client with the URL and key from the config.
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
 /**
@@ -21,6 +22,7 @@ async function getValue(key) {
       .eq('id', key)
       .maybeSingle();
     if (error) throw error;
+    // Parse the value if it exists.
     const parsed = data && data.value ? JSON.parse(data.value) : null;
     logger.debug(`Retrieved config for key "${key}": ${parsed}`);
     return parsed;
@@ -169,10 +171,12 @@ async function deleteReminderData(key) {
  */
 async function trackNewMember(memberId, username, joinTime) {
   try {
-    logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${joinTime}.`);
+    // Validate and format joinTime using day.js.
+    const formattedJoinTime = dayjs(joinTime).toISOString();
+    logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
     const { data, error } = await supabase
       .from('tracked_members')
-      .upsert({ member_id: memberId, join_time: joinTime, username });
+      .upsert({ member_id: memberId, join_time: formattedJoinTime, username });
     if (error) {
       logger.warn(`Failed to track member "${username}" (ID: ${memberId}): ${error.message || error}`);
     } else {
