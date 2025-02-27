@@ -19,11 +19,12 @@ module.exports = {
     .addStringOption(option =>
       option.setName('enabled')
         .setDescription('Toggle auto-role assignment ("enabled" or "disabled") (leave empty to check status)')
-        .setRequired(true)
+        .setRequired(false)
         .addChoices(
           { name: 'Enabled', value: 'enabled' },
           { name: 'Disabled', value: 'disabled' }
         )
+    )
     .addChannelOption(option =>
       option.setName('channel')
         .setDescription('Channel to send welcome messages (leave empty to check status)')
@@ -33,7 +34,6 @@ module.exports = {
       option.setName('role')
         .setDescription('Role to assign to new members (leave empty to check status)')
         .setRequired(false)
-    )
     ),
     
   /**
