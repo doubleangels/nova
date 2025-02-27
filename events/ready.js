@@ -1,6 +1,7 @@
 const { ActivityType } = require('discord.js');
 const logger = require('../logger');
-const { rescheduleReminder, rescheduleAllMuteKicks } = require('../utils/reminderUtils');
+const { rescheduleReminder } = require('../utils/reminderUtils');
+const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { getValue } = require('../utils/supabase');
 
 module.exports = {

@@ -1,5 +1,8 @@
 const logger = require('../logger');
-const { getTrackedMember, removeTrackedMember, getAllTrackedMembers, getValue } = require('../utils/supabase');
+const { 
+  getValue,
+  getAllTrackedMembers
+} = require('../utils/supabase');
 
 async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guildId, client) {
   try {
@@ -12,6 +15,11 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
     
     const remainingTime = (muteKickTime * 3600) - elapsedTime;
     logger.debug(`Calculated remaining time before kick: ${remainingTime.toFixed(2)} seconds.`);
+    
+    if (!client) {
+      logger.error("Discord client is undefined. Ensure that you pass the client instance.");
+      return;
+    }
     
     const guildObj = client.guilds.cache.get(guildId);
     if (!guildObj) {
@@ -77,7 +85,7 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
       }
     }
     
-    setTimeout(delayedKick, 0);
+    setTimeout(() => { delayedKick(); }, 0);
     logger.debug(`Scheduled delayed kick for member '${username}' in ${remainingTime.toFixed(2)} seconds.`);
   } catch (e) {
     logger.error(`Error scheduling mute mode kick for member '${username}' (ID: ${memberId}): ${e}`);
@@ -94,6 +102,7 @@ async function rescheduleAllMuteKicks(client) {
     }
     
     if (client.guilds.cache.size > 0) {
+      // Use the first guild's ID (assuming a single guild scenario)
       const guildId = client.guilds.cache.first().id;
       for (const memberData of trackedMembers) {
         logger.debug(`Rescheduling mute kick for tracked member: ${JSON.stringify(memberData)}`);

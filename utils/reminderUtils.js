@@ -156,41 +156,10 @@ async function rescheduleReminder(key, role, client) {
   }
 }
 
-async function rescheduleAllMuteKicks(client) {
-  try {
-    const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours")) || 4;
-    const trackedMembers = await getAllTrackedMembers();
-    if (!trackedMembers || trackedMembers.length === 0) {
-      logger.debug("No tracked members found to reschedule mute kicks.");
-      return;
-    }
-    
-    if (client.guilds.cache.size > 0) {
-      const guildId = client.guilds.cache.first().id;
-      for (const memberData of trackedMembers) {
-        logger.debug(`Rescheduling mute kick for tracked member: ${JSON.stringify(memberData)}`);
-        await scheduleMuteKick(
-          memberData.member_id,
-          memberData.username,
-          memberData.join_time,
-          muteKickTime,
-          guildId,
-          client
-        );
-      }
-    } else {
-      logger.warning("Bot is not in any guilds; cannot reschedule mute kicks.");
-    }
-  } catch (e) {
-    logger.error(`Error while rescheduling mute kicks on startup: ${e}`);
-  }
-}
-
 module.exports = {
   calculateRemainingTime,
   safeTask,
   sendScheduledMessage,
   handleReminder,
-  rescheduleReminder,
-  rescheduleAllMuteKicks
+  rescheduleReminder
 };
