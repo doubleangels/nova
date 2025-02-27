@@ -1,7 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember } = require('../utils/supabase');
-const { disboard } = require('../commands/reminders');
+const { disboard } = require('../commands/reminder');
 
 /**
  * Event handler for the 'messageCreate' event.
