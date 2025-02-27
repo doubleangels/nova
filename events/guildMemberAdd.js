@@ -33,7 +33,6 @@ module.exports = {
         return;
       }
 
-      // Calculate account age in days using day.js.
       const now = dayjs();
       const created = dayjs(member.user.createdTimestamp);
       const accountAgeDays = now.diff(created, 'day');

@@ -30,14 +30,12 @@ async function handleReminder(message, delay) {
       return;
     }
 
-    // Calculate the scheduled time by adding the delay to the current time using day.js.
     const scheduledTime = dayjs().add(delay, 'millisecond');
 
     // Generate a unique identifier for the reminder.
     const reminderId = randomUUID(); // Alternatively, use uuidv4() if preferred.
 
     // Store the reminder data in the database under the key "bump".
-    // Convert the day.js object to an ISO string for storage.
     await setReminderData('bump', scheduledTime.toISOString(), reminderId);
     logger.debug("Inserted reminder data into database:", {
       key: "bump",
@@ -111,7 +109,6 @@ async function rescheduleReminder(client) {
       return;
     }
     
-    // Parse the scheduled time using day.js and compute the remaining delay.
     const scheduledTime = dayjs(reminder.scheduled_time);
     const delay = scheduledTime.diff(dayjs(), 'millisecond');
     logger.debug("Calculated scheduled time and delay for reminder:", { scheduledTime: scheduledTime.toISOString(), delay });
