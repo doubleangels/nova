@@ -1,6 +1,6 @@
 const { ActivityType } = require('discord.js');
 const logger = require('../logger');
-const { initializeRemindersTable, rescheduleReminder, rescheduleAllMuteKicks } = require('../utils/reminderUtils');
+const { rescheduleReminder, rescheduleAllMuteKicks } = require('../utils/reminderUtils');
 const { getValue } = require('../utils/supabase');
 
 module.exports = {
@@ -37,6 +37,14 @@ module.exports = {
       }
     } catch (error) {
       logger.error(`Error during Disboard reminder rescheduling: ${error}`);
+    }
+
+    try {
+      logger.debug("Attempting to reschedule all mute kicks.");
+      await rescheduleAllMuteKicks(client);
+      logger.debug("Mute kick rescheduling completed successfully.");
+    } catch (error) {
+      logger.error(`Error while rescheduling mute kicks: ${error}`);
     }
 
     logger.info("Bot is ready!");
