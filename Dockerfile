@@ -1,5 +1,5 @@
 # Use the official Node image based on Alpine Linux
-FROM node:22-slim
+FROM node:22-alpine
 
 # Set the working directory in the container
 WORKDIR /app
