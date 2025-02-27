@@ -39,7 +39,7 @@ module.exports = {
               "disboard", 
               "Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.", 
               "It's time to bump the server on Disboard again!", 
-              7200, // 7200 seconds = 2 hours
+              7200,
               client
             );
           } else {
