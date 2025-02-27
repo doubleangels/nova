@@ -1,7 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember } = require('../utils/supabase');
-const { disboard } = require('../commands/reminder');
+const { handleReminder } = require('../utils/reminderUtils');
 
 /**
  * Event handler for the 'messageCreate' event.
@@ -35,7 +35,13 @@ module.exports = {
           // If the embed description includes "Bump done", trigger the Disboard reminder.
           if (embedDescription.includes("Bump done")) {
             logger.debug("Triggering Disboard reminder based on embed content.");
-            await disboard();
+            await handleReminder(
+              "disboard", 
+              "Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.", 
+              "It's time to bump the server on Disboard again!", 
+              7200, // 7200 seconds = 2 hours
+              client
+            );
           } else {
             logger.debug("Embed does not contain 'Bump done'; no action taken.");
           }
