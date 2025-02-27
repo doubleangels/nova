@@ -20,7 +20,7 @@ module.exports = {
     try {
       // Defer reply to allow time for asynchronous operations.
       await interaction.deferReply();
-      logger.debug("Processing /cat command:", { user: interaction.user.tag });
+      logger.debug("/cat command received:", { user: interaction.user.tag });
 
       // Create a unique timestamp to avoid cached images.
       const timestamp = Math.floor(Date.now() / 1000);

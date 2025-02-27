@@ -33,7 +33,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("/reminder command invoked:", { user: interaction.user.tag });
+      logger.debug("/reminder command received:", { user: interaction.user.tag });
       
       // Retrieve channel and role options from the command input.
       const channelOption = interaction.options.getChannel('channel');

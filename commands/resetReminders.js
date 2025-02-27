@@ -26,7 +26,7 @@ module.exports = {
     }
     
     try {
-      logger.debug("/resetreminders command received", { user: interaction.user.tag });
+      logger.debug("/resetreminders command received:", { user: interaction.user.tag });
       
       // Defer the reply to allow processing time.
       await interaction.deferReply();

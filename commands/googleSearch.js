@@ -29,17 +29,17 @@ module.exports = {
     try {
       // Defer reply to allow processing time.
       await interaction.deferReply();
-      logger.debug("/google command received", { user: interaction.user.tag });
+      logger.debug("/google command received:", { user: interaction.user.tag });
 
       // Get query and results count.
       const query = interaction.options.getString('query');
       let resultsCount = interaction.options.getInteger('results') ?? 5;
-      logger.debug("User input", { query, requestedResults: resultsCount });
+      logger.debug("User input:", { query, requestedResults: resultsCount });
 
       // Trim the query and enforce result count boundaries.
       const formattedQuery = query.trim();
       resultsCount = Math.max(1, Math.min(resultsCount, 10));
-      logger.debug("Formatted input", { formattedQuery, resultsCount });
+      logger.debug("Formatted input:", { formattedQuery, resultsCount });
 
       // Build the Google Custom Search API request.
       const searchUrl = "https://www.googleapis.com/customsearch/v1";
@@ -50,16 +50,16 @@ module.exports = {
         num: resultsCount.toString()
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
-      logger.debug("Making Google API request", { requestUrl });
+      logger.debug("Making Google API request:", { requestUrl });
 
       // Fetch data from the API.
       const response = await fetch(requestUrl);
-      logger.debug("Google API response", { status: response.status });
+      logger.debug("Google API response:", { status: response.status });
 
       if (response.ok) {
         // Parse the JSON response.
         const data = await response.json();
-        logger.debug("Received Google Search data", { data });
+        logger.debug("Received Google Search data:", { data });
 
         if (data.items && data.items.length > 0) {
           // Store the search results.
@@ -128,16 +128,16 @@ module.exports = {
             await interaction.editReply({ components: [row] });
           });
         } else {
-          logger.warn("No search results found", { query: formattedQuery });
+          logger.warn("No search results found:", { query: formattedQuery });
           await interaction.editReply(`❌ No search results found for **${formattedQuery}**. Try refining your query!`);
         }
       } else {
         const errorBody = await response.text();
-        logger.warn("Google API error", { status: response.status, errorBody });
+        logger.warn("Google API error:", { status: response.status, errorBody });
         await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
       }
     } catch (error) {
-      logger.error("Error in /google command", { error });
+      logger.error("Error in /google command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

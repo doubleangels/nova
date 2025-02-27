@@ -20,6 +20,7 @@ module.exports = {
     try {
       // Defer reply to allow asynchronous operations.
       await interaction.deferReply();
+      logger.debug("/cat command received:", { user: interaction.user.tag });
       const dogApiUrl = "https://dog.ceo/api/breeds/image/random";
       logger.debug("Fetching random dog image data:", { url: dogApiUrl });
       

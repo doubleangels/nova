@@ -42,7 +42,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("/backupmode command invoked:", { user: interaction.user.tag });
+      logger.debug("/backupmode command received", { user: interaction.user.tag });
       
       // Retrieve command options.
       const channelOption = interaction.options.getChannel('channel');

@@ -27,7 +27,7 @@ module.exports = {
     try {
       // Defer reply to allow additional processing time.
       await interaction.deferReply();
-      logger.debug("Received /anime command:", { user: interaction.user.tag });
+      logger.debug("/anime command received", { user: interaction.user.tag });
 
       // Retrieve and format the anime title.
       const titleQuery = interaction.options.getString('title');

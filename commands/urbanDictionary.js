@@ -26,7 +26,7 @@ module.exports = {
     try {
       // Log the invocation and the query term.
       const query = interaction.options.getString('query');
-      logger.debug("/urban command invoked:", { user: interaction.user.tag, query });
+      logger.debug("/urban command received:", { user: interaction.user.tag, query });
       
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();

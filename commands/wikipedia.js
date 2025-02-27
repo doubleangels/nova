@@ -27,7 +27,7 @@ module.exports = {
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();
       const query = interaction.options.getString('query');
-      logger.debug("/wikipedia command invoked:", { user: interaction.user.tag, query });
+      logger.debug("/wikipedia command received:", { user: interaction.user.tag, query });
       
       // Trim the query to remove unnecessary whitespace.
       const formattedQuery = query.trim();
