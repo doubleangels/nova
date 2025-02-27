@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
@@ -51,18 +51,20 @@ module.exports = {
           address: city,
           key: config.googleApiKey
         });
-        logger.debug("Fetching geocoding data:", { city, requestUrl: `${geocodeUrl}?${geocodeParams.toString()}` });
-        const geocodeResponse = await fetch(`${geocodeUrl}?${geocodeParams.toString()}`);
-        const geoData = await geocodeResponse.json();
+        const geocodeRequestUrl = `${geocodeUrl}?${geocodeParams.toString()}`;
+        logger.debug("Fetching geocoding data:", { city, requestUrl: geocodeRequestUrl });
+        
+        // Fetch geocoding data using axios.
+        const geocodeResponse = await axios.get(geocodeRequestUrl);
+        const geoData = geocodeResponse.data;
 
         if (geoData.results && geoData.results.length > 0) {
           const location = geoData.results[0].geometry.location;
           const lat = location.lat;
           const lng = location.lng;
           logger.debug("Geocoding success:", { city, lat, lng });
-
-          // Get the current timestamp in seconds using day.js.
           const timestamp = dayjs().unix();
+
           // Build the Timezone API URL.
           const timezoneUrl = "https://maps.googleapis.com/maps/api/timezone/json";
           const timezoneParams = new URLSearchParams({
@@ -70,9 +72,12 @@ module.exports = {
             timestamp: timestamp.toString(),
             key: config.googleApiKey
           });
-          logger.debug("Fetching timezone data:", { city, requestUrl: `${timezoneUrl}?${timezoneParams.toString()}` });
-          const timezoneResponse = await fetch(`${timezoneUrl}?${timezoneParams.toString()}`);
-          const tzData = await timezoneResponse.json();
+          const timezoneRequestUrl = `${timezoneUrl}?${timezoneParams.toString()}`;
+          logger.debug("Fetching timezone data:", { city, requestUrl: timezoneRequestUrl });
+          
+          // Fetch timezone data using axios.
+          const timezoneResponse = await axios.get(timezoneRequestUrl);
+          const tzData = timezoneResponse.data;
 
           if (tzData.status === "OK") {
             const rawOffset = tzData.rawOffset / 3600; // seconds to hours.

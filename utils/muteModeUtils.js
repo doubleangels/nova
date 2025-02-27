@@ -1,7 +1,5 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
-const config = require('../config');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/supabase');
 

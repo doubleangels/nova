@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 const config = require('../config');
 
 /**
@@ -66,13 +66,13 @@ module.exports = {
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making Google Image API request:", { requestUrl });
 
-      // Make the API request.
-      const response = await fetch(requestUrl);
+      // Make the API request using axios.
+      const response = await axios.get(requestUrl);
       logger.debug("Google Image API response:", { status: response.status });
 
-      if (response.ok) {
+      if (response.status === 200) {
         // Parse the API response as JSON.
-        const data = await response.json();
+        const data = response.data;
         logger.debug("Received Google Image data:", { data });
 
         // Check if any image results were returned.
@@ -152,7 +152,7 @@ module.exports = {
         }
       } else {
         // If the API returns an error, log the error details.
-        const errorBody = await response.text();
+        const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
         await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
       }

@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 
 /**
  * Module for the /urban command.
@@ -37,12 +37,12 @@ module.exports = {
       const url = `${searchUrl}?${params.toString()}`;
       logger.debug("Fetching Urban Dictionary data:", { requestUrl: url });
       
-      // Fetch the definition data.
-      const response = await fetch(url);
+      // Fetch the definition data using axios.
+      const response = await axios.get(url);
       
       // Check if the API response is successful.
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         // Check if any definitions were returned.
         if (data.list && data.list.length > 0) {
           const topResult = data.list[0];

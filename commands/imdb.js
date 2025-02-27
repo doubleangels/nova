@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 const config = require('../config');
 
 /**
@@ -43,14 +43,15 @@ module.exports = {
         t: formattedTitle,
         apikey: config.omdbApiKey
       });
-      logger.debug("Making OMDb API request:", { requestUrl: `${searchUrl}?${params.toString()}` });
+      const requestUrl = `${searchUrl}?${params.toString()}`;
+      logger.debug("Making OMDb API request:", { requestUrl });
       
-      // Fetch data from the OMDb API.
-      const response = await fetch(`${searchUrl}?${params.toString()}`);
+      // Fetch data from the OMDb API using axios.
+      const response = await axios.get(requestUrl);
       logger.debug("OMDb API response:", { status: response.status });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         logger.debug("Received IMDb data:", { data });
         
         // Check if the API response indicates success.

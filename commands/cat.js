@@ -1,61 +1,114 @@
-const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 const dayjs = require('dayjs');
+const config = require('../config');
 
 /**
- * Module for the /cat command.
- * Fetches a random cat image from the Cataas API and sends it as an embed.
+ * Module for the /anime command.
+ * Searches for an anime on MyAnimeList based on the provided title,
+ * retrieves its details, and sends an embed with the information.
  */
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('cat')
-    .setDescription('Get a random cat picture!'),
+    .setName('anime')
+    .setDescription('Search for an anime on MyAnimeList.')
+    .addStringOption(option =>
+      option.setName('title')
+        .setDescription('Enter the anime title.')
+        .setRequired(true)
+    ),
   
   /**
-   * Executes the /cat command.
-   * @param {Interaction} interaction - The interaction object from Discord.
+   * Executes the /anime command.
+   * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
     try {
-      // Defer reply to allow time for asynchronous operations.
+      // Defer reply to allow additional processing time.
       await interaction.deferReply();
-      logger.debug("/cat command received:", { user: interaction.user.tag });
+      logger.debug("/anime command received", { user: interaction.user.tag });
 
-      // Create a unique timestamp to avoid cached images using day.js.
-      const timestamp = dayjs().unix();
-      const catApiUrl = `https://cataas.com/cat?timestamp=${timestamp}`;
-      logger.debug("Fetching cat image:", { catApiUrl });
+      // Retrieve and format the anime title.
+      const titleQuery = interaction.options.getString('title');
+      logger.debug("User input title:", { titleQuery });
+      const formattedTitle = titleQuery.trim();
+      logger.debug("Formatted title:", { formattedTitle });
 
-      // Fetch the cat image from the Cataas API.
-      const response = await fetch(catApiUrl);
-      logger.debug("Cataas API response:", { status: response.status });
+      // Construct the search URL and headers.
+      const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(formattedTitle)}&limit=1`;
+      const headers = { "X-MAL-CLIENT-ID": config.malClientId };
+      logger.debug("Making MAL search request:", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
-      if (response.ok) {
-        // Convert the response data to a buffer.
-        const imageBuffer = await response.buffer();
-        const filename = "cat.jpg";
-        // Create an attachment from the image buffer.
-        const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
+      // Perform the search request using axios.
+      const searchResponse = await axios.get(searchUrl, { headers });
+      logger.debug("MAL search response:", { status: searchResponse.status });
 
-        // Build an embed with the cat image.
-        const embed = new EmbedBuilder()
-          .setTitle("Random Cat Picture")
-          .setDescription("😺 Here's a cat for you!")
-          .setColor(0xD3D3D3)
-          .setImage(`attachment://${filename}`)
-          .setFooter({ text: "Powered by Cataas API" });
-        
-        // Edit the reply with the embed and attachment.
-        await interaction.editReply({ embeds: [embed], files: [attachment] });
-        logger.debug("Cat image sent successfully:", { user: interaction.user.tag });
+      if (searchResponse.status === 200) {
+        const searchData = searchResponse.data;
+        logger.debug("Received MAL search data:", { searchData });
+
+        // Check for results.
+        if (searchData.data && searchData.data.length > 0) {
+          const animeNode = searchData.data[0].node;
+          const animeId = animeNode.id;
+          const animeTitle = animeNode.title || "Unknown";
+          const imageUrl = animeNode.main_picture ? animeNode.main_picture.medium : null;
+          const malLink = animeId ? `https://myanimelist.net/anime/${animeId}` : "N/A";
+
+          // Construct the details URL.
+          const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
+          logger.debug("Making MAL details request:", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
+
+          // Request detailed anime information using axios.
+          const detailsResponse = await axios.get(detailsUrl, { headers });
+          logger.debug("MAL details response:", { status: detailsResponse.status });
+
+          if (detailsResponse.status === 200) {
+            const detailsData = detailsResponse.data;
+            const synopsis = detailsData.synopsis || "No synopsis available.";
+            const rating = detailsData.mean || "N/A";
+            const genresArray = detailsData.genres || [];
+            const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
+            // Use day.js to format the release date (displaying only the year).
+            const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
+            
+            logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });
+
+            // Create an embed for the anime details.
+            const embed = new EmbedBuilder()
+              .setTitle(`📺 **${animeTitle} (${releaseDate})**`)
+              .setDescription(`📜 **Synopsis:** ${synopsis}`)
+              .setColor(0x2E51A2)
+              .addFields(
+                { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
+                { name: "⭐ MAL Rating", value: `🌟 ${rating}`, inline: true },
+                { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
+              )
+              .setFooter({ text: "Powered by MyAnimeList API" });
+            
+            if (imageUrl) {
+              embed.setThumbnail(imageUrl);
+            }
+            
+            // Send the embed back to the user.
+            await interaction.editReply({ embeds: [embed] });
+            logger.debug("Anime embed sent successfully:", { animeTitle });
+          } else {
+            logger.warn("Error fetching MAL details:", { detailsStatus: detailsResponse.status });
+            await interaction.editReply("⚠️ Error fetching additional anime details. Please try again later.");
+          }
+        } else {
+          logger.warn("No anime results found:", { formattedTitle });
+          await interaction.editReply(`❌ No anime found for **${formattedTitle}**. Try another title!`);
+        }
       } else {
-        logger.warn("Cataas API returned an error:", { status: response.status });
-        await interaction.editReply("😿 Couldn't fetch a cat picture. Try again later.");
+        logger.warn("MAL API search error:", { status: searchResponse.status });
+        await interaction.editReply(`⚠️ Error: MAL API returned status code ${searchResponse.status}.`);
       }
-    } catch (error) {
-      logger.error("Error in /cat command:", { error });
+    } catch (e) {
+      logger.error("Error in /anime command:", { error: e });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

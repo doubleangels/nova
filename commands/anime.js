@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
@@ -41,12 +41,12 @@ module.exports = {
       const headers = { "X-MAL-CLIENT-ID": config.malClientId };
       logger.debug("Making MAL search request:", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
-      // Perform the search request.
-      const searchResponse = await fetch(searchUrl, { headers });
+      // Perform the search request using axios.
+      const searchResponse = await axios.get(searchUrl, { headers });
       logger.debug("MAL search response:", { status: searchResponse.status });
 
-      if (searchResponse.ok) {
-        const searchData = await searchResponse.json();
+      if (searchResponse.status === 200) {
+        const searchData = searchResponse.data;
         logger.debug("Received MAL search data:", { searchData });
 
         // Check for results.
@@ -61,17 +61,16 @@ module.exports = {
           const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
           logger.debug("Making MAL details request:", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
-          // Request detailed anime information.
-          const detailsResponse = await fetch(detailsUrl, { headers });
+          // Request detailed anime information using axios.
+          const detailsResponse = await axios.get(detailsUrl, { headers });
           logger.debug("MAL details response:", { status: detailsResponse.status });
 
-          if (detailsResponse.ok) {
-            const detailsData = await detailsResponse.json();
+          if (detailsResponse.status === 200) {
+            const detailsData = detailsResponse.data;
             const synopsis = detailsData.synopsis || "No synopsis available.";
             const rating = detailsData.mean || "N/A";
             const genresArray = detailsData.genres || [];
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
-            // Use day.js to format the release date (displaying only the year).
             const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
             
             logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });

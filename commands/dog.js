@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch').default;
+const axios = require('axios');
 const dayjs = require('dayjs');
 
 /**
@@ -25,12 +25,12 @@ module.exports = {
       const dogApiUrl = "https://dog.ceo/api/breeds/image/random";
       logger.debug("Fetching random dog image data:", { url: dogApiUrl });
       
-      // Fetch the random dog image data.
-      const response = await fetch(dogApiUrl);
+      // Fetch the random dog image data using axios.
+      const response = await axios.get(dogApiUrl);
       logger.debug("Dog CEO API response received:", { status: response.status });
       
       if (response.status === 200) {
-        const data = await response.json();
+        const data = response.data;
         const imageUrl = data.message;
         
         if (imageUrl) {
@@ -39,12 +39,12 @@ module.exports = {
           const imageUrlWithTimestamp = `${imageUrl}?timestamp=${timestamp}`;
           logger.debug("Fetching dog image file:", { imageUrl: imageUrlWithTimestamp });
           
-          // Fetch the dog image file.
-          const imageResponse = await fetch(imageUrlWithTimestamp);
+          // Fetch the dog image file using axios.
+          const imageResponse = await axios.get(imageUrlWithTimestamp, { responseType: 'arraybuffer' });
           logger.debug("Dog image file response:", { status: imageResponse.status });
           
           if (imageResponse.status === 200) {
-            const imageBuffer = await imageResponse.buffer();
+            const imageBuffer = Buffer.from(imageResponse.data);
             const filename = "dog.jpg";
             const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
             
