@@ -1,8 +1,20 @@
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const Sentry = require("@sentry/node");
+const { nodeProfilingIntegration } = require("@sentry/profiling-node");
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
+
+// Ensure to call this before requiring any other modules!
+Sentry.init({
+  dsn: "https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
+  integrations: [
+    nodeProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+});
 
 /**
  * Create a new Discord client instance with the necessary intents.
