@@ -3,8 +3,15 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 
+// Initialize the Supabase client with the URL and Key from the config.
 const supabase = createClient(config.supabaseUrl, config.supabaseKey);
 
+/**
+ * Retrieves a value from the 'config_test' table based on a given key.
+ *
+ * @param {string} key - The key to retrieve.
+ * @returns {Promise<any|null>} The parsed value if found, otherwise null.
+ */
 async function getValue(key) {
   try {
     const { data, error } = await supabase
@@ -20,6 +27,13 @@ async function getValue(key) {
   }
 }
 
+/**
+ * Sets a value in the 'config_test' table for a given key.
+ * Inserts a new record if the key does not exist; otherwise, updates the existing record.
+ *
+ * @param {string} key - The key to set.
+ * @param {any} value - The value to store, which will be serialized to JSON.
+ */
 async function setValue(key, value) {
   try {
     const serialized = JSON.stringify(value);
@@ -36,6 +50,11 @@ async function setValue(key, value) {
   }
 }
 
+/**
+ * Deletes a value from the 'config_test' table for a given key.
+ *
+ * @param {string} key - The key to delete.
+ */
 async function deleteValue(key) {
   try {
     const { error } = await supabase.from('config_test').delete().eq('id', key);
@@ -45,6 +64,11 @@ async function deleteValue(key) {
   }
 }
 
+/**
+ * Retrieves all configuration records from the 'config_test' table.
+ *
+ * @returns {Promise<Array<Object>>} An array of config objects.
+ */
 async function getAllConfigs() {
   try {
     const { data, error } = await supabase.from('config_test').select('*');
@@ -56,6 +80,12 @@ async function getAllConfigs() {
   }
 }
 
+/**
+ * Retrieves reminder data from the 'reminders_test' table for a given key.
+ *
+ * @param {string} key - The reminder key.
+ * @returns {Promise<Object|null>} The reminder data if found, otherwise null.
+ */
 async function getReminderData(key) {
   try {
     const { data, error } = await supabase
@@ -71,6 +101,14 @@ async function getReminderData(key) {
   }
 }
 
+/**
+ * Sets reminder data in the 'reminders_test' table for a given key.
+ * Inserts a new record if none exists; otherwise, updates the existing record.
+ *
+ * @param {string} key - The reminder key.
+ * @param {string} scheduled_time - The scheduled time as an ISO string.
+ * @param {string} reminder_id - A unique identifier for the reminder.
+ */
 async function setReminderData(key, scheduled_time, reminder_id) {
   try {
     const existing = await getReminderData(key);
@@ -91,6 +129,11 @@ async function setReminderData(key, scheduled_time, reminder_id) {
   }
 }
 
+/**
+ * Deletes reminder data from the 'reminders_test' table for a given key.
+ *
+ * @param {string} key - The reminder key.
+ */
 async function deleteReminderData(key) {
   try {
     const { error } = await supabase.from('reminders_test').delete().eq('key', key);
@@ -100,6 +143,13 @@ async function deleteReminderData(key) {
   }
 }
 
+/**
+ * Tracks a new member by inserting or updating their information in the 'tracked_members_test' table.
+ *
+ * @param {string} memberId - The Discord member ID.
+ * @param {string} username - The username of the member.
+ * @param {string} joinTime - The ISO string representing when the member joined.
+ */
 async function trackNewMember(memberId, username, joinTime) {
   try {
     logger.debug(`Tracking new member '${username}' with ID ${memberId} joining at ${joinTime}.`);
@@ -116,6 +166,12 @@ async function trackNewMember(memberId, username, joinTime) {
   }
 }
 
+/**
+ * Retrieves tracking data for a specific member from the 'tracked_members_test' table.
+ *
+ * @param {string} memberId - The Discord member ID.
+ * @returns {Promise<Object|null>} The tracking data if found, otherwise null.
+ */
 async function getTrackedMember(memberId) {
   try {
     logger.debug(`Retrieving tracking information for member with ID ${memberId}.`);
@@ -137,6 +193,11 @@ async function getTrackedMember(memberId) {
   }
 }
 
+/**
+ * Removes tracking data for a specific member from the 'tracked_members_test' table.
+ *
+ * @param {string} memberId - The Discord member ID.
+ */
 async function removeTrackedMember(memberId) {
   try {
     logger.debug(`Attempting to remove tracking information for member ID ${memberId}.`);
@@ -156,6 +217,11 @@ async function removeTrackedMember(memberId) {
   }
 }
 
+/**
+ * Retrieves all tracked members from the 'tracked_members_test' table.
+ *
+ * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time.
+ */
 async function getAllTrackedMembers() {
   try {
     logger.debug("Retrieving all tracked members from the database.");

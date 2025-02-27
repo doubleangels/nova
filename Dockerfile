@@ -1,15 +1,15 @@
-FROM python:3-slim
+# Use the official Node image based on Alpine Linux
+FROM node:alpine
 
-# Set the working directory
+# Set the working directory in the container
 WORKDIR /app
-FROM python:alpine
 
-# Upgrade pip and install dependencies without cache
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir aiohttp discord-py-interactions numpy pytz sentry-sdk pillow supabase
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm install
 
-# Copy the application code into the container
-COPY main.py .
+# Copy the rest of your application code, including index.js, commands, and utils directories
+COPY . .
 
-# Define the default command
-CMD ["python", "-u", "main.py"]
+# Define the default command to run your application
+CMD ["node", "index.js"]

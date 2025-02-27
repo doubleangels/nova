@@ -4,17 +4,22 @@ const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
-
+/**
+ * Create a new Discord client instance with the necessary intents.
+ */
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.Guilds,           // Access to guild data.
+    GatewayIntentBits.GuildMessages,    // Receive messages from guilds.
+    GatewayIntentBits.MessageContent,   // Read message content.
+    GatewayIntentBits.GuildMembers,     // Access member data.
   ]
 });
 
+// Create a collection to store bot commands.
 client.commands = new Collection();
+
+// Load command files from the 'commands' directory.
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
@@ -23,10 +28,12 @@ for (const file of commandFiles) {
   logger.info(`Loaded command: ${command.data.name}`);
 }
 
+// Load event files from the 'events' directory.
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 for (const file of eventFiles) {
   const event = require(path.join(eventsPath, file));
+  // Bind the event, using 'once' if specified.
   if (event.once) {
     client.once(event.name, (...args) => event.execute(...args, client));
   } else {
@@ -35,10 +42,12 @@ for (const file of eventFiles) {
   logger.info(`Loaded event: ${event.name}`);
 }
 
+// Log when the bot is ready and online.
 client.once('ready', async () => {
   logger.info(`Bot is online as ${client.user.tag}`);
 });
 
+// Listen for interaction events (slash commands).
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
   const command = client.commands.get(interaction.commandName);
@@ -47,6 +56,7 @@ client.on('interactionCreate', async interaction => {
     await command.execute(interaction);
   } catch (error) {
     logger.error(`Error executing command ${interaction.commandName}:`, error);
+    // Reply with an error message if the command fails.
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({ content: 'There was an error executing that command!', ephemeral: true });
     } else {
@@ -55,10 +65,12 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+// Log the client in using the token from the config.
 client.login(config.token).catch(err => {
   logger.error('Error logging in:', err);
 });
 
+// Gracefully handle process termination signals.
 process.on('SIGINT', () => {
   logger.info("Shutdown signal received. Exiting...");
   process.exit(0);

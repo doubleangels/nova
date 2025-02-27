@@ -11,7 +11,6 @@
     "url": "git+https://github.com/doubleangels/nova.git"
   },
   "author": "doubleangels",
-  "license": "ISC",
   "bugs": {
     "url": "https://github.com/doubleangels/nova/issues"
   },
