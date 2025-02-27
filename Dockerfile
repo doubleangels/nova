@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
+RUN npm install -g npm@latest
 RUN npm install
 
 # Copy the rest of your application code, including index.js, commands, and utils directories
