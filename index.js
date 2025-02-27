@@ -25,6 +25,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,    // Receive messages from guilds.
     GatewayIntentBits.MessageContent,   // Read message content.
     GatewayIntentBits.GuildMembers,     // Access member data.
+    GatewayIntentBits.GuildPresences,   // Access member presence data.
   ]
 });
 

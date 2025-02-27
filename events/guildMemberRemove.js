@@ -18,7 +18,7 @@ module.exports = {
       
       const guild = member.guild;
       // Log that the member has left along with the guild name.
-      logger.debug(`Member left: ${member.user.username} from Guild ${guild.name}. Removing from mute tracking.`);
+      logger.debug(`Member left: ${member.user.username} from Guild ${guild.name}.`);
       
       // Remove the member from the mute tracking database.
       await removeTrackedMember(member.id);
