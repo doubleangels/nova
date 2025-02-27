@@ -36,20 +36,20 @@ module.exports = {
   async execute(interaction) {
     // Check if the user has Administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn("Unauthorized /mutemode attempt", { user: interaction.user.tag });
+      logger.warn("Unauthorized /mutemode attempt:", { user: interaction.user.tag });
       await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
       return;
     }
 
     try {
-      logger.debug("/mutemode command received", { user: interaction.user.tag });
+      logger.debug("/mutemode command received:", { user: interaction.user.tag });
       
       // Get the 'enabled' input and time limit (default is 2 hours).
       const enabledInput = interaction.options.getString('enabled');
       const timeLimit = interaction.options.getInteger('time') ?? 2;
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
 
-      logger.debug("Parsed mute mode command", { isEnabled, timeLimit });
+      logger.debug("Parsed mute mode command:", { isEnabled, timeLimit });
 
       // Update the settings in the database.
       await setValue("mute_mode_enabled", isEnabled);
@@ -62,9 +62,9 @@ module.exports = {
 
       // Reply to the interaction.
       await interaction.reply(responseMessage);
-      logger.debug("Mute mode configuration updated", { user: interaction.user.tag, isEnabled, timeLimit });
+      logger.debug("Mute mode configuration updated:", { user: interaction.user.tag, isEnabled, timeLimit });
     } catch (error) {
-      logger.error("Error in /mutemode command", { error });
+      logger.error("Error in /mutemode command:", { error });
       await interaction.reply({ content: "⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral: true });
     }
   }

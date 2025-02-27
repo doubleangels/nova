@@ -20,16 +20,16 @@ module.exports = {
     try {
       // Defer reply to allow time for asynchronous operations.
       await interaction.deferReply();
-      logger.debug("Processing /cat command", { user: interaction.user.tag });
+      logger.debug("Processing /cat command:", { user: interaction.user.tag });
 
       // Create a unique timestamp to avoid cached images.
       const timestamp = Math.floor(Date.now() / 1000);
       const catApiUrl = `https://cataas.com/cat?timestamp=${timestamp}`;
-      logger.debug("Fetching cat image", { catApiUrl });
+      logger.debug("Fetching cat image:", { catApiUrl });
 
       // Fetch the cat image from the Cataas API.
       const response = await fetch(catApiUrl);
-      logger.debug("Cataas API response", { status: response.status });
+      logger.debug("Cataas API response:", { status: response.status });
 
       if (response.ok) {
         // Convert the response data to a buffer.
@@ -48,13 +48,13 @@ module.exports = {
         
         // Edit the reply with the embed and attachment.
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-        logger.debug("Cat image sent successfully", { user: interaction.user.tag });
+        logger.debug("Cat image sent successfully:", { user: interaction.user.tag });
       } else {
-        logger.warn("Cataas API returned an error", { status: response.status });
+        logger.warn("Cataas API returned an error:", { status: response.status });
         await interaction.editReply("😿 Couldn't fetch a cat picture. Try again later.");
       }
     } catch (error) {
-      logger.error("Error in /cat command", { error });
+      logger.error("Error in /cat command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

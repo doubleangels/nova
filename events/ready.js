@@ -27,9 +27,9 @@ module.exports = {
         }],
         status: "online"
       });
-      logger.debug("Bot presence and activity set", { activity: "Watching for ways to assist", status: "online" });
+      logger.debug("Bot presence and activity set:", { activity: "Watching for ways to assist", status: "online" });
     } catch (error) {
-      logger.error("Failed to set bot presence", { error });
+      logger.error("Failed to set bot presence:", { error });
     }
 
     try {
@@ -38,17 +38,17 @@ module.exports = {
       if (!role) {
         logger.warn("Reminder role not configured; skipping Disboard reminder reschedule.");
       } else {
-        logger.debug("Reminder role retrieved", { reminderRole: role });
+        logger.debug("Reminder role retrieved:", { reminderRole: role });
         try {
           logger.debug("Attempting to reschedule Disboard reminder.");
           await rescheduleReminder("disboard", role, client);
           logger.debug("Disboard reminder successfully rescheduled.");
         } catch (innerError) {
-          logger.error("Failed to reschedule Disboard reminder", { error: innerError });
+          logger.error("Failed to reschedule Disboard reminder:", { error: innerError });
         }
       }
     } catch (error) {
-      logger.error("Error during Disboard reminder rescheduling", { error });
+      logger.error("Error during Disboard reminder rescheduling:", { error });
     }
 
     try {
@@ -56,7 +56,7 @@ module.exports = {
       await rescheduleAllMuteKicks(client);
       logger.debug("Mute kick rescheduling completed successfully.");
     } catch (error) {
-      logger.error("Error while rescheduling mute kicks", { error });
+      logger.error("Error while rescheduling mute kicks:", { error });
     }
 
     logger.info("Bot is ready and setup complete!");

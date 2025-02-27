@@ -15,7 +15,7 @@ module.exports = {
   name: 'guildMemberAdd',
   async execute(member, client) {
     try {
-      logger.debug("guildMemberAdd event received", { memberTag: member.user.tag, guildId: member.guild.id });
+      logger.debug("guildMemberAdd event received:", { memberTag: member.user.tag, guildId: member.guild.id });
 
       // Retrieve configuration settings from the database.
       const backupModeEnabled = ((await getValue("backup_mode_enabled")) || "false").toString().toLowerCase();
@@ -26,19 +26,9 @@ module.exports = {
       const muteModeEnabled = ((await getValue("mute_mode_enabled")) || "false").toString().toLowerCase();
       const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours")) || 4;
 
-      logger.debug("Configuration settings retrieved", {
-        backupModeEnabled,
-        backupModeRole,
-        backupModeChannel,
-        trollModeEnabled,
-        trollModeAccountAge,
-        muteModeEnabled,
-        muteKickTime
-      });
-
       // Skip processing for bot accounts.
       if (member.user.bot) {
-        logger.debug("Member is a bot; skipping processing", { memberTag: member.user.tag });
+        logger.debug("Member is a bot; skipping processing:", { memberTag: member.user.tag });
         return;
       }
 
@@ -46,7 +36,7 @@ module.exports = {
       const now = Date.now();
       const created = member.user.createdTimestamp;
       const accountAgeDays = Math.floor((now - created) / (1000 * 3600 * 24));
-      logger.debug("New member joined", {
+      logger.debug("New member joined:", {
         memberTag: member.user.tag,
         guildName: member.guild.name,
         accountAgeDays
@@ -54,16 +44,16 @@ module.exports = {
 
       // Troll mode: Kick member if account age is below threshold.
       if (trollModeEnabled === "true" && accountAgeDays < trollModeAccountAge) {
-        logger.debug("Troll mode active", {
+        logger.debug("Troll mode active:", {
           memberTag: member.user.tag,
           accountAgeDays,
           requiredAge: trollModeAccountAge
         });
         try {
           await member.kick("Account is too new!");
-          logger.info("Member kicked for troll mode", { memberTag: member.user.tag });
+          logger.info("Member kicked for troll mode:", { memberTag: member.user.tag });
         } catch (err) {
-          logger.error("Failed to kick member in troll mode", { memberTag: member.user.tag, error: err });
+          logger.error("Failed to kick member in troll mode:", { memberTag: member.user.tag, error: err });
         }
         return;
       }
@@ -71,17 +61,17 @@ module.exports = {
       // Mute mode: Track new member and schedule a mute kick.
       if (muteModeEnabled === "true") {
         const joinTime = new Date().toISOString();
-        logger.debug("Mute mode active; tracking new member", {
+        logger.debug("Mute mode active; tracking new member:", {
           memberTag: member.user.tag,
           joinTime
         });
         try {
           await trackNewMember(member.id, member.user.tag, joinTime);
-          logger.debug("Member successfully tracked for mute mode", { memberTag: member.user.tag });
+          logger.debug("Member successfully tracked for mute mode:", { memberTag: member.user.tag });
           await scheduleMuteKick(member.id, member.user.tag, joinTime, muteKickTime, member.guild.id, client);
-          logger.debug("Mute kick scheduled", { memberTag: member.user.tag });
+          logger.debug("Mute kick scheduled:", { memberTag: member.user.tag });
         } catch (err) {
-          logger.error("Failed to track or schedule mute kick", { memberTag: member.user.tag, error: err });
+          logger.error("Failed to track or schedule mute kick:", { memberTag: member.user.tag, error: err });
         }
       }
 
@@ -89,7 +79,7 @@ module.exports = {
       if (backupModeEnabled === "true") {
         // Check that backup mode is fully configured.
         if (!backupModeRole || !backupModeChannel) {
-          logger.warn("Backup mode not fully configured; skipping welcome message and role assignment", {
+          logger.warn("Backup mode not fully configured; skipping welcome message and role assignment:", {
             backupModeRole,
             backupModeChannel
           });
@@ -99,7 +89,7 @@ module.exports = {
         // Retrieve the welcome channel.
         const welcomeChannel = member.guild.channels.cache.get(String(backupModeChannel));
         if (!welcomeChannel) {
-          logger.warn("Welcome channel not found", { backupModeChannel });
+          logger.warn("Welcome channel not found:", { backupModeChannel });
           return;
         }
 
@@ -120,19 +110,19 @@ module.exports = {
           .setColor(0xCD41FF);
 
         await welcomeChannel.send({ embeds: [embed] });
-        logger.debug("Welcome message sent", { channelName: welcomeChannel.name, memberTag: member.user.tag });
+        logger.debug("Welcome message sent:", { channelName: welcomeChannel.name, memberTag: member.user.tag });
 
         // Attempt to assign the backup role.
         const backupRole = member.guild.roles.cache.get(String(backupModeRole));
         if (backupRole) {
           await member.roles.add(backupRole);
-          logger.debug("Backup role assigned", { roleName: backupRole.name, memberTag: member.user.tag });
+          logger.debug("Backup role assigned:", { roleName: backupRole.name, memberTag: member.user.tag });
         } else {
-          logger.warn("Backup role not found in guild", { backupModeRole });
+          logger.warn("Backup role not found in guild:", { backupModeRole });
         }
       }
     } catch (error) {
-      logger.error("Error processing guildMemberAdd event", { error });
+      logger.error("Error processing guildMemberAdd event:", { error });
     }
   }
 };

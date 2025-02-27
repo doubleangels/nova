@@ -27,14 +27,14 @@ module.exports = {
     try {
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();
-      logger.debug("/youtube command received", { user: interaction.user.tag });
+      logger.debug("/youtube command received:", { user: interaction.user.tag });
       
       // Retrieve and format the user's search query.
       const query = interaction.options.getString('query');
-      logger.debug("User input for query", { query });
+      logger.debug("User input for query:", { query });
       
       const formattedQuery = query.trim();
-      logger.debug("Formatted query", { formattedQuery });
+      logger.debug("Formatted query:", { formattedQuery });
 
       // Construct the YouTube API URL with the required parameters.
       const searchUrl = "https://www.googleapis.com/youtube/v3/search";
@@ -46,16 +46,16 @@ module.exports = {
         maxResults: "1"
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
-      logger.debug("Making YouTube API request", { requestUrl });
+      logger.debug("Making YouTube API request:", { requestUrl });
       
       // Make the API request.
       const response = await fetch(requestUrl);
-      logger.debug("YouTube API response", { status: response.status });
+      logger.debug("YouTube API response:", { status: response.status });
       
       if (response.ok) {
         // Parse the JSON response.
         const data = await response.json();
-        logger.debug("Received YouTube data", { data });
+        logger.debug("Received YouTube data:", { data });
         
         // Check if the API returned any items.
         if (data.items && data.items.length > 0) {
@@ -68,7 +68,7 @@ module.exports = {
           // Use a high resolution thumbnail if available.
           const thumbnail = snippet.thumbnails && snippet.thumbnails.high ? snippet.thumbnails.high.url : "";
           const videoUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : "N/A";
-          logger.debug("Extracted YouTube video details", { title, videoId });
+          logger.debug("Extracted YouTube video details:", { title, videoId });
           
           // Build an embed with the video details.
           const embed = new EmbedBuilder()
@@ -86,21 +86,21 @@ module.exports = {
           
           // Send the embed as the reply.
           await interaction.editReply({ embeds: [embed] });
-          logger.debug("YouTube embed sent successfully", { user: interaction.user.tag, title });
+          logger.debug("YouTube embed sent successfully:", { user: interaction.user.tag, title });
         } else {
           // No video results found.
-          logger.warn("No video results found", { query: formattedQuery });
+          logger.warn("No video results found:", { query: formattedQuery });
           await interaction.editReply(`❌ No video results found for **${formattedQuery}**. Try another search!`);
         }
       } else {
         // Handle API error responses.
         const errorBody = await response.text();
-        logger.warn("YouTube API error", { status: response.status, errorBody });
+        logger.warn("YouTube API error:", { status: response.status, errorBody });
         await interaction.editReply(`⚠️ Error: YouTube API returned status code ${response.status}.`);
       }
     } catch (error) {
       // Log and report any unexpected errors.
-      logger.error("Error in /youtube command", { error });
+      logger.error("Error in /youtube command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

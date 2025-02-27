@@ -16,7 +16,7 @@ module.exports = {
   async execute(message) {
     try {
       // Log the received message with the author's tag and content.
-      logger.debug("Message received", {
+      logger.debug("Message received:", {
         author: message.author.tag,
         content: message.content
       });
@@ -25,7 +25,7 @@ module.exports = {
       const tracked = await getTrackedMember(message.author.id);
       if (tracked) {
         await removeTrackedMember(message.author.id);
-        logger.debug("User removed from mute tracking", { user: message.author.tag });
+        logger.debug("User removed from mute tracking:", { user: message.author.tag });
       }
       
       // Process embeds if they exist.
@@ -33,7 +33,7 @@ module.exports = {
         try {
           const embed = message.embeds[0];
           const embedDescription = embed.description || "";
-          logger.debug("Embed detected", { embedDescription });
+          logger.debug("Embed detected:", { embedDescription });
           
           // Check if embed description indicates a Disboard bump.
           if (embedDescription.includes("Bump done")) {
@@ -49,13 +49,13 @@ module.exports = {
             logger.debug("Embed does not indicate a bump; no reminder triggered.");
           }
         } catch (embedError) {
-          logger.error("Error processing embed content", { error: embedError });
+          logger.error("Error processing embed content:", { error: embedError });
         }
       } else {
         logger.debug("No embeds found in message; skipping embed processing.");
       }
     } catch (error) {
-      logger.error("Error processing messageCreate event", { error });
+      logger.error("Error processing messageCreate event:", { error });
     }
   }
 };

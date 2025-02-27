@@ -36,7 +36,7 @@ module.exports = {
       await interaction.deferReply();
       const place1 = interaction.options.getString('place1');
       const place2 = interaction.options.getString('place2');
-      logger.debug("/timedifference command received", { user: interaction.user.tag, place1, place2 });
+      logger.debug("/timedifference command received:", { user: interaction.user.tag, place1, place2 });
 
       /**
        * Retrieves the UTC offset for a given city using Google Geocoding and Timezone APIs.
@@ -50,7 +50,7 @@ module.exports = {
           address: city,
           key: config.googleApiKey
         });
-        logger.debug("Fetching geocoding data", { city, requestUrl: `${geocodeUrl}?${geocodeParams.toString()}` });
+        logger.debug("Fetching geocoding data:", { city, requestUrl: `${geocodeUrl}?${geocodeParams.toString()}` });
         const geocodeResponse = await fetch(`${geocodeUrl}?${geocodeParams.toString()}`);
         const geoData = await geocodeResponse.json();
 
@@ -58,7 +58,7 @@ module.exports = {
           const location = geoData.results[0].geometry.location;
           const lat = location.lat;
           const lng = location.lng;
-          logger.debug("Geocoding success", { city, lat, lng });
+          logger.debug("Geocoding success:", { city, lat, lng });
 
           // Get the current timestamp in seconds.
           const timestamp = Math.floor(Date.now() / 1000);
@@ -69,21 +69,21 @@ module.exports = {
             timestamp: timestamp.toString(),
             key: config.googleApiKey
           });
-          logger.debug("Fetching timezone data", { city, requestUrl: `${timezoneUrl}?${timezoneParams.toString()}` });
+          logger.debug("Fetching timezone data:", { city, requestUrl: `${timezoneUrl}?${timezoneParams.toString()}` });
           const timezoneResponse = await fetch(`${timezoneUrl}?${timezoneParams.toString()}`);
           const tzData = await timezoneResponse.json();
 
           if (tzData.status === "OK") {
             const rawOffset = tzData.rawOffset / 3600; // seconds to hours.
             const dstOffset = tzData.dstOffset / 3600;   // seconds to hours.
-            logger.debug("Timezone data retrieved", { city, rawOffset, dstOffset });
+            logger.debug("Timezone data retrieved:", { city, rawOffset, dstOffset });
             return rawOffset + dstOffset;
           } else {
-            logger.warn("Timezone lookup failed", { city, status: tzData.status });
+            logger.warn("Timezone lookup failed:", { city, status: tzData.status });
             return null;
           }
         } else {
-          logger.warn("Geocoding lookup failed", { city });
+          logger.warn("Geocoding lookup failed:", { city });
           return null;
         }
       }
@@ -91,11 +91,11 @@ module.exports = {
       // Retrieve UTC offsets for both places.
       const offset1 = await getUtcOffset(place1);
       const offset2 = await getUtcOffset(place2);
-      logger.debug("UTC offsets retrieved", { place1, offset1, place2, offset2 });
+      logger.debug("UTC offsets retrieved:", { place1, offset1, place2, offset2 });
 
       // If either offset is null, inform the user.
       if (offset1 === null || offset2 === null) {
-        logger.warn("Failed to retrieve one or both timezones", { place1, offset1, place2, offset2 });
+        logger.warn("Failed to retrieve one or both timezones:", { place1, offset1, place2, offset2 });
         await interaction.editReply(`❌ Could not retrieve timezones for '${place1}' or '${place2}'.`);
         return;
       }
@@ -110,9 +110,9 @@ module.exports = {
       // Create and send the reply message.
       const message = `⏳ The time difference between **${formattedPlace1}** and **${formattedPlace2}** is **${timeDiff} hours**.`;
       await interaction.editReply(message);
-      logger.debug("Time difference calculation completed successfully", { timeDiff, formattedPlace1, formattedPlace2 });
+      logger.debug("Time difference calculation completed successfully:", { timeDiff, formattedPlace1, formattedPlace2 });
     } catch (error) {
-      logger.error("Error in /timedifference command", { error });
+      logger.error("Error in /timedifference command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

@@ -27,11 +27,11 @@ module.exports = {
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();
       const query = interaction.options.getString('query');
-      logger.debug("/wikipedia command invoked", { user: interaction.user.tag, query });
+      logger.debug("/wikipedia command invoked:", { user: interaction.user.tag, query });
       
       // Trim the query to remove unnecessary whitespace.
       const formattedQuery = query.trim();
-      logger.debug("Formatted query", { formattedQuery });
+      logger.debug("Formatted query:", { formattedQuery });
       
       // Build the Wikipedia API URL with query parameters.
       const searchUrl = "https://en.wikipedia.org/w/api.php";
@@ -43,16 +43,16 @@ module.exports = {
         utf8: "1"
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
-      logger.debug("Making Wikipedia API request", { requestUrl });
+      logger.debug("Making Wikipedia API request:", { requestUrl });
       
       // Make the API request.
       const response = await fetch(requestUrl);
-      logger.debug("Wikipedia API response", { status: response.status });
+      logger.debug("Wikipedia API response:", { status: response.status });
       
       if (response.ok) {
         // Parse the JSON response.
         const data = await response.json();
-        logger.debug("Received Wikipedia data", { data });
+        logger.debug("Received Wikipedia data:", { data });
         
         // Extract the search results.
         const searchResults = data.query && data.query.search;
@@ -66,7 +66,7 @@ module.exports = {
           // Construct the Wikipedia page URL using the pageid.
           const pageId = topResult.pageid;
           const wikiUrl = `https://en.wikipedia.org/?curid=${pageId}`;
-          logger.debug("Extracted Wikipedia data", { title, pageId });
+          logger.debug("Extracted Wikipedia data:", { title, pageId });
           
           // Build an embed with the retrieved data.
           const embed = new EmbedBuilder()
@@ -79,17 +79,17 @@ module.exports = {
           
           // Send the embed as the reply.
           await interaction.editReply({ embeds: [embed] });
-          logger.debug("Wikipedia embed sent successfully", { user: interaction.user.tag, title });
+          logger.debug("Wikipedia embed sent successfully:", { user: interaction.user.tag, title });
         } else {
-          logger.warn("No results found", { query: formattedQuery });
+          logger.warn("No results found:", { query: formattedQuery });
           await interaction.editReply(`❌ No results found for **${formattedQuery}**. Try refining your search!`);
         }
       } else {
-        logger.warn("Wikipedia API error", { status: response.status });
+        logger.warn("Wikipedia API error:", { status: response.status });
         await interaction.editReply(`⚠️ Error: Wikipedia API returned status code ${response.status}.`);
       }
     } catch (error) {
-      logger.error("Error in /wikipedia command", { error });
+      logger.error("Error in /wikipedia command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

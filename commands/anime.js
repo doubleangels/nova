@@ -27,26 +27,26 @@ module.exports = {
     try {
       // Defer reply to allow additional processing time.
       await interaction.deferReply();
-      logger.debug("Received /anime command", { user: interaction.user.tag });
+      logger.debug("Received /anime command:", { user: interaction.user.tag });
 
       // Retrieve and format the anime title.
       const titleQuery = interaction.options.getString('title');
-      logger.debug("User input title", { titleQuery });
+      logger.debug("User input title:", { titleQuery });
       const formattedTitle = titleQuery.trim();
-      logger.debug("Formatted title", { formattedTitle });
+      logger.debug("Formatted title:", { formattedTitle });
 
       // Construct the search URL and headers.
       const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(formattedTitle)}&limit=1`;
       const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-      logger.debug("Making MAL search request", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
+      logger.debug("Making MAL search request:", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
       // Perform the search request.
       const searchResponse = await fetch(searchUrl, { headers });
-      logger.debug("MAL search response", { status: searchResponse.status });
+      logger.debug("MAL search response:", { status: searchResponse.status });
 
       if (searchResponse.ok) {
         const searchData = await searchResponse.json();
-        logger.debug("Received MAL search data", { searchData });
+        logger.debug("Received MAL search data:", { searchData });
 
         // Check for results.
         if (searchData.data && searchData.data.length > 0) {
@@ -58,11 +58,11 @@ module.exports = {
 
           // Construct the details URL.
           const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-          logger.debug("Making MAL details request", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
+          logger.debug("Making MAL details request:", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
           // Request detailed anime information.
           const detailsResponse = await fetch(detailsUrl, { headers });
-          logger.debug("MAL details response", { status: detailsResponse.status });
+          logger.debug("MAL details response:", { status: detailsResponse.status });
 
           if (detailsResponse.ok) {
             const detailsData = await detailsResponse.json();
@@ -72,7 +72,7 @@ module.exports = {
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
             const releaseDate = detailsData.start_date || "Unknown";
             
-            logger.debug("Extracted anime details", { animeTitle, rating, genres, releaseDate });
+            logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });
 
             // Create an embed for the anime details.
             const embed = new EmbedBuilder()
@@ -92,21 +92,21 @@ module.exports = {
             
             // Send the embed back to the user.
             await interaction.editReply({ embeds: [embed] });
-            logger.debug("Anime embed sent successfully", { animeTitle });
+            logger.debug("Anime embed sent successfully:", { animeTitle });
           } else {
-            logger.warn("Error fetching MAL details", { detailsStatus: detailsResponse.status });
+            logger.warn("Error fetching MAL details:", { detailsStatus: detailsResponse.status });
             await interaction.editReply("⚠️ Error fetching additional anime details. Please try again later.");
           }
         } else {
-          logger.warn("No anime results found", { formattedTitle });
+          logger.warn("No anime results found:", { formattedTitle });
           await interaction.editReply(`❌ No anime found for **${formattedTitle}**. Try another title!`);
         }
       } else {
-        logger.warn("MAL API search error", { status: searchResponse.status });
+        logger.warn("MAL API search error:", { status: searchResponse.status });
         await interaction.editReply(`⚠️ Error: MAL API returned status code ${searchResponse.status}.`);
       }
     } catch (e) {
-      logger.error("Error in /anime command", { error: e });
+      logger.error("Error in /anime command:", { error: e });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

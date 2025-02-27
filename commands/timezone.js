@@ -31,7 +31,7 @@ module.exports = {
       
       // Retrieve the place name from the command options.
       const place = interaction.options.getString('place');
-      logger.debug("/timezone command received", { user: interaction.user.tag, place });
+      logger.debug("/timezone command received:", { user: interaction.user.tag, place });
       
       // Construct the URL for the Google Geocoding API to get coordinates for the place.
       const geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json";
@@ -40,23 +40,23 @@ module.exports = {
         key: config.googleApiKey
       });
       const geocodeRequestUrl = `${geocodeUrl}?${geocodeParams.toString()}`;
-      logger.debug("Fetching geocoding data", { requestUrl: geocodeRequestUrl });
+      logger.debug("Fetching geocoding data:", { requestUrl: geocodeRequestUrl });
       const geocodeResponse = await fetch(geocodeRequestUrl);
 
       // Check if the Geocoding API response is successful.
       if (!geocodeResponse.ok) {
-        logger.warn("Google Geocoding API error", { status: geocodeResponse.status });
+        logger.warn("Google Geocoding API error:", { status: geocodeResponse.status });
         await interaction.editReply("⚠️ Google Geocoding API error. Try again later.");
         return;
       }
       
       // Parse the geocoding data.
       const geoData = await geocodeResponse.json();
-      logger.debug("Received geocoding data", { geoData });
+      logger.debug("Received geocoding data:", { geoData });
       
       // Ensure that at least one result was returned.
       if (!geoData.results || geoData.results.length === 0) {
-        logger.warn("No geocoding results found", { place });
+        logger.warn("No geocoding results found:", { place });
         await interaction.editReply(`❌ Could not find the city '${place}'. Check spelling.`);
         return;
       }
@@ -65,7 +65,7 @@ module.exports = {
       const location = geoData.results[0].geometry.location;
       const lat = location.lat;
       const lng = location.lng;
-      logger.debug("Extracted coordinates", { place, lat, lng });
+      logger.debug("Extracted coordinates:", { place, lat, lng });
 
       // Get the current timestamp in seconds.
       const timestamp = Math.floor(Date.now() / 1000);
@@ -78,23 +78,23 @@ module.exports = {
         key: config.googleApiKey
       });
       const timezoneRequestUrl = `${timezoneUrl}?${timezoneParams.toString()}`;
-      logger.debug("Fetching timezone data", { requestUrl: timezoneRequestUrl });
+      logger.debug("Fetching timezone data:", { requestUrl: timezoneRequestUrl });
       const timezoneResponse = await fetch(timezoneRequestUrl);
 
       // Check if the Time Zone API response is successful.
       if (!timezoneResponse.ok) {
-        logger.warn("Google Time Zone API error", { status: timezoneResponse.status });
+        logger.warn("Google Time Zone API error:", { status: timezoneResponse.status });
         await interaction.editReply("⚠️ Google Time Zone API error. Try again later.");
         return;
       }
       
       // Parse the timezone data.
       const tzData = await timezoneResponse.json();
-      logger.debug("Received timezone data", { tzData });
+      logger.debug("Received timezone data:", { tzData });
       
       // Check if the API returned a valid timezone.
       if (tzData.status !== "OK") {
-        logger.warn("Error retrieving timezone info", { place, status: tzData.status });
+        logger.warn("Error retrieving timezone info:", { place, status: tzData.status });
         await interaction.editReply(`❌ Error retrieving timezone info for '${place}'.`);
         return;
       }
@@ -125,9 +125,9 @@ module.exports = {
       
       // Send the embed as the reply.
       await interaction.editReply({ embeds: [embed] });
-      logger.debug("Timezone lookup successful", { place, localTime: formattedTime, utcOffset });
+      logger.debug("Timezone lookup successful:", { place, localTime: formattedTime, utcOffset });
     } catch (error) {
-      logger.error("Error in /timezone command", { error });
+      logger.error("Error in /timezone command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

@@ -33,7 +33,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("/reminder command invoked", { user: interaction.user.tag });
+      logger.debug("/reminder command invoked:", { user: interaction.user.tag });
       
       // Retrieve channel and role options from the command input.
       const channelOption = interaction.options.getChannel('channel');
@@ -43,7 +43,7 @@ module.exports = {
       if (channelOption && roleOption) {
         // Check for Administrator permissions.
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-          logger.warn("Unauthorized /reminder setup attempt", { user: interaction.user.tag });
+          logger.warn("Unauthorized /reminder attempt:", { user: interaction.user.tag });
           await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
           return;
         }
@@ -57,7 +57,7 @@ module.exports = {
         // Save the selected channel and role in the database.
         await setValue('reminder_channel', channelOption.id);
         await setValue('reminder_role', roleOption.id);
-        logger.debug("Reminder configuration saved successfully");
+        logger.debug("Reminder configuration saved successfully.");
 
         // Respond with a summary of the new configuration.
         await interaction.reply(
@@ -69,12 +69,12 @@ module.exports = {
       }
 
       // If no options are provided, perform a status check.
-      logger.debug("Reminder status check requested", { user: interaction.user.tag });
+      logger.debug("Reminder status check requested:", { user: interaction.user.tag });
 
       // Retrieve current reminder configuration from the database.
       const channelId = await getValue('reminder_channel');
       const roleId = await getValue('reminder_role');
-      logger.debug("Current configuration retrieved", { channelId, roleId });
+      logger.debug("Current configuration retrieved:", { channelId, roleId });
 
       // Resolve the channel name from the channel ID.
       let channelStr = 'Not set!';
@@ -101,9 +101,9 @@ module.exports = {
         `${reminderInfo}`;
 
       await interaction.reply(summary);
-      logger.debug("Reminder status reply sent", { summary });
+      logger.debug("Reminder status reply sent:", { summary });
     } catch (error) {
-      logger.error("Error in /reminder command", { error });
+      logger.error("Error in /reminder command:", { error });
       await interaction.reply({
         content: '⚠️ An error occurred while processing your request. Please try again later.',
         ephemeral: true

@@ -36,24 +36,24 @@ module.exports = {
   async execute(interaction) {
     // Check if the user has Administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn("Unauthorized /trollmode attempt", { user: interaction.user.tag });
+      logger.warn("Unauthorized /trollmode attempt:", { user: interaction.user.tag });
       await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
       return;
     }
 
     try {
-      logger.debug("/trollmode command received", { user: interaction.user.tag });
+      logger.debug("/trollmode command received:", { user: interaction.user.tag });
       
       // Retrieve the 'enabled' option and the account age threshold.
       const enabledInput = interaction.options.getString('enabled');
       const age = interaction.options.getInteger('age') ?? 30;
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
-      logger.debug("Parsed troll mode command", { isEnabled, age });
+      logger.debug("Parsed troll mode command:", { isEnabled, age });
 
       // Save the troll mode settings in the database.
       await setValue('troll_mode_enabled', isEnabled);
       await setValue('troll_mode_account_age', age);
-      logger.debug("Troll mode settings saved", { isEnabled, age });
+      logger.debug("Troll mode settings saved:", { isEnabled, age });
 
       // Prepare the response message.
       const responseMessage = isEnabled
@@ -62,9 +62,9 @@ module.exports = {
 
       // Reply to the interaction.
       await interaction.reply(responseMessage);
-      logger.debug("Troll mode command executed", { user: interaction.user.tag, isEnabled, age });
+      logger.debug("Troll mode command executed:", { user: interaction.user.tag, isEnabled, age });
     } catch (error) {
-      logger.error("Error in /trollmode command", { error });
+      logger.error("Error in /trollmode command:", { error });
       await interaction.reply({ content: '⚠️ An error occurred while toggling troll mode. Please try again later.', ephemeral: true });
     }
   }

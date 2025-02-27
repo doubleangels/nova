@@ -18,7 +18,7 @@ module.exports = {
   async execute(interaction) {
     try {
       // Log that the /source command was received.
-      logger.debug("/source command received", { user: interaction.user.tag });
+      logger.debug("/source command received:", { user: interaction.user.tag });
       
       // Create an embed with the bot's resource links.
       const embed = new EmbedBuilder()
@@ -31,13 +31,13 @@ module.exports = {
         );
 
       // Log that the embed was created successfully.
-      logger.debug("Bot resources embed created", { user: interaction.user.tag });
+      logger.debug("Bot resources embed created:", { user: interaction.user.tag });
       
       // Reply to the interaction with the embed.
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
       // Log any errors that occur during command execution.
-      logger.error("Error in /source command", { error });
+      logger.error("Error in /source command:", { error });
       await interaction.reply({ content: "⚠️ An error occurred while processing your request.", ephemeral: true });
     }
   }

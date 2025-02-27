@@ -27,15 +27,15 @@ module.exports = {
     try {
       // Defer the reply to allow time for processing.
       await interaction.deferReply();
-      logger.debug("/imdb command received", { user: interaction.user.tag });
+      logger.debug("/imdb command received:", { user: interaction.user.tag });
       
       // Retrieve and log the user's title input.
       const titleQuery = interaction.options.getString('title');
-      logger.debug("User input title", { titleQuery });
+      logger.debug("User input title:", { titleQuery });
       
       // Trim any extra whitespace from the title.
       const formattedTitle = titleQuery.trim();
-      logger.debug("Formatted title", { formattedTitle });
+      logger.debug("Formatted title:", { formattedTitle });
       
       // Construct the OMDb API request URL with query parameters.
       const searchUrl = "http://www.omdbapi.com/";
@@ -43,15 +43,15 @@ module.exports = {
         t: formattedTitle,
         apikey: config.omdbApiKey
       });
-      logger.debug("Making OMDb API request", { requestUrl: `${searchUrl}?${params.toString()}` });
+      logger.debug("Making OMDb API request:", { requestUrl: `${searchUrl}?${params.toString()}` });
       
       // Fetch data from the OMDb API.
       const response = await fetch(`${searchUrl}?${params.toString()}`);
-      logger.debug("OMDb API response", { status: response.status });
+      logger.debug("OMDb API response:", { status: response.status });
       
       if (response.ok) {
         const data = await response.json();
-        logger.debug("Received IMDb data", { data });
+        logger.debug("Received IMDb data:", { data });
         
         // Check if the API response indicates success.
         if (data.Response === "True") {
@@ -65,7 +65,7 @@ module.exports = {
           const imdbId = data.imdbID || null;
           const imdbLink = imdbId ? `https://www.imdb.com/title/${imdbId}` : "N/A";
           
-          logger.debug("Extracted IMDb Data", { movieTitle, year, genre, imdbRating });
+          logger.debug("Extracted IMDb Data:", { movieTitle, year, genre, imdbRating });
           
           // Build the embed message with movie details.
           const embed = new EmbedBuilder()
@@ -86,17 +86,17 @@ module.exports = {
           
           // Edit the deferred reply with the embed.
           await interaction.editReply({ embeds: [embed] });
-          logger.debug("IMDb embed sent successfully", { movieTitle });
+          logger.debug("IMDb embed sent successfully:", { movieTitle });
         } else {
-          logger.warn("No results found for title", { formattedTitle });
+          logger.warn("No results found for title:", { formattedTitle });
           await interaction.editReply(`❌ No results found for **${formattedTitle}**. Try another title!`);
         }
       } else {
-        logger.warn("OMDb API error", { status: response.status });
+        logger.warn("OMDb API error:", { status: response.status });
         await interaction.editReply(`⚠️ Error: OMDb API returned status code ${response.status}.`);
       }
     } catch (error) {
-      logger.error("Error in /imdb command", { error });
+      logger.error("Error in /imdb command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

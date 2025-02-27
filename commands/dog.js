@@ -21,11 +21,11 @@ module.exports = {
       // Defer reply to allow asynchronous operations.
       await interaction.deferReply();
       const dogApiUrl = "https://dog.ceo/api/breeds/image/random";
-      logger.debug("Fetching random dog image data", { url: dogApiUrl });
+      logger.debug("Fetching random dog image data:", { url: dogApiUrl });
       
       // Fetch the random dog image data.
       const response = await fetch(dogApiUrl);
-      logger.debug("Dog CEO API response received", { status: response.status });
+      logger.debug("Dog CEO API response received:", { status: response.status });
       
       if (response.status === 200) {
         const data = await response.json();
@@ -35,11 +35,11 @@ module.exports = {
           // Append a timestamp query to avoid potential caching issues.
           const timestamp = Math.floor(Date.now() / 1000);
           const imageUrlWithTimestamp = `${imageUrl}?timestamp=${timestamp}`;
-          logger.debug("Fetching dog image file", { imageUrl: imageUrlWithTimestamp });
+          logger.debug("Fetching dog image file:", { imageUrl: imageUrlWithTimestamp });
           
           // Fetch the dog image file.
           const imageResponse = await fetch(imageUrlWithTimestamp);
-          logger.debug("Dog image file response", { status: imageResponse.status });
+          logger.debug("Dog image file response:", { status: imageResponse.status });
           
           if (imageResponse.status === 200) {
             const imageBuffer = await imageResponse.buffer();
@@ -56,21 +56,21 @@ module.exports = {
             
             // Edit the deferred reply with the embed and attached image.
             await interaction.editReply({ embeds: [embed], files: [attachment] });
-            logger.debug("Dog image sent successfully", { user: interaction.user.tag });
+            logger.debug("Dog image sent successfully:", { user: interaction.user.tag });
           } else {
-            logger.warn("Error fetching dog image file", { status: imageResponse.status });
+            logger.warn("Error fetching dog image file:", { status: imageResponse.status });
             await interaction.editReply("🐶 Couldn't fetch a dog picture. Try again later.");
           }
         } else {
-          logger.warn("No dog image URL found in API response", { responseData: data });
+          logger.warn("No dog image URL found in API response:", { responseData: data });
           await interaction.editReply("🐶 Couldn't find a dog picture. Try again later.");
         }
       } else {
-        logger.warn("Dog CEO API error", { status: response.status });
+        logger.warn("Dog CEO API error:", { status: response.status });
         await interaction.editReply("🐕 Couldn't fetch a dog picture. Try again later.");
       }
     } catch (error) {
-      logger.error("Error in /dog command", { error });
+      logger.error("Error in /dog command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

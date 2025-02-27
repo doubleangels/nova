@@ -20,7 +20,7 @@ module.exports = {
   async execute(interaction) {
     // Check for Administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn("Unauthorized /resetreminders attempt", { user: interaction.user.tag });
+      logger.warn("Unauthorized /resetreminders attempt:", { user: interaction.user.tag });
       await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
       return;
     }
@@ -33,13 +33,13 @@ module.exports = {
       
       // Reset the reminder data for 'disboard' to default values (null).
       await setReminderData("disboard", null, null);
-      logger.debug("Reset reminder data for 'disboard'");
+      logger.debug("Reset reminder data.");
       
       // Inform the user that the reminder has been reset.
       await interaction.editReply("✅ The Disboard reminder has been reset to default values.");
-      logger.debug("Disboard reminder successfully reset", { user: interaction.user.tag });
+      logger.debug("Disboard reminder successfully reset:", { user: interaction.user.tag });
     } catch (error) {
-      logger.error("Error in /resetreminders command", { error });
+      logger.error("Error in /resetreminders command:", { error });
       await interaction.editReply("⚠️ An error occurred while resetting the Disboard reminder. Please try again later.");
     }
   }

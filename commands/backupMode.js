@@ -42,7 +42,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("/backupmode command invoked", { user: interaction.user.tag });
+      logger.debug("/backupmode command invoked:", { user: interaction.user.tag });
       
       // Retrieve command options.
       const channelOption = interaction.options.getChannel('channel');
@@ -53,23 +53,23 @@ module.exports = {
       if (channelOption || roleOption || enabledOption !== null) {
         // Verify Administrator permissions.
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-          logger.warn("Unauthorized backupmode configuration attempt", { user: interaction.user.tag });
+          logger.warn("Unauthorized backupmode configuration attempt:", { user: interaction.user.tag });
           await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
           return;
         }
         
         if (channelOption) {
           await setValue("backup_mode_channel", channelOption.id);
-          logger.debug("Backup mode channel updated", { channelId: channelOption.id, channelName: channelOption.name });
+          logger.debug("Backup mode channel updated:", { channelId: channelOption.id, channelName: channelOption.name });
         }
         if (roleOption) {
           await setValue("backup_mode_role", roleOption.id);
-          logger.debug("Backup mode role updated", { roleId: roleOption.id });
+          logger.debug("Backup mode role updated:", { roleId: roleOption.id });
         }
         if (enabledOption !== null) {
           const isEnabled = enabledOption.toLowerCase() === "enabled";
           await setValue("backup_mode_enabled", isEnabled);
-          logger.debug("Backup mode enabled status updated", { enabled: isEnabled });
+          logger.debug("Backup mode enabled status updated:", { enabled: isEnabled });
         }
         
         const replyMsg = `🔄 **Backup Mode Configured!**\n` +
@@ -79,12 +79,12 @@ module.exports = {
             enabledOption ? (enabledOption.toLowerCase() === "enabled" ? "✅ **Enabled**" : "❌ **Disabled**") : "Not changed"
           }`;
         await interaction.reply(replyMsg);
-        logger.debug("Backup mode configuration reply sent", { replyMsg });
+        logger.debug("Backup mode configuration reply sent:", { replyMsg });
         return;
       }
       
       // No options provided: perform a status check.
-      logger.debug("Backup mode status check requested", { user: interaction.user.tag });
+      logger.debug("Backup mode status check requested:", { user: interaction.user.tag });
       
       const channelId = await getValue("backup_mode_channel");
       const roleId = await getValue("backup_mode_role");
@@ -105,9 +105,9 @@ module.exports = {
         `🔘 **Auto-role assignment:** ${enabledStr}`;
       
       await interaction.reply(summary);
-      logger.debug("Backup mode status reply sent", { summary });
+      logger.debug("Backup mode status reply sent:", { summary });
     } catch (e) {
-      logger.error("Error in /backupmode command", { error: e });
+      logger.error("Error in /backupmode command:", { error: e });
       await interaction.reply({ content: "⚠️ An error occurred while processing your request. Please try again later.", ephemeral: true });
     }
   }

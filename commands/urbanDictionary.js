@@ -26,7 +26,7 @@ module.exports = {
     try {
       // Log the invocation and the query term.
       const query = interaction.options.getString('query');
-      logger.debug("/urban command invoked", { user: interaction.user.tag, query });
+      logger.debug("/urban command invoked:", { user: interaction.user.tag, query });
       
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();
@@ -35,7 +35,7 @@ module.exports = {
       const searchUrl = "https://api.urbandictionary.com/v0/define";
       const params = new URLSearchParams({ term: query });
       const url = `${searchUrl}?${params.toString()}`;
-      logger.debug("Fetching Urban Dictionary data", { requestUrl: url });
+      logger.debug("Fetching Urban Dictionary data:", { requestUrl: url });
       
       // Fetch the definition data.
       const response = await fetch(url);
@@ -53,7 +53,7 @@ module.exports = {
           const thumbsUp = topResult.thumbs_up || 0;
           const thumbsDown = topResult.thumbs_down || 0;
           
-          logger.debug("Definition found", { word, thumbsUp, thumbsDown });
+          logger.debug("Definition found:", { word, thumbsUp, thumbsDown });
           
           // Build an embed with the retrieved definition.
           const embed = new EmbedBuilder()
@@ -69,19 +69,19 @@ module.exports = {
           
           // Edit the deferred reply with the embed.
           await interaction.editReply({ embeds: [embed] });
-          logger.debug("Urban definition embed sent", { user: interaction.user.tag, word });
+          logger.debug("Urban definition embed sent:", { user: interaction.user.tag, word });
         } else {
           // No definitions found.
-          logger.debug("No definitions found", { query });
+          logger.debug("No definitions found:", { query });
           await interaction.editReply("⚠️ No definitions found for your query. Try refining it.");
         }
       } else {
         // Log if the API response was not successful.
-        logger.warn("Urban Dictionary API error", { status: response.status });
+        logger.warn("Urban Dictionary API error:", { status: response.status });
         await interaction.editReply(`⚠️ Error: Urban Dictionary API returned status code ${response.status}.`);
       }
     } catch (error) {
-      logger.error("Error in /urban command", { error });
+      logger.error("Error in /urban command:", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }
