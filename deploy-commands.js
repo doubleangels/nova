@@ -30,12 +30,18 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     console.log('Started refreshing application (/) commands.');
     
     // Define the target guild ID and the client (application) ID.
-    const guildId = '1307236666989346837';
+    const devGuildId = '1307236666989346837';
+    const productionGuildId = '691991366615564388';
     const clientId = '1343753891338129520';
 
-    // Register (or update) the commands for the specified guild.
+    // Register (or update) the commands for the specified guilds.
     await rest.put(
-      Routes.applicationGuildCommands(clientId, guildId),
+      Routes.applicationGuildCommands(clientId, devGuildId),
+      { body: commands }
+    );
+
+    await rest.put(
+      Routes.applicationGuildCommands(clientId, productionGuildId),
       { body: commands }
     );
     
