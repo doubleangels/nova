@@ -16,14 +16,14 @@ const { getValue, setReminderData, getReminderData, deleteReminderData } = requi
 async function handleReminder(message, delay) {
   try {
     // Retrieve the role ID for pinging on the final reminder.
-    const reminderRole = await getValue("reminder_role");
+    const reminderRole = await getValue('reminder_role');
     if (!reminderRole) {
       logger.error("Configuration error: 'reminder_role' value not found.");
       return;
     }
 
     // Retrieve the channel ID where reminders should be sent.
-    const reminderChannelId = await getValue("reminder_channel");
+    const reminderChannelId = await getValue('reminder_channel');
     if (!reminderChannelId) {
       logger.error("Configuration error: 'reminder_channel' value not found.");
       return;
@@ -36,7 +36,7 @@ async function handleReminder(message, delay) {
     const reminderId = randomUUID(); // Alternatively, use uuidv4() if preferred.
 
     // Store the reminder data in the database under the key "bump".
-    await setReminderData("bump", scheduledTime, reminderId);
+    await setReminderData('bump', scheduledTime, reminderId);
     logger.debug("Inserted reminder data into database:", {
       key: "bump",
       scheduled_time: scheduledTime.toISOString(),

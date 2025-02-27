@@ -86,7 +86,7 @@ module.exports = {
       const roleStr = roleId ? `<@&${roleId}>` : 'Not set!';
 
       // Retrieve the current reminder data for the 'disboard' service.
-      const reminderData = await getReminderData('disboard');
+      const reminderData = await getReminderData('bump');
       // Calculate the remaining time until the next reminder if available.
       const timeStr = reminderData && reminderData.scheduled_time
         ? calculateRemainingTime(reminderData.scheduled_time)
