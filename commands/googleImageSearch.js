@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const fetch = require('node-fetch').default;
@@ -31,10 +31,10 @@ module.exports = {
         .setDescription('How many results do you want? (1-10, Default: 5)')
         .setRequired(false)
     ),
-    
+
   /**
    * Executes the /googleimage command.
-   * Searches for images on Google using the Custom Search API and returns the results in embeds.
+   * Searches for images on Google using the Custom Search API and returns the results in a single paginated embed.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -42,18 +42,18 @@ module.exports = {
       // Defer the reply to allow time for API processing.
       await interaction.deferReply();
       logger.debug("/googleimage command received", { user: interaction.user.tag });
-      
+
       // Retrieve user input for the query and number of results.
       const query = interaction.options.getString('query');
       let resultsCount = interaction.options.getInteger('results') ?? 5;
       logger.debug("User input", { query, requestedResults: resultsCount });
-      
+
       // Format the query to title case and trim extra whitespace.
       const formattedQuery = titleCase(query.trim());
       // Ensure resultsCount is between 1 and 10.
       resultsCount = Math.max(1, Math.min(resultsCount, 10));
       logger.debug("Formatted input", { formattedQuery, resultsCount });
-      
+
       // Construct the Google Custom Search API URL and parameters.
       const searchUrl = "https://www.googleapis.com/customsearch/v1";
       const params = new URLSearchParams({
@@ -65,35 +65,86 @@ module.exports = {
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making Google Image API request", { requestUrl });
-      
+
       // Make the API request.
       const response = await fetch(requestUrl);
       logger.debug("Google Image API response", { status: response.status });
-      
+
       if (response.ok) {
         // Parse the API response as JSON.
         const data = await response.json();
         logger.debug("Received Google Image data", { data });
-        
+
         // Check if any image results were returned.
         if (data.items && data.items.length > 0) {
-          // Map each result to an embed.
-          const embeds = data.items.map(item => {
+          // Save the items for pagination.
+          const items = data.items;
+          let currentIndex = 0;
+
+          // Helper function to create an embed for a given index.
+          const generateEmbed = (index) => {
+            const item = items[index];
             const title = item.title || "No Title";
             const imageLink = item.link || "";
             // Use contextLink if available, otherwise fallback to the image link.
             const pageLink = item.image && item.image.contextLink ? item.image.contextLink : imageLink;
-            logger.debug("Image result extracted", { title, imageLink });
             return new EmbedBuilder()
-              .setTitle(`🖼️ **${title}**`)
+              .setTitle(`🖼️ **${title}** (${index + 1}/${items.length})`)
               .setDescription(`🔗 **[View Image](${imageLink})**`)
               .setColor(0x1A73E8)
               .setImage(imageLink)
               .setFooter({ text: "Powered by Google Image Search" });
+          };
+
+          // Create buttons for pagination.
+          const previousButton = new ButtonBuilder()
+            .setCustomId('previous')
+            .setLabel('Previous')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(true); // start disabled since we're at the first item
+
+          const nextButton = new ButtonBuilder()
+            .setCustomId('next')
+            .setLabel('Next')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(items.length <= 1); // disable if only one item
+
+          const row = new ActionRowBuilder().addComponents(previousButton, nextButton);
+
+          // Send the initial embed with buttons.
+          const message = await interaction.editReply({ embeds: [generateEmbed(currentIndex)], components: [row] });
+
+          // Create a collector to handle button interactions.
+          const collector = message.createMessageComponentCollector({ time: 60000 });
+          collector.on('collect', async i => {
+            // Only allow the command user to interact.
+            if (i.user.id !== interaction.user.id) {
+              await i.reply({ content: "These buttons aren't for you!", ephemeral: true });
+              return;
+            }
+
+            // Update currentIndex based on which button was clicked.
+            if (i.customId === 'previous') {
+              currentIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+            } else if (i.customId === 'next') {
+              currentIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+            }
+
+            // Optionally, adjust button disabled states if you don't want wrap-around.
+            // For example, disable "Previous" on the first item and "Next" on the last item:
+            previousButton.setDisabled(currentIndex === 0);
+            nextButton.setDisabled(currentIndex === items.length - 1);
+
+            // Update the embed with the new image.
+            await i.update({ embeds: [generateEmbed(currentIndex)], components: [row] });
           });
-          // Edit the deferred reply with the embeds.
-          await interaction.editReply({ embeds });
-          logger.debug("Google image results sent", { user: interaction.user.tag, resultCount: embeds.length });
+
+          // Disable buttons after the collector expires.
+          collector.on('end', async () => {
+            previousButton.setDisabled(true);
+            nextButton.setDisabled(true);
+            await interaction.editReply({ components: [row] });
+          });
         } else {
           // Inform the user if no images were found.
           logger.warn("No image results found", { query: formattedQuery });

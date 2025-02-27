@@ -40,10 +40,10 @@ const rest = new REST({ version: '10' }).setToken(config.token);
       { body: commands }
     );
 
-    await rest.put(
-      Routes.applicationGuildCommands(clientId, productionGuildId),
-      { body: commands }
-    );
+    //await rest.put(
+    //  Routes.applicationGuildCommands(clientId, productionGuildId),
+    //  { body: commands }
+    //);
     
     console.log('Successfully reloaded application (/) commands for the guild.');
   } catch (error) {
