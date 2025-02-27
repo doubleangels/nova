@@ -23,10 +23,8 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
       `Scheduling mute kick for member '${username}' (ID: ${memberId}) in guild ${guildId}. Join time: ${joinTime}, allowed mute time: ${muteKickTime} hour(s).`
     );
     
-    // Use day.js for current time and join time.
     const now = dayjs();
     const joinTimeDt = dayjs(joinTime);
-    // Calculate elapsed time in seconds.
     const elapsedTime = now.diff(joinTimeDt, 'second');
     logger.debug(
       `Current time: ${now.toISOString()}, Join time: ${joinTimeDt.toISOString()}, Elapsed time: ${elapsedTime} second(s).`

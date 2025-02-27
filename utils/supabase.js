@@ -171,7 +171,6 @@ async function deleteReminderData(key) {
  */
 async function trackNewMember(memberId, username, joinTime) {
   try {
-    // Validate and format joinTime using day.js.
     const formattedJoinTime = dayjs(joinTime).toISOString();
     logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
     const { data, error } = await supabase

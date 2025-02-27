@@ -87,7 +87,6 @@ module.exports = {
         let forecastText = "";
         for (let i = 0; i < 3 && i < daily.length; i++) {
           const day = daily[i];
-          // Format the day's date using day.js (assuming day.time is in Unix seconds).
           const forecastDate = dayjs.unix(day.time).format('MM/DD/YYYY');
           const daySummary = day.summary || "No data";
           const highC = (typeof day.temperatureHigh === "number") ? day.temperatureHigh : "N/A";

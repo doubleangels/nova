@@ -71,7 +71,6 @@ module.exports = {
             const rating = detailsData.mean || "N/A";
             const genresArray = detailsData.genres || [];
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
-            // Use day.js to format the release date (displaying only the year).
             const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
             
             logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });

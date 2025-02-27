@@ -39,7 +39,6 @@ module.exports = {
       // Define delay (in seconds) and generate unique reminder data.
       const seconds = 7200;
       const reminderId = randomUUID();
-      // Use day.js to calculate the scheduled time.
       const scheduledTime = dayjs().add(seconds, 'second').toISOString();
       
       // Save the reminder data to the database.

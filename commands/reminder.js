@@ -92,7 +92,6 @@ module.exports = {
             const diffMs = scheduled.diff(now);
             if (diffMs <= 0) return "Reminder is overdue";
             const diffDuration = dayjs.duration(diffMs);
-            // Format as "Xh Ym Zs" (hours, minutes, seconds)
             const hours = diffDuration.hours();
             const minutes = diffDuration.minutes();
             const seconds = diffDuration.seconds();
