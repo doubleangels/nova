@@ -24,7 +24,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setTitle("📜 **Bot Resources**")
         .setDescription("Here are the links for the bot's resources:")
-        .setColor(0x00ff00)
+        .setColor(0xD3D3D3)
         .addFields(
           { name: "🖥️ GitHub Repository", value: "[🔗 Click Here](https://github.com/doubleangels/Nova)", inline: false },
           { name: "🗄️ Supabase Database", value: "[🔗 Click Here](https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public)", inline: false }
