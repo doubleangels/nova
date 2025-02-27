@@ -171,7 +171,7 @@ async function rescheduleReminder(key, role, client) {
         await sendScheduledMessage({
           initialMessage: null,
           reminderMessage: `🔔 <@&${role}> It's time to bump on Disboard!`,
-          interval: remainingTimeSeconds,
+          interval: 0,
           key,
           client
         });
