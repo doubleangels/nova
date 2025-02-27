@@ -1,2 +1,4 @@
 pickle.db
 bot.log
+.env
+node_modules/*
