@@ -1,194 +1,143 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getReminderData, deleteReminderData, setReminderData, getValue } = require('../utils/supabase');
+const { randomUUID } = require('crypto');
+const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/supabase');
 
 /**
- * Calculates the remaining time until the scheduled time.
+ * Schedules a bump reminder and stores it in the database.
  *
- * @param {string} scheduledTime - The ISO string representing the scheduled time.
- * @returns {string} A formatted string "HH:MM:SS" representing the remaining time, "⏰ Expired!" if the time is past,
- *                   "Not set!" if scheduledTime is falsy, or an error message if an error occurs.
+ * This function retrieves necessary configuration values (role and channel IDs) from the database,
+ * calculates a scheduled time based on the provided delay, stores the reminder data, and sends an immediate
+ * confirmation message in the designated channel. It then schedules a final reminder message to be sent after the delay.
+ *
+ * @param {Message} message - The Discord message object from which to access the client.
+ * @param {number} delay - The delay in milliseconds before sending the final bump reminder.
  */
-function calculateRemainingTime(scheduledTime) {
-  if (!scheduledTime) return 'Not set!';
+async function handleReminder(message, delay) {
   try {
-    const now = new Date();
-    const scheduled = new Date(scheduledTime);
-    const diffMs = scheduled - now; // Difference in milliseconds.
-    if (diffMs <= 0) return '⏰ Expired!';
-    const hours = Math.floor(diffMs / 3600000);
-    const minutes = Math.floor((diffMs % 3600000) / 60000);
-    const seconds = Math.floor((diffMs % 60000) / 1000);
-    // Format each time component to have at least two digits.
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  } catch (error) {
-    logger.error('Error calculating remaining time:', { error });
-    return '⚠️ Error calculating time!';
-  }
-}
-
-/**
- * Sends a scheduled message to a reminder channel.
- *
- * This function sends an initial message (if provided), waits for a specified interval,
- * sends a reminder message, and then cleans up the reminder data.
- *
- * @param {Object} options - An object containing the following properties:
- *   @property {string|null} initialMessage - The message to send immediately (if any).
- *   @property {string} reminderMessage - The message to send after the interval.
- *   @property {number} interval - The delay (in seconds) before sending the reminder.
- *   @property {string} key - The reminder key used for tracking.
- *   @property {Client} client - The Discord client instance.
- */
-async function sendScheduledMessage({ initialMessage, reminderMessage, interval, key, client }) {
-  try {
-    logger.debug(`sendScheduledMessage for key "${key}" invoked. Interval: ${interval} sec; Initial message: ${initialMessage}; Reminder message: ${reminderMessage}`);
-    
-    // Retrieve the reminder channel ID.
-    const channelId = await getValue('reminder_channel');
-    if (!channelId) {
-      logger.warn("No valid reminder channel found; aborting scheduled message.");
+    // Retrieve the role ID for pinging on the final reminder.
+    const reminderRole = await getValue("reminder_role");
+    if (!reminderRole) {
+      logger.error("Configuration error: 'reminder_role' value not found.");
       return;
     }
-    
-    // Get the channel from the client.
-    const channel = client.channels.cache.get(channelId);
+
+    // Retrieve the channel ID where reminders should be sent.
+    const reminderChannelId = await getValue("reminder_channel");
+    if (!reminderChannelId) {
+      logger.error("Configuration error: 'reminder_channel' value not found.");
+      return;
+    }
+
+    // Calculate the scheduled time by adding the delay to the current time.
+    const scheduledTime = new Date(Date.now() + delay);
+
+    // Generate a unique identifier for the reminder.
+    const reminderId = randomUUID(); // Alternatively, use uuidv4() if preferred.
+
+    // Store the reminder data in the database under the key "bump".
+    await setReminderData("bump", scheduledTime, reminderId);
+    logger.debug("Inserted reminder data into database:", {
+      key: "bump",
+      scheduled_time: scheduledTime.toISOString(),
+      reminder_id: reminderId
+    });
+
+    // Attempt to retrieve the channel object using the cached channels or fetching it.
+    const channel = message.client.channels.cache.get(reminderChannelId) ||
+      await message.client.channels.fetch(reminderChannelId);
+
     if (!channel) {
-      logger.warn(`Channel with ID "${channelId}" not found.`);
+      logger.error(`Channel fetch error: Unable to locate channel with ID: ${reminderChannelId}`);
       return;
     }
-    
-    // Send the initial message if provided.
-    if (initialMessage) {
-      logger.debug(`Sending initial message: ${initialMessage}`);
-      await channel.send(initialMessage);
-    }
-    
-    logger.debug(`Waiting ${interval} seconds before sending reminder.`);
-    await new Promise(resolve => setTimeout(resolve, interval * 1000));
-    
-    logger.debug(`Sending reminder: ${reminderMessage}`);
-    await channel.send(reminderMessage);
-    
-    // Clean up reminder data.
-    const reminderData = await getReminderData(key);
-    if (reminderData) {
-      await deleteReminderData(key);
-      logger.debug(`Cleaned up reminder data (ID: ${reminderData.reminder_id}).`);
-    } else {
-      logger.debug(`No reminder data found to clean up for key "${key}".`);
-    }
-  } catch (e) {
-    logger.error(`Error in sendScheduledMessage:`, { error: e });
-  }
-}
 
-/**
- * Handles setting up a reminder.
- *
- * If no reminder is scheduled for the given key, creates a new reminder entry
- * in the database with a scheduled time calculated from the interval and sends a scheduled message.
- *
- * @param {string} key - The key for the reminder (e.g., "disboard").
- * @param {string|null} initialMessage - The message to send immediately, if any.
- * @param {string} reminderMessage - The reminder message to send after the interval.
- * @param {number} interval - The interval in seconds before the reminder is sent.
- * @param {Client} client - The Discord client instance.
- */
-async function handleReminder(key, initialMessage, reminderMessage, interval, client) {
-  try {
-    logger.debug(`handleReminder invoked with interval: ${interval} seconds.`);
-    
-    const existingData = await getReminderData(key);
-    if (existingData && existingData.scheduled_time) {
-      logger.debug(`Reminder already exists (ID: ${existingData.reminder_id}). Skipping setup.`);
-      return;
-    }
-    
-    const { randomUUID } = require('crypto');
-    const reminderId = randomUUID();
-    const scheduledTime = new Date(Date.now() + interval * 1000).toISOString();
-    
-    // Save reminder data.
-    await setReminderData(key, scheduledTime, reminderId);
-    logger.debug(`Reminder data saved: ID "${reminderId}", scheduled at "${scheduledTime}".`);
-    
-    // Retrieve role for mention.
-    const role = await getValue("reminder_role");
-    if (role) {
-      logger.debug(`Role "${role}" retrieved; scheduling sendScheduledMessage.`);
-      await sendScheduledMessage({
-        initialMessage,
-        reminderMessage: `🔔 <@&${role}> ${reminderMessage}`,
-        interval,
-        key,
-        client
-      });
-    } else {
-      logger.warn("No reminder role found; skipping reminder message.");
-    }
-  } catch (e) {
-    logger.error("Error handling reminder:", { error: e });
-  }
-}
+    // Send an immediate confirmation message in the designated channel.
+    await channel.send("Thanks for bumping! I'll remind you again in 2 hours.");
+    logger.debug("Sent confirmation message in channel:", { channelId: reminderChannelId });
 
-/**
- * Reschedules a reminder for a specific key (only supports "disboard").
- *
- * If a reminder exists and is still scheduled in the future,
- * calculates the remaining time and sets a delayed task to send the reminder.
- *
- * @param {string} key - The key for the reminder (e.g., "disboard").
- * @param {string} role - The role ID to mention in the reminder.
- * @param {Client} client - The Discord client instance.
- */
-async function rescheduleReminder(key, role, client) {
-  try {
-    logger.debug(`Attempting to reschedule reminder with role "${role}".`);
-    
-    const reminderData = await getReminderData(key);
-    if (!reminderData) {
-      logger.debug("No reminder data found.");
-      return;
-    }
-    
-    const { scheduled_time: scheduledTime, reminder_id: reminderId } = reminderData;
-    if (scheduledTime && reminderId) {
-      const scheduledDt = new Date(scheduledTime);
-      const now = new Date();
-      if (scheduledDt <= now) {
-        logger.debug(`Reminder (ID: ${reminderId}) has expired. Removing it.`);
-        await deleteReminderData(key);
-        return;
-      }
-      
-      const remainingTimeMs = scheduledDt - now;
-      const remainingTimeSeconds = remainingTimeMs / 1000;
-      logger.debug(`Rescheduling reminder (ID: ${reminderId}) to fire in ${remainingTimeSeconds} seconds.`);
-      
-      // Schedule the reminder.
-      setTimeout(async () => {
-        await sendScheduledMessage({
-          initialMessage: null,
-          reminderMessage: `🔔 <@&${role}> It's time to bump on Disboard!`,
-          interval: 0,
-          key,
-          client
+    // Schedule the final reminder message after the specified delay.
+    setTimeout(async () => {
+      try {
+        await channel.send(`<@&${reminderRole}> It's time to bump again!`);
+        logger.debug("Sent scheduled bump reminder ping:", {
+          role: reminderRole,
+          channelId: reminderChannelId
         });
-      }, remainingTimeMs);
-      
-      logger.debug(`Reschedule task created for reminder (ID: ${reminderId}) with delay of ${remainingTimeSeconds} seconds.`);
-    } else {
-      logger.warn("Insufficient reminder data; cannot reschedule.");
-    }
-  } catch (e) {
-    logger.error("Error while rescheduling the reminder:", { error: e });
+      } catch (err) {
+        logger.error("Error while sending scheduled bump reminder:", { error: err });
+      }
+    }, delay);
+
+  } catch (error) {
+    logger.error("Unhandled error in handleReminder:", { error });
   }
 }
 
-module.exports = {
-  calculateRemainingTime,
-  sendScheduledMessage,
-  handleReminder,
-  rescheduleReminder
-};
+/**
+ * Reschedules stored bump reminders after a potential downtime or restart.
+ *
+ * This function retrieves all stored reminders for the key "bump" from the database.
+ * It then checks each reminder's scheduled time and calculates the delay until it should be sent.
+ * If the scheduled time has already passed, it removes the reminder from the database.
+ * Otherwise, it sets up a timeout to send the reminder message at the appropriate time.
+ *
+ * @param {Client} client - The Discord client instance used to fetch channels.
+ */
+async function rescheduleReminder(client) {
+  try {
+    // Retrieve the stored reminder for the "bump" key.
+    const reminder = await getReminderData("bump");
+    if (!reminder || reminder.length === 0) {
+      logger.debug("No stored bump reminders found for rescheduling.");
+      return;
+    }
+    
+    // Retrieve the configuration values for the channel and role.
+    const reminderChannelId = await getValue("reminder_channel");
+    const reminderRole = await getValue("reminder_role");
+    if (!reminderChannelId || !reminderRole) {
+      logger.error("Configuration error: Missing reminder channel or role values.");
+      return;
+    }
+    
+    // Retrieve the channel object from cache or by fetching from Discord.
+    const channel = client.channels.cache.get(reminderChannelId) ||
+      await client.channels.fetch(reminderChannelId);
+    if (!channel) {
+      logger.error(`Channel fetch error: Unable to locate channel with ID: ${reminderChannelId}`);
+      return;
+    }
+    
+    // Parse the scheduled time and compute the remaining delay.
+    const scheduledTime = new Date(reminder.scheduled_time);
+    let delay = scheduledTime.getTime() - Date.now();
+    logger.debug("Calculated scheduled time and delay for reminder:", { scheduledTime, delay });
+    
+    // If the scheduled time has passed, remove the overdue reminder.
+    if (delay < 0) {
+      await deleteReminderData("bump");
+      logger.debug("Deleted overdue bump reminder:", { reminder_id: reminder.reminder_id });
+      return;
+    }
+    
+    // Reschedule the reminder to send the bump message after the computed delay.
+    setTimeout(async () => {
+      try {
+        await channel.send(`<@&${reminderRole}> It's time to bump again!`);
+        logger.debug("Sent rescheduled bump reminder:", { reminder_id: reminder.reminder_id });
+      } catch (err) {
+        logger.error("Error while sending rescheduled bump reminder:", { error: err });
+      }
+    }, delay);
+    
+    logger.debug("Successfully rescheduled bump reminder:", {
+      reminder_id: reminder.reminder_id,
+      delay
+    });
+  } catch (error) {
+    logger.error("Unhandled error in rescheduleReminder:", { error });
+  }
+}
+
+module.exports = { handleReminder, rescheduleReminder };

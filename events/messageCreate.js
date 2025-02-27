@@ -28,32 +28,18 @@ module.exports = {
         logger.debug("User removed from mute tracking:", { user: message.author.tag });
       }
       
-      // Process embeds if they exist.
+      // Check for embeds that contain "Bump done"
       if (message.embeds && message.embeds.length > 0) {
-        try {
-          const embed = message.embeds[0];
-          const embedDescription = embed.description || "";
-          logger.debug("Embed detected:", { embedDescription });
-          
-          // Check if embed description indicates a Disboard bump.
-          if (embedDescription.includes("Bump done")) {
-            logger.debug("Disboard bump detected in embed; triggering reminder.");
-            await handleReminder(
-              "disboard", 
-              "Thanks for bumping the server on Disboard! I'll remind you when it's time to bump again.", 
-              "It's time to bump the server on Disboard again!", 
-              7200,
-              message.client
-            );
-          } else {
-            logger.debug("Embed does not indicate a bump; no reminder triggered.");
-          }
-        } catch (embedError) {
-          logger.error("Error processing embed content:", { error: embedError });
+        const bumpEmbed = message.embeds.find(embed =>
+          embed.description && embed.description.includes("Bump done")
+        );
+        if (bumpEmbed) {
+          // Schedule a 2-hour reminder (2 hours = 7200000 milliseconds)
+          await handleReminder(message, 7200000);
+          logger.debug("Bump reminder scheduled for 2 hours.");
         }
-      } else {
-        logger.debug("No embeds found in message; skipping embed processing.");
       }
+    
     } catch (error) {
       logger.error("Error processing messageCreate event:", { error });
     }
