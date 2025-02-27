@@ -2,7 +2,6 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const dayjs = require('dayjs');
 
 /**
  * Module for the /cat command.
@@ -24,16 +23,15 @@ module.exports = {
       logger.debug("/cat command received:", { user: interaction.user.tag });
 
       // Create a unique timestamp to avoid cached images using day.js.
-      const timestamp = dayjs().unix();
-      const catApiUrl = `https://cataas.com/cat?timestamp=${timestamp}`;
+      const catApiUrl = `https://cataas.com/cat`;
       logger.debug("Fetching cat image:", { catApiUrl });
 
       // Fetch the cat image from the Cataas API using axios with responseType 'arraybuffer'.
-      const response = await axios.get(catApiUrl, { responseType: 'arraybuffer' });
+      const response = await axios.get(catApiUrl, { responseType: 'arraybuffer', headers: { 'Accept': 'image/*' } });
       logger.debug("Cataas API response:", { status: response.status });
 
       if (response.status === 200) {
-        // Convert the response data to a buffer.
+        // Convert the response data to a buffer using binary encoding.
         const imageBuffer = Buffer.from(response.data);
         const filename = "cat.jpg";
         // Create an attachment from the image buffer.
