@@ -25,5 +25,5 @@ module.exports = {
   // Supabase key for database operations
   supabaseKey: process.env.SUPABASE_KEY,
   // Logging level; defaults to 'debug' if not set
-  logLevel: process.env.LOG_LEVEL || 'debug'
+  logLevel: process.env.LOG_LEVEL || 'info'
 };
