@@ -1,10 +1,10 @@
 name: Dev CI
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - dev
-  workflow_dispatch:
 
 jobs:
   lint:
