@@ -1,9 +1,8 @@
 // eslint.config.js
-const recommended = require("eslint/conf/eslint-recommended");
+const { flatConfigs } = require("eslint/use-at-your-own-risk");
 
 module.exports = [
-  // Include the recommended ESLint config
-  recommended,
+  flatConfigs.recommended,
   {
     files: ["**/*.js"],
     languageOptions: {
