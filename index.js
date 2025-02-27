@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config'); // Contains your bot token and other config values
 const logger = require('./logger'); // Your logging module
-const supabase = require('./utils/supabase'); // Load the Supabase helper functions
 
 // Create a new Discord client instance
 const client = new Client({

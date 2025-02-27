@@ -8,19 +8,15 @@ module.exports = {
     try {
       logger.debug(`Message received from ${message.author.tag}: ${message.content}`);
       
-      // Remove the user from mute tracking if they send a message.
       const tracked = await getTrackedMember(message.author.id);
       if (tracked) {
         await removeTrackedMember(message.author.id);
         logger.debug(`User ${message.author.tag} sent a message and was removed from mute tracking.`);
       }
       
-      // Process the message if it contains embeds.
       if (message.embeds && message.embeds.length > 0) {
         try {
-          // Use the first embed in the message.
           const embed = message.embeds[0];
-          // Some embeds might not have a description, so default to an empty string.
           const embedDescription = embed.description || "";
           logger.debug(`Embed detected with description: ${embedDescription}`);
           

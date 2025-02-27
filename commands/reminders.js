@@ -24,9 +24,7 @@ module.exports = {
       const channelOption = interaction.options.getChannel('channel');
       const roleOption = interaction.options.getRole('role');
 
-      // Setup mode: both channel and role provided.
       if (channelOption && roleOption) {
-        // Check if the user has Administrator permissions.
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
           logger.warn(`Unauthorized /reminder setup attempt by ${interaction.user.tag}`);
           await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
@@ -34,7 +32,6 @@ module.exports = {
         }
 
         logger.debug(`Reminder setup requested by ${interaction.user.tag}. Channel: ${channelOption.name}, Role: ${roleOption.id}`);
-        // Save the configuration values using Supabase helpers.
         await setValue('reminder_channel', channelOption.id);
         await setValue('reminder_role', roleOption.id);
         logger.debug('Reminder configuration saved successfully.');
@@ -47,7 +44,6 @@ module.exports = {
         return;
       }
 
-      // Status check mode: one or both options were not provided.
       logger.debug(`Reminder status check requested by ${interaction.user.tag}.`);
 
       const channelId = await getValue('reminder_channel');
@@ -63,7 +59,6 @@ module.exports = {
       }
       const roleStr = roleId ? `<@&${roleId}>` : 'Not set!';
 
-      // Retrieve the current reminder data (for example, for the "disboard" reminder).
       const data = await getReminderData('disboard');
       const timeStr = data && data.scheduled_time
         ? calculateRemainingTime(data.scheduled_time)

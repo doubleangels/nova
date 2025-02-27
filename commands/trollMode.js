@@ -22,7 +22,6 @@ module.exports = {
     ),
     
   async execute(interaction) {
-    // Check if the user has administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
       logger.warn(`Unauthorized /trollmode attempt by ${interaction.user.tag}`);
       await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
@@ -32,14 +31,12 @@ module.exports = {
     try {
       logger.debug(`/trollmode command received from ${interaction.user.tag}`);
       
-      // Retrieve the command options.
       const enabledInput = interaction.options.getString('enabled');
-      const age = interaction.options.getInteger('age') ?? 30; // default to 30 days if not provided
+      const age = interaction.options.getInteger('age') ?? 30;
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
 
       logger.debug(`Troll mode toggle: ${isEnabled ? 'Enabled' : 'Disabled'}, Minimum age: ${age} days`);
 
-      // Save the configuration values using your Supabase helper.
       await setValue('troll_mode_enabled', isEnabled);
       await setValue('troll_mode_account_age', age);
 

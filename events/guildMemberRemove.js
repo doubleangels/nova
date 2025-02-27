@@ -1,8 +1,20 @@
 const logger = require('../logger');
+const { removeTrackedMember } = require('../utils/supabase');
 
 module.exports = {
   name: 'guildMemberRemove',
-  execute(member) {
-    logger.info(`GuildMemberRemove event: Member left: ${member.user.tag}`);
+  async execute(member) {
+    try {
+      logger.debug(`Processing guildMemberRemove event for member ID ${member.id}.`);
+      
+      const guild = member.guild;
+      logger.debug(`Member left: ${member.user.username} from Guild ${guild.name}. Removing from mute tracking.`);
+      
+      await removeTrackedMember(member.id);
+      
+      logger.debug(`Successfully processed removal for ${member.user.username}.`);
+    } catch (error) {
+      logger.error(`Error during guildMemberRemove event: ${error}`);
+    }
   }
 };

@@ -29,13 +29,6 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     
     console.log('Successfully reloaded application (/) commands for the guild.');
     
-    // If you prefer to register globally, use:
-    // await rest.put(
-    //   Routes.applicationCommands(clientId),
-    //   { body: commands }
-    // );
-    // console.log('Successfully reloaded global application (/) commands.');
-    
   } catch (error) {
     console.error(error);
   }

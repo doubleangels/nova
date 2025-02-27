@@ -34,9 +34,7 @@ module.exports = {
       const roleOption = interaction.options.getRole('role');
       const enabledOption = interaction.options.getString('enabled');
       
-      // If any option is provided, update configuration.
       if (channelOption || roleOption || enabledOption !== null) {
-        // Ensure the user has administrator permission.
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
           logger.warn(`Unauthorized /backupmode setup attempt by ${interaction.user.tag}`);
           await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
@@ -67,7 +65,6 @@ module.exports = {
         return;
       }
       
-      // If no options are provided, perform a status check.
       logger.debug(`Backup mode status check requested by ${interaction.user.tag}`);
       const channelId = await getValue("backup_mode_channel");
       const roleId = await getValue("backup_mode_role");

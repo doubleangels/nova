@@ -22,7 +22,6 @@ module.exports = {
       logger.error(`Failed to set bot presence: ${error}`);
     }
 
-    // Reschedule the Disboard reminder based on a specific role.
     try {
       const role = await getValue("reminder_role");
       if (!role) {
@@ -30,7 +29,6 @@ module.exports = {
       } else {
         try {
           logger.debug("Attempting to reschedule Disboard reminder.");
-          // The rescheduleReminder function should handle re-creating the reminder.
           await rescheduleReminder("disboard", role, client);
           logger.debug("Disboard reminder successfully rescheduled.");
         } catch (innerError) {

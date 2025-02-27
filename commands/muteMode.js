@@ -23,7 +23,6 @@ module.exports = {
         .setRequired(false)
     ),
   async execute(interaction) {
-    // Check administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
       logger.warn(`Unauthorized /mutemode attempt by ${interaction.user.tag}`);
       await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
@@ -34,12 +33,11 @@ module.exports = {
       logger.debug(`/mutemode command received from ${interaction.user.tag}`);
       
       const enabledInput = interaction.options.getString('enabled');
-      const timeLimit = interaction.options.getInteger('time') ?? 2; // default to 2 hours
+      const timeLimit = interaction.options.getInteger('time') ?? 2;
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
 
       logger.debug(`Mute mode toggle: ${isEnabled ? 'Enabled' : 'Disabled'}, Kick Time: ${timeLimit} hours`);
 
-      // Save mute mode configuration in Supabase.
       await setValue("mute_mode_enabled", isEnabled);
       await setValue("mute_mode_kick_time_hours", timeLimit);
 

@@ -13,7 +13,6 @@ module.exports = {
         await interaction.reply('No config values found.');
         return;
       }
-      // Format each row as "key: value"
       const replyText = configs.map(cfg => `${cfg.id}: ${cfg.value}`).join('\n');
       await interaction.reply(`Config values:\n${replyText}`);
     } catch (error) {

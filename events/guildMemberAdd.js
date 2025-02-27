@@ -6,15 +6,13 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
   name: 'guildMemberAdd',
-  async execute(member) {
+  async execute(member, client) {
     try {
       logger.debug("Processing guildMemberAdd event.");
 
-      // Retrieve configuration settings from Supabase.
-      // (Assumes that getValue returns a value or null.)
       const backupModeEnabled = ((await getValue("backup_mode_enabled")) || "false").toString().toLowerCase();
-      const backupModeRole = await getValue("backup_mode_role"); // expected to be a string or number
-      const backupModeChannel = await getValue("backup_mode_channel"); // expected to be a string or number
+      const backupModeRole = await getValue("backup_mode_role");
+      const backupModeChannel = await getValue("backup_mode_channel");
       const trollModeEnabled = ((await getValue("troll_mode_enabled")) || "false").toString().toLowerCase();
       const trollModeAccountAge = parseInt(await getValue("troll_mode_account_age")) || 30;
       const muteModeEnabled = ((await getValue("mute_mode_enabled")) || "false").toString().toLowerCase();
@@ -25,19 +23,16 @@ module.exports = {
         troll_mode_enabled=${trollModeEnabled}, troll_mode_account_age=${trollModeAccountAge}, 
         mute_mode_enabled=${muteModeEnabled}, mute_kick_time=${muteKickTime}`);
 
-      // Skip processing if the member is a bot.
       if (member.user.bot) {
         logger.debug(`Member ${member.user.tag} is a bot; skipping further processing.`);
         return;
       }
 
-      // Calculate the member's account age in days.
       const now = Date.now();
-      const created = member.user.createdTimestamp; // ms timestamp
+      const created = member.user.createdTimestamp;
       const accountAgeDays = Math.floor((now - created) / (1000 * 3600 * 24));
       logger.debug(`New member joined: ${member.user.tag} in guild ${member.guild.name} | Account Age: ${accountAgeDays} days`);
 
-      // Kick new members if troll mode is enabled and account age is too low.
       if (trollModeEnabled === "true" && accountAgeDays < trollModeAccountAge) {
         logger.debug(`Member ${member.user.tag} account age ${accountAgeDays} days is below threshold of ${trollModeAccountAge} days; attempting kick.`);
         try {
@@ -49,37 +44,31 @@ module.exports = {
         return;
       }
 
-      // If mute mode is enabled, track the member and schedule a mute kick.
       if (muteModeEnabled === "true") {
         const joinTime = new Date().toISOString();
         logger.debug(`Attempting to track ${member.user.tag} for mute mode. Join time: ${joinTime}`);
         try {
-          // trackNewMember and scheduleMuteKick are assumed to be defined in your utilities.
           await trackNewMember(member.id, member.user.tag, joinTime);
           logger.debug(`Successfully tracked ${member.user.tag} for mute mode.`);
-          await scheduleMuteKick(member.id, member.user.tag, joinTime, muteKickTime, member.guild.id);
+          await scheduleMuteKick(member.id, member.user.tag, joinTime, muteKickTime, member.guild.id, client);
           logger.debug(`Scheduled mute kick for ${member.user.tag}.`);
         } catch (err) {
           logger.error(`Failed to track ${member.user.tag} for mute mode: ${err}`);
         }
       }
 
-      // If backup mode is enabled, send welcome message and assign a role.
       if (backupModeEnabled === "true") {
-        // Check if backup mode is fully configured.
         if (!backupModeRole || !backupModeChannel) {
           logger.debug("Backup mode is not fully configured. Skipping role assignment and welcome message.");
           return;
         }
 
-        // Retrieve the designated channel for welcome messages.
         const welcomeChannel = member.guild.channels.cache.get(String(backupModeChannel));
         if (!welcomeChannel) {
           logger.warn(`Channel with ID ${backupModeChannel} not found. Welcome message skipped.`);
           return;
         }
 
-        // Create the welcome embed.
         const embed = new EmbedBuilder()
           .setTitle(`🎉 Welcome ${member.user.username}!`)
           .setDescription(
@@ -95,11 +84,9 @@ module.exports = {
           )
           .setColor(0xCD41FF);
 
-        // Send the welcome embed.
         await welcomeChannel.send({ embeds: [embed] });
         logger.debug(`Sent welcome message in ${welcomeChannel.name} for ${member.user.tag}.`);
 
-        // Retrieve the backup role object from the guild.
         const backupRole = member.guild.roles.cache.get(String(backupModeRole));
         if (backupRole) {
           await member.roles.add(backupRole);
