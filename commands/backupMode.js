@@ -78,7 +78,7 @@ module.exports = {
         
         // Prepare the reply message summarizing the new configuration.
         const replyMsg = `🔄 **Backup Mode Configured!**\n` +
-          `📢 Welcome messages will be sent in ${channelOption ? channelOption.name : "Not changed"}\n` +
+          `📢 Welcome messages will be sent in: ${channelOption ? channelOption.name : "Not changed"}\n` +
           `🎭 New members will be assigned the role: ${roleOption ? `<@&${roleOption.id}>` : "Not changed"}\n` +
           `🔘 Auto-role assignment: ${
             enabledOption ? (enabledOption.toLowerCase() === "enabled" ? "✅ **Enabled**" : "❌ **Disabled**") : "Not changed"
