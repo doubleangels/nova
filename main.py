@@ -766,14 +766,49 @@ async def schedule_mute_kick(member_id: int, username: str, join_time: str, mute
         logger.exception(f"Error scheduling mute mode kick for member '{username}' (ID: {member_id}): {e}")
 
 # -------------------------
-# Event Listeners
+# Reschedule All Mute Kicks on Startup
+# -------------------------
+async def reschedule_all_mute_kicks():
+    """
+    ! RESCHEDULE ALL PENDING MUTE KICKS
+    * Retrieves all tracked members from the 'tracked_members' table and calls schedule_mute_kick
+    * for each one so that any pending kick is rescheduled on bot start.
+    """
+    try:
+        # Get the mute kick time from configuration (default to 4 hours if not set)
+        mute_kick_time = int(get_value("mute_mode_kick_time_hours") or 4)
+        tracked_members = get_all_tracked_members()
+        if not tracked_members:
+            logger.debug("No tracked members found to reschedule mute kicks.")
+            return
+        
+        # Assuming a single guild, use the first guild the bot is in.
+        if bot.guilds:
+            guild_id = bot.guilds[0].id
+            for member in tracked_members:
+                logger.debug(f"Rescheduling mute kick for tracked member: {member}")
+                # Call schedule_mute_kick with the stored join time and current configuration.
+                await schedule_mute_kick(
+                    member_id=member["member_id"],
+                    username=member["username"],
+                    join_time=member["join_time"],
+                    mute_kick_time=mute_kick_time,
+                    guild_id=guild_id
+                )
+        else:
+            logger.warning("Bot is not in any guilds; cannot reschedule mute kicks.")
+    except Exception as e:
+        logger.exception(f"Error while rescheduling mute kicks on startup: {e}")
+
+# -------------------------
+# Update on_ready Event Handler
 # -------------------------
 @interactions.listen()
 async def on_ready():
     """
     ! EVENT HANDLER CALLED WHEN THE BOT IS READY
     * Sets up bot presence and activity, initializes the reminders table,
-    * and reschedules the Disboard reminder if a valid role is present.
+    * reschedules the Disboard reminder if a valid role is present, and now also reschedules mute kicks.
     """
     logger.info("Bot is online! Setting up status and activity.")
 
@@ -797,7 +832,7 @@ async def on_ready():
     except Exception as e:
         logger.exception(f"Error initializing reminders table: {e}")
 
-    # Reschedule only the Disboard reminder based on a specific role
+    # Reschedule the Disboard reminder based on a specific role
     try:
         role = get_role()
         if not role:
@@ -811,6 +846,14 @@ async def on_ready():
                 logger.exception(f"Failed to reschedule Disboard reminder: {inner_e}")
     except Exception as e:
         logger.exception(f"Error during Disboard reminder rescheduling: {e}")
+
+    # NEW: Reschedule mute kicks for tracked members on startup
+    try:
+        logger.debug("Rescheduling mute kicks for tracked members on startup.")
+        await reschedule_all_mute_kicks()
+        logger.debug("Mute kick rescheduling completed.")
+    except Exception as e:
+        logger.exception(f"Error while rescheduling mute kicks: {e}")
 
     logger.info("Bot is ready!")
 
