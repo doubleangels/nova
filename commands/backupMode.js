@@ -5,7 +5,7 @@ const { getValue, setValue } = require('../utils/supabase');
 
 /**
  * Module for the /backupmode command.
- * This command configures and toggles backup mode for new members by setting:
+ * Configures and toggles backup mode for new members by setting:
  * - The channel to send welcome messages.
  * - The role to assign to new members.
  * - The auto-role assignment status.
@@ -42,41 +42,36 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Log the invocation of the backupmode command.
-      logger.debug(`/backupmode command invoked by ${interaction.user.tag}`);
+      logger.debug("/backupmode command invoked", { user: interaction.user.tag });
       
-      // Retrieve command options for channel, role, and enabled state.
+      // Retrieve command options.
       const channelOption = interaction.options.getChannel('channel');
       const roleOption = interaction.options.getRole('role');
       const enabledOption = interaction.options.getString('enabled');
-      
-      // Check if any configuration option was provided.
+
+      // If any configuration option is provided, attempt to update backup mode settings.
       if (channelOption || roleOption || enabledOption !== null) {
-        // Verify if the user has Administrator permissions.
+        // Verify Administrator permissions.
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-          logger.warn(`Unauthorized /backupmode setup attempt by ${interaction.user.tag}`);
+          logger.warn("Unauthorized backupmode configuration attempt", { user: interaction.user.tag });
           await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
           return;
         }
         
-        // If a channel option is provided, save it in the database.
         if (channelOption) {
           await setValue("backup_mode_channel", channelOption.id);
-          logger.debug(`Backup mode channel set to ${channelOption.name}`);
+          logger.debug("Backup mode channel updated", { channelId: channelOption.id, channelName: channelOption.name });
         }
-        // If a role option is provided, save it in the database.
         if (roleOption) {
           await setValue("backup_mode_role", roleOption.id);
-          logger.debug(`Backup mode role set to ${roleOption.id}`);
+          logger.debug("Backup mode role updated", { roleId: roleOption.id });
         }
-        // If the enabled option is provided, determine its boolean value and save it.
         if (enabledOption !== null) {
           const isEnabled = enabledOption.toLowerCase() === "enabled";
           await setValue("backup_mode_enabled", isEnabled);
-          logger.debug(`Backup mode ${isEnabled ? "enabled" : "disabled"}`);
+          logger.debug("Backup mode enabled status updated", { enabled: isEnabled });
         }
         
-        // Prepare the reply message summarizing the new configuration.
         const replyMsg = `🔄 **Backup Mode Configured!**\n` +
           `📢 Welcome messages will be sent in: ${channelOption ? channelOption.name : "Not changed"}\n` +
           `🎭 New members will be assigned the role: ${roleOption ? `<@&${roleOption.id}>` : "Not changed"}\n` +
@@ -84,38 +79,35 @@ module.exports = {
             enabledOption ? (enabledOption.toLowerCase() === "enabled" ? "✅ **Enabled**" : "❌ **Disabled**") : "Not changed"
           }`;
         await interaction.reply(replyMsg);
+        logger.debug("Backup mode configuration reply sent", { replyMsg });
         return;
       }
       
-      // If no options are provided, perform a status check.
-      logger.debug(`Backup mode status check requested by ${interaction.user.tag}`);
+      // No options provided: perform a status check.
+      logger.debug("Backup mode status check requested", { user: interaction.user.tag });
       
-      // Retrieve current backup mode settings from the database.
       const channelId = await getValue("backup_mode_channel");
       const roleId = await getValue("backup_mode_role");
       const enabledStatus = await getValue("backup_mode_enabled");
       
-      // Determine the channel name from the channel ID.
+      // Get channel name from ID.
       let channelStr = "Not set!";
       if (channelId) {
         const channelObj = interaction.guild.channels.cache.get(channelId);
         channelStr = channelObj ? channelObj.name : "Not set!";
       }
-      // Format role and enabled status for display.
       const roleStr = roleId ? `<@&${roleId}>` : "Not set!";
       const enabledStr = enabledStatus ? "✅ **Enabled**" : "❌ **Disabled**";
       
-      // Create a summary message with the current backup mode configuration.
       const summary = `📌 **Backup Mode Status:**\n` +
         `📢 **Channel:** ${channelStr}\n` +
         `🎭 **Role:** ${roleStr}\n` +
         `🔘 **Auto-role assignment:** ${enabledStr}`;
       
       await interaction.reply(summary);
-      logger.debug("Backup mode status check completed successfully.");
+      logger.debug("Backup mode status reply sent", { summary });
     } catch (e) {
-      // Log any errors and inform the user.
-      logger.error(`Error in /backupmode command: ${e}`);
+      logger.error("Error in /backupmode command", { error: e });
       await interaction.reply({ content: "⚠️ An error occurred while processing your request. Please try again later.", ephemeral: true });
     }
   }

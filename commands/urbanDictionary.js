@@ -5,7 +5,7 @@ const fetch = require('node-fetch').default;
 
 /**
  * Module for the /urban command.
- * This command searches Urban Dictionary for definitions of a provided query term.
+ * Searches Urban Dictionary for definitions of a provided query term.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -25,19 +25,19 @@ module.exports = {
   async execute(interaction) {
     try {
       // Log the invocation and the query term.
-      logger.debug(`/urban command invoked by ${interaction.user.tag} for query: '${interaction.options.getString('query')}'`);
+      const query = interaction.options.getString('query');
+      logger.debug("/urban command invoked", { user: interaction.user.tag, query });
       
-      // Defer the reply to allow time for API call.
+      // Defer the reply to allow time for the API call.
       await interaction.deferReply();
       
-      // Get the query term from the command options.
-      const query = interaction.options.getString('query');
       // Construct the Urban Dictionary API URL with query parameters.
       const searchUrl = "https://api.urbandictionary.com/v0/define";
       const params = new URLSearchParams({ term: query });
       const url = `${searchUrl}?${params.toString()}`;
+      logger.debug("Fetching Urban Dictionary data", { requestUrl: url });
       
-      // Fetch the definition data from Urban Dictionary.
+      // Fetch the definition data.
       const response = await fetch(url);
       
       // Check if the API response is successful.
@@ -47,15 +47,15 @@ module.exports = {
         if (data.list && data.list.length > 0) {
           const topResult = data.list[0];
           const word = topResult.word || "No Word";
-          // Replace any carriage return/newline combinations with newlines for proper formatting.
+          // Replace any carriage returns/newlines for proper formatting.
           const definition = (topResult.definition || "No Definition Available.").replace(/\r\n/g, "\n");
-          const example = (topResult.example || "").replace(/\r\n/g, "\n") || "No example available.";
+          const example = (topResult.example || "No example available.").replace(/\r\n/g, "\n");
           const thumbsUp = topResult.thumbs_up || 0;
           const thumbsDown = topResult.thumbs_down || 0;
           
-          logger.debug(`Found definition for '${word}': ${definition} (${thumbsUp}/${thumbsDown})`);
+          logger.debug("Definition found", { word, thumbsUp, thumbsDown });
           
-          // Build an embed with the retrieved Urban Dictionary definition.
+          // Build an embed with the retrieved definition.
           const embed = new EmbedBuilder()
             .setTitle(`📖 Definition: ${word}`)
             .setDescription(definition)
@@ -67,21 +67,21 @@ module.exports = {
             )
             .setFooter({ text: "🔍 Powered by Urban Dictionary" });
           
-          // Send the embed as the reply.
+          // Edit the deferred reply with the embed.
           await interaction.editReply({ embeds: [embed] });
+          logger.debug("Urban definition embed sent", { user: interaction.user.tag, word });
         } else {
-          // No definitions found; inform the user.
-          logger.debug(`No definitions found for '${query}'`);
+          // No definitions found.
+          logger.debug("No definitions found", { query });
           await interaction.editReply("⚠️ No definitions found for your query. Try refining it.");
         }
       } else {
-        // API response was not OK; log and inform the user.
-        logger.warn(`Urban Dictionary API error: ${response.status}`);
+        // Log if the API response was not successful.
+        logger.warn("Urban Dictionary API error", { status: response.status });
         await interaction.editReply(`⚠️ Error: Urban Dictionary API returned status code ${response.status}.`);
       }
     } catch (error) {
-      // Log any unexpected errors and inform the user.
-      logger.error(`Error in /urban command: ${error}`);
+      logger.error("Error in /urban command", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

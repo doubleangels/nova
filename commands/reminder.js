@@ -15,12 +15,14 @@ module.exports = {
     .setName('reminder')
     .setDescription('Setup and check the status of bump reminders.')
     .addChannelOption(option =>
-      option.setName('channel')
+      option
+        .setName('channel')
         .setDescription('Channel to send reminders in (leave empty to check status)')
         .setRequired(false)
     )
     .addRoleOption(option =>
-      option.setName('role')
+      option
+        .setName('role')
         .setDescription('Role to ping in reminders (leave empty to check status)')
         .setRequired(false)
     ),
@@ -31,46 +33,48 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug(`/reminder command invoked by ${interaction.user.tag}`);
+      logger.debug("/reminder command invoked", { user: interaction.user.tag });
       
-      // Get the channel and role options from the command input.
+      // Retrieve channel and role options from the command input.
       const channelOption = interaction.options.getChannel('channel');
       const roleOption = interaction.options.getRole('role');
 
-      // If both options are provided, process setup configuration.
+      // If both options are provided, process the setup configuration.
       if (channelOption && roleOption) {
         // Check for Administrator permissions.
         if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-          logger.warn(`Unauthorized /reminder setup attempt by ${interaction.user.tag}`);
+          logger.warn("Unauthorized /reminder setup attempt", { user: interaction.user.tag });
           await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
           return;
         }
 
-        logger.debug(`Reminder setup requested by ${interaction.user.tag}. Channel: ${channelOption.name}, Role: ${roleOption.id}`);
+        logger.debug("Processing reminder setup", { 
+          user: interaction.user.tag,
+          channel: channelOption.id,
+          role: roleOption.id 
+        });
         
         // Save the selected channel and role in the database.
         await setValue('reminder_channel', channelOption.id);
         await setValue('reminder_role', roleOption.id);
-        logger.debug('Reminder configuration saved successfully.');
+        logger.debug("Reminder configuration saved successfully");
 
-        // Reply to the user confirming setup.
+        // Respond with a summary of the new configuration.
         await interaction.reply(
           `✅ **Reminder setup complete!**\n` +
-          `📢 Reminders will be sent in <#${channelOption.name}>.\n` +
+          `📢 Reminders will be sent in <#${channelOption.id}>.\n` +
           `🎭 The role to be pinged is <@&${roleOption.id}>.`
         );
         return;
       }
 
-      // If no setup options are provided, perform a status check.
-      logger.debug(`Reminder status check requested by ${interaction.user.tag}.`);
+      // If no options are provided, perform a status check.
+      logger.debug("Reminder status check requested", { user: interaction.user.tag });
 
       // Retrieve current reminder configuration from the database.
       const channelId = await getValue('reminder_channel');
       const roleId = await getValue('reminder_role');
-
-      logger.debug(`Current Reminder Channel: ${channelId}`);
-      logger.debug(`Current Reminder Role: ${roleId}`);
+      logger.debug("Current configuration retrieved", { channelId, roleId });
 
       // Resolve the channel name from the channel ID.
       let channelStr = 'Not set!';
@@ -82,25 +86,24 @@ module.exports = {
       const roleStr = roleId ? `<@&${roleId}>` : 'Not set!';
 
       // Retrieve the current reminder data for the 'disboard' service.
-      const data = await getReminderData('disboard');
+      const reminderData = await getReminderData('disboard');
       // Calculate the remaining time until the next reminder if available.
-      const timeStr = data && data.scheduled_time
-        ? calculateRemainingTime(data.scheduled_time)
+      const timeStr = reminderData && reminderData.scheduled_time
+        ? calculateRemainingTime(reminderData.scheduled_time)
         : 'Not set!';
       const reminderInfo = `⏳ **Disboard**: ${timeStr}`;
 
-      // Build the summary message with current reminder settings.
+      // Build the summary message with the current reminder settings.
       const summary =
         `📌 **Disboard Reminder Status:**\n` +
         `📢 **Channel:** ${channelStr}\n` +
         `🎭 **Role:** ${roleStr}\n\n` +
         `${reminderInfo}`;
 
-      // Reply with the reminder status.
       await interaction.reply(summary);
+      logger.debug("Reminder status reply sent", { summary });
     } catch (error) {
-      // Log any errors and inform the user.
-      logger.error('Error in /reminder command:', error);
+      logger.error("Error in /reminder command", { error });
       await interaction.reply({
         content: '⚠️ An error occurred while processing your request. Please try again later.',
         ephemeral: true

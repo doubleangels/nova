@@ -5,7 +5,7 @@ const { setValue } = require('../utils/supabase');
 
 /**
  * Module for the /mutemode command.
- * This command toggles auto-kicking of users who don't send a message within a specified time limit.
+ * Toggles auto-kicking of users who don't send a message within a specified time limit.
  * Only users with Administrator permissions can execute this command.
  */
 module.exports = {
@@ -36,20 +36,20 @@ module.exports = {
   async execute(interaction) {
     // Check if the user has Administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn(`Unauthorized /mutemode attempt by ${interaction.user.tag}`);
+      logger.warn("Unauthorized /mutemode attempt", { user: interaction.user.tag });
       await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
       return;
     }
 
     try {
-      logger.debug(`/mutemode command received from ${interaction.user.tag}`);
+      logger.debug("/mutemode command received", { user: interaction.user.tag });
       
       // Get the 'enabled' input and time limit (default is 2 hours).
       const enabledInput = interaction.options.getString('enabled');
       const timeLimit = interaction.options.getInteger('time') ?? 2;
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
 
-      logger.debug(`Mute mode toggle: ${isEnabled ? 'Enabled' : 'Disabled'}, Kick Time: ${timeLimit} hours`);
+      logger.debug("Parsed mute mode command", { isEnabled, timeLimit });
 
       // Update the settings in the database.
       await setValue("mute_mode_enabled", isEnabled);
@@ -62,10 +62,9 @@ module.exports = {
 
       // Reply to the interaction.
       await interaction.reply(responseMessage);
-      logger.debug(`Mute mode ${isEnabled ? 'enabled' : 'disabled'} by ${interaction.user.tag}, kick time set to ${timeLimit} hours.`);
+      logger.debug("Mute mode configuration updated", { user: interaction.user.tag, isEnabled, timeLimit });
     } catch (error) {
-      // Log any errors and inform the user.
-      logger.error(`Error in /mutemode command: ${error}`);
+      logger.error("Error in /mutemode command", { error });
       await interaction.reply({ content: "⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral: true });
     }
   }

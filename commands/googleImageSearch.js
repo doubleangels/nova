@@ -41,19 +41,19 @@ module.exports = {
     try {
       // Defer the reply to allow time for API processing.
       await interaction.deferReply();
-      logger.debug(`/googleimage command received from ${interaction.user.tag}`);
+      logger.debug("/googleimage command received", { user: interaction.user.tag });
       
       // Retrieve user input for the query and number of results.
       const query = interaction.options.getString('query');
       let resultsCount = interaction.options.getInteger('results') ?? 5;
-      logger.debug(`User input: query='${query}', requested results=${resultsCount}`);
-
+      logger.debug("User input", { query, requestedResults: resultsCount });
+      
       // Format the query to title case and trim extra whitespace.
       const formattedQuery = titleCase(query.trim());
       // Ensure resultsCount is between 1 and 10.
       resultsCount = Math.max(1, Math.min(resultsCount, 10));
-      logger.debug(`Formatted query: '${formattedQuery}', adjusted results count: ${resultsCount}`);
-
+      logger.debug("Formatted input", { formattedQuery, resultsCount });
+      
       // Construct the Google Custom Search API URL and parameters.
       const searchUrl = "https://www.googleapis.com/customsearch/v1";
       const params = new URLSearchParams({
@@ -63,17 +63,18 @@ module.exports = {
         searchType: "image",
         num: resultsCount.toString()
       });
-      logger.debug(`Making Google Image API request to: ${searchUrl}?${params.toString()}`);
-
+      const requestUrl = `${searchUrl}?${params.toString()}`;
+      logger.debug("Making Google Image API request", { requestUrl });
+      
       // Make the API request.
-      const response = await fetch(`${searchUrl}?${params.toString()}`);
-      logger.debug(`Google Image API Response Status: ${response.status}`);
-
+      const response = await fetch(requestUrl);
+      logger.debug("Google Image API response", { status: response.status });
+      
       if (response.ok) {
         // Parse the API response as JSON.
         const data = await response.json();
-        logger.debug(`Received Google Image data: ${JSON.stringify(data, null, 2)}`);
-
+        logger.debug("Received Google Image data", { data });
+        
         // Check if any image results were returned.
         if (data.items && data.items.length > 0) {
           // Map each result to an embed.
@@ -82,7 +83,7 @@ module.exports = {
             const imageLink = item.link || "";
             // Use contextLink if available, otherwise fallback to the image link.
             const pageLink = item.image && item.image.contextLink ? item.image.contextLink : imageLink;
-            logger.debug(`Image result - Title: ${title}, Image Link: ${imageLink}`);
+            logger.debug("Image result extracted", { title, imageLink });
             return new EmbedBuilder()
               .setTitle(`🖼️ **${title}**`)
               .setDescription(`🔗 **[View Image](${imageLink})**`)
@@ -92,20 +93,21 @@ module.exports = {
           });
           // Edit the deferred reply with the embeds.
           await interaction.editReply({ embeds });
+          logger.debug("Google image results sent", { user: interaction.user.tag, resultCount: embeds.length });
         } else {
           // Inform the user if no images were found.
-          logger.warn(`No image results found for query: '${formattedQuery}'`);
+          logger.warn("No image results found", { query: formattedQuery });
           await interaction.editReply(`❌ No images found for **${formattedQuery}**. Try refining your query!`);
         }
       } else {
         // If the API returns an error, log the error details.
         const errorBody = await response.text();
-        logger.warn(`Google API error: ${response.status} - ${errorBody}`);
+        logger.warn("Google API error", { status: response.status, errorBody });
         await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
       }
-    } catch (e) {
+    } catch (error) {
       // Log any unexpected errors and notify the user.
-      logger.error(`Error in /googleimage command: ${e}`);
+      logger.error("Error in /googleimage command", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

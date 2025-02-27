@@ -22,7 +22,7 @@ function calculateRemainingTime(scheduledTime) {
     // Format each time component to have at least two digits.
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   } catch (error) {
-    logger.error('Error calculating remaining time:', error);
+    logger.error('Error calculating remaining time:', { error });
     return '⚠️ Error calculating time!';
   }
 }
@@ -42,67 +42,66 @@ function calculateRemainingTime(scheduledTime) {
  */
 async function sendScheduledMessage({ initialMessage, reminderMessage, interval, key, client }) {
   try {
-    logger.debug(`sendScheduledMessage called with key '${key}', interval ${interval}, initialMessage: ${initialMessage}, reminderMessage: ${reminderMessage}`);
+    logger.debug(`sendScheduledMessage for key "${key}" invoked. Interval: ${interval} sec; Initial message: ${initialMessage}; Reminder message: ${reminderMessage}`);
     
-    // Retrieve the configured reminder channel ID from the database.
+    // Retrieve the reminder channel ID.
     const channelId = await getValue('reminder_channel');
     if (!channelId) {
-      logger.warn("No valid reminder channel found; cannot send scheduled message.");
+      logger.warn("No valid reminder channel found; aborting scheduled message.");
       return;
     }
     
-    // Get the channel object from the client.
+    // Get the channel from the client.
     const channel = client.channels.cache.get(channelId);
     if (!channel) {
-      logger.warn(`Channel with ID ${channelId} not found.`);
+      logger.warn(`Channel with ID "${channelId}" not found.`);
       return;
     }
     
     // Send the initial message if provided.
     if (initialMessage) {
-      logger.debug(`Sending initial message for '${key}': ${initialMessage}`);
+      logger.debug(`Sending initial message for key "${key}": ${initialMessage}`);
       await channel.send(initialMessage);
     }
     
-    logger.debug(`Waiting ${interval} seconds before sending reminder for '${key}'.`);
-    // Wait for the specified interval.
+    logger.debug(`Waiting ${interval} sec before sending reminder for key "${key}".`);
     await new Promise(resolve => setTimeout(resolve, interval * 1000));
     
-    logger.debug(`Sending reminder message for '${key}': ${reminderMessage}`);
+    logger.debug(`Sending reminder for key "${key}": ${reminderMessage}`);
     await channel.send(reminderMessage);
     
-    // Clean up reminder data if it exists.
+    // Clean up reminder data.
     const reminderData = await getReminderData(key);
     if (reminderData) {
       await deleteReminderData(key);
-      logger.debug(`Reminder ${reminderData.reminder_id} for '${key}' has been cleaned up.`);
+      logger.debug(`Cleaned up reminder data (ID: ${reminderData.reminder_id}) for key "${key}".`);
     } else {
-      logger.debug(`No reminder data to clean up for key '${key}'.`);
+      logger.debug(`No reminder data found to clean up for key "${key}".`);
     }
   } catch (e) {
-    logger.error(`Error in sendScheduledMessage for key '${key}':`, e);
+    logger.error(`Error in sendScheduledMessage for key "${key}":`, { error: e });
   }
 }
 
 /**
  * Handles setting up a reminder.
  *
- * If no reminder is currently scheduled for the given key, this function creates a new reminder entry
- * in the database with a scheduled time calculated from the interval and then sends a scheduled message.
+ * If no reminder is scheduled for the given key, creates a new reminder entry
+ * in the database with a scheduled time calculated from the interval and sends a scheduled message.
  *
  * @param {string} key - The key for the reminder (e.g., "disboard").
  * @param {string|null} initialMessage - The message to send immediately, if any.
  * @param {string} reminderMessage - The reminder message to send after the interval.
- * @param {number} interval - The interval in seconds after which the reminder should be sent.
+ * @param {number} interval - The interval in seconds before the reminder is sent.
  * @param {Client} client - The Discord client instance.
  */
 async function handleReminder(key, initialMessage, reminderMessage, interval, client) {
   try {
-    logger.debug(`handleReminder invoked with interval ${interval}.`);
+    logger.debug(`handleReminder invoked for key "${key}" with interval: ${interval} sec.`);
     
     const existingData = await getReminderData(key);
     if (existingData && existingData.scheduled_time) {
-      logger.debug(`${key.charAt(0).toUpperCase() + key.slice(1)} already has a timer set. Skipping new reminder.`);
+      logger.debug(`Reminder for "${key}" already exists (ID: ${existingData.reminder_id}). Skipping setup.`);
       return;
     }
     
@@ -110,14 +109,14 @@ async function handleReminder(key, initialMessage, reminderMessage, interval, cl
     const reminderId = randomUUID();
     const scheduledTime = new Date(Date.now() + interval * 1000).toISOString();
     
-    // Save the reminder data to the database.
+    // Save reminder data.
     await setReminderData(key, scheduledTime, reminderId);
-    logger.debug(`Reminder data set with reminder_id '${reminderId}' and scheduled_time '${scheduledTime}'.`);
+    logger.debug(`Reminder data saved: ID "${reminderId}", scheduled at "${scheduledTime}".`);
     
-    // Retrieve the role to mention in the reminder.
+    // Retrieve role for mention.
     const role = await getValue("reminder_role");
     if (role) {
-      logger.debug(`Role '${role}' retrieved for reminders, scheduling message.`);
+      logger.debug(`Role "${role}" retrieved; scheduling sendScheduledMessage for key "${key}".`);
       await sendScheduledMessage({
         initialMessage,
         reminderMessage: `🔔 <@&${role}> ${reminderMessage}`,
@@ -126,18 +125,18 @@ async function handleReminder(key, initialMessage, reminderMessage, interval, cl
         client
       });
     } else {
-      logger.warn(`No role found for reminders, skipping reminder message.`);
+      logger.warn("No reminder role found; skipping reminder message.");
     }
   } catch (e) {
-    logger.error(`Error handling reminder!`, e);
+    logger.error("Error handling reminder:", { error: e });
   }
 }
 
 /**
  * Reschedules a reminder for a specific key (only supports "disboard").
  *
- * If a reminder for the given key exists and is still scheduled for a future time,
- * this function calculates the remaining time and sets a delayed task to send the reminder.
+ * If a reminder exists and is still scheduled in the future,
+ * calculates the remaining time and sets a delayed task to send the reminder.
  *
  * @param {string} key - The key for the reminder (e.g., "disboard").
  * @param {string} role - The role ID to mention in the reminder.
@@ -145,11 +144,11 @@ async function handleReminder(key, initialMessage, reminderMessage, interval, cl
  */
 async function rescheduleReminder(key, role, client) {
   try {
-    logger.debug(`Attempting to reschedule reminder with role '${role}'.`);
+    logger.debug(`Attempting to reschedule reminder for key "${key}" with role "${role}".`);
     
     const reminderData = await getReminderData(key);
     if (!reminderData) {
-      logger.debug("No reminder data found for Disboard.");
+      logger.debug("No reminder data found for key 'disboard'.");
       return;
     }
     
@@ -158,16 +157,16 @@ async function rescheduleReminder(key, role, client) {
       const scheduledDt = new Date(scheduledTime);
       const now = new Date();
       if (scheduledDt <= now) {
-        logger.debug(`Reminder ${reminderId} for Disboard has already expired. Removing it.`);
+        logger.debug(`Reminder (ID: ${reminderId}) for key "disboard" has expired. Removing it.`);
         await deleteReminderData(key);
         return;
       }
       
       const remainingTimeMs = scheduledDt - now;
       const remainingTimeSeconds = remainingTimeMs / 1000;
-      logger.debug(`Rescheduling Disboard reminder ${reminderId} in ${remainingTimeSeconds} seconds.`);
+      logger.debug(`Rescheduling reminder (ID: ${reminderId}) to fire in ${remainingTimeSeconds} sec.`);
       
-      // Schedule the sending of the reminder after the remaining time.
+      // Schedule the reminder.
       setTimeout(async () => {
         await sendScheduledMessage({
           initialMessage: null,
@@ -178,12 +177,12 @@ async function rescheduleReminder(key, role, client) {
         });
       }, remainingTimeMs);
       
-      logger.debug(`Reschedule task created for reminder ${reminderId} with a delay of ${remainingTimeSeconds} seconds.`);
+      logger.debug(`Reschedule task created for reminder (ID: ${reminderId}) with delay of ${remainingTimeSeconds} sec.`);
     } else {
-      logger.warn(`Insufficient reminder data; cannot reschedule.`);
+      logger.warn("Insufficient reminder data; cannot reschedule.");
     }
   } catch (e) {
-    logger.error(`Error while attempting to reschedule the Disboard reminder: ${e}`);
+    logger.error("Error while rescheduling the reminder:", { error: e });
   }
 }
 

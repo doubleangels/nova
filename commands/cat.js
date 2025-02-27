@@ -5,7 +5,7 @@ const fetch = require('node-fetch').default;
 
 /**
  * Module for the /cat command.
- * This command fetches a random cat image from the Cataas API and sends it as an embed.
+ * Fetches a random cat image from the Cataas API and sends it as an embed.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,21 +18,24 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to allow for asynchronous operations.
+      // Defer reply to allow time for asynchronous operations.
       await interaction.deferReply();
-      
+      logger.debug("Processing /cat command", { user: interaction.user.tag });
+
       // Create a unique timestamp to avoid cached images.
       const timestamp = Math.floor(Date.now() / 1000);
       const catApiUrl = `https://cataas.com/cat?timestamp=${timestamp}`;
-      logger.debug(`Fetching cat image from ${catApiUrl}`);
+      logger.debug("Fetching cat image", { catApiUrl });
 
-      // Fetch the cat image from the API.
+      // Fetch the cat image from the Cataas API.
       const response = await fetch(catApiUrl);
+      logger.debug("Cataas API response", { status: response.status });
+
       if (response.ok) {
         // Convert the response data to a buffer.
         const imageBuffer = await response.buffer();
         const filename = "cat.jpg";
-        // Create an attachment with the image buffer.
+        // Create an attachment from the image buffer.
         const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
 
         // Build an embed with the cat image.
@@ -42,18 +45,16 @@ module.exports = {
           .setColor(0xD3D3D3)
           .setImage(`attachment://${filename}`)
           .setFooter({ text: "Powered by Cataas API" });
-
+        
         // Edit the reply with the embed and attachment.
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-        logger.debug("Cat image sent successfully.");
+        logger.debug("Cat image sent successfully", { user: interaction.user.tag });
       } else {
-        // Log and reply if the API returned an error status.
-        logger.warn(`Cataas API error: ${response.status}`);
+        logger.warn("Cataas API returned an error", { status: response.status });
         await interaction.editReply("😿 Couldn't fetch a cat picture. Try again later.");
       }
     } catch (error) {
-      // Log unexpected errors and inform the user.
-      logger.error(`Error in /cat command: ${error}`);
+      logger.error("Error in /cat command", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

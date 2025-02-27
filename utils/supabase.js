@@ -14,15 +14,18 @@ const supabase = createClient(config.supabaseUrl, config.supabaseKey);
  */
 async function getValue(key) {
   try {
+    logger.debug(`Getting config value for key "${key}".`);
     const { data, error } = await supabase
       .from('config')
       .select('value')
       .eq('id', key)
       .maybeSingle();
     if (error) throw error;
-    return data && data.value ? JSON.parse(data.value) : null;
+    const parsed = data && data.value ? JSON.parse(data.value) : null;
+    logger.debug(`Retrieved config for key "${key}": ${parsed}`);
+    return parsed;
   } catch (err) {
-    logger.error(`Error getting key ${key}:`, err);
+    logger.error(`Error getting key "${key}":`, { error: err });
     return null;
   }
 }
@@ -36,17 +39,20 @@ async function getValue(key) {
  */
 async function setValue(key, value) {
   try {
+    logger.debug(`Setting config value for key "${key}".`);
     const serialized = JSON.stringify(value);
     const existing = await getValue(key);
     if (existing === null) {
       const { error } = await supabase.from('config').insert([{ id: key, value: serialized }]);
       if (error) throw error;
+      logger.debug(`Inserted new config for key "${key}".`);
     } else {
       const { error } = await supabase.from('config').update({ value: serialized }).eq('id', key);
       if (error) throw error;
+      logger.debug(`Updated existing config for key "${key}".`);
     }
   } catch (err) {
-    logger.error(`Error setting key ${key}:`, err);
+    logger.error(`Error setting key "${key}":`, { error: err });
   }
 }
 
@@ -57,10 +63,12 @@ async function setValue(key, value) {
  */
 async function deleteValue(key) {
   try {
+    logger.debug(`Deleting config for key "${key}".`);
     const { error } = await supabase.from('config').delete().eq('id', key);
     if (error) throw error;
+    logger.debug(`Deleted config for key "${key}".`);
   } catch (err) {
-    logger.error(`Error deleting key ${key}:`, err);
+    logger.error(`Error deleting key "${key}":`, { error: err });
   }
 }
 
@@ -71,11 +79,13 @@ async function deleteValue(key) {
  */
 async function getAllConfigs() {
   try {
+    logger.debug("Retrieving all config records.");
     const { data, error } = await supabase.from('config').select('*');
     if (error) throw error;
+    logger.debug(`Retrieved ${data ? data.length : 0} config records.`);
     return data;
   } catch (err) {
-    logger.error("Error getting all config values:", err);
+    logger.error("Error getting all config values:", { error: err });
     return [];
   }
 }
@@ -88,15 +98,17 @@ async function getAllConfigs() {
  */
 async function getReminderData(key) {
   try {
+    logger.debug(`Getting reminder data for key "${key}".`);
     const { data, error } = await supabase
       .from('reminders')
       .select('scheduled_time, reminder_id')
       .eq('key', key)
       .maybeSingle();
     if (error) throw error;
+    logger.debug(`Reminder data for key "${key}": ${JSON.stringify(data)}`);
     return data;
   } catch (err) {
-    logger.error(`Error getting reminder data for key ${key}:`, err);
+    logger.error(`Error getting reminder data for key "${key}":`, { error: err });
     return null;
   }
 }
@@ -111,21 +123,24 @@ async function getReminderData(key) {
  */
 async function setReminderData(key, scheduled_time, reminder_id) {
   try {
+    logger.debug(`Setting reminder data for key "${key}".`);
     const existing = await getReminderData(key);
     if (!existing) {
       const { error } = await supabase
         .from('reminders')
         .insert([{ key, scheduled_time, reminder_id }]);
       if (error) throw error;
+      logger.debug(`Inserted new reminder data for key "${key}".`);
     } else {
       const { error } = await supabase
         .from('reminders')
         .update({ scheduled_time, reminder_id })
         .eq('key', key);
       if (error) throw error;
+      logger.debug(`Updated reminder data for key "${key}".`);
     }
   } catch (err) {
-    logger.error(`Error setting reminder data for key ${key}:`, err);
+    logger.error(`Error setting reminder data for key "${key}":`, { error: err });
   }
 }
 
@@ -136,10 +151,12 @@ async function setReminderData(key, scheduled_time, reminder_id) {
  */
 async function deleteReminderData(key) {
   try {
+    logger.debug(`Deleting reminder data for key "${key}".`);
     const { error } = await supabase.from('reminders').delete().eq('key', key);
     if (error) throw error;
+    logger.debug(`Deleted reminder data for key "${key}".`);
   } catch (err) {
-    logger.error(`Error deleting reminder data for key ${key}:`, err);
+    logger.error(`Error deleting reminder data for key "${key}":`, { error: err });
   }
 }
 
@@ -152,17 +169,17 @@ async function deleteReminderData(key) {
  */
 async function trackNewMember(memberId, username, joinTime) {
   try {
-    logger.debug(`Tracking new member '${username}' with ID ${memberId} joining at ${joinTime}.`);
+    logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${joinTime}.`);
     const { data, error } = await supabase
       .from('tracked_members')
-      .upsert({ member_id: memberId, join_time: joinTime, username: username });
+      .upsert({ member_id: memberId, join_time: joinTime, username });
     if (error) {
-      logger.warn(`Failed to track ${username} - ${error.message || error}`);
+      logger.warn(`Failed to track member "${username}" (ID: ${memberId}): ${error.message || error}`);
     } else {
-      logger.debug(`Tracked new member: ${username} at ${joinTime}.`);
+      logger.debug(`Successfully tracked member "${username}" (ID: ${memberId}).`);
     }
   } catch (err) {
-    logger.error(`Error tracking new member ${username}:`, err);
+    logger.error(`Error tracking new member "${username}":`, { error: err });
   }
 }
 
@@ -174,7 +191,7 @@ async function trackNewMember(memberId, username, joinTime) {
  */
 async function getTrackedMember(memberId) {
   try {
-    logger.debug(`Retrieving tracking information for member with ID ${memberId}.`);
+    logger.debug(`Retrieving tracking data for member ID "${memberId}".`);
     const { data, error } = await supabase
       .from('tracked_members')
       .select('*')
@@ -182,13 +199,13 @@ async function getTrackedMember(memberId) {
       .maybeSingle();
     if (error) throw error;
     if (data) {
-      logger.debug(`Tracking data for member ${memberId} retrieved: ${JSON.stringify(data)}`);
+      logger.debug(`Found tracking data for member ID "${memberId}": ${JSON.stringify(data)}`);
       return data;
     }
-    logger.debug(`No tracking data found for member ${memberId}.`);
+    logger.debug(`No tracking data found for member ID "${memberId}".`);
     return null;
   } catch (err) {
-    logger.error("Error retrieving tracked data for a member:", err);
+    logger.error(`Error retrieving tracking data for member ID "${memberId}":`, { error: err });
     return null;
   }
 }
@@ -200,20 +217,20 @@ async function getTrackedMember(memberId) {
  */
 async function removeTrackedMember(memberId) {
   try {
-    logger.debug(`Attempting to remove tracking information for member ID ${memberId}.`);
+    logger.debug(`Removing tracking data for member ID "${memberId}".`);
     const { data, error } = await supabase
       .from('tracked_members')
       .delete()
       .eq('member_id', memberId);
     if (error) {
-      logger.error(`Failed to remove tracked member with ID ${memberId}. Error: ${error.message || error}`);
+      logger.error(`Failed to remove tracking data for member ID "${memberId}": ${error.message || error}`);
     } else if (!data || data.length === 0) {
-      logger.debug(`No tracked member found for ID ${memberId}. Nothing to remove.`);
+      logger.debug(`No tracking data found for member ID "${memberId}" to remove.`);
     } else {
-      logger.debug(`Successfully removed tracked member with ID ${memberId}.`);
+      logger.debug(`Successfully removed tracking data for member ID "${memberId}".`);
     }
   } catch (err) {
-    logger.error(`Error removing tracked member:`, err);
+    logger.error("Error removing tracked member:", { error: err });
   }
 }
 
@@ -224,19 +241,19 @@ async function removeTrackedMember(memberId) {
  */
 async function getAllTrackedMembers() {
   try {
-    logger.debug("Retrieving all tracked members from the database.");
+    logger.debug("Retrieving all tracked members.");
     const { data, error } = await supabase
       .from('tracked_members')
       .select('member_id, username, join_time');
     if (error) throw error;
     if (data) {
-      logger.debug(`Retrieved ${data.length} tracked members.`);
+      logger.debug(`Retrieved ${data.length} tracked member(s).`);
       return data;
     }
     logger.debug("No tracked members found.");
     return [];
   } catch (err) {
-    logger.error("Error retrieving all tracked members from Supabase:", err);
+    logger.error("Error retrieving all tracked members:", { error: err });
     return [];
   }
 }

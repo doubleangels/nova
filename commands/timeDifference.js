@@ -6,8 +6,8 @@ const config = require('../config');
 
 /**
  * Module for the /timedifference command.
- * This command calculates the time difference between two places by retrieving their UTC offsets using the Google Geocoding
- * and Timezone APIs.
+ * Calculates the time difference between two places by retrieving their UTC offsets
+ * using the Google Geocoding and Timezone APIs.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,11 +32,11 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer reply to allow time for processing the request.
+      // Defer reply to allow time for processing.
       await interaction.deferReply();
       const place1 = interaction.options.getString('place1');
       const place2 = interaction.options.getString('place2');
-      logger.debug(`/timedifference command received with place1: '${place1}', place2: '${place2}'`);
+      logger.debug("/timedifference command received", { user: interaction.user.tag, place1, place2 });
 
       /**
        * Retrieves the UTC offset for a given city using Google Geocoding and Timezone APIs.
@@ -44,43 +44,46 @@ module.exports = {
        * @returns {number|null} The combined UTC offset in hours, or null if lookup fails.
        */
       async function getUtcOffset(city) {
-        // Build the Geocoding API URL with parameters.
+        // Build the Geocoding API URL.
         const geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json";
         const geocodeParams = new URLSearchParams({
           address: city,
           key: config.googleApiKey
         });
-        // Fetch geocoding data.
+        logger.debug("Fetching geocoding data", { city, requestUrl: `${geocodeUrl}?${geocodeParams.toString()}` });
         const geocodeResponse = await fetch(`${geocodeUrl}?${geocodeParams.toString()}`);
         const geoData = await geocodeResponse.json();
-        // Check if geocoding returned any results.
+
         if (geoData.results && geoData.results.length > 0) {
           const location = geoData.results[0].geometry.location;
           const lat = location.lat;
           const lng = location.lng;
+          logger.debug("Geocoding success", { city, lat, lng });
+
           // Get the current timestamp in seconds.
           const timestamp = Math.floor(Date.now() / 1000);
-          // Build the Timezone API URL with parameters.
+          // Build the Timezone API URL.
           const timezoneUrl = "https://maps.googleapis.com/maps/api/timezone/json";
           const timezoneParams = new URLSearchParams({
             location: `${lat},${lng}`,
             timestamp: timestamp.toString(),
             key: config.googleApiKey
           });
-          // Fetch timezone data.
+          logger.debug("Fetching timezone data", { city, requestUrl: `${timezoneUrl}?${timezoneParams.toString()}` });
           const timezoneResponse = await fetch(`${timezoneUrl}?${timezoneParams.toString()}`);
           const tzData = await timezoneResponse.json();
-          // If the timezone lookup is successful, calculate the total offset.
+
           if (tzData.status === "OK") {
-            const rawOffset = tzData.rawOffset / 3600; // Convert seconds to hours.
-            const dstOffset = tzData.dstOffset / 3600;   // Convert seconds to hours.
+            const rawOffset = tzData.rawOffset / 3600; // seconds to hours.
+            const dstOffset = tzData.dstOffset / 3600;   // seconds to hours.
+            logger.debug("Timezone data retrieved", { city, rawOffset, dstOffset });
             return rawOffset + dstOffset;
           } else {
-            logger.warn(`Timezone lookup failed for city '${city}': ${tzData.status}`);
+            logger.warn("Timezone lookup failed", { city, status: tzData.status });
             return null;
           }
         } else {
-          logger.warn(`Geocoding failed for city '${city}'`);
+          logger.warn("Geocoding lookup failed", { city });
           return null;
         }
       }
@@ -88,10 +91,11 @@ module.exports = {
       // Retrieve UTC offsets for both places.
       const offset1 = await getUtcOffset(place1);
       const offset2 = await getUtcOffset(place2);
+      logger.debug("UTC offsets retrieved", { place1, offset1, place2, offset2 });
 
-      // If either offset is null, inform the user about the failure.
+      // If either offset is null, inform the user.
       if (offset1 === null || offset2 === null) {
-        logger.warn(`Could not retrieve timezones for '${place1}' or '${place2}'`);
+        logger.warn("Failed to retrieve one or both timezones", { place1, offset1, place2, offset2 });
         await interaction.editReply(`❌ Could not retrieve timezones for '${place1}' or '${place2}'.`);
         return;
       }
@@ -99,19 +103,16 @@ module.exports = {
       // Calculate the absolute time difference.
       const timeDiff = Math.abs(offset1 - offset2);
 
-      // Format the place names by trimming and capitalizing the first letter.
+      // Format the place names (trim and capitalize first letter).
       const formattedPlace1 = place1.trim().charAt(0).toUpperCase() + place1.trim().slice(1);
       const formattedPlace2 = place2.trim().charAt(0).toUpperCase() + place2.trim().slice(1);
 
-      // Create the reply message.
+      // Create and send the reply message.
       const message = `⏳ The time difference between **${formattedPlace1}** and **${formattedPlace2}** is **${timeDiff} hours**.`;
-
-      // Edit the deferred reply with the result.
       await interaction.editReply(message);
-      logger.debug("Time difference calculation completed successfully.");
+      logger.debug("Time difference calculation completed successfully", { timeDiff, formattedPlace1, formattedPlace2 });
     } catch (error) {
-      // Log and handle any errors.
-      logger.error(`Error in /timedifference command: ${error}`);
+      logger.error("Error in /timedifference command", { error });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

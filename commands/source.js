@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Module for the /source command.
- * This command provides users with links to the bot's resources.
+ * Provides users with links to the bot's resources.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -17,8 +17,8 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Log the command execution.
-      logger.debug(`/source command received from ${interaction.user.tag}`);
+      // Log that the /source command was received.
+      logger.debug("/source command received", { user: interaction.user.tag });
       
       // Create an embed with the bot's resource links.
       const embed = new EmbedBuilder()
@@ -30,14 +30,14 @@ module.exports = {
           { name: "🗄️ Supabase Database", value: "[🔗 Click Here](https://supabase.com/dashboard/project/amietgblnpazkunprnxo/editor/29246?schema=public)", inline: false }
         );
 
-      // Log success of embed creation.
-      logger.debug(`Bot resources embed created successfully for ${interaction.user.tag}`);
+      // Log that the embed was created successfully.
+      logger.debug("Bot resources embed created", { user: interaction.user.tag });
       
       // Reply to the interaction with the embed.
       await interaction.reply({ embeds: [embed] });
     } catch (error) {
-      // Log any errors and notify the user.
-      logger.error(`Error in /source command: ${error}`);
+      // Log any errors that occur during command execution.
+      logger.error("Error in /source command", { error });
       await interaction.reply({ content: "⚠️ An error occurred while processing your request.", ephemeral: true });
     }
   }

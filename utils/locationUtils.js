@@ -12,45 +12,46 @@ const config = require('../config');
  *                                        If the coordinates cannot be retrieved, returns [null, null].
  */
 async function getCoordinates(city) {
+  // Construct the base URL and query parameters for the geocoding API.
+  const geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json";
+  const params = new URLSearchParams({
+    address: city,
+    key: config.googleApiKey
+  });
+
   try {
-    // Construct the Google Geocoding API URL and query parameters.
-    const geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json";
-    const params = new URLSearchParams({
-      address: city,
-      key: config.googleApiKey
-    });
-    
-    // Log the API request details. The API key is redacted in the logs.
-    logger.debug(`Requesting geocoding for city: ${city} with URL: ${geocodeUrl}?${params.toString()} (API key redacted)`);
-    
-    // Fetch data from the Google Geocoding API.
+    // Log the outgoing request without exposing the API key.
+    logger.debug(
+      `Requesting geocoding for city "${city}". URL: ${geocodeUrl}?${params.toString().replace(config.googleApiKey, '[REDACTED]')}`
+    );
+
     const response = await fetch(`${geocodeUrl}?${params.toString()}`);
-    logger.debug(`Received response from Google Geocoding API with status code: ${response.status}`);
-    
-    if (response.ok) {
-      // Parse the JSON response.
-      const data = await response.json();
-      logger.debug(`Google Geocoding API response for city '${city}': ${JSON.stringify(data, null, 2)}`);
-      
-      // Check if any results were returned.
-      if (data.results && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
-        const lat = location.lat;
-        const lon = location.lng;
-        logger.debug(`Coordinates for city '${city}' retrieved: lat=${lat}, lon=${lon}`);
-        return [lat, lon];
-      } else {
-        logger.warn(`No geocoding results found for city: '${city}'.`);
-      }
+    logger.debug(`Received response for city "${city}" with status code: ${response.status}`);
+
+    if (!response.ok) {
+      logger.error(`Non-OK response from Google Geocoding API for city "${city}". Status: ${response.status}`);
+      return [null, null];
+    }
+
+    const data = await response.json();
+    logger.debug(`Google Geocoding API JSON response for city "${city}": ${JSON.stringify(data)}`);
+
+    if (data.results && data.results.length > 0) {
+      const location = data.results[0].geometry.location;
+      const lat = location.lat;
+      const lon = location.lng;
+      logger.info(`Coordinates retrieved for city "${city}": latitude=${lat}, longitude=${lon}`);
+      return [lat, lon];
     } else {
-      logger.error(`Google Geocoding API returned non-200 status code: ${response.status} for city: '${city}'.`);
+      logger.warn(`No results returned from Google Geocoding API for city "${city}".`);
+      return [null, null];
     }
   } catch (error) {
-    logger.error(`Error fetching coordinates for city '${city}': ${error}`);
+    // Include error stack if available for better debugging.
+    logger.error(`Error fetching coordinates for city "${city}": ${error.message}`, { error });
+    return [null, null];
   }
-  
-  // Return null coordinates if any step fails.
-  return [null, null];
 }
 
 module.exports = { getCoordinates };
+

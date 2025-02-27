@@ -5,7 +5,7 @@ const { setValue } = require('../utils/supabase');
 
 /**
  * Module for the /trollmode command.
- * This command toggles kicking of accounts younger than a specified age.
+ * Toggles kicking of accounts younger than a specified age.
  * Only users with Administrator permissions can execute this command.
  */
 module.exports = {
@@ -36,37 +36,35 @@ module.exports = {
   async execute(interaction) {
     // Check if the user has Administrator permissions.
     if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn(`Unauthorized /trollmode attempt by ${interaction.user.tag}`);
+      logger.warn("Unauthorized /trollmode attempt", { user: interaction.user.tag });
       await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
       return;
     }
 
     try {
-      logger.debug(`/trollmode command received from ${interaction.user.tag}`);
+      logger.debug("/trollmode command received", { user: interaction.user.tag });
       
       // Retrieve the 'enabled' option and the account age threshold.
       const enabledInput = interaction.options.getString('enabled');
       const age = interaction.options.getInteger('age') ?? 30;
-      // Determine if troll mode should be enabled.
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
-
-      logger.debug(`Troll mode toggle: ${isEnabled ? 'Enabled' : 'Disabled'}, Minimum age: ${age} days`);
+      logger.debug("Parsed troll mode command", { isEnabled, age });
 
       // Save the troll mode settings in the database.
       await setValue('troll_mode_enabled', isEnabled);
       await setValue('troll_mode_account_age', age);
+      logger.debug("Troll mode settings saved", { isEnabled, age });
 
-      // Prepare the response message based on the mode.
+      // Prepare the response message.
       const responseMessage = isEnabled
         ? `👹 Troll mode has been ✅ **enabled**. Minimum account age: **${age}** days.`
         : `👹 Troll mode has been ❌ **disabled**.`;
 
-      // Reply to the interaction with the confirmation message.
+      // Reply to the interaction.
       await interaction.reply(responseMessage);
-      logger.debug(`Troll mode ${isEnabled ? 'enabled' : 'disabled'} by ${interaction.user.tag}; account age threshold = ${age} days.`);
-    } catch (e) {
-      // Log any errors and notify the user.
-      logger.error(`Error in /trollmode command: ${e}`);
+      logger.debug("Troll mode command executed", { user: interaction.user.tag, isEnabled, age });
+    } catch (error) {
+      logger.error("Error in /trollmode command", { error });
       await interaction.reply({ content: '⚠️ An error occurred while toggling troll mode. Please try again later.', ephemeral: true });
     }
   }

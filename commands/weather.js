@@ -7,7 +7,7 @@ const { getCoordinates } = require('../utils/locationUtils');
 
 /**
  * Module for the /weather command.
- * This command retrieves the current weather for a specified place using the PirateWeather API.
+ * Retrieves the current weather for a specified place using the PirateWeather API.
  * It first obtains the coordinates of the place using a helper function and then fetches the weather data.
  */
 module.exports = {
@@ -29,17 +29,17 @@ module.exports = {
     try {
       // Defer the reply to allow time for processing and API calls.
       await interaction.deferReply();
-      logger.debug(`/weather command received from ${interaction.user.tag}`);
-      
+      logger.debug("/weather command received", { user: interaction.user.tag });
+
       // Retrieve the 'place' option provided by the user.
       const place = interaction.options.getString('place');
-      logger.debug(`User input for place: '${place}'`);
-
+      logger.debug("User input for place", { place });
+      
       // Get the latitude and longitude for the provided place using a helper function.
       const [lat, lon] = await getCoordinates(place);
       if (lat === null || lon === null) {
-        logger.warn(`Failed to get coordinates for '${place}'`);
-        await interaction.editReply(`Could not find the location for '${place}'. Try another city.`);
+        logger.warn("Failed to get coordinates", { place });
+        await interaction.editReply(`❌ Could not find the location for '${place}'. Try another city.`);
         return;
       }
       
@@ -47,20 +47,21 @@ module.exports = {
       const formattedPlace = place.split(' ')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ');
-      logger.debug(`Formatted place: '${formattedPlace}' (Lat: ${lat}, Lon: ${lon})`);
+      logger.debug("Formatted place", { formattedPlace, lat, lon });
       
       // Build the PirateWeather API URL using the coordinates.
       const url = `https://api.pirateweather.net/forecast/${config.pirateWeatherApiKey}/${lat},${lon}`;
       // Set additional parameters; here, we're using SI units.
       const params = new URLSearchParams({ units: "si" });
-      logger.debug(`Making PirateWeather API request to: ${url}?${params.toString()}`);
-
+      const requestUrl = `${url}?${params.toString()}`;
+      logger.debug("Making PirateWeather API request", { requestUrl });
+      
       // Fetch weather data from PirateWeather.
-      const response = await fetch(`${url}?${params.toString()}`);
+      const response = await fetch(requestUrl);
       if (response.status === 200) {
         const data = await response.json();
-        logger.debug(`Received weather data: ${JSON.stringify(data, null, 2)}`);
-
+        logger.debug("Received weather data", { data });
+        
         // Extract current weather details from the response.
         const currently = data.currently;
         // Get daily forecast data.
@@ -93,7 +94,12 @@ module.exports = {
           forecastText += `**Day ${i+1}:** ${daySummary}\n🌡 High: ${highC}°C / ${highF}°F, Low: ${lowC}°C / ${lowF}°F\n\n`;
         }
         
-        logger.debug(`Extracted weather data for ${formattedPlace}: Temp ${tempC}°C, Feels Like ${feelsLikeC}°C, Humidity ${humidity}%`);
+        logger.debug("Extracted weather details", {
+          formattedPlace,
+          temperature: `${tempC}°C / ${tempF}°F`,
+          feelsLike: `${feelsLikeC}°C / ${feelsLikeF}°F`,
+          humidity: `${humidity}%`
+        });
         
         // Create an embed to display the weather data.
         const embed = new EmbedBuilder()
@@ -119,14 +125,15 @@ module.exports = {
         
         // Send the embed as the reply.
         await interaction.editReply({ embeds: [embed] });
+        logger.debug("Weather embed sent successfully", { formattedPlace });
       } else {
         // If the API response is not OK, log a warning and inform the user.
-        logger.warn(`PirateWeather API error: ${response.status}`);
+        logger.warn("PirateWeather API error", { status: response.status });
         await interaction.editReply(`Error: PirateWeather API returned status code ${response.status}.`);
       }
     } catch (error) {
       // Log any unexpected errors and send an error message to the user.
-      logger.error(`Error in /weather command: ${error}`);
+      logger.error("Error in /weather command", { error });
       await interaction.editReply({ content: "An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }

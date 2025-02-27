@@ -6,7 +6,7 @@ const config = require('../config');
 
 /**
  * Module for the /anime command.
- * This command searches for an anime on MyAnimeList based on the provided title,
+ * Searches for an anime on MyAnimeList based on the provided title,
  * retrieves its details, and sends an embed with the information.
  */
 module.exports = {
@@ -25,63 +25,56 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to give the bot more time to process the command.
+      // Defer reply to allow additional processing time.
       await interaction.deferReply();
-      logger.debug(`/anime command received from ${interaction.user.tag}`);
+      logger.debug("Received /anime command", { user: interaction.user.tag });
 
-      // Retrieve and log the user input for the anime title.
+      // Retrieve and format the anime title.
       const titleQuery = interaction.options.getString('title');
-      logger.debug(`User input for title: '${titleQuery}'`);
-
-      // Trim any extra whitespace from the title.
+      logger.debug("User input title", { titleQuery });
       const formattedTitle = titleQuery.trim();
-      logger.debug(`Formatted title: '${formattedTitle}'`);
+      logger.debug("Formatted title", { formattedTitle });
 
-      // Construct the search URL for the MyAnimeList API.
+      // Construct the search URL and headers.
       const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(formattedTitle)}&limit=1`;
-      // Setup the headers with the MAL client ID.
       const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-      logger.debug(`Making MyAnimeList API request to: ${searchUrl} with headers ${JSON.stringify(headers)}`);
+      logger.debug("Making MAL search request", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
-      // Make the search request to the MyAnimeList API.
+      // Perform the search request.
       const searchResponse = await fetch(searchUrl, { headers });
-      logger.debug(`MyAnimeList API (search) Response Status: ${searchResponse.status}`);
+      logger.debug("MAL search response", { status: searchResponse.status });
 
       if (searchResponse.ok) {
-        // Parse the JSON response from the search request.
         const searchData = await searchResponse.json();
-        logger.debug(`Received MAL search data: ${JSON.stringify(searchData, null, 2)}`);
+        logger.debug("Received MAL search data", { searchData });
 
-        // Check if there is at least one result.
+        // Check for results.
         if (searchData.data && searchData.data.length > 0) {
-          // Extract basic anime information from the first result.
           const animeNode = searchData.data[0].node;
           const animeId = animeNode.id;
           const animeTitle = animeNode.title || "Unknown";
           const imageUrl = animeNode.main_picture ? animeNode.main_picture.medium : null;
           const malLink = animeId ? `https://myanimelist.net/anime/${animeId}` : "N/A";
 
-          // Construct the URL for fetching detailed anime information.
+          // Construct the details URL.
           const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-          logger.debug(`Making MAL details request to: ${detailsUrl} with headers ${JSON.stringify(headers)}`);
-          
-          // Make the request for additional details.
+          logger.debug("Making MAL details request", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
+
+          // Request detailed anime information.
           const detailsResponse = await fetch(detailsUrl, { headers });
-          logger.debug(`MyAnimeList API (details) Response Status: ${detailsResponse.status}`);
+          logger.debug("MAL details response", { status: detailsResponse.status });
 
           if (detailsResponse.ok) {
-            // Parse the detailed data response.
             const detailsData = await detailsResponse.json();
             const synopsis = detailsData.synopsis || "No synopsis available.";
             const rating = detailsData.mean || "N/A";
             const genresArray = detailsData.genres || [];
-            // Format the genres as a comma-separated string.
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
             const releaseDate = detailsData.start_date || "Unknown";
+            
+            logger.debug("Extracted anime details", { animeTitle, rating, genres, releaseDate });
 
-            logger.debug(`Extracted MAL Data - Title: ${animeTitle}, Rating: ${rating}, Genres: ${genres}`);
-
-            // Build the embed message to be sent back to the user.
+            // Create an embed for the anime details.
             const embed = new EmbedBuilder()
               .setTitle(`📺 **${animeTitle} (${releaseDate})**`)
               .setDescription(`📜 **Synopsis:** ${synopsis}`)
@@ -93,31 +86,27 @@ module.exports = {
               )
               .setFooter({ text: "Powered by MyAnimeList API" });
             
-            // Add a thumbnail if an image URL is available.
             if (imageUrl) {
               embed.setThumbnail(imageUrl);
             }
             
-            // Edit the original reply with the constructed embed.
+            // Send the embed back to the user.
             await interaction.editReply({ embeds: [embed] });
+            logger.debug("Anime embed sent successfully", { animeTitle });
           } else {
-            // Log and inform the user if there was an error fetching detailed information.
-            logger.warn(`Error fetching extra details from MAL: ${detailsResponse.status}`);
+            logger.warn("Error fetching MAL details", { detailsStatus: detailsResponse.status });
             await interaction.editReply("⚠️ Error fetching additional anime details. Please try again later.");
           }
         } else {
-          // Log and inform the user if no anime results were found.
-          logger.warn(`No results found for title: '${formattedTitle}'`);
+          logger.warn("No anime results found", { formattedTitle });
           await interaction.editReply(`❌ No anime found for **${formattedTitle}**. Try another title!`);
         }
       } else {
-        // Log and inform the user if the initial API call failed.
-        logger.warn(`MyAnimeList API error: ${searchResponse.status}`);
+        logger.warn("MAL API search error", { status: searchResponse.status });
         await interaction.editReply(`⚠️ Error: MAL API returned status code ${searchResponse.status}.`);
       }
     } catch (e) {
-      // Log any unexpected errors and notify the user.
-      logger.error(`Error in /anime command: ${e}`);
+      logger.error("Error in /anime command", { error: e });
       await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }
