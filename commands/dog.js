@@ -2,7 +2,6 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const dayjs = require('dayjs');
 
 /**
  * Module for the /dog command.
@@ -34,9 +33,7 @@ module.exports = {
         const imageUrl = data.message;
         
         if (imageUrl) {
-          // Append a timestamp query to avoid potential caching issues.
-          const timestamp = dayjs().unix();
-          const imageUrlWithTimestamp = `${imageUrl}?timestamp=${timestamp}`;
+          const imageUrlWithTimestamp = `${imageUrl}`;
           logger.debug("Fetching dog image file:", { imageUrl: imageUrlWithTimestamp });
           
           // Fetch the dog image file using axios.
