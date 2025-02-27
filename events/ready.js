@@ -1,3 +1,4 @@
+const { ActivityType } = require('discord.js');
 const logger = require('../logger');
 const { initializeRemindersTable, rescheduleReminder, rescheduleAllMuteKicks } = require('../utils/reminderUtils');
 const { getValue } = require('../utils/supabase');
@@ -8,12 +9,11 @@ module.exports = {
   async execute(client) {
     logger.info("Bot is online! Setting up status and activity.");
 
-    // Set bot presence and activity.
     try {
       await client.user.setPresence({
         activities: [{
           name: "for ways to assist!",
-          type: "WATCHING"
+          type: ActivityType.Watching
         }],
         status: "online"
       });
