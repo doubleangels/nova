@@ -23,7 +23,7 @@ module.exports = {
       logger.debug("/cat command received:", { user: interaction.user.tag });
 
       // Create a unique timestamp to avoid cached images using day.js.
-      const catApiUrl = `https://cataas.com/cat`;
+      const catApiUrl = `https://cataas.com/cat/cute`;
       logger.debug("Fetching cat image:", { catApiUrl });
 
       // Fetch the cat image from the Cataas API using axios with responseType 'arraybuffer'.
