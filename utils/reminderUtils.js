@@ -28,19 +28,6 @@ function calculateRemainingTime(scheduledTime) {
 }
 
 /**
- * Executes a task function safely, logging any errors that occur.
- *
- * @param {Function} taskFn - The asynchronous function to execute.
- */
-async function safeTask(taskFn) {
-  try {
-    await taskFn();
-  } catch (error) {
-    logger.error("Error in safeTask:", error);
-  }
-}
-
-/**
  * Sends a scheduled message to a reminder channel.
  *
  * This function sends an initial message (if provided), waits for a specified interval,
@@ -111,7 +98,7 @@ async function sendScheduledMessage({ initialMessage, reminderMessage, interval,
  */
 async function handleReminder(key, initialMessage, reminderMessage, interval, client) {
   try {
-    logger.debug(`handleReminder invoked for key '${key}' with interval ${interval}.`);
+    logger.debug(`handleReminder invoked with interval ${interval}.`);
     
     const existingData = await getReminderData(key);
     if (existingData && existingData.scheduled_time) {
@@ -125,12 +112,12 @@ async function handleReminder(key, initialMessage, reminderMessage, interval, cl
     
     // Save the reminder data to the database.
     await setReminderData(key, scheduledTime, reminderId);
-    logger.debug(`Reminder data set for key '${key}' with reminder_id '${reminderId}' and scheduled_time '${scheduledTime}'.`);
+    logger.debug(`Reminder data set with reminder_id '${reminderId}' and scheduled_time '${scheduledTime}'.`);
     
     // Retrieve the role to mention in the reminder.
     const role = await getValue("reminder_role");
     if (role) {
-      logger.debug(`Role '${role}' retrieved for reminder key '${key}'. Scheduling sendScheduledMessage.`);
+      logger.debug(`Role '${role}' retrieved for reminders, scheduling message.`);
       await sendScheduledMessage({
         initialMessage,
         reminderMessage: `🔔 <@&${role}> ${reminderMessage}`,
@@ -139,10 +126,10 @@ async function handleReminder(key, initialMessage, reminderMessage, interval, cl
         client
       });
     } else {
-      logger.warn(`No role found for reminder key '${key}'; cannot mention in reminder message.`);
+      logger.warn(`No role found for reminders, skipping reminder message.`);
     }
   } catch (e) {
-    logger.error(`Error handling reminder for key '${key}':`, e);
+    logger.error(`Error handling reminder!`, e);
   }
 }
 
@@ -158,13 +145,7 @@ async function handleReminder(key, initialMessage, reminderMessage, interval, cl
  */
 async function rescheduleReminder(key, role, client) {
   try {
-    logger.debug(`Attempting to reschedule reminder for key '${key}' with role '${role}'.`);
-    
-    // Only the 'disboard' reminder is supported.
-    if (key !== "disboard") {
-      logger.debug(`Reminder key '${key}' is not supported. Only 'disboard' is handled.`);
-      return;
-    }
+    logger.debug(`Attempting to reschedule reminder with role '${role}'.`);
     
     const reminderData = await getReminderData(key);
     if (!reminderData) {
@@ -188,20 +169,18 @@ async function rescheduleReminder(key, role, client) {
       
       // Schedule the sending of the reminder after the remaining time.
       setTimeout(async () => {
-        await safeTask(async () => {
-          await sendScheduledMessage({
-            initialMessage: null,
-            reminderMessage: `🔔 <@&${role}> It's time to bump on Disboard!`,
-            interval: remainingTimeSeconds,
-            key,
-            client
-          });
+        await sendScheduledMessage({
+          initialMessage: null,
+          reminderMessage: `🔔 <@&${role}> It's time to bump on Disboard!`,
+          interval: remainingTimeSeconds,
+          key,
+          client
         });
       }, remainingTimeMs);
       
       logger.debug(`Reschedule task created for reminder ${reminderId} with a delay of ${remainingTimeSeconds} seconds.`);
     } else {
-      logger.warn(`Insufficient reminder data for key '${key}'; cannot reschedule.`);
+      logger.warn(`Insufficient reminder data; cannot reschedule.`);
     }
   } catch (e) {
     logger.error(`Error while attempting to reschedule the Disboard reminder: ${e}`);
@@ -210,7 +189,6 @@ async function rescheduleReminder(key, role, client) {
 
 module.exports = {
   calculateRemainingTime,
-  safeTask,
   sendScheduledMessage,
   handleReminder,
   rescheduleReminder
