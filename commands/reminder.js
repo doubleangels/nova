@@ -56,7 +56,7 @@ module.exports = {
         // Reply to the user confirming setup.
         await interaction.reply(
           `✅ **Reminder setup complete!**\n` +
-          `📢 Reminders will be sent in ${channelOption.name}.\n` +
+          `📢 Reminders will be sent in <#${channelOption.name}>.\n` +
           `🎭 The role to be pinged is <@&${roleOption.id}>.`
         );
         return;
@@ -76,7 +76,7 @@ module.exports = {
       let channelStr = 'Not set!';
       if (channelId) {
         const channelObj = interaction.guild.channels.cache.get(channelId);
-        channelStr = channelObj ? channelObj.name : 'Not set!';
+        channelStr = channelObj ? `<#${channelId}>` : 'Not set!';
       }
       // Format the role for display.
       const roleStr = roleId ? `<@&${roleId}>` : 'Not set!';
