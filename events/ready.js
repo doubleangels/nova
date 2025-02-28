@@ -21,7 +21,7 @@ module.exports = {
       // Set the bot's presence with a custom activity.
       await client.user.setPresence({
         activities: [{
-          name: "for ways to assist!",
+          name: "for ways to assist! ❤️",
           type: ActivityType.Watching
         }],
         status: "online"
