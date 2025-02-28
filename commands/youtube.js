@@ -43,7 +43,8 @@ module.exports = {
         part: "snippet",
         q: formattedQuery,
         type: "video",
-        maxResults: "1"
+        maxResults: "1",
+        order: "viewCount"
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making YouTube API request:", { requestUrl });

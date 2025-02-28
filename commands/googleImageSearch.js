@@ -61,7 +61,8 @@ module.exports = {
         cx: config.imageSearchEngineId,
         q: query,
         searchType: "image",
-        num: resultsCount.toString()
+        num: resultsCount.toString(),
+        start: "1"
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making Google Image API request:", { requestUrl });
