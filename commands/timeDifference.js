@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch');
+const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
@@ -54,13 +54,9 @@ module.exports = {
         const geocodeRequestUrl = `${geocodeUrl}?${geocodeParams.toString()}`;
         logger.debug("Fetching geocoding data:", { city, requestUrl: geocodeRequestUrl });
         
-        // Fetch geocoding data using node-fetch.
-        const geocodeResponse = await fetch(geocodeRequestUrl);
-        if (!geocodeResponse.ok) {
-          logger.warn("Geocoding request failed:", { city, status: geocodeResponse.status });
-          return null;
-        }
-        const geoData = await geocodeResponse.json();
+        // Fetch geocoding data using axios.
+        const geocodeResponse = await axios.get(geocodeRequestUrl);
+        const geoData = geocodeResponse.data;
 
         if (geoData.results && geoData.results.length > 0) {
           const location = geoData.results[0].geometry.location;
@@ -79,13 +75,9 @@ module.exports = {
           const timezoneRequestUrl = `${timezoneUrl}?${timezoneParams.toString()}`;
           logger.debug("Fetching timezone data:", { city, requestUrl: timezoneRequestUrl });
           
-          // Fetch timezone data using node-fetch.
-          const timezoneResponse = await fetch(timezoneRequestUrl);
-          if (!timezoneResponse.ok) {
-            logger.warn("Timezone request failed:", { city, status: timezoneResponse.status });
-            return null;
-          }
-          const tzData = await timezoneResponse.json();
+          // Fetch timezone data using axios.
+          const timezoneResponse = await axios.get(timezoneRequestUrl);
+          const tzData = timezoneResponse.data;
 
           if (tzData.status === "OK") {
             const rawOffset = tzData.rawOffset / 3600; // seconds to hours.

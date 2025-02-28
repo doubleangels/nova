@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch');
+const axios = require('axios');
 
 /**
  * Module for the /wikipedia command.
@@ -45,13 +45,13 @@ module.exports = {
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making Wikipedia API request:", { requestUrl });
       
-      // Make the API request using node-fetch.
-      const response = await fetch(requestUrl);
+      // Make the API request using axios.
+      const response = await axios.get(requestUrl);
       logger.debug("Wikipedia API response:", { status: response.status });
       
-      if (response.ok) {
+      if (response.status === 200) {
         // Parse the JSON response.
-        const data = await response.json();
+        const data = response.data;
         logger.debug("Received Wikipedia data:", { data });
         
         // Extract the search results.

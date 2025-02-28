@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch');
+const axios = require('axios');
 
 /**
  * Module for the /dog command.
@@ -20,30 +20,28 @@ module.exports = {
     try {
       // Defer reply to allow asynchronous operations.
       await interaction.deferReply();
-      logger.debug("/dog command received:", { user: interaction.user.tag });
-      
+      logger.debug("/cat command received:", { user: interaction.user.tag });
       const dogApiUrl = "https://dog.ceo/api/breeds/image/random";
       logger.debug("Fetching random dog image data:", { url: dogApiUrl });
       
-      // Fetch the random dog image data using node-fetch.
-      const response = await fetch(dogApiUrl);
+      // Fetch the random dog image data using axios.
+      const response = await axios.get(dogApiUrl);
       logger.debug("Dog CEO API response received:", { status: response.status });
       
-      if (response.ok) {
-        const data = await response.json();
+      if (response.status === 200) {
+        const data = response.data;
         const imageUrl = data.message;
         
         if (imageUrl) {
           const imageUrlWithTimestamp = `${imageUrl}`;
           logger.debug("Fetching dog image file:", { imageUrl: imageUrlWithTimestamp });
           
-          // Fetch the dog image file using node-fetch.
-          const imageResponse = await fetch(imageUrlWithTimestamp);
+          // Fetch the dog image file using axios.
+          const imageResponse = await axios.get(imageUrlWithTimestamp, { responseType: 'arraybuffer' });
           logger.debug("Dog image file response:", { status: imageResponse.status });
           
-          if (imageResponse.ok) {
-            const arrayBuffer = await imageResponse.arrayBuffer();
-            const imageBuffer = Buffer.from(arrayBuffer);
+          if (imageResponse.status === 200) {
+            const imageBuffer = Buffer.from(imageResponse.data);
             const filename = "dog.jpg";
             const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
             

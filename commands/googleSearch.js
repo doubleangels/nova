@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch');
+const axios = require('axios');
 const config = require('../config');
 
 module.exports = {
@@ -53,13 +53,13 @@ module.exports = {
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making Google API request:", { requestUrl });
 
-      // Fetch data from the API using node-fetch.
-      const response = await fetch(requestUrl);
+      // Fetch data from the API using axios.
+      const response = await axios.get(requestUrl);
       logger.debug("Google API response:", { status: response.status });
 
-      if (response.ok) {
+      if (response.status === 200) {
         // Parse the JSON response.
-        const data = await response.json();
+        const data = response.data;
         logger.debug("Received Google Search data:", { data });
 
         if (data.items && data.items.length > 0) {
@@ -122,7 +122,7 @@ module.exports = {
             await i.update({ embeds: [generateEmbed(currentIndex)], components: [row] });
           });
 
-          // Disable buttons after the collector expires.
+          // When collector ends, disable the buttons.
           collector.on('end', async () => {
             previousButton.setDisabled(true);
             nextButton.setDisabled(true);
@@ -133,7 +133,7 @@ module.exports = {
           await interaction.editReply(`❌ No search results found for **${formattedQuery}**. Try refining your query!`);
         }
       } else {
-        const errorBody = await response.text();
+        const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
         await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
       }
