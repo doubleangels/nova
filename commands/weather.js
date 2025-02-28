@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const fetch = require('node-fetch');
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates } = require('../utils/locationUtils');
@@ -57,10 +57,10 @@ module.exports = {
       const requestUrl = `${url}?${params.toString()}`;
       logger.debug("Making PirateWeather API request:", { requestUrl });
       
-      // Fetch weather data from PirateWeather using axios.
-      const response = await axios.get(requestUrl);
-      if (response.status === 200) {
-        const data = response.data;
+      // Fetch weather data from PirateWeather using node-fetch.
+      const response = await fetch(requestUrl);
+      if (response.ok) {
+        const data = await response.json();
         logger.debug("Received weather data:", { data });
         
         // Extract current weather details from the response.

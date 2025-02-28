@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const fetch = require('node-fetch');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 dayjs.extend(utc);
@@ -45,18 +45,14 @@ module.exports = {
       const geocodeRequestUrl = `${geocodeUrl}?${geocodeParams.toString()}`;
       logger.debug("Fetching geocoding data:", { requestUrl: geocodeRequestUrl });
       
-      // Fetch geocoding data using axios.
-      const geocodeResponse = await axios.get(geocodeRequestUrl);
-      
-      // Check if the Geocoding API response is successful.
-      if (geocodeResponse.status !== 200) {
+      // Fetch geocoding data using node-fetch.
+      const geocodeResponse = await fetch(geocodeRequestUrl);
+      if (!geocodeResponse.ok) {
         logger.warn("Google Geocoding API error:", { status: geocodeResponse.status });
         await interaction.editReply("⚠️ Google Geocoding API error. Try again later.");
         return;
       }
-      
-      // Parse the geocoding data.
-      const geoData = geocodeResponse.data;
+      const geoData = await geocodeResponse.json();
       logger.debug("Received geocoding data:", { geoData });
       
       // Ensure that at least one result was returned.
@@ -85,18 +81,14 @@ module.exports = {
       const timezoneRequestUrl = `${timezoneUrl}?${timezoneParams.toString()}`;
       logger.debug("Fetching timezone data:", { requestUrl: timezoneRequestUrl });
       
-      // Fetch timezone data using axios.
-      const timezoneResponse = await axios.get(timezoneRequestUrl);
-      
-      // Check if the Time Zone API response is successful.
-      if (timezoneResponse.status !== 200) {
+      // Fetch timezone data using node-fetch.
+      const timezoneResponse = await fetch(timezoneRequestUrl);
+      if (!timezoneResponse.ok) {
         logger.warn("Google Time Zone API error:", { status: timezoneResponse.status });
         await interaction.editReply("⚠️ Google Time Zone API error. Try again later.");
         return;
       }
-      
-      // Parse the timezone data.
-      const tzData = timezoneResponse.data;
+      const tzData = await timezoneResponse.json();
       logger.debug("Received timezone data:", { tzData });
       
       // Check if the API returned a valid timezone.
@@ -113,7 +105,7 @@ module.exports = {
       const utcOffset = rawOffset + dstOffset;       // Total UTC offset in hours.
       const isDST = dstOffset > 0 ? "Yes" : "No";
       
-      // Calculate the local time by adding the UTC offset (in hours) to the current UTC time using day.js.
+      // Calculate the local time by adding the UTC offset (in hours) to the current UTC time.
       const localTime = dayjs.utc().add(utcOffset, 'hour');
       const formattedTime = localTime.format('YYYY-MM-DD HH:mm:ss');
       

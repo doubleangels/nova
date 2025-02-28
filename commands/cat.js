@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const fetch = require('node-fetch');
 
 /**
  * Module for the /cat command.
@@ -22,18 +22,20 @@ module.exports = {
       await interaction.deferReply();
       logger.debug("/cat command received:", { user: interaction.user.tag });
 
-      // Create a unique timestamp to avoid cached images using day.js.
+      // Define the Cataas API URL.
       const catApiUrl = `https://cataas.com/cat/cute`;
       logger.debug("Fetching cat image:", { catApiUrl });
 
-      // Fetch the cat image from the Cataas API using axios with responseType 'arraybuffer'.
-      const response = await axios.get(catApiUrl, { responseType: 'arraybuffer', headers: { 'Accept': 'image/*' } });
+      // Fetch the cat image using node-fetch.
+      const response = await fetch(catApiUrl, { headers: { 'Accept': 'image/*' } });
       logger.debug("Cataas API response:", { status: response.status });
 
-      if (response.status === 200) {
-        // Convert the response data to a buffer using binary encoding.
-        const imageBuffer = Buffer.from(response.data);
+      if (response.ok) {
+        // Convert the response to an ArrayBuffer and then to a Buffer.
+        const arrayBuffer = await response.arrayBuffer();
+        const imageBuffer = Buffer.from(arrayBuffer);
         const filename = "cat.jpg";
+
         // Create an attachment from the image buffer.
         const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
 

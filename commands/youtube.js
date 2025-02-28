@@ -1,13 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const fetch = require('node-fetch');
 const config = require('../config');
 
-/**
- * Module for the /youtube command.
- * Searches YouTube for videos related to a given query and returns the top result.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
@@ -35,7 +31,7 @@ module.exports = {
       
       const formattedQuery = query.trim();
       logger.debug("Formatted query:", { formattedQuery });
-
+      
       // Construct the YouTube API URL with the required parameters.
       const searchUrl = "https://www.googleapis.com/youtube/v3/search";
       const params = new URLSearchParams({
@@ -43,18 +39,19 @@ module.exports = {
         part: "snippet",
         q: formattedQuery,
         type: "video",
-        maxResults: "1"
+        maxResults: "1",
+        order: "viewCount"
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making YouTube API request:", { requestUrl });
       
-      // Make the API request using axios.
-      const response = await axios.get(requestUrl);
+      // Make the API request using node-fetch.
+      const response = await fetch(requestUrl);
       logger.debug("YouTube API response:", { status: response.status });
       
-      if (response.status === 200) {
+      if (response.ok) {
         // Parse the JSON response.
-        const data = response.data;
+        const data = await response.json();
         logger.debug("Received YouTube data:", { data });
         
         // Check if the API returned any items.
