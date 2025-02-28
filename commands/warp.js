@@ -39,6 +39,10 @@ module.exports = {
    * @param {CommandInteraction} interaction
    */
   async execute(interaction) {
+    // Temporarily disable the command
+    interaction.reply('This command is currently disabled due to a bug. Please check back later.');
+    return;
+
     await interaction.deferReply();
     const timestamp = dayjs().format();
     const user = interaction.options.getUser('user');
