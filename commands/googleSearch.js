@@ -47,7 +47,8 @@ module.exports = {
         key: config.googleApiKey,
         cx: config.searchEngineId,
         q: formattedQuery,
-        num: resultsCount.toString()
+        num: resultsCount.toString(),
+        start: "1"
       });
       const requestUrl = `${searchUrl}?${params.toString()}`;
       logger.debug("Making Google API request:", { requestUrl });

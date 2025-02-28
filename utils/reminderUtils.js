@@ -53,13 +53,13 @@ async function handleReminder(message, delay) {
     }
 
     // Send an immediate confirmation message in the designated channel.
-    await channel.send("Thanks for bumping! I'll remind you again in 2 hours.");
+    await channel.send("❤️ Thanks for bumping! I'll remind you again in 2 hours.");
     logger.debug("Sent confirmation message in channel:", { channelId: reminderChannelId });
 
     // Schedule the final reminder message after the specified delay.
     setTimeout(async () => {
       try {
-        await channel.send(`<@&${reminderRole}> It's time to bump again!`);
+        await channel.send(`🔔 <@&${reminderRole}> It's time to bump again!`);
         logger.debug("Sent scheduled bump reminder ping:", {
           role: reminderRole,
           channelId: reminderChannelId
@@ -123,7 +123,7 @@ async function rescheduleReminder(client) {
     // Reschedule the reminder to send the bump message after the computed delay.
     setTimeout(async () => {
       try {
-        await channel.send(`<@&${reminderRole}> It's time to bump again!`);
+        await channel.send(`🔔<@&${reminderRole}> It's time to bump again!`);
         logger.debug("Sent rescheduled bump reminder:", { reminder_id: reminder.reminder_id });
       } catch (err) {
         logger.error("Error while sending rescheduled bump reminder:", { error: err });

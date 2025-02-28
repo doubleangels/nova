@@ -21,18 +21,24 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
   try {
-    console.log('Started refreshing global application (/) commands.');
+    console.log('Started refreshing guild application (/) commands.');
     
-    // Define the client (application) ID.
+    // Define the client (application) ID and your specific guild ID.
     const clientId = '1343753891338129520';
+    //const guildId = '1307236666989346837';
 
-    // Register (or update) the commands globally.
+    // Register (or update) the commands for a specific guild.
+    //await rest.put(
+    //  Routes.applicationGuildCommands(clientId, guildId),
+    //  { body: commands }
+    //);
+
     await rest.put(
       Routes.applicationCommands(clientId),
       { body: commands }
     );
     
-    console.log('Successfully reloaded global application (/) commands.');
+    console.log('Successfully reloaded guild application (/) commands.');
   } catch (error) {
     console.error(error);
   }
