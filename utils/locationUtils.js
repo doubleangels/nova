@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const fetch = require('node-fetch');
+const axios = require('axios');
 const config = require('../config');
 
 /**
@@ -12,6 +12,7 @@ const config = require('../config');
  *                                        If the coordinates cannot be retrieved, returns [null, null].
  */
 async function getCoordinates(city) {
+  // Construct the base URL and query parameters for the geocoding API.
   const geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json";
   const params = new URLSearchParams({
     address: city,
@@ -19,19 +20,21 @@ async function getCoordinates(city) {
   });
 
   try {
+    // Log the outgoing request without exposing the API key.
     logger.debug(
       `Requesting geocoding for city "${city}". URL: ${geocodeUrl}?${params.toString().replace(config.googleApiKey, '[REDACTED]')}`
     );
 
-    const response = await fetch(`${geocodeUrl}?${params.toString()}`);
+    // Fetch the geocoding data using axios.
+    const response = await axios.get(`${geocodeUrl}?${params.toString()}`);
     logger.debug(`Received response for city "${city}" with status code: ${response.status}`);
 
-    if (!response.ok) {
+    if (response.status !== 200) {
       logger.error(`Non-OK response from Google Geocoding API for city "${city}". Status: ${response.status}`);
       return [null, null];
     }
 
-    const data = await response.json();
+    const data = response.data;
     logger.debug(`Google Geocoding API JSON response for city "${city}": ${JSON.stringify(data)}`);
 
     if (data.results && data.results.length > 0) {
@@ -45,6 +48,7 @@ async function getCoordinates(city) {
       return [null, null];
     }
   } catch (error) {
+    // Include error stack if available for better debugging.
     logger.error(`Error fetching coordinates for city "${city}": ${error.message}`, { error });
     return [null, null];
   }
