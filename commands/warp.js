@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { CommandInteraction, MessageAttachment } = require('discord.js');
-const axios = require('axios');
 const dayjs = require('dayjs');
+const axios = require('axios');
 const { createCanvas, loadImage } = require('canvas');
 
 module.exports = {
