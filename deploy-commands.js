@@ -25,7 +25,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     
     // Define the client (application) ID and your specific guild ID.
     const clientId = '1343753891338129520';
-    const guildId = '1307236666989346837'; // Replace with your actual guild id
+    const guildId = '1307236666989346837';
 
     // Register (or update) the commands for a specific guild.
     await rest.put(
