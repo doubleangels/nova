@@ -27,6 +27,9 @@ module.exports = {
    */
   async execute(interaction) {
     try {
+      // Temporarily disable the command.
+      await interaction.reply({ content: "⚠️ This command is temporarily disabled.", ephemeral: true });
+      
       // Defer reply to allow processing time.
       await interaction.deferReply();
       logger.debug("/google command received:", { user: interaction.user.tag });

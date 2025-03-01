@@ -38,6 +38,9 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    // Temporarily disable the command.
+    await interaction.reply({ content: "⚠️ This command is temporarily disabled.", ephemeral: true });
+      
     try {
       // Defer the reply to allow time for API processing.
       await interaction.deferReply();
