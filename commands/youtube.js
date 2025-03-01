@@ -27,6 +27,7 @@ module.exports = {
     try {
       // Temporarily disable the command.
       await interaction.reply("⚠️ This command is temporarily disabled. Please check back later.");
+      return;
 
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();
