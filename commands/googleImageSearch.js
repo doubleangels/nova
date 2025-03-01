@@ -39,7 +39,7 @@ module.exports = {
    */
   async execute(interaction) {
     // Temporarily disable the command.
-    await interaction.reply({ content: "⚠️ This command is temporarily disabled.", ephemeral: true });
+    await interaction.reply("⚠️ This command is temporarily disabled. Please check back later.");
       
     try {
       // Defer the reply to allow time for API processing.
