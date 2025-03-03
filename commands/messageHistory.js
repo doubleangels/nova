@@ -1,6 +1,6 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const path = require('path');
 const logger = require('../logger')(require('path').basename(__filename));
-const Sentry = require('@sentry/node');
 
 module.exports = {
   data: new ContextMenuCommandBuilder()
@@ -147,7 +147,6 @@ module.exports = {
       });
       
     } catch (error) {
-      Sentry.captureException(error);
       logger.error('Error executing Message History command:', { error });
       
       try {
