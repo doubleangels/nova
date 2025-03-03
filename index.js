@@ -84,6 +84,53 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
+// Listen for context menu interaction events.
+// Add this to your index.js file, right after the existing interactionCreate event handler
+
+// Listen for context menu command interactions
+client.on('interactionCreate', async interaction => {
+  // Skip if it's not a context menu command
+  if (!interaction.isContextMenuCommand()) return;
+
+  logger.debug("Executing context menu command:", { 
+    command: interaction.commandName, 
+    user: interaction.user.tag 
+  });
+
+  const command = client.commands.get(interaction.commandName);
+  
+  if (!command) {
+    logger.warn("Unknown context menu command:", { command: interaction.commandName });
+    return;
+  }
+  
+  try {
+    await command.execute(interaction);
+    logger.debug("Context menu command executed successfully:", { command: interaction.commandName });
+  } catch (error) {
+    logger.error("Error executing context menu command:", { 
+      command: interaction.commandName, 
+      error 
+    });
+    
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ 
+          content: 'There was an error executing that command!', 
+          ephemeral: true 
+        });
+      } else {
+        await interaction.reply({ 
+          content: 'There was an error executing that command!', 
+          ephemeral: true 
+        });
+      }
+    } catch (replyError) {
+      logger.error("Error sending error response:", { error: replyError });
+    }
+  }
+});
+
 // Log the client in using the token from the config.
 client.login(config.token).catch(err => {
   logger.error("Error logging in:", { err });
