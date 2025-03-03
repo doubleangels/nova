@@ -6,34 +6,36 @@ const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
-// Initialize Sentry with performance monitoring.
+/**
+ * This script initializes and configures a Discord bot using discord.js.
+ * It loads commands and event handlers, integrates Sentry for error tracking,
+ * and handles bot interactions, including slash commands and context menu commands.
+ */
+
+// Initialize Sentry for error tracking and performance monitoring.
 Sentry.init({
   dsn: "https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",
-  integrations: [
-    nodeProfilingIntegration(),
-  ],
-  tracesSampleRate: 1.0,
-  profilesSampleRate: 1.0,
+  integrations: [nodeProfilingIntegration()],
+  tracesSampleRate: 1.0, // Capture all trace data.
+  profilesSampleRate: 1.0, // Capture all profiling data.
 });
 logger.info("Sentry initialized with performance monitoring.");
 
-/**
- * Create a new Discord client instance with the necessary intents.
- */
+// Create a new Discord client instance with necessary gateway intents.
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,           // Access to guild data.
-    GatewayIntentBits.GuildMessages,    // Receive messages from guilds.
-    GatewayIntentBits.MessageContent,   // Read message content.
-    GatewayIntentBits.GuildMembers,     // Access member data.
-    GatewayIntentBits.GuildPresences,   // Access member presence data.
+    GatewayIntentBits.Guilds,           // Allows bot to access basic guild (server) data.
+    GatewayIntentBits.GuildMessages,    // Allows bot to read messages in guilds.
+    GatewayIntentBits.MessageContent,   // Allows bot to read the content of messages.
+    GatewayIntentBits.GuildMembers,     // Allows bot to access guild member information.
+    GatewayIntentBits.GuildPresences,   // Allows bot to track member presence (online/offline).
   ]
 });
 
-// Create a collection to store bot commands.
+// Collection to store bot commands.
 client.commands = new Collection();
 
-// Load command files from the 'commands' directory.
+// Load and register command files.
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
@@ -42,7 +44,7 @@ for (const file of commandFiles) {
   logger.info("Loaded command:", { command: command.data.name });
 }
 
-// Load event files from the 'events' directory.
+// Load and register event files.
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 for (const file of eventFiles) {
@@ -61,35 +63,37 @@ for (const file of eventFiles) {
   logger.info("Loaded event:", { event: event.name });
 }
 
-// Log when the bot is ready and online.
+// Event triggered when the bot is ready.
 client.once('ready', async () => {
   logger.info("Bot is online:", { tag: client.user.tag });
 });
 
-// Listen for interaction events (slash commands).
+// Handle interaction events (slash commands).
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
+
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
+
   try {
     logger.debug("Executing command:", { command: interaction.commandName, user: interaction.user.tag });
     await command.execute(interaction);
   } catch (error) {
     logger.error("Error executing command:", { command: interaction.commandName, error });
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: 'There was an error executing that command!', ephemeral: true });
-    } else {
-      await interaction.reply({ content: 'There was an error executing that command!', ephemeral: true });
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: 'There was an error executing that command!', ephemeral: true });
+      } else {
+        await interaction.reply({ content: 'There was an error executing that command!', ephemeral: true });
+      }
+    } catch (replyError) {
+      logger.error("Error sending error response:", { error: replyError });
     }
   }
 });
 
-// Listen for context menu interaction events.
-// Add this to your index.js file, right after the existing interactionCreate event handler
-
-// Listen for context menu command interactions
+// Handle context menu command interactions.
 client.on('interactionCreate', async interaction => {
-  // Skip if it's not a context menu command
   if (!interaction.isContextMenuCommand()) return;
 
   logger.debug("Executing context menu command:", { 
@@ -98,12 +102,11 @@ client.on('interactionCreate', async interaction => {
   });
 
   const command = client.commands.get(interaction.commandName);
-  
   if (!command) {
     logger.warn("Unknown context menu command:", { command: interaction.commandName });
     return;
   }
-  
+
   try {
     await command.execute(interaction);
     logger.debug("Context menu command executed successfully:", { command: interaction.commandName });
@@ -112,18 +115,11 @@ client.on('interactionCreate', async interaction => {
       command: interaction.commandName, 
       error 
     });
-    
     try {
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ 
-          content: 'There was an error executing that command!', 
-          ephemeral: true 
-        });
+        await interaction.followUp({ content: 'There was an error executing that command!', ephemeral: true });
       } else {
-        await interaction.reply({ 
-          content: 'There was an error executing that command!', 
-          ephemeral: true 
-        });
+        await interaction.reply({ content: 'There was an error executing that command!', ephemeral: true });
       }
     } catch (replyError) {
       logger.error("Error sending error response:", { error: replyError });
@@ -131,12 +127,12 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-// Log the client in using the token from the config.
+// Log the bot in using the token from the config file.
 client.login(config.token).catch(err => {
   logger.error("Error logging in:", { err });
 });
 
-// Gracefully handle process termination signals.
+// Gracefully handle termination signals (for clean bot shutdown).
 process.on('SIGINT', () => {
   logger.info("Shutdown signal (SIGINT) received. Exiting...");
   process.exit(0);

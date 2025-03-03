@@ -2,6 +2,10 @@ const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.j
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
+/**
+ * Context menu command that converts a selected message's text into "mOcKiNg" format.
+ * This command is triggered when a user selects a message and chooses the "Mock" option.
+ */
 module.exports = {
   data: new ContextMenuCommandBuilder()
     .setName('Mock')
@@ -9,56 +13,57 @@ module.exports = {
   
   async execute(interaction) {
     try {
-      // Get the targeted message
+      logger.debug("Mock command received", { user: interaction.user.tag });
+      
+      // Retrieve the targeted message
       const targetMessage = interaction.targetMessage;
+      logger.debug("Retrieved target message", { targetMessageId: targetMessage?.id });
       
-      logger.debug('Mock command triggered', {
-        user: interaction.user.tag,
-        targetMessageId: targetMessage?.id
-      });
-      
-      // Check if targetMessage exists
+      // Ensure the target message exists
       if (!targetMessage) {
-        logger.error('Target message is undefined');
+        logger.error("Target message is undefined");
         return await interaction.reply({
-          content: 'Error: Could not retrieve the target message.',
+          content: "Error: Could not retrieve the target message.",
           ephemeral: true
         });
       }
       
       const messageContent = targetMessage.content;
+      logger.debug("Target message content", { messageContent });
       
-      // If there's no content, respond with an error
+      // Ensure the message has content to mock
       if (!messageContent || messageContent.trim() === '') {
-        logger.debug('No content to mock');
+        logger.warn("No content available to mock");
         return await interaction.reply({
-          content: 'There is no text to mock!',
+          content: "There is no text to mock!",
           ephemeral: true
         });
       }
       
-      // Convert the text to mOcKiNg form
+      // Convert the message content to "mOcKiNg" text format
       const mockedText = messageContent.split('').map((char, index) => {
         return index % 2 === 0 ? char.toLowerCase() : char.toUpperCase();
       }).join('');
       
-      // Reply with the mocked text, pinging the original author
-      await interaction.reply(`<@${targetMessage.author.id}> "${mockedText}"`);
-      logger.debug('Mock command executed successfully');
+      logger.debug("Generated mocked text", { mockedText });
+      
+      // Reply with the mocked text while mentioning the original author
+      await interaction.reply(`<@${targetMessage.author.id}>: "${mockedText}" <a:spongebobmock:1291527476564066387>`);
+      logger.debug("Mock command executed successfully", { user: interaction.user.tag });
       
     } catch (error) {
-      logger.error('Error executing mock command:', { error });
+      logger.error("Error executing mock command", { error });
       
-      // Try to respond to the user if possible
+      // Attempt to send an error response to the user
       try {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
-            content: 'An error occurred while executing this command.',
+            content: "An error occurred while executing this command.",
             ephemeral: true
           });
         }
       } catch (replyError) {
-        logger.error('Error sending error response:', { error: replyError });
+        logger.error("Error sending error response", { error: replyError });
       }
     }
   }
