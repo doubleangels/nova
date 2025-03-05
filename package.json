@@ -1,0 +1,28 @@
+{
+  "name": "nova",
+  "version": "1.0.0",
+  "description": "Dockerized multi-purpose bot for Discord servers.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doubleangels/nova.git"
+  },
+  "author": "doubleangels",
+  "bugs": {
+    "url": "https://github.com/doubleangels/nova/issues"
+  },
+  "homepage": "https://github.com/doubleangels/nova#readme",
+  "dependencies": {
+    "@sentry/node": "^9.2.0",
+    "@sentry/profiling-node": "^9.3.0",
+    "axios": "^1.8.1",
+    "dayjs": "^1.11.13",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.3",
+    "winston": "^3.17.0"
+  }
+}
