@@ -9,7 +9,7 @@ const axios = require('axios');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
-    .setDescription('Get a random dog picture!'),
+    .setDescription('Get a random dog picture.'),
   
   /**
    * Executes the /dog command.

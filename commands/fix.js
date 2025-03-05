@@ -12,7 +12,7 @@ const { setReminderData } = require('../utils/supabase');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
-    .setDescription('Runs the fix logic for Disboard by adding the service data to the database.'),
+    .setDescription('Fix reminder data in the database.'),
     
   /**
    * Executes the /fix command.

@@ -4,7 +4,7 @@ const logger = require('../logger')('messageCount.js'); // Adjust path as needed
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('messagecount')
-    .setDescription('Count how many messages a user has sent in this server')
+    .setDescription('Count how many messages a user has sent in this server.')
     .addUserOption(option => 
       option
         .setName('user')
