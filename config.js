@@ -8,10 +8,8 @@ require('dotenv').config();
 module.exports = {
   // Discord bot token
   token: process.env.DISCORD_BOT_TOKEN,
-  // Discord client ID
-  clientId: process.env.DISCORD_CLIENT_ID,
-  // Discord dev client ID
-  devClientId: process.env.DISCORD_DEV_CLIENT_ID || 'unset',
+    // Neon connection string for database operations
+  neonConnectionString: process.env.NEON_CONNECTION_STRING,
   // Google API key for geocoding, timezone, and search functionalities
   googleApiKey: process.env.GOOGLE_API_KEY,
   // Search engine ID for Google Custom Search
@@ -24,8 +22,10 @@ module.exports = {
   pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
   // MyAnimeList client ID for anime searches
   malClientId: process.env.MAL_CLIENT_ID,
-  // Neon connection string for database operations
-  neonConnectionString: process.env.NEON_CONNECTION_STRING,
   // Logging level; defaults to 'debug' if not set
-  logLevel: process.env.LOG_LEVEL || 'info'
+  logLevel: process.env.LOG_LEVEL || 'info',
+    // Discord client ID
+  clientId: process.env.DISCORD_CLIENT_ID,
+  // Discord dev client ID
+  devClientId: process.env.DISCORD_DEV_CLIENT_ID,
 };

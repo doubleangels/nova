@@ -34,13 +34,13 @@ services:
     restart: always
     environment:
       - DISCORD_BOT_TOKEN=your_discord_bot_token_here
+      - NEON_CONNECTION_STRING=
       - GOOGLE_API_KEY=your_google_api_key_here
       - SEARCH_ENGINE_ID=your_search_engine_id_here
       - IMAGE_SEARCH_ENGINE_ID=your_image_search_engine_id_here
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
       - MAL_CLIENT_ID=your_mal_client_id_here
-      - NEON_CONNECTION_STRING=
 
 networks:
   default:
