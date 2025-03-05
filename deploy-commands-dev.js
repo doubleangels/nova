@@ -12,13 +12,13 @@ for (const file of commandFiles) {
   commands.push(command.data.toJSON());
 }
 
-const rest = new REST({ version: '10' }).setToken(config.token);
+const rest = new REST({ version: '10' }).setToken(config.devToken);
 
 (async () => {
   try {
     console.log('Started refreshing guild application (/) commands.');
     
-    const clientId = config.clientId;
+    const clientId = config.devClientId;
     await rest.put(Routes.applicationCommands(clientId), { body: commands });
     
     console.log('Successfully reloaded guild application (/) commands.');

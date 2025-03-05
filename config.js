@@ -8,6 +8,10 @@ require('dotenv').config();
 module.exports = {
   // Discord bot token
   token: process.env.DISCORD_BOT_TOKEN,
+  // Discord client ID
+  clientId: process.env.DISCORD_CLIENT_ID,
+  // Discord dev client ID
+  devClientId: process.env.DISCORD_DEV_CLIENT_ID || 'unset',
   // Google API key for geocoding, timezone, and search functionalities
   googleApiKey: process.env.GOOGLE_API_KEY,
   // Search engine ID for Google Custom Search
