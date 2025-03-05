@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const logger = require('../logger')('source.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Module for the /source command.

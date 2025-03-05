@@ -1,5 +1,6 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.js');
-const logger = require('../logger')('mock.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Context menu command that converts a selected message's text into "mOcKiNg" format.

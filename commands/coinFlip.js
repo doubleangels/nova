@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
-const logger = require('../logger')('coinFlip.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 
 module.exports = {
     /**

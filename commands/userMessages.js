@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const logger = require('../logger')('userMessages.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 
 module.exports = {
   data: new SlashCommandBuilder()

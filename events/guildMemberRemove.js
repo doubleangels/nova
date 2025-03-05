@@ -1,4 +1,5 @@
-const logger = require('../logger')('guildMemberRemove.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const { removeTrackedMember } = require('../utils/database');
 
 /**
