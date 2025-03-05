@@ -110,9 +110,9 @@ module.exports = {
       const statusText = enabledStatus ? "Enabled" : "Disabled";
       
       const responseMessage = `🔄 **Backup Mode Status**\n` +
+        `🔘 Backup mode: ${statusEmoji} **${statusText}**\n` + 
         `📢 Welcome channel: ${channelStr}\n` +
-        `🎭 New member role: ${roleStr}\n` +
-        `🔘 Backup mode: ${statusEmoji} **${statusText}**`;
+        `🎭 New member role: ${roleStr}`;
       
       await interaction.reply(responseMessage);
       logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
