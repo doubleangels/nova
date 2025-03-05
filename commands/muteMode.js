@@ -14,7 +14,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('enabled')
-        .setDescription('Enable or disable mute mode')
+        .setDescription('Do you want to enable or disable mute mode?')
         .setRequired(true)
         .addChoices(
           { name: 'Enabled', value: 'enabled' },

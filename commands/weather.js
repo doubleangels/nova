@@ -17,7 +17,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('place')
-        .setDescription('Enter the place name.')
+        .setDescription('What place do you want weather data for?')
         .setRequired(true)
     ),
     

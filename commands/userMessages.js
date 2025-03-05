@@ -8,7 +8,7 @@ module.exports = {
     .addUserOption(option => 
       option
         .setName('user')
-        .setDescription('The user whose messages you want to see.')
+        .setDescription("What user's messages do you want to see?")
         .setRequired(true)),
 
   async execute(interaction) {

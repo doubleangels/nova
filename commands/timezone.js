@@ -18,7 +18,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('place')
-        .setDescription('Enter a place name.')
+        .setDescription('What place do you want the time for?')
         .setRequired(true)
     ),
     

@@ -16,13 +16,13 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('place1')
-        .setDescription('Enter the first city name (e.g., New York).')
+        .setDescription('Enter the first city name (e.g., New York)')
         .setRequired(true)
     )
     .addStringOption(option =>
       option
         .setName('place2')
-        .setDescription('Enter the second city name (e.g., London).')
+        .setDescription('Enter the second city name (e.g., London)')
         .setRequired(true)
     ),
     

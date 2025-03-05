@@ -12,13 +12,13 @@ module.exports = {
     .addChannelOption(option =>
       option
         .setName('channel')
-        .setDescription('Channel to send reminders in (leave empty to check status)')
+        .setDescription('What channel do you want reminders in?')
         .setRequired(false)
     )
     .addRoleOption(option =>
       option
         .setName('role')
-        .setDescription('Role to ping in reminders (leave empty to check status)')
+        .setDescription('What role do you want to ping for reminders?')
         .setRequired(false)
     ),
 

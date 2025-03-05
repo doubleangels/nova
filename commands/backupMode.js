@@ -17,7 +17,7 @@ module.exports = {
     .setDescription('Configure and toggle backup mode for new members.')
     .addStringOption(option =>
       option.setName('enabled')
-        .setDescription('Toggle auto-role assignment ("enabled" or "disabled") (leave empty to check status)')
+        .setDescription('Do you want to enable or disable auto-role assignment?')
         .setRequired(false)
         .addChoices(
           { name: 'Enabled', value: 'enabled' },
@@ -26,12 +26,12 @@ module.exports = {
     )
     .addChannelOption(option =>
       option.setName('channel')
-        .setDescription('Channel to send welcome messages (leave empty to check status)')
+        .setDescription('What channel do you want to send welcome messages to?')
         .setRequired(false)
     )
     .addRoleOption(option =>
       option.setName('role')
-        .setDescription('Role to assign to new members (leave empty to check status)')
+        .setDescription('What role to do you want to assign to new members?')
         .setRequired(false)
     ),
     

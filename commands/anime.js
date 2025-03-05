@@ -15,7 +15,7 @@ module.exports = {
     .setDescription('Search for an anime on MyAnimeList.')
     .addStringOption(option =>
       option.setName('title')
-        .setDescription('Enter the anime title.')
+        .setDescription('What anime do you want to search for?')
         .setRequired(true)
     ),
   

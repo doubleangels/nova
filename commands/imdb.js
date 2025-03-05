@@ -14,7 +14,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('title')
-        .setDescription('Enter the movie or TV show title.')
+        .setDescription('What movie or TV show do you want to search for?')
         .setRequired(true)
     ),
     

@@ -14,7 +14,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('enabled')
-        .setDescription('Enable or disable troll mode')
+        .setDescription('Do you want to enable or disable troll mode?')
         .setRequired(true)
         .addChoices(
           { name: 'Enabled', value: 'enabled' },
