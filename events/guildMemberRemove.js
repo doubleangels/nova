@@ -1,5 +1,5 @@
 const logger = require('../logger')('guildMemberRemove.js');
-const { removeTrackedMember } = require('../utils/supabase');
+const { removeTrackedMember } = require('../utils/database');
 
 /**
  * Event handler for the 'guildMemberRemove' event.

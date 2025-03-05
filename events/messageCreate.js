@@ -1,5 +1,5 @@
 const logger = require('../logger')('messageCreate.js');
-const { getTrackedMember, removeTrackedMember } = require('../utils/supabase');
+const { getTrackedMember, removeTrackedMember } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 
 /**

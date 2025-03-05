@@ -1,6 +1,6 @@
 const logger = require('../logger')('muteModeUtils.js');
 const dayjs = require('dayjs');
-const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/supabase');
+const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
 
 /**
  * Schedules a mute kick for a member if they do not send a message within the allowed mute time.

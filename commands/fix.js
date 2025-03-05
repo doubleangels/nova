@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger')('fix.js');
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
-const { setReminderData } = require('../utils/supabase');
+const { setReminderData } = require('../utils/database');
 
 /**
  * Module for the /fix command.

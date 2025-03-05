@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const logger = require('../logger')('trollMode.js');
-const { setValue } = require('../utils/supabase');
+const { setValue } = require('../utils/database');
 
 /**
  * Module for the /trollmode command.

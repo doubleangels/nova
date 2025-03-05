@@ -24,10 +24,8 @@ module.exports = {
   pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
   // MyAnimeList client ID for anime searches
   malClientId: process.env.MAL_CLIENT_ID,
-  // Supabase URL for database operations
-  supabaseUrl: process.env.SUPABASE_URL,
-  // Supabase key for database operations
-  supabaseKey: process.env.SUPABASE_KEY,
+  // Neon connection string for database operations
+  neonConnectionString: process.env.NEON_CONNECTION_STRING,
   // Logging level; defaults to 'debug' if not set
   logLevel: process.env.LOG_LEVEL || 'info'
 };

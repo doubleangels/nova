@@ -20,7 +20,7 @@ Before deploying Nova, ensure you have the following:
   - OMDB
   - PirateWeather
   - MAL (MyAnimeList) Client ID
-  - Supabase URL and Key
+  - [Neon](https://neon.tech) connection string
 
 ## Docker Compose Setup
 
@@ -40,9 +40,9 @@ services:
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
       - MAL_CLIENT_ID=your_mal_client_id_here
-      - SUPABASE_URL=your_supabase_url_here
-      - SUPABASE_KEY=your_supabase_key_here
+      - NEON_CONNECTION_STRING=
 
 networks:
   default:
     name: discord
+```

@@ -3,7 +3,7 @@ const logger = require('../logger')('reminder.js');
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
-const { getValue, setValue, getReminderData } = require('../utils/supabase');
+const { getValue, setValue, getReminderData } = require('../utils/database');
 
 module.exports = {
   data: new SlashCommandBuilder()

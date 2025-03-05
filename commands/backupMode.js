@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const logger = require('../logger')('backupMode.js');
-const { getValue, setValue } = require('../utils/supabase');
+const { getValue, setValue } = require('../utils/database');
 
 /**
  * Module for the /backupmode command.

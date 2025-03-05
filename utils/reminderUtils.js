@@ -1,7 +1,7 @@
 const logger = require('../logger')('reminderUtils.js');
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
-const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/supabase');
+const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/database');
 
 /**
  * Schedules a bump reminder and stores it in the database.
