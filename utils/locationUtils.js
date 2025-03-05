@@ -1,5 +1,4 @@
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('locationUtils.js');
 const axios = require('axios');
 const config = require('../config');
 

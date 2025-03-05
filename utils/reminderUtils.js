@@ -1,5 +1,4 @@
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('reminderUtils.js');
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/supabase');

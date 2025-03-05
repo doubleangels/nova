@@ -1,6 +1,5 @@
 const { ActivityType } = require('discord.js');
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('ready.js');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 

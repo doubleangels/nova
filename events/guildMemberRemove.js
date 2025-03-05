@@ -1,5 +1,4 @@
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('guildMemberRemove.js');
 const { removeTrackedMember } = require('../utils/supabase');
 
 /**

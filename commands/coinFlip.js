@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const logger = require('../logger')('coinFlip.js');
 
 module.exports = {
     /**

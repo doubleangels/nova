@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const logger = require('../logger')('userMessages.js'); // Adjust path as needed
+const logger = require('../logger')('userMessages.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -84,7 +84,7 @@ module.exports = {
       
       for (let i = 0; i < allMessages.length; i += messagesPerEmbed) {
         const embed = new EmbedBuilder()
-          .setColor(targetMember?.displayColor || 0x0099FF)
+          .setColor(targetMember?.displayColor || 0xcd41ff)
           .setAuthor({
             name: `Last messages from ${targetUser.username}`,
             iconURL: targetUser.displayAvatarURL()

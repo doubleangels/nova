@@ -1,5 +1,4 @@
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('muteModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/supabase');
 

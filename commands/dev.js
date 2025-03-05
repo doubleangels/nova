@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('dev.js');
 
 /**
  * Module for the /dev command.

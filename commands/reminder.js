@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('reminder.js');
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);

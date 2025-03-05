@@ -1,6 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('supabase.js');
 const dayjs = require('dayjs');
 const config = require('../config');
 
