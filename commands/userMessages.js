@@ -13,6 +13,13 @@ module.exports = {
 
   async execute(interaction) {
     try {
+      logger.debug("Usermessages command received:", { 
+        user: interaction.user.tag, 
+        userId: interaction.user.id,
+        guild: interaction.guild.name,
+        guildId: interaction.guild.id
+      });
+      
       // Defer reply as ephemeral since this might take some time
       await interaction.deferReply({ ephemeral: true });
       
@@ -20,22 +27,40 @@ module.exports = {
       const targetUser = interaction.options.getUser('user');
       const targetMember = interaction.options.getMember('user');
       
+      logger.debug("Target user retrieved:", { 
+        targetUser: targetUser?.tag,
+        targetUserId: targetUser?.id,
+        hasTargetMember: !!targetMember
+      });
+      
       if (!targetUser) {
+        logger.warn("Target user not found:", { requestedBy: interaction.user.tag });
         return interaction.editReply('User not found.');
       }
       
       // Check if user has permission to use this command
       if (!interaction.member.permissions.has('MODERATE_MEMBERS')) {
+        logger.warn("Permission denied for user:", { 
+          user: interaction.user.tag, 
+          userId: interaction.user.id,
+          missingPermission: 'MODERATE_MEMBERS'
+        });
         return interaction.editReply('You do not have permission to use this command.');
       }
       
-      logger.info(`Fetching messages for user: ${targetUser.tag} (${targetUser.id})`);
+      logger.info(`Fetching messages for user:`, { 
+        targetUser: targetUser.tag, 
+        targetUserId: targetUser.id,
+        requestedBy: interaction.user.tag
+      });
       
       // Get all accessible channels in the guild
       const channels = interaction.guild.channels.cache.filter(
         channel => channel.type === 0 && // 0 is TextChannel
                   channel.permissionsFor(interaction.client.user).has(['ViewChannel', 'ReadMessageHistory'])
       );
+      
+      logger.debug("Accessible channels found:", { count: channels.size });
       
       let allMessages = [];
       
@@ -44,11 +69,23 @@ module.exports = {
       
       for (const [channelId, channel] of channels) {
         try {
+          logger.debug("Searching channel:", { 
+            channelName: channel.name, 
+            channelId: channelId 
+          });
+          
           // Fetch recent messages in the channel
           const messages = await channel.messages.fetch({ limit: 100 });
           
           // Filter for messages by the target user
           const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
+          
+          logger.debug("Messages found in channel:", { 
+            channelName: channel.name, 
+            channelId: channelId,
+            totalMessages: messages.size,
+            userMessages: userMessages.size
+          });
           
           // Add channel information to the messages
           userMessages.forEach(msg => {
@@ -64,17 +101,34 @@ module.exports = {
           
         } catch (error) {
           // Continue to next channel if there's an error with this one
-          logger.warn(`Error fetching messages from channel ${channel.name}:`, { error });
+          logger.warn("Error fetching messages from channel:", { 
+            channelName: channel.name, 
+            channelId: channelId,
+            error: error.message
+          });
         }
       }
       
       // Sort messages by timestamp (newest first)
       allMessages.sort((a, b) => b.timestamp - a.timestamp);
       
+      logger.debug("Messages collected and sorted:", { 
+        totalMessagesFound: allMessages.length,
+        targetUser: targetUser.tag
+      });
+      
       // Limit to 50 messages
+      const originalCount = allMessages.length;
       allMessages = allMessages.slice(0, 50);
       
+      logger.debug("Messages limited to 50:", { 
+        originalCount: originalCount,
+        limitedCount: allMessages.length,
+        wasLimited: originalCount > 50
+      });
+      
       if (allMessages.length === 0) {
+        logger.info("No messages found for user:", { targetUser: targetUser.tag });
         return interaction.editReply(`No recent messages found from ${targetUser.username}.`);
       }
       
@@ -84,7 +138,7 @@ module.exports = {
       
       for (let i = 0; i < allMessages.length; i += messagesPerEmbed) {
         const embed = new EmbedBuilder()
-          .setColor(targetMember?.displayColor || 0xcd41ff)
+          .setColor(0xcd41ff) // Set the embed color to #cd41ff
           .setAuthor({
             name: `Last messages from ${targetUser.username}`,
             iconURL: targetUser.displayAvatarURL()
@@ -120,6 +174,11 @@ module.exports = {
         
         embeds.push(embed);
       }
+      
+      logger.debug("Embeds created:", { 
+        embedCount: embeds.length, 
+        messagesPerEmbed: messagesPerEmbed
+      });
       
       // Create pagination buttons
       const createButtons = (currentPage, totalPages) => {
@@ -163,6 +222,12 @@ module.exports = {
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
       
+      logger.info("Initial response sent:", { 
+        messageCount: allMessages.length,
+        pageCount: totalPages,
+        targetUser: targetUser.tag
+      });
+      
       // Only create collector if there are multiple pages
       if (totalPages > 1) {
         // Create a collector for button interactions
@@ -171,11 +236,24 @@ module.exports = {
           time: 300000 // 5 minutes
         });
         
+        logger.debug("Button collector created:", { 
+          timeout: "5 minutes",
+          pages: totalPages
+        });
+        
         collector.on('collect', async (i) => {
           // Verify that the button interaction is from the user who ran the command
           if (i.user.id !== interaction.user.id) {
+            logger.warn("Unauthorized button interaction:", { 
+              attemptedUser: i.user.tag,
+              attemptedUserId: i.user.id,
+              commandUser: interaction.user.tag,
+              commandUserId: interaction.user.id
+            });
             return i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
           }
+          
+          const oldPage = currentPage + 1;
           
           // Handle button interactions
           switch (i.customId) {
@@ -193,6 +271,14 @@ module.exports = {
               break;
           }
           
+          logger.debug("Button interaction:", { 
+            button: i.customId,
+            user: i.user.tag,
+            oldPage: oldPage,
+            newPage: currentPage + 1,
+            totalPages: totalPages
+          });
+          
           // Update the message with the new embed and buttons
           await i.update({ 
             embeds: [embeds[currentPage]], 
@@ -201,18 +287,34 @@ module.exports = {
         });
         
         collector.on('end', () => {
+          logger.debug("Button collector ended:", { 
+            finalPage: currentPage + 1,
+            totalPages: totalPages
+          });
+          
           // Remove buttons when collector expires
           interaction.editReply({ 
             embeds: [embeds[currentPage]], 
             components: [] 
-          }).catch(() => {});
+          }).catch((error) => {
+            logger.error("Failed to remove buttons after collector ended:", { error: error.message });
+          });
         });
       }
       
-      logger.info(`Successfully displayed ${allMessages.length} messages for user ${targetUser.tag}`);
+      logger.info("Command executed successfully:", { 
+        user: interaction.user.tag,
+        targetUser: targetUser.tag,
+        messagesFound: allMessages.length
+      });
       
     } catch (error) {
-      logger.error('Error executing usermessages command:', { error });
+      logger.error("Error executing usermessages command:", { 
+        error: error.message,
+        stack: error.stack,
+        user: interaction.user?.tag,
+        guild: interaction.guild?.name
+      });
       
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('There was an error fetching the messages. Please try again later.');

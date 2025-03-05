@@ -12,15 +12,15 @@ module.exports = {
   
   async execute(interaction) {
     try {
-      logger.debug("Mock command received", { user: interaction.user.tag });
+      logger.debug("Mock command received:", { user: interaction.user.tag });
       
       // Retrieve the targeted message
       const targetMessage = interaction.targetMessage;
-      logger.debug("Retrieved target message", { targetMessageId: targetMessage?.id });
+      logger.debug("Retrieved target message:", { targetMessageId: targetMessage?.id });
       
       // Ensure the target message exists
       if (!targetMessage) {
-        logger.error("Target message is undefined");
+        logger.error("Target message is undefined.");
         return await interaction.reply({
           content: "Error: Could not retrieve the target message.",
           ephemeral: true
@@ -44,14 +44,14 @@ module.exports = {
         return index % 2 === 0 ? char.toLowerCase() : char.toUpperCase();
       }).join('');
       
-      logger.debug("Generated mocked text", { mockedText });
+      logger.debug("Generated mocked text:", { mockedText });
       
       // Reply with the mocked text while mentioning the original author
       await interaction.reply(`<@${targetMessage.author.id}>: "${mockedText}" <a:spongebobmock:1291527476564066387>`);
-      logger.debug("Mock command executed successfully", { user: interaction.user.tag });
+      logger.debug("Mock command executed successfully:", { user: interaction.user.tag });
       
     } catch (error) {
-      logger.error("Error executing mock command", { error });
+      logger.error("Error executing mock command:", { error });
       
       // Attempt to send an error response to the user
       try {
@@ -62,7 +62,7 @@ module.exports = {
           });
         }
       } catch (replyError) {
-        logger.error("Error sending error response", { error: replyError });
+        logger.error("Error sending error response:", { error: replyError });
       }
     }
   }
