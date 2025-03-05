@@ -75,16 +75,19 @@ module.exports = {
         // Prepare response message
         let responseMessage = `🔄 **Backup Mode Updated**\n`;
         
+        // Add enabled status first if provided
+        if (enabledOption !== null) {
+          const statusEmoji = enabledOption.toLowerCase() === "enabled" ? "✅" : "❌";
+          const statusText = enabledOption.toLowerCase() === "enabled" ? "Enabled" : "Disabled";
+          responseMessage += `🔘 Backup mode: ${statusEmoji} **${statusText}**\n`;
+        }
+        
+        // Then add channel and role if provided
         if (channelOption) {
           responseMessage += `📢 Welcome channel: <#${channelOption.id}>\n`;
         }
         if (roleOption) {
-          responseMessage += `🎭 New member role: <@&${roleOption.id}>\n`;
-        }
-        if (enabledOption !== null) {
-          const statusEmoji = enabledOption.toLowerCase() === "enabled" ? "✅" : "❌";
-          const statusText = enabledOption.toLowerCase() === "enabled" ? "Enabled" : "Disabled";
-          responseMessage += `🔘 Backup mode: ${statusEmoji} **${statusText}**`;
+          responseMessage += `🎭 New member role: <@&${roleOption.id}>`;
         }
         
         await interaction.reply(responseMessage);
