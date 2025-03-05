@@ -1,5 +1,5 @@
 const path = require('path')
-const logger = require('../../logger')(path.basename(__filename));
+const logger = require('../logger')(path.basename(__filename));
 const Sentry = require('../sentry');
 
 /**
