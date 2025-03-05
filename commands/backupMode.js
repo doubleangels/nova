@@ -57,13 +57,14 @@ module.exports = {
           return;
         }
         
+        // Update configuration values in database
         if (channelOption) {
           await setValue("backup_mode_channel", channelOption.id);
           logger.debug("Backup mode channel updated:", { channelId: channelOption.id, channelName: channelOption.name });
         }
         if (roleOption) {
           await setValue("backup_mode_role", roleOption.id);
-          logger.debug("Backup mode role updated:", { roleId: roleOption.id });
+          logger.debug("Backup mode role updated:", { roleId: roleOption.id, roleName: roleOption.name });
         }
         if (enabledOption !== null) {
           const isEnabled = enabledOption.toLowerCase() === "enabled";
@@ -71,14 +72,23 @@ module.exports = {
           logger.debug("Backup mode enabled status updated:", { enabled: isEnabled });
         }
         
-        const replyMsg = `🔄 **Backup Mode Configured!**\n` +
-          `📢 Welcome messages will be sent in: ${channelOption ? channelOption.name : "Not changed"}\n` +
-          `🎭 New members will be assigned the role: ${roleOption ? `<@&${roleOption.id}>` : "Not changed"}\n` +
-          `🔘 Auto-role assignment: ${
-            enabledOption ? (enabledOption.toLowerCase() === "enabled" ? "✅ **Enabled**" : "❌ **Disabled**") : "Not changed"
-          }`;
-        await interaction.reply(replyMsg);
-        logger.debug("Backup mode configuration reply sent:", { replyMsg });
+        // Prepare response message
+        let responseMessage = `🔄 **Backup Mode Updated**\n`;
+        
+        if (channelOption) {
+          responseMessage += `📢 Welcome channel: <#${channelOption.id}>\n`;
+        }
+        if (roleOption) {
+          responseMessage += `🎭 New member role: <@&${roleOption.id}>\n`;
+        }
+        if (enabledOption !== null) {
+          const statusEmoji = enabledOption.toLowerCase() === "enabled" ? "✅" : "❌";
+          const statusText = enabledOption.toLowerCase() === "enabled" ? "Enabled" : "Disabled";
+          responseMessage += `🔘 Backup mode: ${statusEmoji} **${statusText}**`;
+        }
+        
+        await interaction.reply(responseMessage);
+        logger.debug("Backup mode configuration updated:", { user: interaction.user.tag, channel: channelOption?.id, role: roleOption?.id, enabled: enabledOption });
         return;
       }
       
@@ -90,24 +100,25 @@ module.exports = {
       const enabledStatus = await getValue("backup_mode_enabled");
       
       // Get channel name from ID.
-      let channelStr = "Not set!";
+      let channelStr = "Not set";
       if (channelId) {
-        const channelObj = interaction.guild.channels.cache.get(channelId);
-        channelStr = channelObj ? channelObj.name : "Not set!";
+        channelStr = `<#${channelId}>`;
       }
-      const roleStr = roleId ? `<@&${roleId}>` : "Not set!";
-      const enabledStr = enabledStatus ? "✅ **Enabled**" : "❌ **Disabled**";
       
-      const summary = `📌 **Backup Mode Status:**\n` +
-        `📢 **Channel:** ${channelStr}\n` +
-        `🎭 **Role:** ${roleStr}\n` +
-        `🔘 **Auto-role assignment:** ${enabledStr}`;
+      const roleStr = roleId ? `<@&${roleId}>` : "Not set";
+      const statusEmoji = enabledStatus ? "✅" : "❌";
+      const statusText = enabledStatus ? "Enabled" : "Disabled";
       
-      await interaction.reply(summary);
-      logger.debug("Backup mode status reply sent:", { summary });
-    } catch (e) {
-      logger.error("Error in /backupmode command:", { error: e });
-      await interaction.reply({ content: "⚠️ An error occurred while processing your request. Please try again later.", ephemeral: true });
+      const responseMessage = `🔄 **Backup Mode Status**\n` +
+        `📢 Welcome channel: ${channelStr}\n` +
+        `🎭 New member role: ${roleStr}\n` +
+        `🔘 Backup mode: ${statusEmoji} **${statusText}**`;
+      
+      await interaction.reply(responseMessage);
+      logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
+    } catch (error) {
+      logger.error("Error in /backupmode command:", { error });
+      await interaction.reply({ content: "⚠️ An error occurred while configuring backup mode. Please try again later.", ephemeral: true });
     }
   }
 };
