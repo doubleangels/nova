@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const logger = require('../logger')('googleSearch.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 

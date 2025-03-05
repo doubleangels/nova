@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
-const logger = require('../logger')('GuildMemberAdd.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');

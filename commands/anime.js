@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const logger = require('../logger')('anime.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');

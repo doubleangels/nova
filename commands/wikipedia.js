@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const logger = require('../logger')('wikipedia.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
 /**
