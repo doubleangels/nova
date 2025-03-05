@@ -4,11 +4,11 @@ const logger = require('../logger')('userMessages.js');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')
-    .setDescription('Lists the last 50 messages from a specific user')
+    .setDescription('Lists the last 50 messages from a specific user.')
     .addUserOption(option => 
       option
         .setName('user')
-        .setDescription('The user whose messages you want to see')
+        .setDescription('The user whose messages you want to see.')
         .setRequired(true)),
 
   async execute(interaction) {
