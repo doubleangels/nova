@@ -1,15 +1,14 @@
-
 const { SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger')('ping.js');
 
 module.exports = {
     /**
      * Slash command definition for checking the bot's latency.
-     * This command calculates and returns the API latency and the bot's response time.
+     * This command calculates and returns the bot's response time.
      */
     data: new SlashCommandBuilder()
         .setName('ping')
-        .setDescription('Checks the bot\'s response time and API latency.'),
+        .setDescription('Checks the bot\'s response time.'),
 
     /**
      * Executes the /ping command.
@@ -37,23 +36,18 @@ module.exports = {
             const endTime = Date.now();
             const responseTime = endTime - startTime;
             
-            // Get the WebSocket ping from the client
-            const apiLatency = interaction.client.ws.ping;
-            
-            logger.debug("Latency calculated:", {
-                responseTime: responseTime,
-                apiLatency: apiLatency
+            logger.debug("Response time calculated:", {
+                responseTime: responseTime
             });
 
-            // Edit the response with the calculated values
+            // Edit the response with the calculated value
             await interaction.editReply({ 
-                content: `🏓 Pong!\n⏱️ Response Time: ${responseTime}ms\n📡 API Latency: ${apiLatency}ms` 
+                content: `🏓 Pong!\n⏱️ Response Time: ${responseTime}ms` 
             });
             
             logger.info("Ping command executed successfully:", {
                 user: interaction.user.tag,
-                responseTime: responseTime,
-                apiLatency: apiLatency
+                responseTime: responseTime
             });
             
         } catch (error) {
@@ -73,7 +67,7 @@ module.exports = {
                     });
                 } else if (interaction.replied) {
                     await interaction.editReply({
-                        content: "An error occurred while calculating latency."
+                        content: "An error occurred while calculating response time."
                     });
                 }
             } catch (replyError) {
