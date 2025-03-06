@@ -10,7 +10,14 @@ module.exports = {
       option
         .setName('user')
         .setDescription("What user's messages do you want to see?")
-        .setRequired(true)),
+        .setRequired(true))
+    .addIntegerOption(option =>
+      option
+        .setName('limit')
+        .setDescription('Maximum number of messages to fetch (default: 50, max: 100)')
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(100)),
 
   async execute(interaction) {
     try {
@@ -27,11 +34,13 @@ module.exports = {
       // Get the target user from options
       const targetUser = interaction.options.getUser('user');
       const targetMember = interaction.options.getMember('user');
+      const messageLimit = interaction.options.getInteger('limit') || 50;
       
       logger.debug("Target user retrieved:", { 
         targetUser: targetUser?.tag,
         targetUserId: targetUser?.id,
-        hasTargetMember: !!targetMember
+        hasTargetMember: !!targetMember,
+        messageLimit
       });
       
       if (!targetUser) {
@@ -64,50 +73,82 @@ module.exports = {
       logger.debug("Accessible channels found:", { count: channels.size });
       
       let allMessages = [];
+      let processedChannels = 0;
       
       // For each channel, fetch messages from this user
       await interaction.editReply(`Searching for messages from ${targetUser.username}...`);
       
-      for (const [channelId, channel] of channels) {
-        try {
-          logger.debug("Searching channel:", { 
-            channelName: channel.name, 
-            channelId: channelId 
-          });
-          
-          // Fetch recent messages in the channel
-          const messages = await channel.messages.fetch({ limit: 100 });
-          
-          // Filter for messages by the target user
-          const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
-          
-          logger.debug("Messages found in channel:", { 
-            channelName: channel.name, 
-            channelId: channelId,
-            totalMessages: messages.size,
-            userMessages: userMessages.size
-          });
-          
-          // Add channel information to the messages
-          userMessages.forEach(msg => {
-            allMessages.push({
-              content: msg.content || '[No text content]',
-              attachments: msg.attachments.size > 0,
-              embeds: msg.embeds.length > 0,
-              timestamp: msg.createdTimestamp,
-              channelName: channel.name,
-              messageUrl: msg.url
-            });
-          });
-          
-        } catch (error) {
-          // Continue to next channel if there's an error with this one
-          logger.warn("Error fetching messages from channel:", { 
-            channelName: channel.name, 
-            channelId: channelId,
-            error: error.message
-          });
+      // Create a progress updater
+      let lastUpdateTime = Date.now();
+      const updateInterval = 2500; // Update progress every 2.5 seconds
+      
+      async function updateProgress() {
+        const now = Date.now();
+        if (now - lastUpdateTime > updateInterval) {
+          await interaction.editReply(
+            `Searching for messages from ${targetUser.username}... ` +
+            `(${processedChannels}/${channels.size} channels, ${allMessages.length} messages found)`
+          );
+          lastUpdateTime = now;
         }
+      }
+      
+      // Process channels in parallel with a concurrency limit
+      const concurrencyLimit = 5; // Process 5 channels at a time
+      const channelArray = Array.from(channels.values());
+      
+      // Process channels in batches
+      for (let i = 0; i < channelArray.length; i += concurrencyLimit) {
+        // Stop if we've already found enough messages
+        if (allMessages.length >= messageLimit) break;
+        
+        const channelBatch = channelArray.slice(i, i + concurrencyLimit);
+        
+        // Process this batch of channels in parallel
+        await Promise.all(channelBatch.map(async (channel) => {
+          try {
+            logger.debug("Searching channel:", { 
+              channelName: channel.name, 
+              channelId: channel.id 
+            });
+            
+            // Fetch recent messages in the channel
+            const messages = await channel.messages.fetch({ limit: 100 });
+            
+            // Filter for messages by the target user
+            const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
+            
+            logger.debug("Messages found in channel:", { 
+              channelName: channel.name, 
+              channelId: channel.id,
+              totalMessages: messages.size,
+              userMessages: userMessages.size
+            });
+            
+            // Add channel information to the messages
+            userMessages.forEach(msg => {
+              allMessages.push({
+                content: msg.content || '[No text content]',
+                attachments: msg.attachments.size > 0,
+                embeds: msg.embeds.length > 0,
+                timestamp: msg.createdTimestamp,
+                channelName: channel.name,
+                messageUrl: msg.url
+              });
+            });
+            
+          } catch (error) {
+            // Continue to next channel if there's an error with this one
+            logger.warn("Error fetching messages from channel:", { 
+              channelName: channel.name, 
+              channelId: channel.id,
+              error: error.message
+            });
+          } finally {
+            processedChannels++;
+            await updateProgress();
+          }
+        }));
       }
       
       // Sort messages by timestamp (newest first)
@@ -118,14 +159,14 @@ module.exports = {
         targetUser: targetUser.tag
       });
       
-      // Limit to 50 messages
+      // Limit to the requested number of messages
       const originalCount = allMessages.length;
-      allMessages = allMessages.slice(0, 50);
+      allMessages = allMessages.slice(0, messageLimit);
       
-      logger.debug("Messages limited to 50:", { 
+      logger.debug(`Messages limited to ${messageLimit}:`, { 
         originalCount: originalCount,
         limitedCount: allMessages.length,
-        wasLimited: originalCount > 50
+        wasLimited: originalCount > messageLimit
       });
       
       if (allMessages.length === 0) {
@@ -218,7 +259,7 @@ module.exports = {
       const totalPages = embeds.length;
       
       const message = await interaction.editReply({ 
-        content: `Found ${allMessages.length} messages from ${targetUser.username}.`,
+        content: `Found ${allMessages.length} messages from ${targetUser.username} (searched ${processedChannels} of ${channels.size} channels).`,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
