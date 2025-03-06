@@ -1,7 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const dayjs = require('dayjs');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -212,7 +211,7 @@ module.exports = {
           // Format the message with channel, content, and dynamic timestamp
           embed.addFields({
             name: `${messageNumber}. ${msg.channelName} ${extraText}`,
-            value: `**Message:** ${content || '[No text content]'}\n**Posted:** <t:${timestamp}:R> (Full Date: ${dayjs(msg.timestamp).format('MMMM D, YYYY [at] h:mm A')})\n[Jump to Message](${msg.messageUrl})`,
+            value: `**Message:** ${content || '[No text content]'}\n**Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
             inline: false // Make sure the fields are stacked vertically
           });
         });
