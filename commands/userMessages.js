@@ -177,7 +177,7 @@ module.exports = {
       // Create embeds for the messages (max 10 messages per embed due to field limits)
       const embeds = [];
       const messagesPerEmbed = 10;
-      
+
       for (let i = 0; i < allMessages.length; i += messagesPerEmbed) {
         const embed = new EmbedBuilder()
           .setColor(0xcd41ff) // Set the embed color to #cd41ffe
@@ -208,9 +208,11 @@ module.exports = {
           
           const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
           
+          // Format the message with date, time, and channel
           embed.addFields({
-            name: `${messageNumber}. ${date} in #${msg.channelName}${extraText}`,
-            value: content || '[No text content]' + `\n[Jump to Message](${msg.messageUrl})`
+            name: `${messageNumber}. ${msg.channelName} ${extraText}`,
+            value: `**Message:** ${content || '[No text content]'}\n**Date & Time:** ${date}\n[Jump to Message](${msg.messageUrl})`,
+            inline: false // Make sure the fields are stacked vertically
           });
         });
         
