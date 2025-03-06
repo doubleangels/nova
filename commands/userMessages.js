@@ -180,7 +180,7 @@ module.exports = {
       
       for (let i = 0; i < allMessages.length; i += messagesPerEmbed) {
         const embed = new EmbedBuilder()
-          .setColor(0xcd41ff) // Set the embed color to #cd41ff
+          .setColor(0xcd41ff) // Set the embed color to #cd41ffe
           .setAuthor({
             name: `Last messages from ${targetUser.username}`,
             iconURL: targetUser.displayAvatarURL()
@@ -259,7 +259,7 @@ module.exports = {
       const totalPages = embeds.length;
       
       const message = await interaction.editReply({ 
-        content: `Found ${allMessages.length} messages from ${targetUser.username} (searched ${processedChannels} of ${channels.size} channels).`,
+        content: `Found ${allMessages.length} messages from ${targetUser.username} - ${processedChannels} of ${channels.size} channels.`,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
