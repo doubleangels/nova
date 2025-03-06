@@ -193,7 +193,7 @@ module.exports = {
         
         messagesChunk.forEach((msg, index) => {
           const messageNumber = i + index + 1;
-          const date = new Date(msg.timestamp).toLocaleString();
+          const timestamp = Math.floor(msg.timestamp / 1000); // Convert to seconds
           let content = msg.content;
           
           // Truncate long messages
@@ -208,10 +208,10 @@ module.exports = {
           
           const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
           
-          // Format the message with date, time, and channel
+          // Format the message with channel, content, and timestamp
           embed.addFields({
-            name: `${messageNumber}. #${msg.channelName} ${extraText}`,
-            value: `**Message:** ${content || '[No text content]'}\n**Date & Time:** ${date}\n[Jump to Message](${msg.messageUrl})`,
+            name: `${messageNumber}. ${msg.channelName} ${extraText}`,
+            value: `**Message:** ${content || '[No text content]'}\n**Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
             inline: false // Make sure the fields are stacked vertically
           });
         });
