@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const dayjs = require('dayjs');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -193,7 +194,7 @@ module.exports = {
         
         messagesChunk.forEach((msg, index) => {
           const messageNumber = i + index + 1;
-          const timestamp = Math.floor(msg.timestamp / 1000); // Convert to seconds
+          const timestamp = Math.floor(msg.timestamp / 1000); // Convert to seconds for Discord
           let content = msg.content;
           
           // Truncate long messages
@@ -208,10 +209,10 @@ module.exports = {
           
           const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
           
-          // Format the message with channel, content, and timestamp
+          // Format the message with channel, content, and dynamic timestamp
           embed.addFields({
             name: `${messageNumber}. ${msg.channelName} ${extraText}`,
-            value: `**Message:** ${content || '[No text content]'}\n**Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
+            value: `**Message:** ${content || '[No text content]'}\n**Posted:** <t:${timestamp}:R> (Full Date: ${dayjs(msg.timestamp).format('MMMM D, YYYY [at] h:mm A')})\n[Jump to Message](${msg.messageUrl})`,
             inline: false // Make sure the fields are stacked vertically
           });
         });
