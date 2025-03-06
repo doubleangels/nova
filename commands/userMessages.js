@@ -86,8 +86,8 @@ module.exports = {
         const now = Date.now();
         if (now - lastUpdateTime > updateInterval) {
           await interaction.editReply(
-            `Searching for messages from ${targetUser.username}... ` +
-            `(${processedChannels}/${channels.size} channels, ${allMessages.length} messages found)`
+            `Searching for messages from ${targetUser.username} - ` +
+            `${processedChannels}/${channels.size} channels, ${allMessages.length} messages found.`
           );
           lastUpdateTime = now;
         }
