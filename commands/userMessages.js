@@ -211,7 +211,7 @@ module.exports = {
           // Format the message with channel, content, and dynamic timestamp
           embed.addFields({
             name: `${messageNumber}. ${msg.channelName} ${extraText}`,
-            value: `**Message:** ${content || '[No text content]'}\n**Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
+            value: `📜 **Message:** ${content || '[No text content]'}\n⏰ **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
             inline: false // Make sure the fields are stacked vertically
           });
         });
