@@ -210,7 +210,7 @@ module.exports = {
           
           // Format the message with date, time, and channel
           embed.addFields({
-            name: `${messageNumber}. ${msg.channelName} ${extraText}`,
+            name: `${messageNumber}. #${msg.channelName} ${extraText}`,
             value: `**Message:** ${content || '[No text content]'}\n**Date & Time:** ${date}\n[Jump to Message](${msg.messageUrl})`,
             inline: false // Make sure the fields are stacked vertically
           });
