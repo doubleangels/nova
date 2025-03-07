@@ -17,7 +17,7 @@
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
     "@sentry/node": "^9.2.0",
-    "@sentry/profiling-node": "^9.4.0",
+    "@sentry/profiling-node": "^9.5.0",
     "axios": "^1.8.1",
     "dayjs": "^1.11.13",
     "discord.js": "^14.18.0",
