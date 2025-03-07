@@ -27,6 +27,15 @@ module.exports = {
           ephemeral: true
         });
       }
+
+      // Check if the message is sent by the bot itself
+      if (targetMessage.author.id === interaction.client.user.id) {
+        logger.warn("Attempted to mock the bot's own message.");
+        return await interaction.reply({
+          content: "I cannot mock my own messages!",
+          ephemeral: true
+        });
+      }
       
       const messageContent = targetMessage.content;
       logger.debug("Target message content", { messageContent });
