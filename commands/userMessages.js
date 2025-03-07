@@ -5,16 +5,21 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')
-    .setDescription('Lists the last 50 messages from a specific user.')
+    .setDescription('Lists the last 50 messages from a specific user in a specified channel.')
     .addUserOption(option => 
       option
         .setName('user')
         .setDescription("What user's messages do you want to see?")
         .setRequired(true))
+    .addChannelOption(option =>
+      option
+        .setName('channel')
+        .setDescription('What channel do you want to search in?')
+        .setRequired(true))
     .addIntegerOption(option =>
       option
         .setName('limit')
-        .setDescription('Maximum number of messages to fetch (default: 50, max: 100)')
+        .setDescription('How many messages do you want to display? (1-50, Default: 50)')
         .setRequired(false)
         .setMinValue(1)
         .setMaxValue(100)),
@@ -31,15 +36,16 @@ module.exports = {
       // Defer reply as ephemeral since this might take some time
       await interaction.deferReply({ ephemeral: true });
       
-      // Get the target user from options
+      // Get the target user and channel from options
       const targetUser = interaction.options.getUser('user');
-      const targetMember = interaction.options.getMember('user');
+      const targetChannel = interaction.options.getChannel('channel'); // Get the specified channel
       const messageLimit = interaction.options.getInteger('limit') || 50;
       
-      logger.debug("Target user retrieved:", { 
+      logger.debug("Target user and channel retrieved:", { 
         targetUser: targetUser?.tag,
         targetUserId: targetUser?.id,
-        hasTargetMember: !!targetMember,
+        targetChannel: targetChannel?.name,
+        targetChannelId: targetChannel?.id,
         messageLimit
       });
       
@@ -48,109 +54,61 @@ module.exports = {
         return interaction.editReply('User not found.');
       }
       
-      // Check if user has permission to use this command
-      if (!interaction.member.permissions.has('MODERATE_MEMBERS')) {
-        logger.warn("Permission denied for user:", { 
-          user: interaction.user.tag, 
-          userId: interaction.user.id,
-          missingPermission: 'MODERATE_MEMBERS'
-        });
-        return interaction.editReply('You do not have permission to use this command.');
-      }
-      
       logger.info(`Fetching messages for user:`, { 
         targetUser: targetUser.tag, 
         targetUserId: targetUser.id,
         requestedBy: interaction.user.tag
       });
       
-      // Get all accessible channels in the guild
-      const channels = interaction.guild.channels.cache.filter(
-        channel => channel.type === 0 && // 0 is TextChannel
-                  channel.permissionsFor(interaction.client.user).has(['ViewChannel', 'ReadMessageHistory'])
-      );
+      // Check if the specified channel is a text channel
+      if (targetChannel.type !== 0) { // 0 is TextChannel
+        logger.warn("Invalid channel type:", { 
+          channelName: targetChannel.name, 
+          channelId: targetChannel.id 
+        });
+        return interaction.editReply('Please select a valid text channel.');
+      }
+
+      // Ensure bot has permission to view the channel
+      if (!targetChannel.permissionsFor(interaction.client.user).has(['ViewChannel', 'ReadMessageHistory'])) {
+        logger.warn("Bot lacks permissions for the channel:", { 
+          channelName: targetChannel.name, 
+          channelId: targetChannel.id 
+        });
+        return interaction.editReply('I do not have permission to read messages in that channel.');
+      }
+
+      logger.debug("Searching specified channel for messages:", { 
+        channelName: targetChannel.name, 
+        channelId: targetChannel.id 
+      });
+
+      // Fetch recent messages in the specified channel
+      const messages = await targetChannel.messages.fetch({ limit: 100 });
       
-      logger.debug("Accessible channels found:", { count: channels.size });
+      // Filter for messages by the target user
+      const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
       
+      logger.debug("Messages found in specified channel:", { 
+        channelName: targetChannel.name, 
+        channelId: targetChannel.id,
+        totalMessages: messages.size,
+        userMessages: userMessages.size
+      });
+
+      // Prepare messages for output
       let allMessages = [];
-      let processedChannels = 0;
-      
-      // For each channel, fetch messages from this user
-      await interaction.editReply(`Searching for messages from ${targetUser.username}...`);
-      
-      // Create a progress updater
-      let lastUpdateTime = Date.now();
-      const updateInterval = 2500; // Update progress every 2.5 seconds
-      
-      async function updateProgress() {
-        const now = Date.now();
-        if (now - lastUpdateTime > updateInterval) {
-          await interaction.editReply(
-            `Searching for messages from ${targetUser.username} - ` +
-            `${processedChannels}/${channels.size} channels, ${allMessages.length} messages found.`
-          );
-          lastUpdateTime = now;
-        }
-      }
-      
-      // Process channels in parallel with a concurrency limit
-      const concurrencyLimit = 5; // Process 5 channels at a time
-      const channelArray = Array.from(channels.values());
-      
-      // Process channels in batches
-      for (let i = 0; i < channelArray.length; i += concurrencyLimit) {
-        // Stop if we've already found enough messages
-        if (allMessages.length >= messageLimit) break;
-        
-        const channelBatch = channelArray.slice(i, i + concurrencyLimit);
-        
-        // Process this batch of channels in parallel
-        await Promise.all(channelBatch.map(async (channel) => {
-          try {
-            logger.debug("Searching channel:", { 
-              channelName: channel.name, 
-              channelId: channel.id 
-            });
-            
-            // Fetch recent messages in the channel
-            const messages = await channel.messages.fetch({ limit: 100 });
-            
-            // Filter for messages by the target user
-            const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
-            
-            logger.debug("Messages found in channel:", { 
-              channelName: channel.name, 
-              channelId: channel.id,
-              totalMessages: messages.size,
-              userMessages: userMessages.size
-            });
-            
-            // Add channel information to the messages
-            userMessages.forEach(msg => {
-              allMessages.push({
-                content: msg.content || '[No text content]',
-                attachments: msg.attachments.size > 0,
-                embeds: msg.embeds.length > 0,
-                timestamp: msg.createdTimestamp,
-                channelName: channel.name,
-                messageUrl: msg.url
-              });
-            });
-            
-          } catch (error) {
-            // Continue to next channel if there's an error with this one
-            logger.warn("Error fetching messages from channel:", { 
-              channelName: channel.name, 
-              channelId: channel.id,
-              error: error.message
-            });
-          } finally {
-            processedChannels++;
-            await updateProgress();
-          }
-        }));
-      }
-      
+      userMessages.forEach(msg => {
+        allMessages.push({
+          content: msg.content || '[No text content]',
+          attachments: msg.attachments.size > 0,
+          embeds: msg.embeds.length > 0,
+          timestamp: msg.createdTimestamp,
+          channelName: targetChannel.name,
+          messageUrl: msg.url
+        });
+      });
+
       // Sort messages by timestamp (newest first)
       allMessages.sort((a, b) => b.timestamp - a.timestamp);
       
@@ -171,7 +129,7 @@ module.exports = {
       
       if (allMessages.length === 0) {
         logger.info("No messages found for user:", { targetUser: targetUser.tag });
-        return interaction.editReply(`No recent messages found from ${targetUser.username}.`);
+        return interaction.editReply(`No recent messages found from ${targetUser.username} in ${targetChannel.name}.`);
       }
       
       // Create embeds for the messages (max 10 messages per embed due to field limits)
@@ -261,7 +219,7 @@ module.exports = {
       const totalPages = embeds.length;
       
       const message = await interaction.editReply({ 
-        content: `Found ${allMessages.length} messages from ${targetUser.username} - ${processedChannels} of ${channels.size} channels.`,
+        content: `Found ${allMessages.length} messages from ${targetUser.username} in ${targetChannel.name}.`,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
