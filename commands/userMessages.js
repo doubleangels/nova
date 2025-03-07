@@ -22,7 +22,7 @@ module.exports = {
         .setDescription('How many messages do you want to display? (1-50, Default: 50)')
         .setRequired(false)
         .setMinValue(1)
-        .setMaxValue(100)),
+        .setMaxValue(50)),
 
   async execute(interaction) {
     try {
@@ -83,31 +83,36 @@ module.exports = {
         channelId: targetChannel.id 
       });
 
-      // Fetch recent messages in the specified channel
-      const messages = await targetChannel.messages.fetch({ limit: 100 });
-      
-      // Filter for messages by the target user
-      const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
-      
-      logger.debug("Messages found in specified channel:", { 
-        channelName: targetChannel.name, 
-        channelId: targetChannel.id,
-        totalMessages: messages.size,
-        userMessages: userMessages.size
-      });
-
-      // Prepare messages for output
+      // Fetch messages in batches until the desired limit is reached
       let allMessages = [];
-      userMessages.forEach(msg => {
-        allMessages.push({
+      let lastMessageId = null; // To track the last message fetched for pagination
+
+      while (allMessages.length < messageLimit) {
+        // Fetch messages with a limit of 100
+        const messages = await targetChannel.messages.fetch({ limit: 100, before: lastMessageId });
+
+        // If no messages are returned, break the loop
+        if (messages.size === 0) break;
+
+        // Filter for messages by the target user
+        const userMessages = messages.filter(msg => msg.author.id === targetUser.id);
+        
+        // Add the filtered user messages to the allMessages array
+        allMessages.push(...userMessages.map(msg => ({
           content: msg.content || '[No text content]',
           attachments: msg.attachments.size > 0,
           embeds: msg.embeds.length > 0,
           timestamp: msg.createdTimestamp,
           channelName: targetChannel.name,
           messageUrl: msg.url
-        });
-      });
+        })));
+
+        // Update lastMessageId to the ID of the last message fetched
+        lastMessageId = messages.last().id;
+
+        // If we have reached or exceeded the limit, break the loop
+        if (allMessages.length >= messageLimit) break;
+      }
 
       // Sort messages by timestamp (newest first)
       allMessages.sort((a, b) => b.timestamp - a.timestamp);
@@ -138,7 +143,7 @@ module.exports = {
 
       for (let i = 0; i < allMessages.length; i += messagesPerEmbed) {
         const embed = new EmbedBuilder()
-          .setColor(0xcd41ff) // Set the embed color to #cd41ffe
+          .setColor(0xcd41ff)
           .setAuthor({
             name: `Last messages from ${targetUser.username}`,
             iconURL: targetUser.displayAvatarURL()
