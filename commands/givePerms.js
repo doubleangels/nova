@@ -138,9 +138,9 @@ module.exports = {
             });
             
             await interaction.editReply({
-                content: `Successfully gave ${targetUser.tag} permissions in the server!`
+                content: `Successfully gave <@${targetUser.id}> permissions in the server!`
             });
-            
+                        
         } catch (error) {
             // Log the full error with stack trace
             logger.error("Error in /giveperms command:", { 
