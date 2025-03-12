@@ -42,6 +42,8 @@ services:
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
       - MAL_CLIENT_ID=your_mal_client_id_here
       - LOG_LEVEL=your_desired_log_level_here
+      - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
+      - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
 
 networks:
   default:
