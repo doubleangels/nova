@@ -1,7 +1,7 @@
 # nova
 
 <div align="center">
-  <img src="logo.png" alt="Logo" width="250"> <!-- You can specify width if needed -->
+  <img src="logo.png" alt="Logo" width="250">
 </div>
 <br>
 
