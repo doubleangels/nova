@@ -18,12 +18,12 @@ Nova is a powerful Discord bot designed to bring a range of advanced functionali
 Before deploying Nova, ensure you have the following:
 
 - A valid [Discord Bot Token](https://discord.com/developers/applications)
+- A [Neon](https://neon.tech) connection string
 - API keys for:
   - Google (with Search Engine ID and Image Search Engine ID)
   - OMDB
   - PirateWeather
   - MAL (MyAnimeList) Client ID
-  - [Neon](https://neon.tech) connection string
 
 ## Docker Compose Setup
 
