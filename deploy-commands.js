@@ -14,17 +14,13 @@ for (const file of commandFiles) {
 
 const rest = new REST({ version: '10' }).setToken(config.token);
 
-require('dotenv').config();
-module.exports = {
-  // Discord bot client ID
-  clientId: process.env.DISCORD_CLIENT_ID,
-};
+// Access DISCORD_CLIENT_ID directly from process.env
+const clientId = process.env.DISCORD_CLIENT_ID;
+console.log(`Client ID: ${clientId}`);
 
 (async () => {
-  try {
-    console.log('Started refreshing guild application (/) commands.');
-    
-    const clientId = config.clientId;
+  try {    
+    // Use the clientId variable here
     await rest.put(Routes.applicationCommands(clientId), { body: commands });
     
     console.log('Successfully reloaded guild application (/) commands.');
