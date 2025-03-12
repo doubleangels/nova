@@ -41,9 +41,9 @@ services:
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
       - MAL_CLIENT_ID=your_mal_client_id_here
-      - LOG_LEVEL=your_desired_log_level_here
       - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
       - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
+      - LOG_LEVEL=your_desired_log_level_here
 
 networks:
   default:
@@ -55,7 +55,7 @@ networks:
 Here is a table of all available environment variables:
 
 | Variable                            | Description                                               | Required | Default | Example                                                                          |
-| ----------------------------------- | --------------------------------------------------------- | :------: | :-----: | -------------------------------------------------------------------------------- |
+| ----------------------------------- | --------------------------------------------------------- | :------: | :-----: | -------------------------------------------------------------------------------- | --- |
 | `DISCORD_BOT_TOKEN`                 | Authentication token for your Discord bot                 |    ✅    |    -    | -                                                                                |
 | `NEON_CONNECTION_STRING`            | Connection string for Neon PostgreSQL database            |    ✅    |    -    | `postgresql://user:password@your-neon-url-123456.us-east-2.aws.neon.tech/neondb` |
 | `GOOGLE_API_KEY`                    | API key for Google services                               |    ✅    |    -    | -                                                                                |
@@ -63,7 +63,7 @@ Here is a table of all available environment variables:
 | `IMAGE_SEARCH_ENGINE_ID`            | Google Custom Search Engine ID for image searches         |    ✅    |    -    | -                                                                                |
 | `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |    -    | -                                                                                |
 | `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |    -    | -                                                                                |
-| `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |    -    | -                                                                                |
-| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `error`, `warn`, `info`, `debug`                                                 |
+| `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |    -    | -                                                                                |     |
 | `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ✅    |    -    | -                                                                                |
+| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `error`, `warn`, `info`, `debug`                                                 |
