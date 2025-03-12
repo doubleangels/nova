@@ -49,3 +49,21 @@ networks:
   default:
     name: discord
 ```
+
+## Environment Variables
+
+Here is a table of all available environment variables:
+
+| Variable                            | Description                                               | Required | Default | Example                                                                          |
+| ----------------------------------- | --------------------------------------------------------- | :------: | :-----: | -------------------------------------------------------------------------------- |
+| `DISCORD_BOT_TOKEN`                 | Authentication token for your Discord bot                 |    ✅    |    -    | -                                                                                |
+| `NEON_CONNECTION_STRING`            | Connection string for Neon PostgreSQL database            |    ✅    |    -    | `postgresql://user:password@your-neon-url-123456.us-east-2.aws.neon.tech/neondb` |
+| `GOOGLE_API_KEY`                    | API key for Google services                               |    ✅    |    -    | -                                                                                |
+| `SEARCH_ENGINE_ID`                  | Google Custom Search Engine ID for web searches           |    ✅    |    -    | -                                                                                |
+| `IMAGE_SEARCH_ENGINE_ID`            | Google Custom Search Engine ID for image searches         |    ✅    |    -    | -                                                                                |
+| `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |    -    | -                                                                                |
+| `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |    -    | -                                                                                |
+| `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |    -    | -                                                                                |
+| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `debug`, `info`, `warn`, `error`                                                 |
+| `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
+| `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ✅    |    -    | -                                                                                |
