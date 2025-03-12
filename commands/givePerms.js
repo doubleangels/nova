@@ -85,7 +85,7 @@ module.exports = {
             const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
             if (!positionRole) {
                 logger.error("Reference role not found:", { roleId: POSITION_ABOVE_ROLE_ID });
-                return await interaction.editReply('Reference role for positioning not found. Please check the hardcoded role ID.');
+                return await interaction.editReply('⚠️ Reference role for positioning not found. Please the postitioning role ID.');
             }
             logger.debug("Reference role found:", { 
                 roleId: positionRole.id, 
@@ -111,7 +111,7 @@ module.exports = {
             const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
             if (!additionalRole) {
                 logger.error("Additional role not found:", { roleId: FREN_ROLE_ID });
-                return await interaction.editReply('Additional role not found. Please check the Fren role ID.');
+                return await interaction.editReply('⚠️ Additional role not found. Please check the Fren role ID.');
             }
             logger.debug("Additional role found:", { 
                 roleId: additionalRole.id, 
@@ -138,7 +138,7 @@ module.exports = {
             });
             
             await interaction.editReply({
-                content: `Successfully gave <@${targetUser.id}> permissions in the server!`
+                content: `✅ Successfully gave <@${targetUser.id}> permissions in the server!`
             });
                         
         } catch (error) {
