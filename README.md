@@ -1,6 +1,9 @@
 # nova
 
-![Logo](logo.png)
+<div align="center">
+  <img src="logo.png" alt="Logo" width="250"> <!-- You can specify width if needed -->
+</div>
+<br>
 
 Nova is a powerful Discord bot designed to bring a range of advanced functionalities to your server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Supabase, and more, Nova offers a dynamic and customizable experience for your community.
 
