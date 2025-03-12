@@ -27,20 +27,14 @@ module.exports = {
         .setName('time')
         .setDescription('Time limit in hours before a silent user is kicked (Default: 2)')
         .setRequired(false)
-    ),
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
     
   /**
    * Executes the /mutemode command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
-    // Check if the user has Administrator permissions.
-    if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn("Unauthorized /mutemode attempt:", { user: interaction.user.tag });
-      await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
-      return;
-    }
-
     try {
       logger.debug("/mutemode command received:", { user: interaction.user.tag });
       

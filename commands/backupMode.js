@@ -34,7 +34,8 @@ module.exports = {
       option.setName('role')
         .setDescription('What role to do you want to assign to new members?')
         .setRequired(false)
-    ),
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
     
   /**
    * Executes the /backupmode command.
@@ -51,13 +52,6 @@ module.exports = {
 
       // If any configuration option is provided, attempt to update backup mode settings.
       if (channelOption || roleOption || enabledOption !== null) {
-        // Verify Administrator permissions.
-        if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-          logger.warn("Unauthorized backupmode configuration attempt:", { user: interaction.user.tag });
-          await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
-          return;
-        }
-        
         // Update configuration values in database
         if (channelOption) {
           await setValue("backup_mode_channel", channelOption.id);

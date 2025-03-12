@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -13,23 +13,14 @@ const { setReminderData } = require('../utils/database');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
-    .setDescription('Fix reminder data in the database.'),
+    .setDescription('Fix reminder data in the database.')
+    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
     
   /**
    * Executes the /fix command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
-    // Check if the user has Administrator permissions.
-    if (
-      !interaction.memberPermissions.has("Administrator") &&
-      !interaction.memberPermissions.has(require('discord.js').PermissionsBitField.Flags.Administrator)
-    ) {
-      logger.warn("Unauthorized /fix attempt:", { user: interaction.user.tag });
-      await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
-      return;
-    }
-
     try {
       logger.debug("/fix command received:", { user: interaction.user.tag });
       

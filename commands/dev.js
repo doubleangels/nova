@@ -10,20 +10,14 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dev')
-    .setDescription('Maintain developer tag.'),
+    .setDescription('Maintain developer tag.')
+    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
     
   /**
    * Executes the /dev command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
-    // Verify Administrator permissions.
-    if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn("Unauthorized /dev attempt:", { user: interaction.user.tag });
-      await interaction.reply({ content: "❌ You do not have permission to use this command.", ephemeral: true });
-      return;
-    }
-    
     try {
       logger.debug("/dev command received:", { user: interaction.user.tag });
       // Placeholder for developer tag maintenance.

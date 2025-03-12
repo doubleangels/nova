@@ -27,20 +27,14 @@ module.exports = {
         .setName('age')
         .setDescription('Minimum account age in days (Default: 30)')
         .setRequired(false)
-    ),
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
     
   /**
    * Executes the /trollmode command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
-    // Check if the user has Administrator permissions.
-    if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-      logger.warn("Unauthorized /trollmode attempt:", { user: interaction.user.tag });
-      await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
-      return;
-    }
-
     try {
       logger.debug("/trollmode command received:", { user: interaction.user.tag });
       
