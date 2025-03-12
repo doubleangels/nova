@@ -28,8 +28,4 @@ module.exports = {
   givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
   // Give permissions Fren role ID
   givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
-  // Discord client ID
-  clientId: process.env.DISCORD_CLIENT_ID,
-  // Discord dev client ID
-  devClientId: process.env.DISCORD_DEV_CLIENT_ID,
 };
