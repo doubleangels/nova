@@ -64,6 +64,6 @@ Here is a table of all available environment variables:
 | `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |    -    | -                                                                                |
 | `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |    -    | -                                                                                |
 | `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |    -    | -                                                                                |
-| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `debug`, `info`, `warn`, `error`                                                 |
+| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `error`, `warn`, `info`, `debug`                                                 |
 | `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ✅    |    -    | -                                                                                |
