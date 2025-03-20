@@ -10,14 +10,14 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
-        .setDescription('Changes the color of a role')
+        .setDescription('Changes the color of a role.')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('The role to change the color of')
+                .setDescription('what role would you like to change the color for?')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('The new color in #RRGGBB or RRGGBB format')
+                .setDescription('What color should the role have? (#RRGGBB or RRGGBB)')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
@@ -41,6 +41,9 @@ module.exports = {
                 colorHex
             });
             
+            // Store the original color before changing
+            const originalColor = role.hexColor;
+            
             // Validate and normalize color format
             let normalizedColorHex = colorHex;
             if (colorHex.match(/^[0-9A-Fa-f]{6}$/)) {
@@ -63,12 +66,13 @@ module.exports = {
             logger.info("Role color successfully changed:", { 
                 roleId: role.id, 
                 roleName: role.name,
+                oldColor: originalColor,
                 newColor: normalizedColorHex,
                 changedBy: interaction.user.tag
             });
             
             await interaction.editReply({
-                content: `✅ Successfully changed the color of ${role.name} to ${normalizedColorHex}!`
+                content: `✅ Successfully changed the color of ${role} from ${originalColor} to ${normalizedColorHex}!`
             });
             
         } catch (error) {
