@@ -14,7 +14,7 @@ module.exports = {
         .setName('giveperms')
         .setDescription('Gives user permissions in the server.')
         .addStringOption(option =>
-            option.setName('rolename')
+            option.setName('role')
                 .setDescription("What do you want the name of the user's role to be?")
                 .setRequired(true))
         .addStringOption(option =>
