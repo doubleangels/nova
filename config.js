@@ -12,6 +12,7 @@ module.exports = {
     deployCommandsOnStart: true,
     rescheduleReminderOnStart: true,
     rescheduleAllMuteKicksOnStart: true,
+    disabledCommands: [],
   },
   token: process.env.DISCORD_BOT_TOKEN,
   neonConnectionString: process.env.NEON_CONNECTION_STRING,

@@ -27,11 +27,45 @@ client.commands = new Collection();
 // Load and register command files.
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-for (const file of commandFiles) {
-  const command = require(path.join(commandsPath, file));
-  client.commands.set(command.data.name, command);
-  logger.info("Loaded command:", { command: command.data.name });
+
+// Check if we have a list of disabled commands
+const hasDisabledCommandsList = config.settings && 
+  config.settings.disabledCommands && 
+  Array.isArray(config.settings.disabledCommands) && 
+  config.settings.disabledCommands.length > 0;
+
+if (hasDisabledCommandsList) {
+  logger.info(`Using disabledCommands filter - will not load ${config.settings.disabledCommands.length} specified commands`);
 }
+
+let loadedCount = 0;
+let skippedCount = 0;
+
+for (const file of commandFiles) {
+  const commandName = file.replace('.js', ''); // Get command name without extension
+  
+  // Skip this command if it's in the disabled list
+  if (hasDisabledCommandsList && config.settings.disabledCommands.includes(commandName)) {
+    logger.debug(`Skipping disabled command: ${commandName}`);
+    skippedCount++;
+    continue;
+  }
+  
+  try {
+    const command = require(path.join(commandsPath, file));
+    client.commands.set(command.data.name, command);
+    logger.info("Loaded command:", { command: command.data.name });
+    loadedCount++;
+  } catch (error) {
+    logger.error(`Failed to load command ${commandName}:`, { error });
+    Sentry.captureException(error, {
+      extra: { context: 'command_loading_failure', commandName }
+    });
+  }
+}
+
+// Log summary of loaded commands
+logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} skipped`);
 
 // Load and register event files.
 const eventsPath = path.join(__dirname, 'events');
