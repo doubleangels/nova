@@ -13,6 +13,7 @@ module.exports = {
     disabledCommands: [],
   },
   token: process.env.DISCORD_BOT_TOKEN,
+  clientId: "1280311987154456657",
   neonConnectionString: process.env.NEON_CONNECTION_STRING,
   googleApiKey: process.env.GOOGLE_API_KEY,
   searchEngineId: process.env.SEARCH_ENGINE_ID,
