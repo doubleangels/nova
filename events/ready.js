@@ -4,13 +4,17 @@ const logger = require('../logger')(path.basename(__filename));
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 
- /**
-  * Event handler for the 'ready' event.
-  * Executed once when the bot comes online. It sets the bot's presence,
-  * attempts to reschedule Disboard reminders, and reschedules all mute kicks.
-  *
-  * @param {Client} client - The Discord client instance.
-  */
+// Import the deploy-commands module
+const deployCommands = require('../deploy-commands');
+
+/**
+ * Event handler for the 'ready' event.
+ * Executed once when the bot comes online. It sets the bot's presence,
+ * attempts to reschedule Disboard reminders, reschedules all mute kicks,
+ * and deploys slash commands.
+ *
+ * @param {Client} client - The Discord client instance.
+ */
 module.exports = {
   name: 'ready',
   once: true,
@@ -29,6 +33,15 @@ module.exports = {
       logger.debug("Bot presence and activity set:", { activity: "Watching for ways to assist", status: "online" });
     } catch (error) {
       logger.error("Failed to set bot presence:", { error });
+    }
+
+    try {
+      // Deploy slash commands
+      logger.debug("Deploying slash commands to Discord...");
+      await deployCommands();
+      logger.debug("Slash commands deployed successfully");
+    } catch (error) {
+      logger.error("Failed to deploy slash commands:", { error });
     }
 
     try {
