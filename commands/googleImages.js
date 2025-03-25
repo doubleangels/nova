@@ -17,7 +17,7 @@ const titleCase = str =>
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('googleimage')
+    .setName('googleimages')
     .setDescription('Search Google for images and return the top results.')
     .addStringOption(option =>
       option
