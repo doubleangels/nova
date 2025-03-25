@@ -90,61 +90,84 @@ module.exports = {
             // Use contextLink if available, otherwise fallback to the image link.
             const pageLink = item.image && item.image.contextLink ? item.image.contextLink : imageLink;
             return new EmbedBuilder()
-              .setTitle(`🖼️ **${title}** (${index + 1}/${items.length})`)
+              .setTitle(`🖼️ **${title}**`)
               .setDescription(`🔗 **[View Image](${imageLink})**`)
-              .setColor(0x1A73E8)
+              .setColor(0x4285F4) // Google blue color
               .setImage(imageLink)
-              .setFooter({ text: "Powered by Google Image Search" });
+              .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
           };
 
-          // Create buttons for pagination.
-          const previousButton = new ButtonBuilder()
-            .setCustomId('previous')
-            .setLabel('Previous')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true); // start disabled since we're at the first item
-
-          const nextButton = new ButtonBuilder()
-            .setCustomId('next')
-            .setLabel('Next')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(items.length <= 1); // disable if only one item
-
-          const row = new ActionRowBuilder().addComponents(previousButton, nextButton);
+          // Create arrow buttons for navigation
+          const createArrowButtons = (currentIndex) => {
+            const prevButton = new ButtonBuilder()
+              .setCustomId(`img_prev_${interaction.user.id}`)
+              .setLabel('◀')
+              .setStyle(ButtonStyle.Primary) // Google blue
+              .setDisabled(currentIndex === 0); // Disable when on first item
+              
+            const nextButton = new ButtonBuilder()
+              .setCustomId(`img_next_${interaction.user.id}`)
+              .setLabel('▶')
+              .setStyle(ButtonStyle.Primary) // Google blue
+              .setDisabled(currentIndex === items.length - 1); // Disable when on last item
+            
+            const navRow = new ActionRowBuilder().addComponents(prevButton, nextButton);
+            return navRow;
+          };
 
           // Send the initial embed with buttons.
-          const message = await interaction.editReply({ embeds: [generateEmbed(currentIndex)], components: [row] });
+          const message = await interaction.editReply({ 
+            embeds: [generateEmbed(currentIndex)], 
+            components: [createArrowButtons(currentIndex)] 
+          });
 
           // Create a collector to handle button interactions.
-          const collector = message.createMessageComponentCollector({ time: 60000 });
+          const filter = i => 
+            (i.customId.startsWith('img_prev_') || 
+             i.customId.startsWith('img_next_')) && 
+            i.customId.includes(interaction.user.id) &&
+            i.user.id === interaction.user.id;
+
+          const collector = message.createMessageComponentCollector({ filter, time: 120000 }); // 2 minute timeout
+          
           collector.on('collect', async i => {
-            // Only allow the command user to interact.
-            if (i.user.id !== interaction.user.id) {
-              await i.reply({ content: "These buttons aren't for you!", ephemeral: true });
-              return;
+            const buttonType = i.customId.split('_')[1];
+            
+            if (buttonType === 'prev') {
+              // Previous button clicked
+              currentIndex = Math.max(0, currentIndex - 1);
+            } else if (buttonType === 'next') {
+              // Next button clicked
+              currentIndex = Math.min(items.length - 1, currentIndex + 1);
             }
-
-            // Update currentIndex based on which button was clicked.
-            if (i.customId === 'previous') {
-              currentIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-            } else if (i.customId === 'next') {
-              currentIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-            }
-
-            // Optionally, adjust button disabled states if you don't want wrap-around.
-            // For example, disable "Previous" on the first item and "Next" on the last item:
-            previousButton.setDisabled(currentIndex === 0);
-            nextButton.setDisabled(currentIndex === items.length - 1);
-
-            // Update the embed with the new image.
-            await i.update({ embeds: [generateEmbed(currentIndex)], components: [row] });
+            
+            await i.update({ 
+              embeds: [generateEmbed(currentIndex)],
+              components: [createArrowButtons(currentIndex)]
+            });
           });
 
           // Disable buttons after the collector expires.
           collector.on('end', async () => {
-            previousButton.setDisabled(true);
-            nextButton.setDisabled(true);
-            await interaction.editReply({ components: [row] });
+            const disabledPrevButton = new ButtonBuilder()
+              .setCustomId(`img_prev_disabled`)
+              .setLabel('◀')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(true);
+              
+            const disabledNextButton = new ButtonBuilder()
+              .setCustomId(`img_next_disabled`)
+              .setLabel('▶')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(true);
+            
+            const disabledNavRow = new ActionRowBuilder().addComponents(
+              disabledPrevButton, disabledNextButton
+            );
+            
+            await interaction.editReply({
+              components: [disabledNavRow]
+            }).catch(err => logger.error("Failed to update timed out message:", err));
           });
         } else {
           // Inform the user if no images were found.
