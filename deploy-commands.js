@@ -1,7 +1,7 @@
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
-const logger = require('./logger')(path.basename(__filename));
-const path = require('path');
+const path = require('path'); // Move this up
+const logger = require('./logger')(path.basename(__filename)); // Now path is available
 const config = require('./config');
 
 /**
