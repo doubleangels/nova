@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const logger = require('../../logger')('ghostping.js');
+const logger = require('../logger')('ghostping.js');
 
 module.exports = {
   // Define the slash command with its name, description and required options
