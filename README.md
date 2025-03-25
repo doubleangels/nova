@@ -5,12 +5,12 @@
 </div>
 <br>
 
-Nova is a powerful Discord bot designed to bring a range of advanced functionalities to your server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Supabase, and more, Nova offers a dynamic and customizable experience for your community.
+Nova is a custom, admin-level Discord bot designed to bring a range of advanced functionalities to the [Da Frens](https://dafrens.games) server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Supabase, and more, Nova offers a dynamic and customizable experience.
 
 ## Features
 
 - **Multi-Platform Integration:** Connect with Google, OMDB, MAL, and other APIs for enriched data and interactivity.
-- **Robust Commands:** A wide array of commands to fetch information, perform searches, and display dynamic content.
+- **Robust Commands:** A wide array of commands to fetch information, perform searches, simplify administrative duties, and display dynamic content.
 - **Scalable & Reliable:** Containerized with Docker for streamlined deployment and auto-restart for high availability.
 
 ## Prerequisites

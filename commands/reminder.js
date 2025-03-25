@@ -21,7 +21,8 @@ module.exports = {
         .setName('role')
         .setDescription('What role do you want to ping for reminders?')
         .setRequired(false)
-    ),
+    )
+    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
 
   /**
    * Executes the /reminder command.
@@ -37,13 +38,6 @@ module.exports = {
 
       // If both options are provided, process the setup configuration.
       if (channelOption && roleOption) {
-        // Check for Administrator permissions.
-        if (!interaction.memberPermissions.has(PermissionsBitField.Flags.Administrator)) {
-          logger.warn("Unauthorized /reminder attempt:", { user: interaction.user.tag });
-          await interaction.reply({ content: '❌ You do not have permission to use this command.', ephemeral: true });
-          return;
-        }
-
         logger.debug("Processing reminder setup", { 
           user: interaction.user.tag,
           channel: channelOption.id,

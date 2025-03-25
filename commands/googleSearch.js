@@ -74,59 +74,83 @@ module.exports = {
             const link = item.link || "No Link Found";
             const snippet = item.snippet || "No Description Found";
             return new EmbedBuilder()
-              .setTitle(`🔍 **${title}** (${index + 1}/${items.length})`)
+              .setTitle(`🔍 **${title}**`)
               .setDescription(`📜 **Summary:** ${snippet}\n🔗 [Read More](${link})`)
-              .setColor(0x1A73E8)
-              .setFooter({ text: "Powered by Google Search" });
+              .setColor(0x4285F4) // Google blue color
+              .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Search` });
           };
 
-          // Create pagination buttons.
-          const previousButton = new ButtonBuilder()
-            .setCustomId('previous')
-            .setLabel('Previous')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true); // Disable since first result is shown initially.
+          // Create arrow buttons for navigation
+          const createArrowButtons = (currentIndex) => {
+            const prevButton = new ButtonBuilder()
+              .setCustomId(`search_prev_${interaction.user.id}`)
+              .setLabel('◀')
+              .setStyle(ButtonStyle.Primary) // Google blue
+              .setDisabled(currentIndex === 0); // Disable when on first item
+              
+            const nextButton = new ButtonBuilder()
+              .setCustomId(`search_next_${interaction.user.id}`)
+              .setLabel('▶')
+              .setStyle(ButtonStyle.Primary) // Google blue
+              .setDisabled(currentIndex === items.length - 1); // Disable when on last item
+            
+            const navRow = new ActionRowBuilder().addComponents(prevButton, nextButton);
+            return navRow;
+          };
 
-          const nextButton = new ButtonBuilder()
-            .setCustomId('next')
-            .setLabel('Next')
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(items.length <= 1); // Disable if only one result.
-
-          const row = new ActionRowBuilder().addComponents(previousButton, nextButton);
-
-          // Send the initial embed.
-          const message = await interaction.editReply({ embeds: [generateEmbed(currentIndex)], components: [row] });
-
-          // Create a collector to handle button interactions.
-          const collector = message.createMessageComponentCollector({ time: 60000 });
-          collector.on('collect', async i => {
-            // Restrict button usage to the command invoker.
-            if (i.user.id !== interaction.user.id) {
-              await i.reply({ content: "These buttons aren't for you!", ephemeral: true });
-              return;
-            }
-
-            // Update index based on the button pressed.
-            if (i.customId === 'previous') {
-              currentIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
-            } else if (i.customId === 'next') {
-              currentIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
-            }
-
-            // Update button disabled states if you want non-wrap-around behavior.
-            previousButton.setDisabled(currentIndex === 0);
-            nextButton.setDisabled(currentIndex === items.length - 1);
-
-            // Update the embed with the new result.
-            await i.update({ embeds: [generateEmbed(currentIndex)], components: [row] });
+          // Send the initial embed with buttons.
+          const message = await interaction.editReply({ 
+            embeds: [generateEmbed(currentIndex)], 
+            components: [createArrowButtons(currentIndex)] 
           });
 
-          // When collector ends, disable the buttons.
+          // Create a collector to handle button interactions.
+          const filter = i => 
+            (i.customId.startsWith('search_prev_') || 
+             i.customId.startsWith('search_next_')) && 
+            i.customId.includes(interaction.user.id) &&
+            i.user.id === interaction.user.id;
+
+          const collector = message.createMessageComponentCollector({ filter, time: 120000 }); // 2 minute timeout
+          
+          collector.on('collect', async i => {
+            const buttonType = i.customId.split('_')[1];
+            
+            if (buttonType === 'prev') {
+              // Previous button clicked
+              currentIndex = Math.max(0, currentIndex - 1);
+            } else if (buttonType === 'next') {
+              // Next button clicked
+              currentIndex = Math.min(items.length - 1, currentIndex + 1);
+            }
+            
+            await i.update({ 
+              embeds: [generateEmbed(currentIndex)],
+              components: [createArrowButtons(currentIndex)]
+            });
+          });
+
+          // Disable buttons after the collector expires.
           collector.on('end', async () => {
-            previousButton.setDisabled(true);
-            nextButton.setDisabled(true);
-            await interaction.editReply({ components: [row] });
+            const disabledPrevButton = new ButtonBuilder()
+              .setCustomId(`search_prev_disabled`)
+              .setLabel('◀')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(true);
+              
+            const disabledNextButton = new ButtonBuilder()
+              .setCustomId(`search_next_disabled`)
+              .setLabel('▶')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(true);
+            
+            const disabledNavRow = new ActionRowBuilder().addComponents(
+              disabledPrevButton, disabledNextButton
+            );
+            
+            await interaction.editReply({
+              components: [disabledNavRow]
+            }).catch(err => logger.error("Failed to update timed out message:", err));
           });
         } else {
           logger.warn("No search results found:", { query: formattedQuery });
