@@ -33,7 +33,7 @@ module.exports = {
       
       // Send a confirmation to the command user (only they can see this)
       await interaction.editReply({
-        content: `✅ Successfully ghost pinged ${target.tag}.`,
+        content: `✅ Successfully ghost pinged!`,
         ephemeral: true
       });
       
