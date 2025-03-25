@@ -6,12 +6,12 @@ const config = require('../config');
 
 /**
  * Module for the /youtube command.
- * Searches YouTube for videos and returns 5 results with interactive selection.
+ * Searches YouTube for videos and returns 5 results with arrow navigation.
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
-    .setDescription('Search YouTube for videos and return 5 interactive results.')
+    .setDescription('Search YouTube for videos.')
     .addStringOption(option =>
       option
         .setName('query')
@@ -21,7 +21,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('sort')
-        .setDescription('How to sort results')
+        .setDescription('How do you want to sort the results?')
         .addChoices(
           { name: 'Relevance', value: 'relevance' },
           { name: 'View Count', value: 'viewCount' },
@@ -32,7 +32,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('duration')
-        .setDescription('Video length')
+        .setDescription('How long should the videos be?')
         .addChoices(
           { name: 'Any', value: 'any' },
           { name: 'Short (<4 min)', value: 'short' },
@@ -68,8 +68,8 @@ module.exports = {
         part: "snippet",
         q: formattedQuery,
         type: "video",
-        maxResults: "5", // Always get 5 results
-        order: sortMethod // Use user's sort preference
+        maxResults: "5",
+        order: sortMethod
       });
       
       // Add duration parameter only if it's not 'any'
@@ -130,7 +130,7 @@ module.exports = {
           };
           
           // Function to create an embed for a video
-          const createVideoEmbed = (video) => {
+          const createVideoEmbed = (video, currentIndex, totalCount) => {
             const snippet = video.snippet;
             const statistics = video.statistics;
             const title = snippet.title || "No Title";
@@ -147,7 +147,7 @@ module.exports = {
               .setTitle(`🎬 ${title}`)
               .setDescription(`${description.substring(0, 150)}${description.length > 150 ? '...' : ''}`)
               .setURL(videoUrl)
-              .setColor(0xFF0000)
+              .setColor(0xFF0000) // YouTube red
               .addFields(
                 { name: "👁️ Views", value: viewCount.toLocaleString(), inline: true },
                 { name: "👍 Likes", value: likeCount.toLocaleString(), inline: true },
@@ -156,39 +156,43 @@ module.exports = {
                 { name: "👤 Channel", value: channelTitle, inline: true }
               )
               .setImage(thumbnail) // Use setImage for larger thumbnail
-              .setFooter({ text: "Powered by YouTube Data API" });
+              .setFooter({ text: `Result ${currentIndex + 1} of ${totalCount} • Powered by YouTube Data API` });
           };
           
           // Always use interactive mode for all 5 videos
           const results = videoDetails.slice(0, 5);
           
-          // Create buttons for all 5 results
-          const resultButtons = results.map((video, index) => {
-            const title = video.snippet.title || "Result";
-            // Truncate long titles for button labels
-            const shortTitle = title.length > 15 ? title.substring(0, 12) + '...' : title;
+          // Function to create arrow navigation buttons
+          const createArrowButtons = (currentIndex) => {
+            // Create arrow buttons for navigation in YouTube red color
+            const prevButton = new ButtonBuilder()
+              .setCustomId(`yt_prev_${interaction.user.id}`)
+              .setLabel('◀')
+              .setStyle(ButtonStyle.Danger) // Red color like YouTube
+              .setDisabled(currentIndex === 0); // Disable when on first item
+              
+            const nextButton = new ButtonBuilder()
+              .setCustomId(`yt_next_${interaction.user.id}`)
+              .setLabel('▶')
+              .setStyle(ButtonStyle.Danger) // Red color like YouTube
+              .setDisabled(currentIndex === results.length - 1); // Disable when on last item
             
-            return new ButtonBuilder()
-              .setCustomId(`youtube_select_${index}_${interaction.user.id}`)
-              .setLabel(`${index + 1}. ${shortTitle}`)
-              .setStyle(ButtonStyle.Primary);
-          });
+            const navRow = new ActionRowBuilder().addComponents(prevButton, nextButton);
+            return [navRow];
+          };
           
-          // Split buttons into rows of 3 and 2 for better UI
-          const row1 = new ActionRowBuilder().addComponents(resultButtons.slice(0, 3));
-          const row2 = new ActionRowBuilder().addComponents(resultButtons.slice(3, 5));
-          
-          // Send interactive message with first result
+          // Initial state - show the first video
+          let currentIndex = 0;
           await interaction.editReply({ 
-            content: "📺 **YouTube Search Results** - Click a button to view details:",
-            components: [row1, row2],
-            embeds: [createVideoEmbed(results[0])] // Show first result initially
+            components: createArrowButtons(currentIndex),
+            embeds: [createVideoEmbed(results[currentIndex], currentIndex, results.length)]
           });
           
           // Create a button collector
           const filter = i => 
-            i.customId.startsWith('youtube_select_') && 
-            i.customId.endsWith(interaction.user.id) &&
+            (i.customId.startsWith('yt_prev_') || 
+             i.customId.startsWith('yt_next_')) && 
+            i.customId.includes(interaction.user.id) &&
             i.user.id === interaction.user.id;
           
           const collector = interaction.channel.createMessageComponentCollector({ 
@@ -197,53 +201,48 @@ module.exports = {
           });
           
           collector.on('collect', async i => {
-            const selectedIndex = parseInt(i.customId.split('_')[2]);
+            const buttonType = i.customId.split('_')[1];
             
-            // Update buttons to show which one is selected
-            const updatedButtons = results.map((video, index) => {
-              const title = video.snippet.title || "Result";
-              const shortTitle = title.length > 15 ? title.substring(0, 12) + '...' : title;
-              
-              return new ButtonBuilder()
-                .setCustomId(`youtube_select_${index}_${interaction.user.id}`)
-                .setLabel(`${index + 1}. ${shortTitle}`)
-                .setStyle(index === selectedIndex ? ButtonStyle.Success : ButtonStyle.Primary);
-            });
-            
-            const updatedRow1 = new ActionRowBuilder().addComponents(updatedButtons.slice(0, 3));
-            const updatedRow2 = new ActionRowBuilder().addComponents(updatedButtons.slice(3, 5));
+            if (buttonType === 'prev') {
+              // Previous button clicked
+              currentIndex = Math.max(0, currentIndex - 1);
+            } else if (buttonType === 'next') {
+              // Next button clicked
+              currentIndex = Math.min(results.length - 1, currentIndex + 1);
+            }
             
             await i.update({ 
-              embeds: [createVideoEmbed(results[selectedIndex])],
-              components: [updatedRow1, updatedRow2]
+              components: createArrowButtons(currentIndex),
+              embeds: [createVideoEmbed(results[currentIndex], currentIndex, results.length)]
             });
           });
           
           collector.on('end', async (collected, reason) => {
             if (reason === 'time') {
-              // If timed out, disable the buttons
-              const disabledButtons = results.map((video, index) => {
-                const title = video.snippet.title || "Result";
-                const shortTitle = title.length > 15 ? title.substring(0, 12) + '...' : title;
+              // Disable buttons when timed out
+              const disabledPrevButton = new ButtonBuilder()
+                .setCustomId(`yt_prev_disabled`)
+                .setLabel('◀')
+                .setStyle(ButtonStyle.Danger)
+                .setDisabled(true);
                 
-                return new ButtonBuilder()
-                  .setCustomId(`youtube_select_${index}_disabled`)
-                  .setLabel(`${index + 1}. ${shortTitle}`)
-                  .setStyle(ButtonStyle.Secondary)
-                  .setDisabled(true);
-              });
+              const disabledNextButton = new ButtonBuilder()
+                .setCustomId(`yt_next_disabled`)
+                .setLabel('▶')
+                .setStyle(ButtonStyle.Danger)
+                .setDisabled(true);
               
-              const disabledRow1 = new ActionRowBuilder().addComponents(disabledButtons.slice(0, 3));
-              const disabledRow2 = new ActionRowBuilder().addComponents(disabledButtons.slice(3, 5));
+              const disabledNavRow = new ActionRowBuilder().addComponents(
+                disabledPrevButton, disabledNextButton
+              );
               
               await interaction.editReply({
-                content: "📺 **YouTube Search Results** - Selection timed out",
-                components: [disabledRow1, disabledRow2]
+                components: [disabledNavRow]
               }).catch(err => logger.error("Failed to update timed out message:", err));
             }
           });
           
-          logger.debug("YouTube interactive results sent successfully:", { user: interaction.user.tag });
+          logger.debug("YouTube arrow navigation results sent successfully:", { user: interaction.user.tag });
         } else {
           // No video results found.
           logger.warn("No video results found:", { query: formattedQuery });
