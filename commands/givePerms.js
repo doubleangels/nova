@@ -38,7 +38,7 @@ module.exports = {
         
         try {
             // Extract command options
-            const roleName = interaction.options.getString('rolename');
+            const roleName = interaction.options.getString('role');
             const colorHex = interaction.options.getString('color');
             const targetUser = interaction.options.getUser('user');
             
