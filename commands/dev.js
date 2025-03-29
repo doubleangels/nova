@@ -27,7 +27,7 @@ module.exports = {
       await interaction.reply("🛠️ Developer tag maintained!");
     } catch (error) {
       logger.error("Error in /dev command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while maintaining the developer tag. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

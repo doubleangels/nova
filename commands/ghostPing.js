@@ -42,10 +42,7 @@ module.exports = {
     } catch (error) {
       // Handle any errors that might occur during execution
       logger.error(`Error in ghost ping command: ${error}`);
-      await interaction.editReply({
-        content: '❌ Failed to send ghost ping. I may not have the required permissions.',
-        flags: MessageFlags.Ephemeral
-      });
+      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   },
 };

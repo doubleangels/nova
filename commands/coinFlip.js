@@ -47,20 +47,7 @@ module.exports = {
                 user: interaction.user?.tag,
                 guild: interaction.guild?.name
             });
-            
-            // Attempt to send an error response to the user
-            try {
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({
-                        content: "An error occurred while flipping the coin.",
-                        flags: MessageFlags.Ephemeral
-                    });
-                }
-            } catch (replyError) {
-                logger.error("Error sending error response:", {
-                    error: replyError.message
-                });
-            }
+            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
         }
     }
 };

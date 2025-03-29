@@ -90,11 +90,14 @@ module.exports = {
           logger.debug("IMDb embed sent successfully:", { movieTitle });
         } else {
           logger.warn("No results found for title:", { formattedTitle });
-          await interaction.editReply(`❌ No results found for **${formattedTitle}**. Try another title!`);
+          await interaction.editReply({ content: `❌ No results found for **${formattedTitle}**. Try another title!`, flags: MessageFlags.Ephemeral });
         }
       } else {
         logger.warn("OMDb API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: OMDb API returned status code ${response.status}.`);
+        await interaction.editReply({
+          content: `⚠️ Error: OMDb API returned status code ${response.status}.`, 
+          flags: MessageFlags.Ephemeral 
+        });
       }
     } catch (error) {
       logger.error("Error in /imdb command:", { error });

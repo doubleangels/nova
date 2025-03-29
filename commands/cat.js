@@ -50,7 +50,7 @@ module.exports = {
         logger.debug("Cat image sent successfully:", { user: interaction.user.tag });
       } else {
         logger.warn("Cataas API returned an error:", { status: response.status });
-        await interaction.editReply("😿 Couldn't fetch a cat picture. Try again later.");
+        await interaction.editReply({content: "⚠️ Couldn't fetch a cat picture. Try again later.", flags: MessageFlags.Ephemeral });
       }
     } catch (error) {
       logger.error("Error in /cat command:", { error });

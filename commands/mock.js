@@ -62,18 +62,10 @@ module.exports = {
       
     } catch (error) {
       logger.error("Error executing mock command:", { error });
-      
-      // Attempt to send an error response to the user
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: "An error occurred while executing this command.",
-            flags: MessageFlags.Ephemeral
-          });
-        }
-      } catch (replyError) {
-        logger.error("Error sending error response:", { error: replyError });
-      }
+      await interaction.reply({
+        content: "An error occurred while executing this command.",
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 };

@@ -73,12 +73,12 @@ module.exports = {
         } else {
           // No definitions found.
           logger.debug("No definitions found:", { query });
-          await interaction.editReply("⚠️ No definitions found for your query. Try refining it.");
+          await interaction.editReply({ content: "⚠️ No definitions found for your query. Try refining it.", flags: MessageFlags.Ephemeral });
         }
       } else {
         // Log if the API response was not successful.
         logger.warn("Urban Dictionary API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: Urban Dictionary API returned status code ${response.status}.`);
+        await interaction.editReply({ content: `⚠️ Error: Urban Dictionary API returned status code ${response.status}.`, flags: MessageFlags.Ephemeral });
       }
     } catch (error) {
       logger.error("Error in /urban command:", { error });

@@ -172,18 +172,22 @@ module.exports = {
         } else {
           // Inform the user if no images were found.
           logger.warn("No image results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No images found for **${formattedQuery}**. Try refining your query!`);
+          avw
+          await interaction.editReply({ content: `❌ No images found for **${formattedQuery}**. Try refining your query!`, flags: MessageFlags.Ephemeral });
         }
       } else {
         // If the API returns an error, log the error details.
         const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
-        await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
+        await interaction.editReply({ content: `⚠️ Error: Google API returned status code ${response.status}.`, flags: MessageFlags.Ephemeral });
       }
     } catch (error) {
       // Log any unexpected errors and notify the user.
       logger.error("Error in /googleimage command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 };

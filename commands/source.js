@@ -38,7 +38,7 @@ module.exports = {
     } catch (error) {
       // Log any errors that occur during command execution.
       logger.error("Error in /source command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while processing your request.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord.js');
+const { PermissionFlagsBits, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -53,7 +53,7 @@ module.exports = {
             } else if (!colorHex.match(/^#[0-9A-Fa-f]{6}$/)) {
                 // If it doesn't match either format, it's invalid
                 logger.warn("Invalid color format:", { colorHex });
-                return await interaction.editReply('⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.');
+                return await interaction.editReply({ content: '⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.', flags: MessageFlags.Ephemeral });
             }
             
             // Convert hex to decimal for Discord's color system
@@ -81,13 +81,7 @@ module.exports = {
                 error: error.message,
                 stack: error.stack 
             });
-            
-            // Provide a user-friendly error message
-            let errorMessage = 'There was an error while executing this command.';
-            
-            await interaction.editReply({
-                content: `⚠️ ${errorMessage}`
-            });
+            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
         }
     },
 };

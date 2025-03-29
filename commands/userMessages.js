@@ -51,7 +51,7 @@ module.exports = {
       
       if (!targetUser) {
         logger.warn("Target user not found:", { requestedBy: interaction.user.tag });
-        return interaction.editReply('User not found.');
+        return interaction.editReply({ content: "User not found.", flags: MessageFlags.Ephemeral });
       }
       
       logger.info(`Fetching messages for user:`, { 
@@ -66,16 +66,7 @@ module.exports = {
           channelName: targetChannel.name, 
           channelId: targetChannel.id 
         });
-        return interaction.editReply('Please select a valid text channel.');
-      }
-
-      // Ensure bot has permission to view the channel
-      if (!targetChannel.permissionsFor(interaction.client.user).has(['ViewChannel', 'ReadMessageHistory'])) {
-        logger.warn("Bot lacks permissions for the channel:", { 
-          channelName: targetChannel.name, 
-          channelId: targetChannel.id 
-        });
-        return interaction.editReply('I do not have permission to read messages in that channel.');
+        return interaction.editReply({ content: "Please select a valid text channel.", flags: MessageFlags.Ephemeral });
       }
 
       logger.debug("Searching specified channel for messages:", { 
@@ -134,7 +125,7 @@ module.exports = {
       
       if (allMessages.length === 0) {
         logger.info("No messages found for user:", { targetUser: targetUser.tag });
-        return interaction.editReply(`No recent messages found from ${targetUser.username} in ${targetChannel.name}.`);
+        return interaction.editReply({ content: `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`, flags: MessageFlags.Ephemeral });
       }
       
       // Create embeds for the messages (max 10 messages per embed due to field limits)
@@ -225,6 +216,7 @@ module.exports = {
       
       const message = await interaction.editReply({ 
         content: `Found ${allMessages.length} messages from ${targetUser.username} in ${targetChannel.name}.`,
+        flags: MessageFlags.Ephemeral,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
@@ -324,9 +316,9 @@ module.exports = {
       });
       
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply('There was an error fetching the messages. Please try again later.');
+        await interaction.editReply({ content: "⚠️ There was an error fetching the messages. Please try again later.", flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: 'There was an error fetching the messages. Please try again later.', flags: MessageFlags.Ephemeral });
+        await interaction.reply({ content: "⚠️ There was an error fetching the messages. Please try again later.", flags: MessageFlags.Ephemeral });
       }
     }
   }

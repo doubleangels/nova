@@ -82,11 +82,11 @@ module.exports = {
           logger.debug("Wikipedia embed sent successfully:", { user: interaction.user.tag, title });
         } else {
           logger.warn("No results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No results found for **${formattedQuery}**. Try refining your search!`);
+          await interaction.editReply({ content: `⚠️ No results found for **${formattedQuery}**. Try refining your search!`, flags: MessageFlags.Ephemeral });
         }
       } else {
         logger.warn("Wikipedia API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: Wikipedia API returned status code ${response.status}.`);
+        await interaction.editReply({ content: `⚠️ Error: Wikipedia API returned status code ${response.status}.`, flags: MessageFlags.Ephemeral });
       }
     } catch (error) {
       logger.error("Error in /wikipedia command:", { error });

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -40,7 +40,7 @@ module.exports = {
       await interaction.editReply("✅ Reminder successfully fixed!");
     } catch (error) {
       logger.error("Error in /fix command:", { error });
-      await interaction.editReply("⚠️ An error occurred while applying fix. Please try again later.");
+      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

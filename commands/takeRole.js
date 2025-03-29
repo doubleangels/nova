@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord.js');
+const { PermissionFlagsBits, flatten } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -51,7 +51,7 @@ module.exports = {
                     userId: targetUser.id,
                     roleId: role.id
                 });
-                return await interaction.editReply(`⚠️ ${targetUser} doesn't have the ${role} role.`);
+                return await interaction.editReply({ content: `⚠️ ${targetUser} doesn't have the ${role} role.`, flags: MessageFlags.Ephemeral });
             }
             
             // Remove the role from the user
@@ -75,10 +75,7 @@ module.exports = {
                 error: error.message,
                 stack: error.stack 
             });
-            
-            await interaction.editReply({
-                content: `⚠️ There was an error while executing this command.`
-            });
+            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
         }
     },
 };

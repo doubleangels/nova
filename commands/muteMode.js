@@ -59,7 +59,7 @@ module.exports = {
       logger.debug("Mute mode configuration updated:", { user: interaction.user.tag, isEnabled, timeLimit });
     } catch (error) {
       logger.error("Error in /mutemode command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while toggling mute mode. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

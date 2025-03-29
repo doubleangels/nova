@@ -96,15 +96,15 @@ module.exports = {
             logger.debug("Anime embed sent successfully:", { animeTitle });
           } else {
             logger.warn("Error fetching MAL details:", { detailsStatus: detailsResponse.status });
-            await interaction.editReply("⚠️ Error fetching additional anime details. Please try again later.");
+            await interaction.editReply({ content: "⚠️ Error fetching additional anime details. Please try again later.", flags: MessageFlags.Ephemeral });
           }
         } else {
           logger.warn("No anime results found:", { formattedTitle });
-          await interaction.editReply(`❌ No anime found for **${formattedTitle}**. Try another title!`);
+          await interaction.editReply({ content: `⚠️ No anime found for **${formattedTitle}**. Try another title!`, flags: MessageFlags.Ephemeral });
         }
       } else {
         logger.warn("MAL API search error:", { status: searchResponse.status });
-        await interaction.editReply(`⚠️ Error: MAL API returned status code ${searchResponse.status}.`);
+        await interaction.editReply({ content: `⚠️ Error: MAL API returned status code ${searchResponse.status}.`, flags: MessageFlags.Ephemeral });
       }
     } catch (e) {
       logger.error("Error in /anime command:", { error: e });

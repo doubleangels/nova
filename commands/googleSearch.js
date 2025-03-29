@@ -154,12 +154,12 @@ module.exports = {
           });
         } else {
           logger.warn("No search results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No search results found for **${formattedQuery}**. Try refining your query!`);
+          await interaction.editReply({ content: `❌ No search results found for **${formattedQuery}**. Try refining your query!`, flags: MessageFlags.Ephemeral });
         }
       } else {
         const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
-        await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
+        await interaction.editReply({ content: `⚠️ Error: Google API returned status code ${response.status}.`, flags: MessageFlags.Ephemeral });
       }
     } catch (error) {
       logger.error("Error in /google command:", { error });

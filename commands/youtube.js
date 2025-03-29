@@ -246,12 +246,12 @@ module.exports = {
         } else {
           // No video results found.
           logger.warn("No video results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No video results found for **${formattedQuery}**. Try another search!`);
+          await interaction.editReply({ content: "⚠️ No video results found for **${formattedQuery}**. Try another search!", flags: MessageFlags.Ephemeral });
         }
       } else {
         // Handle API error responses.
         logger.warn("YouTube API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: YouTube API returned status code ${response.status}.`);
+        await interaction.editReply({ content: "⚠️ Error: YouTube API returned status code ${response.status}.", flags: MessageFlags.Ephemeral });
       }
     } catch (error) {
       // Log and report any unexpected errors.

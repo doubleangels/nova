@@ -51,7 +51,7 @@ module.exports = {
       // Check if the Geocoding API response is successful.
       if (geocodeResponse.status !== 200) {
         logger.warn("Google Geocoding API error:", { status: geocodeResponse.status });
-        await interaction.editReply("⚠️ Google Geocoding API error. Try again later.");
+        await interaction.editReply({ content: "⚠️ Google Geocoding API error. Try again later.", flags: MessageFlags.Ephemeral });
         return;
       }
       
@@ -62,7 +62,7 @@ module.exports = {
       // Ensure that at least one result was returned.
       if (!geoData.results || geoData.results.length === 0) {
         logger.warn("No geocoding results found:", { place });
-        await interaction.editReply(`❌ Could not find the city '${place}'. Check spelling.`);
+        await interaction.editReply({ content: `❌ Could not find the city '${place}'. Check spelling.`, flags: MessageFlags.Ephemeral });
         return;
       }
       
@@ -91,7 +91,7 @@ module.exports = {
       // Check if the Time Zone API response is successful.
       if (timezoneResponse.status !== 200) {
         logger.warn("Google Time Zone API error:", { status: timezoneResponse.status });
-        await interaction.editReply("⚠️ Google Time Zone API error. Try again later.");
+        await interaction.editReply({ content: "⚠️ Google Time Zone API error. Try again later.", flags: MessageFlags.Ephemeral });
         return;
       }
       
@@ -102,7 +102,7 @@ module.exports = {
       // Check if the API returned a valid timezone.
       if (tzData.status !== "OK") {
         logger.warn("Error retrieving timezone info:", { place, status: tzData.status });
-        await interaction.editReply(`❌ Error retrieving timezone info for '${place}'.`);
+        await interaction.editReply({ content: `❌ Error retrieving timezone info for '${place}'.`, flags: MessageFlags.Ephemeral });
         return;
       }
       
