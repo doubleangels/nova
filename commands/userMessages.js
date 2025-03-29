@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -35,7 +35,7 @@ module.exports = {
       
       // Defer reply as ephemeral since this might take some time
       await interaction.deferReply({ 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
       
       // Get the target user and channel from options
@@ -55,7 +55,7 @@ module.exports = {
         logger.warn("Target user not found:", { requestedBy: interaction.user.tag });
         return interaction.editReply({ 
           content: "User not found.", 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
       
@@ -73,7 +73,7 @@ module.exports = {
         });
         return interaction.editReply({ 
           content: "Please select a valid text channel.", 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
 
@@ -133,7 +133,7 @@ module.exports = {
       
       if (allMessages.length === 0) {
         logger.info("No messages found for user:", { targetUser: targetUser.tag });
-        return interaction.editReply({ content: `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`, flags: MessageFlags.Ephemeral });
+        return interaction.editReply({ content: `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`, ephemeral: true });
       }
       
       // Create embeds for the messages (max 10 messages per embed due to field limits)
@@ -224,7 +224,7 @@ module.exports = {
       
       const message = await interaction.editReply({ 
         content: `Found ${allMessages.length} messages from ${targetUser.username} in ${targetChannel.name}.`,
-        flags: MessageFlags.Ephemeral,
+        ephemeral: true,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
@@ -257,9 +257,9 @@ module.exports = {
               commandUser: interaction.user.tag,
               commandUserId: interaction.user.id
             });
-            return i.reply({ 
+            return i.editReply({ 
               content: 'You cannot use these buttons.', 
-              flags: MessageFlags.Ephemeral 
+              ephemeral: true 
             });
           }
           
@@ -329,12 +329,12 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ 
           content: "⚠️ There was an error fetching the messages. Please try again later.", 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       } else {
-        await interaction.reply({ 
+        await interaction.editReply({ 
           content: "⚠️ There was an error fetching the messages. Please try again later.", 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
     }

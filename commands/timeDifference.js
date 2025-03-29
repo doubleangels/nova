@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -104,7 +104,7 @@ module.exports = {
         logger.warn("Failed to retrieve one or both timezones:", { place1, offset1, place2, offset2 });
         await interaction.editReply({ 
           content: `⚠️ Could not retrieve timezones for '${place1}' or '${place2}'.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
         return;
       }
@@ -122,7 +122,7 @@ module.exports = {
       logger.debug("Time difference calculation completed successfully:", { timeDiff, formattedPlace1, formattedPlace2 });
     } catch (error) {
       logger.error("Error in /timedifference command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
     }
   }
 };

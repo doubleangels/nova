@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -35,13 +35,13 @@ module.exports = {
       logger.debug("Bot resources embed created:", { user: interaction.user.tag });
       
       // Reply to the interaction with the embed.
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       // Log any errors that occur during command execution.
       logger.error("Error in /source command:", { error });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
     }
   }

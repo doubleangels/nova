@@ -1,4 +1,4 @@
-const { ContextMenuCommandBuilder, ApplicationCommandType, MessageFlags } = require('discord.js');
+const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -22,18 +22,18 @@ module.exports = {
       // Ensure the target message exists
       if (!targetMessage) {
         logger.error("Target message is undefined.");
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "Error: Could not retrieve the target message.",
-          flags: MessageFlags.Ephemeral
+          ephemeral: true
         });
       }
 
       // Check if the message is sent by the bot itself
       if (targetMessage.author.id === interaction.client.user.id) {
         logger.warn("Attempted to mock the bot's own message.");
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "I cannot mock my own messages!",
-          flags: MessageFlags.Ephemeral
+          ephemeral: true
         });
       }
       
@@ -43,9 +43,9 @@ module.exports = {
       // Ensure the message has content to mock
       if (!messageContent || messageContent.trim() === '') {
         logger.warn("No content available to mock");
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "There is no text to mock!",
-          flags: MessageFlags.Ephemeral
+          ephemeral: true
         });
       }
       
@@ -57,14 +57,14 @@ module.exports = {
       logger.debug("Generated mocked text:", { mockedText });
       
       // Reply with the mocked text while mentioning the original author
-      await interaction.reply(`<@${targetMessage.author.id}>: "${mockedText}" <a:spongebobmock:1291527476564066387>`);
+      await interaction.editReply(`<@${targetMessage.author.id}>: "${mockedText}" <a:spongebobmock:1291527476564066387>`);
       logger.debug("Mock command executed successfully:", { user: interaction.user.tag });
       
     } catch (error) {
       logger.error("Error executing mock command:", { error });
-      await interaction.reply({
+      await interaction.editReply({
         content: "An error occurred while executing this command.",
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
       });
     }
   }

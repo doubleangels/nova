@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -53,7 +53,7 @@ module.exports = {
                 });
                 return await interaction.editReply({
                     content: `⚠️ ${targetUser} already has the ${role} role.`,
-                    flags: MessageFlags.Ephemeral
+                    ephemeral: true
                 });
             }
             
@@ -80,7 +80,7 @@ module.exports = {
             });
             await interaction.editReply({
                 content: "⚠️ An unexpected error occurred. Please try again later.",
-                flags: MessageFlags.Ephemeral
+                ephemeral: true
             });
         }
     },

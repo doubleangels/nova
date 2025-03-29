@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -42,7 +42,7 @@ module.exports = {
       logger.error("Error in /fix command:", { error });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
       });
     }
   }

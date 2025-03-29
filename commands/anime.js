@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -98,28 +98,28 @@ module.exports = {
             logger.warn("Error fetching MAL details:", { detailsStatus: detailsResponse.status });
             await interaction.editReply({
               content: "⚠️ Error fetching additional anime details. Please try again later.",
-              flags: MessageFlags.Ephemeral
+              ephemeral: true
             });
           }
         } else {
           logger.warn("No anime results found:", { formattedTitle });
           await interaction.editReply({
             content: `⚠️ No anime found for **${formattedTitle}**. Try another title!`,
-            flags: MessageFlags.Ephemeral
+            ephemeral: true
           });
         }
       } else {
         logger.warn("MAL API search error:", { status: searchResponse.status });
         await interaction.editReply({
           content: `⚠️ Error: MAL API returned status code ${searchResponse.status}.`,
-          flags: MessageFlags.Ephemeral
+          ephemeral: true
         });
       }
     } catch (e) {
       logger.error("Error in /anime command:", { error: e });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
       });
     }
   }

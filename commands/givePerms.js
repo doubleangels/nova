@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -76,7 +76,7 @@ module.exports = {
                 logger.warn("Invalid color format:", { colorHex });
                 return await interaction.editReply({
                     content: "Invalid color format. Please use the format #RRGGBB or RRGGBB.",
-                    flags: MessageFlags.Ephemeral
+                    ephemeral: true
                 });
             }
 
@@ -90,7 +90,7 @@ module.exports = {
                 logger.error("Reference role not found:", { roleId: POSITION_ABOVE_ROLE_ID });
                 return await interaction.editReply({
                     content: "⚠️ Reference role for positioning not found. Please the postitioning role ID.",
-                    flags: MessageFlags.Ephemeral
+                    ephemeral: true
                 });
             }
             logger.debug("Reference role found:", { 
@@ -119,7 +119,7 @@ module.exports = {
                 logger.error("Additional role not found:", { roleId: FREN_ROLE_ID });
                 return await interaction.editReply({
                     content: "⚠️ Additional role not found. Please check the Fren role ID.",
-                    flags: MessageFlags.Ephemeral
+                    ephemeral: true
                 });
             }
             logger.debug("Additional role found:", { 
@@ -158,7 +158,7 @@ module.exports = {
             });
             await interaction.editReply({
                 content: "⚠️ An unexpected error occurred. Please try again later.",
-                flags: MessageFlags.Ephemeral
+                ephemeral: true
             });
         }
     },

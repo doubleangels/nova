@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -25,12 +25,12 @@ module.exports = {
       logger.debug("Developer tag maintenance executed successfully.");
       
       // Inform the user that the developer tag has been maintained.
-      await interaction.reply("🛠️ Developer tag maintained!");
+      await interaction.editReply("🛠️ Developer tag maintained!");
     } catch (error) {
       logger.error("Error in /dev command:", { error });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
       });
     }
   }

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -86,7 +86,7 @@ module.exports = {
           responseMessage += `🎭 New member role: <@&${roleOption.id}>`;
         }
         
-        await interaction.reply(responseMessage);
+        await interaction.editReply(responseMessage);
         logger.debug("Backup mode configuration updated:", { user: interaction.user.tag, channel: channelOption?.id, role: roleOption?.id, enabled: enabledOption });
         return;
       }
@@ -113,13 +113,13 @@ module.exports = {
         `📢 Welcome channel: ${channelStr}\n` +
         `🎭 New member role: ${roleStr}`;
       
-      await interaction.reply(responseMessage);
+      await interaction.editReply(responseMessage);
       logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
     } catch (error) {
       logger.error("Error in /backupmode command:", { error });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
       });
     }
   }

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -42,7 +42,7 @@ module.exports = {
         logger.warn("Failed to get coordinates:", { place });
         await interaction.editReply({ 
           content: `⚠️ Could not find the location for '${place}'. Try another city.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
         return;
       }
@@ -136,7 +136,7 @@ module.exports = {
         logger.warn("PirateWeather API error:", { status: response.status });
         await interaction.editReply({ 
           content: `⚠️ Error: PirateWeather API returned status code ${response.status}.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
     } catch (error) {
@@ -144,7 +144,7 @@ module.exports = {
       logger.error("Error in /weather command:", { error });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
     }
   }

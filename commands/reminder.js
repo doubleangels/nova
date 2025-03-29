@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -51,7 +51,7 @@ module.exports = {
         logger.debug("Reminder configuration saved successfully.");
 
         // Respond with a summary of the new configuration.
-        await interaction.reply(
+        await interaction.editReply(
           `✅ **Reminder setup complete!**\n` +
           `📢 Reminders will be sent in <#${channelOption.id}>.\n` +
           `🎭 The role to be pinged is <@&${roleOption.id}>.`
@@ -103,13 +103,13 @@ module.exports = {
         `🎭 **Role:** ${roleStr}\n\n` +
         `${reminderInfo}`;
 
-      await interaction.reply(summary);
+      await interaction.editReply(summary);
       logger.debug("Reminder status reply sent:", { summary });
     } catch (error) {
       logger.error("Error in /reminder command:", { error });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
     }
   }

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -174,7 +174,7 @@ module.exports = {
           logger.warn("No image results found:", { query: formattedQuery });
           await interaction.editReply({
             content: `⚠️ No images found for **${formattedQuery}**. Try refining your query!`,
-            flags: MessageFlags.Ephemeral
+            ephemeral: true
           });
         }
       } else {
@@ -183,7 +183,7 @@ module.exports = {
         logger.warn("Google API error:", { status: response.status, errorBody });
         await interaction.editReply({
           content: `⚠️ Error: Google API returned status code ${response.status}.`,
-          flags: MessageFlags.Ephemeral
+          ephemeral: true
         });
       }
     } catch (error) {
@@ -191,7 +191,7 @@ module.exports = {
       logger.error("Error in /googleimages command:", { error });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
       });
     }
   }

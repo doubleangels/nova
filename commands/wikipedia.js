@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -84,21 +84,21 @@ module.exports = {
           logger.warn("No results found:", { query: formattedQuery });
           await interaction.editReply({ 
             content: `⚠️ No results found for **${formattedQuery}**. Try refining your search!`, 
-            flags: MessageFlags.Ephemeral 
+            ephemeral: true 
           });
         }
       } else {
         logger.warn("Wikipedia API error:", { status: response.status });
         await interaction.editReply({ 
           content: `⚠️ Error: Wikipedia API returned status code ${response.status}.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
     } catch (error) {
       logger.error("Error in /wikipedia command:", { error });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
     }
   }

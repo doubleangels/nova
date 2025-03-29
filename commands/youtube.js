@@ -248,7 +248,7 @@ module.exports = {
           logger.warn("No video results found:", { query: formattedQuery });
           await interaction.editReply({ 
             content: `⚠️ No video results found for **${formattedQuery}**. Try another search!`, 
-            flags: MessageFlags.Ephemeral 
+            ephemeral: true 
           });
         }
       } else {
@@ -256,7 +256,7 @@ module.exports = {
         logger.warn("YouTube API error:", { status: response.status });
         await interaction.editReply({ 
           content: `⚠️ Error: YouTube API returned status code ${response.status}.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
     } catch (error) {
@@ -264,7 +264,7 @@ module.exports = {
       logger.error("Error in /youtube command:", { error: error.message, stack: error.stack });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral
+        ephemeral: true
        });
     }
   }

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -53,7 +53,7 @@ module.exports = {
         logger.warn("Google Geocoding API error:", { status: geocodeResponse.status });
         await interaction.editReply({ 
           content: "⚠️ Google Geocoding API error. Try again later.", 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
         return;
       }
@@ -67,7 +67,7 @@ module.exports = {
         logger.warn("No geocoding results found:", { place });
         await interaction.editReply({ 
           content: `⚠️ Could not find the city '${place}'. Check spelling.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
         return;
       }
@@ -99,7 +99,7 @@ module.exports = {
         logger.warn("Google Time Zone API error:", { status: timezoneResponse.status });
         await interaction.editReply({ 
           content: "⚠️ Google Time Zone API error. Try again later.", 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
         return;
       }
@@ -113,7 +113,7 @@ module.exports = {
         logger.warn("Error retrieving timezone info:", { place, status: tzData.status });
         await interaction.editReply({ 
           content: `⚠️ Error retrieving timezone info for '${place}'.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
         return;
       }
@@ -148,7 +148,7 @@ module.exports = {
       logger.error("Error in /timezone command:", { error });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
     }
   }

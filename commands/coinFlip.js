@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -35,7 +35,7 @@ module.exports = {
             });
 
             // Reply to the user with the result (public message)
-            await interaction.reply({ content: `🪙 The coin landed on **${result}**!` });
+            await interaction.editReply({ content: `🪙 The coin landed on **${result}**!` });
             
             logger.info("Coinflip command executed successfully:", {
                 user: interaction.user.tag,
@@ -50,7 +50,7 @@ module.exports = {
             });
             await interaction.editReply({
                 content: "⚠️ An unexpected error occurred. Please try again later.",
-                flags: MessageFlags.Ephemeral
+                ephemeral: true
             });
         }
     }

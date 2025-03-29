@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -75,7 +75,7 @@ module.exports = {
           logger.debug("No definitions found:", { query });
           await interaction.editReply({ 
             content: "⚠️ No definitions found for your query. Try refining it.", 
-            flags: MessageFlags.Ephemeral 
+            ephemeral: true 
           });
         }
       } else {
@@ -83,14 +83,14 @@ module.exports = {
         logger.warn("Urban Dictionary API error:", { status: response.status });
         await interaction.editReply({ 
           content: `⚠️ Error: Urban Dictionary API returned status code ${response.status}.`, 
-          flags: MessageFlags.Ephemeral 
+          ephemeral: true 
         });
       }
     } catch (error) {
       logger.error("Error in /urban command:", { error });
       await interaction.editReply({ 
         content: "⚠️ An unexpected error occurred. Please try again later.", 
-        flags: MessageFlags.Ephemeral 
+        ephemeral: true 
       });
     }
   }
