@@ -16,6 +16,7 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       // Log that the /source command was received.
       logger.debug("/source command received:", { user: interaction.user.tag });
@@ -34,11 +35,14 @@ module.exports = {
       logger.debug("Bot resources embed created:", { user: interaction.user.tag });
       
       // Reply to the interaction with the embed.
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       // Log any errors that occur during command execution.
       logger.error("Error in /source command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while processing your request.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
+      });
     }
   }
 };

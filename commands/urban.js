@@ -73,16 +73,25 @@ module.exports = {
         } else {
           // No definitions found.
           logger.debug("No definitions found:", { query });
-          await interaction.editReply("⚠️ No definitions found for your query. Try refining it.");
+          await interaction.editReply({ 
+            content: "⚠️ No definitions found for your query. Try refining it.", 
+            ephemeral: true 
+          });
         }
       } else {
         // Log if the API response was not successful.
         logger.warn("Urban Dictionary API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: Urban Dictionary API returned status code ${response.status}.`);
+        await interaction.editReply({ 
+          content: `⚠️ Error: Urban Dictionary API returned status code ${response.status}.`, 
+          ephemeral: true 
+        });
       }
     } catch (error) {
       logger.error("Error in /urban command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
+      });
     }
   }
 };

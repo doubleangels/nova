@@ -40,7 +40,10 @@ module.exports = {
       const [lat, lon] = await getCoordinates(place);
       if (lat === null || lon === null) {
         logger.warn("Failed to get coordinates:", { place });
-        await interaction.editReply(`❌ Could not find the location for '${place}'. Try another city.`);
+        await interaction.editReply({ 
+          content: `⚠️ Could not find the location for '${place}'. Try another city.`, 
+          ephemeral: true 
+        });
         return;
       }
       
@@ -131,12 +134,18 @@ module.exports = {
       } else {
         // If the API response is not OK, log a warning and inform the user.
         logger.warn("PirateWeather API error:", { status: response.status });
-        await interaction.editReply(`Error: PirateWeather API returned status code ${response.status}.`);
+        await interaction.editReply({ 
+          content: `⚠️ Error: PirateWeather API returned status code ${response.status}.`, 
+          ephemeral: true 
+        });
       }
     } catch (error) {
       // Log any unexpected errors and send an error message to the user.
       logger.error("Error in /weather command:", { error });
-      await interaction.editReply({ content: "An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
+      });
     }
   }
 };

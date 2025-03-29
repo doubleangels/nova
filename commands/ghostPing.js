@@ -19,7 +19,9 @@ module.exports = {
    */
   async execute(interaction) {
     // Acknowledge the command with an ephemeral reply to prevent timeout
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ 
+      ephemeral: true
+    });
     
     // Get the user to ping from the command options
     const target = interaction.options.getUser('user');
@@ -33,7 +35,7 @@ module.exports = {
       
       // Send a confirmation to the command user (only they can see this)
       await interaction.editReply({
-        content: `✅ Successfully ghost pinged!`,
+        content: "✅ Successfully ghost pinged!",
         ephemeral: true
       });
       
@@ -43,7 +45,7 @@ module.exports = {
       // Handle any errors that might occur during execution
       logger.error(`Error in ghost ping command: ${error}`);
       await interaction.editReply({
-        content: '❌ Failed to send ghost ping. I may not have the required permissions.',
+        content: "⚠️ An unexpected error occurred. Please try again later.",
         ephemeral: true
       });
     }

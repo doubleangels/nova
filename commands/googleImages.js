@@ -33,7 +33,7 @@ module.exports = {
     ),
 
   /**
-   * Executes the /googleimage command.
+   * Executes the /googleimages command.
    * Searches for images on Google using the Custom Search API and returns the results in a single paginated embed.
    * @param {Interaction} interaction - The Discord interaction object.
    */
@@ -41,7 +41,7 @@ module.exports = {
     try {
       // Defer the reply to allow time for API processing.
       await interaction.deferReply();
-      logger.debug("/googleimage command received:", { user: interaction.user.tag });
+      logger.debug("/googleimages command received:", { user: interaction.user.tag });
 
       // Retrieve user input for the query and number of results.
       const query = interaction.options.getString('query');
@@ -172,18 +172,27 @@ module.exports = {
         } else {
           // Inform the user if no images were found.
           logger.warn("No image results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No images found for **${formattedQuery}**. Try refining your query!`);
+          await interaction.editReply({
+            content: `⚠️ No images found for **${formattedQuery}**. Try refining your query!`,
+            ephemeral: true
+          });
         }
       } else {
         // If the API returns an error, log the error details.
         const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
-        await interaction.editReply(`⚠️ Error: Google API returned status code ${response.status}.`);
+        await interaction.editReply({
+          content: `⚠️ Error: Google API returned status code ${response.status}.`,
+          ephemeral: true
+        });
       }
     } catch (error) {
       // Log any unexpected errors and notify the user.
-      logger.error("Error in /googleimage command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
+      logger.error("Error in /googleimages command:", { error });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
+      });
     }
   }
 };

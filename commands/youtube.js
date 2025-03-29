@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -246,17 +246,26 @@ module.exports = {
         } else {
           // No video results found.
           logger.warn("No video results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No video results found for **${formattedQuery}**. Try another search!`);
+          await interaction.editReply({ 
+            content: `⚠️ No video results found for **${formattedQuery}**. Try another search!`, 
+            ephemeral: true 
+          });
         }
       } else {
         // Handle API error responses.
         logger.warn("YouTube API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: YouTube API returned status code ${response.status}.`);
+        await interaction.editReply({ 
+          content: `⚠️ Error: YouTube API returned status code ${response.status}.`, 
+          ephemeral: true 
+        });
       }
     } catch (error) {
       // Log and report any unexpected errors.
       logger.error("Error in /youtube command:", { error: error.message, stack: error.stack });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true
+       });
     }
   }
 };

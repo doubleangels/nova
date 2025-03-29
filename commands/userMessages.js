@@ -34,7 +34,9 @@ module.exports = {
       });
       
       // Defer reply as ephemeral since this might take some time
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ 
+        ephemeral: true 
+      });
       
       // Get the target user and channel from options
       const targetUser = interaction.options.getUser('user');
@@ -51,7 +53,10 @@ module.exports = {
       
       if (!targetUser) {
         logger.warn("Target user not found:", { requestedBy: interaction.user.tag });
-        return interaction.editReply('User not found.');
+        return interaction.editReply({ 
+          content: "User not found.", 
+          ephemeral: true 
+        });
       }
       
       logger.info(`Fetching messages for user:`, { 
@@ -66,16 +71,10 @@ module.exports = {
           channelName: targetChannel.name, 
           channelId: targetChannel.id 
         });
-        return interaction.editReply('Please select a valid text channel.');
-      }
-
-      // Ensure bot has permission to view the channel
-      if (!targetChannel.permissionsFor(interaction.client.user).has(['ViewChannel', 'ReadMessageHistory'])) {
-        logger.warn("Bot lacks permissions for the channel:", { 
-          channelName: targetChannel.name, 
-          channelId: targetChannel.id 
+        return interaction.editReply({ 
+          content: "Please select a valid text channel.", 
+          ephemeral: true 
         });
-        return interaction.editReply('I do not have permission to read messages in that channel.');
       }
 
       logger.debug("Searching specified channel for messages:", { 
@@ -134,7 +133,7 @@ module.exports = {
       
       if (allMessages.length === 0) {
         logger.info("No messages found for user:", { targetUser: targetUser.tag });
-        return interaction.editReply(`No recent messages found from ${targetUser.username} in ${targetChannel.name}.`);
+        return interaction.editReply({ content: `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`, ephemeral: true });
       }
       
       // Create embeds for the messages (max 10 messages per embed due to field limits)
@@ -225,6 +224,7 @@ module.exports = {
       
       const message = await interaction.editReply({ 
         content: `Found ${allMessages.length} messages from ${targetUser.username} in ${targetChannel.name}.`,
+        ephemeral: true,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [createButtons(currentPage, totalPages)] : []
       });
@@ -257,7 +257,10 @@ module.exports = {
               commandUser: interaction.user.tag,
               commandUserId: interaction.user.id
             });
-            return i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
+            return i.editReply({ 
+              content: 'You cannot use these buttons.', 
+              ephemeral: true 
+            });
           }
           
           const oldPage = currentPage + 1;
@@ -324,9 +327,15 @@ module.exports = {
       });
       
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply('There was an error fetching the messages. Please try again later.');
+        await interaction.editReply({ 
+          content: "⚠️ There was an error fetching the messages. Please try again later.", 
+          ephemeral: true 
+        });
       } else {
-        await interaction.reply({ content: 'There was an error fetching the messages. Please try again later.', ephemeral: true });
+        await interaction.editReply({ 
+          content: "⚠️ There was an error fetching the messages. Please try again later.", 
+          ephemeral: true 
+        });
       }
     }
   }

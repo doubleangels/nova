@@ -18,16 +18,20 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/dev command received:", { user: interaction.user.tag });
       // Placeholder for developer tag maintenance.
       logger.debug("Developer tag maintenance executed successfully.");
       
       // Inform the user that the developer tag has been maintained.
-      await interaction.reply("🛠️ Developer tag maintained!");
+      await interaction.editReply("🛠️ Developer tag maintained!");
     } catch (error) {
       logger.error("Error in /dev command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while maintaining the developer tag. Please try again later.", ephemeral: true });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
+      });
     }
   }
 };

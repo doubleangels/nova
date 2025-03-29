@@ -20,7 +20,7 @@ module.exports = {
     try {
       // Defer reply to allow asynchronous operations.
       await interaction.deferReply();
-      logger.debug("/cat command received:", { user: interaction.user.tag });
+      logger.debug("/dog command received:", { user: interaction.user.tag });
       const dogApiUrl = "https://dog.ceo/api/breeds/image/random";
       logger.debug("Fetching random dog image data:", { url: dogApiUrl });
       
@@ -58,19 +58,31 @@ module.exports = {
             logger.debug("Dog image sent successfully:", { user: interaction.user.tag });
           } else {
             logger.warn("Error fetching dog image file:", { status: imageResponse.status });
-            await interaction.editReply("🐶 Couldn't fetch a dog picture. Try again later.");
+            await interaction.editReply({
+              content: "⚠️ Couldn't fetch a dog picture. Try again later.",
+              ephemeral: true
+            });
           }
         } else {
           logger.warn("No dog image URL found in API response:", { responseData: data });
-          await interaction.editReply("🐶 Couldn't find a dog picture. Try again later.");
+          await interaction.editReply({
+            content: "⚠️ Couldn't find a dog picture. Try again later.",
+            ephemeral: true
+          });
         }
       } else {
         logger.warn("Dog CEO API error:", { status: response.status });
-        await interaction.editReply("🐕 Couldn't fetch a dog picture. Try again later.");
+        await interaction.editReply({
+          content: "⚠️ Couldn't fetch a dog picture. Try again later.",
+          ephemeral: true
+        });
       }
     } catch (error) {
       logger.error("Error in /dog command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
+      });
     }
   }
 };

@@ -28,13 +28,14 @@ module.exports = {
         .setDescription('Time limit in hours before a silent user is kicked (Default: 2)')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
    * Executes the /mutemode command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/mutemode command received:", { user: interaction.user.tag });
       
@@ -52,14 +53,17 @@ module.exports = {
       // Prepare the response message based on the mode.
       const responseMessage = isEnabled
         ? `🔇 Mute mode has been ✅ **enabled**. New users must send a message within **${timeLimit}** hours or be kicked.`
-        : `🔇 Mute mode has been ❌ **disabled**.`;
+        : `🔇 Mute mode has been ⚠️ **disabled**.`;
 
       // Reply to the interaction.
-      await interaction.reply(responseMessage);
+      await interaction.editReply(responseMessage);
       logger.debug("Mute mode configuration updated:", { user: interaction.user.tag, isEnabled, timeLimit });
     } catch (error) {
       logger.error("Error in /mutemode command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true 
+      });
     }
   }
 };

@@ -14,7 +14,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
     .setDescription('Fix reminder data in the database.')
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
    * Executes the /fix command.
@@ -40,7 +40,10 @@ module.exports = {
       await interaction.editReply("✅ Reminder successfully fixed!");
     } catch (error) {
       logger.error("Error in /fix command:", { error });
-      await interaction.editReply("⚠️ An error occurred while applying fix. Please try again later.");
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
+      });
     }
   }
 };

@@ -22,7 +22,7 @@ module.exports = {
       // Ensure the target message exists
       if (!targetMessage) {
         logger.error("Target message is undefined.");
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "Error: Could not retrieve the target message.",
           ephemeral: true
         });
@@ -31,7 +31,7 @@ module.exports = {
       // Check if the message is sent by the bot itself
       if (targetMessage.author.id === interaction.client.user.id) {
         logger.warn("Attempted to mock the bot's own message.");
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "I cannot mock my own messages!",
           ephemeral: true
         });
@@ -43,7 +43,7 @@ module.exports = {
       // Ensure the message has content to mock
       if (!messageContent || messageContent.trim() === '') {
         logger.warn("No content available to mock");
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "There is no text to mock!",
           ephemeral: true
         });
@@ -57,23 +57,15 @@ module.exports = {
       logger.debug("Generated mocked text:", { mockedText });
       
       // Reply with the mocked text while mentioning the original author
-      await interaction.reply(`<@${targetMessage.author.id}>: "${mockedText}" <a:spongebobmock:1291527476564066387>`);
+      await interaction.editReply(`<@${targetMessage.author.id}>: "${mockedText}" <a:spongebobmock:1291527476564066387>`);
       logger.debug("Mock command executed successfully:", { user: interaction.user.tag });
       
     } catch (error) {
       logger.error("Error executing mock command:", { error });
-      
-      // Attempt to send an error response to the user
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: "An error occurred while executing this command.",
-            ephemeral: true
-          });
-        }
-      } catch (replyError) {
-        logger.error("Error sending error response:", { error: replyError });
-      }
+      await interaction.editReply({
+        content: "An error occurred while executing this command.",
+        ephemeral: true
+      });
     }
   }
 };

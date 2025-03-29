@@ -82,15 +82,24 @@ module.exports = {
           logger.debug("Wikipedia embed sent successfully:", { user: interaction.user.tag, title });
         } else {
           logger.warn("No results found:", { query: formattedQuery });
-          await interaction.editReply(`❌ No results found for **${formattedQuery}**. Try refining your search!`);
+          await interaction.editReply({ 
+            content: `⚠️ No results found for **${formattedQuery}**. Try refining your search!`, 
+            ephemeral: true 
+          });
         }
       } else {
         logger.warn("Wikipedia API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: Wikipedia API returned status code ${response.status}.`);
+        await interaction.editReply({ 
+          content: `⚠️ Error: Wikipedia API returned status code ${response.status}.`, 
+          ephemeral: true 
+        });
       }
     } catch (error) {
       logger.error("Error in /wikipedia command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
+      });
     }
   }
 };

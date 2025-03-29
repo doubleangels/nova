@@ -42,6 +42,7 @@ module.exports = {
    * @param {Interaction} interaction - The interaction object from Discord.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/backupmode command received", { user: interaction.user.tag });
       
@@ -85,7 +86,7 @@ module.exports = {
           responseMessage += `🎭 New member role: <@&${roleOption.id}>`;
         }
         
-        await interaction.reply(responseMessage);
+        await interaction.editReply(responseMessage);
         logger.debug("Backup mode configuration updated:", { user: interaction.user.tag, channel: channelOption?.id, role: roleOption?.id, enabled: enabledOption });
         return;
       }
@@ -112,11 +113,14 @@ module.exports = {
         `📢 Welcome channel: ${channelStr}\n` +
         `🎭 New member role: ${roleStr}`;
       
-      await interaction.reply(responseMessage);
+      await interaction.editReply(responseMessage);
       logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
     } catch (error) {
       logger.error("Error in /backupmode command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while configuring backup mode. Please try again later.", ephemeral: true });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
+      });
     }
   }
 };

@@ -22,13 +22,14 @@ module.exports = {
         .setDescription('What role do you want to ping for reminders?')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   /**
    * Executes the /reminder command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/reminder command received:", { user: interaction.user.tag });
       
@@ -50,7 +51,7 @@ module.exports = {
         logger.debug("Reminder configuration saved successfully.");
 
         // Respond with a summary of the new configuration.
-        await interaction.reply(
+        await interaction.editReply(
           `✅ **Reminder setup complete!**\n` +
           `📢 Reminders will be sent in <#${channelOption.id}>.\n` +
           `🎭 The role to be pinged is <@&${roleOption.id}>.`
@@ -102,13 +103,13 @@ module.exports = {
         `🎭 **Role:** ${roleStr}\n\n` +
         `${reminderInfo}`;
 
-      await interaction.reply(summary);
+      await interaction.editReply(summary);
       logger.debug("Reminder status reply sent:", { summary });
     } catch (error) {
       logger.error("Error in /reminder command:", { error });
-      await interaction.reply({
-        content: '⚠️ An error occurred while processing your request. Please try again later.',
-        ephemeral: true
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
       });
     }
   }

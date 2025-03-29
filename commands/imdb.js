@@ -38,7 +38,7 @@ module.exports = {
       logger.debug("Formatted title:", { formattedTitle });
       
       // Construct the OMDb API request URL with query parameters.
-      const searchUrl = "http://www.omdbapi.com/";
+      const searchUrl = "https://www.omdbapi.com/";
       const params = new URLSearchParams({
         t: formattedTitle,
         apikey: config.omdbApiKey
@@ -90,15 +90,24 @@ module.exports = {
           logger.debug("IMDb embed sent successfully:", { movieTitle });
         } else {
           logger.warn("No results found for title:", { formattedTitle });
-          await interaction.editReply(`❌ No results found for **${formattedTitle}**. Try another title!`);
+          await interaction.editReply({ 
+            content: `⚠️ No results found for **${formattedTitle}**. Try another title!`, 
+            ephemeral: true 
+          });
         }
       } else {
         logger.warn("OMDb API error:", { status: response.status });
-        await interaction.editReply(`⚠️ Error: OMDb API returned status code ${response.status}.`);
+        await interaction.editReply({
+          content: `⚠️ Error: OMDb API returned status code ${response.status}.`, 
+          ephemeral: true 
+        });
       }
     } catch (error) {
       logger.error("Error in /imdb command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
+      });
     }
   }
 };

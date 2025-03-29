@@ -35,6 +35,7 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/trollmode command received:", { user: interaction.user.tag });
       
@@ -55,11 +56,14 @@ module.exports = {
         : `👹 Troll mode has been ❌ **disabled**.`;
 
       // Reply to the interaction.
-      await interaction.reply(responseMessage);
+      await interaction.editReply(responseMessage);
       logger.debug("Troll mode command executed:", { user: interaction.user.tag, isEnabled, age });
     } catch (error) {
       logger.error("Error in /trollmode command:", { error });
-      await interaction.reply({ content: '⚠️ An error occurred while toggling troll mode. Please try again later.', ephemeral: true });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        ephemeral: true 
+      });
     }
   }
 };

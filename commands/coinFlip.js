@@ -16,6 +16,7 @@ module.exports = {
      * @param {import('discord.js').CommandInteraction} interaction - The interaction object from Discord.
      */
     async execute(interaction) {
+        await interaction.deferReply();
         try {
             logger.debug("Coinflip command received:", {
                 user: interaction.user.tag,
@@ -34,7 +35,7 @@ module.exports = {
             });
 
             // Reply to the user with the result (public message)
-            await interaction.reply({ content: `🪙 The coin landed on **${result}**!` });
+            await interaction.editReply({ content: `🪙 The coin landed on **${result}**!` });
             
             logger.info("Coinflip command executed successfully:", {
                 user: interaction.user.tag,
@@ -47,20 +48,10 @@ module.exports = {
                 user: interaction.user?.tag,
                 guild: interaction.guild?.name
             });
-            
-            // Attempt to send an error response to the user
-            try {
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({
-                        content: "An error occurred while flipping the coin.",
-                        ephemeral: true
-                    });
-                }
-            } catch (replyError) {
-                logger.error("Error sending error response:", {
-                    error: replyError.message
-                });
-            }
+            await interaction.editReply({
+                content: "⚠️ An unexpected error occurred. Please try again later.",
+                ephemeral: true
+            });
         }
     }
 };
