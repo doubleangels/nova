@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -136,7 +136,7 @@ module.exports = {
     } catch (error) {
       // Log any unexpected errors and send an error message to the user.
       logger.error("Error in /weather command:", { error });
-      await interaction.editReply({ content: "An unexpected error occurred. Please try again later.", ephemeral: true });
+      await interaction.editReply({ content: "An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

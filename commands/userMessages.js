@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -34,7 +34,7 @@ module.exports = {
       });
       
       // Defer reply as ephemeral since this might take some time
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       
       // Get the target user and channel from options
       const targetUser = interaction.options.getUser('user');
@@ -257,7 +257,7 @@ module.exports = {
               commandUser: interaction.user.tag,
               commandUserId: interaction.user.id
             });
-            return i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
+            return i.reply({ content: 'You cannot use these buttons.', flags: MessageFlags.Ephemeral });
           }
           
           const oldPage = currentPage + 1;
@@ -326,7 +326,7 @@ module.exports = {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('There was an error fetching the messages. Please try again later.');
       } else {
-        await interaction.reply({ content: 'There was an error fetching the messages. Please try again later.', ephemeral: true });
+        await interaction.reply({ content: 'There was an error fetching the messages. Please try again later.', flags: MessageFlags.Ephemeral });
       }
     }
   }

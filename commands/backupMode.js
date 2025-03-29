@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -116,7 +116,7 @@ module.exports = {
       logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
     } catch (error) {
       logger.error("Error in /backupmode command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while configuring backup mode. Please try again later.", ephemeral: true });
+      await interaction.reply({ content: "⚠️ An error occurred while configuring backup mode. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

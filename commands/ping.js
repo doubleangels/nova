@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -64,7 +64,7 @@ module.exports = {
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: "An error occurred while checking ping.",
-                        ephemeral: true
+                        flags: MessageFlags.Ephemeral
                     });
                 } else if (interaction.replied) {
                     await interaction.editReply({

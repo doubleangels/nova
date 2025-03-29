@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue } = require('../utils/database');
@@ -59,7 +59,7 @@ module.exports = {
       logger.debug("Mute mode configuration updated:", { user: interaction.user.tag, isEnabled, timeLimit });
     } catch (error) {
       logger.error("Error in /mutemode command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while toggling mute mode. Please try again later.", ephemeral: true });
+      await interaction.reply({ content: "⚠️ An error occurred while toggling mute mode. Please try again later.", flags: MessageFlags.Ephemeral });
     }
   }
 };

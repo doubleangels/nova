@@ -1,4 +1,4 @@
-const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.js');
+const { ContextMenuCommandBuilder, ApplicationCommandType, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -24,7 +24,7 @@ module.exports = {
         logger.error("Target message is undefined.");
         return await interaction.reply({
           content: "Error: Could not retrieve the target message.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -33,7 +33,7 @@ module.exports = {
         logger.warn("Attempted to mock the bot's own message.");
         return await interaction.reply({
           content: "I cannot mock my own messages!",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -45,7 +45,7 @@ module.exports = {
         logger.warn("No content available to mock");
         return await interaction.reply({
           content: "There is no text to mock!",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -68,7 +68,7 @@ module.exports = {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: "An error occurred while executing this command.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
         }
       } catch (replyError) {

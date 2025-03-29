@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -38,7 +38,7 @@ module.exports = {
     } catch (error) {
       // Log any errors that occur during command execution.
       logger.error("Error in /source command:", { error });
-      await interaction.reply({ content: "⚠️ An error occurred while processing your request.", ephemeral: true });
+      await interaction.reply({ content: "⚠️ An error occurred while processing your request.", flags: MessageFlags.Ephemeral });
     }
   }
 };
