@@ -38,7 +38,7 @@ module.exports = {
       logger.debug("Formatted title:", { formattedTitle });
       
       // Construct the OMDb API request URL with query parameters.
-      const searchUrl = "http://www.omdbapi.com/";
+      const searchUrl = "https://www.omdbapi.com/";
       const params = new URLSearchParams({
         t: formattedTitle,
         apikey: config.omdbApiKey

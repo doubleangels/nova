@@ -18,6 +18,7 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/dev command received:", { user: interaction.user.tag });
       // Placeholder for developer tag maintenance.

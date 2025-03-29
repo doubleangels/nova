@@ -22,13 +22,14 @@ module.exports = {
         .setDescription('What role do you want to ping for reminders?')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   /**
    * Executes the /reminder command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/reminder command received:", { user: interaction.user.tag });
       

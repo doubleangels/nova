@@ -16,6 +16,7 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       // Log that the /source command was received.
       logger.debug("/source command received:", { user: interaction.user.tag });

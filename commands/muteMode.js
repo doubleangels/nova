@@ -28,13 +28,14 @@ module.exports = {
         .setDescription('Time limit in hours before a silent user is kicked (Default: 2)')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
    * Executes the /mutemode command.
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/mutemode command received:", { user: interaction.user.tag });
       

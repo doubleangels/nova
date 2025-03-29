@@ -16,6 +16,7 @@ module.exports = {
      * @param {import('discord.js').CommandInteraction} interaction - The interaction object from Discord.
      */
     async execute(interaction) {
+        await interaction.deferReply();
         try {
             logger.debug("Coinflip command received:", {
                 user: interaction.user.tag,

@@ -247,7 +247,7 @@ module.exports = {
           // No video results found.
           logger.warn("No video results found:", { query: formattedQuery });
           await interaction.editReply({ 
-            content: "⚠️ No video results found for **${formattedQuery}**. Try another search!", 
+            content: `⚠️ No video results found for **${formattedQuery}**. Try another search!`, 
             flags: MessageFlags.Ephemeral 
           });
         }
@@ -255,7 +255,7 @@ module.exports = {
         // Handle API error responses.
         logger.warn("YouTube API error:", { status: response.status });
         await interaction.editReply({ 
-          content: "⚠️ Error: YouTube API returned status code ${response.status}.", 
+          content: `⚠️ Error: YouTube API returned status code ${response.status}.`, 
           flags: MessageFlags.Ephemeral 
         });
       }

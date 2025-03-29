@@ -14,7 +14,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
     .setDescription('Fix reminder data in the database.')
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
    * Executes the /fix command.

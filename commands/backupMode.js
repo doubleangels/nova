@@ -42,6 +42,7 @@ module.exports = {
    * @param {Interaction} interaction - The interaction object from Discord.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/backupmode command received", { user: interaction.user.tag });
       

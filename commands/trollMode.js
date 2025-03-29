@@ -35,6 +35,7 @@ module.exports = {
    * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
+    await interaction.deferReply();
     try {
       logger.debug("/trollmode command received:", { user: interaction.user.tag });
       

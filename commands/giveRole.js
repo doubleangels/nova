@@ -52,8 +52,8 @@ module.exports = {
                     roleId: role.id
                 });
                 return await interaction.editReply({
-                    content: "⚠️ ${targetUser} already has the ${role} role.",
-                    ephemeral: true
+                    content: `⚠️ ${targetUser} already has the ${role} role.`,
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
