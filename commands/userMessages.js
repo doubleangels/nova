@@ -34,7 +34,9 @@ module.exports = {
       });
       
       // Defer reply as ephemeral since this might take some time
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      await interaction.deferReply({ 
+        flags: MessageFlags.Ephemeral 
+      });
       
       // Get the target user and channel from options
       const targetUser = interaction.options.getUser('user');
@@ -51,7 +53,10 @@ module.exports = {
       
       if (!targetUser) {
         logger.warn("Target user not found:", { requestedBy: interaction.user.tag });
-        return interaction.editReply({ content: "User not found.", flags: MessageFlags.Ephemeral });
+        return interaction.editReply({ 
+          content: "User not found.", 
+          flags: MessageFlags.Ephemeral 
+        });
       }
       
       logger.info(`Fetching messages for user:`, { 
@@ -66,7 +71,10 @@ module.exports = {
           channelName: targetChannel.name, 
           channelId: targetChannel.id 
         });
-        return interaction.editReply({ content: "Please select a valid text channel.", flags: MessageFlags.Ephemeral });
+        return interaction.editReply({ 
+          content: "Please select a valid text channel.", 
+          flags: MessageFlags.Ephemeral 
+        });
       }
 
       logger.debug("Searching specified channel for messages:", { 
@@ -249,7 +257,10 @@ module.exports = {
               commandUser: interaction.user.tag,
               commandUserId: interaction.user.id
             });
-            return i.reply({ content: 'You cannot use these buttons.', flags: MessageFlags.Ephemeral });
+            return i.reply({ 
+              content: 'You cannot use these buttons.', 
+              flags: MessageFlags.Ephemeral 
+            });
           }
           
           const oldPage = currentPage + 1;
@@ -316,9 +327,15 @@ module.exports = {
       });
       
       if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ content: "⚠️ There was an error fetching the messages. Please try again later.", flags: MessageFlags.Ephemeral });
+        await interaction.editReply({ 
+          content: "⚠️ There was an error fetching the messages. Please try again later.", 
+          flags: MessageFlags.Ephemeral 
+        });
       } else {
-        await interaction.reply({ content: "⚠️ There was an error fetching the messages. Please try again later.", flags: MessageFlags.Ephemeral });
+        await interaction.reply({ 
+          content: "⚠️ There was an error fetching the messages. Please try again later.", 
+          flags: MessageFlags.Ephemeral 
+        });
       }
     }
   }

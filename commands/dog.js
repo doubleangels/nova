@@ -58,19 +58,31 @@ module.exports = {
             logger.debug("Dog image sent successfully:", { user: interaction.user.tag });
           } else {
             logger.warn("Error fetching dog image file:", { status: imageResponse.status });
-            await interaction.editReply({ content: "⚠️ Couldn't fetch a dog picture. Try again later.", flags: MessageFlags.Ephemeral });
+            await interaction.editReply({
+              content: "⚠️ Couldn't fetch a dog picture. Try again later.",
+              flags: MessageFlags.Ephemeral
+            });
           }
         } else {
           logger.warn("No dog image URL found in API response:", { responseData: data });
-          await interaction.editReply({ content: "⚠️ Couldn't find a dog picture. Try again later.", flags: MessageFlags.Ephemeral });
+          await interaction.editReply({
+            content: "⚠️ Couldn't find a dog picture. Try again later.",
+            flags: MessageFlags.Ephemeral
+          });
         }
       } else {
         logger.warn("Dog CEO API error:", { status: response.status });
-        await interaction.editReply({ content: "⚠️ Couldn't fetch a dog picture. Try again later.", flags: MessageFlags.Ephemeral });
+        await interaction.editReply({
+          content: "⚠️ Couldn't fetch a dog picture. Try again later.",
+          flags: MessageFlags.Ephemeral
+        });
       }
     } catch (error) {
       logger.error("Error in /dog command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 };

@@ -75,7 +75,10 @@ module.exports = {
                 error: error.message,
                 stack: error.stack 
             });
-            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+            await interaction.editReply({ 
+                content: "⚠️ An unexpected error occurred. Please try again later.", 
+                flags: MessageFlags.Ephemeral 
+            });
         }
     },
 };

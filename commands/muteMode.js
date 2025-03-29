@@ -52,14 +52,17 @@ module.exports = {
       // Prepare the response message based on the mode.
       const responseMessage = isEnabled
         ? `🔇 Mute mode has been ✅ **enabled**. New users must send a message within **${timeLimit}** hours or be kicked.`
-        : `🔇 Mute mode has been ❌ **disabled**.`;
+        : `🔇 Mute mode has been ⚠️ **disabled**.`;
 
       // Reply to the interaction.
       await interaction.reply(responseMessage);
       logger.debug("Mute mode configuration updated:", { user: interaction.user.tag, isEnabled, timeLimit });
     } catch (error) {
       logger.error("Error in /mutemode command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        flags: MessageFlags.Ephemeral 
+      });
     }
   }
 };

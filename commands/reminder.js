@@ -106,7 +106,10 @@ module.exports = {
       logger.debug("Reminder status reply sent:", { summary });
     } catch (error) {
       logger.error("Error in /reminder command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        flags: MessageFlags.Ephemeral 
+      });
     }
   }
 };

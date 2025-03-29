@@ -40,7 +40,10 @@ module.exports = {
       await interaction.editReply("✅ Reminder successfully fixed!");
     } catch (error) {
       logger.error("Error in /fix command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 };

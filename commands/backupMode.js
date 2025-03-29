@@ -116,7 +116,10 @@ module.exports = {
       logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
     } catch (error) {
       logger.error("Error in /backupmode command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 };

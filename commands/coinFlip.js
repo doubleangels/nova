@@ -47,7 +47,10 @@ module.exports = {
                 user: interaction.user?.tag,
                 guild: interaction.guild?.name
             });
-            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+            await interaction.editReply({
+                content: "⚠️ An unexpected error occurred. Please try again later.",
+                flags: MessageFlags.Ephemeral
+            });
         }
     }
 };

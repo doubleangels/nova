@@ -74,7 +74,10 @@ module.exports = {
             } else if (!colorHex.match(/^#[0-9A-Fa-f]{6}$/)) {
                 // If it doesn't match either format, it's invalid
                 logger.warn("Invalid color format:", { colorHex });
-                return await interaction.editReply({ content: "Invalid color format. Please use the format #RRGGBB or RRGGBB.", flags: MessageFlags.Ephemeral });
+                return await interaction.editReply({
+                    content: "Invalid color format. Please use the format #RRGGBB or RRGGBB.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
 
             // Convert hex to decimal for Discord's color system
@@ -85,7 +88,10 @@ module.exports = {
             const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
             if (!positionRole) {
                 logger.error("Reference role not found:", { roleId: POSITION_ABOVE_ROLE_ID });
-                return await interaction.editReply({ content: "⚠️ Reference role for positioning not found. Please the postitioning role ID.", flags: MessageFlags.Ephemeral });
+                return await interaction.editReply({
+                    content: "⚠️ Reference role for positioning not found. Please the postitioning role ID.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
             logger.debug("Reference role found:", { 
                 roleId: positionRole.id, 
@@ -111,7 +117,10 @@ module.exports = {
             const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
             if (!additionalRole) {
                 logger.error("Additional role not found:", { roleId: FREN_ROLE_ID });
-                return await interaction.editReply({ content: "⚠️ Additional role not found. Please check the Fren role ID.", flags: MessageFlags.Ephemeral });
+                return await interaction.editReply({
+                    content: "⚠️ Additional role not found. Please check the Fren role ID.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
             logger.debug("Additional role found:", { 
                 roleId: additionalRole.id, 
@@ -147,7 +156,10 @@ module.exports = {
                 error: error.message,
                 stack: error.stack 
             });
-            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+            await interaction.editReply({
+                content: "⚠️ An unexpected error occurred. Please try again later.",
+                flags: MessageFlags.Ephemeral
+            });
         }
     },
 };

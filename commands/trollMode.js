@@ -59,7 +59,10 @@ module.exports = {
       logger.debug("Troll mode command executed:", { user: interaction.user.tag, isEnabled, age });
     } catch (error) {
       logger.error("Error in /trollmode command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({ 
+        content: "⚠️ An unexpected error occurred. Please try again later.", 
+        flags: MessageFlags.Ephemeral 
+      });
     }
   }
 };

@@ -33,9 +33,15 @@ module.exports = {
           logger.error("Error executing command:", { command: interaction.commandName, error });
           try {
             if (interaction.replied || interaction.deferred) {
-              await interaction.followUp({ content: 'There was an error executing that command!', flags: MessageFlags.Ephemeral });
+              await interaction.followUp({ 
+                content: 'There was an error executing that command!', 
+                flags: MessageFlags.Ephemeral 
+              });
             } else {
-              await interaction.reply({ content: 'There was an error executing that command!', flags: MessageFlags.Ephemeral });
+              await interaction.reply({ 
+                content: 'There was an error executing that command!', 
+                flags: MessageFlags.Ephemeral 
+              });
             }
           } catch (replyError) {
             // Track the follow-up error as well
@@ -84,9 +90,15 @@ module.exports = {
           });
           try {
             if (interaction.replied || interaction.deferred) {
-              await interaction.followUp({ content: 'There was an error executing that command!', flags: MessageFlags.Ephemeral });
+              await interaction.followUp({ 
+                content: 'There was an error executing that command!', 
+                flags: MessageFlags.Ephemeral 
+              });
             } else {
-              await interaction.reply({ content: 'There was an error executing that command!', flags: MessageFlags.Ephemeral });
+              await interaction.reply({ 
+                content: 'There was an error executing that command!', 
+                flags: MessageFlags.Ephemeral 
+              });
             }
           } catch (replyError) {
             // Track the follow-up error as well

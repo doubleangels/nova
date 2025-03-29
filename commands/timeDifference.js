@@ -102,7 +102,10 @@ module.exports = {
       // If either offset is null, inform the user.
       if (offset1 === null || offset2 === null) {
         logger.warn("Failed to retrieve one or both timezones:", { place1, offset1, place2, offset2 });
-        await interaction.editReply({ content: `❌ Could not retrieve timezones for '${place1}' or '${place2}'.`, flags: MessageFlags.Ephemeral });
+        await interaction.editReply({ 
+          content: `⚠️ Could not retrieve timezones for '${place1}' or '${place2}'.`, 
+          flags: MessageFlags.Ephemeral 
+        });
         return;
       }
 

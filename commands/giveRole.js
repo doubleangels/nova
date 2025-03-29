@@ -51,7 +51,10 @@ module.exports = {
                     userId: targetUser.id,
                     roleId: role.id
                 });
-                return await interaction.editReply({ content: "⚠️ ${targetUser} already has the ${role} role.", ephemeral: true });
+                return await interaction.editReply({
+                    content: "⚠️ ${targetUser} already has the ${role} role.",
+                    ephemeral: true
+                });
             }
             
             // Add the role to the user
@@ -75,9 +78,8 @@ module.exports = {
                 error: error.message,
                 stack: error.stack 
             });
-            
             await interaction.editReply({
-                content: "⚠️ There was an error while executing this command.",
+                content: "⚠️ An unexpected error occurred. Please try again later.",
                 flags: MessageFlags.Ephemeral
             });
         }

@@ -53,7 +53,10 @@ module.exports = {
             } else if (!colorHex.match(/^#[0-9A-Fa-f]{6}$/)) {
                 // If it doesn't match either format, it's invalid
                 logger.warn("Invalid color format:", { colorHex });
-                return await interaction.editReply({ content: '⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.', flags: MessageFlags.Ephemeral });
+                return await interaction.editReply({
+                    content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
+                    flags: MessageFlags.Ephemeral
+                });
             }
             
             // Convert hex to decimal for Discord's color system
@@ -81,7 +84,10 @@ module.exports = {
                 error: error.message,
                 stack: error.stack 
             });
-            await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+            await interaction.editReply({
+                content: "⚠️ An unexpected error occurred. Please try again later.",
+                flags: MessageFlags.Ephemeral
+            });
         }
     },
 };

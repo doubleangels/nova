@@ -173,13 +173,19 @@ module.exports = {
           // Inform the user if no images were found.
           logger.warn("No image results found:", { query: formattedQuery });
           avw
-          await interaction.editReply({ content: `❌ No images found for **${formattedQuery}**. Try refining your query!`, flags: MessageFlags.Ephemeral });
+          await interaction.editReply({
+            content: `⚠️ No images found for **${formattedQuery}**. Try refining your query!`,
+            flags: MessageFlags.Ephemeral
+          });
         }
       } else {
         // If the API returns an error, log the error details.
         const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
-        await interaction.editReply({ content: `⚠️ Error: Google API returned status code ${response.status}.`, flags: MessageFlags.Ephemeral });
+        await interaction.editReply({
+          content: `⚠️ Error: Google API returned status code ${response.status}.`,
+          flags: MessageFlags.Ephemeral
+        });
       }
     } catch (error) {
       // Log any unexpected errors and notify the user.

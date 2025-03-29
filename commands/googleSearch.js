@@ -154,16 +154,25 @@ module.exports = {
           });
         } else {
           logger.warn("No search results found:", { query: formattedQuery });
-          await interaction.editReply({ content: `❌ No search results found for **${formattedQuery}**. Try refining your query!`, flags: MessageFlags.Ephemeral });
+          await interaction.editReply({ 
+            content: `⚠️ No search results found for **${formattedQuery}**. Try refining your query!`, 
+            flags: MessageFlags.Ephemeral 
+          });
         }
       } else {
         const errorBody = response.data;
         logger.warn("Google API error:", { status: response.status, errorBody });
-        await interaction.editReply({ content: `⚠️ Error: Google API returned status code ${response.status}.`, flags: MessageFlags.Ephemeral });
+        await interaction.editReply({ 
+          content: `⚠️ Error: Google API returned status code ${response.status}.`, 
+          flags: MessageFlags.Ephemeral 
+        });
       }
     } catch (error) {
       logger.error("Error in /google command:", { error });
-      await interaction.editReply({ content: "⚠️ An unexpected error occurred. Please try again later.", flags: MessageFlags.Ephemeral });
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        flags: MessageFlags.Ephemeral
+      });
     }
   }
 };
