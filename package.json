@@ -16,7 +16,7 @@
   },
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
-    "@sentry/node": "^9.10.1",
+    "@sentry/node": "^9.11.0",
     "axios": "^1.8.4",
     "dayjs": "^1.11.13",
     "discord.js": "^14.18.0",
