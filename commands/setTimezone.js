@@ -27,10 +27,10 @@ const isValidTimezone = (tz) => {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('settimezone')
-        .setDescription('Sets your timezone (e.g., America/New_York, Europe/London).')
+        .setDescription('Sets your timezone for use in auto-timezone features.')
         .addStringOption(option =>
             option.setName('timezone')
-                .setDescription('Your timezone identifier (e.g., America/New_York)')
+                .setDescription('What timezone do you want to set? (e.g., America/New_York, Europe/London)')
                 .setRequired(true)
         ),
 
@@ -39,8 +39,7 @@ module.exports = {
      * @param {Interaction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
-
+        await interaction.deferReply();
         try {
             const timezoneInput = interaction.options.getString('timezone', true).trim(); // Trim whitespace early
             const memberId = interaction.user.id;
@@ -56,8 +55,9 @@ module.exports = {
                  logger.warn(`Invalid timezone identifier provided by ${interaction.user.tag}: ${timezoneInput}`);
                  await interaction.editReply({
                     content: `⚠️ Invalid timezone identifier: \`${timezoneInput}\`. Please use a valid IANA timezone name (e.g., "America/New_York", "Europe/London", "Asia/Tokyo", "UTC").\n\nYou can find a list here: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`,
+                    ephemeral: true
                  });
-                 return; // Stop execution
+                 return;
             }
 
             // Call the database function to save/update the timezone
@@ -73,17 +73,10 @@ module.exports = {
 
         } catch (error) {
             logger.error(`Error executing /${this.data.name} command for ${interaction.user.tag}:`, { error });
-
-            if (interaction.replied || interaction.deferred) {
-                 await interaction.editReply({
-                    content: '⚠️ An unexpected error occurred while setting your timezone. Please try again later or contact support if the issue persists.',
-                });
-            } else {
-                 await interaction.reply({ // Fallback just in case
-                    content: '⚠️ An unexpected error occurred. Please try again later.',
-                    ephemeral: true
-                 });
-            }
+            await interaction.reply({
+                content: '⚠️ An unexpected error occurred. Please try again later.',
+                ephemeral: true
+            });
         }
     }
 };
