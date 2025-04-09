@@ -53,11 +53,17 @@ module.exports = {
         if (!userTimezone) {
           logger.debug("User has no timezone set:", { userId: user.id });
           try {
-            // Reply ephemerally to the user
-            await reaction.message.channel.send({
-              content: `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`,
-              ephemeral: true
+            // Reply with a temporary message that pings the user
+            const reply = await reaction.message.channel.send({
+              content: `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`
             });
+            
+            // Delete the message after 30 seconds
+            setTimeout(() => {
+              reply.delete().catch(err => 
+                logger.error("Failed to delete temporary message:", { error: err })
+              );
+            }, 30000);
           } catch (replyError) {
             logger.error("Failed to send timezone reminder:", { error: replyError });
           }
@@ -102,28 +108,40 @@ module.exports = {
             // Format the converted times for display
             const formattedTimes = formatTimeReferences(convertedTimes, userTimezone);
             
-            // Create a message with the time conversions
-            const messageContent = `Here are the time conversions for your timezone (${userTimezone}):\n\n${formattedTimes}`;
+            // Create a message with the time conversions that pings the user
+            const messageContent = `<@${user.id}>, here are the time conversions for your timezone (${userTimezone}):\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
             
-            // Reply ephemerally in the channel
-            await reaction.message.channel.send({
-              content: `<@${user.id}>, ${messageContent}`,
-              ephemeral: true
+            // Send a temporary reply in the channel
+            const reply = await reaction.message.channel.send({
+              content: messageContent
             });
             
-            logger.debug("Sent ephemeral time conversions to user:", { user: user.tag, timezone: userTimezone });
+            // Delete the message after 30 seconds
+            setTimeout(() => {
+              reply.delete().catch(err => 
+                logger.error("Failed to delete time conversion message:", { error: err })
+              );
+            }, 30000);
+            
+            logger.debug("Sent temporary time conversions to user:", { user: user.tag, timezone: userTimezone });
           } catch (replyError) {
-            logger.error("Failed to send ephemeral reply with time conversions:", { error: replyError });
+            logger.error("Failed to send reply with time conversions:", { error: replyError });
           }
         } else {
           logger.debug("No time references found for message:", { messageId: reaction.message.id });
           
-          // Notify the user that no time references were found
+          // Notify the user that no time references were found with a ping
           try {
-            await reaction.message.channel.send({
-              content: `<@${user.id}>, I couldn't find any time references in that message.`,
-              ephemeral: true
+            const reply = await reaction.message.channel.send({
+              content: `<@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
             });
+            
+            // Delete the message after 15 seconds
+            setTimeout(() => {
+              reply.delete().catch(err => 
+                logger.error("Failed to delete no-references notification:", { error: err })
+              );
+            }, 15000);
           } catch (replyError) {
             logger.error("Failed to send no-references notification:", { error: replyError });
           }
