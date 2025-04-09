@@ -2,7 +2,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getUserTimezone } = require('../utils/database');
-const { formatTimeReferences, convertTimeToTimezone } = require('../utils/timeUtils');
+const { convertTimeToTimezone } = require('../utils/timeUtils');
 
 /**
  * Event handler for the 'messageReactionAdd' event.
@@ -118,7 +118,15 @@ module.exports = {
               return convertTimeToTimezone(ref, userTimezone);
             });
             
-            // Format the converted times for display
+            // Format the converted times for display (implementing inline since the function is missing)
+            const formatTimeReferences = (convertedTimes, timezone) => {
+              return convertedTimes.map(conversion => {
+                const { text, originalTime, convertedTime } = conversion;
+                return `"${text}": ${convertedTime} (${timezone})`;
+              }).join('\n');
+            };
+            
+            // Format the converted times
             const formattedTimes = formatTimeReferences(convertedTimes, userTimezone);
             
             // Create a message with the time conversions that pings the user
