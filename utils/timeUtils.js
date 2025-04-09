@@ -64,8 +64,31 @@ function createTimestampResponse(timeReferences, originalContent) {
   return response;
 }
 
+/**
+ * Converts a time reference to the specified timezone
+ * 
+ * @param {Object} timeReference - The time reference object from chrono-node
+ * @param {string} timezone - The target timezone (e.g., 'America/New_York')
+ * @return {Object} - The converted time reference
+ */
+function convertTimeToTimezone(timeReference, timezone) {
+  // Clone the time reference to avoid modifying the original
+  const convertedRef = { ...timeReference };
+  
+  // Convert the date to the target timezone
+  if (convertedRef.date) {
+    const originalDate = new Date(convertedRef.date);
+    // Create a new date object with the timezone adjustment
+    convertedRef.date = new Date(originalDate.toLocaleString('en-US', { timeZone: timezone }));
+    convertedRef.timezone = timezone;
+  }
+  
+  return convertedRef;
+}
+
 module.exports = {
   extractTimeReferences,
   containsTimeReference,
-  createTimestampResponse
+  createTimestampResponse,
+  convertTimeToTimezone
 };
