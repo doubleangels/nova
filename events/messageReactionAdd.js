@@ -1,71 +1,77 @@
-// events/messageCreate.js
+// events/messageReactionAdd.js
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getTrackedMember, removeTrackedMember } = require('../utils/database');
-const { handleReminder } = require('../utils/reminderUtils');
-const { extractTimeReferences, containsTimeReference } = require('../utils/timeUtils');
+const { extractTimeReferences, createTimestampResponse } = require('../utils/timeUtils');
 
 /**
- * Event handler for the 'messageCreate' event.
- * Processes incoming messages to:
- *  - Remove users from mute tracking when they send a message.
- *  - Trigger a Disboard reminder when a message embed indicates a bump was done.
- *  - React with a clock emoji when a message contains time references.
+ * Event handler for the 'messageReactionAdd' event.
+ * Processes reactions to messages, specifically handling clock emoji reactions
+ * to provide timezone-converted timestamps.
  *
- * @param {Message} message - The message object from Discord.
+ * @param {MessageReaction} reaction - The reaction object.
+ * @param {User} user - The user who added the reaction.
  */
 module.exports = {
-  name: 'messageCreate',
-  async execute(message) {
+  name: 'messageReactionAdd',
+  async execute(reaction, user) {
     try {
-      // Log the received message with the author's tag and content.
-      logger.debug("Message received:", {
-        author: message.author.tag,
-        content: message.content
-      });
+      // Ignore reactions from bots
+      if (user.bot) return;
       
-      // Check if the message author is being tracked for mute mode.
-      const tracked = await getTrackedMember(message.author.id);
-      if (tracked) {
-        await removeTrackedMember(message.author.id);
-        logger.debug("User removed from mute tracking:", { user: message.author.tag });
-      }
-      
-      // Check for embeds that contain "Bump done"
-      if (message.embeds && message.embeds.length > 0) {
-        const bumpEmbed = message.embeds.find(embed =>
-          embed.description && embed.description.includes("Bump done")
-        );
-        if (bumpEmbed) {
-          // Schedule a 2-hour reminder (2 hours = 7200000 milliseconds)
-          await handleReminder(message, 7200000);
-          logger.debug("Bump reminder scheduled for 2 hours.");
-        }
-      }
-      
-      // Check if the message contains time references using chrono-node
-      const timeReferences = extractTimeReferences(message.content);
-      if (timeReferences.length > 0) {
-        try {
-          // Store the parsed times in a cache or database
-          // We'll use a simple Map in the global scope for this example
-          if (!global.timeReferenceCache) {
-            global.timeReferenceCache = new Map();
+      // Check if this is a clock emoji reaction
+      if (reaction.emoji.name === '🕒') {
+        // Fetch the message if it's a partial
+        if (reaction.partial) {
+          try {
+            await reaction.fetch();
+          } catch (error) {
+            logger.error("Error fetching partial reaction:", { error });
+            return;
           }
-          global.timeReferenceCache.set(message.id, timeReferences);
+        }
+        
+        const message = reaction.message;
+        
+        // If we need to fetch the full message
+        if (message.partial) {
+          try {
+            await message.fetch();
+          } catch (error) {
+            logger.error("Error fetching partial message:", { error });
+            return;
+          }
+        }
+        
+        // Get the parsed times from cache or re-parse if not available
+        let timeReferences;
+        if (global.timeReferenceCache && global.timeReferenceCache.has(message.id)) {
+          timeReferences = global.timeReferenceCache.get(message.id);
+        } else {
+          timeReferences = extractTimeReferences(message.content);
+        }
+        
+        if (timeReferences && timeReferences.length > 0) {
+          // Create a response with Discord timestamp formats for each time reference
+          const response = createTimestampResponse(timeReferences, message.content);
           
-          await message.react('🕒');
-          logger.debug("Added clock reaction to message with time reference:", { 
-            messageId: message.id,
-            references: timeReferences.map(ref => ref.text)
-          });
-        } catch (reactionError) {
-          logger.error("Failed to add clock reaction:", { error: reactionError });
+          try {
+            // For Discord.js v14+, use this approach for ephemeral messages
+            // This assumes you have message content intent enabled
+            await message.channel.send({
+              content: `<@${user.id}> ${response}`,
+              // Note: true ephemeral messages are only possible with interactions
+              // This will be a regular message that mentions the user
+              allowedMentions: { users: [user.id] }
+            });
+            
+            logger.debug("Sent timezone conversion to user:", { user: user.tag });
+          } catch (replyError) {
+            logger.error("Failed to send timezone conversion:", { error: replyError });
+          }
         }
       }
-    
     } catch (error) {
-      logger.error("Error processing messageCreate event:", { error });
+      logger.error("Error processing messageReactionAdd event:", { error });
     }
   }
 };

@@ -18,11 +18,26 @@ module.exports = {
   name: 'messageCreate',
   async execute(message) {
     try {
+      // Handle partial message by fetching it if needed
+      if (message.partial) {
+        try {
+          await message.fetch();
+        } catch (fetchError) {
+          logger.error("Failed to fetch partial message:", { error: fetchError });
+          return;
+        }
+      }
+
       // Log the received message with the author's tag and content.
       logger.debug("Message received:", {
-        author: message.author.tag,
-        content: message.content
+        author: message.author?.tag || "Unknown Author",
+        content: message.content || "No Content"
       });
+      
+      // Skip processing if message is from a webhook or bot
+      if (message.webhookId || (message.author && message.author.bot)) {
+        return;
+      }
       
       // Check if the message author is being tracked for mute mode.
       const tracked = await getTrackedMember(message.author.id);
@@ -44,23 +59,32 @@ module.exports = {
       }
       
       // Check if the message contains time references using chrono-node
-      const timeReferences = extractTimeReferences(message.content);
-      if (timeReferences.length > 0) {
-        try {
-          // Store the parsed times in a cache or database
-          // We'll use a simple Map in the global scope for this example
-          if (!global.timeReferenceCache) {
-            global.timeReferenceCache = new Map();
+      if (message.content) {
+        const timeReferences = extractTimeReferences(message.content);
+        if (timeReferences.length > 0) {
+          try {
+            // Store the parsed times in a cache or database
+            // We'll use a simple Map in the global scope for this example
+            if (!global.timeReferenceCache) {
+              global.timeReferenceCache = new Map();
+            }
+            global.timeReferenceCache.set(message.id, timeReferences);
+            
+            // Check if the bot has permission to add reactions
+            if (message.guild && message.channel.permissionsFor(message.guild.members.me).has('AddReactions')) {
+              await message.react('🕒');
+              logger.debug("Added clock reaction to message with time reference:", { 
+                messageId: message.id,
+                references: timeReferences.map(ref => ref.text)
+              });
+            } else {
+              logger.warn("Missing permission to add reactions in channel:", {
+                channelId: message.channel.id
+              });
+            }
+          } catch (reactionError) {
+            logger.error("Failed to add clock reaction:", { error: reactionError });
           }
-          global.timeReferenceCache.set(message.id, timeReferences);
-          
-          await message.react('🕒');
-          logger.debug("Added clock reaction to message with time reference:", { 
-            messageId: message.id,
-            references: timeReferences.map(ref => ref.text)
-          });
-        } catch (reactionError) {
-          logger.error("Failed to add clock reaction:", { error: reactionError });
         }
       }
     
