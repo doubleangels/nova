@@ -345,6 +345,85 @@ async function getAllTrackedMembers() {
   }
 }
 
+/**
+ * Sets or updates the timezone for a given Discord member ID.
+ * Uses an "upsert" operation (INSERT ON CONFLICT DO UPDATE).
+ *
+ * @param {string} memberId - The Discord member ID (passed as a string).
+ * @param {string} timezone - The timezone string (e.g., 'America/New_York').
+ */
+async function setUserTimezone(memberId, timezone) {
+  const client = await pool.connect();
+  try {
+    // Validate timezone - should be a non-empty string
+    if (typeof timezone !== 'string' || timezone.trim() === '') {
+        throw new Error(`Invalid timezone provided: ${timezone}`);
+    }
+     // Validate memberId - should be a non-empty string representing a large integer
+    if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
+        throw new Error(`Invalid memberId provided (must be a string representing an integer): ${memberId}`);
+    }
+
+    logger.debug(`Setting timezone for member ID "${memberId}" to "${timezone}".`);
+
+    // Note: member_id column is BIGINT, timezone is TEXT
+    const query = `
+      INSERT INTO ${SCHEMA}.timezones (member_id, timezone)
+      VALUES ($1::bigint, $2) -- Explicit cast of $1 to bigint
+      ON CONFLICT (member_id)
+      DO UPDATE SET timezone = $2;
+    `;
+    // Pass memberId as a string; pg driver handles conversion correctly with cast
+    await client.query(query, [memberId, timezone.trim()]);
+
+    logger.debug(`Successfully set timezone for member ID "${memberId}".`);
+  } catch (err) {
+    logger.error(`Error setting timezone for member ID "${memberId}":`, { error: err });
+    // throw err; // Optional: re-throw
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Retrieves the timezone for a given Discord member ID.
+ *
+ * @param {string} memberId - The Discord member ID (passed as a string).
+ * @returns {Promise<string|null>} The timezone string if found, otherwise null.
+ */
+async function getUserTimezone(memberId) {
+  const client = await pool.connect();
+  try {
+    // Validate memberId - should be a non-empty string representing a large integer
+    if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
+        logger.warn(`Attempted to get timezone with invalid memberId format: ${memberId}`);
+        return null; // Return null for invalid format
+    }
+
+    logger.debug(`Getting timezone for member ID "${memberId}".`);
+
+    // Note: member_id column is BIGINT
+    const result = await client.query(
+      `SELECT timezone FROM ${SCHEMA}.timezones WHERE member_id = $1::bigint`, // Explicit cast
+      [memberId] // Pass memberId as string
+    );
+
+    if (result.rows.length > 0) {
+      const timezone = result.rows[0].timezone;
+      logger.debug(`Found timezone for member ID "${memberId}": ${timezone}`);
+      return timezone;
+    } else {
+      logger.debug(`No timezone found for member ID "${memberId}".`);
+      return null;
+    }
+  } catch (err) {
+    logger.error(`Error getting timezone for member ID "${memberId}":`, { error: err });
+    return null; // Return null on error
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -357,5 +436,7 @@ module.exports = {
   trackNewMember,
   getTrackedMember,
   removeTrackedMember,
-  getAllTrackedMembers
+  getAllTrackedMembers,
+  setUserTimezone,
+  getUserTimezone,
 };
