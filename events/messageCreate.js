@@ -43,8 +43,13 @@ module.exports = {
       }
       
       // Check if the message contains time references using chrono-node
-      if (containsTimeReference(message.content)) {
+      const timeReferences = extractTimeReferences(message.content);
+      if (timeReferences.length > 0) {
         try {
+          // Store the parsed times in a custom property on the message object
+          // This will be used when handling reactions
+          message.parsedTimes = timeReferences;
+          
           await message.react('🕒');
           logger.debug("Added clock reaction to message with time reference");
         } catch (reactionError) {
@@ -59,17 +64,25 @@ module.exports = {
 };
 
 /**
- * Checks if a string contains time references using chrono-node.
+ * Extract time references from a string using chrono-node.
  * 
  * @param {string} content - The message content to check.
- * @returns {boolean} True if the content contains time references, false otherwise.
+ * @returns {Array} Array of objects containing parsed date and original text.
  */
-function containsTimeReference(content) {
-  if (!content) return false;
+function extractTimeReferences(content) {
+  if (!content) return [];
   
   // Use chrono-node to parse potential dates/times from the message
   const results = chrono.parse(content);
   
-  // If chrono found any date/time references, return true
-  return results.length > 0;
+  // Filter results to only include those with time components
+  return results
+    .filter(result => {
+      // Check if the parsed result has time information
+      return result.text.match(/\d+\s*:\s*\d+|noon|midnight|morning|afternoon|evening|night|[ap]\.?m\.?/i) !== null;
+    })
+    .map(result => ({
+      date: result.start.date(),
+      text: result.text
+    }));
 }
