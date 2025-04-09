@@ -1,4 +1,4 @@
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Partials } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
@@ -18,6 +18,12 @@ const client = new Client({
     GatewayIntentBits.MessageContent,   // Allows bot to read the content of messages.
     GatewayIntentBits.GuildMembers,     // Allows bot to access guild member information.
     GatewayIntentBits.GuildPresences,   // Allows bot to track member presence (online/offline).
+    GatewayIntentBits.GuildMessageReactions, // Allows bot to receive reaction events
+  ],
+  partials: [
+    Partials.Message,    // Handle reactions on uncached messages
+    Partials.Channel,    // Handle messages in uncached channels
+    Partials.Reaction    // Handle uncached reactions
   ]
 });
 
