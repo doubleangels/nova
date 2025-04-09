@@ -1,3 +1,4 @@
+// events/messageReactionAdd.js
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getUserTimezone } = require('../utils/database');
@@ -52,7 +53,7 @@ module.exports = {
       
       // Check if the reaction is a clock emoji
       if (reaction.emoji.name === '🕒') {
-        // Get the user's timezone from the database
+        // Get the user's timezone from the database (User 2 - the reactor)
         const userTimezone = await getUserTimezone(user.id);
         
         if (!userTimezone) {
@@ -88,6 +89,43 @@ module.exports = {
           return;
         }
         
+        // Get the message author's timezone from the database (User 1 - the original poster)
+        const messageAuthorId = reaction.message.author.id;
+        const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
+        
+        if (!messageAuthorTimezone) {
+          logger.debug("Message author has no timezone set:", { authorId: messageAuthorId });
+          try {
+            // Reply with a temporary message that pings the user
+            const reply = await reaction.message.channel.send(
+              `<@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
+            ).catch(err => {
+              logger.error("Failed to send author timezone missing message:", { 
+                error: err.message || err.toString(),
+                stack: err.stack
+              });
+              return null;
+            });
+            
+            // Delete the message after 30 seconds if it was sent successfully
+            if (reply) {
+              setTimeout(() => {
+                reply.delete().catch(err => 
+                  logger.error("Failed to delete temporary message:", { 
+                    error: err.message || err.toString() 
+                  })
+                );
+              }, 30000);
+            }
+          } catch (replyError) {
+            logger.error("Failed to send author timezone missing notification:", { 
+              error: replyError.message || replyError.toString(),
+              stack: replyError.stack
+            });
+          }
+          return;
+        }
+        
         // Get the cached time references for this message
         let timeReferences = global.timeReferenceCache?.get(reaction.message.id);
         
@@ -114,12 +152,13 @@ module.exports = {
           logger.debug("Processing clock reaction for time references:", {
             messageId: reaction.message.id,
             references: timeReferences.map(ref => ref.text),
+            authorTimezone: messageAuthorTimezone,
             userTimezone: userTimezone
           });
           
           try {
-            // Implement our own time conversion function using Day.js
-            const convertTimeToTimezone = (timeRef, targetTimezone) => {
+            // Convert time from author's timezone to user's timezone
+            const convertTimeToUserTimezone = (timeRef, authorTimezone, userTimezone) => {
               // Extract the time from the reference
               const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?/;
               const match = timeRef.text.match(timeRegex);
@@ -128,7 +167,9 @@ module.exports = {
                 return {
                   text: timeRef.text,
                   originalTime: null,
-                  convertedTime: "Could not parse time"
+                  convertedTime: "Could not parse time",
+                  fromTimezone: authorTimezone,
+                  toTimezone: userTimezone
                 };
               }
               
@@ -144,38 +185,39 @@ module.exports = {
                 hours = 0;
               }
               
-              // Get the current date in the message author's timezone (assuming UTC as default)
-              const authorTimezone = timeRef.timezone || 'UTC';
+              // Get the current date in the author's timezone
               const now = dayjs().tz(authorTimezone);
               
-              // Create a Day.js object with the specified time
+              // Create a Day.js object with the specified time in the author's timezone
               const timeInAuthorTZ = now.hour(hours).minute(minutes).second(0);
               
-              // Convert to the target timezone
-              const timeInTargetTZ = timeInAuthorTZ.tz(targetTimezone);
+              // Convert to the user's timezone
+              const timeInUserTZ = timeInAuthorTZ.tz(userTimezone);
               
               // Format the times
-              const originalTimeFormatted = timeInAuthorTZ.format('h:mm A z');
-              const convertedTimeFormatted = timeInTargetTZ.format('h:mm A');
+              const originalTimeFormatted = timeInAuthorTZ.format('h:mm A');
+              const convertedTimeFormatted = timeInUserTZ.format('h:mm A');
               
               return {
                 text: timeRef.text,
                 originalTime: originalTimeFormatted,
-                convertedTime: convertedTimeFormatted
+                convertedTime: convertedTimeFormatted,
+                fromTimezone: authorTimezone,
+                toTimezone: userTimezone
               };
             };
             
-            // Convert the time references to the user's timezone
+            // Convert each time reference
             const convertedTimes = timeReferences.map(ref => {
-              return convertTimeToTimezone(ref, userTimezone);
+              return convertTimeToUserTimezone(ref, messageAuthorTimezone, userTimezone);
             });
             
             // Format the converted times for display
-            const formatTimeReferences = (convertedTimes, timezone) => {
+            const formatTimeReferences = (convertedTimes) => {
               return convertedTimes.map(conversion => {
-                const { text, originalTime, convertedTime } = conversion;
+                const { text, originalTime, convertedTime, fromTimezone, toTimezone } = conversion;
                 if (originalTime) {
-                  return `"${text}": ${convertedTime} (${timezone})`;
+                  return `"${text}": ${originalTime} (${fromTimezone}) → ${convertedTime} (${toTimezone})`;
                 } else {
                   return `"${text}": ${convertedTime}`;
                 }
@@ -183,10 +225,10 @@ module.exports = {
             };
             
             // Format the converted times
-            const formattedTimes = formatTimeReferences(convertedTimes, userTimezone);
+            const formattedTimes = formatTimeReferences(convertedTimes);
             
             // Create a message with the time conversions that pings the user
-            const messageContent = `<@${user.id}>, here are the time conversions for your timezone (${userTimezone}):\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
+            const messageContent = `<@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
             
             // Send a temporary reply in the channel with better error handling
             logger.debug("Attempting to send time conversion message");
