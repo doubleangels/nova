@@ -53,11 +53,13 @@ module.exports = {
         if (!userTimezone) {
           logger.debug("User has no timezone set:", { userId: user.id });
           try {
-            await user.send({
-              content: `You haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`
+            // Reply ephemerally to the user
+            await reaction.message.channel.send({
+              content: `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`,
+              ephemeral: true
             });
-          } catch (dmError) {
-            logger.error("Failed to send timezone reminder DM:", { error: dmError });
+          } catch (replyError) {
+            logger.error("Failed to send timezone reminder:", { error: replyError });
           }
           return;
         }
@@ -100,28 +102,31 @@ module.exports = {
             // Format the converted times for display
             const formattedTimes = formatTimeReferences(convertedTimes, userTimezone);
             
-            // Create a message with the original message link and the time conversions
-            const messageContent = `Here are the time conversions for your timezone (${userTimezone}):\n\n${formattedTimes}\n\nOriginal message: ${reaction.message.url}`;
+            // Create a message with the time conversions
+            const messageContent = `Here are the time conversions for your timezone (${userTimezone}):\n\n${formattedTimes}`;
             
-            // Send a DM to the user with the time conversions
-            await user.send({ content: messageContent });
+            // Reply ephemerally in the channel
+            await reaction.message.channel.send({
+              content: `<@${user.id}>, ${messageContent}`,
+              ephemeral: true
+            });
             
-            logger.debug("Sent time conversions to user:", { user: user.tag, timezone: userTimezone });
-          } catch (dmError) {
-            logger.error("Failed to send DM with time conversions:", { error: dmError });
-            
-            // If DM fails, try to reply in the channel
-            try {
-              await reaction.message.reply({
-                content: `<@${user.id}>, I couldn't send you a DM. Please check your privacy settings.`,
-                ephemeral: true
-              });
-            } catch (replyError) {
-              logger.error("Failed to reply in channel:", { error: replyError });
-            }
+            logger.debug("Sent ephemeral time conversions to user:", { user: user.tag, timezone: userTimezone });
+          } catch (replyError) {
+            logger.error("Failed to send ephemeral reply with time conversions:", { error: replyError });
           }
         } else {
           logger.debug("No time references found for message:", { messageId: reaction.message.id });
+          
+          // Notify the user that no time references were found
+          try {
+            await reaction.message.channel.send({
+              content: `<@${user.id}>, I couldn't find any time references in that message.`,
+              ephemeral: true
+            });
+          } catch (replyError) {
+            logger.error("Failed to send no-references notification:", { error: replyError });
+          }
         }
       }
     } catch (error) {

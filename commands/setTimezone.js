@@ -54,7 +54,7 @@ module.exports = {
             if (!isValidTimezone(timezoneInput)) {
                  logger.warn(`Invalid timezone identifier provided by ${interaction.user.tag}: ${timezoneInput}`);
                  await interaction.editReply({
-                    content: `⚠️ Invalid timezone identifier: \`${timezoneInput}\`. Please use a valid IANA timezone name (e.g., "America/New_York", "Europe/London", "Asia/Tokyo", "UTC").\n\nYou can find a list here: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`,
+                    content: `⚠️ Invalid timezone identifier: \`${timezoneInput}\`. Please use a valid timezone name (e.g., "America/New_York", "Europe/London", "Asia/Tokyo", "UTC").\n\nYou can find a list here: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>`,
                     ephemeral: true
                  });
                  return;
