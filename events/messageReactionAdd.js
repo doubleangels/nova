@@ -54,18 +54,31 @@ module.exports = {
           logger.debug("User has no timezone set:", { userId: user.id });
           try {
             // Reply with a temporary message that pings the user
-            const reply = await reaction.message.channel.send({
-              content: `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`
+            const reply = await reaction.message.channel.send(
+              `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`
+            ).catch(err => {
+              logger.error("Failed to send timezone reminder message:", { 
+                error: err.message || err.toString(),
+                stack: err.stack
+              });
+              return null;
             });
             
-            // Delete the message after 30 seconds
-            setTimeout(() => {
-              reply.delete().catch(err => 
-                logger.error("Failed to delete temporary message:", { error: err })
-              );
-            }, 30000);
+            // Delete the message after 30 seconds if it was sent successfully
+            if (reply) {
+              setTimeout(() => {
+                reply.delete().catch(err => 
+                  logger.error("Failed to delete temporary message:", { 
+                    error: err.message || err.toString() 
+                  })
+                );
+              }, 30000);
+            }
           } catch (replyError) {
-            logger.error("Failed to send timezone reminder:", { error: replyError });
+            logger.error("Failed to send timezone reminder:", { 
+              error: replyError.message || replyError.toString(),
+              stack: replyError.stack
+            });
           }
           return;
         }
@@ -111,44 +124,75 @@ module.exports = {
             // Create a message with the time conversions that pings the user
             const messageContent = `<@${user.id}>, here are the time conversions for your timezone (${userTimezone}):\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
             
-            // Send a temporary reply in the channel
-            const reply = await reaction.message.channel.send({
-              content: messageContent
-            });
+            // Send a temporary reply in the channel with better error handling
+            logger.debug("Attempting to send time conversion message");
             
-            // Delete the message after 30 seconds
-            setTimeout(() => {
-              reply.delete().catch(err => 
-                logger.error("Failed to delete time conversion message:", { error: err })
-              );
-            }, 30000);
+            const reply = await reaction.message.channel.send(messageContent)
+              .catch(err => {
+                logger.error("Error in channel.send():", { 
+                  error: err.message || err.toString(),
+                  stack: err.stack,
+                  channel: reaction.message.channel.id
+                });
+                return null;
+              });
             
-            logger.debug("Sent temporary time conversions to user:", { user: user.tag, timezone: userTimezone });
+            // Delete the message after 30 seconds if it was sent successfully
+            if (reply) {
+              logger.debug("Successfully sent time conversion message");
+              setTimeout(() => {
+                reply.delete().catch(err => 
+                  logger.error("Failed to delete time conversion message:", { 
+                    error: err.message || err.toString() 
+                  })
+                );
+              }, 30000);
+            } else {
+              logger.error("Failed to send time conversion message - reply is null");
+            }
           } catch (replyError) {
-            logger.error("Failed to send reply with time conversions:", { error: replyError });
+            logger.error("Failed to send reply with time conversions:", { 
+              error: replyError.message || replyError.toString(),
+              stack: replyError.stack
+            });
           }
         } else {
           logger.debug("No time references found for message:", { messageId: reaction.message.id });
           
           // Notify the user that no time references were found with a ping
           try {
-            const reply = await reaction.message.channel.send({
-              content: `<@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
+            const reply = await reaction.message.channel.send(
+              `<@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
+            ).catch(err => {
+              logger.error("Failed to send no-references message:", { 
+                error: err.message || err.toString() 
+              });
+              return null;
             });
             
-            // Delete the message after 15 seconds
-            setTimeout(() => {
-              reply.delete().catch(err => 
-                logger.error("Failed to delete no-references notification:", { error: err })
-              );
-            }, 15000);
+            // Delete the message after 15 seconds if it was sent successfully
+            if (reply) {
+              setTimeout(() => {
+                reply.delete().catch(err => 
+                  logger.error("Failed to delete no-references notification:", { 
+                    error: err.message || err.toString() 
+                  })
+                );
+              }, 15000);
+            }
           } catch (replyError) {
-            logger.error("Failed to send no-references notification:", { error: replyError });
+            logger.error("Failed to send no-references notification:", { 
+              error: replyError.message || replyError.toString(),
+              stack: replyError.stack
+            });
           }
         }
       }
     } catch (error) {
-      logger.error("Error processing messageReactionAdd event:", { error });
+      logger.error("Error processing messageReactionAdd event:", { 
+        error: error.message || error.toString(),
+        stack: error.stack 
+      });
     }
   }
 };
