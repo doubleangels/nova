@@ -1,104 +1,71 @@
+// events/messageCreate.js
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getTrackedMember, removeTrackedMember } = require('../utils/database');
+const { handleReminder } = require('../utils/reminderUtils');
+const { extractTimeReferences, containsTimeReference } = require('../utils/timeUtils');
 
 /**
- * Event handler for the 'messageReactionAdd' event.
- * Processes reactions to messages, specifically handling clock emoji reactions
- * to provide timezone-converted timestamps.
+ * Event handler for the 'messageCreate' event.
+ * Processes incoming messages to:
+ *  - Remove users from mute tracking when they send a message.
+ *  - Trigger a Disboard reminder when a message embed indicates a bump was done.
+ *  - React with a clock emoji when a message contains time references.
  *
- * @param {MessageReaction} reaction - The reaction object.
- * @param {User} user - The user who added the reaction.
+ * @param {Message} message - The message object from Discord.
  */
 module.exports = {
-  name: 'messageReactionAdd',
-  async execute(reaction, user) {
+  name: 'messageCreate',
+  async execute(message) {
     try {
-      // Ignore reactions from bots
-      if (user.bot) return;
+      // Log the received message with the author's tag and content.
+      logger.debug("Message received:", {
+        author: message.author.tag,
+        content: message.content
+      });
       
-      // Check if this is a clock emoji reaction
-      if (reaction.emoji.name === '🕒') {
-        // Fetch the message if it's a partial
-        if (reaction.partial) {
-          try {
-            await reaction.fetch();
-          } catch (error) {
-            logger.error("Error fetching partial reaction:", { error });
-            return;
-          }
-        }
-        
-        const message = reaction.message;
-        
-        // If we need to fetch the full message
-        if (message.partial) {
-          try {
-            await message.fetch();
-          } catch (error) {
-            logger.error("Error fetching partial message:", { error });
-            return;
-          }
-        }
-        
-        // Re-parse the message content if parsedTimes isn't available
-        // (This might happen if the bot was restarted since the original message was processed)
-        const timeReferences = message.parsedTimes || extractTimeReferences(message.content);
-        
-        if (timeReferences && timeReferences.length > 0) {
-          // Create a response with Discord timestamp formats for each time reference
-          const response = createTimestampResponse(timeReferences, message.content);
-          
-          // Send an ephemeral reply to the user who reacted
-          try {
-            // Check if we're in a guild (server) context
-            if (message.guild) {
-              // Get the channel
-              const channel = message.channel;
-              
-              // Send ephemeral message using Discord.js v14 approach
-              await channel.send({
-                content: response,
-                ephemeral: true,
-                // Target the user who reacted
-                allowedMentions: { users: [user.id] },
-                // Make sure only the user who reacted can see this
-                reply: { messageReference: message.id, failIfNotExists: false }
-              });
-              
-              logger.debug("Sent timezone conversion to user:", { user: user.tag });
-            }
-          } catch (replyError) {
-            logger.error("Failed to send ephemeral timezone conversion:", { error: replyError });
-          }
+      // Check if the message author is being tracked for mute mode.
+      const tracked = await getTrackedMember(message.author.id);
+      if (tracked) {
+        await removeTrackedMember(message.author.id);
+        logger.debug("User removed from mute tracking:", { user: message.author.tag });
+      }
+      
+      // Check for embeds that contain "Bump done"
+      if (message.embeds && message.embeds.length > 0) {
+        const bumpEmbed = message.embeds.find(embed =>
+          embed.description && embed.description.includes("Bump done")
+        );
+        if (bumpEmbed) {
+          // Schedule a 2-hour reminder (2 hours = 7200000 milliseconds)
+          await handleReminder(message, 7200000);
+          logger.debug("Bump reminder scheduled for 2 hours.");
         }
       }
+      
+      // Check if the message contains time references using chrono-node
+      const timeReferences = extractTimeReferences(message.content);
+      if (timeReferences.length > 0) {
+        try {
+          // Store the parsed times in a cache or database
+          // We'll use a simple Map in the global scope for this example
+          if (!global.timeReferenceCache) {
+            global.timeReferenceCache = new Map();
+          }
+          global.timeReferenceCache.set(message.id, timeReferences);
+          
+          await message.react('🕒');
+          logger.debug("Added clock reaction to message with time reference:", { 
+            messageId: message.id,
+            references: timeReferences.map(ref => ref.text)
+          });
+        } catch (reactionError) {
+          logger.error("Failed to add clock reaction:", { error: reactionError });
+        }
+      }
+    
     } catch (error) {
-      logger.error("Error processing messageReactionAdd event:", { error });
+      logger.error("Error processing messageCreate event:", { error });
     }
   }
 };
-
-/**
- * Creates a response message with Discord timestamp formats.
- * 
- * @param {Array} timeReferences - Array of parsed time references.
- * @param {string} originalContent - The original message content.
- * @returns {string} Formatted response with Discord timestamps.
- */
-function createTimestampResponse(timeReferences, originalContent) {
-  let response = "**Time Conversion**\n";
-  
-  timeReferences.forEach(ref => {
-    const timestamp = Math.floor(ref.date.getTime() / 1000);
-    
-    response += `> "${ref.text}"\n`;
-    response += `<t:${timestamp}> (your local time)\n`;
-    response += `<t:${timestamp}:F> (full date/time)\n`;
-    response += `<t:${timestamp}:R> (relative time)\n\n`;
-  });
-  
-  return response;
-}
-
-// Make sure to export the extractTimeReferences function so it's available to both modules
-module.exports.extractTimeReferences = extractTimeReferences;

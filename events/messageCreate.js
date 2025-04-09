@@ -1,8 +1,9 @@
+// events/messageCreate.js
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
-const chrono = require('chrono-node');
+const { extractTimeReferences, containsTimeReference } = require('../utils/timeUtils');
 
 /**
  * Event handler for the 'messageCreate' event.
@@ -46,12 +47,18 @@ module.exports = {
       const timeReferences = extractTimeReferences(message.content);
       if (timeReferences.length > 0) {
         try {
-          // Store the parsed times in a custom property on the message object
-          // This will be used when handling reactions
-          message.parsedTimes = timeReferences;
+          // Store the parsed times in a cache or database
+          // We'll use a simple Map in the global scope for this example
+          if (!global.timeReferenceCache) {
+            global.timeReferenceCache = new Map();
+          }
+          global.timeReferenceCache.set(message.id, timeReferences);
           
           await message.react('🕒');
-          logger.debug("Added clock reaction to message with time reference");
+          logger.debug("Added clock reaction to message with time reference:", { 
+            messageId: message.id,
+            references: timeReferences.map(ref => ref.text)
+          });
         } catch (reactionError) {
           logger.error("Failed to add clock reaction:", { error: reactionError });
         }
@@ -62,27 +69,3 @@ module.exports = {
     }
   }
 };
-
-/**
- * Extract time references from a string using chrono-node.
- * 
- * @param {string} content - The message content to check.
- * @returns {Array} Array of objects containing parsed date and original text.
- */
-function extractTimeReferences(content) {
-  if (!content) return [];
-  
-  // Use chrono-node to parse potential dates/times from the message
-  const results = chrono.parse(content);
-  
-  // Filter results to only include those with time components
-  return results
-    .filter(result => {
-      // Check if the parsed result has time information
-      return result.text.match(/\d+\s*:\s*\d+|noon|midnight|morning|afternoon|evening|night|[ap]\.?m\.?/i) !== null;
-    })
-    .map(result => ({
-      date: result.start.date(),
-      text: result.text
-    }));
-}
