@@ -4,26 +4,12 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
-const { getValue, setValue, getReminderData, isConnected } = require('../utils/database');
+const { getValue, setValue, getReminderData } = require('../utils/database');
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'reminder',
-  DESCRIPTION: 'Setup and check the status of bump reminders.',
-  REMINDER_TYPE: 'bump',
-  DB_KEYS: {
-    CHANNEL: 'reminder_channel',
-    ROLE: 'reminder_role'
-  },
-  RESPONSES: {
-    SETUP_SUCCESS: '✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#%s>.\n🎭 The role to be pinged is <@&%s>.',
-    STATUS_HEADER: '📌 **Disboard Reminder Status:**\n📢 **Channel:** %s\n🎭 **Role:** %s\n\n⏳ **Disboard**: %s',
-    NOT_SET: 'Not set!',
-    OVERDUE: 'Reminder is overdue',
-    ERROR: '⚠️ An unexpected error occurred. Please try again later.',
-    DB_ERROR: '⚠️ Database connection error. Please check server logs.'
-  }
-};
+// Configuration constants
+const REMINDER_TYPE = 'bump';
+const DB_KEY_CHANNEL = 'reminder_channel';
+const DB_KEY_ROLE = 'reminder_role';
 
 /**
  * Module for the /reminder command.
@@ -31,8 +17,8 @@ const COMMAND_CONFIG = {
  */
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
-    .setDescription(COMMAND_CONFIG.DESCRIPTION)
+    .setName('reminder')
+    .setDescription('Setup and check the status of bump reminders.')
     .addChannelOption(option =>
       option
         .setName('channel')
@@ -54,20 +40,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     
-    try {
-      // Check database connection before proceeding.
-      if (!isConnected()) {
-        logger.error("Failed to execute reminder command due to database connection issue.", {
-          userId: interaction.user.id,
-          guildId: interaction.guildId
-        });
-        
-        return await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.DB_ERROR,
-          ephemeral: true
-        });
-      }
-      
+    try {      
       logger.info("Reminder command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId
@@ -96,7 +69,7 @@ module.exports = {
       // Handle case where interaction wasn't deferred properly.
       try {
         await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.ERROR,
+          content: '⚠️ An unexpected error occurred. Please try again later.',
           ephemeral: true
         });
       } catch (followUpError) {
@@ -108,7 +81,7 @@ module.exports = {
         
         // Try replying if editing failed.
         await interaction.reply({
-          content: COMMAND_CONFIG.RESPONSES.ERROR,
+          content: '⚠️ An unexpected error occurred. Please try again later.',
           ephemeral: true
         }).catch(() => {
           // Silent catch if everything fails.
@@ -133,8 +106,22 @@ async function handleReminderSetup(interaction, channelOption, roleOption) {
   });
   
   // Save the selected channel and role in the database.
-  await setValue(COMMAND_CONFIG.DB_KEYS.CHANNEL, channelOption.id);
-  await setValue(COMMAND_CONFIG.DB_KEYS.ROLE, roleOption.id);
+  try {
+    await setValue(DB_KEY_CHANNEL, channelOption.id);
+    await setValue(DB_KEY_ROLE, roleOption.id);
+  } catch (dbError) {
+    logger.error("Database operation failed during reminder setup.", { 
+      error: dbError.message, 
+      stack: dbError.stack,
+      userId: interaction.user.id,
+      guildId: interaction.guildId
+    });
+    await interaction.editReply({
+      content: "⚠️ Failed to save reminder settings. Please try again later.",
+      ephemeral: true
+    });
+    return;
+  }
   
   logger.info("Reminder configuration updated successfully.", {
     userId: interaction.user.id,
@@ -144,9 +131,7 @@ async function handleReminderSetup(interaction, channelOption, roleOption) {
   });
 
   // Respond with a summary of the new configuration.
-  const response = COMMAND_CONFIG.RESPONSES.SETUP_SUCCESS
-    .replace('%s', channelOption.id)
-    .replace('%s', roleOption.id);
+  const response = `✅ **Reminder setup complete!**\n📢 Reminders will be sent in <#${channelOption.id}>.\n🎭 The role to be pinged is <@&${roleOption.id}>.`;
     
   await interaction.editReply(response);
 }
@@ -161,37 +146,64 @@ async function handleReminderStatus(interaction) {
     guildId: interaction.guildId
   });
 
+  let channelId, roleId, reminderData;
+
   // Retrieve current reminder configuration from the database.
-  const channelId = await getValue(COMMAND_CONFIG.DB_KEYS.CHANNEL);
-  const roleId = await getValue(COMMAND_CONFIG.DB_KEYS.ROLE);
-  
-  logger.debug("Retrieved reminder configuration.", { 
-    channelId, 
-    roleId,
-    guildId: interaction.guildId
-  });
+  try {
+    channelId = await getValue(DB_KEY_CHANNEL);
+    roleId = await getValue(DB_KEY_ROLE);
+    
+    logger.debug("Retrieved reminder configuration.", { 
+      channelId, 
+      roleId,
+      guildId: interaction.guildId
+    });
+  } catch (dbError) {
+    logger.error("Database operation failed while retrieving reminder configuration.", { 
+      error: dbError.message, 
+      stack: dbError.stack,
+      userId: interaction.user.id,
+      guildId: interaction.guildId
+    });
+    await interaction.editReply({
+      content: "⚠️ Failed to retrieve reminder settings. Please try again later.",
+      ephemeral: true
+    });
+    return;
+  }
 
   // Resolve the channel name from the channel ID.
-  let channelStr = COMMAND_CONFIG.RESPONSES.NOT_SET;
+  let channelStr = 'Not set!';
   if (channelId) {
     const channelObj = interaction.guild.channels.cache.get(channelId);
-    channelStr = channelObj ? `<#${channelId}>` : COMMAND_CONFIG.RESPONSES.NOT_SET;
+    channelStr = channelObj ? `<#${channelId}>` : 'Not set!';
   }
   
   // Format the role for display.
-  const roleStr = roleId ? `<@&${roleId}>` : COMMAND_CONFIG.RESPONSES.NOT_SET;
+  const roleStr = roleId ? `<@&${roleId}>` : 'Not set!';
 
   // Retrieve the current reminder data.
-  const reminderData = await getReminderData(COMMAND_CONFIG.REMINDER_TYPE);
+  try {
+    reminderData = await getReminderData(REMINDER_TYPE);
+  } catch (dbError) {
+    logger.error("Database operation failed while retrieving reminder data.", { 
+      error: dbError.message, 
+      stack: dbError.stack,
+      userId: interaction.user.id,
+      guildId: interaction.guildId
+    });
+    await interaction.editReply({
+      content: "⚠️ Failed to retrieve reminder timing data. Please try again later.",
+      ephemeral: true
+    });
+    return;
+  }
   
   // Calculate the remaining time until the next reminder.
   const timeStr = calculateRemainingTime(reminderData);
 
   // Build the summary message with the current reminder settings.
-  const summary = COMMAND_CONFIG.RESPONSES.STATUS_HEADER
-    .replace('%s', channelStr)
-    .replace('%s', roleStr)
-    .replace('%s', timeStr);
+  const summary = `📌 **Disboard Reminder Status:**\n📢 **Channel:** ${channelStr}\n🎭 **Role:** ${roleStr}\n\n⏳ **Disboard**: ${timeStr}`;
 
   await interaction.editReply(summary);
   logger.info("Reminder status check completed successfully.", {
@@ -207,7 +219,7 @@ async function handleReminderStatus(interaction) {
  */
 function calculateRemainingTime(reminderData) {
   if (!reminderData || !reminderData.scheduled_time) {
-    return COMMAND_CONFIG.RESPONSES.NOT_SET;
+    return 'Not set!';
   }
   
   const now = dayjs();
@@ -215,7 +227,7 @@ function calculateRemainingTime(reminderData) {
   const diffMs = scheduled.diff(now);
   
   if (diffMs <= 0) {
-    return COMMAND_CONFIG.RESPONSES.OVERDUE;
+    return 'Reminder is overdue';
   }
   
   const diffDuration = dayjs.duration(diffMs);

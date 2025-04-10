@@ -5,17 +5,15 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 
 // Configuration constants.
-const COMMAND_CONFIG = {
-    POSITION_ABOVE_ROLE_ID: config.givePermsPositionAboveRoleId,
-    FREN_ROLE_ID: config.givePermsFrenRoleId,
-    MAX_ROLE_NAME_LENGTH: 100 // Discord's maximum role name length.
-};
+const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
+const FREN_ROLE_ID = config.givePermsFrenRoleId;
+const MAX_ROLE_NAME_LENGTH = 100; // Discord's maximum role name length.
 
 // Validate required configuration.
-if (!COMMAND_CONFIG.POSITION_ABOVE_ROLE_ID || !COMMAND_CONFIG.FREN_ROLE_ID) {
+if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
     logger.error("Missing required configuration for /giveperms command.", {
-        positionAboveRoleId: COMMAND_CONFIG.POSITION_ABOVE_ROLE_ID,
-        frenRoleId: COMMAND_CONFIG.FREN_ROLE_ID
+        positionAboveRoleId: POSITION_ABOVE_ROLE_ID,
+        frenRoleId: FREN_ROLE_ID
     });
 }
 
@@ -48,7 +46,7 @@ module.exports = {
      */
     async execute(interaction) {
         // Check if required configuration is available.
-        if (!COMMAND_CONFIG.POSITION_ABOVE_ROLE_ID || !COMMAND_CONFIG.FREN_ROLE_ID) {
+        if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
             logger.error("Command execution failed due to missing configuration.", {
                 commandName: 'giveperms',
                 guildId: interaction.guildId
@@ -81,13 +79,13 @@ module.exports = {
                 });
             }
             
-            if (roleName.length > COMMAND_CONFIG.MAX_ROLE_NAME_LENGTH) {
+            if (roleName.length > MAX_ROLE_NAME_LENGTH) {
                 logger.warn("Role name exceeds maximum length.", { 
                     roleName, 
-                    maxLength: COMMAND_CONFIG.MAX_ROLE_NAME_LENGTH 
+                    maxLength: MAX_ROLE_NAME_LENGTH 
                 });
                 return await interaction.editReply({
-                    content: `Role name must be ${COMMAND_CONFIG.MAX_ROLE_NAME_LENGTH} characters or less.`,
+                    content: `Role name must be ${MAX_ROLE_NAME_LENGTH} characters or less.`,
                     ephemeral: true
                 });
             }
@@ -128,9 +126,9 @@ module.exports = {
             const colorDecimal = parseInt(normalizedColorHex.replace('#', ''), 16);
             
             // Get the reference role for positioning.
-            const positionRole = interaction.guild.roles.cache.get(COMMAND_CONFIG.POSITION_ABOVE_ROLE_ID);
+            const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
             if (!positionRole) {
-                logger.error("Reference role not found.", { roleId: COMMAND_CONFIG.POSITION_ABOVE_ROLE_ID });
+                logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
                 return await interaction.editReply({
                     content: "⚠️ Reference role for positioning not found. Please check the positioning role ID.",
                     ephemeral: true
@@ -138,9 +136,9 @@ module.exports = {
             }
             
             // Get the additional role to assign.
-            const additionalRole = interaction.guild.roles.cache.get(COMMAND_CONFIG.FREN_ROLE_ID);
+            const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
             if (!additionalRole) {
-                logger.error("Additional role not found.", { roleId: COMMAND_CONFIG.FREN_ROLE_ID });
+                logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
                 return await interaction.editReply({
                     content: "⚠️ Additional role not found. Please check the Fren role ID.",
                     ephemeral: true

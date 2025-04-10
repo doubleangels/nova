@@ -1,47 +1,11 @@
-/**
- * Module for the /urban command.
- * 
- * This module allows users to search Urban Dictionary for definitions of specified terms.
- * It fetches data from the Urban Dictionary API and formats the results in an embed.
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
 // Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'urban',
-  DESCRIPTION: 'Search Urban Dictionary for definitions.',
-  OPTIONS: {
-    QUERY: {
-      NAME: 'query',
-      DESCRIPTION: 'What term do you want to search for?'
-    }
-  },
-  API: {
-    URL: 'https://api.urbandictionary.com/v0/define'
-  },
-  EMBED: {
-    COLOR: 0x1D2439,
-    TITLE_PREFIX: '📖 Definition: ',
-    EXAMPLE_FIELD: '📝 Example',
-    THUMBS_UP_FIELD: '👍 Thumbs Up',
-    THUMBS_DOWN_FIELD: '👎 Thumbs Down',
-    FOOTER: '🔍 Powered by Urban Dictionary'
-  },
-  RESPONSES: {
-    NO_DEFINITION: '⚠️ No definitions found for your query. Try refining it.',
-    API_ERROR: '⚠️ Error: Urban Dictionary API returned status code %s.',
-    GENERAL_ERROR: '⚠️ An unexpected error occurred. Please try again later.'
-  },
-  DEFAULTS: {
-    NO_WORD: 'No Word',
-    NO_DEFINITION: 'No Definition Available.',
-    NO_EXAMPLE: 'No example available.'
-  }
-};
+const URBAN_EMBED_COLOR = 0x1D2439;
+const URBAN_DICTIONARY_API_URL = 'https://api.urbandictionary.com/v0/define';
 
 /**
  * Sanitizes text from the Urban Dictionary API for safe rendering.
@@ -62,12 +26,12 @@ function sanitizeText(text) {
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
-    .setDescription(COMMAND_CONFIG.DESCRIPTION)
+    .setName('urban')
+    .setDescription('Search Urban Dictionary for definitions.')
     .addStringOption(option =>
       option
-        .setName(COMMAND_CONFIG.OPTIONS.QUERY.NAME)
-        .setDescription(COMMAND_CONFIG.OPTIONS.QUERY.DESCRIPTION)
+        .setName('query')
+        .setDescription('What term do you want to search for?')
         .setRequired(true)
     ),
     
@@ -80,7 +44,7 @@ module.exports = {
   async execute(interaction) {
     try {
       // Get the query term from the interaction options.
-      const query = interaction.options.getString(COMMAND_CONFIG.OPTIONS.QUERY.NAME);
+      const query = interaction.options.getString('query');
       
       logger.info("Urban Dictionary search initiated.", {
         userId: interaction.user.id,
@@ -95,7 +59,7 @@ module.exports = {
       
       // Construct the Urban Dictionary API URL with query parameters.
       const params = new URLSearchParams({ term: query });
-      const requestUrl = `${COMMAND_CONFIG.API.URL}?${params.toString()}`;
+      const requestUrl = `${URBAN_DICTIONARY_API_URL}?${params.toString()}`;
       
       logger.debug("Fetching data from Urban Dictionary API.", {
         query: query,
@@ -114,9 +78,9 @@ module.exports = {
         // Check if any definitions were returned.
         if (data.list && data.list.length > 0) {
           const topResult = data.list[0];
-          const word = topResult.word || COMMAND_CONFIG.DEFAULTS.NO_WORD;
-          const definition = sanitizeText(topResult.definition || COMMAND_CONFIG.DEFAULTS.NO_DEFINITION);
-          const example = sanitizeText(topResult.example || COMMAND_CONFIG.DEFAULTS.NO_EXAMPLE);
+          const word = topResult.word || 'No Word';
+          const definition = sanitizeText(topResult.definition || 'No Definition Available.');
+          const example = sanitizeText(topResult.example || 'No example available.');
           const thumbsUp = topResult.thumbs_up || 0;
           const thumbsDown = topResult.thumbs_down || 0;
           
@@ -130,15 +94,15 @@ module.exports = {
           
           // Build an embed with the retrieved definition.
           const embed = new EmbedBuilder()
-            .setTitle(`${COMMAND_CONFIG.EMBED.TITLE_PREFIX}${word}`)
+            .setTitle(`📖 Definition: ${word}`)
             .setDescription(definition)
-            .setColor(COMMAND_CONFIG.EMBED.COLOR)
+            .setColor(URBAN_EMBED_COLOR)
             .addFields(
-              { name: COMMAND_CONFIG.EMBED.EXAMPLE_FIELD, value: example, inline: false },
-              { name: COMMAND_CONFIG.EMBED.THUMBS_UP_FIELD, value: `${thumbsUp}`, inline: true },
-              { name: COMMAND_CONFIG.EMBED.THUMBS_DOWN_FIELD, value: `${thumbsDown}`, inline: true }
+              { name: '📝 Example', value: example, inline: false },
+              { name: '👍 Thumbs Up', value: `${thumbsUp}`, inline: true },
+              { name: '👎 Thumbs Down', value: `${thumbsDown}`, inline: true }
             )
-            .setFooter({ text: COMMAND_CONFIG.EMBED.FOOTER });
+            .setFooter({ text: '🔍 Powered by Urban Dictionary' });
           
           // Edit the deferred reply with the embed.
           await interaction.editReply({ embeds: [embed] });
@@ -156,7 +120,7 @@ module.exports = {
           });
           
           await interaction.editReply({ 
-            content: COMMAND_CONFIG.RESPONSES.NO_DEFINITION, 
+            content: '⚠️ No definitions found for your query. Try refining it.', 
             ephemeral: true 
           });
         }
@@ -170,7 +134,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: COMMAND_CONFIG.RESPONSES.API_ERROR.replace('%s', response.status), 
+          content: `⚠️ Error: Urban Dictionary API returned status code ${response.status}.`, 
           ephemeral: true 
         });
       }
@@ -180,18 +144,18 @@ module.exports = {
         error: error.message,
         stack: error.stack,
         userId: interaction.user.id,
-        query: interaction.options.getString(COMMAND_CONFIG.OPTIONS.QUERY.NAME)
+        query: interaction.options.getString('query')
       });
       
       // Determine if interaction has already been deferred.
       if (interaction.deferred) {
         await interaction.editReply({ 
-          content: COMMAND_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
       } else {
         await interaction.reply({ 
-          content: COMMAND_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
       }

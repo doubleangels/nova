@@ -3,6 +3,11 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
+// Configuration constants
+const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
+const EMBED_COLOR = 0xD3D3D3;
+const IMAGE_FILENAME = "dog.jpg";
+
 /**
  * Module for the /dog command.
  * Fetches a random dog image from the Dog CEO API and sends it as an embed.
@@ -21,11 +26,10 @@ module.exports = {
       // Defer reply to allow asynchronous operations.
       await interaction.deferReply();
       logger.debug("/dog command received:", { user: interaction.user.tag });
-      const dogApiUrl = "https://dog.ceo/api/breeds/image/random";
-      logger.debug("Fetching random dog image data:", { url: dogApiUrl });
+      logger.debug("Fetching random dog image data:", { url: DOG_API_URL });
       
       // Fetch the random dog image data using axios.
-      const response = await axios.get(dogApiUrl);
+      const response = await axios.get(DOG_API_URL);
       logger.debug("Dog CEO API response received:", { status: response.status });
       
       if (response.status === 200) {
@@ -42,15 +46,14 @@ module.exports = {
           
           if (imageResponse.status === 200) {
             const imageBuffer = Buffer.from(imageResponse.data);
-            const filename = "dog.jpg";
-            const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
+            const attachment = new AttachmentBuilder(imageBuffer, { name: IMAGE_FILENAME });
             
             // Build an embed to display the dog image.
             const embed = new EmbedBuilder()
               .setTitle("Random Dog Picture")
               .setDescription("🐶 Here's a doggo for you!")
-              .setColor(0xD3D3D3)
-              .setImage(`attachment://${filename}`)
+              .setColor(EMBED_COLOR)
+              .setImage(`attachment://${IMAGE_FILENAME}`)
               .setFooter({ text: "Powered by Dog CEO API" });
             
             // Edit the deferred reply with the embed and attached image.

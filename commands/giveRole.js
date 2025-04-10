@@ -3,23 +3,13 @@ const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-    COMMAND_NAME: 'giverole',
-    ERROR_MESSAGES: {
-        MISSING_PERMISSIONS: "⚠️ I don't have permission to manage this role.",
-        ROLE_HIERARCHY: "⚠️ The selected role is higher than my highest role. I cannot assign it.",
-        USER_HIERARCHY: "⚠️ You don't have permission to assign a role higher than your highest role."
-    }
-};
-
 /**
  * Module for the /giverole command.
  * Assigns a specified role to a specified user.
  */
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName(COMMAND_CONFIG.COMMAND_NAME)
+        .setName('giverole')
         .setDescription('Gives a specified role to a user.')
         .addRoleOption(option =>
             option.setName('role')
@@ -38,7 +28,7 @@ module.exports = {
     async execute(interaction) {
         // Defer reply since this might take a moment.
         await interaction.deferReply({ ephemeral: true });
-        logger.info(`/${COMMAND_CONFIG.COMMAND_NAME} command initiated.`, { 
+        logger.info(`/giverole command initiated.`, { 
             userId: interaction.user.id, 
             guildId: interaction.guild.id 
         });
@@ -67,18 +57,6 @@ module.exports = {
                 });
             }
             
-            // Check if the role is manageable by the bot.
-            if (!role.manageable) {
-                logger.warn("Role is not manageable by the bot.", { 
-                    roleId: role.id, 
-                    roleName: role.name
-                });
-                return await interaction.editReply({
-                    content: COMMAND_CONFIG.ERROR_MESSAGES.MISSING_PERMISSIONS,
-                    ephemeral: true
-                });
-            }
-            
             // Check role hierarchy for the user issuing the command.
             const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
             const issuerHighestRole = issuerMember.roles.highest;
@@ -89,7 +67,7 @@ module.exports = {
                     userHighestRoleId: issuerHighestRole.id
                 });
                 return await interaction.editReply({
-                    content: COMMAND_CONFIG.ERROR_MESSAGES.USER_HIERARCHY,
+                    content: "⚠️ You don't have permission to assign a role higher than your highest role.",
                     ephemeral: true
                 });
             }

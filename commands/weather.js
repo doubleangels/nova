@@ -1,10 +1,3 @@
-/**
- * Module for the /weather command.
- * 
- * Retrieves the current weather for a specified place using the PirateWeather API.
- * It first obtains the coordinates of the place using a helper function and then fetches the weather data.
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -14,81 +7,46 @@ const config = require('../config');
 const { getCoordinates } = require('../utils/locationUtils');
 
 // Configuration constants.
-const WEATHER_CONFIG = {
-  COMMAND: {
-    NAME: 'weather',
-    DESCRIPTION: 'Get the current weather for a place.'
-  },
-  OPTIONS: {
-    PLACE: {
-      NAME: 'place',
-      DESCRIPTION: 'What place do you want weather data for?'
-    }
-  },
-  API: {
-    BASE_URL: 'https://api.pirateweather.net/forecast/',
-    UNITS: 'si',
-    DAYS_FORECAST: 3
-  },
-  EMBED: {
-    COLOR: 0xFF6E42,
-    TITLE: 'Weather in %s',
-    FOOTER: 'Powered by PirateWeather'
-  },
-  FIELDS: {
-    LOCATION: '🌍 Location',
-    TEMPERATURE: '🌡 Temperature',
-    FEELS_LIKE: '🤔 Feels Like',
-    HUMIDITY: '💧 Humidity',
-    WIND_SPEED: '💨 Wind Speed',
-    UV_INDEX: '🌞 UV Index',
-    VISIBILITY: '👀 Visibility',
-    PRESSURE: '🛰 Pressure',
-    DEW_POINT: '🌫 Dew Point',
-    CLOUD_COVER: '☁ Cloud Cover',
-    PRECIP: '🌧 Precipitation',
-    PRECIP_PROB: '🌧 Precip. Probability',
-    FORECAST: '📅 3-Day Forecast'
-  },
-  RESPONSES: {
-    LOCATION_NOT_FOUND: '⚠️ Could not find the location for \'%s\'. Try another city.',
-    API_ERROR: '⚠️ Error: PirateWeather API returned status code %s.',
-    GENERAL_ERROR: '⚠️ An unexpected error occurred. Please try again later.',
-    API_KEY_MISSING: '⚠️ Weather API key is not configured. Please contact the bot administrator.'
-  },
-  DEFAULTS: {
-    SUMMARY: 'Unknown',
-    TEMP: 0,
-    HUMIDITY: 0,
-    WIND_SPEED: 0,
-    UV_INDEX: 'N/A',
-    VISIBILITY: 'N/A',
-    PRESSURE: 'N/A',
-    DEW_POINT: 'N/A',
-    CLOUD_COVER: 0,
-    PRECIP_INTENSITY: 0,
-    PRECIP_PROBABILITY: 0
-  },
-  UNITS: {
-    TEMP_C: '°C',
-    TEMP_F: '°F',
-    PERCENTAGE: '%',
-    WIND_SPEED: 'm/s',
-    VISIBILITY: 'km',
-    PRESSURE: 'hPa',
-    PRECIP: 'mm/hr'
-  },
-  DATE_FORMAT: 'MM/DD/YYYY'
-};
+const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
+const WEATHER_API_UNITS = 'si';
+const WEATHER_FORECAST_DAYS = 3;
+const WEATHER_EMBED_COLOR = 0xFF6E42;
+const WEATHER_EMBED_TITLE_FORMAT = 'Weather in %s';
+const WEATHER_EMBED_FOOTER = 'Powered by PirateWeather';
+const WEATHER_DATE_FORMAT = 'MM/DD/YYYY';
+
+// Field names
+const WEATHER_FIELD_LOCATION = '🌍 Location';
+const WEATHER_FIELD_TEMPERATURE = '🌡 Temperature';
+const WEATHER_FIELD_FEELS_LIKE = '🤔 Feels Like';
+const WEATHER_FIELD_HUMIDITY = '💧 Humidity';
+const WEATHER_FIELD_WIND_SPEED = '💨 Wind Speed';
+const WEATHER_FIELD_UV_INDEX = '🌞 UV Index';
+const WEATHER_FIELD_VISIBILITY = '👀 Visibility';
+const WEATHER_FIELD_PRESSURE = '🛰 Pressure';
+const WEATHER_FIELD_DEW_POINT = '🌫 Dew Point';
+const WEATHER_FIELD_CLOUD_COVER = '☁ Cloud Cover';
+const WEATHER_FIELD_PRECIP = '🌧 Precipitation';
+const WEATHER_FIELD_PRECIP_PROB = '🌧 Precip. Probability';
+const WEATHER_FIELD_FORECAST = '📅 3-Day Forecast';
+
+// Units
+const WEATHER_UNIT_TEMP_C = '°C';
+const WEATHER_UNIT_TEMP_F = '°F';
+const WEATHER_UNIT_PERCENTAGE = '%';
+const WEATHER_UNIT_WIND_SPEED = 'm/s';
+const WEATHER_UNIT_VISIBILITY = 'km';
+const WEATHER_UNIT_PRESSURE = 'hPa';
+const WEATHER_UNIT_PRECIP = 'mm/hr';
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(WEATHER_CONFIG.COMMAND.NAME)
-    .setDescription(WEATHER_CONFIG.COMMAND.DESCRIPTION)
+    .setName('weather')
+    .setDescription('Get the current weather for a place.')
     .addStringOption(option =>
       option
-        .setName(WEATHER_CONFIG.OPTIONS.PLACE.NAME)
-        .setDescription(WEATHER_CONFIG.OPTIONS.PLACE.DESCRIPTION)
+        .setName('place')
+        .setDescription('What place do you want weather data for?')
         .setRequired(true)
     ),
     
@@ -112,14 +70,14 @@ module.exports = {
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: WEATHER_CONFIG.RESPONSES.API_KEY_MISSING, 
+          content: '⚠️ Weather API key is not configured. Please contact the bot administrator.', 
           ephemeral: true 
         });
         return;
       }
 
       // Retrieve the 'place' option provided by the user.
-      const place = interaction.options.getString(WEATHER_CONFIG.OPTIONS.PLACE.NAME);
+      const place = interaction.options.getString('place');
       
       logger.debug("Processing weather request.", { 
         place, 
@@ -136,7 +94,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: WEATHER_CONFIG.RESPONSES.LOCATION_NOT_FOUND.replace('%s', place), 
+          content: `⚠️ Could not find the location for '${place}'. Try another city.`, 
           ephemeral: true 
         });
         return;
@@ -162,7 +120,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: WEATHER_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
         return;
@@ -189,12 +147,12 @@ module.exports = {
       
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ 
-          content: WEATHER_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
       } else {
         await interaction.reply({ 
-          content: WEATHER_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
       }
@@ -223,9 +181,9 @@ module.exports = {
   async fetchWeatherData(lat, lon) {
     try {
       // Build the PirateWeather API URL using the coordinates.
-      const url = `${WEATHER_CONFIG.API.BASE_URL}${config.pirateWeatherApiKey}/${lat},${lon}`;
+      const url = `${WEATHER_API_BASE_URL}${config.pirateWeatherApiKey}/${lat},${lon}`;
       // Set additional parameters; here, we're using SI units.
-      const params = new URLSearchParams({ units: WEATHER_CONFIG.API.UNITS });
+      const params = new URLSearchParams({ units: WEATHER_API_UNITS });
       const requestUrl = `${url}?${params.toString()}`;
       
       logger.debug("Making PirateWeather API request.", { requestUrl });
@@ -270,109 +228,109 @@ module.exports = {
     
     // Extract weather information with defaults for missing data.
     const weatherInfo = {
-      summary: currently.summary || WEATHER_CONFIG.DEFAULTS.SUMMARY,
-      tempC: currently.temperature ?? WEATHER_CONFIG.DEFAULTS.TEMP,
-      humidity: (currently.humidity ?? WEATHER_CONFIG.DEFAULTS.HUMIDITY) * 100,
-      windSpeed: currently.windSpeed ?? WEATHER_CONFIG.DEFAULTS.WIND_SPEED,
-      uvIndex: currently.uvIndex ?? WEATHER_CONFIG.DEFAULTS.UV_INDEX,
-      visibility: currently.visibility ?? WEATHER_CONFIG.DEFAULTS.VISIBILITY,
-      pressure: currently.pressure ?? WEATHER_CONFIG.DEFAULTS.PRESSURE,
-      dewPointC: currently.dewPoint !== undefined ? currently.dewPoint : WEATHER_CONFIG.DEFAULTS.DEW_POINT,
-      cloudCover: (currently.cloudCover ?? WEATHER_CONFIG.DEFAULTS.CLOUD_COVER) * 100,
-      precipIntensity: currently.precipIntensity ?? WEATHER_CONFIG.DEFAULTS.PRECIP_INTENSITY,
-      precipProbability: (currently.precipProbability ?? WEATHER_CONFIG.DEFAULTS.PRECIP_PROBABILITY) * 100
+      summary: currently.summary || "Unknown",
+      tempC: currently.temperature ?? 0,
+      humidity: (currently.humidity ?? 0) * 100,
+      windSpeed: currently.windSpeed ?? 0,
+      uvIndex: currently.uvIndex ?? "N/A",
+      visibility: currently.visibility ?? "N/A",
+      pressure: currently.pressure ?? "N/A",
+      dewPointC: currently.dewPoint !== undefined ? currently.dewPoint : "N/A",
+      cloudCover: (currently.cloudCover ?? 0) * 100,
+      precipIntensity: currently.precipIntensity ?? 0,
+      precipProbability: (currently.precipProbability ?? 0) * 100
     };
 
     // Calculate Fahrenheit values from Celsius.
     const tempF = typeof weatherInfo.tempC === 'number' ? 
       Math.round((weatherInfo.tempC * 9/5) + 32) : 
-      WEATHER_CONFIG.DEFAULTS.TEMP;
+      0;
     
-    const feelsLikeC = currently.apparentTemperature ?? WEATHER_CONFIG.DEFAULTS.TEMP;
+    const feelsLikeC = currently.apparentTemperature ?? 0;
     const feelsLikeF = typeof feelsLikeC === 'number' ? 
       Math.round((feelsLikeC * 9/5) + 32) : 
-      WEATHER_CONFIG.DEFAULTS.TEMP;
+      0;
     
     const dewPointF = typeof weatherInfo.dewPointC === 'number' ? 
       Math.round((weatherInfo.dewPointC * 9/5) + 32) : 
-      WEATHER_CONFIG.DEFAULTS.DEW_POINT;
+      "N/A";
     
     // Build a forecast text for the next 3 days (or available days if less than 3).
     const forecastText = this.createForecastText(daily);
     
     // Create an embed to display the weather data.
     const embed = new EmbedBuilder()
-      .setTitle(WEATHER_CONFIG.EMBED.TITLE.replace('%s', place))
+      .setTitle(WEATHER_EMBED_TITLE_FORMAT.replace('%s', place))
       .setDescription(`**${weatherInfo.summary}**`)
-      .setColor(WEATHER_CONFIG.EMBED.COLOR)
+      .setColor(WEATHER_EMBED_COLOR)
       .addFields(
         { 
-          name: WEATHER_CONFIG.FIELDS.LOCATION, 
+          name: WEATHER_FIELD_LOCATION, 
           value: `📍 ${place}\n📍 Lat: ${lat}, Lon: ${lon}`, 
           inline: false 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.TEMPERATURE, 
-          value: `${weatherInfo.tempC}${WEATHER_CONFIG.UNITS.TEMP_C} / ${tempF}${WEATHER_CONFIG.UNITS.TEMP_F}`, 
+          name: WEATHER_FIELD_TEMPERATURE, 
+          value: `${weatherInfo.tempC}${WEATHER_UNIT_TEMP_C} / ${tempF}${WEATHER_UNIT_TEMP_F}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.FEELS_LIKE, 
-          value: `${feelsLikeC}${WEATHER_CONFIG.UNITS.TEMP_C} / ${feelsLikeF}${WEATHER_CONFIG.UNITS.TEMP_F}`, 
+          name: WEATHER_FIELD_FEELS_LIKE, 
+          value: `${feelsLikeC}${WEATHER_UNIT_TEMP_C} / ${feelsLikeF}${WEATHER_UNIT_TEMP_F}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.HUMIDITY, 
-          value: `${weatherInfo.humidity}${WEATHER_CONFIG.UNITS.PERCENTAGE}`, 
+          name: WEATHER_FIELD_HUMIDITY, 
+          value: `${weatherInfo.humidity}${WEATHER_UNIT_PERCENTAGE}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.WIND_SPEED, 
-          value: `${weatherInfo.windSpeed} ${WEATHER_CONFIG.UNITS.WIND_SPEED}`, 
+          name: WEATHER_FIELD_WIND_SPEED, 
+          value: `${weatherInfo.windSpeed} ${WEATHER_UNIT_WIND_SPEED}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.UV_INDEX, 
+          name: WEATHER_FIELD_UV_INDEX, 
           value: `${weatherInfo.uvIndex}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.VISIBILITY, 
-          value: `${weatherInfo.visibility} ${WEATHER_CONFIG.UNITS.VISIBILITY}`, 
+          name: WEATHER_FIELD_VISIBILITY, 
+          value: `${weatherInfo.visibility} ${WEATHER_UNIT_VISIBILITY}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.PRESSURE, 
-          value: `${weatherInfo.pressure} ${WEATHER_CONFIG.UNITS.PRESSURE}`, 
+          name: WEATHER_FIELD_PRESSURE, 
+          value: `${weatherInfo.pressure} ${WEATHER_UNIT_PRESSURE}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.DEW_POINT, 
-          value: `${weatherInfo.dewPointC}${WEATHER_CONFIG.UNITS.TEMP_C} / ${dewPointF}${WEATHER_CONFIG.UNITS.TEMP_F}`, 
+          name: WEATHER_FIELD_DEW_POINT, 
+          value: `${weatherInfo.dewPointC}${WEATHER_UNIT_TEMP_C} / ${dewPointF}${WEATHER_UNIT_TEMP_F}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.CLOUD_COVER, 
-          value: `${weatherInfo.cloudCover}${WEATHER_CONFIG.UNITS.PERCENTAGE}`, 
+          name: WEATHER_FIELD_CLOUD_COVER, 
+          value: `${weatherInfo.cloudCover}${WEATHER_UNIT_PERCENTAGE}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.PRECIP, 
-          value: `${weatherInfo.precipIntensity} ${WEATHER_CONFIG.UNITS.PRECIP}`, 
+          name: WEATHER_FIELD_PRECIP, 
+          value: `${weatherInfo.precipIntensity} ${WEATHER_UNIT_PRECIP}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.PRECIP_PROB, 
-          value: `${weatherInfo.precipProbability}${WEATHER_CONFIG.UNITS.PERCENTAGE}`, 
+          name: WEATHER_FIELD_PRECIP_PROB, 
+          value: `${weatherInfo.precipProbability}${WEATHER_UNIT_PERCENTAGE}`, 
           inline: true 
         },
         { 
-          name: WEATHER_CONFIG.FIELDS.FORECAST, 
+          name: WEATHER_FIELD_FORECAST, 
           value: forecastText, 
           inline: false 
         }
       )
-      .setFooter({ text: WEATHER_CONFIG.EMBED.FOOTER });
+      .setFooter({ text: WEATHER_EMBED_FOOTER });
     
     return embed;
   },
@@ -385,38 +343,38 @@ module.exports = {
    */
   createForecastText(daily) {
     let forecastText = "";
-    const daysToShow = Math.min(WEATHER_CONFIG.API.DAYS_FORECAST, daily.length);
+    const daysToShow = Math.min(WEATHER_FORECAST_DAYS, daily.length);
     
     for (let i = 0; i < daysToShow; i++) {
       const day = daily[i] || {};
       const forecastDate = day.time ? 
-        dayjs.unix(day.time).format(WEATHER_CONFIG.DATE_FORMAT) : 
+        dayjs.unix(day.time).format(WEATHER_DATE_FORMAT) : 
         'Unknown date';
       
       const daySummary = day.summary || "No data";
       
       const highC = typeof day.temperatureHigh === "number" ? 
         day.temperatureHigh : 
-        WEATHER_CONFIG.DEFAULTS.TEMP;
+        0;
       
       const highF = typeof highC === "number" ? 
         Math.round((highC * 9/5) + 32) : 
-        WEATHER_CONFIG.DEFAULTS.TEMP;
+        0;
       
       const lowC = typeof day.temperatureLow === "number" ? 
         day.temperatureLow : 
-        WEATHER_CONFIG.DEFAULTS.TEMP;
+        0;
       
       const lowF = typeof lowC === "number" ? 
         Math.round((lowC * 9/5) + 32) : 
-        WEATHER_CONFIG.DEFAULTS.TEMP;
+        0;
       
       forecastText += `**${forecastDate}**\n`;
       forecastText += `**${daySummary}**\n`;
-      forecastText += `🌡 High: ${highC}${WEATHER_CONFIG.UNITS.TEMP_C} / `;
-      forecastText += `${highF}${WEATHER_CONFIG.UNITS.TEMP_F}, Low: `;
-      forecastText += `${lowC}${WEATHER_CONFIG.UNITS.TEMP_C} / `;
-      forecastText += `${lowF}${WEATHER_CONFIG.UNITS.TEMP_F}\n\n`;
+      forecastText += `🌡 High: ${highC}${WEATHER_UNIT_TEMP_C} / `;
+      forecastText += `${highF}${WEATHER_UNIT_TEMP_F}, Low: `;
+      forecastText += `${lowC}${WEATHER_UNIT_TEMP_C} / `;
+      forecastText += `${lowF}${WEATHER_UNIT_TEMP_F}\n\n`;
     }
     
     return forecastText || "No forecast data available.";

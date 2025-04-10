@@ -1,62 +1,31 @@
-/**
- * Module for the /trollmode command.
- * 
- * This command toggles kicking of accounts younger than a specified age threshold.
- * Only users with Administrator permissions can execute this command.
- */
-
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue } = require('../utils/database');
 
 // Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'trollmode',
-  DESCRIPTION: 'Toggle kicking of accounts younger than a specified age.',
-  OPTIONS: {
-    ENABLED: {
-      NAME: 'enabled',
-      DESCRIPTION: 'Do you want to enable or disable troll mode?',
-      CHOICES: [
-        { name: 'Enabled', value: 'enabled' },
-        { name: 'Disabled', value: 'disabled' }
-      ]
-    },
-    AGE: {
-      NAME: 'age',
-      DESCRIPTION: 'Minimum account age in days (Default: 30)'
-    }
-  },
-  DATABASE: {
-    ENABLED_KEY: 'troll_mode_enabled',
-    AGE_KEY: 'troll_mode_account_age'
-  },
-  DEFAULTS: {
-    AGE_DAYS: 30
-  },
-  RESPONSES: {
-    ENABLED: '👹 Troll mode has been ✅ **enabled**. Minimum account age: **%s** days.',
-    DISABLED: '👹 Troll mode has been ❌ **disabled**.',
-    ERROR: '⚠️ An unexpected error occurred. Please try again later.'
-  }
-};
+const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
+const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
+const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
-    .setDescription(COMMAND_CONFIG.DESCRIPTION)
+    .setName('trollmode')
+    .setDescription('Toggle kicking of accounts younger than a specified age.')
     .addStringOption(option =>
       option
-        .setName(COMMAND_CONFIG.OPTIONS.ENABLED.NAME)
-        .setDescription(COMMAND_CONFIG.OPTIONS.ENABLED.DESCRIPTION)
+        .setName('enabled')
+        .setDescription('Do you want to enable or disable troll mode?')
         .setRequired(true)
-        .addChoices(...COMMAND_CONFIG.OPTIONS.ENABLED.CHOICES)
+        .addChoices(
+          { name: 'Enabled', value: 'enabled' },
+          { name: 'Disabled', value: 'disabled' }
+        )
     )
     .addIntegerOption(option =>
       option
-        .setName(COMMAND_CONFIG.OPTIONS.AGE.NAME)
-        .setDescription(COMMAND_CONFIG.OPTIONS.AGE.DESCRIPTION)
+        .setName('age')
+        .setDescription('Minimum account age in days (Default: 30)')
         .setRequired(false)
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
@@ -94,8 +63,8 @@ module.exports = {
       });
       
       // Retrieve the command options.
-      const enabledInput = interaction.options.getString(COMMAND_CONFIG.OPTIONS.ENABLED.NAME);
-      const age = interaction.options.getInteger(COMMAND_CONFIG.OPTIONS.AGE.NAME) ?? COMMAND_CONFIG.DEFAULTS.AGE_DAYS;
+      const enabledInput = interaction.options.getString('enabled');
+      const age = interaction.options.getInteger('age') ?? DEFAULT_TROLL_MODE_AGE_DAYS;
       const isEnabled = enabledInput.toLowerCase() === 'enabled';
       
       logger.debug("Parsed trollmode command parameters.", {
@@ -119,20 +88,34 @@ module.exports = {
       }
 
       // Save the troll mode settings in the database.
-      await setValue(COMMAND_CONFIG.DATABASE.ENABLED_KEY, isEnabled);
-      await setValue(COMMAND_CONFIG.DATABASE.AGE_KEY, age);
-      
-      logger.debug("Trollmode settings saved to database.", {
-        isEnabled,
-        age,
-        enabledKey: COMMAND_CONFIG.DATABASE.ENABLED_KEY,
-        ageKey: COMMAND_CONFIG.DATABASE.AGE_KEY
-      });
+      try {
+        await setValue(TROLL_MODE_ENABLED_KEY, isEnabled);
+        await setValue(TROLL_MODE_ACCOUNT_AGE_KEY, age);
+        
+        logger.debug("Trollmode settings saved to database.", {
+          isEnabled,
+          age,
+          enabledKey: TROLL_MODE_ENABLED_KEY,
+          ageKey: TROLL_MODE_ACCOUNT_AGE_KEY
+        });
+      } catch (dbError) {
+        logger.error("Database operation failed while saving trollmode settings.", { 
+          error: dbError.message, 
+          stack: dbError.stack,
+          userId: interaction.user.id,
+          guildId: interaction.guildId
+        });
+        await interaction.editReply({
+          content: "⚠️ Failed to save trollmode settings. Please try again later.",
+          ephemeral: true
+        });
+        return;
+      }
 
       // Prepare the response message.
       const responseMessage = isEnabled
-        ? COMMAND_CONFIG.RESPONSES.ENABLED.replace('%s', age)
-        : COMMAND_CONFIG.RESPONSES.DISABLED;
+        ? `👹 Troll mode has been ✅ **enabled**. Minimum account age: **${age}** days.`
+        : '👹 Troll mode has been ❌ **disabled**.';
 
       // Reply to the interaction.
       await interaction.editReply(responseMessage);
@@ -156,12 +139,12 @@ module.exports = {
       // If the reply hasn't been sent yet, send it. Otherwise, edit it.
       if (interaction.deferred) {
         await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.ERROR,
+          content: '⚠️ An unexpected error occurred. Please try again later.',
           ephemeral: true
         });
       } else {
         await interaction.reply({
-          content: COMMAND_CONFIG.RESPONSES.ERROR,
+          content: '⚠️ An unexpected error occurred. Please try again later.',
           ephemeral: true
         });
       }

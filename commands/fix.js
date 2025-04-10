@@ -6,10 +6,8 @@ const { randomUUID } = require('crypto');
 const { setReminderData } = require('../utils/database');
 
 // Configuration constants.
-const REMINDER_CONSTANTS = {
-  SERVICE_TYPE: 'bump',
-  DELAY_SECONDS: 7200,  // 2 hours in seconds
-};
+const SERVICE_TYPE = 'bump';
+const DELAY_SECONDS = 7200;  // 2 hours in seconds
 
 /**
  * Module for the /fix command.
@@ -39,11 +37,11 @@ module.exports = {
 
       // Generate unique reminder data.
       const reminderId = randomUUID();
-      const scheduledTime = dayjs().add(REMINDER_CONSTANTS.DELAY_SECONDS, 'second').toISOString();
+      const scheduledTime = dayjs().add(DELAY_SECONDS, 'second').toISOString();
       
       // Save the reminder data to the database.
       await setReminderData(
-        REMINDER_CONSTANTS.SERVICE_TYPE, 
+        SERVICE_TYPE, 
         scheduledTime, 
         reminderId
       );
@@ -51,7 +49,7 @@ module.exports = {
       logger.debug("Reminder data saved to database.", { 
         reminderId: reminderId,
         scheduledTime: scheduledTime,
-        serviceType: REMINDER_CONSTANTS.SERVICE_TYPE
+        serviceType: SERVICE_TYPE
       });
       
       // Inform the user that the fix logic was successfully applied.

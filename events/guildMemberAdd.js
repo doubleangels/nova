@@ -5,6 +5,9 @@ const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 
+// Configuration constants.
+const WELCOME_EMBED_COLOR = 0xCD41FF;
+
 /**
  * Event handler for the 'guildMemberAdd' event.
  * Processes new members by applying troll mode, mute mode, and backup mode settings.
@@ -18,6 +21,12 @@ module.exports = {
     try {
       logger.debug("guildMemberAdd event received:", { memberTag: member.user.tag, guildId: member.guild.id });
 
+      // Skip processing for bot accounts.
+      if (member.user.bot) {
+        logger.debug("Member is a bot; skipping processing:", { memberTag: member.user.tag });
+        return;
+      }
+
       // Retrieve configuration settings from the database.
       const backupModeEnabled = ((await getValue("backup_mode_enabled")) || "false").toString().toLowerCase();
       const backupModeRole = await getValue("backup_mode_role");
@@ -26,12 +35,6 @@ module.exports = {
       const trollModeAccountAge = parseInt(await getValue("troll_mode_account_age")) || 30;
       const muteModeEnabled = ((await getValue("mute_mode_enabled")) || "false").toString().toLowerCase();
       const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours")) || 4;
-
-      // Skip processing for bot accounts.
-      if (member.user.bot) {
-        logger.debug("Member is a bot; skipping processing:", { memberTag: member.user.tag });
-        return;
-      }
 
       const now = dayjs();
       const created = dayjs(member.user.createdTimestamp);
@@ -107,7 +110,7 @@ module.exports = {
             "• Can we donate your organs to ... \"charity\"?\n\n" +
             "**Please tell us how old you are at least - this is an age restricted server! If you don't send at least one message, you might get automatically kicked.**"
           )
-          .setColor(0xCD41FF);
+          .setColor(WELCOME_EMBED_COLOR);
 
         await welcomeChannel.send({ embeds: [embed] });
         logger.debug("Welcome message sent:", { channelName: welcomeChannel.name, memberTag: member.user.tag });

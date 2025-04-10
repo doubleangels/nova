@@ -3,16 +3,27 @@ const logger = require('../logger')('neon.js');
 const dayjs = require('dayjs');
 const config = require('../config');
 
-// Initialize the PostgreSQL client with connection details from config
-const pool = new Pool({
+// Database configuration constants.
+const SCHEMA = 'main';
+const DEFAULT_QUERY_TIMEOUT = 30000; // 30 seconds timeout for queries
+const CONNECTION_OPTIONS = {
   connectionString: config.neonConnectionString,
   ssl: {
     rejectUnauthorized: true 
-  }
-});
+  },
+  query_timeout: DEFAULT_QUERY_TIMEOUT
+};
 
-// Define the schema name to use across all queries
-const SCHEMA = 'main';
+// Initialize the PostgreSQL client with connection details from config.
+const pool = new Pool(CONNECTION_OPTIONS);
+
+// Table names for consistent reference.
+const TABLES = {
+  CONFIG: `${SCHEMA}.config`,
+  REMINDERS: `${SCHEMA}.reminders`,
+  TRACKED_MEMBERS: `${SCHEMA}.tracked_members`,
+  TIMEZONES: `${SCHEMA}.timezones`
+};
 
 /**
  * Initializes the database by creating necessary tables if they don't exist.
@@ -20,38 +31,38 @@ const SCHEMA = 'main';
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
-    logger.debug("Initializing database tables in schema 'main'...");
+    logger.info("Initializing database tables in schema 'main'...");
     
-    // Create schema if it doesn't exist
+    // Create schema if it doesn't exist.
     await client.query(`CREATE SCHEMA IF NOT EXISTS ${SCHEMA};`);
     
-    // Create config table
+    // Create config table.
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${SCHEMA}.config (
+      CREATE TABLE IF NOT EXISTS ${TABLES.CONFIG} (
         id TEXT PRIMARY KEY,
         value TEXT NOT NULL
       );
     `);
     
-    // Create reminders table
+    // Create reminders table.
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${SCHEMA}.reminders (
+      CREATE TABLE IF NOT EXISTS ${TABLES.REMINDERS} (
         key TEXT PRIMARY KEY,
         scheduled_time TEXT NOT NULL,
         reminder_id TEXT NOT NULL
       );
     `);
     
-    // Create tracked_members table
+    // Create tracked_members table.
     await client.query(`
-      CREATE TABLE IF NOT EXISTS ${SCHEMA}.tracked_members (
+      CREATE TABLE IF NOT EXISTS ${TABLES.TRACKED_MEMBERS} (
         member_id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
         join_time TEXT NOT NULL
       );
     `);
     
-    logger.debug("Database initialization complete.");
+    logger.info("Database initialization complete.");
   } catch (err) {
     logger.error("Error initializing database:", { error: err });
     throw err;
@@ -71,7 +82,7 @@ async function getValue(key) {
   try {
     logger.debug(`Getting config value for key "${key}".`);
     const result = await client.query(
-      `SELECT value FROM ${SCHEMA}.config WHERE id = $1`,
+      `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
       [key]
     );
     // Parse the value if it exists.
@@ -100,21 +111,15 @@ async function setValue(key, value) {
   try {
     logger.debug(`Setting config value for key "${key}".`);
     const serialized = JSON.stringify(value);
-    const existing = await getValue(key);
     
-    if (existing === null) {
-      await client.query(
-        `INSERT INTO ${SCHEMA}.config (id, value) VALUES ($1, $2)`,
-        [key, serialized]
-      );
-      logger.debug(`Inserted new config for key "${key}".`);
-    } else {
-      await client.query(
-        `UPDATE ${SCHEMA}.config SET value = $1 WHERE id = $2`,
-        [serialized, key]
-      );
-      logger.debug(`Updated existing config for key "${key}".`);
-    }
+    // Use upsert pattern instead of separate get and set operations.
+    await client.query(
+      `INSERT INTO ${TABLES.CONFIG} (id, value) VALUES ($1, $2)
+       ON CONFLICT (id) DO UPDATE SET value = $2`,
+      [key, serialized]
+    );
+    
+    logger.debug(`Set config for key "${key}" successfully.`);
   } catch (err) {
     logger.error(`Error setting key "${key}":`, { error: err });
   } finally {
@@ -131,7 +136,7 @@ async function deleteValue(key) {
   const client = await pool.connect();
   try {
     logger.debug(`Deleting config for key "${key}".`);
-    await client.query(`DELETE FROM ${SCHEMA}.config WHERE id = $1`, [key]);
+    await client.query(`DELETE FROM ${TABLES.CONFIG} WHERE id = $1`, [key]);
     logger.debug(`Deleted config for key "${key}".`);
   } catch (err) {
     logger.error(`Error deleting key "${key}":`, { error: err });
@@ -149,7 +154,7 @@ async function getAllConfigs() {
   const client = await pool.connect();
   try {
     logger.debug("Retrieving all config records.");
-    const result = await client.query(`SELECT * FROM ${SCHEMA}.config`);
+    const result = await client.query(`SELECT * FROM ${TABLES.CONFIG}`);
     logger.debug(`Retrieved ${result.rows.length} config records.`);
     return result.rows;
   } catch (err) {
@@ -171,7 +176,7 @@ async function getReminderData(key) {
   try {
     logger.debug(`Getting reminder data for key "${key}".`);
     const result = await client.query(
-      `SELECT scheduled_time, reminder_id FROM ${SCHEMA}.reminders WHERE key = $1`,
+      `SELECT scheduled_time, reminder_id FROM ${TABLES.REMINDERS} WHERE key = $1`,
       [key]
     );
     const data = result.rows.length > 0 ? result.rows[0] : null;
@@ -197,21 +202,16 @@ async function setReminderData(key, scheduled_time, reminder_id) {
   const client = await pool.connect();
   try {
     logger.debug(`Setting reminder data for key "${key}".`);
-    const existing = await getReminderData(key);
     
-    if (!existing) {
-      await client.query(
-        `INSERT INTO ${SCHEMA}.reminders (key, scheduled_time, reminder_id) VALUES ($1, $2, $3)`,
-        [key, scheduled_time, reminder_id]
-      );
-      logger.debug(`Inserted new reminder data for key "${key}".`);
-    } else {
-      await client.query(
-        `UPDATE ${SCHEMA}.reminders SET scheduled_time = $1, reminder_id = $2 WHERE key = $3`,
-        [scheduled_time, reminder_id, key]
-      );
-      logger.debug(`Updated reminder data for key "${key}".`);
-    }
+    // Use upsert pattern for better performance.
+    await client.query(
+      `INSERT INTO ${TABLES.REMINDERS} (key, scheduled_time, reminder_id) 
+       VALUES ($1, $2, $3)
+       ON CONFLICT (key) 
+       DO UPDATE SET scheduled_time = $2, reminder_id = $3`,
+      [key, scheduled_time, reminder_id]
+    );
+    logger.info(`Set reminder data for key "${key}" successfully.`);
   } catch (err) {
     logger.error(`Error setting reminder data for key "${key}":`, { error: err });
   } finally {
@@ -228,8 +228,8 @@ async function deleteReminderData(key) {
   const client = await pool.connect();
   try {
     logger.debug(`Deleting reminder data for key "${key}".`);
-    await client.query(`DELETE FROM ${SCHEMA}.reminders WHERE key = $1`, [key]);
-    logger.debug(`Deleted reminder data for key "${key}".`);
+    await client.query(`DELETE FROM ${TABLES.REMINDERS} WHERE key = $1`, [key]);
+    logger.info(`Deleted reminder data for key "${key}".`);
   } catch (err) {
     logger.error(`Error deleting reminder data for key "${key}":`, { error: err });
   } finally {
@@ -250,16 +250,16 @@ async function trackNewMember(memberId, username, joinTime) {
     const formattedJoinTime = dayjs(joinTime).toISOString();
     logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
     
-    // Using ON CONFLICT for upsert functionality
+    // Using ON CONFLICT for upsert functionality.
     await client.query(
-      `INSERT INTO ${SCHEMA}.tracked_members (member_id, join_time, username) 
+      `INSERT INTO ${TABLES.TRACKED_MEMBERS} (member_id, join_time, username) 
        VALUES ($1, $2, $3) 
        ON CONFLICT (member_id) 
        DO UPDATE SET join_time = $2, username = $3`,
       [memberId, formattedJoinTime, username]
     );
     
-    logger.debug(`Successfully tracked member "${username}" (ID: ${memberId}).`);
+    logger.info(`Successfully tracked member "${username}" (ID: ${memberId}).`);
   } catch (err) {
     logger.error(`Error tracking new member "${username}":`, { error: err });
   } finally {
@@ -278,7 +278,7 @@ async function getTrackedMember(memberId) {
   try {
     logger.debug(`Retrieving tracking data for member ID "${memberId}".`);
     const result = await client.query(
-      `SELECT * FROM ${SCHEMA}.tracked_members WHERE member_id = $1`,
+      `SELECT * FROM ${TABLES.TRACKED_MEMBERS} WHERE member_id = $1`,
       [memberId]
     );
     
@@ -307,14 +307,14 @@ async function removeTrackedMember(memberId) {
   try {
     logger.debug(`Removing tracking data for member ID "${memberId}".`);
     const result = await client.query(
-      `DELETE FROM ${SCHEMA}.tracked_members WHERE member_id = $1 RETURNING *`,
+      `DELETE FROM ${TABLES.TRACKED_MEMBERS} WHERE member_id = $1 RETURNING *`,
       [memberId]
     );
     
     if (result.rowCount === 0) {
       logger.debug(`No tracking data found for member ID "${memberId}" to remove.`);
     } else {
-      logger.debug(`Successfully removed tracking data for member ID "${memberId}".`);
+      logger.info(`Successfully removed tracking data for member ID "${memberId}".`);
     }
   } catch (err) {
     logger.error("Error removing tracked member:", { error: err });
@@ -333,9 +333,9 @@ async function getAllTrackedMembers() {
   try {
     logger.debug("Retrieving all tracked members.");
     const result = await client.query(
-      `SELECT member_id, username, join_time FROM ${SCHEMA}.tracked_members`
+      `SELECT member_id, username, join_time FROM ${TABLES.TRACKED_MEMBERS}`
     );
-    logger.debug(`Retrieved ${result.rows.length} tracked member(s).`);
+    logger.info(`Retrieved ${result.rows.length} tracked member(s).`);
     return result.rows;
   } catch (err) {
     logger.error("Error retrieving all tracked members:", { error: err });
@@ -355,31 +355,30 @@ async function getAllTrackedMembers() {
 async function setUserTimezone(memberId, timezone) {
   const client = await pool.connect();
   try {
-    // Validate timezone - should be a non-empty string
+    // Validate timezone - should be a non-empty string.
     if (typeof timezone !== 'string' || timezone.trim() === '') {
         throw new Error(`Invalid timezone provided: ${timezone}`);
     }
-     // Validate memberId - should be a non-empty string representing a large integer
+     // Validate memberId - should be a non-empty string representing a large integer.
     if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
         throw new Error(`Invalid memberId provided (must be a string representing an integer): ${memberId}`);
     }
 
     logger.debug(`Setting timezone for member ID "${memberId}" to "${timezone}".`);
 
-    // Note: member_id column is BIGINT, timezone is TEXT
+    // Note: member_id column is BIGINT, timezone is TEXT.
     const query = `
-      INSERT INTO ${SCHEMA}.timezones (member_id, timezone)
+      INSERT INTO ${TABLES.TIMEZONES} (member_id, timezone)
       VALUES ($1::bigint, $2) -- Explicit cast of $1 to bigint
       ON CONFLICT (member_id)
       DO UPDATE SET timezone = $2;
     `;
-    // Pass memberId as a string; pg driver handles conversion correctly with cast
+    // Pass memberId as a string; pg driver handles conversion correctly with cast.
     await client.query(query, [memberId, timezone.trim()]);
 
-    logger.debug(`Successfully set timezone for member ID "${memberId}".`);
+    logger.info(`Successfully set timezone for member ID "${memberId}".`);
   } catch (err) {
     logger.error(`Error setting timezone for member ID "${memberId}":`, { error: err });
-    // throw err; // Optional: re-throw
   } finally {
     client.release();
   }
@@ -394,18 +393,18 @@ async function setUserTimezone(memberId, timezone) {
 async function getUserTimezone(memberId) {
   const client = await pool.connect();
   try {
-    // Validate memberId - should be a non-empty string representing a large integer
+    // Validate memberId - should be a non-empty string representing a large integer.
     if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
         logger.warn(`Attempted to get timezone with invalid memberId format: ${memberId}`);
-        return null; // Return null for invalid format
+        return null; // Return null for invalid format.
     }
 
     logger.debug(`Getting timezone for member ID "${memberId}".`);
 
-    // Note: member_id column is BIGINT
+    // Note: member_id column is BIGINT.
     const result = await client.query(
-      `SELECT timezone FROM ${SCHEMA}.timezones WHERE member_id = $1::bigint`, // Explicit cast
-      [memberId] // Pass memberId as string
+      `SELECT timezone FROM ${TABLES.TIMEZONES} WHERE member_id = $1::bigint`, // Explicit cast.
+      [memberId] // Pass memberId as string.
     );
 
     if (result.rows.length > 0) {
@@ -418,7 +417,7 @@ async function getUserTimezone(memberId) {
     }
   } catch (err) {
     logger.error(`Error getting timezone for member ID "${memberId}":`, { error: err });
-    return null; // Return null on error
+    return null; // Return null on error.
   } finally {
     client.release();
   }

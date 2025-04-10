@@ -2,16 +2,9 @@ const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.j
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'Mock',
-  MAX_CONTENT_LENGTH: 2000, // Discord message length limit
-  MOCK_EMOJI: '<a:spongebobmock:1291527476564066387>', // Complete emoji reference
-  EMPTY_MESSAGE_ERROR: "There is no text to mock!",
-  BOT_MOCK_ERROR: "I cannot mock my own messages!",
-  MISSING_MESSAGE_ERROR: "Error: Could not retrieve the target message.",
-  GENERAL_ERROR: "An error occurred while executing this command."
-};
+// Configuration constants
+const MAX_CONTENT_LENGTH = 2000; // Discord message length limit
+const MOCK_EMOJI = '<a:spongebobmock:1291527476564066387>'; // Complete emoji reference
 
 /**
  * Context menu command that converts a selected message's text into "mOcKiNg" format.
@@ -19,7 +12,7 @@ const COMMAND_CONFIG = {
  */
 module.exports = {
   data: new ContextMenuCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
+    .setName('Mock')
     .setType(ApplicationCommandType.Message),
   
   /**
@@ -47,7 +40,7 @@ module.exports = {
         });
         
         return await interaction.editReply({
-          content: COMMAND_CONFIG.MISSING_MESSAGE_ERROR,
+          content: "Error: Could not retrieve the target message.",
           ephemeral: true
         });
       }
@@ -65,7 +58,7 @@ module.exports = {
         });
         
         return await interaction.editReply({
-          content: COMMAND_CONFIG.BOT_MOCK_ERROR,
+          content: "I cannot mock my own messages!",
           ephemeral: true
         });
       }
@@ -82,7 +75,7 @@ module.exports = {
         });
         
         return await interaction.editReply({
-          content: COMMAND_CONFIG.EMPTY_MESSAGE_ERROR,
+          content: "There is no text to mock!",
           ephemeral: true
         });
       }
@@ -101,17 +94,17 @@ module.exports = {
       });
       
       // Reply with the mocked text while mentioning the original author.
-      const replyContent = `<@${targetMessage.author.id}>: "${mockedText}" ${COMMAND_CONFIG.MOCK_EMOJI}`;
+      const replyContent = `<@${targetMessage.author.id}>: "${mockedText}" ${MOCK_EMOJI}`;
       
       // Check if the reply would exceed Discord's message length limit.
-      if (replyContent.length > COMMAND_CONFIG.MAX_CONTENT_LENGTH) {
+      if (replyContent.length > MAX_CONTENT_LENGTH) {
         logger.warn("Mocked text exceeds Discord's message length limit.", {
           contentLength: replyContent.length,
-          limit: COMMAND_CONFIG.MAX_CONTENT_LENGTH
+          limit: MAX_CONTENT_LENGTH
         });
         
         const truncatedMockedText = mockedText.substring(0, 1900 - targetMessage.author.id.length) + "...";
-        await interaction.editReply(`<@${targetMessage.author.id}>: "${truncatedMockedText}" ${COMMAND_CONFIG.MOCK_EMOJI}`);
+        await interaction.editReply(`<@${targetMessage.author.id}>: "${truncatedMockedText}" ${MOCK_EMOJI}`);
       } else {
         await interaction.editReply(replyContent);
       }
@@ -132,7 +125,7 @@ module.exports = {
       // Handle case where interaction wasn't deferred properly.
       try {
         await interaction.editReply({
-          content: COMMAND_CONFIG.GENERAL_ERROR,
+          content: "An error occurred while executing this command.",
           ephemeral: true
         });
       } catch (followUpError) {
@@ -143,7 +136,7 @@ module.exports = {
         
         // Try replying if editing failed.
         await interaction.reply({
-          content: COMMAND_CONFIG.GENERAL_ERROR,
+          content: "An error occurred while executing this command.",
           ephemeral: true
         }).catch(() => {
           // Silent catch if everything fails.

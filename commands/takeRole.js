@@ -3,44 +3,21 @@ const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'takerole',
-  DESCRIPTION: 'Removes a specified role from a user.',
-  ROLE_OPTION: {
-    NAME: 'role',
-    DESCRIPTION: 'What role would you like to remove?'
-  },
-  USER_OPTION: {
-    NAME: 'user',
-    DESCRIPTION: 'Which user should have this role removed?'
-  },
-  RESPONSES: {
-    SUCCESS: '✅ Successfully removed the %s role from %s!',
-    USER_NO_ROLE: '⚠️ %s doesn\'t have the %s role.',
-    BOT_MISSING_PERMISSIONS: '⚠️ I don\'t have permission to manage roles. Please check my role permissions.',
-    ROLE_HIERARCHY_ERROR: '⚠️ I cannot remove this role because it\'s positioned higher than or equal to my highest role.',
-    ERROR: '⚠️ An unexpected error occurred. Please try again later.',
-    FAILED_TO_FETCH: '⚠️ Failed to fetch the guild member. Please try again.'
-  },
-  AUDIT_REASON: 'Role removed by %s using takerole command.'
-};
-
 /**
  * Module for the /takerole command.
  * Removes a specified role from a specified user.
  */
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
-    .setDescription(COMMAND_CONFIG.DESCRIPTION)
+    .setName('takerole')
+    .setDescription('Removes a specified role from a user.')
     .addRoleOption(option =>
-      option.setName(COMMAND_CONFIG.ROLE_OPTION.NAME)
-        .setDescription(COMMAND_CONFIG.ROLE_OPTION.DESCRIPTION)
+      option.setName('role')
+        .setDescription('What role would you like to remove?')
         .setRequired(true))
     .addUserOption(option =>
-      option.setName(COMMAND_CONFIG.USER_OPTION.NAME)
-        .setDescription(COMMAND_CONFIG.USER_OPTION.DESCRIPTION)
+      option.setName('user')
+        .setDescription('Which user should have this role removed?')
         .setRequired(true))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
@@ -59,8 +36,8 @@ module.exports = {
     
     try {
       // Extract command options.
-      const role = interaction.options.getRole(COMMAND_CONFIG.ROLE_OPTION.NAME);
-      const targetUser = interaction.options.getUser(COMMAND_CONFIG.USER_OPTION.NAME);
+      const role = interaction.options.getRole('role');
+      const targetUser = interaction.options.getUser('user');
       
       logger.debug("Processing take role command.", { 
         roleId: role.id,
@@ -76,7 +53,7 @@ module.exports = {
         });
         
         return await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.BOT_MISSING_PERMISSIONS,
+          content: '⚠️ I don\'t have permission to manage roles. Please check my role permissions.',
           ephemeral: true
         });
       }
@@ -86,7 +63,7 @@ module.exports = {
       
       if (!targetMember) {
         return await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.FAILED_TO_FETCH,
+          content: '⚠️ Failed to fetch the guild member. Please try again.',
           ephemeral: true
         });
       }
@@ -100,7 +77,7 @@ module.exports = {
         });
         
         return await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.USER_NO_ROLE.replace('%s', targetUser).replace('%s', role),
+          content: `⚠️ ${targetUser} doesn't have the ${role} role.`,
           ephemeral: true
         });
       }
@@ -115,13 +92,13 @@ module.exports = {
         });
         
         return await interaction.editReply({
-          content: COMMAND_CONFIG.RESPONSES.ROLE_HIERARCHY_ERROR,
+          content: '⚠️ I cannot remove this role because it\'s positioned higher than or equal to my highest role.',
           ephemeral: true
         });
       }
       
       // Remove the role from the user.
-      const auditReason = COMMAND_CONFIG.AUDIT_REASON.replace('%s', interaction.user.tag);
+      const auditReason = `Role removed by ${interaction.user.tag} using takerole command.`;
       await targetMember.roles.remove(role, auditReason);
       
       logger.info("Role successfully removed from user.", { 
@@ -133,7 +110,7 @@ module.exports = {
       });
       
       await interaction.editReply({
-        content: COMMAND_CONFIG.RESPONSES.SUCCESS.replace('%s', role).replace('%s', targetUser)
+        content: `✅ Successfully removed the ${role} role from ${targetUser}!`
       });
       
     } catch (error) {
@@ -145,7 +122,7 @@ module.exports = {
       });
       
       await interaction.editReply({ 
-        content: COMMAND_CONFIG.RESPONSES.ERROR, 
+        content: '⚠️ An unexpected error occurred. Please try again later.', 
         ephemeral: true 
       });
     }

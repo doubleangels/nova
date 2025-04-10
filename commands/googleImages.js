@@ -4,19 +4,14 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'googleimages',
-  GOOGLE_API_KEY: config.googleApiKey,
-  SEARCH_ENGINE_ID: config.imageSearchEngineId,
-  SEARCH_API_URL: "https://www.googleapis.com/customsearch/v1",
-  DEFAULT_RESULTS_COUNT: 5,
-  MAX_RESULTS: 10,
-  MIN_RESULTS: 1,
-  COLLECTOR_TIMEOUT: 120000, // 2 minute timeout
-  EMBED_COLOR: 0x4285F4, // Google blue color
-  SAFE_SEARCH: "medium" // Can be "off", "medium", or "high"
-};
+// Configuration constants
+const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
+const DEFAULT_RESULTS_COUNT = 5;
+const MAX_RESULTS = 10;
+const MIN_RESULTS = 1;
+const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout
+const EMBED_COLOR = 0x4285F4; // Google blue color
+const SAFE_SEARCH = "medium"; // Can be "off", "medium", or "high"
 
 /**
  * Converts a string to title case.
@@ -31,7 +26,7 @@ const titleCase = str =>
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
+    .setName('googleimages')
     .setDescription('Search Google for images and return the top results.')
     .addStringOption(option =>
       option
@@ -42,7 +37,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription(`How many results do you want? (${COMMAND_CONFIG.MIN_RESULTS}-${COMMAND_CONFIG.MAX_RESULTS}, Default: ${COMMAND_CONFIG.DEFAULT_RESULTS_COUNT})`)
+        .setDescription(`How many results do you want? (${MIN_RESULTS}-${MAX_RESULTS}, Default: ${DEFAULT_RESULTS_COUNT})`)
         .setRequired(false)
     ),
 
@@ -54,10 +49,10 @@ module.exports = {
   async execute(interaction) {
     try {
       // Validate API configuration before proceeding.
-      if (!COMMAND_CONFIG.GOOGLE_API_KEY || !COMMAND_CONFIG.SEARCH_ENGINE_ID) {
+      if (!config.googleApiKey || !config.imageSearchEngineId) {
         logger.error("Google API configuration is missing.", {
-          hasApiKey: !!COMMAND_CONFIG.GOOGLE_API_KEY,
-          hasSearchEngineId: !!COMMAND_CONFIG.SEARCH_ENGINE_ID
+          hasApiKey: !!config.googleApiKey,
+          hasSearchEngineId: !!config.imageSearchEngineId
         });
         return await interaction.reply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
@@ -67,14 +62,14 @@ module.exports = {
 
       // Defer the reply to allow time for API processing.
       await interaction.deferReply();
-      logger.info(`/${COMMAND_CONFIG.NAME} command initiated.`, { 
+      logger.info(`/googleimages command initiated.`, { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
 
       // Retrieve user input for the query and number of results.
       const query = interaction.options.getString('query');
-      let resultsCount = interaction.options.getInteger('results') ?? COMMAND_CONFIG.DEFAULT_RESULTS_COUNT;
+      let resultsCount = interaction.options.getInteger('results') ?? DEFAULT_RESULTS_COUNT;
       logger.debug("Processing user input.", { query, requestedResults: resultsCount });
 
       // Validate the query has non-whitespace content.
@@ -89,20 +84,20 @@ module.exports = {
       // Format the query to title case and trim extra whitespace.
       const formattedQuery = titleCase(query.trim());
       // Ensure resultsCount is between MIN_RESULTS and MAX_RESULTS.
-      resultsCount = Math.max(COMMAND_CONFIG.MIN_RESULTS, Math.min(resultsCount, COMMAND_CONFIG.MAX_RESULTS));
+      resultsCount = Math.max(MIN_RESULTS, Math.min(resultsCount, MAX_RESULTS));
       logger.debug("Formatted search parameters.", { formattedQuery, resultsCount });
 
       // Construct the Google Custom Search API URL and parameters.
       const params = new URLSearchParams({
-        key: COMMAND_CONFIG.GOOGLE_API_KEY,
-        cx: COMMAND_CONFIG.SEARCH_ENGINE_ID,
+        key: config.googleApiKey,
+        cx: config.imageSearchEngineId,
         q: formattedQuery,
         searchType: "image",
         num: resultsCount.toString(),
         start: "1",
-        safe: COMMAND_CONFIG.SAFE_SEARCH
+        safe: SAFE_SEARCH
       });
-      const requestUrl = `${COMMAND_CONFIG.SEARCH_API_URL}?${params.toString()}`;
+      const requestUrl = `${SEARCH_API_URL}?${params.toString()}`;
       logger.debug("Preparing Google Image API request.", { 
         searchQuery: formattedQuery,
         resultsRequested: resultsCount
@@ -156,7 +151,7 @@ module.exports = {
           return new EmbedBuilder()
             .setTitle(`🖼️ ${title}`)
             .setDescription(`🔗 **[View Original Source](${pageLink})**`)
-            .setColor(COMMAND_CONFIG.EMBED_COLOR)
+            .setColor(EMBED_COLOR)
             .setImage(imageLink)
             .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
         };
@@ -193,7 +188,7 @@ module.exports = {
 
         const collector = message.createMessageComponentCollector({ 
           filter, 
-          time: COMMAND_CONFIG.COLLECTOR_TIMEOUT,
+          time: COLLECTOR_TIMEOUT,
           idle: 60000 // Expire after 1 minute of inactivity
         });
         

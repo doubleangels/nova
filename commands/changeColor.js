@@ -3,11 +3,9 @@ const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-// Configuration constants.
-const COLOR_PATTERNS = {
-    HEX_WITH_HASH: /^#[0-9A-Fa-f]{6}$/,
-    HEX_WITHOUT_HASH: /^[0-9A-Fa-f]{6}$/
-};
+// Configuration constants
+const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
+const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
 
 /**
  * Module for the /changecolor command.
@@ -67,14 +65,14 @@ module.exports = {
             // Validate and normalize color format.
             let normalizedColorHex = colorHex;
             
-            if (COLOR_PATTERNS.HEX_WITHOUT_HASH.test(colorHex)) {
+            if (COLOR_PATTERN_HEX_WITHOUT_HASH.test(colorHex)) {
                 // If it's just RRGGBB without #, add the #.
                 normalizedColorHex = `#${colorHex}`;
                 logger.debug("Color format normalized.", { 
                     original: colorHex, 
                     normalized: normalizedColorHex 
                 });
-            } else if (!COLOR_PATTERNS.HEX_WITH_HASH.test(colorHex)) {
+            } else if (!COLOR_PATTERN_HEX_WITH_HASH.test(colorHex)) {
                 // If it doesn't match either format, it's invalid.
                 logger.warn("Invalid color format provided.", { 
                     colorHex: colorHex,

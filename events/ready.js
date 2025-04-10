@@ -5,8 +5,15 @@ const config = require('../config');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 
-// Import the deploy-commands module
+// Import the deploy-commands module.
 const deployCommands = require('../deploy-commands');
+
+// Bot activity configuration.
+const BOT_ACTIVITY = {
+  name: "for ways to assist! ❤️",
+  type: ActivityType.Watching
+};
+const BOT_STATUS = "online";
 
 /**
  * Event handler for the 'ready' event.
@@ -26,12 +33,12 @@ module.exports = {
       // Set the bot's presence with a custom activity.
       await client.user.setPresence({
         activities: [{
-          name: "for ways to assist! ❤️",
-          type: ActivityType.Watching
+          name: BOT_ACTIVITY.name,
+          type: BOT_ACTIVITY.type
         }],
-        status: "online"
+        status: BOT_STATUS
       });
-      logger.debug("Bot presence and activity set:", { activity: "Watching for ways to assist", status: "online" });
+      logger.debug("Bot presence and activity set:", { activity: `${BOT_ACTIVITY.type} ${BOT_ACTIVITY.name}`, status: BOT_STATUS });
     } catch (error) {
       logger.error("Failed to set bot presence:", { error });
     }
@@ -40,7 +47,7 @@ module.exports = {
       try {
         logger.debug("Attempting to deploy all slash commands to Discord API.");
         await deployCommands();
-        logger.debug("Slash command deployment completed successfully.");
+        logger.info("Slash command deployment completed successfully.");
       } catch (error) {
         logger.error("Failed to deploy slash commands:", { error });
       }
@@ -50,7 +57,7 @@ module.exports = {
       try {
         logger.debug("Attempting to reschedule all bump reminders from the database.");
         await rescheduleReminder(client);
-        logger.debug("Bump reminder rescheduling completed successfully.");
+        logger.info("Bump reminder rescheduling completed successfully.");
       } catch (error) {
         logger.error("Error while rescheduling bump reminders:", { error });
       }
@@ -60,7 +67,7 @@ module.exports = {
       try {
         logger.debug("Attempting to reschedule all mute kicks for tracked members.");
         await rescheduleAllMuteKicks(client);
-        logger.debug("Mute kick rescheduling completed successfully.");
+        logger.info("Mute kick rescheduling completed successfully.");
       } catch (error) {
         logger.error("Error while rescheduling mute kicks:", { error });
       }

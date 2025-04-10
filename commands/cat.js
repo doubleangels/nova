@@ -31,8 +31,7 @@ module.exports = {
       logger.debug("Fetching cat image from API.");
       const response = await axios.get(CAT_API_URL, { 
         responseType: 'arraybuffer', 
-        headers: { 'Accept': 'image/*' },
-        timeout: 5000 // 5 second timeout for API request
+        headers: { 'Accept': 'image/*' }
       });
 
       if (response.status === 200) {

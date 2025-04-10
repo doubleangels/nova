@@ -4,14 +4,11 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'imdb',
-  OMDB_API_URL: 'https://www.omdbapi.com/',
-  IMDB_BASE_URL: 'https://www.imdb.com/title/',
-  EMBED_COLOR: 0xFFD700, // IMDb gold color
-  REQUEST_TIMEOUT: 10000 // 10 second API request timeout
-};
+// Configuration constants
+const OMDB_API_URL = 'https://www.omdbapi.com/';
+const IMDB_BASE_URL = 'https://www.imdb.com/title/';
+const EMBED_COLOR = 0xFFD700; // IMDb gold color
+const REQUEST_TIMEOUT = 10000; // 10 second API request timeout
 
 /**
  * Module for the /imdb command.
@@ -19,7 +16,7 @@ const COMMAND_CONFIG = {
  */
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
+    .setName('imdb')
     .setDescription('Search for a movie or TV show on IMDB.')
     .addStringOption(option =>
       option
@@ -48,7 +45,7 @@ module.exports = {
 
       // Defer the reply to allow time for processing.
       await interaction.deferReply();
-      logger.info(`/${COMMAND_CONFIG.NAME} command initiated.`, {
+      logger.info(`/imdb command initiated.`, {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -79,13 +76,13 @@ module.exports = {
         t: formattedTitle,
         apikey: config.omdbApiKey
       });
-      const requestUrl = `${COMMAND_CONFIG.OMDB_API_URL}?${params.toString()}`;
+      const requestUrl = `${OMDB_API_URL}?${params.toString()}`;
       
       // Fetch data from the OMDb API using axios.
       let response;
       try {
         response = await axios.get(requestUrl, { 
-          timeout: COMMAND_CONFIG.REQUEST_TIMEOUT 
+          timeout: REQUEST_TIMEOUT 
         });
         logger.debug("OMDb API response received.", {
           status: response.status
@@ -117,7 +114,7 @@ module.exports = {
         const plot = data.Plot || "No plot available.";
         const poster = (data.Poster && data.Poster !== "N/A") ? data.Poster : null;
         const imdbId = data.imdbID || null;
-        const imdbLink = imdbId ? `${COMMAND_CONFIG.IMDB_BASE_URL}${imdbId}` : "N/A";
+        const imdbLink = imdbId ? `${IMDB_BASE_URL}${imdbId}` : "N/A";
         
         logger.info("Media information retrieved successfully.", {
           title: movieTitle,
@@ -130,7 +127,7 @@ module.exports = {
         const embed = new EmbedBuilder()
           .setTitle(`🎬 ${movieTitle} (${year})`)
           .setDescription(`📜 **Plot:** ${plot}`)
-          .setColor(COMMAND_CONFIG.EMBED_COLOR)
+          .setColor(EMBED_COLOR)
           .addFields(
             { name: "🎭 Genre", value: `🎞 ${genre}`, inline: true },
             { name: "⭐ IMDb Rating", value: `🌟 ${imdbRating}`, inline: true },

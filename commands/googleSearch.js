@@ -4,22 +4,19 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
-// Configuration constants.
-const COMMAND_CONFIG = {
-  NAME: 'google',
-  API_URL: 'https://www.googleapis.com/customsearch/v1',
-  DEFAULT_RESULTS: 5,
-  MIN_RESULTS: 1,
-  MAX_RESULTS: 10,
-  COLLECTOR_TIMEOUT: 120000, // 2 minute timeout
-  EMBED_COLOR: 0x4285F4, // Google blue color
-  REQUEST_TIMEOUT: 10000, // 10 second API request timeout
-  SAFE_SEARCH: 'medium' // Options: 'off', 'medium', 'high'
-};
+// Configuration constants
+const API_URL = 'https://www.googleapis.com/customsearch/v1';
+const DEFAULT_RESULTS = 5;
+const MIN_RESULTS = 1;
+const MAX_RESULTS = 10;
+const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout
+const EMBED_COLOR = 0x4285F4; // Google blue color
+const REQUEST_TIMEOUT = 10000; // 10 second API request timeout
+const SAFE_SEARCH = 'medium'; // Options: 'off', 'medium', 'high'
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(COMMAND_CONFIG.NAME)
+    .setName('google')
     .setDescription('Search Google and return the top results.')
     .addStringOption(option =>
       option
@@ -30,7 +27,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription(`How many results do you want? (${COMMAND_CONFIG.MIN_RESULTS}-${COMMAND_CONFIG.MAX_RESULTS}, Default: ${COMMAND_CONFIG.DEFAULT_RESULTS})`)
+        .setDescription(`How many results do you want? (${MIN_RESULTS}-${MAX_RESULTS}, Default: ${DEFAULT_RESULTS})`)
         .setRequired(false)
     ),
 
@@ -54,14 +51,14 @@ module.exports = {
 
       // Defer reply to allow processing time.
       await interaction.deferReply();
-      logger.info(`/${COMMAND_CONFIG.NAME} command initiated.`, { 
+      logger.info(`/google command initiated.`, { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
 
       // Get query and results count.
       const query = interaction.options.getString('query');
-      let resultsCount = interaction.options.getInteger('results') ?? COMMAND_CONFIG.DEFAULT_RESULTS;
+      let resultsCount = interaction.options.getInteger('results') ?? DEFAULT_RESULTS;
       logger.debug("Processing user input.", { 
         query, 
         requestedResults: resultsCount 
@@ -78,7 +75,7 @@ module.exports = {
 
       // Trim the query and enforce result count boundaries.
       const formattedQuery = query.trim();
-      resultsCount = Math.max(COMMAND_CONFIG.MIN_RESULTS, Math.min(resultsCount, COMMAND_CONFIG.MAX_RESULTS));
+      resultsCount = Math.max(MIN_RESULTS, Math.min(resultsCount, MAX_RESULTS));
       logger.debug("Formatted search parameters.", { 
         formattedQuery, 
         resultsCount 
@@ -91,9 +88,9 @@ module.exports = {
         q: formattedQuery,
         num: resultsCount.toString(),
         start: "1",
-        safe: COMMAND_CONFIG.SAFE_SEARCH
+        safe: SAFE_SEARCH
       });
-      const requestUrl = `${COMMAND_CONFIG.API_URL}?${params.toString()}`;
+      const requestUrl = `${API_URL}?${params.toString()}`;
       logger.debug("Preparing Google API request.", { 
         searchQuery: formattedQuery,
         resultsRequested: resultsCount
@@ -102,7 +99,7 @@ module.exports = {
       // Fetch data from the API using axios.
       let response;
       try {
-        response = await axios.get(requestUrl, { timeout: COMMAND_CONFIG.REQUEST_TIMEOUT });
+        response = await axios.get(requestUrl, { timeout: REQUEST_TIMEOUT });
         logger.debug("Google API response received.", { 
           status: response.status,
           itemsReturned: response.data?.items?.length || 0
@@ -144,7 +141,7 @@ module.exports = {
           return new EmbedBuilder()
             .setTitle(`🔍 ${title}`)
             .setDescription(`📜 **Summary:** ${snippet}\n🔗 [Read More](${link})`)
-            .setColor(COMMAND_CONFIG.EMBED_COLOR)
+            .setColor(EMBED_COLOR)
             .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Search` });
         };
 
@@ -181,7 +178,7 @@ module.exports = {
 
         const collector = message.createMessageComponentCollector({ 
           filter, 
-          time: COMMAND_CONFIG.COLLECTOR_TIMEOUT,
+          time: COLLECTOR_TIMEOUT,
           idle: 60000 // Expire after 1 minute of inactivity
         });
         

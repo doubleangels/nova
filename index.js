@@ -5,11 +5,16 @@ const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 const Sentry = require('./sentry');
 
+// Configuration constants.
+const COMMAND_EXTENSION = '.js';
+const SENTRY_FLUSH_TIMEOUT = 2000;
+
 /**
  * This script initializes and configures a Discord bot using discord.js.
  * It loads commands and event handlers and handles bot interactions, 
  * including slash commands and context menu commands.
  */
+
 // Create a new Discord client instance with necessary gateway intents.
 const client = new Client({
   intents: [
@@ -18,12 +23,12 @@ const client = new Client({
     GatewayIntentBits.MessageContent,   // Allows bot to read the content of messages.
     GatewayIntentBits.GuildMembers,     // Allows bot to access guild member information.
     GatewayIntentBits.GuildPresences,   // Allows bot to track member presence (online/offline).
-    GatewayIntentBits.GuildMessageReactions, // Allows bot to receive reaction events
+    GatewayIntentBits.GuildMessageReactions, // Allows bot to receive reaction events.
   ],
   partials: [
-    Partials.Message,    // Handle reactions on uncached messages
-    Partials.Channel,    // Handle messages in uncached channels
-    Partials.Reaction    // Handle uncached reactions
+    Partials.Message,    // Allows bot to handle reactions on uncached messages.
+    Partials.Channel,    // Allows bot to handle messages in uncached channels.
+    Partials.Reaction    // Allows bot to handle uncached reactions.
   ]
 });
 
@@ -32,33 +37,33 @@ client.commands = new Collection();
 
 // Load and register command files.
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(COMMAND_EXTENSION));
 
-// Check if we have a list of disabled commands
-const hasDisabledCommandsList = config.settings && 
-  config.settings.disabledCommands && 
-  Array.isArray(config.settings.disabledCommands) && 
-  config.settings.disabledCommands.length > 0;
+// Get the list of disabled commands if available.
+const disabledCommands = config.settings?.disabledCommands || [];
+const hasDisabledCommands = Array.isArray(disabledCommands) && disabledCommands.length > 0;
 
-if (hasDisabledCommandsList) {
-  logger.info(`Using disabledCommands filter - will not load ${config.settings.disabledCommands.length} specified commands`);
+if (hasDisabledCommands) {
+  logger.info(`Using disabledCommands filter - will not load ${disabledCommands.length} specified commands.`);
 }
 
 let loadedCount = 0;
 let skippedCount = 0;
 
+// Process each command file.
 for (const file of commandFiles) {
-  const commandName = file.replace('.js', ''); // Get command name without extension
+  const commandName = file.replace(COMMAND_EXTENSION, ''); 
   
-  // Skip this command if it's in the disabled list
-  if (hasDisabledCommandsList && config.settings.disabledCommands.includes(commandName)) {
-    logger.debug(`Skipping disabled command: ${commandName}`);
+  // Skip this command if it's in the disabled list.
+  if (hasDisabledCommands && disabledCommands.includes(commandName)) {
+    logger.debug(`Skipping disabled command: ${commandName}.`);
     skippedCount++;
     continue;
   }
   
   try {
-    const command = require(path.join(commandsPath, file));
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
     client.commands.set(command.data.name, command);
     logger.info("Loaded command:", { command: command.data.name });
     loadedCount++;
@@ -70,26 +75,40 @@ for (const file of commandFiles) {
   }
 }
 
-// Log summary of loaded commands
-logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} skipped`);
+// Log summary of loaded commands.
+logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} skipped.`);
 
 // Load and register event files.
 const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(COMMAND_EXTENSION));
+
+// Process each event file.
 for (const file of eventFiles) {
-  const event = require(path.join(eventsPath, file));
-  if (event.once) {
-    client.once(event.name, (...args) => {
-      logger.debug("Executing once event:", { event: event.name });
-      event.execute(...args, client);
-    });
-  } else {
-    client.on(event.name, (...args) => {
-      logger.debug("Executing event:", { event: event.name });
-      event.execute(...args, client);
+  try {
+    const filePath = path.join(eventsPath, file);
+    const event = require(filePath);
+    
+    if (event.once) {
+      client.once(event.name, (...args) => {
+        logger.debug("Executing once event:", { event: event.name });
+        event.execute(...args, client);
+      });
+    } else {
+      client.on(event.name, (...args) => {
+        // Only log debug for non-frequent events to avoid log spam.
+        if (event.name !== 'typingStart' && event.name !== 'presenceUpdate') {
+          logger.debug("Executing event:", { event: event.name });
+        }
+        event.execute(...args, client);
+      });
+    }
+    logger.info("Loaded event:", { event: event.name });
+  } catch (error) {
+    logger.error(`Failed to load event from ${file}:`, { error });
+    Sentry.captureException(error, {
+      extra: { context: 'event_loading_failure', eventFile: file }
     });
   }
-  logger.info("Loaded event:", { event: event.name });
 }
 
 // Event triggered when the bot is ready.
@@ -102,17 +121,17 @@ client.login(config.token).catch(err => {
   Sentry.captureException(err, {
     extra: { context: 'bot_login_failure' }
   });
-  logger.error("Error logging in:", { err });
+  logger.error("Error logging in:", { error: err });
 });
 
-// Add global unhandled error handlers
+// Add global unhandled error handlers.
 process.on('uncaughtException', (error) => {
   Sentry.captureException(error, {
     extra: { context: 'uncaughtException' }
   });
   logger.error('Uncaught Exception:', { error });
-  // Don't exit immediately to allow Sentry to send the error
-  setTimeout(() => process.exit(1), 1000);
+  // Don't exit immediately to allow Sentry to send the error.
+  setTimeout(() => process.exit(1), SENTRY_FLUSH_TIMEOUT);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
@@ -122,19 +141,18 @@ process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Promise Rejection:', { reason });
 });
 
-// Gracefully handle termination signals (for clean bot shutdown).
-process.on('SIGINT', () => {
-  logger.info("Shutdown signal (SIGINT) received. Exiting...");
-  // Flush Sentry events before exiting
-  Sentry.close(2000).then(() => {
+/**
+ * Handles graceful shutdown when receiving termination signals.
+ * @param {string} signal - The signal that triggered the shutdown.
+ */
+function handleShutdown(signal) {
+  logger.info(`Shutdown signal (${signal}) received. Exiting...`);
+  // Flush Sentry events before exiting.
+  Sentry.close(SENTRY_FLUSH_TIMEOUT).then(() => {
     process.exit(0);
   });
-});
+}
 
-process.on('SIGTERM', () => {
-  logger.info("Shutdown signal (SIGTERM) received. Exiting...");
-  // Flush Sentry events before exiting
-  Sentry.close(2000).then(() => {
-    process.exit(0);
-  });
-});
+// Gracefully handle termination signals (for clean bot shutdown).
+process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));

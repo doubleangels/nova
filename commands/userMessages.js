@@ -1,118 +1,42 @@
-/**
- * Module for the /usermessages command.
- * 
- * This command retrieves and displays the most recent messages from a specific user
- * in a specified channel with pagination support.
- */
-
-const { 
-  SlashCommandBuilder, 
-  EmbedBuilder, 
-  ActionRowBuilder, 
-  ButtonBuilder, 
-  ButtonStyle, 
-  ComponentType 
-} = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
 // Configuration constants.
-const CONFIG = {
-  COMMAND: {
-    NAME: 'usermessages',
-    DESCRIPTION: 'Lists the last 50 messages from a specific user in a specified channel.'
-  },
-  OPTIONS: {
-    USER: {
-      NAME: 'user',
-      DESCRIPTION: "What user's messages do you want to see?"
-    },
-    CHANNEL: {
-      NAME: 'channel',
-      DESCRIPTION: 'What channel do you want to search in?'
-    },
-    LIMIT: {
-      NAME: 'limit',
-      DESCRIPTION: 'How many messages do you want to display? (1-50, Default: 50)',
-      DEFAULT: 50,
-      MIN: 1,
-      MAX: 50
-    }
-  },
-  EMBED: {
-    COLOR: 0xcd41ff,
-    MESSAGES_PER_PAGE: 10,
-    MAX_CONTENT_LENGTH: 200,
-    ELLIPSIS: '...'
-  },
-  BUTTONS: {
-    FIRST: {
-      ID: 'first',
-      LABEL: '<<'
-    },
-    PREVIOUS: {
-      ID: 'previous',
-      LABEL: '<'
-    },
-    PAGE_INFO: {
-      ID: 'page_info'
-    },
-    NEXT: {
-      ID: 'next',
-      LABEL: '>'
-    },
-    LAST: {
-      ID: 'last',
-      LABEL: '>>'
-    }
-  },
-  COLLECTOR: {
-    TIMEOUT: 300000 // 5 minutes
-  },
-  RESPONSES: {
-    NO_MESSAGES: 'No recent messages found from %s in %s.',
-    MESSAGES_FOUND: 'Found %s messages from %s in %s.',
-    ERROR: '⚠️ There was an error fetching the messages. Please try again later.',
-    UNAUTHORIZED_BUTTON: 'You cannot use these buttons.',
-    USER_NOT_FOUND: 'User not found.',
-    INVALID_CHANNEL: 'Please select a valid text channel.'
-  },
-  INDICATORS: {
-    ATTACHMENT: '📎',
-    EMBED: '🖼️',
-    MESSAGE: '📜',
-    TIME: '⏰',
-    NO_CONTENT: '[No text content]'
-  },
-  CHANNEL_TYPES: {
-    TEXT: 0 // Discord channel type for text channels
-  },
-  FETCH: {
-    BATCH_SIZE: 100 // Number of messages to fetch in each batch
-  }
-};
+const MESSAGES_EMBED_COLOR = 0xcd41ff;
+const MESSAGES_PER_PAGE = 10;
+const MAX_CONTENT_LENGTH = 200;
+const CONTENT_ELLIPSIS = '...';
+const BUTTON_COLLECTOR_TIMEOUT = 300000; // 5 minutes
+const ATTACHMENT_INDICATOR = '📎';
+const EMBED_INDICATOR = '🖼️';
+const MESSAGE_INDICATOR = '📜';
+const TIME_INDICATOR = '⏰';
+const NO_CONTENT_TEXT = '[No text content]';
+const TEXT_CHANNEL_TYPE = 0; // Discord channel type for text channels
+const MESSAGE_FETCH_BATCH_SIZE = 100; // Number of messages to fetch in each batch
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(CONFIG.COMMAND.NAME)
-    .setDescription(CONFIG.COMMAND.DESCRIPTION)
+    .setName('usermessages')
+    .setDescription('Lists the last 50 messages from a specific user in a specified channel.')
     .addUserOption(option => 
       option
-        .setName(CONFIG.OPTIONS.USER.NAME)
-        .setDescription(CONFIG.OPTIONS.USER.DESCRIPTION)
+        .setName('user')
+        .setDescription("What user's messages do you want to see?")
         .setRequired(true))
     .addChannelOption(option =>
       option
-        .setName(CONFIG.OPTIONS.CHANNEL.NAME)
-        .setDescription(CONFIG.OPTIONS.CHANNEL.DESCRIPTION)
+        .setName('channel')
+        .setDescription('What channel do you want to search in?')
         .setRequired(true))
     .addIntegerOption(option =>
       option
-        .setName(CONFIG.OPTIONS.LIMIT.NAME)
-        .setDescription(CONFIG.OPTIONS.LIMIT.DESCRIPTION)
+        .setName('limit')
+        .setDescription('How many messages do you want to display? (1-50, Default: 50)')
         .setRequired(false)
-        .setMinValue(CONFIG.OPTIONS.LIMIT.MIN)
-        .setMaxValue(CONFIG.OPTIONS.LIMIT.MAX)),
+        .setMinValue(1)
+        .setMaxValue(50)),
 
   /**
    * Executes the usermessages command.
@@ -135,9 +59,9 @@ module.exports = {
       });
       
       // Get the target user and channel from options.
-      const targetUser = interaction.options.getUser(CONFIG.OPTIONS.USER.NAME);
-      const targetChannel = interaction.options.getChannel(CONFIG.OPTIONS.CHANNEL.NAME);
-      const messageLimit = interaction.options.getInteger(CONFIG.OPTIONS.LIMIT.NAME) || CONFIG.OPTIONS.LIMIT.DEFAULT;
+      const targetUser = interaction.options.getUser('user');
+      const targetChannel = interaction.options.getChannel('channel');
+      const messageLimit = interaction.options.getInteger('limit') || 50;
       
       logger.debug("Command parameters retrieved.", { 
         targetUserTag: targetUser?.tag,
@@ -155,7 +79,7 @@ module.exports = {
         });
         
         return interaction.editReply({ 
-          content: CONFIG.RESPONSES.USER_NOT_FOUND, 
+          content: 'User not found.', 
           ephemeral: true 
         });
       }
@@ -168,7 +92,7 @@ module.exports = {
       });
       
       // Check if the specified channel is a text channel.
-      if (targetChannel.type !== CONFIG.CHANNEL_TYPES.TEXT) {
+      if (targetChannel.type !== TEXT_CHANNEL_TYPE) {
         logger.warn("Invalid channel type specified.", { 
           channelName: targetChannel.name, 
           channelId: targetChannel.id,
@@ -176,7 +100,7 @@ module.exports = {
         });
         
         return interaction.editReply({ 
-          content: CONFIG.RESPONSES.INVALID_CHANNEL, 
+          content: 'Please select a valid text channel.', 
           ephemeral: true 
         });
       }
@@ -202,8 +126,7 @@ module.exports = {
         });
         
         return interaction.editReply({
-          content: CONFIG.RESPONSES.NO_MESSAGES.replace('%s', targetUser.username)
-                                               .replace('%s', targetChannel.name),
+          content: `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`,
           ephemeral: true 
         });
       }
@@ -213,7 +136,7 @@ module.exports = {
       
       logger.debug("Created message embeds.", { 
         embedCount: embeds.length, 
-        messagesPerPage: CONFIG.EMBED.MESSAGES_PER_PAGE,
+        messagesPerPage: MESSAGES_PER_PAGE,
         totalMessages: allMessages.length
       });
       
@@ -222,10 +145,7 @@ module.exports = {
       const totalPages = embeds.length;
       
       const message = await interaction.editReply({ 
-        content: CONFIG.RESPONSES.MESSAGES_FOUND
-                  .replace('%s', allMessages.length)
-                  .replace('%s', targetUser.username)
-                  .replace('%s', targetChannel.name),
+        content: `Found ${allMessages.length} messages from ${targetUser.username} in ${targetChannel.name}.`,
         ephemeral: true,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [this.createPaginationButtons(currentPage, totalPages)] : []
@@ -253,7 +173,7 @@ module.exports = {
       const replyMethod = (interaction.deferred || interaction.replied) ? 'editReply' : 'reply';
       
       await interaction[replyMethod]({ 
-        content: CONFIG.RESPONSES.ERROR, 
+        content: '⚠️ There was an error fetching the messages. Please try again later.', 
         ephemeral: true 
       }).catch(err => {
         logger.error("Failed to send error message to user.", { 
@@ -278,7 +198,7 @@ module.exports = {
     while (allMessages.length < limit) {
       // Fetch messages with the specified batch size.
       const messages = await channel.messages.fetch({ 
-        limit: CONFIG.FETCH.BATCH_SIZE, 
+        limit: MESSAGE_FETCH_BATCH_SIZE, 
         before: lastMessageId 
       });
 
@@ -290,7 +210,7 @@ module.exports = {
       
       // Add the filtered user messages to the allMessages array.
       allMessages.push(...userMessages.map(msg => ({
-        content: msg.content || CONFIG.INDICATORS.NO_CONTENT,
+        content: msg.content || NO_CONTENT_TEXT,
         attachments: msg.attachments.size > 0,
         embeds: msg.embeds.length > 0,
         timestamp: msg.createdTimestamp,
@@ -321,11 +241,11 @@ module.exports = {
    */
   createMessageEmbeds(messages, targetUser) {
     const embeds = [];
-    const messagesPerEmbed = CONFIG.EMBED.MESSAGES_PER_PAGE;
+    const messagesPerEmbed = MESSAGES_PER_PAGE;
 
     for (let i = 0; i < messages.length; i += messagesPerEmbed) {
       const embed = new EmbedBuilder()
-        .setColor(CONFIG.EMBED.COLOR)
+        .setColor(MESSAGES_EMBED_COLOR)
         .setAuthor({
           name: `Last messages from ${targetUser.username}`,
           iconURL: targetUser.displayAvatarURL()
@@ -342,21 +262,21 @@ module.exports = {
         let content = msg.content;
         
         // Truncate long messages.
-        if (content.length > CONFIG.EMBED.MAX_CONTENT_LENGTH) {
-          content = content.substring(0, CONFIG.EMBED.MAX_CONTENT_LENGTH) + CONFIG.EMBED.ELLIPSIS;
+        if (content.length > MAX_CONTENT_LENGTH) {
+          content = content.substring(0, MAX_CONTENT_LENGTH) + CONTENT_ELLIPSIS;
         }
         
         // Add indicators for attachments/embeds.
         let extras = [];
-        if (msg.attachments) extras.push(CONFIG.INDICATORS.ATTACHMENT);
-        if (msg.embeds) extras.push(CONFIG.INDICATORS.EMBED);
+        if (msg.attachments) extras.push(ATTACHMENT_INDICATOR);
+        if (msg.embeds) extras.push(EMBED_INDICATOR);
         
         const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
         
         // Format the message with channel, content, and dynamic timestamp.
         embed.addFields({
           name: `${messageNumber}. ${msg.channelName} ${extraText}`,
-          value: `${CONFIG.INDICATORS.MESSAGE} **Message:** ${content}\n${CONFIG.INDICATORS.TIME} **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
+          value: `${MESSAGE_INDICATOR} **Message:** ${content}\n${TIME_INDICATOR} **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
           inline: false
         });
       });
@@ -378,28 +298,28 @@ module.exports = {
     return new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
-          .setCustomId(CONFIG.BUTTONS.FIRST.ID)
-          .setLabel(CONFIG.BUTTONS.FIRST.LABEL)
+          .setCustomId('first')
+          .setLabel('<<')
           .setStyle(ButtonStyle.Primary)
           .setDisabled(currentPage === 0),
         new ButtonBuilder()
-          .setCustomId(CONFIG.BUTTONS.PREVIOUS.ID)
-          .setLabel(CONFIG.BUTTONS.PREVIOUS.LABEL)
+          .setCustomId('previous')
+          .setLabel('<')
           .setStyle(ButtonStyle.Primary)
           .setDisabled(currentPage === 0),
         new ButtonBuilder()
-          .setCustomId(CONFIG.BUTTONS.PAGE_INFO.ID)
+          .setCustomId('page_info')
           .setLabel(`${currentPage + 1}/${totalPages}`)
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(true),
         new ButtonBuilder()
-          .setCustomId(CONFIG.BUTTONS.NEXT.ID)
-          .setLabel(CONFIG.BUTTONS.NEXT.LABEL)
+          .setCustomId('next')
+          .setLabel('>')
           .setStyle(ButtonStyle.Primary)
           .setDisabled(currentPage === totalPages - 1),
         new ButtonBuilder()
-          .setCustomId(CONFIG.BUTTONS.LAST.ID)
-          .setLabel(CONFIG.BUTTONS.LAST.LABEL)
+          .setCustomId('last')
+          .setLabel('>>')
           .setStyle(ButtonStyle.Primary)
           .setDisabled(currentPage === totalPages - 1),
       );
@@ -421,11 +341,11 @@ module.exports = {
     // Create a collector for button interactions.
     const collector = message.createMessageComponentCollector({ 
       componentType: ComponentType.Button,
-      time: CONFIG.COLLECTOR.TIMEOUT
+      time: BUTTON_COLLECTOR_TIMEOUT
     });
     
     logger.debug("Button collector created.", { 
-      timeout: `${CONFIG.COLLECTOR.TIMEOUT / 60000} minutes`,
+      timeout: `${BUTTON_COLLECTOR_TIMEOUT / 60000} minutes`,
       pages: totalPages
     });
     
@@ -440,7 +360,7 @@ module.exports = {
         });
         
         return i.reply({ 
-          content: CONFIG.RESPONSES.UNAUTHORIZED_BUTTON, 
+          content: 'You cannot use these buttons.', 
           ephemeral: true 
         });
       }
@@ -449,16 +369,16 @@ module.exports = {
       
       // Handle button interactions.
       switch (i.customId) {
-        case CONFIG.BUTTONS.FIRST.ID:
+        case 'first':
           currentPage = 0;
           break;
-        case CONFIG.BUTTONS.PREVIOUS.ID:
+        case 'previous':
           currentPage = Math.max(0, currentPage - 1);
           break;
-        case CONFIG.BUTTONS.NEXT.ID:
+        case 'next':
           currentPage = Math.min(totalPages - 1, currentPage + 1);
           break;
-        case CONFIG.BUTTONS.LAST.ID:
+        case 'last':
           currentPage = totalPages - 1;
           break;
       }

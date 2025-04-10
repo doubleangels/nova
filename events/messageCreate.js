@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
-const { extractTimeReferences, containsTimeReference } = require('../utils/timeUtils');
+const { extractTimeReferences } = require('../utils/timeUtils');
 
 /**
  * Event handler for the 'messageCreate' event.
@@ -34,57 +34,55 @@ module.exports = {
         content: message.content || "No Content"
       });
       
-      // Skip processing if message is from a webhook or bot
-      if (message.webhookId || (message.author && message.author.bot)) {
-        return;
+      // Handle user-specific actions only for non-bot messages
+      if (!message.webhookId && message.author && !message.author.bot) {
+        // Check if the message author is being tracked for mute mode.
+        const tracked = await getTrackedMember(message.author.id);
+        if (tracked) {
+          await removeTrackedMember(message.author.id);
+          logger.debug("User removed from mute tracking:", { user: message.author.tag });
+        }
+        
+        // Check if the message contains time references using chrono-node
+        if (message.content) {
+          const timeReferences = extractTimeReferences(message.content);
+          if (timeReferences.length > 0) {
+            try {
+              // Store the parsed times in a cache or database
+              // We'll use a simple Map in the global scope for this example
+              if (!global.timeReferenceCache) {
+                global.timeReferenceCache = new Map();
+              }
+              global.timeReferenceCache.set(message.id, timeReferences);
+              
+              // Check if the bot has permission to add reactions
+              if (message.guild && message.channel.permissionsFor(message.guild.members.me).has('AddReactions')) {
+                await message.react('🕒');
+                logger.debug("Added clock reaction to message with time reference:", { 
+                  messageId: message.id,
+                  references: timeReferences.map(ref => ref.text)
+                });
+              } else {
+                logger.warn("Missing permission to add reactions in channel:", {
+                  channelId: message.channel.id
+                });
+              }
+            } catch (reactionError) {
+              logger.error("Failed to add clock reaction:", { error: reactionError });
+            }
+          }
+        }
       }
       
-      // Check if the message author is being tracked for mute mode.
-      const tracked = await getTrackedMember(message.author.id);
-      if (tracked) {
-        await removeTrackedMember(message.author.id);
-        logger.debug("User removed from mute tracking:", { user: message.author.tag });
-      }
-      
-      // Check for embeds that contain "Bump done"
+      // Check for bumps regardless of message source (including bots)
       if (message.embeds && message.embeds.length > 0) {
         const bumpEmbed = message.embeds.find(embed =>
-          embed.description && embed.description.includes("Bump done")
+          embed.description && embed.description.includes("Bump done!")
         );
         if (bumpEmbed) {
           // Schedule a 2-hour reminder (2 hours = 7200000 milliseconds)
           await handleReminder(message, 7200000);
           logger.debug("Bump reminder scheduled for 2 hours.");
-        }
-      }
-      
-      // Check if the message contains time references using chrono-node
-      if (message.content) {
-        const timeReferences = extractTimeReferences(message.content);
-        if (timeReferences.length > 0) {
-          try {
-            // Store the parsed times in a cache or database
-            // We'll use a simple Map in the global scope for this example
-            if (!global.timeReferenceCache) {
-              global.timeReferenceCache = new Map();
-            }
-            global.timeReferenceCache.set(message.id, timeReferences);
-            
-            // Check if the bot has permission to add reactions
-            if (message.guild && message.channel.permissionsFor(message.guild.members.me).has('AddReactions')) {
-              await message.react('🕒');
-              logger.debug("Added clock reaction to message with time reference:", { 
-                messageId: message.id,
-                references: timeReferences.map(ref => ref.text)
-              });
-            } else {
-              logger.warn("Missing permission to add reactions in channel:", {
-                channelId: message.channel.id
-              });
-            }
-          } catch (reactionError) {
-            logger.error("Failed to add clock reaction:", { error: reactionError });
-          }
         }
       }
     

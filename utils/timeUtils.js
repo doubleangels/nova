@@ -5,7 +5,13 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 
-// Extend dayjs with plugins for timezone handling
+// Configuration constants.
+const TIME_FORMAT = 'h:mm A';
+const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
+const NEXT_DAY_SUFFIX = ' (next day)';
+const PREVIOUS_DAY_SUFFIX = ' (previous day)';
+
+// Extend dayjs with plugins for timezone handling.
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -16,10 +22,15 @@ dayjs.extend(timezone);
  * @returns {boolean} Whether the timezone is valid.
  */
 function isValidTimezone(tz) {
+  if (!tz || typeof tz !== 'string') {
+    return false;
+  }
+  
   try {
     dayjs().tz(tz);
     return true;
-  } catch {
+  } catch (error) {
+    logger.debug("Invalid timezone identifier.", { timezone: tz });
     return false;
   }
 }
@@ -37,21 +48,35 @@ function isValidTimezone(tz) {
  * @returns {Array<Object>} An array of objects containing the parsed date and original text.
  */
 function extractTimeReferences(content, options = {}) {
-  if (!content) return [];
+  if (!content) {
+    return [];
+  }
+  
   try {
     const results = chrono.parse(content);
+    logger.debug("Parsed time references from content.", { 
+      count: results.length, 
+      contentLength: content.length 
+    });
+    
     return results
       .filter(result => {
-        if (options.includeAllTimes) return true;
-        // Expanded regex to include more time formats
-        return result.text.match(/\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i) !== null;
+        if (options.includeAllTimes) {
+          return true;
+        }
+        // Filter for results that contain an explicit time component.
+        return TIME_PATTERN.test(result.text);
       })
       .map(result => ({
         date: result.start.date(),
         text: result.text
       }));
   } catch (error) {
-    logger.error("Error parsing time references:", { error, content });
+    logger.error("Error parsing time references.", { 
+      error: error.message, 
+      stack: error.stack,
+      content: content.substring(0, 100) // Log only first 100 chars for brevity
+    });
     return [];
   }
 }
@@ -69,14 +94,27 @@ function extractTimeReferences(content, options = {}) {
  * @returns {Object} An object containing the original text, parsed times, and timezone information.
  */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
-  // Validate timezones
+  // Validate input parameters.
+  if (!timeRef || !timeRef.text) {
+    logger.debug("Invalid time reference provided.", { timeRef });
+    return {
+      text: timeRef?.text || "undefined",
+      originalTime: null,
+      convertedTime: "Could not parse time",
+      fromTimezone,
+      toTimezone
+    };
+  }
+
+  // Validate timezones.
   if (!isValidTimezone(fromTimezone) || !isValidTimezone(toTimezone)) {
+    logger.debug("Invalid timezone in conversion request.", { fromTimezone, toTimezone });
     return {
       text: timeRef.text,
       originalTime: null,
       convertedTime: "Invalid timezone specified",
-      fromTimezone: fromTimezone,
-      toTimezone: toTimezone
+      fromTimezone,
+      toTimezone
     };
   }
 
@@ -86,39 +124,39 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
         text: timeRef.text,
         originalTime: null,
         convertedTime: "Could not parse time",
-        fromTimezone: fromTimezone,
-        toTimezone: toTimezone
+        fromTimezone,
+        toTimezone
       };
     }
 
-    // Get the parsed date (which is in the server's timezone)
+    // Get the parsed date (which is in the server's timezone).
     const parsedDate = timeRef.date;
     
-    // Extract just the time components
+    // Extract just the time components.
     const hours = parsedDate.getHours();
     const minutes = parsedDate.getMinutes();
     const seconds = parsedDate.getSeconds();
     
-    // Create a new date in the author's timezone with the same time components
+    // Create a new date in the author's timezone with the same time components.
     const correctDate = dayjs()
       .tz(fromTimezone)
       .hour(hours)
       .minute(minutes)
       .second(seconds);
     
-    // Convert to target timezone
+    // Convert to target timezone.
     const timeInTargetTZ = correctDate.tz(toTimezone);
     
-    // Format the times for display
-    const originalTimeFormatted = correctDate.format('h:mm A');
-    const convertedTimeFormatted = timeInTargetTZ.format('h:mm A');
+    // Format the times for display.
+    const originalTimeFormatted = correctDate.format(TIME_FORMAT);
+    const convertedTimeFormatted = timeInTargetTZ.format(TIME_FORMAT);
     
-    // Calculate day difference
+    // Calculate day difference.
     const dayDifference = timeInTargetTZ.date() - correctDate.date();
     const monthDifference = timeInTargetTZ.month() - correctDate.month();
     const yearDifference = timeInTargetTZ.year() - correctDate.year();
     
-    // Determine if this is a different day (considering month/year boundaries)
+    // Determine if this is a different day (considering month/year boundaries).
     const isNextDay = dayDifference > 0 || monthDifference > 0 || yearDifference > 0;
     const isPreviousDay = dayDifference < 0 || monthDifference < 0 || yearDifference < 0;
     
@@ -126,31 +164,37 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       text: timeRef.text,
       originalTime: originalTimeFormatted,
       convertedTime: convertedTimeFormatted,
-      fromTimezone: fromTimezone,
-      toTimezone: toTimezone,
-      dayDifference: dayDifference,
-      isNextDay: isNextDay,
-      isPreviousDay: isPreviousDay
+      fromTimezone,
+      toTimezone,
+      dayDifference,
+      isNextDay,
+      isPreviousDay
     };
   } catch (error) {
-    logger.error("Error converting time zones:", { error, timeRef });
+    logger.error("Error converting time zones.", { 
+      error: error.message,
+      stack: error.stack, 
+      timeRef,
+      fromTimezone,
+      toTimezone 
+    });
+    
     return {
       text: timeRef.text,
       originalTime: null,
       convertedTime: "Error converting time",
-      fromTimezone: fromTimezone,
-      toTimezone: toTimezone,
+      fromTimezone,
+      toTimezone,
       error: error.message
     };
   }
 }
 
-
 /**
- * Default formatter for time conversion results
+ * Default formatter for time conversion results.
  * 
- * @param {Object} conversion - A time conversion result object
- * @returns {string} Formatted string representation
+ * @param {Object} conversion - A time conversion result object.
+ * @returns {string} Formatted string representation.
  */
 function defaultFormatter(conversion) {
   const { originalTime, convertedTime, fromTimezone, toTimezone, isNextDay, isPreviousDay } = conversion;
@@ -161,9 +205,9 @@ function defaultFormatter(conversion) {
   
   let dayIndicator = '';
   if (isNextDay) {
-    dayIndicator = ' (next day)';
+    dayIndicator = NEXT_DAY_SUFFIX;
   } else if (isPreviousDay) {
-    dayIndicator = ' (previous day)';
+    dayIndicator = PREVIOUS_DAY_SUFFIX;
   }
   
   return `${originalTime} (${fromTimezone}) → ${convertedTime}${dayIndicator} (${toTimezone})`;
@@ -180,6 +224,11 @@ function defaultFormatter(conversion) {
  * @returns {string} A formatted string showing the time conversions.
  */
 function formatConvertedTimes(convertedTimes, formatter = defaultFormatter) {
+  if (!Array.isArray(convertedTimes) || convertedTimes.length === 0) {
+    logger.debug("No time conversions to format.");
+    return "";
+  }
+  
   return convertedTimes.map(formatter).join('\n');
 }
 

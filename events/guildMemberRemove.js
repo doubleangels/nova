@@ -17,7 +17,7 @@ module.exports = {
       logger.debug("Processing guildMemberRemove event:", { memberId: member.id });
       
       // Log details about the member and guild.
-      logger.debug("Member left:", { username: member.user.username, guildName: member.guild.name });
+      logger.info("Member left:", { username: member.user.username, guildName: member.guild.name });
       
       // Remove the member from the mute tracking database.
       await removeTrackedMember(member.id);

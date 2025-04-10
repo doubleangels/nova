@@ -1,69 +1,24 @@
-/**
- * Module for the /wikipedia command.
- * 
- * Searches Wikipedia for articles related to the provided query and returns the top result.
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
 // Configuration constants.
-const WIKIPEDIA_CONFIG = {
-  COMMAND: {
-    NAME: 'wikipedia',
-    DESCRIPTION: 'Search Wikipedia for articles and return the top result.'
-  },
-  OPTIONS: {
-    QUERY: {
-      NAME: 'query',
-      DESCRIPTION: 'What topic do you want to search for?'
-    }
-  },
-  API: {
-    BASE_URL: 'https://en.wikipedia.org/w/api.php',
-    PARAMS: {
-      ACTION: 'query',
-      FORMAT: 'json',
-      LIST: 'search',
-      UTF8: '1'
-    },
-    ARTICLE_URL: 'https://en.wikipedia.org/?curid=%s'
-  },
-  EMBED: {
-    COLOR: 0xFFFFFF,
-    TITLE_PREFIX: '📖 **%s**',
-    SUMMARY_PREFIX: '📜 **Summary:** %s',
-    LINK_FIELD_NAME: '🔗 Wikipedia Link',
-    LINK_FIELD_VALUE: '[Click Here](%s)',
-    FOOTER: 'Powered by Wikipedia API'
-  },
-  RESPONSES: {
-    NO_RESULTS: '⚠️ No results found for **%s**. Try refining your search!',
-    API_ERROR: '⚠️ Error: Wikipedia API returned status code %s.',
-    GENERAL_ERROR: '⚠️ An unexpected error occurred. Please try again later.'
-  },
-  FORMATTING: {
-    SEARCH_MATCH_OPEN: '**',
-    SEARCH_MATCH_CLOSE: '**',
-    DEFAULT_TITLE: 'No Title',
-    DEFAULT_SNIPPET: 'No snippet available.'
-  },
-  HTML_TAGS: {
-    SEARCH_MATCH_OPEN: /<span class="searchmatch">/g,
-    SEARCH_MATCH_CLOSE: /<\/span>/g
-  }
-};
+const WIKIPEDIA_API_BASE_URL = 'https://en.wikipedia.org/w/api.php';
+const WIKIPEDIA_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
+const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF;
+const WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
+const WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
+const WIKIPEDIA_API_TIMEOUT = 5000;
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName(WIKIPEDIA_CONFIG.COMMAND.NAME)
-    .setDescription(WIKIPEDIA_CONFIG.COMMAND.DESCRIPTION)
+    .setName('wikipedia')
+    .setDescription('Search Wikipedia for articles and return the top result.')
     .addStringOption(option =>
       option
-        .setName(WIKIPEDIA_CONFIG.OPTIONS.QUERY.NAME)
-        .setDescription(WIKIPEDIA_CONFIG.OPTIONS.QUERY.DESCRIPTION)
+        .setName('query')
+        .setDescription('What topic do you want to search for?')
         .setRequired(true)
     ),
     
@@ -78,7 +33,7 @@ module.exports = {
       // Defer the reply to allow time for the API call.
       await interaction.deferReply();
       
-      const query = interaction.options.getString(WIKIPEDIA_CONFIG.OPTIONS.QUERY.NAME);
+      const query = interaction.options.getString('query');
       
       logger.debug("Wikipedia command received.", { 
         userId: interaction.user.id,
@@ -95,21 +50,21 @@ module.exports = {
       
       // Build the Wikipedia API URL with query parameters.
       const params = new URLSearchParams({
-        action: WIKIPEDIA_CONFIG.API.PARAMS.ACTION,
-        format: WIKIPEDIA_CONFIG.API.PARAMS.FORMAT,
-        list: WIKIPEDIA_CONFIG.API.PARAMS.LIST,
+        action: 'query',
+        format: 'json',
+        list: 'search',
         srsearch: formattedQuery,
-        utf8: WIKIPEDIA_CONFIG.API.PARAMS.UTF8
+        utf8: '1'
       });
       
-      const requestUrl = `${WIKIPEDIA_CONFIG.API.BASE_URL}?${params.toString()}`;
+      const requestUrl = `${WIKIPEDIA_API_BASE_URL}?${params.toString()}`;
       
       logger.debug("Making Wikipedia API request.", { 
         requestUrl 
       });
       
       // Make the API request using axios with a timeout.
-      const response = await axios.get(requestUrl, { timeout: 5000 });
+      const response = await axios.get(requestUrl, { timeout: WIKIPEDIA_API_TIMEOUT });
       
       logger.debug("Wikipedia API response received.", { 
         status: response.status 
@@ -125,17 +80,17 @@ module.exports = {
         if (searchResults && searchResults.length > 0) {
           // Take the top result.
           const topResult = searchResults[0];
-          const title = topResult.title || WIKIPEDIA_CONFIG.FORMATTING.DEFAULT_TITLE;
+          const title = topResult.title || "No Title";
           
           // Replace HTML span tags with markdown for emphasis.
-          let snippet = topResult.snippet || WIKIPEDIA_CONFIG.FORMATTING.DEFAULT_SNIPPET;
+          let snippet = topResult.snippet || "No snippet available.";
           snippet = snippet
-            .replace(WIKIPEDIA_CONFIG.HTML_TAGS.SEARCH_MATCH_OPEN, WIKIPEDIA_CONFIG.FORMATTING.SEARCH_MATCH_OPEN)
-            .replace(WIKIPEDIA_CONFIG.HTML_TAGS.SEARCH_MATCH_CLOSE, WIKIPEDIA_CONFIG.FORMATTING.SEARCH_MATCH_CLOSE);
+            .replace(WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX, '**')
+            .replace(WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX, '**');
           
           // Construct the Wikipedia page URL using the pageid.
           const pageId = topResult.pageid;
-          const wikiUrl = WIKIPEDIA_CONFIG.API.ARTICLE_URL.replace('%s', pageId);
+          const wikiUrl = WIKIPEDIA_ARTICLE_URL.replace('%s', pageId);
           
           logger.debug("Found Wikipedia article.", { 
             title, 
@@ -144,17 +99,17 @@ module.exports = {
           
           // Build an embed with the retrieved data.
           const embed = new EmbedBuilder()
-            .setTitle(WIKIPEDIA_CONFIG.EMBED.TITLE_PREFIX.replace('%s', title))
-            .setDescription(WIKIPEDIA_CONFIG.EMBED.SUMMARY_PREFIX.replace('%s', snippet))
+            .setTitle(`📖 **${title}**`)
+            .setDescription(`📜 **Summary:** ${snippet}`)
             .setURL(wikiUrl)
-            .setColor(WIKIPEDIA_CONFIG.EMBED.COLOR)
+            .setColor(WIKIPEDIA_EMBED_COLOR)
             .addFields({ 
-              name: WIKIPEDIA_CONFIG.EMBED.LINK_FIELD_NAME, 
-              value: WIKIPEDIA_CONFIG.EMBED.LINK_FIELD_VALUE.replace('%s', wikiUrl), 
+              name: '🔗 Wikipedia Link', 
+              value: `[Click Here](${wikiUrl})`, 
               inline: false 
             })
             .setFooter({ 
-              text: WIKIPEDIA_CONFIG.EMBED.FOOTER 
+              text: 'Powered by Wikipedia API' 
             });
           
           // Send the embed as the reply.
@@ -173,7 +128,7 @@ module.exports = {
           });
           
           await interaction.editReply({ 
-            content: WIKIPEDIA_CONFIG.RESPONSES.NO_RESULTS.replace('%s', formattedQuery), 
+            content: `⚠️ No results found for **${formattedQuery}**. Try refining your search!`, 
             ephemeral: true 
           });
         }
@@ -184,7 +139,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: WIKIPEDIA_CONFIG.RESPONSES.API_ERROR.replace('%s', response.status), 
+          content: `⚠️ Error: Wikipedia API returned status code ${response.status}.`, 
           ephemeral: true 
         });
       }
@@ -193,17 +148,17 @@ module.exports = {
         error: error.message,
         stack: error.stack,
         userId: interaction.user?.id,
-        query: interaction.options?.getString(WIKIPEDIA_CONFIG.OPTIONS.QUERY.NAME) 
+        query: interaction.options?.getString('query') 
       });
       
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ 
-          content: WIKIPEDIA_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
       } else {
         await interaction.reply({ 
-          content: WIKIPEDIA_CONFIG.RESPONSES.GENERAL_ERROR, 
+          content: '⚠️ An unexpected error occurred. Please try again later.', 
           ephemeral: true 
         });
       }

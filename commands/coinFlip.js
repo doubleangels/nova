@@ -2,11 +2,9 @@ const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-// Configuration constants.
-const COIN_FACES = {
-    HEADS: 'Heads',
-    TAILS: 'Tails'
-};
+// Configuration constants
+const COIN_FACE_HEADS = 'Heads';
+const COIN_FACE_TAILS = 'Tails';
 const HEADS_PROBABILITY = 0.5;
 
 module.exports = {
@@ -33,7 +31,7 @@ module.exports = {
 
             // Generate a random number and determine Heads or Tails.
             const randomValue = Math.random();
-            const result = randomValue < HEADS_PROBABILITY ? COIN_FACES.HEADS : COIN_FACES.TAILS;
+            const result = randomValue < HEADS_PROBABILITY ? COIN_FACE_HEADS : COIN_FACE_TAILS;
             
             logger.debug("Coin flip result determined.", {
                 result: result,
