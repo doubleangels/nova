@@ -1,36 +1,36 @@
-// events/messageReactionAdd.js
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getUserTimezone } = require('../utils/database');
-const { 
-  extractTimeReferences, 
-  convertTimeZones, 
-  formatConvertedTimes 
-} = require('../utils/timeUtils');
+const { extractTimeReferences, convertTimeZones, formatConvertedTimes } = require('../utils/timeUtils');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 
-// Configure Day.js with the necessary plugins
+// Extend dayjs with timezone capabilities
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-/**
- * Event handler for the 'messageReactionAdd' event.
- * Processes reactions added to messages, specifically handling clock emoji reactions
- * to provide time zone conversions for time references in messages.
- *
- * @param {MessageReaction} reaction - The reaction object.
- * @param {User} user - The user who added the reaction.
- */
 module.exports = {
   name: 'messageReactionAdd',
+  
+  /**
+   * Handles the messageReactionAdd event for time conversion functionality.
+   * 
+   * This function processes reactions added to messages, specifically looking for
+   * the clock emoji (🕒). When detected, it checks if both the reactor and message author
+   * have set timezones, extracts time references from the message content, and converts
+   * those times between the two users' timezones.
+   *
+   * @param {MessageReaction} reaction - The Discord.js MessageReaction object
+   * @param {User} user - The Discord.js User who added the reaction
+   * @returns {Promise<void>}
+   */
   async execute(reaction, user) {
     try {
-      // Skip if the reaction is from a bot
+      // Ignore reactions from bots
       if (user.bot) return;
       
-      // Handle partial reactions by fetching complete data if needed
+      // Handle partial reactions by fetching the complete data
       if (reaction.partial) {
         try {
           await reaction.fetch();
@@ -40,7 +40,7 @@ module.exports = {
         }
       }
       
-      // Handle partial messages by fetching complete data if needed
+      // Handle partial messages by fetching the complete data
       if (reaction.message.partial) {
         try {
           await reaction.message.fetch();
@@ -56,15 +56,16 @@ module.exports = {
         user: user.tag
       });
       
-      // Check if the reaction is a clock emoji
+      // Process only clock emoji reactions for time conversion
       if (reaction.emoji.name === '🕒') {
-        // Get the user's timezone from the database (User 2 - the reactor)
+        // Get the reactor's timezone from database
         const userTimezone = await getUserTimezone(user.id);
         
+        // Handle case where reactor has no timezone set
         if (!userTimezone) {
           logger.debug("User has no timezone set:", { userId: user.id });
           try {
-            // Reply with a temporary message that pings the user
+            // Send a temporary reminder to set timezone
             const reply = await reaction.message.channel.send(
               `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
             ).catch(err => {
@@ -75,7 +76,7 @@ module.exports = {
               return null;
             });
             
-            // Delete the message after 30 seconds if it was sent successfully
+            // Delete the reminder after 30 seconds
             if (reply) {
               setTimeout(() => {
                 reply.delete().catch(err => 
@@ -94,14 +95,15 @@ module.exports = {
           return;
         }
         
-        // Get the message author's timezone from the database (User 1 - the original poster)
+        // Get the message author's timezone from database
         const messageAuthorId = reaction.message.author.id;
         const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
         
+        // Handle case where message author has no timezone set
         if (!messageAuthorTimezone) {
           logger.debug("Message author has no timezone set:", { authorId: messageAuthorId });
           try {
-            // Reply with a temporary message that pings the user
+            // Send a temporary notification about missing author timezone
             const reply = await reaction.message.channel.send(
               `<@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
             ).catch(err => {
@@ -112,7 +114,7 @@ module.exports = {
               return null;
             });
             
-            // Delete the message after 30 seconds if it was sent successfully
+            // Delete the notification after 30 seconds
             if (reply) {
               setTimeout(() => {
                 reply.delete().catch(err => 
@@ -131,14 +133,12 @@ module.exports = {
           return;
         }
         
-        // Get the cached time references for this message
+        // Check for cached time references or extract them from message content
         let timeReferences = global.timeReferenceCache?.get(reaction.message.id);
-        
-        // If no cached references, try to extract them from the message content
         if (!timeReferences && reaction.message.content) {
           timeReferences = extractTimeReferences(reaction.message.content);
           
-          // Store these in the cache for future use
+          // Cache the extracted time references if found
           if (timeReferences.length > 0) {
             if (!global.timeReferenceCache) {
               global.timeReferenceCache = new Map();
@@ -152,6 +152,7 @@ module.exports = {
           }
         }
         
+        // Process time references if found
         if (timeReferences && timeReferences.length > 0) {
           logger.debug("Processing clock reaction for time references:", {
             messageId: reaction.message.id,
@@ -161,20 +162,16 @@ module.exports = {
           });
           
           try {
-            // Convert each time reference from author's timezone to user's timezone
+            // Convert each time reference between the two timezones
             const convertedTimes = timeReferences.map(ref => {
               return convertTimeZones(ref, messageAuthorTimezone, userTimezone);
             });
             
-            // Format the converted times
+            // Format the converted times into a readable message
             const formattedTimes = formatConvertedTimes(convertedTimes);
-            
-            // Create a message with the time conversions that pings the user
             const messageContent = `<@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
             
-            // Send a temporary reply in the channel with better error handling
             logger.debug("Attempting to send time conversion message");
-            
             const reply = await reaction.message.channel.send(messageContent)
               .catch(err => {
                 logger.error("Error in channel.send():", { 
@@ -184,8 +181,8 @@ module.exports = {
                 });
                 return null;
               });
-            
-            // Delete the message after 30 seconds if it was sent successfully
+              
+            // Set up auto-deletion for the conversion message
             if (reply) {
               logger.debug("Successfully sent time conversion message");
               setTimeout(() => {
@@ -205,9 +202,8 @@ module.exports = {
             });
           }
         } else {
+          // Handle case where no time references were found
           logger.debug("No time references found for message:", { messageId: reaction.message.id });
-          
-          // Notify the user that no time references were found with a ping
           try {
             const reply = await reaction.message.channel.send(
               `<@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
@@ -218,7 +214,7 @@ module.exports = {
               return null;
             });
             
-            // Delete the message after 15 seconds if it was sent successfully
+            // Set up auto-deletion for the notification
             if (reply) {
               setTimeout(() => {
                 reply.delete().catch(err => 
@@ -237,6 +233,7 @@ module.exports = {
         }
       }
     } catch (error) {
+      // Catch-all for any unhandled errors in the event handler
       logger.error("Error processing messageReactionAdd event:", { 
         error: error.message || error.toString(),
         stack: error.stack 

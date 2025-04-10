@@ -1,3 +1,14 @@
+/**
+ * Timezone Command Module
+ * 
+ * This module implements a Discord slash command that allows users to set their timezone
+ * for use with the bot's time conversion features. It uses Google's Geocoding and Timezone APIs
+ * to convert a location name to a valid IANA timezone identifier. Administrators can also set
+ * timezones for other users.
+ * 
+ * @module commands/timezone
+ */
+
 const { SlashCommandBuilder, Interaction, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const { DateTime } = require('luxon');
@@ -7,27 +18,29 @@ const axios = require('axios');
 const config = require('../config');
 
 /**
- * Validates if a string is a valid IANA timezone identifier using Luxon.
- * @param {string} tz - The timezone string to validate.
- * @returns {boolean} True if valid, false otherwise.
+ * Validates if a timezone identifier is valid using Luxon.
+ * 
+ * This function checks if the provided string is a valid IANA timezone identifier
+ * by attempting to create a DateTime object with the timezone and checking its validity.
+ * 
+ * @param {string} tz - The timezone identifier to validate
+ * @returns {boolean} True if the timezone is valid, false otherwise
  */
 const isValidTimezone = (tz) => {
+    // Check if the input is a non-empty string
     if (typeof tz !== 'string' || tz.trim() === '') {
-        return false; // Basic check: must be a non-empty string
+        return false;
     }
-    // Try creating a DateTime object and setting the zone.
-    // If the zone is invalid, the resulting object's isValid flag will be false.
+    
+    // Try to create a DateTime object with the timezone
     const dt = DateTime.local().setZone(tz);
-    // Additionally check the invalidReason in case setZone succeeds but with issues (less common for zones)
+    
+    // Check if the DateTime object is valid
     return dt.isValid && dt.invalidReason === null;
 };
 
-/**
- * Module for the /timezone command.
- * Allows users to set their preferred timezone by providing a location name.
- * Admins can also set timezones for other users.
- */
 module.exports = {
+    // Define the slash command using Discord.js builder
     data: new SlashCommandBuilder()
         .setName('timezone')
         .setDescription('Sets your timezone for use in auto-timezone features.')
@@ -41,22 +54,32 @@ module.exports = {
                 .setDescription('What user do you want to set the timezone for?')
                 .setRequired(false)
         ),
+    
     /**
-     * Executes the /timezone command.
-     * @param {Interaction} interaction - The Discord interaction object.
+     * Executes the timezone command, setting a user's timezone based on a location name.
+     * 
+     * This function handles the timezone command execution flow:
+     * 1. Validates permissions if setting timezone for another user
+     * 2. Geocodes the provided place name to coordinates using Google's Geocoding API
+     * 3. Converts the coordinates to a timezone using Google's Timezone API
+     * 4. Validates the timezone and stores it in the database
+     * 5. Responds to the user with confirmation
+     * 
+     * @param {Interaction} interaction - The Discord interaction object
+     * @returns {Promise<void>}
      */
     async execute(interaction) {
+        // Defer the reply to give time for API calls to complete
         await interaction.deferReply({ ephemeral: true });
+        
         try {
+            // Get command options
             const place = interaction.options.getString('place', true).trim();
             const targetUser = interaction.options.getUser('user');
-            
-            // Determine if this is an admin setting someone else's timezone
             const isAdminAction = targetUser !== null;
             
-            // If trying to set someone else's timezone, check admin permissions
+            // Check permissions if setting timezone for another user
             if (isAdminAction) {
-                // Check if user has admin permissions
                 const member = interaction.member;
                 const hasPermission = member.permissions.has(PermissionFlagsBits.Administrator);
                 
@@ -69,10 +92,10 @@ module.exports = {
                 }
             }
             
-            // Determine whose timezone we're setting
+            // Determine the target user ID and tag
             const memberId = isAdminAction ? targetUser.id : interaction.user.id;
             const memberTag = isAdminAction ? targetUser.tag : interaction.user.tag;
-
+            
             logger.debug(`/${this.data.name} command received`, {
                 user: interaction.user.tag,
                 userId: interaction.user.id,
@@ -80,19 +103,19 @@ module.exports = {
                 targetUserId: memberId,
                 place: place
             });
-
-            // Geocode the location to get coordinates
+            
+            // Step 1: Geocode the place name to coordinates using Google's Geocoding API
             const geocodeUrl = "https://maps.googleapis.com/maps/api/geocode/json";
             const geocodeParams = new URLSearchParams({
                 address: place,
                 key: config.googleApiKey
             });
             const geocodeRequestUrl = `${geocodeUrl}?${geocodeParams.toString()}`;
-            logger.debug("Fetching geocoding data:", { requestUrl: geocodeRequestUrl });
             
+            logger.debug("Fetching geocoding data:", { requestUrl: geocodeRequestUrl });
             const geocodeResponse = await axios.get(geocodeRequestUrl);
             
-            // Check if the Geocoding API response is successful
+            // Handle API errors
             if (geocodeResponse.status !== 200) {
                 logger.warn("Google Geocoding API error:", { status: geocodeResponse.status });
                 await interaction.editReply({ 
@@ -101,10 +124,8 @@ module.exports = {
                 return;
             }
             
-            // Parse the geocoding data
+            // Process geocoding results
             const geoData = geocodeResponse.data;
-            
-            // Ensure that at least one result was returned
             if (!geoData.results || geoData.results.length === 0) {
                 logger.warn("No geocoding results found:", { place });
                 await interaction.editReply({ 
@@ -113,19 +134,16 @@ module.exports = {
                 return;
             }
             
-            // Get the formatted address for better user feedback
+            // Extract location information from geocoding results
             const formattedAddress = geoData.results[0].formatted_address;
-            
-            // Extract latitude and longitude from the first result
             const location = geoData.results[0].geometry.location;
             const lat = location.lat;
             const lng = location.lng;
-            logger.debug("Extracted coordinates:", { place, lat, lng });
-
-            // Get the current timestamp in seconds
-            const timestamp = Math.floor(Date.now() / 1000);
             
-            // Get timezone for the coordinates
+            logger.debug("Extracted coordinates:", { place, lat, lng });
+            
+            // Step 2: Get the timezone for the coordinates using Google's Timezone API
+            const timestamp = Math.floor(Date.now() / 1000);
             const timezoneUrl = "https://maps.googleapis.com/maps/api/timezone/json";
             const timezoneParams = new URLSearchParams({
                 location: `${lat},${lng}`,
@@ -133,11 +151,11 @@ module.exports = {
                 key: config.googleApiKey
             });
             const timezoneRequestUrl = `${timezoneUrl}?${timezoneParams.toString()}`;
-            logger.debug("Fetching timezone data:", { requestUrl: timezoneRequestUrl });
             
+            logger.debug("Fetching timezone data:", { requestUrl: timezoneRequestUrl });
             const timezoneResponse = await axios.get(timezoneRequestUrl);
             
-            // Check if the Time Zone API response is successful
+            // Handle API errors
             if (timezoneResponse.status !== 200) {
                 logger.warn("Google Time Zone API error:", { status: timezoneResponse.status });
                 await interaction.editReply({ 
@@ -146,11 +164,10 @@ module.exports = {
                 return;
             }
             
-            // Parse the timezone data
+            // Process timezone results
             const tzData = timezoneResponse.data;
             logger.debug("Received timezone data:", { tzData });
             
-            // Check if the API returned a valid timezone
             if (tzData.status !== "OK") {
                 logger.warn("Error retrieving timezone info:", { place, status: tzData.status });
                 await interaction.editReply({ 
@@ -159,10 +176,8 @@ module.exports = {
                 return;
             }
             
-            // Extract the timezone ID
+            // Extract and validate the timezone identifier
             const timezoneId = tzData.timeZoneId;
-            
-            // Validate the timezone using Luxon as a double-check
             if (!isValidTimezone(timezoneId)) {
                 logger.warn(`Invalid timezone identifier returned by API: ${timezoneId}`);
                 await interaction.editReply({
@@ -170,13 +185,13 @@ module.exports = {
                 });
                 return;
             }
-
-            // Call the database function to save/update the timezone
+            
+            // Step 3: Store the timezone in the database
             await setUserTimezone(memberId, timezoneId);
-
+            
             logger.info(`Timezone set for ${memberTag} (ID: ${memberId}) to ${timezoneId} by ${interaction.user.tag}`);
-
-            // Inform the user of success
+            
+            // Step 4: Send confirmation message
             if (isAdminAction) {
                 await interaction.editReply({
                     content: `✅ You have set ${targetUser}'s timezone to: \`${timezoneId}\` based on location: ${formattedAddress}`
@@ -186,8 +201,8 @@ module.exports = {
                     content: `✅ Your timezone has been successfully set to: \`${timezoneId}\` based on location: ${formattedAddress}`
                 });
             }
-
         } catch (error) {
+            // Handle any unexpected errors
             logger.error(`Error executing /${this.data.name} command for ${interaction.user.tag}:`, { error });
             await interaction.editReply({
                 content: '⚠️ An unexpected error occurred. Please try again later.',
