@@ -92,6 +92,8 @@ module.exports = {
                         '• Asia/Tokyo',
                         '• UTC',
                         '',
+                        'Not sure what your timezone is? Try running `/currenttime` with your city name to find your timezone.',
+                        '',
                         'You can find a complete list here: <https://en.wikipedia.org/wiki/List_of_tz_database_time_zones>'
                     ].join('\n')
                  });
