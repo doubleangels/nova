@@ -306,6 +306,40 @@ function formatErrorMessage(place, errorType) {
   }
 }
 
+/**
+ * Gets the coordinates (latitude and longitude) for a given place name.
+ * Returns [null, null] if the location cannot be found.
+ *
+ * @param {string} place - The place name to get coordinates for.
+ * @returns {Promise<[number|null, number|null]>} A promise that resolves to an array containing [latitude, longitude].
+ */
+async function getCoordinates(place) {
+  try {
+    // Get the geocoding data for the place
+    const geocodeResult = await getGeocodingData(place);
+    
+    if (geocodeResult.error) {
+      logger.warn("Failed to get coordinates.", { 
+        place, 
+        errorType: geocodeResult.type 
+      });
+      return [null, null];
+    }
+    
+    const { location } = geocodeResult;
+    return [location.lat, location.lng];
+    
+  } catch (error) {
+    logger.error("Error in getCoordinates function.", {
+      place,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    return [null, null];
+  }
+}
+
 module.exports = {
   GEOCODING_URL,
   TIMEZONE_URL,
@@ -316,5 +350,6 @@ module.exports = {
   getTimezoneData,
   getUtcOffset,
   formatPlaceName,
-  formatErrorMessage
+  formatErrorMessage,
+  getCoordinates
 };

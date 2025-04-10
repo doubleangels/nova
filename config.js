@@ -10,7 +10,7 @@ module.exports = {
     deployCommandsOnStart: true,
     rescheduleReminderOnStart: true,
     rescheduleAllMuteKicksOnStart: true,
-    disabledCommands: ["weather"],
+    disabledCommands: [],
   },
   token: process.env.DISCORD_BOT_TOKEN,
   clientId: "1280311987154456657",
