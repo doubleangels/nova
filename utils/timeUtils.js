@@ -22,11 +22,12 @@ function extractTimeReferences(content) {
     // Use chrono-node to parse potential dates/times from the message
     const results = chrono.parse(content);
     
-    // Filter results to only include those with time components
+    // Filter results to only include those with specific time formats
     return results
       .filter(result => {
-        // Check if the parsed result has time information
-        return result.text.match(/\d+\s*:\s*\d+|noon|midnight|morning|afternoon|evening|night|[ap]\.?m\.?/i) !== null;
+        // Check if the parsed result has specific time information (HH:MM or with AM/PM)
+        // Only match explicit time formats like "3:30" or "3:30pm", not general words
+        return result.text.match(/\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?/i) !== null;
       })
       .map(result => ({
         date: result.start.date(),
