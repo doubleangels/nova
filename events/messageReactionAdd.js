@@ -17,7 +17,7 @@ module.exports = {
    * Handles the messageReactionAdd event for time conversion functionality.
    * 
    * This function processes reactions added to messages, specifically looking for
-   * the clock emoji (🕒). When detected, it checks if both the reactor and message author
+   * the clock emoji. When detected, it checks if both the reactor and message author
    * have set timezones, extracts time references from the message content, and converts
    * those times between the two users' timezones.
    *
@@ -67,7 +67,7 @@ module.exports = {
           try {
             // Send a temporary reminder to set timezone
             const reply = await reaction.message.channel.send(
-              `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
+              `⚠️ <@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
             ).catch(err => {
               logger.error("Failed to send timezone reminder message:", { 
                 error: err.message || err.toString(),
@@ -105,7 +105,7 @@ module.exports = {
           try {
             // Send a temporary notification about missing author timezone
             const reply = await reaction.message.channel.send(
-              `<@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
+              `⚠️ <@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
             ).catch(err => {
               logger.error("Failed to send author timezone missing message:", { 
                 error: err.message || err.toString(),
@@ -169,7 +169,7 @@ module.exports = {
             
             // Format the converted times into a readable message
             const formattedTimes = formatConvertedTimes(convertedTimes);
-            const messageContent = `<@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
+            const messageContent = `🕒 <@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
             
             logger.debug("Attempting to send time conversion message");
             const reply = await reaction.message.channel.send(messageContent)
@@ -206,7 +206,7 @@ module.exports = {
           logger.debug("No time references found for message:", { messageId: reaction.message.id });
           try {
             const reply = await reaction.message.channel.send(
-              `<@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
+              `⚠️ <@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
             ).catch(err => {
               logger.error("Failed to send no-references message:", { 
                 error: err.message || err.toString() 
