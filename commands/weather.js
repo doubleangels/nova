@@ -15,7 +15,7 @@ const WEATHER_EMBED_TITLE_FORMAT = 'Weather in %s';
 const WEATHER_EMBED_FOOTER = 'Powered by PirateWeather';
 const WEATHER_DATE_FORMAT = 'MM/DD/YYYY';
 
-// Field names
+// Field names.
 const WEATHER_FIELD_LOCATION = '🌍 Location';
 const WEATHER_FIELD_TEMPERATURE = '🌡 Temperature';
 const WEATHER_FIELD_FEELS_LIKE = '🤔 Feels Like';
@@ -30,7 +30,7 @@ const WEATHER_FIELD_PRECIP = '🌧 Precipitation';
 const WEATHER_FIELD_PRECIP_PROB = '🌧 Precip. Probability';
 const WEATHER_FIELD_FORECAST = '📅 3-Day Forecast';
 
-// Units
+// Units.
 const WEATHER_UNIT_TEMP_C = '°C';
 const WEATHER_UNIT_TEMP_F = '°F';
 const WEATHER_UNIT_PERCENTAGE = '%';
