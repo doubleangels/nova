@@ -1,7 +1,13 @@
-// utils/timeUtils.js
 const chrono = require('chrono-node');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+// Configure Day.js with the necessary plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /**
  * Extract time references from a string using chrono-node.
@@ -86,9 +92,85 @@ function convertTimeToTimezone(timeReference, timezone) {
   return convertedRef;
 }
 
+/**
+ * Converts a time reference from one timezone to another
+ * 
+ * @param {Object} timeRef - The time reference object containing text and date
+ * @param {string} fromTimezone - The source timezone (e.g., 'America/New_York')
+ * @param {string} toTimezone - The target timezone (e.g., 'America/Los_Angeles')
+ * @return {Object} - The converted time reference with original and converted times
+ */
+function convertTimeZones(timeRef, fromTimezone, toTimezone) {
+  // Extract the time from the reference
+  const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?/;
+  const match = timeRef.text.match(timeRegex);
+  
+  if (!match) {
+    return {
+      text: timeRef.text,
+      originalTime: null,
+      convertedTime: "Could not parse time",
+      fromTimezone: fromTimezone,
+      toTimezone: toTimezone
+    };
+  }
+  
+  // Extract hours, minutes, and am/pm
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2] ? parseInt(match[2], 10) : 0;
+  const ampm = match[3] ? match[3].toLowerCase() : null;
+  
+  // Adjust hours for 12-hour format if am/pm is specified
+  if (ampm === 'pm' && hours < 12) {
+    hours += 12;
+  } else if (ampm === 'am' && hours === 12) {
+    hours = 0;
+  }
+  
+  // Get the current date in the source timezone
+  const now = dayjs().tz(fromTimezone);
+  
+  // Create a Day.js object with the specified time in the source timezone
+  const timeInSourceTZ = now.hour(hours).minute(minutes).second(0);
+  
+  // Convert to the target timezone
+  const timeInTargetTZ = timeInSourceTZ.tz(toTimezone);
+  
+  // Format the times
+  const originalTimeFormatted = timeInSourceTZ.format('h:mm A');
+  const convertedTimeFormatted = timeInTargetTZ.format('h:mm A');
+  
+  return {
+    text: timeRef.text,
+    originalTime: originalTimeFormatted,
+    convertedTime: convertedTimeFormatted,
+    fromTimezone: fromTimezone,
+    toTimezone: toTimezone
+  };
+}
+
+/**
+ * Format converted time references for display
+ * 
+ * @param {Array} convertedTimes - Array of converted time references
+ * @return {string} - Formatted string for display
+ */
+function formatConvertedTimes(convertedTimes) {
+  return convertedTimes.map(conversion => {
+    const { text, originalTime, convertedTime, fromTimezone, toTimezone } = conversion;
+    if (originalTime) {
+      return `**"${text}"**: ${originalTime} (${fromTimezone}) → ${convertedTime} (${toTimezone})`;
+    } else {
+      return `**"${text}"**: ${convertedTime}`;
+    }
+  }).join('\n');
+}
+
 module.exports = {
   extractTimeReferences,
   containsTimeReference,
   createTimestampResponse,
-  convertTimeToTimezone
+  convertTimeToTimezone,
+  convertTimeZones,
+  formatConvertedTimes
 };

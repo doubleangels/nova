@@ -2,6 +2,11 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getUserTimezone } = require('../utils/database');
+const { 
+  extractTimeReferences, 
+  convertTimeZones, 
+  formatConvertedTimes 
+} = require('../utils/timeUtils');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
@@ -61,7 +66,7 @@ module.exports = {
           try {
             // Reply with a temporary message that pings the user
             const reply = await reaction.message.channel.send(
-              `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone set\` command to set your timezone.`
+              `<@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
             ).catch(err => {
               logger.error("Failed to send timezone reminder message:", { 
                 error: err.message || err.toString(),
@@ -131,7 +136,6 @@ module.exports = {
         
         // If no cached references, try to extract them from the message content
         if (!timeReferences && reaction.message.content) {
-          const { extractTimeReferences } = require('../utils/timeUtils');
           timeReferences = extractTimeReferences(reaction.message.content);
           
           // Store these in the cache for future use
@@ -157,75 +161,13 @@ module.exports = {
           });
           
           try {
-            // Convert time from author's timezone to user's timezone
-            const convertTimeToUserTimezone = (timeRef, authorTimezone, userTimezone) => {
-              // Extract the time from the reference
-              const timeRegex = /(\d{1,2})(?::(\d{2}))?\s*(am|pm|AM|PM)?/;
-              const match = timeRef.text.match(timeRegex);
-              
-              if (!match) {
-                return {
-                  text: timeRef.text,
-                  originalTime: null,
-                  convertedTime: "Could not parse time",
-                  fromTimezone: authorTimezone,
-                  toTimezone: userTimezone
-                };
-              }
-              
-              // Extract hours, minutes, and am/pm
-              let hours = parseInt(match[1], 10);
-              const minutes = match[2] ? parseInt(match[2], 10) : 0;
-              const ampm = match[3] ? match[3].toLowerCase() : null;
-              
-              // Adjust hours for 12-hour format if am/pm is specified
-              if (ampm === 'pm' && hours < 12) {
-                hours += 12;
-              } else if (ampm === 'am' && hours === 12) {
-                hours = 0;
-              }
-              
-              // Get the current date in the author's timezone
-              const now = dayjs().tz(authorTimezone);
-              
-              // Create a Day.js object with the specified time in the author's timezone
-              const timeInAuthorTZ = now.hour(hours).minute(minutes).second(0);
-              
-              // Convert to the user's timezone
-              const timeInUserTZ = timeInAuthorTZ.tz(userTimezone);
-              
-              // Format the times
-              const originalTimeFormatted = timeInAuthorTZ.format('h:mm A');
-              const convertedTimeFormatted = timeInUserTZ.format('h:mm A');
-              
-              return {
-                text: timeRef.text,
-                originalTime: originalTimeFormatted,
-                convertedTime: convertedTimeFormatted,
-                fromTimezone: authorTimezone,
-                toTimezone: userTimezone
-              };
-            };
-            
-            // Convert each time reference
+            // Convert each time reference from author's timezone to user's timezone
             const convertedTimes = timeReferences.map(ref => {
-              return convertTimeToUserTimezone(ref, messageAuthorTimezone, userTimezone);
+              return convertTimeZones(ref, messageAuthorTimezone, userTimezone);
             });
             
-            // Format the converted times for display
-            const formatTimeReferences = (convertedTimes) => {
-              return convertedTimes.map(conversion => {
-                const { text, originalTime, convertedTime, fromTimezone, toTimezone } = conversion;
-                if (originalTime) {
-                  return `"${text}": ${originalTime} (${fromTimezone}) → ${convertedTime} (${toTimezone})`;
-                } else {
-                  return `"${text}": ${convertedTime}`;
-                }
-              }).join('\n');
-            };
-            
             // Format the converted times
-            const formattedTimes = formatTimeReferences(convertedTimes);
+            const formattedTimes = formatConvertedTimes(convertedTimes);
             
             // Create a message with the time conversions that pings the user
             const messageContent = `<@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
