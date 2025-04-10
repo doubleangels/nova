@@ -91,23 +91,32 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       };
     }
 
-    // Use the already parsed date
+    // Get the parsed date (which is in the server's timezone)
     const parsedDate = timeRef.date;
     
-    // Create dayjs objects for the source timezone
-    const timeInSourceTZ = dayjs(parsedDate).tz(fromTimezone);
+    // Extract just the time components
+    const hours = parsedDate.getHours();
+    const minutes = parsedDate.getMinutes();
+    const seconds = parsedDate.getSeconds();
+    
+    // Create a new date in the author's timezone with the same time components
+    const correctDate = dayjs()
+      .tz(fromTimezone)
+      .hour(hours)
+      .minute(minutes)
+      .second(seconds);
     
     // Convert to target timezone
-    const timeInTargetTZ = timeInSourceTZ.tz(toTimezone);
+    const timeInTargetTZ = correctDate.tz(toTimezone);
     
     // Format the times for display
-    const originalTimeFormatted = timeInSourceTZ.format('h:mm A');
+    const originalTimeFormatted = correctDate.format('h:mm A');
     const convertedTimeFormatted = timeInTargetTZ.format('h:mm A');
     
     // Calculate day difference
-    const dayDifference = timeInTargetTZ.date() - timeInSourceTZ.date();
-    const monthDifference = timeInTargetTZ.month() - timeInSourceTZ.month();
-    const yearDifference = timeInTargetTZ.year() - timeInSourceTZ.year();
+    const dayDifference = timeInTargetTZ.date() - correctDate.date();
+    const monthDifference = timeInTargetTZ.month() - correctDate.month();
+    const yearDifference = timeInTargetTZ.year() - correctDate.year();
     
     // Determine if this is a different day (considering month/year boundaries)
     const isNextDay = dayDifference > 0 || monthDifference > 0 || yearDifference > 0;
@@ -135,6 +144,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     };
   }
 }
+
 
 /**
  * Default formatter for time conversion results
