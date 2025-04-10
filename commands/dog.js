@@ -33,11 +33,11 @@ module.exports = {
         const imageUrl = data.message;
         
         if (imageUrl) {
-          const imageUrl = `${imageUrl}`;
-          logger.debug("Fetching dog image file:", { imageUrl: imageUrl });
+          const imageUrlWithTimestamp = `${imageUrl}`;
+          logger.debug("Fetching dog image file:", { imageUrl: imageUrlWithTimestamp });
           
           // Fetch the dog image file using axios.
-          const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+          const imageResponse = await axios.get(imageUrlWithTimestamp, { responseType: 'arraybuffer' });
           logger.debug("Dog image file response:", { status: imageResponse.status });
           
           if (imageResponse.status === 200) {

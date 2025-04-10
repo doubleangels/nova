@@ -1,7 +1,27 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { setValue } = require('../utils/database');
+const { setValue, isConnected } = require('../utils/database');
+
+// Configuration constants.
+const COMMAND_CONFIG = {
+  NAME: 'mutemode',
+  DESCRIPTION: "Toggle auto-kicking of users who don't send a message within a time limit.",
+  DEFAULT_TIME_LIMIT: 2, // Default time limit in hours
+  MIN_TIME_LIMIT: 1, // Minimum allowed time limit in hours
+  MAX_TIME_LIMIT: 72, // Maximum allowed time limit in hours (3 days)
+  DB_KEYS: {
+    ENABLED: "mute_mode_enabled",
+    TIME_LIMIT: "mute_mode_kick_time_hours"
+  },
+  RESPONSES: {
+    ENABLED_TPL: "🔇 Mute mode has been ✅ **enabled**. New users must send a message within **%d** hours or be kicked.",
+    DISABLED: "🔇 Mute mode has been ⚠️ **disabled**.",
+    ERROR: "⚠️ An unexpected error occurred. Please try again later.",
+    DB_ERROR: "⚠️ Database connection error. Please check server logs.",
+    INVALID_TIME: "⚠️ Invalid time limit. Please specify a value between %d and %d hours."
+  }
+};
 
 /**
  * Module for the /mutemode command.
@@ -10,8 +30,8 @@ const { setValue } = require('../utils/database');
  */
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('mutemode')
-    .setDescription("Toggle auto-kicking of users who don't send a message within a time limit.")
+    .setName(COMMAND_CONFIG.NAME)
+    .setDescription(COMMAND_CONFIG.DESCRIPTION)
     .addStringOption(option =>
       option
         .setName('enabled')
@@ -25,8 +45,10 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('time')
-        .setDescription('Time limit in hours before a silent user is kicked (Default: 2)')
+        .setDescription(`Time limit in hours before a silent user is kicked (Default: ${COMMAND_CONFIG.DEFAULT_TIME_LIMIT})`)
         .setRequired(false)
+        .setMinValue(COMMAND_CONFIG.MIN_TIME_LIMIT)
+        .setMaxValue(COMMAND_CONFIG.MAX_TIME_LIMIT)
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
@@ -36,34 +58,97 @@ module.exports = {
    */
   async execute(interaction) {
     await interaction.deferReply();
+    
     try {
-      logger.debug("/mutemode command received:", { user: interaction.user.tag });
+      // Check database connection before proceeding.
+      if (!isConnected()) {
+        logger.error("Failed to execute mutemode command due to database connection issue.", {
+          userId: interaction.user.id,
+          guildId: interaction.guildId
+        });
+        
+        return await interaction.editReply({
+          content: COMMAND_CONFIG.RESPONSES.DB_ERROR,
+          ephemeral: true
+        });
+      }
       
-      // Get the 'enabled' input and time limit (default is 2 hours).
+      logger.info("Mutemode command initiated.", {
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
+      
+      // Get the 'enabled' input.
       const enabledInput = interaction.options.getString('enabled');
-      const timeLimit = interaction.options.getInteger('time') ?? 2;
-      const isEnabled = enabledInput.toLowerCase() === 'enabled';
-
-      logger.debug("Parsed mute mode command:", { isEnabled, timeLimit });
+      const isEnabled = enabledInput === 'enabled';
+      
+      // Get and validate the time limit.
+      let timeLimit = interaction.options.getInteger('time') ?? COMMAND_CONFIG.DEFAULT_TIME_LIMIT;
+      
+      if (timeLimit < COMMAND_CONFIG.MIN_TIME_LIMIT || timeLimit > COMMAND_CONFIG.MAX_TIME_LIMIT) {
+        logger.warn("Invalid time limit specified.", {
+          userId: interaction.user.id,
+          guildId: interaction.guildId,
+          providedValue: timeLimit
+        });
+        
+        timeLimit = COMMAND_CONFIG.DEFAULT_TIME_LIMIT;
+      }
+      
+      logger.debug("Processing mutemode command.", {
+        isEnabled,
+        timeLimit,
+        guildId: interaction.guildId
+      });
 
       // Update the settings in the database.
-      await setValue("mute_mode_enabled", isEnabled);
-      await setValue("mute_mode_kick_time_hours", timeLimit);
+      await setValue(COMMAND_CONFIG.DB_KEYS.ENABLED, isEnabled);
+      await setValue(COMMAND_CONFIG.DB_KEYS.TIME_LIMIT, timeLimit);
 
       // Prepare the response message based on the mode.
-      const responseMessage = isEnabled
-        ? `🔇 Mute mode has been ✅ **enabled**. New users must send a message within **${timeLimit}** hours or be kicked.`
-        : `🔇 Mute mode has been ⚠️ **disabled**.`;
+      const responseMessage = isEnabled 
+        ? COMMAND_CONFIG.RESPONSES.ENABLED_TPL.replace('%d', timeLimit)
+        : COMMAND_CONFIG.RESPONSES.DISABLED;
 
       // Reply to the interaction.
       await interaction.editReply(responseMessage);
-      logger.debug("Mute mode configuration updated:", { user: interaction.user.tag, isEnabled, timeLimit });
-    } catch (error) {
-      logger.error("Error in /mutemode command:", { error });
-      await interaction.editReply({ 
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true 
+      
+      logger.info("Mutemode configuration updated successfully.", {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        isEnabled,
+        timeLimit
       });
+      
+    } catch (error) {
+      logger.error("Error executing mutemode command.", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
+      
+      // Handle case where interaction wasn't deferred properly.
+      try {
+        await interaction.editReply({
+          content: COMMAND_CONFIG.RESPONSES.ERROR,
+          ephemeral: true
+        });
+      } catch (followUpError) {
+        logger.error("Failed to send error response for mutemode command.", {
+          error: followUpError.message,
+          originalError: error.message,
+          userId: interaction.user.id
+        });
+        
+        // Try replying if editing failed.
+        await interaction.reply({
+          content: COMMAND_CONFIG.RESPONSES.ERROR,
+          ephemeral: true
+        }).catch(() => {
+          // Silent catch if everything fails.
+        });
+      }
     }
   }
 };

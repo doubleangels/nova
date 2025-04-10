@@ -1,7 +1,14 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
+
+// Configuration constants.
+const CONFIG_KEYS = {
+  CHANNEL: "backup_mode_channel",
+  ROLE: "backup_mode_role",
+  ENABLED: "backup_mode_enabled"
+};
 
 /**
  * Module for the /backupmode command.
@@ -35,7 +42,7 @@ module.exports = {
         .setDescription('What role to do you want to assign to new members?')
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Administrator),
+    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
    * Executes the /backupmode command.
@@ -44,28 +51,60 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     try {
-      logger.debug("/backupmode command received", { user: interaction.user.tag });
+      logger.info("Backup mode command initiated.", { userId: interaction.user.id, guildId: interaction.guild.id });
       
       // Retrieve command options.
       const channelOption = interaction.options.getChannel('channel');
       const roleOption = interaction.options.getRole('role');
       const enabledOption = interaction.options.getString('enabled');
 
+      // Validate channel type if provided.
+      if (channelOption && channelOption.type !== ChannelType.GuildText) {
+        logger.warn("Invalid channel type selected for backup mode.", { channelId: channelOption.id, type: channelOption.type });
+        await interaction.editReply({
+          content: "⚠️ The channel must be a text channel for welcome messages.",
+          ephemeral: true
+        });
+        return;
+      }
+
+      // Validate role if provided.
+      if (roleOption && (!roleOption.editable || roleOption.managed)) {
+        logger.warn("Invalid role selected for backup mode.", { roleId: roleOption.id, managed: roleOption.managed });
+        await interaction.editReply({
+          content: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
+          ephemeral: true
+        });
+        return;
+      }
+
       // If any configuration option is provided, attempt to update backup mode settings.
       if (channelOption || roleOption || enabledOption !== null) {
         // Update configuration values in database
-        if (channelOption) {
-          await setValue("backup_mode_channel", channelOption.id);
-          logger.debug("Backup mode channel updated:", { channelId: channelOption.id, channelName: channelOption.name });
-        }
-        if (roleOption) {
-          await setValue("backup_mode_role", roleOption.id);
-          logger.debug("Backup mode role updated:", { roleId: roleOption.id, roleName: roleOption.name });
-        }
-        if (enabledOption !== null) {
-          const isEnabled = enabledOption.toLowerCase() === "enabled";
-          await setValue("backup_mode_enabled", isEnabled);
-          logger.debug("Backup mode enabled status updated:", { enabled: isEnabled });
+        try {
+          if (channelOption) {
+            await setValue(CONFIG_KEYS.CHANNEL, channelOption.id);
+            logger.debug("Backup mode channel updated.", { channelId: channelOption.id, channelName: channelOption.name });
+          }
+          if (roleOption) {
+            await setValue(CONFIG_KEYS.ROLE, roleOption.id);
+            logger.debug("Backup mode role updated.", { roleId: roleOption.id, roleName: roleOption.name });
+          }
+          if (enabledOption !== null) {
+            const isEnabled = enabledOption.toLowerCase() === "enabled";
+            await setValue(CONFIG_KEYS.ENABLED, isEnabled);
+            logger.debug("Backup mode enabled status updated.", { enabled: isEnabled });
+          }
+        } catch (dbError) {
+          logger.error("Database operation failed during backup mode update.", { 
+            error: dbError.message, 
+            stack: dbError.stack 
+          });
+          await interaction.editReply({
+            content: "⚠️ Failed to save settings. Please try again later.",
+            ephemeral: true
+          });
+          return;
         }
         
         // Prepare response message
@@ -87,36 +126,61 @@ module.exports = {
         }
         
         await interaction.editReply(responseMessage);
-        logger.debug("Backup mode configuration updated:", { user: interaction.user.tag, channel: channelOption?.id, role: roleOption?.id, enabled: enabledOption });
+        logger.info("Backup mode configuration updated successfully.", { 
+          userId: interaction.user.id,
+          guildId: interaction.guild.id,
+          channel: channelOption?.id, 
+          role: roleOption?.id, 
+          enabled: enabledOption 
+        });
         return;
       }
       
       // No options provided: perform a status check.
-      logger.debug("Backup mode status check requested:", { user: interaction.user.tag });
+      logger.debug("Retrieving current backup mode configuration.");
       
-      const channelId = await getValue("backup_mode_channel");
-      const roleId = await getValue("backup_mode_role");
-      const enabledStatus = await getValue("backup_mode_enabled");
-      
-      // Get channel name from ID.
-      let channelStr = "Not set";
-      if (channelId) {
-        channelStr = `<#${channelId}>`;
+      try {
+        const channelId = await getValue(CONFIG_KEYS.CHANNEL);
+        const roleId = await getValue(CONFIG_KEYS.ROLE);
+        const enabledStatus = await getValue(CONFIG_KEYS.ENABLED);
+        
+        // Get channel name from ID.
+        let channelStr = "Not set";
+        if (channelId) {
+          channelStr = `<#${channelId}>`;
+        }
+        
+        const roleStr = roleId ? `<@&${roleId}>` : "Not set";
+        const statusEmoji = enabledStatus ? "✅" : "❌";
+        const statusText = enabledStatus ? "Enabled" : "Disabled";
+        
+        const responseMessage = `🔄 **Backup Mode Status**\n` +
+          `🔘 Backup mode: ${statusEmoji} **${statusText}**\n` + 
+          `📢 Welcome channel: ${channelStr}\n` +
+          `🎭 New member role: ${roleStr}`;
+        
+        await interaction.editReply(responseMessage);
+        logger.info("Backup mode status check completed successfully.", { 
+          userId: interaction.user.id,
+          guildId: interaction.guild.id
+        });
+      } catch (dbError) {
+        logger.error("Database operation failed during backup mode status check.", { 
+          error: dbError.message, 
+          stack: dbError.stack 
+        });
+        await interaction.editReply({
+          content: "⚠️ Failed to retrieve backup mode settings. Please try again later.",
+          ephemeral: true
+        });
       }
-      
-      const roleStr = roleId ? `<@&${roleId}>` : "Not set";
-      const statusEmoji = enabledStatus ? "✅" : "❌";
-      const statusText = enabledStatus ? "Enabled" : "Disabled";
-      
-      const responseMessage = `🔄 **Backup Mode Status**\n` +
-        `🔘 Backup mode: ${statusEmoji} **${statusText}**\n` + 
-        `📢 Welcome channel: ${channelStr}\n` +
-        `🎭 New member role: ${roleStr}`;
-      
-      await interaction.editReply(responseMessage);
-      logger.debug("Backup mode status check completed:", { user: interaction.user.tag });
     } catch (error) {
-      logger.error("Error in /backupmode command:", { error });
+      logger.error("Error in /backupmode command execution.", { 
+        error: error.message, 
+        stack: error.stack,
+        userId: interaction.user?.id,
+        guildId: interaction.guild?.id
+      });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
         ephemeral: true

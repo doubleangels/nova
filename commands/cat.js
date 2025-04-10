@@ -3,6 +3,11 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
+// Configuration constants.
+const CAT_API_URL = 'https://cataas.com/cat/cute';
+const CAT_EMBED_COLOR = 0xD3D3D3;
+const DEFAULT_FILENAME = 'cat.jpg';
+
 /**
  * Module for the /cat command.
  * Fetches a random cat image from the Cataas API and sends it as an embed.
@@ -20,45 +25,68 @@ module.exports = {
     try {
       // Defer reply to allow time for asynchronous operations.
       await interaction.deferReply();
-      logger.debug("/cat command received:", { user: interaction.user.tag });
-      const catApiUrl = `https://cataas.com/cat/cute`;
-      logger.debug("Fetching cat image:", { catApiUrl });
+      logger.info("Cat command initiated.", { userId: interaction.user.id });
 
       // Fetch the cat image from the Cataas API using axios with responseType 'arraybuffer'.
-      const response = await axios.get(catApiUrl, { responseType: 'arraybuffer', headers: { 'Accept': 'image/*' } });
-      logger.debug("Cataas API response:", { status: response.status });
+      logger.debug("Fetching cat image from API.");
+      const response = await axios.get(CAT_API_URL, { 
+        responseType: 'arraybuffer', 
+        headers: { 'Accept': 'image/*' },
+        timeout: 5000 // 5 second timeout for API request
+      });
 
       if (response.status === 200) {
-        // Convert the response data to a buffer using binary encoding.
+        // Convert the response data to a buffer.
         const imageBuffer = Buffer.from(response.data);
-        const filename = "cat.jpg";
+        
         // Create an attachment from the image buffer.
-        const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
+        const attachment = new AttachmentBuilder(imageBuffer, { name: DEFAULT_FILENAME });
 
         // Build an embed with the cat image.
         const embed = new EmbedBuilder()
           .setTitle("Random Cat Picture")
           .setDescription("😺 Here's a cat for you!")
-          .setColor(0xD3D3D3)
-          .setImage(`attachment://${filename}`)
+          .setColor(CAT_EMBED_COLOR)
+          .setImage(`attachment://${DEFAULT_FILENAME}`)
           .setFooter({ text: "Powered by Cataas API" });
         
         // Edit the reply with the embed and attachment.
         await interaction.editReply({ embeds: [embed], files: [attachment] });
-        logger.debug("Cat image sent successfully:", { user: interaction.user.tag });
+        logger.info("Cat image sent successfully.", { userId: interaction.user.id });
       } else {
-        logger.warn("Cataas API returned an error:", { status: response.status });
+        logger.warn("Cataas API returned an unexpected status code.", { 
+          status: response.status,
+          userId: interaction.user.id 
+        });
+        
         await interaction.editReply({
           content: "⚠️ Couldn't fetch a cat picture. Try again later.", 
           ephemeral: true
         });
       }
     } catch (error) {
-      logger.error("Error in /cat command:", { error });
-      await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
+      const errorMessage = error.response 
+        ? `API responded with status ${error.response.status}` 
+        : error.message || "Unknown error";
+        
+      logger.error("Error in cat command execution.", { 
+        error: errorMessage, 
+        stack: error.stack,
+        userId: interaction.user.id
       });
+      
+      // Determine if interaction can still be replied to
+      if (interaction.deferred) {
+        await interaction.editReply({
+          content: "⚠️ An unexpected error occurred while fetching the cat image. Please try again later.",
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({
+          content: "⚠️ An unexpected error occurred. Please try again later.",
+          ephemeral: true
+        });
+      }
     }
   }
 };

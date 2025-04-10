@@ -5,6 +5,12 @@ const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { setReminderData } = require('../utils/database');
 
+// Configuration constants.
+const REMINDER_CONSTANTS = {
+  SERVICE_TYPE: 'bump',
+  DELAY_SECONDS: 7200,  // 2 hours in seconds
+};
+
 /**
  * Module for the /fix command.
  * This command runs the fix logic for Disboard by adding the service data to the database.
@@ -22,24 +28,48 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("/fix command received:", { user: interaction.user.tag });
+      // Log the command initiation with the user's ID for better tracking.
+      logger.info("Fix command initiated.", {
+        userId: interaction.user.id,
+        guildId: interaction.guild.id
+      });
       
       // Defer the reply to allow processing time.
       await interaction.deferReply();
 
-      // Define delay (in seconds) and generate unique reminder data.
-      const seconds = 7200;
+      // Generate unique reminder data.
       const reminderId = randomUUID();
-      const scheduledTime = dayjs().add(seconds, 'second').toISOString();
+      const scheduledTime = dayjs().add(REMINDER_CONSTANTS.DELAY_SECONDS, 'second').toISOString();
       
       // Save the reminder data to the database.
-      await setReminderData('bump', scheduledTime, reminderId);
-      logger.debug("Fix applied:", { scheduledTime, reminderId });
+      await setReminderData(
+        REMINDER_CONSTANTS.SERVICE_TYPE, 
+        scheduledTime, 
+        reminderId
+      );
+      
+      logger.debug("Reminder data saved to database.", { 
+        reminderId: reminderId,
+        scheduledTime: scheduledTime,
+        serviceType: REMINDER_CONSTANTS.SERVICE_TYPE
+      });
       
       // Inform the user that the fix logic was successfully applied.
       await interaction.editReply("✅ Reminder successfully fixed!");
+      
+      logger.info("Fix command completed successfully.", {
+        userId: interaction.user.id,
+        guildId: interaction.guild.id,
+        reminderId: reminderId
+      });
     } catch (error) {
-      logger.error("Error in /fix command:", { error });
+      logger.error("Error in /fix command.", { 
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guild.id
+      });
+      
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
         ephemeral: true

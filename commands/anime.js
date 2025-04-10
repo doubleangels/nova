@@ -5,6 +5,12 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
+// Configuration constants.
+const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
+const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
+const MAL_EMBED_COLOR = 0x2E51A2;
+const SEARCH_LIMIT = 1;
+
 /**
  * Module for the /anime command.
  * Searches for an anime on MyAnimeList based on the provided title,
@@ -26,45 +32,51 @@ module.exports = {
    */
   async execute(interaction) {
     try {
+      // Verify API key is configured.
+      if (!config.malClientId) {
+        logger.error("MyAnimeList API client ID is not configured.");
+        await interaction.reply({
+          content: "⚠️ Bot configuration error: MAL API key not set.",
+          ephemeral: true
+        });
+        return;
+      }
+
       // Defer reply to allow additional processing time.
       await interaction.deferReply();
-      logger.debug("/anime command received", { user: interaction.user.tag });
+      logger.info("Anime search requested.", { user: interaction.user.tag });
 
       // Retrieve and format the anime title.
       const titleQuery = interaction.options.getString('title');
-      logger.debug("User input title:", { titleQuery });
+      logger.debug("Processing search query.", { titleQuery });
       const formattedTitle = titleQuery.trim();
-      logger.debug("Formatted title:", { formattedTitle });
 
-      // Construct the search URL and headers.
-      const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(formattedTitle)}&limit=1`;
+      // Prepare request components.
+      const searchUrl = `${MAL_API_BASE_URL}/anime?q=${encodeURIComponent(formattedTitle)}&limit=${SEARCH_LIMIT}`;
       const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-      logger.debug("Making MAL search request:", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
-
+      
       // Perform the search request using axios.
+      logger.debug("Making MAL search request.", { searchUrl });
       const searchResponse = await axios.get(searchUrl, { headers });
-      logger.debug("MAL search response:", { status: searchResponse.status });
-
+      
       if (searchResponse.status === 200) {
         const searchData = searchResponse.data;
-        logger.debug("Received MAL search data:", { searchData });
-
+        
         // Check for results.
         if (searchData.data && searchData.data.length > 0) {
           const animeNode = searchData.data[0].node;
           const animeId = animeNode.id;
           const animeTitle = animeNode.title || "Unknown";
           const imageUrl = animeNode.main_picture ? animeNode.main_picture.medium : null;
-          const malLink = animeId ? `https://myanimelist.net/anime/${animeId}` : "N/A";
+          const malLink = animeId ? `${MAL_WEBSITE_URL}/${animeId}` : "N/A";
 
           // Construct the details URL.
-          const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-          logger.debug("Making MAL details request:", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
-
-          // Request detailed anime information using axios.
+          const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
+          
+          // Request detailed anime information.
+          logger.debug("Fetching anime details.", { animeId });
           const detailsResponse = await axios.get(detailsUrl, { headers });
-          logger.debug("MAL details response:", { status: detailsResponse.status });
-
+          
           if (detailsResponse.status === 200) {
             const detailsData = detailsResponse.data;
             const synopsis = detailsData.synopsis || "No synopsis available.";
@@ -73,13 +85,13 @@ module.exports = {
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
             const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
             
-            logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });
+            logger.debug("Retrieved anime details successfully.", { animeTitle });
 
             // Create an embed for the anime details.
             const embed = new EmbedBuilder()
               .setTitle(`📺 **${animeTitle} (${releaseDate})**`)
               .setDescription(`📜 **Synopsis:** ${synopsis}`)
-              .setColor(0x2E51A2)
+              .setColor(MAL_EMBED_COLOR)
               .addFields(
                 { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
                 { name: "⭐ MAL Rating", value: `🌟 ${rating}`, inline: true },
@@ -93,34 +105,46 @@ module.exports = {
             
             // Send the embed back to the user.
             await interaction.editReply({ embeds: [embed] });
-            logger.debug("Anime embed sent successfully:", { animeTitle });
+            logger.info("Anime information sent successfully.", { animeTitle, userId: interaction.user.id });
           } else {
-            logger.warn("Error fetching MAL details:", { detailsStatus: detailsResponse.status });
+            logger.warn("Failed to retrieve anime details.", { status: detailsResponse.status, animeId });
             await interaction.editReply({
               content: "⚠️ Error fetching additional anime details. Please try again later.",
               ephemeral: true
             });
           }
         } else {
-          logger.warn("No anime results found:", { formattedTitle });
+          logger.info("No anime results found for query.", { query: formattedTitle });
           await interaction.editReply({
             content: `⚠️ No anime found for **${formattedTitle}**. Try another title!`,
             ephemeral: true
           });
         }
       } else {
-        logger.warn("MAL API search error:", { status: searchResponse.status });
+        logger.warn("MAL API search returned an error status.", { status: searchResponse.status });
         await interaction.editReply({
           content: `⚠️ Error: MAL API returned status code ${searchResponse.status}.`,
           ephemeral: true
         });
       }
-    } catch (e) {
-      logger.error("Error in /anime command:", { error: e });
-      await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
+    } catch (error) {
+      logger.error("Error executing anime command.", { 
+        error: error.message, 
+        stack: error.stack 
       });
+      
+      // Determine if the interaction can still be replied to.
+      if (interaction.deferred) {
+        await interaction.editReply({
+          content: "⚠️ An unexpected error occurred. Please try again later.",
+          ephemeral: true
+        });
+      } else {
+        await interaction.reply({
+          content: "⚠️ An unexpected error occurred. Please try again later.",
+          ephemeral: true
+        });
+      }
     }
   }
 };
