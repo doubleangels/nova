@@ -30,34 +30,24 @@ module.exports = {
       await interaction.deferReply();
       logger.debug("/anime command received", { user: interaction.user.tag });
 
-      // Retrieve and validate the anime title.
+      // Retrieve and format the anime title.
       const titleQuery = interaction.options.getString('title');
-      
-      if (titleQuery.length > 100) {
-        logger.warn("Title query too long", { length: titleQuery.length });
-        await interaction.editReply({
-          content: "⚠️ Search query is too long. Please use a shorter title.",
-          ephemeral: true
-        });
-        return;
-      }
-      
+      logger.debug("User input title:", { titleQuery });
       const formattedTitle = titleQuery.trim();
-      logger.debug("Searching for anime:", { formattedTitle });
+      logger.debug("Formatted title:", { formattedTitle });
 
-      // Construct the search URL with expanded fields to reduce API calls
-      const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(formattedTitle)}&limit=1&fields=id,title,main_picture`;
+      // Construct the search URL and headers.
+      const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(formattedTitle)}&limit=1`;
       const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-      logger.debug("Making MAL search request");
+      logger.debug("Making MAL search request:", { searchUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
-      // Perform the search request using axios with timeout
-      const searchResponse = await axios.get(searchUrl, { 
-        headers,
-        timeout: 5000 // 5 second timeout
-      });
+      // Perform the search request using axios.
+      const searchResponse = await axios.get(searchUrl, { headers });
+      logger.debug("MAL search response:", { status: searchResponse.status });
 
       if (searchResponse.status === 200) {
         const searchData = searchResponse.data;
+        logger.debug("Received MAL search data:", { searchData });
 
         // Check for results.
         if (searchData.data && searchData.data.length > 0) {
@@ -67,31 +57,23 @@ module.exports = {
           const imageUrl = animeNode.main_picture ? animeNode.main_picture.medium : null;
           const malLink = animeId ? `https://myanimelist.net/anime/${animeId}` : "N/A";
 
-          // Construct the details URL with all needed fields
+          // Construct the details URL.
           const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-          logger.debug("Making MAL details request for anime ID:", { animeId });
+          logger.debug("Making MAL details request:", { detailsUrl, headers: { ...headers, "X-MAL-CLIENT-ID": "[REDACTED]" } });
 
-          // Request detailed anime information using axios with timeout
-          const detailsResponse = await axios.get(detailsUrl, { 
-            headers,
-            timeout: 5000 // 5 second timeout
-          });
+          // Request detailed anime information using axios.
+          const detailsResponse = await axios.get(detailsUrl, { headers });
+          logger.debug("MAL details response:", { status: detailsResponse.status });
 
           if (detailsResponse.status === 200) {
             const detailsData = detailsResponse.data;
-            
-            // Extract data with defaults in one step
-            const {
-              synopsis = "No synopsis available.",
-              mean: rating = "N/A",
-              genres: genresArray = [],
-              start_date: startDate
-            } = detailsData;
-
+            const synopsis = detailsData.synopsis || "No synopsis available.";
+            const rating = detailsData.mean || "N/A";
+            const genresArray = detailsData.genres || [];
             const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
-            const releaseDate = startDate ? dayjs(startDate).format('YYYY') : "Unknown";
+            const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
             
-            logger.debug("Extracted anime details:", { animeTitle, rating });
+            logger.debug("Extracted anime details:", { animeTitle, rating, genres, releaseDate });
 
             // Create an embed for the anime details.
             const embed = new EmbedBuilder()
@@ -111,7 +93,7 @@ module.exports = {
             
             // Send the embed back to the user.
             await interaction.editReply({ embeds: [embed] });
-            logger.debug("Anime embed sent successfully");
+            logger.debug("Anime embed sent successfully:", { animeTitle });
           } else {
             logger.warn("Error fetching MAL details:", { detailsStatus: detailsResponse.status });
             await interaction.editReply({
@@ -135,26 +117,10 @@ module.exports = {
       }
     } catch (e) {
       logger.error("Error in /anime command:", { error: e });
-      let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
-      
-      if (e.response) {
-        // API responded with error status
-        errorMessage = `⚠️ MyAnimeList API error: ${e.response.status}`;
-        logger.warn("API error response:", { status: e.response.status, data: e.response.data });
-      } else if (e.request) {
-        // No response received
-        errorMessage = "⚠️ Could not connect to MyAnimeList. Please try again later.";
-        logger.warn("No response from API:", { error: e.message });
-      }
-      
-      try {
-        await interaction.editReply({
-          content: errorMessage,
-          ephemeral: true
-        });
-      } catch (replyError) {
-        logger.error("Failed to send error reply:", { error: replyError });
-      }
+      await interaction.editReply({
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
+      });
     }
   }
 };

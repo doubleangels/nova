@@ -21,8 +21,6 @@ module.exports = {
       // Defer reply to allow time for asynchronous operations.
       await interaction.deferReply();
       logger.debug("/cat command received:", { user: interaction.user.tag });
-
-      // Create a unique timestamp to avoid cached images using day.js.
       const catApiUrl = `https://cataas.com/cat/cute`;
       logger.debug("Fetching cat image:", { catApiUrl });
 
