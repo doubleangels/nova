@@ -159,9 +159,9 @@ function formatConvertedTimes(convertedTimes) {
   return convertedTimes.map(conversion => {
     const { text, originalTime, convertedTime, fromTimezone, toTimezone } = conversion;
     if (originalTime) {
-      return `**"${text}"**: ${originalTime} (${fromTimezone}) → ${convertedTime} (${toTimezone})`;
+      return `${originalTime} (${fromTimezone}) → ${convertedTime} (${toTimezone})`;
     } else {
-      return `**"${text}"**: ${convertedTime}`;
+      return `${convertedTime}`;
     }
   }).join('\n');
 }
