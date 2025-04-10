@@ -174,7 +174,7 @@ module.exports = {
             const formattedTimes = formatConvertedTimes(convertedTimes);
             const messageContent = `${CLOCK_EMOJI} <@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
             
-            logger.debug("Attempting to send time conversion message");
+            logger.debug("Attempting to send time conversion message.");
             const reply = await reaction.message.channel.send(messageContent)
               .catch(err => {
                 logger.error("Error in channel.send():", { 
@@ -187,7 +187,7 @@ module.exports = {
               
             // Set up auto-deletion for the conversion message.
             if (reply) {
-              logger.debug("Successfully sent time conversion message");
+              logger.debug("Successfully sent time conversion message.");
               setTimeout(() => {
                 reply.delete().catch(err => 
                   logger.error("Failed to delete time conversion message:", { 
