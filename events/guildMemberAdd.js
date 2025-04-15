@@ -4,13 +4,14 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
+const Sentry = require('../sentry');
 
-// Configuration constants.
+// We use this color for welcome embeds to maintain visual consistency.
 const WELCOME_EMBED_COLOR = 0xCD41FF;
 
 /**
  * Event handler for the 'guildMemberAdd' event.
- * Processes new members by applying troll mode, mute mode, and backup mode settings.
+ * We process new members by applying troll mode, mute mode, and backup mode settings.
  *
  * @param {GuildMember} member - The guild member who joined.
  * @param {Client} client - The Discord client.
@@ -21,13 +22,13 @@ module.exports = {
     try {
       logger.debug("guildMemberAdd event received:", { memberTag: member.user.tag, guildId: member.guild.id });
 
-      // Skip processing for bot accounts.
+      // We skip processing for bot accounts to avoid unnecessary actions.
       if (member.user.bot) {
         logger.debug("Member is a bot; skipping processing:", { memberTag: member.user.tag });
         return;
       }
 
-      // Retrieve configuration settings from the database.
+      // We retrieve all necessary configuration settings from the database.
       const [
         backupModeEnabled,
         backupModeRole,
@@ -46,7 +47,7 @@ module.exports = {
         getValue("mute_mode_kick_time_hours")
       ]);
 
-      // Parse values with proper defaults
+      // We parse values with proper defaults to ensure reliable behavior.
       const isBackupModeEnabled = (backupModeEnabled || "false").toString().toLowerCase() === "true";
       const isTrollModeEnabled = (trollModeEnabled || "false").toString().toLowerCase() === "true";
       const isMuteModeEnabled = (muteModeEnabled || "false").toString().toLowerCase() === "true";
@@ -62,7 +63,7 @@ module.exports = {
         accountAgeDays
       });
 
-      // Troll mode: Kick member if account age is below threshold.
+      // We implement troll mode by kicking members with accounts newer than the threshold.
       if (isTrollModeEnabled && accountAgeDays < trollModeAccountAge) {
         logger.debug("Troll mode active:", {
           memberTag: member.user.tag,
@@ -78,7 +79,7 @@ module.exports = {
         return;
       }
 
-      // Mute mode: Track new member and schedule a mute kick.
+      // We track new members in mute mode and schedule automatic kicks if they don't verify.
       if (isMuteModeEnabled) {
         const joinTime = dayjs().toISOString();
         logger.debug("Mute mode active; tracking new member:", {
@@ -95,9 +96,9 @@ module.exports = {
         }
       }
 
-      // Backup mode: Send a welcome message and assign a role.
+      // We handle backup mode by sending a welcome message and assigning a role.
       if (isBackupModeEnabled) {
-        // Check that backup mode is fully configured.
+        // We check that backup mode is fully configured before proceeding.
         if (!backupModeRole || !backupModeChannel) {
           logger.warn("Backup mode not fully configured; skipping welcome message and role assignment:", {
             backupModeRole,
@@ -106,14 +107,14 @@ module.exports = {
           return;
         }
 
-        // Retrieve the welcome channel.
+        // We retrieve the welcome channel from the guild's cache.
         const welcomeChannel = member.guild.channels.cache.get(String(backupModeChannel));
         if (!welcomeChannel) {
           logger.warn("Welcome channel not found:", { backupModeChannel });
           return;
         }
 
-        // Build and send the welcome embed.
+        // We build and send a welcome embed with instructions for the new member.
         const embed = new EmbedBuilder()
           .setTitle(`🎉 Welcome ${member.user.username}!`)
           .setDescription(
@@ -136,7 +137,7 @@ module.exports = {
           logger.error("Failed to send welcome message:", { channelName: welcomeChannel.name, error: err });
         }
 
-        // Attempt to assign the backup role.
+        // We attempt to assign the backup role to the new member.
         const backupRole = member.guild.roles.cache.get(String(backupModeRole));
         if (backupRole) {
           try {
@@ -150,6 +151,15 @@ module.exports = {
         }
       }
     } catch (error) {
+      // Add Sentry error tracking
+      Sentry.captureException(error, {
+        extra: {
+          event: 'guildMemberAdd',
+          memberId: member.id,
+          memberTag: member.user.tag,
+          guildId: member.guild.id
+        }
+      });
       logger.error("Error processing guildMemberAdd event:", { error });
     }
   }
