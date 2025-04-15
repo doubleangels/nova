@@ -16,6 +16,29 @@ const BOT_ACTIVITY = {
 const BOT_STATUS = "online";
 
 /**
+ * Performs a setup task with proper error handling and logging
+ * 
+ * @param {string} taskName - Name of the task for logging
+ * @param {Function} task - Async function to execute
+ * @param {string} startMessage - Message to log before starting
+ * @param {string} successMessage - Message to log on success
+ */
+async function performSetupTask(taskName, task, startMessage, successMessage) {
+  try {
+    logger.debug(startMessage);
+    await task();
+    logger.info(successMessage);
+    return true;
+  } catch (error) {
+    logger.error(`Failed to ${taskName}:`, { 
+      error: error.message || error.toString(),
+      stack: error.stack
+    });
+    return false;
+  }
+}
+
+/**
  * Event handler for the 'ready' event.
  * Executed once when the bot comes online. It sets the bot's presence,
  * attempts to reschedule Disboard reminders, reschedules all mute kicks,
@@ -28,51 +51,75 @@ module.exports = {
   once: true,
   async execute(client) {
     logger.info("Bot is online! Initializing setup procedures...");
+    
+    // Track setup tasks for summary report
+    const setupResults = {
+      presence: false,
+      commands: false,
+      reminders: false,
+      muteKicks: false
+    };
 
-    try {
-      // Set the bot's presence with a custom activity.
-      await client.user.setPresence({
-        activities: [{
-          name: BOT_ACTIVITY.name,
-          type: BOT_ACTIVITY.type
-        }],
-        status: BOT_STATUS
-      });
-      logger.debug("Bot presence and activity set:", { activity: `${BOT_ACTIVITY.type} ${BOT_ACTIVITY.name}`, status: BOT_STATUS });
-    } catch (error) {
-      logger.error("Failed to set bot presence:", { error });
-    }
+    // Set bot presence
+    setupResults.presence = await performSetupTask(
+      "set bot presence",
+      async () => {
+        await client.user.setPresence({
+          activities: [{
+            name: BOT_ACTIVITY.name,
+            type: BOT_ACTIVITY.type
+          }],
+          status: BOT_STATUS
+        });
+      },
+      "Setting bot presence and activity...",
+      `Bot presence and activity set: ${BOT_ACTIVITY.type} ${BOT_ACTIVITY.name}, status: ${BOT_STATUS}`
+    );
 
+    // Deploy slash commands if enabled
     if (config.settings.deployCommandsOnStart) {
-      try {
-        logger.debug("Attempting to deploy all slash commands to Discord API.");
-        await deployCommands();
-        logger.info("Slash command deployment completed successfully.");
-      } catch (error) {
-        logger.error("Failed to deploy slash commands:", { error });
-      }
+      setupResults.commands = await performSetupTask(
+        "deploy slash commands",
+        async () => await deployCommands(),
+        "Attempting to deploy all slash commands to Discord API...",
+        "Slash command deployment completed successfully."
+      );
+    } else {
+      logger.debug("Slash command deployment skipped (disabled in config).");
     }
 
+    // Reschedule reminders if enabled
     if (config.settings.rescheduleReminderOnStart) {
-      try {
-        logger.debug("Attempting to reschedule all bump reminders from the database.");
-        await rescheduleReminder(client);
-        logger.info("Bump reminder rescheduling completed successfully.");
-      } catch (error) {
-        logger.error("Error while rescheduling bump reminders:", { error });
-      }
+      setupResults.reminders = await performSetupTask(
+        "reschedule bump reminders",
+        async () => await rescheduleReminder(client),
+        "Attempting to reschedule all bump reminders from the database...",
+        "Bump reminder rescheduling completed successfully."
+      );
+    } else {
+      logger.debug("Bump reminder rescheduling skipped (disabled in config).");
     }
 
+    // Reschedule mute kicks if enabled
     if (config.settings.rescheduleAllMuteKicksOnStart) {
-      try {
-        logger.debug("Attempting to reschedule all mute kicks for tracked members.");
-        await rescheduleAllMuteKicks(client);
-        logger.info("Mute kick rescheduling completed successfully.");
-      } catch (error) {
-        logger.error("Error while rescheduling mute kicks:", { error });
-      }
+      setupResults.muteKicks = await performSetupTask(
+        "reschedule mute kicks",
+        async () => await rescheduleAllMuteKicks(client),
+        "Attempting to reschedule all mute kicks for tracked members...",
+        "Mute kick rescheduling completed successfully."
+      );
+    } else {
+      logger.debug("Mute kick rescheduling skipped (disabled in config).");
     }
 
-    logger.info("Bot is ready and setup complete!");
+    // Log setup completion with status summary
+    const successCount = Object.values(setupResults).filter(Boolean).length;
+    const totalTasks = Object.keys(setupResults).length;
+    
+    if (successCount === totalTasks) {
+      logger.info("Bot is ready and all setup tasks completed successfully!");
+    } else {
+      logger.warn(`Bot is ready but only ${successCount}/${totalTasks} setup tasks completed successfully.`, { setupResults });
+    }
   }
 };

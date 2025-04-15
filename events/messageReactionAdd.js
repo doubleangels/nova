@@ -20,11 +20,6 @@ module.exports = {
   /**
    * Handles the messageReactionAdd event for time conversion functionality.
    * 
-   * This function processes reactions added to messages, specifically looking for
-   * the clock emoji. When detected, it checks if both the reactor and message author
-   * have set timezones, extracts time references from the message content, and converts
-   * those times between the two users' timezones.
-   *
    * @param {MessageReaction} reaction - The Discord.js MessageReaction object.
    * @param {User} user - The Discord.js User who added the reaction.
    * @returns {Promise<void>}
@@ -34,25 +29,8 @@ module.exports = {
       // Ignore reactions from bots.
       if (user.bot) return;
       
-      // Handle partial reactions by fetching the complete data.
-      if (reaction.partial) {
-        try {
-          await reaction.fetch();
-        } catch (error) {
-          logger.error("Failed to fetch partial reaction:", { error });
-          return;
-        }
-      }
-      
-      // Handle partial messages by fetching the complete data.
-      if (reaction.message.partial) {
-        try {
-          await reaction.message.fetch();
-        } catch (error) {
-          logger.error("Failed to fetch partial message:", { error });
-          return;
-        }
-      }
+      // Handle partial reactions and messages
+      await fetchPartialData(reaction);
       
       logger.debug("Reaction added:", {
         emoji: reaction.emoji.name,
@@ -62,178 +40,7 @@ module.exports = {
       
       // Process only clock emoji reactions for time conversion.
       if (reaction.emoji.name === CLOCK_EMOJI) {
-        // Get the reactor's timezone from database.
-        const userTimezone = await getUserTimezone(user.id);
-        
-        // Handle case where reactor has no timezone set.
-        if (!userTimezone) {
-          logger.debug("User has no timezone set:", { userId: user.id });
-          try {
-            // Send a temporary reminder to set timezone.
-            const reply = await reaction.message.channel.send(
-              `⚠️ <@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
-            ).catch(err => {
-              logger.error("Failed to send timezone reminder message:", { 
-                error: err.message || err.toString(),
-                stack: err.stack
-              });
-              return null;
-            });
-            
-            // Delete the reminder after timeout.
-            if (reply) {
-              setTimeout(() => {
-                reply.delete().catch(err => 
-                  logger.error("Failed to delete temporary message:", { 
-                    error: err.message || err.toString() 
-                  })
-                );
-              }, TIME_CONVERSION_TIMEOUT);
-            }
-          } catch (replyError) {
-            logger.error("Failed to send timezone reminder:", { 
-              error: replyError.message || replyError.toString(),
-              stack: replyError.stack
-            });
-          }
-          return;
-        }
-        
-        // Get the message author's timezone from database.
-        const messageAuthorId = reaction.message.author.id;
-        const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
-        
-        // Handle case where message author has no timezone set.
-        if (!messageAuthorTimezone) {
-          logger.debug("Message author has no timezone set:", { authorId: messageAuthorId });
-          try {
-            // Send a temporary notification about missing author timezone.
-            const reply = await reaction.message.channel.send(
-              `⚠️ <@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
-            ).catch(err => {
-              logger.error("Failed to send author timezone missing message:", { 
-                error: err.message || err.toString(),
-                stack: err.stack
-              });
-              return null;
-            });
-            
-            // Delete the notification after timeout.
-            if (reply) {
-              setTimeout(() => {
-                reply.delete().catch(err => 
-                  logger.error("Failed to delete temporary message:", { 
-                    error: err.message || err.toString() 
-                  })
-                );
-              }, TIME_CONVERSION_TIMEOUT);
-            }
-          } catch (replyError) {
-            logger.error("Failed to send author timezone missing notification:", { 
-              error: replyError.message || replyError.toString(),
-              stack: replyError.stack
-            });
-          }
-          return;
-        }
-        
-        // Check for cached time references or extract them from message content.
-        let timeReferences = global.timeReferenceCache?.get(reaction.message.id);
-        if (!timeReferences && reaction.message.content) {
-          timeReferences = extractTimeReferences(reaction.message.content);
-          
-          // Cache the extracted time references if found.
-          if (timeReferences.length > 0) {
-            if (!global.timeReferenceCache) {
-              global.timeReferenceCache = new Map();
-            }
-            global.timeReferenceCache.set(reaction.message.id, timeReferences);
-            
-            logger.debug("Re-extracted time references for message:", {
-              messageId: reaction.message.id,
-              references: timeReferences.map(ref => ref.text)
-            });
-          }
-        }
-        
-        // Process time references if found.
-        if (timeReferences && timeReferences.length > 0) {
-          logger.info("Processing time conversion:", {
-            messageId: reaction.message.id,
-            authorTimezone: messageAuthorTimezone,
-            userTimezone: userTimezone
-          });
-          
-          try {
-            // Convert each time reference between the two timezones.
-            const convertedTimes = timeReferences.map(ref => {
-              return convertTimeZones(ref, messageAuthorTimezone, userTimezone);
-            });
-            
-            // Format the converted times into a readable message.
-            const formattedTimes = formatConvertedTimes(convertedTimes);
-            const messageContent = `${CLOCK_EMOJI} <@${user.id}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
-            
-            logger.debug("Attempting to send time conversion message.");
-            const reply = await reaction.message.channel.send(messageContent)
-              .catch(err => {
-                logger.error("Error in channel.send():", { 
-                  error: err.message || err.toString(),
-                  stack: err.stack,
-                  channel: reaction.message.channel.id
-                });
-                return null;
-              });
-              
-            // Set up auto-deletion for the conversion message.
-            if (reply) {
-              logger.debug("Successfully sent time conversion message.");
-              setTimeout(() => {
-                reply.delete().catch(err => 
-                  logger.error("Failed to delete time conversion message:", { 
-                    error: err.message || err.toString() 
-                  })
-                );
-              }, TIME_CONVERSION_TIMEOUT);
-            } else {
-              logger.error("Failed to send time conversion message - reply is null");
-            }
-          } catch (replyError) {
-            logger.error("Failed to send reply with time conversions:", { 
-              error: replyError.message || replyError.toString(),
-              stack: replyError.stack
-            });
-          }
-        } else {
-          // Handle case where no time references were found.
-          logger.debug("No time references found for message:", { messageId: reaction.message.id });
-          try {
-            const reply = await reaction.message.channel.send(
-              `⚠️ <@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
-            ).catch(err => {
-              logger.error("Failed to send no-references message:", { 
-                error: err.message || err.toString() 
-              });
-              return null;
-            });
-            
-            // Set up auto-deletion for the notification.
-            if (reply) {
-              setTimeout(() => {
-                reply.delete().catch(err => 
-                  logger.error("Failed to delete no-references notification:", { 
-                    error: err.message || err.toString() 
-                  })
-                );
-              }, TIME_CONVERSION_TIMEOUT);
-            }
-          } catch (replyError) {
-            logger.error("Failed to send no-references notification:", { 
-              error: replyError.message || replyError.toString(),
-              stack: replyError.stack
-            });
-          }
-        }
+        await handleClockReaction(reaction, user);
       }
     } catch (error) {
       // Catch-all for any unhandled errors in the event handler.
@@ -244,3 +51,172 @@ module.exports = {
     }
   }
 };
+
+/**
+ * Fetches partial reaction and message data if needed
+ * @param {MessageReaction} reaction - The reaction object
+ */
+async function fetchPartialData(reaction) {
+  // Handle partial reactions by fetching the complete data.
+  if (reaction.partial) {
+    try {
+      await reaction.fetch();
+    } catch (error) {
+      logger.error("Failed to fetch partial reaction:", { error });
+      throw error; // Re-throw to stop processing
+    }
+  }
+  
+  // Handle partial messages by fetching the complete data.
+  if (reaction.message.partial) {
+    try {
+      await reaction.message.fetch();
+    } catch (error) {
+      logger.error("Failed to fetch partial message:", { error });
+      throw error; // Re-throw to stop processing
+    }
+  }
+}
+
+/**
+ * Handles clock emoji reactions for time conversion
+ * @param {MessageReaction} reaction - The reaction object
+ * @param {User} user - The user who reacted
+ */
+async function handleClockReaction(reaction, user) {
+  try {
+    // Get the reactor's timezone from database.
+    const userTimezone = await getUserTimezone(user.id);
+    
+    // Handle case where reactor has no timezone set.
+    if (!userTimezone) {
+      await sendTemporaryMessage(
+        reaction.message.channel,
+        `⚠️ <@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
+      );
+      return;
+    }
+    
+    // Get the message author's timezone from database.
+    const messageAuthorId = reaction.message.author.id;
+    const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
+    
+    // Handle case where message author has no timezone set.
+    if (!messageAuthorTimezone) {
+      await sendTemporaryMessage(
+        reaction.message.channel,
+        `⚠️ <@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
+      );
+      return;
+    }
+    
+    // Get time references and process them
+    const timeReferences = await getTimeReferences(reaction.message);
+    
+    if (timeReferences && timeReferences.length > 0) {
+      await processTimeConversion(
+        reaction.message.channel,
+        user.id,
+        timeReferences,
+        messageAuthorTimezone,
+        userTimezone
+      );
+    } else {
+      await sendTemporaryMessage(
+        reaction.message.channel,
+        `⚠️ <@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
+      );
+    }
+  } catch (error) {
+    logger.error("Error handling clock reaction:", { error });
+  }
+}
+
+/**
+ * Gets time references from a message, either from cache or by extracting them
+ * @param {Message} message - The Discord message
+ * @returns {Array} Array of time references
+ */
+async function getTimeReferences(message) {
+  // Check for cached time references
+  let timeReferences = global.timeReferenceCache?.get(message.id);
+  
+  // If not in cache and message has content, extract them
+  if (!timeReferences && message.content) {
+    timeReferences = extractTimeReferences(message.content);
+    
+    // Cache the extracted time references if found
+    if (timeReferences.length > 0) {
+      if (!global.timeReferenceCache) {
+        global.timeReferenceCache = new Map();
+      }
+      global.timeReferenceCache.set(message.id, timeReferences);
+      
+      logger.debug("Re-extracted time references for message:", {
+        messageId: message.id,
+        references: timeReferences.map(ref => ref.text)
+      });
+    }
+  }
+  
+  return timeReferences;
+}
+
+/**
+ * Processes time conversion between two timezones
+ * @param {TextChannel} channel - The Discord channel to send the message to
+ * @param {string} userId - The user ID who requested the conversion
+ * @param {Array} timeReferences - Array of time references
+ * @param {string} fromTimezone - Source timezone
+ * @param {string} toTimezone - Target timezone
+ */
+async function processTimeConversion(channel, userId, timeReferences, fromTimezone, toTimezone) {
+  try {
+    logger.info("Processing time conversion:", {
+      fromTimezone,
+      toTimezone,
+      references: timeReferences.map(ref => ref.text)
+    });
+    
+    // Convert each time reference between the two timezones
+    const convertedTimes = timeReferences.map(ref => {
+      return convertTimeZones(ref, fromTimezone, toTimezone);
+    });
+    
+    // Format the converted times into a readable message
+    const formattedTimes = formatConvertedTimes(convertedTimes);
+    const messageContent = `${CLOCK_EMOJI} <@${userId}>, here are the time conversions:\n\n${formattedTimes}\n\n*This message will self-destruct in 30 seconds.*`;
+    
+    await sendTemporaryMessage(channel, messageContent);
+  } catch (error) {
+    logger.error("Failed to process time conversion:", { error });
+  }
+}
+
+/**
+ * Sends a temporary message that deletes itself after a timeout
+ * @param {TextChannel} channel - The Discord channel to send to
+ * @param {string} content - The message content
+ * @param {number} timeout - Time in ms before deletion (defaults to TIME_CONVERSION_TIMEOUT)
+ */
+async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_TIMEOUT) {
+  try {
+    const reply = await channel.send(content);
+    
+    setTimeout(() => {
+      reply.delete().catch(err => 
+        logger.error("Failed to delete temporary message:", { 
+          error: err.message || err.toString() 
+        })
+      );
+    }, timeout);
+    
+    return reply;
+  } catch (error) {
+    logger.error("Failed to send temporary message:", { 
+      error: error.message || error.toString(),
+      channelId: channel.id
+    });
+    return null;
+  }
+}

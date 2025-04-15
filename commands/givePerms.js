@@ -3,6 +3,7 @@ const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
+const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 
 // Configuration constants.
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
@@ -42,7 +43,7 @@ module.exports = {
     
     /**
      * Executes the /giveperms command.
-     * @param {Interaction} interaction - The Discord interaction object.
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
         // Check if required configuration is available.
@@ -70,22 +71,11 @@ module.exports = {
             const colorHex = interaction.options.getString('color');
             const targetUser = interaction.options.getUser('user');
             
-            // Validate role name.
-            if (!roleName || roleName.trim().length === 0) {
-                logger.warn("Invalid role name provided.", { roleName });
+            // Validate inputs
+            const validationResult = this.validateInputs(interaction, roleName, colorHex, targetUser);
+            if (!validationResult.success) {
                 return await interaction.editReply({
-                    content: "Please provide a valid role name.",
-                    ephemeral: true
-                });
-            }
-            
-            if (roleName.length > MAX_ROLE_NAME_LENGTH) {
-                logger.warn("Role name exceeds maximum length.", { 
-                    roleName, 
-                    maxLength: MAX_ROLE_NAME_LENGTH 
-                });
-                return await interaction.editReply({
-                    content: `Role name must be ${MAX_ROLE_NAME_LENGTH} characters or less.`,
+                    content: validationResult.message,
                     ephemeral: true
                 });
             }
@@ -107,14 +97,9 @@ module.exports = {
                 });
             }
             
-            // Validate and normalize color format.
-            let normalizedColorHex = colorHex;
-            if (colorHex.match(/^[0-9A-Fa-f]{6}$/)) {
-                // If it's just RRGGBB without #, add the #.
-                normalizedColorHex = `#${colorHex}`;
-                logger.debug("Color format normalized.", { original: colorHex, normalized: normalizedColorHex });
-            } else if (!colorHex.match(/^#[0-9A-Fa-f]{6}$/)) {
-                // If it doesn't match either format, it's invalid.
+            // Validate and normalize color format using the utility function.
+            const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
+            if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided.", { colorHex });
                 return await interaction.editReply({
                     content: "Invalid color format. Please use the format #RRGGBB or RRGGBB.",
@@ -122,53 +107,24 @@ module.exports = {
                 });
             }
 
-            // Convert hex to decimal for Discord's color system.
-            const colorDecimal = parseInt(normalizedColorHex.replace('#', ''), 16);
+            const normalizedColorHex = colorValidationResult.normalizedColor;
+            // Convert hex to decimal for Discord's color system using the utility function.
+            const colorDecimal = hexToDecimal(normalizedColorHex);
             
-            // Get the reference role for positioning.
-            const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
-            if (!positionRole) {
-                logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
+            // Create and assign roles
+            const rolesResult = await this.createAndAssignRoles(
+                interaction, 
+                roleName.trim(), 
+                colorDecimal, 
+                targetMember
+            );
+            
+            if (!rolesResult.success) {
                 return await interaction.editReply({
-                    content: "⚠️ Reference role for positioning not found. Please check the positioning role ID.",
+                    content: rolesResult.message,
                     ephemeral: true
                 });
             }
-            
-            // Get the additional role to assign.
-            const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
-            if (!additionalRole) {
-                logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
-                return await interaction.editReply({
-                    content: "⚠️ Additional role not found. Please check the Fren role ID.",
-                    ephemeral: true
-                });
-            }
-            
-            // Create the new role.
-            const newRole = await interaction.guild.roles.create({
-                name: roleName.trim(),
-                color: colorDecimal,
-                position: positionRole.position + 1,
-                reason: `Role created by ${interaction.user.tag} using giveperms command`
-            });
-            logger.info("New role created.", { 
-                roleId: newRole.id, 
-                roleName: newRole.name, 
-                position: newRole.position,
-                createdBy: interaction.user.tag
-            });
-            
-            // Assign both roles to the user.
-            await targetMember.roles.add([newRole.id, additionalRole.id], 
-                `Roles assigned by ${interaction.user.tag} using giveperms command`);
-            
-            logger.info("Permissions successfully granted to user.", { 
-                userId: targetUser.id, 
-                userTag: targetUser.tag,
-                roles: [newRole.name, additionalRole.name],
-                roleIds: [newRole.id, additionalRole.id]
-            });
             
             await interaction.editReply({
                 content: `✅ Successfully gave <@${targetUser.id}> permissions in the server!`,
@@ -184,9 +140,128 @@ module.exports = {
                 guildId: interaction.guildId
             });
             await interaction.editReply({
-                content: "⚠️ An unexpected error occurred. Please try again later.",
+                content: this.getErrorMessage(error),
                 ephemeral: true
             });
         }
     },
+    
+    /**
+     * Validates the command inputs.
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {string} roleName - The name for the new role.
+     * @param {string} colorHex - The color for the new role.
+     * @param {User} targetUser - The user to receive the role.
+     * @returns {Object} An object with success status and message.
+     */
+    validateInputs(interaction, roleName, colorHex, targetUser) {
+        // Validate role name.
+        if (!roleName || roleName.trim().length === 0) {
+            logger.warn("Invalid role name provided.", { roleName });
+            return {
+                success: false,
+                message: "Please provide a valid role name."
+            };
+        }
+
+        if (roleName.length > MAX_ROLE_NAME_LENGTH) {
+            logger.warn("Role name exceeds maximum length.", { 
+                roleName, 
+                maxLength: MAX_ROLE_NAME_LENGTH 
+            });
+            return {
+                success: false,
+                message: `Role name must be ${MAX_ROLE_NAME_LENGTH} characters or less.`
+            };
+        }
+        
+        return { success: true };
+    },
+    
+    /**
+     * Creates a new role and assigns it along with the fren role to the target member.
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {string} roleName - The name for the new role.
+     * @param {number} colorDecimal - The color for the new role in decimal format.
+     * @param {GuildMember} targetMember - The member to receive the roles.
+     * @returns {Object} An object with success status and message.
+     */
+    async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
+        // Get the reference role for positioning.
+        const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
+        if (!positionRole) {
+            logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
+            return {
+                success: false,
+                message: "⚠️ Reference role for positioning not found. Please check the positioning role ID."
+            };
+        }
+        
+        // Get the additional role to assign.
+        const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
+        if (!additionalRole) {
+            logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
+            return {
+                success: false,
+                message: "⚠️ Additional role not found. Please check the Fren role ID."
+            };
+        }
+        
+        // Check if the bot can create a role at the desired position
+        const botMember = await interaction.guild.members.fetchMe();
+        if (botMember.roles.highest.position <= positionRole.position) {
+            logger.warn("Bot's highest role is not high enough to create a role above the reference role.", {
+                botHighestRolePosition: botMember.roles.highest.position,
+                referenceRolePosition: positionRole.position
+            });
+            return {
+                success: false,
+                message: "⚠️ I don't have permission to create a role at the desired position. My highest role must be above the reference role."
+            };
+        }
+        
+        // Create the new role.
+        const auditReason = `Role created by ${interaction.user.tag} (ID: ${interaction.user.id}) using giveperms command`;
+        const newRole = await interaction.guild.roles.create({
+            name: roleName,
+            color: colorDecimal,
+            position: positionRole.position + 1,
+            reason: auditReason
+        });
+        
+        logger.info("New role created.", { 
+            roleId: newRole.id, 
+            roleName: newRole.name, 
+            position: newRole.position,
+            createdBy: interaction.user.tag
+        });
+        
+        // Assign both roles to the user.
+        await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
+        
+        logger.info("Permissions successfully granted to user.", { 
+            userId: targetMember.id, 
+            userTag: targetMember.user.tag,
+            roles: [newRole.name, additionalRole.name],
+            roleIds: [newRole.id, additionalRole.id]
+        });
+        
+        return { success: true };
+    },
+    
+    /**
+     * Gets a user-friendly error message based on the error.
+     * @param {Error} error - The error object.
+     * @returns {string} A user-friendly error message.
+     */
+    getErrorMessage(error) {
+        if (error.code === 50013) {
+            return "⚠️ I don't have permission to manage roles. Please check my permissions.";
+        } else if (error.message.includes('Maximum number of server roles reached')) {
+            return "⚠️ This server has reached the maximum number of roles allowed by Discord.";
+        } else if (error.message.includes('rate limit')) {
+            return "⚠️ Discord is currently rate limiting this action. Please try again in a few moments.";
+        }
+        return "⚠️ An unexpected error occurred. Please try again later.";
+    }
 };

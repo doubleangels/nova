@@ -28,13 +28,30 @@ module.exports = {
       }
 
       // Retrieve configuration settings from the database.
-      const backupModeEnabled = ((await getValue("backup_mode_enabled")) || "false").toString().toLowerCase();
-      const backupModeRole = await getValue("backup_mode_role");
-      const backupModeChannel = await getValue("backup_mode_channel");
-      const trollModeEnabled = ((await getValue("troll_mode_enabled")) || "false").toString().toLowerCase();
-      const trollModeAccountAge = parseInt(await getValue("troll_mode_account_age")) || 30;
-      const muteModeEnabled = ((await getValue("mute_mode_enabled")) || "false").toString().toLowerCase();
-      const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours")) || 4;
+      const [
+        backupModeEnabled,
+        backupModeRole,
+        backupModeChannel,
+        trollModeEnabled,
+        trollModeAccountAgeStr,
+        muteModeEnabled,
+        muteKickTimeStr
+      ] = await Promise.all([
+        getValue("backup_mode_enabled"),
+        getValue("backup_mode_role"),
+        getValue("backup_mode_channel"),
+        getValue("troll_mode_enabled"),
+        getValue("troll_mode_account_age"),
+        getValue("mute_mode_enabled"),
+        getValue("mute_mode_kick_time_hours")
+      ]);
+
+      // Parse values with proper defaults
+      const isBackupModeEnabled = (backupModeEnabled || "false").toString().toLowerCase() === "true";
+      const isTrollModeEnabled = (trollModeEnabled || "false").toString().toLowerCase() === "true";
+      const isMuteModeEnabled = (muteModeEnabled || "false").toString().toLowerCase() === "true";
+      const trollModeAccountAge = parseInt(trollModeAccountAgeStr) || 30;
+      const muteKickTime = parseInt(muteKickTimeStr) || 4;
 
       const now = dayjs();
       const created = dayjs(member.user.createdTimestamp);
@@ -46,7 +63,7 @@ module.exports = {
       });
 
       // Troll mode: Kick member if account age is below threshold.
-      if (trollModeEnabled === "true" && accountAgeDays < trollModeAccountAge) {
+      if (isTrollModeEnabled && accountAgeDays < trollModeAccountAge) {
         logger.debug("Troll mode active:", {
           memberTag: member.user.tag,
           accountAgeDays,
@@ -62,7 +79,7 @@ module.exports = {
       }
 
       // Mute mode: Track new member and schedule a mute kick.
-      if (muteModeEnabled === "true") {
+      if (isMuteModeEnabled) {
         const joinTime = dayjs().toISOString();
         logger.debug("Mute mode active; tracking new member:", {
           memberTag: member.user.tag,
@@ -79,7 +96,7 @@ module.exports = {
       }
 
       // Backup mode: Send a welcome message and assign a role.
-      if (backupModeEnabled === "true") {
+      if (isBackupModeEnabled) {
         // Check that backup mode is fully configured.
         if (!backupModeRole || !backupModeChannel) {
           logger.warn("Backup mode not fully configured; skipping welcome message and role assignment:", {
@@ -112,14 +129,22 @@ module.exports = {
           )
           .setColor(WELCOME_EMBED_COLOR);
 
-        await welcomeChannel.send({ embeds: [embed] });
-        logger.debug("Welcome message sent:", { channelName: welcomeChannel.name, memberTag: member.user.tag });
+        try {
+          await welcomeChannel.send({ embeds: [embed] });
+          logger.debug("Welcome message sent:", { channelName: welcomeChannel.name, memberTag: member.user.tag });
+        } catch (err) {
+          logger.error("Failed to send welcome message:", { channelName: welcomeChannel.name, error: err });
+        }
 
         // Attempt to assign the backup role.
         const backupRole = member.guild.roles.cache.get(String(backupModeRole));
         if (backupRole) {
-          await member.roles.add(backupRole);
-          logger.debug("Backup role assigned:", { roleName: backupRole.name, memberTag: member.user.tag });
+          try {
+            await member.roles.add(backupRole);
+            logger.debug("Backup role assigned:", { roleName: backupRole.name, memberTag: member.user.tag });
+          } catch (err) {
+            logger.error("Failed to assign backup role:", { roleName: backupRole.name, error: err });
+          }
         } else {
           logger.warn("Backup role not found in guild:", { backupModeRole });
         }

@@ -4,12 +4,10 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
-const { getCoordinates } = require('../utils/locationUtils');
+const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
 
 // Configuration constants.
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
-const WEATHER_API_UNITS = 'si';
-const WEATHER_FORECAST_DAYS = 3;
 const WEATHER_EMBED_COLOR = 0xFF6E42;
 const WEATHER_EMBED_TITLE_FORMAT = 'Weather in %s';
 const WEATHER_EMBED_FOOTER = 'Powered by PirateWeather';
@@ -28,32 +26,71 @@ const WEATHER_FIELD_DEW_POINT = '🌫 Dew Point';
 const WEATHER_FIELD_CLOUD_COVER = '☁ Cloud Cover';
 const WEATHER_FIELD_PRECIP = '🌧 Precipitation';
 const WEATHER_FIELD_PRECIP_PROB = '🌧 Precip. Probability';
-const WEATHER_FIELD_FORECAST = '📅 3-Day Forecast';
+const WEATHER_FIELD_FORECAST = '📅 %d-Day Forecast';
 
 // Units.
 const WEATHER_UNIT_TEMP_C = '°C';
 const WEATHER_UNIT_TEMP_F = '°F';
 const WEATHER_UNIT_PERCENTAGE = '%';
-const WEATHER_UNIT_WIND_SPEED = 'm/s';
-const WEATHER_UNIT_VISIBILITY = 'km';
-const WEATHER_UNIT_PRESSURE = 'hPa';
-const WEATHER_UNIT_PRECIP = 'mm/hr';
+const WEATHER_UNIT_WIND_SPEED_MS = 'm/s';
+const WEATHER_UNIT_WIND_SPEED_MPH = 'mph';
+const WEATHER_UNIT_VISIBILITY_KM = 'km';
+const WEATHER_UNIT_VISIBILITY_MI = 'mi';
+const WEATHER_UNIT_PRESSURE_HPA = 'hPa';
+const WEATHER_UNIT_PRESSURE_INHG = 'inHg';
+const WEATHER_UNIT_PRECIP_MM = 'mm/hr';
+const WEATHER_UNIT_PRECIP_IN = 'in/hr';
+
+// Weather condition icons
+const WEATHER_ICONS = {
+  'clear-day': '☀️',
+  'clear-night': '🌙',
+  'rain': '🌧️',
+  'snow': '❄️',
+  'sleet': '🌨️',
+  'wind': '💨',
+  'fog': '🌫️',
+  'cloudy': '☁️',
+  'partly-cloudy-day': '⛅',
+  'partly-cloudy-night': '☁️🌙',
+  'thunderstorm': '⛈️',
+  'tornado': '🌪️',
+  'default': '🌤️'
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('weather')
-    .setDescription('Get the current weather for a place.')
+    .setDescription('Get weather information for a location.')
     .addStringOption(option =>
       option
         .setName('place')
         .setDescription('What place do you want weather data for?')
         .setRequired(true)
+    )
+    .addStringOption(option =>
+      option
+        .setName('units')
+        .setDescription('What units do you want to use?')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Metric (°C, m/s)', value: 'metric' },
+          { name: 'Imperial (°F, mph)', value: 'imperial' }
+        )
+    )
+    .addIntegerOption(option =>
+      option
+        .setName('forecast_days')
+        .setDescription('What number of forecast days do you want data for? (1-7)')
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(7)
     ),
     
   /**
    * Executes the /weather command.
    * 
-   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {Promise<void>}
    */
   async execute(interaction) {
@@ -70,105 +107,89 @@ module.exports = {
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: '⚠️ Weather API key is not configured. Please contact the bot administrator.', 
-          ephemeral: true 
+          content: '⚠️ Weather API key is not configured. Please contact the bot administrator.'
         });
         return;
       }
 
-      // Retrieve the 'place' option provided by the user.
+      // Get command options
       const place = interaction.options.getString('place');
+      const unitsOption = interaction.options.getString('units') || 'metric';
+      const forecastDays = interaction.options.getInteger('forecast_days') || 3;
+      
+      const units = unitsOption === 'imperial' ? 'us' : 'si';
       
       logger.debug("Processing weather request.", { 
         place, 
+        units: unitsOption,
+        forecastDays,
         userId: interaction.user.id 
       });
       
-      // Get the latitude and longitude for the provided place using a helper function.
-      const [lat, lon] = await getCoordinates(place);
+      // Get geocoding data for the provided place
+      const geocodeResult = await getGeocodingData(place);
       
-      if (lat === null || lon === null) {
+      if (geocodeResult.error) {
         logger.warn("Failed to get coordinates for location.", { 
           place, 
+          errorType: geocodeResult.type,
           userId: interaction.user.id 
         });
         
         await interaction.editReply({ 
-          content: `⚠️ Could not find the location for '${place}'. Try another city.`, 
-          ephemeral: true 
+          content: `⚠️ Could not find the location for '${place}'. Try another city.`
         });
         return;
       }
       
-      // Format the place name for display (capitalize each word).
-      const formattedPlace = this.formatPlaceName(place);
+      const { location, formattedAddress } = geocodeResult;
+      const { lat, lng: lon } = location;
       
       logger.debug("Location coordinates retrieved.", { 
-        formattedPlace, 
+        formattedAddress, 
         lat, 
         lon 
       });
       
-      // Build the PirateWeather API URL using the coordinates.
-      const weatherData = await this.fetchWeatherData(lat, lon);
+      // Fetch weather data from PirateWeather API
+      const weatherData = await this.fetchWeatherData(lat, lon, units);
       
       if (!weatherData) {
         logger.warn("Failed to fetch weather data.", { 
-          place: formattedPlace, 
+          place: formattedAddress, 
           lat, 
           lon 
         });
         
         await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.', 
-          ephemeral: true 
+          content: '⚠️ An unexpected error occurred while fetching weather data. Please try again later.'
         });
         return;
       }
       
       // Create an embed with the weather data.
-      const embed = this.createWeatherEmbed(formattedPlace, lat, lon, weatherData);
+      const embed = this.createWeatherEmbed(
+        formattedAddress, 
+        lat, 
+        lon, 
+        weatherData, 
+        unitsOption, 
+        forecastDays
+      );
       
       // Send the embed as the reply.
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Weather information sent successfully.", { 
-        place: formattedPlace, 
-        userId: interaction.user.id 
+        place: formattedAddress, 
+        userId: interaction.user.id,
+        units: unitsOption,
+        forecastDays
       });
       
     } catch (error) {
-      // Log any unexpected errors and send an error message to the user.
-      logger.error("Error executing weather command.", { 
-        error: error.message, 
-        stack: error.stack,
-        userId: interaction.user?.id 
-      });
-      
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.', 
-          ephemeral: true 
-        });
-      } else {
-        await interaction.reply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.', 
-          ephemeral: true 
-        });
-      }
+      await this.handleError(interaction, error);
     }
-  },
-
-  /**
-   * Formats a place name by capitalizing each word.
-   * 
-   * @param {string} place - The place name to format.
-   * @returns {string} - The formatted place name.
-   */
-  formatPlaceName(place) {
-    return place.split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
   },
 
   /**
@@ -176,14 +197,18 @@ module.exports = {
    * 
    * @param {number} lat - Latitude of the location.
    * @param {number} lon - Longitude of the location.
+   * @param {string} units - Units to use ('si' for metric, 'us' for imperial).
    * @returns {Object|null} - Weather data object or null if the request failed.
    */
-  async fetchWeatherData(lat, lon) {
+  async fetchWeatherData(lat, lon, units) {
     try {
       // Build the PirateWeather API URL using the coordinates.
       const url = `${WEATHER_API_BASE_URL}${config.pirateWeatherApiKey}/${lat},${lon}`;
-      // Set additional parameters; here, we're using SI units.
-      const params = new URLSearchParams({ units: WEATHER_API_UNITS });
+      // Set additional parameters
+      const params = new URLSearchParams({ 
+        units: units,
+        extend: 'hourly' // Get hourly data for more detailed forecasts
+      });
       const requestUrl = `${url}?${params.toString()}`;
       
       logger.debug("Making PirateWeather API request.", { requestUrl });
@@ -218,75 +243,90 @@ module.exports = {
    * @param {number} lat - Latitude of the location.
    * @param {number} lon - Longitude of the location.
    * @param {Object} data - Weather data from the API.
+   * @param {string} unitsOption - Units preference ('metric' or 'imperial').
+   * @param {number} forecastDays - Number of forecast days to show.
    * @returns {EmbedBuilder} - Discord embed with weather information.
    */
-  createWeatherEmbed(place, lat, lon, data) {
+  createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
     // Extract current weather details from the response.
     const currently = data.currently || {};
     // Get daily forecast data.
     const daily = data.daily?.data || [];
     
+    // Get weather icon
+    const icon = currently.icon || 'default';
+    const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
+    
     // Extract weather information with defaults for missing data.
     const weatherInfo = {
       summary: currently.summary || "Unknown",
-      tempC: currently.temperature ?? 0,
+      icon: icon,
+      temperature: currently.temperature ?? 0,
       humidity: (currently.humidity ?? 0) * 100,
       windSpeed: currently.windSpeed ?? 0,
+      windBearing: currently.windBearing ?? 0,
       uvIndex: currently.uvIndex ?? "N/A",
       visibility: currently.visibility ?? "N/A",
       pressure: currently.pressure ?? "N/A",
-      dewPointC: currently.dewPoint !== undefined ? currently.dewPoint : "N/A",
+      dewPoint: currently.dewPoint !== undefined ? currently.dewPoint : "N/A",
       cloudCover: (currently.cloudCover ?? 0) * 100,
       precipIntensity: currently.precipIntensity ?? 0,
       precipProbability: (currently.precipProbability ?? 0) * 100
     };
 
-    // Calculate Fahrenheit values from Celsius.
-    const tempF = typeof weatherInfo.tempC === 'number' ? 
-      Math.round((weatherInfo.tempC * 9/5) + 32) : 
-      0;
+    // Format units based on user preference
+    const isMetric = unitsOption === 'metric';
     
-    const feelsLikeC = currently.apparentTemperature ?? 0;
-    const feelsLikeF = typeof feelsLikeC === 'number' ? 
-      Math.round((feelsLikeC * 9/5) + 32) : 
-      0;
+    const tempUnit = isMetric ? WEATHER_UNIT_TEMP_C : WEATHER_UNIT_TEMP_F;
+    const windUnit = isMetric ? WEATHER_UNIT_WIND_SPEED_MS : WEATHER_UNIT_WIND_SPEED_MPH;
+    const visibilityUnit = isMetric ? WEATHER_UNIT_VISIBILITY_KM : WEATHER_UNIT_VISIBILITY_MI;
+    const pressureUnit = isMetric ? WEATHER_UNIT_PRESSURE_HPA : WEATHER_UNIT_PRESSURE_INHG;
+    const precipUnit = isMetric ? WEATHER_UNIT_PRECIP_MM : WEATHER_UNIT_PRECIP_IN;
     
-    const dewPointF = typeof weatherInfo.dewPointC === 'number' ? 
-      Math.round((weatherInfo.dewPointC * 9/5) + 32) : 
-      "N/A";
+    // Convert pressure if using imperial units
+    if (!isMetric && typeof weatherInfo.pressure === 'number') {
+      weatherInfo.pressure = (weatherInfo.pressure * 0.02953).toFixed(2);
+    }
     
-    // Build a forecast text for the next 3 days (or available days if less than 3).
-    const forecastText = this.createForecastText(daily);
+    // Get wind direction
+    const windDirection = this.getWindDirection(weatherInfo.windBearing);
+    
+    // Build a forecast text for the specified number of days
+    const forecastText = this.createForecastText(daily, unitsOption, forecastDays);
+    
+    // Get the current timestamp
+    const timestamp = new Date();
+    const formattedTime = timestamp.toLocaleString();
     
     // Create an embed to display the weather data.
     const embed = new EmbedBuilder()
-      .setTitle(WEATHER_EMBED_TITLE_FORMAT.replace('%s', place))
+      .setTitle(`${weatherIcon} ${WEATHER_EMBED_TITLE_FORMAT.replace('%s', place)}`)
       .setDescription(`**${weatherInfo.summary}**`)
       .setColor(WEATHER_EMBED_COLOR)
       .addFields(
         { 
           name: WEATHER_FIELD_LOCATION, 
-          value: `📍 ${place}\n📍 Lat: ${lat}, Lon: ${lon}`, 
+          value: `📍 ${place}\n📍 Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, 
           inline: false 
         },
         { 
           name: WEATHER_FIELD_TEMPERATURE, 
-          value: `${weatherInfo.tempC}${WEATHER_UNIT_TEMP_C} / ${tempF}${WEATHER_UNIT_TEMP_F}`, 
+          value: `${weatherInfo.temperature.toFixed(1)}${tempUnit}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_FEELS_LIKE, 
-          value: `${feelsLikeC}${WEATHER_UNIT_TEMP_C} / ${feelsLikeF}${WEATHER_UNIT_TEMP_F}`, 
+          value: `${(currently.apparentTemperature || 0).toFixed(1)}${tempUnit}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_HUMIDITY, 
-          value: `${weatherInfo.humidity}${WEATHER_UNIT_PERCENTAGE}`, 
+          value: `${weatherInfo.humidity.toFixed(0)}${WEATHER_UNIT_PERCENTAGE}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_WIND_SPEED, 
-          value: `${weatherInfo.windSpeed} ${WEATHER_UNIT_WIND_SPEED}`, 
+          value: `${weatherInfo.windSpeed.toFixed(1)} ${windUnit} ${windDirection}`, 
           inline: true 
         },
         { 
@@ -296,41 +336,42 @@ module.exports = {
         },
         { 
           name: WEATHER_FIELD_VISIBILITY, 
-          value: `${weatherInfo.visibility} ${WEATHER_UNIT_VISIBILITY}`, 
+          value: `${weatherInfo.visibility} ${visibilityUnit}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_PRESSURE, 
-          value: `${weatherInfo.pressure} ${WEATHER_UNIT_PRESSURE}`, 
+          value: `${weatherInfo.pressure} ${pressureUnit}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_DEW_POINT, 
-          value: `${weatherInfo.dewPointC}${WEATHER_UNIT_TEMP_C} / ${dewPointF}${WEATHER_UNIT_TEMP_F}`, 
+          value: `${typeof weatherInfo.dewPoint === 'number' ? weatherInfo.dewPoint.toFixed(1) : weatherInfo.dewPoint}${tempUnit}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_CLOUD_COVER, 
-          value: `${weatherInfo.cloudCover}${WEATHER_UNIT_PERCENTAGE}`, 
+          value: `${weatherInfo.cloudCover.toFixed(0)}${WEATHER_UNIT_PERCENTAGE}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_PRECIP, 
-          value: `${weatherInfo.precipIntensity} ${WEATHER_UNIT_PRECIP}`, 
+          value: `${weatherInfo.precipIntensity} ${precipUnit}`, 
           inline: true 
         },
         { 
           name: WEATHER_FIELD_PRECIP_PROB, 
-          value: `${weatherInfo.precipProbability}${WEATHER_UNIT_PERCENTAGE}`, 
+          value: `${weatherInfo.precipProbability.toFixed(0)}${WEATHER_UNIT_PERCENTAGE}`, 
           inline: true 
         },
         { 
-          name: WEATHER_FIELD_FORECAST, 
+          name: WEATHER_FIELD_FORECAST.replace('%d', forecastDays), 
           value: forecastText, 
           inline: false 
         }
       )
-      .setFooter({ text: WEATHER_EMBED_FOOTER });
+      .setFooter({ text: `${WEATHER_EMBED_FOOTER} • Data as of ${formattedTime}` })
+      .setTimestamp();
     
     return embed;
   },
@@ -339,13 +380,19 @@ module.exports = {
    * Creates a formatted forecast text for the given daily weather data.
    * 
    * @param {Array} daily - Array of daily forecast data.
+   * @param {string} unitsOption - Units preference ('metric' or 'imperial').
+   * @param {number} daysToShow - Number of forecast days to show.
    * @returns {string} - Formatted forecast text.
    */
-  createForecastText(daily) {
+  createForecastText(daily, unitsOption, daysToShow) {
     let forecastText = "";
-    const daysToShow = Math.min(WEATHER_FORECAST_DAYS, daily.length);
+    const isMetric = unitsOption === 'metric';
+    const tempUnit = isMetric ? WEATHER_UNIT_TEMP_C : WEATHER_UNIT_TEMP_F;
     
-    for (let i = 0; i < daysToShow; i++) {
+    // Limit to available days or requested days, whichever is smaller
+    const days = Math.min(daysToShow, daily.length);
+    
+    for (let i = 0; i < days; i++) {
       const day = daily[i] || {};
       const forecastDate = day.time ? 
         dayjs.unix(day.time).format(WEATHER_DATE_FORMAT) : 
@@ -353,30 +400,75 @@ module.exports = {
       
       const daySummary = day.summary || "No data";
       
-      const highC = typeof day.temperatureHigh === "number" ? 
-        day.temperatureHigh : 
-        0;
+      // Get weather icon
+      const icon = day.icon || 'default';
+      const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
       
-      const highF = typeof highC === "number" ? 
-        Math.round((highC * 9/5) + 32) : 
-        0;
+      const highTemp = typeof day.temperatureHigh === "number" ? 
+        day.temperatureHigh.toFixed(1) : 
+        "N/A";
       
-      const lowC = typeof day.temperatureLow === "number" ? 
-        day.temperatureLow : 
-        0;
+      const lowTemp = typeof day.temperatureLow === "number" ? 
+        day.temperatureLow.toFixed(1) : 
+        "N/A";
       
-      const lowF = typeof lowC === "number" ? 
-        Math.round((lowC * 9/5) + 32) : 
-        0;
+      const precipProb = typeof day.precipProbability === "number" ? 
+        (day.precipProbability * 100).toFixed(0) : 
+        "0";
       
-      forecastText += `**${forecastDate}**\n`;
-      forecastText += `**${daySummary}**\n`;
-      forecastText += `🌡 High: ${highC}${WEATHER_UNIT_TEMP_C} / `;
-      forecastText += `${highF}${WEATHER_UNIT_TEMP_F}, Low: `;
-      forecastText += `${lowC}${WEATHER_UNIT_TEMP_C} / `;
-      forecastText += `${lowF}${WEATHER_UNIT_TEMP_F}\n\n`;
+      forecastText += `**${forecastDate}** ${weatherIcon}\n`;
+      forecastText += `${daySummary}\n`;
+      forecastText += `🌡 High: ${highTemp}${tempUnit}, Low: ${lowTemp}${tempUnit}\n`;
+      forecastText += `🌧 Precipitation: ${precipProb}${WEATHER_UNIT_PERCENTAGE}\n\n`;
     }
     
     return forecastText || "No forecast data available.";
+  },
+  
+  /**
+   * Gets a cardinal direction from a wind bearing in degrees.
+   * 
+   * @param {number} bearing - Wind bearing in degrees.
+   * @returns {string} - Cardinal direction.
+   */
+  getWindDirection(bearing) {
+    if (bearing === undefined || bearing === null) return '';
+    
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(((bearing % 360) / 22.5));
+    return `(${directions[index % 16]})`;
+  },
+  
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+    // Log any unexpected errors and send an error message to the user.
+    logger.error("Error executing weather command.", { 
+      error: error.message, 
+      stack: error.stack,
+      userId: interaction.user?.id 
+    });
+    
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({ 
+          content: '⚠️ An unexpected error occurred. Please try again later.'
+        });
+      } else {
+        await interaction.reply({ 
+          content: '⚠️ An unexpected error occurred. Please try again later.'
+        });
+      }
+    } catch (replyError) {
+      logger.error("Failed to send error response for weather command.", {
+        error: replyError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+    }
   }
 };

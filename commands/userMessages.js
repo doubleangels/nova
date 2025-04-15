@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -13,13 +13,12 @@ const EMBED_INDICATOR = '🖼️';
 const MESSAGE_INDICATOR = '📜';
 const TIME_INDICATOR = '⏰';
 const NO_CONTENT_TEXT = '[No text content]';
-const TEXT_CHANNEL_TYPE = 0; // Discord channel type for text channels
 const MESSAGE_FETCH_BATCH_SIZE = 100; // Number of messages to fetch in each batch
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')
-    .setDescription('Lists the last 50 messages from a specific user in a specified channel.')
+    .setDescription('Lists the last messages from a specific user in a specified channel.')
     .addUserOption(option => 
       option
         .setName('user')
@@ -29,6 +28,7 @@ module.exports = {
       option
         .setName('channel')
         .setDescription('What channel do you want to search in?')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
         .setRequired(true))
     .addIntegerOption(option =>
       option
@@ -36,12 +36,24 @@ module.exports = {
         .setDescription('How many messages do you want to display? (1-50, Default: 50)')
         .setRequired(false)
         .setMinValue(1)
-        .setMaxValue(50)),
+        .setMaxValue(50))
+    .addStringOption(option =>
+      option
+        .setName('contains')
+        .setDescription('Only show messages containing this text (optional)')
+        .setRequired(false))
+    .addIntegerOption(option =>
+      option
+        .setName('days')
+        .setDescription('Only show messages from the last X days (optional)')
+        .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(365)),
 
   /**
    * Executes the usermessages command.
    * 
-   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {Promise<void>}
    */
   async execute(interaction) {
@@ -49,73 +61,56 @@ module.exports = {
       logger.debug("User messages command received.", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag,
-        guildName: interaction.guild.name,
-        guildId: interaction.guild.id
+        guildName: interaction.guild?.name,
+        guildId: interaction.guild?.id
       });
+      
+      // Handle DM case
+      if (!interaction.guild) {
+        logger.warn("Command used in DMs where it's not supported.", {
+          userId: interaction.user.id,
+          userTag: interaction.user.tag
+        });
+        
+        return await interaction.reply({
+          content: "⚠️ This command can only be used in servers, not in direct messages.",
+          ephemeral: true
+        });
+      }
       
       // Defer reply as ephemeral since this might take some time.
       await interaction.deferReply({ 
         ephemeral: true 
       });
       
-      // Get the target user and channel from options.
-      const targetUser = interaction.options.getUser('user');
-      const targetChannel = interaction.options.getChannel('channel');
-      const messageLimit = interaction.options.getInteger('limit') || 50;
+      // Get the command options
+      const commandOptions = await this.parseOptions(interaction);
       
-      logger.debug("Command parameters retrieved.", { 
-        targetUserTag: targetUser?.tag,
-        targetUserId: targetUser?.id,
-        targetChannelName: targetChannel?.name,
-        targetChannelId: targetChannel?.id,
-        messageLimit
-      });
-      
-      // Verify the target user exists.
-      if (!targetUser) {
-        logger.warn("Target user not found.", { 
-          requestedByUserId: interaction.user.id,
-          requestedByUserTag: interaction.user.tag 
-        });
-        
-        return interaction.editReply({ 
-          content: 'User not found.', 
-          ephemeral: true 
+      if (!commandOptions.valid) {
+        return await interaction.editReply({
+          content: commandOptions.errorMessage,
+          ephemeral: true
         });
       }
+      
+      const { targetUser, targetChannel, messageLimit, filterText, dayLimit } = commandOptions;
       
       logger.info("Fetching messages for user.", { 
         targetUserTag: targetUser.tag, 
         targetUserId: targetUser.id,
         requestedByUserTag: interaction.user.tag,
-        requestedByUserId: interaction.user.id
-      });
-      
-      // Check if the specified channel is a text channel.
-      if (targetChannel.type !== TEXT_CHANNEL_TYPE) {
-        logger.warn("Invalid channel type specified.", { 
-          channelName: targetChannel.name, 
-          channelId: targetChannel.id,
-          channelType: targetChannel.type
-        });
-        
-        return interaction.editReply({ 
-          content: 'Please select a valid text channel.', 
-          ephemeral: true 
-        });
-      }
-
-      logger.debug("Searching channel for messages.", { 
-        channelName: targetChannel.name, 
-        channelId: targetChannel.id,
-        targetUserId: targetUser.id
+        requestedByUserId: interaction.user.id,
+        filterText: filterText || "None",
+        dayLimit: dayLimit || "None"
       });
 
       // Fetch messages in batches until the desired limit is reached.
       const allMessages = await this.fetchUserMessages(
         targetChannel, 
         targetUser.id, 
-        messageLimit
+        messageLimit,
+        filterText,
+        dayLimit
       );
       
       // Handle case where no messages are found.
@@ -125,8 +120,18 @@ module.exports = {
           channelName: targetChannel.name
         });
         
+        let noMessagesText = `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`;
+        
+        if (filterText) {
+          noMessagesText += ` with text containing "${filterText}"`;
+        }
+        
+        if (dayLimit) {
+          noMessagesText += ` from the last ${dayLimit} days`;
+        }
+        
         return interaction.editReply({
-          content: `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`,
+          content: noMessagesText,
           ephemeral: true 
         });
       }
@@ -144,8 +149,21 @@ module.exports = {
       let currentPage = 0;
       const totalPages = embeds.length;
       
+      // Create summary text
+      let summaryText = `Found ${allMessages.length} message${allMessages.length !== 1 ? 's' : ''} from ${targetUser.username} in ${targetChannel.name}`;
+      
+      if (filterText) {
+        summaryText += ` containing "${filterText}"`;
+      }
+      
+      if (dayLimit) {
+        summaryText += ` from the last ${dayLimit} day${dayLimit !== 1 ? 's' : ''}`;
+      }
+      
+      summaryText += '.';
+      
       const message = await interaction.editReply({ 
-        content: `Found ${allMessages.length} messages from ${targetUser.username} in ${targetChannel.name}.`,
+        content: summaryText,
         ephemeral: true,
         embeds: [embeds[currentPage]],
         components: totalPages > 1 ? [this.createPaginationButtons(currentPage, totalPages)] : []
@@ -163,24 +181,85 @@ module.exports = {
       }
       
     } catch (error) {
-      logger.error("Error executing user messages command.", { 
-        error: error.message,
-        stack: error.stack,
-        userTag: interaction.user?.tag,
-        guildName: interaction.guild?.name
-      });
-      
-      const replyMethod = (interaction.deferred || interaction.replied) ? 'editReply' : 'reply';
-      
-      await interaction[replyMethod]({ 
-        content: '⚠️ There was an error fetching the messages. Please try again later.', 
-        ephemeral: true 
-      }).catch(err => {
-        logger.error("Failed to send error message to user.", { 
-          error: err.message 
-        });
-      });
+      await this.handleError(interaction, error);
     }
+  },
+  
+  /**
+   * Parses and validates command options.
+   * 
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @returns {Promise<Object>} Validated command options.
+   */
+  async parseOptions(interaction) {
+    // Get the target user and channel from options.
+    const targetUser = interaction.options.getUser('user');
+    const targetChannel = interaction.options.getChannel('channel');
+    const messageLimit = interaction.options.getInteger('limit') || 50;
+    const filterText = interaction.options.getString('contains');
+    const dayLimit = interaction.options.getInteger('days');
+    
+    logger.debug("Command parameters retrieved.", { 
+      targetUserTag: targetUser?.tag,
+      targetUserId: targetUser?.id,
+      targetChannelName: targetChannel?.name,
+      targetChannelId: targetChannel?.id,
+      messageLimit,
+      filterText: filterText || "None",
+      dayLimit: dayLimit || "None"
+    });
+    
+    // Verify the target user exists.
+    if (!targetUser) {
+      logger.warn("Target user not found.", { 
+        requestedByUserId: interaction.user.id,
+        requestedByUserTag: interaction.user.tag 
+      });
+      
+      return {
+        valid: false,
+        errorMessage: '⚠️ User not found.'
+      };
+    }
+    
+    // Check if the specified channel is a text channel.
+    if (targetChannel.type !== ChannelType.GuildText && targetChannel.type !== ChannelType.GuildAnnouncement) {
+      logger.warn("Invalid channel type specified.", { 
+        channelName: targetChannel.name, 
+        channelId: targetChannel.id,
+        channelType: targetChannel.type
+      });
+      
+      return {
+        valid: false,
+        errorMessage: '⚠️ Please select a valid text channel.'
+      };
+    }
+    
+    // Check if the user has permission to view the channel
+    const member = interaction.member;
+    if (!targetChannel.permissionsFor(member).has(PermissionFlagsBits.ViewChannel)) {
+      logger.warn("User lacks permission to view the specified channel.", {
+        userTag: interaction.user.tag,
+        userId: interaction.user.id,
+        channelName: targetChannel.name,
+        channelId: targetChannel.id
+      });
+      
+      return {
+        valid: false,
+        errorMessage: `⚠️ You don't have permission to view messages in ${targetChannel.name}.`
+      };
+    }
+    
+    return {
+      valid: true,
+      targetUser,
+      targetChannel,
+      messageLimit,
+      filterText,
+      dayLimit
+    };
   },
 
   /**
@@ -189,11 +268,21 @@ module.exports = {
    * @param {TextChannel} channel - The channel to search in.
    * @param {string} userId - The ID of the user to fetch messages for.
    * @param {number} limit - Maximum number of messages to fetch.
+   * @param {string|null} filterText - Optional text to filter messages by.
+   * @param {number|null} dayLimit - Optional day limit to filter messages by.
    * @returns {Promise<Array>} Array of filtered user messages.
    */
-  async fetchUserMessages(channel, userId, limit) {
+  async fetchUserMessages(channel, userId, limit, filterText = null, dayLimit = null) {
     const allMessages = [];
     let lastMessageId = null;
+    
+    // Calculate the cutoff date if a day limit is specified
+    const cutoffTimestamp = dayLimit 
+      ? Date.now() - (dayLimit * 24 * 60 * 60 * 1000) 
+      : null;
+
+    // Convert filterText to lowercase for case-insensitive comparison
+    const filterTextLower = filterText ? filterText.toLowerCase() : null;
 
     while (allMessages.length < limit) {
       // Fetch messages with the specified batch size.
@@ -206,7 +295,18 @@ module.exports = {
       if (messages.size === 0) break;
 
       // Filter for messages by the target user.
-      const userMessages = messages.filter(msg => msg.author.id === userId);
+      const userMessages = messages.filter(msg => {
+        // Filter by user ID
+        if (msg.author.id !== userId) return false;
+        
+        // Filter by date if specified
+        if (cutoffTimestamp && msg.createdTimestamp < cutoffTimestamp) return false;
+        
+        // Filter by content if specified
+        if (filterTextLower && !msg.content.toLowerCase().includes(filterTextLower)) return false;
+        
+        return true;
+      });
       
       // Add the filtered user messages to the allMessages array.
       allMessages.push(...userMessages.map(msg => ({
@@ -215,7 +315,9 @@ module.exports = {
         embeds: msg.embeds.length > 0,
         timestamp: msg.createdTimestamp,
         channelName: channel.name,
-        messageUrl: msg.url
+        messageUrl: msg.url,
+        hasCodeBlock: msg.content.includes('```') || msg.content.includes('`'),
+        reactionCount: msg.reactions.cache.size
       })));
 
       // Update lastMessageId for pagination.
@@ -223,6 +325,9 @@ module.exports = {
 
       // If we have reached or exceeded the limit, break the loop.
       if (allMessages.length >= limit) break;
+      
+      // If we're filtering by date and the oldest message is older than the cutoff, break the loop
+      if (cutoffTimestamp && messages.last().createdTimestamp < cutoffTimestamp) break;
     }
 
     // Sort messages by timestamp (newest first).
@@ -237,9 +342,10 @@ module.exports = {
    * 
    * @param {Array} messages - Array of message data to display.
    * @param {User} targetUser - The user whose messages are being displayed.
+   * @param {Channel} targetChannel - The channel where messages were found.
    * @returns {Array<EmbedBuilder>} Array of embed pages.
    */
-  createMessageEmbeds(messages, targetUser) {
+  createMessageEmbeds(messages, targetUser, targetChannel) {
     const embeds = [];
     const messagesPerEmbed = MESSAGES_PER_PAGE;
 
@@ -247,7 +353,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(MESSAGES_EMBED_COLOR)
         .setAuthor({
-          name: `Last messages from ${targetUser.username}`,
+          name: `Messages from ${targetUser.username} in #${targetChannel.name}`,
           iconURL: targetUser.displayAvatarURL()
         })
         .setFooter({
@@ -270,12 +376,14 @@ module.exports = {
         let extras = [];
         if (msg.attachments) extras.push(ATTACHMENT_INDICATOR);
         if (msg.embeds) extras.push(EMBED_INDICATOR);
+        if (msg.hasCodeBlock) extras.push('`');
+        if (msg.reactionCount > 0) extras.push(`💬 ${msg.reactionCount}`);
         
         const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
         
         // Format the message with channel, content, and dynamic timestamp.
         embed.addFields({
-          name: `${messageNumber}. ${msg.channelName} ${extraText}`,
+          name: `${messageNumber}. ${extraText}`,
           value: `${MESSAGE_INDICATOR} **Message:** ${content}\n${TIME_INDICATOR} **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
           inline: false
         });
@@ -329,7 +437,7 @@ module.exports = {
    * Sets up the collector for pagination button interactions.
    * 
    * @param {Message} message - The message with the pagination buttons.
-   * @param {Interaction} interaction - The original interaction.
+   * @param {ChatInputCommandInteraction} interaction - The original interaction.
    * @param {Array<EmbedBuilder>} embeds - Array of embed pages.
    * @param {number} startPage - Starting page index.
    * @param {number} totalPages - Total number of pages.
@@ -414,5 +522,33 @@ module.exports = {
         });
       });
     });
+  },
+  
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+    logger.error("Error executing user messages command.", { 
+      error: error.message,
+      stack: error.stack,
+      userTag: interaction.user?.tag,
+      guildName: interaction.guild?.name
+    });
+    
+    try {
+      const replyMethod = (interaction.deferred || interaction.replied) ? 'editReply' : 'reply';
+      
+      await interaction[replyMethod]({ 
+        content: '⚠️ There was an error fetching the messages. Please try again later.', 
+        ephemeral: true 
+      });
+    } catch (err) {
+      logger.error("Failed to send error message to user.", { 
+        error: err.message 
+      });
+    }
   }
 };

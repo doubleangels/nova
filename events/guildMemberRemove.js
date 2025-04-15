@@ -13,20 +13,41 @@ module.exports = {
   name: 'guildMemberRemove',
   async execute(member) {
     try {
-      // Log the start of the removal process with the member's ID.
-      logger.debug("Processing guildMemberRemove event:", { memberId: member.id });
+      // Skip processing for bot accounts
+      if (member.user.bot) {
+        logger.debug("Bot member left; skipping tracking removal:", { botTag: member.user.tag });
+        return;
+      }
       
-      // Log details about the member and guild.
-      logger.info("Member left:", { username: member.user.username, guildName: member.guild.name });
+      // Log the start of the removal process with the member's ID.
+      logger.debug("Processing guildMemberRemove event:", { 
+        memberId: member.id,
+        username: member.user.username,
+        guildName: member.guild.name 
+      });
       
       // Remove the member from the mute tracking database.
-      await removeTrackedMember(member.id);
+      const wasRemoved = await removeTrackedMember(member.id);
       
-      // Log successful removal.
-      logger.debug("Successfully removed tracking data for member:", { memberId: member.id, username: member.user.username });
+      // Log successful removal only if the member was actually being tracked
+      if (wasRemoved) {
+        logger.debug("Successfully removed tracking data for member:", { 
+          memberId: member.id, 
+          username: member.user.username 
+        });
+      } else {
+        logger.debug("Member was not being tracked in mute system:", { 
+          memberId: member.id, 
+          username: member.user.username 
+        });
+      }
     } catch (error) {
       // Log any errors encountered during removal.
-      logger.error("Error processing guildMemberRemove event:", { memberId: member.id, error });
+      logger.error("Error processing guildMemberRemove event:", { 
+        memberId: member.id, 
+        username: member.user?.username || "Unknown",
+        error 
+      });
     }
   }
 };

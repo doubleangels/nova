@@ -3,31 +3,56 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
+const crypto = require('crypto');
+const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
 
 // Configuration constants.
 const YOUTUBE_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YOUTUBE_API_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
+const YOUTUBE_API_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
+const YOUTUBE_API_PLAYLISTS_URL = 'https://www.googleapis.com/youtube/v3/playlists';
 const YOUTUBE_API_TIMEOUT_MS = 5000;
-const YOUTUBE_SEARCH_MAX_RESULTS = '5';
+const YOUTUBE_SEARCH_MAX_RESULTS = 10;
 const YOUTUBE_EMBED_COLOR = 0xFF0000; // YouTube red
 const YOUTUBE_DESCRIPTION_MAX_LENGTH = 150;
 const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000; // 2 minutes
 const YOUTUBE_RELEVANCE_LIKES_WEIGHT = 0.001; // Factor for relevance calculation
 
+// Simple in-memory cache
+const cache = new Map();
+const CACHE_TTL = 1000 * 60 * 10; // 10 minutes
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
-    .setDescription('Search YouTube for videos.')
+    .setDescription('Search YouTube for videos, channels, or playlists.')
     .addStringOption(option =>
       option
         .setName('query')
-        .setDescription('What videos do you want to search for?')
+        .setDescription('What do you want to search for?')
         .setRequired(true)
     )
     .addStringOption(option => {
+      const typeOption = option
+        .setName('type')
+        .setDescription('What type of content do you want to search for?')
+        .setRequired(false);
+      
+      [
+        { name: 'Videos', value: 'video' },
+        { name: 'Channels', value: 'channel' },
+        { name: 'Playlists', value: 'playlist' }
+      ].forEach(choice => {
+        typeOption.addChoices(choice);
+      });
+      
+      return typeOption;
+    })
+    .addStringOption(option => {
       const sortOption = option
         .setName('sort')
-        .setDescription('How do you want to sort the results?');
+        .setDescription('How do you want to sort the results?')
+        .setRequired(false);
       
       [
         { name: 'Relevance', value: 'relevance' },
@@ -43,7 +68,8 @@ module.exports = {
     .addStringOption(option => {
       const durationOption = option
         .setName('duration')
-        .setDescription('How long should the videos be?');
+        .setDescription('How long should the videos be?')
+        .setRequired(false);
       
       [
         { name: 'Any', value: 'any' },
@@ -57,12 +83,6 @@ module.exports = {
       return durationOption;
     }),
     
-  /**
-   * Executes the /youtube command.
-   * 
-   * @param {Interaction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
-   */
   async execute(interaction) {
     try {
       // Defer the reply to allow time for the API calls.
@@ -77,19 +97,20 @@ module.exports = {
       if (!config.googleApiKey) {
         logger.error("YouTube API key is missing in configuration.");
         await interaction.editReply({ 
-          content: '⚠️ YouTube API key is not configured. Please contact the bot administrator.', 
-          ephemeral: true 
+          content: '⚠️ YouTube API key is not configured. Please contact the bot administrator.'
         });
         return;
       }
       
       // Retrieve and format the user's search query and options.
       const query = interaction.options.getString('query');
+      const contentType = interaction.options.getString('type') || 'video';
       const sortMethod = interaction.options.getString('sort') || 'relevance';
       const duration = interaction.options.getString('duration') || 'any';
       
       logger.debug("Processing search request.", { 
         query, 
+        contentType,
         sortMethod, 
         duration,
         userId: interaction.user.id 
@@ -97,356 +118,475 @@ module.exports = {
       
       const formattedQuery = query.trim();
       
-      // Search for videos using the YouTube API.
-      const videoResults = await this.searchYouTubeVideos(formattedQuery, sortMethod, duration);
+      // Check cache for this query
+      const cacheKey = `${contentType}:${formattedQuery}:${sortMethod}:${duration}`;
+      const cachedResults = this.getCachedResults(cacheKey);
       
-      if (!videoResults || videoResults.length === 0) {
-        logger.warn("No video results found.", { query: formattedQuery });
+      let results;
+      if (cachedResults) {
+        logger.debug("Using cached results.", { cacheKey });
+        results = cachedResults;
+      } else {
+        // Search for content using the YouTube API.
+        results = await this.searchYouTube(formattedQuery, contentType, sortMethod, duration);
+        
+        // Cache the results if valid
+        if (results && results.length > 0) {
+          this.cacheResults(cacheKey, results);
+        }
+      }
+      
+      if (!results || results.length === 0) {
+        logger.warn("No results found.", { query: formattedQuery, contentType });
         await interaction.editReply({ 
-          content: `⚠️ No video results found for **${formattedQuery}**. Try another search!`, 
-          ephemeral: true 
+          content: `⚠️ No ${contentType} results found for **${formattedQuery}**. Try another search!`
         });
         return;
       }
       
-      // Create interactive navigation for the search results.
-      await this.createInteractiveNavigation(interaction, videoResults);
+      // Use the paginated results utility instead of custom implementation
+      const itemsToDisplay = results.slice(0, YOUTUBE_SEARCH_MAX_RESULTS);
       
+      // Create a function that generates an embed for a specific index
+      const generateEmbed = (index) => {
+        return this.createContentEmbed(
+          itemsToDisplay[index],
+          contentType,
+          index,
+          itemsToDisplay.length
+        );
+      };
+      
+      // Use the reusable pagination utility with YouTube-specific styling
+      await createPaginatedResults(
+        interaction,
+        itemsToDisplay,
+        generateEmbed,
+        'yt',
+        YOUTUBE_COLLECTOR_TIMEOUT_MS,
+        logger,
+        {
+          buttonStyle: ButtonStyle.Danger, // YouTube red
+          prevLabel: 'Previous',
+          nextLabel: 'Next',
+          prevEmoji: '◀️',
+          nextEmoji: '▶️'
+        }
+      );
       logger.info("YouTube search results sent successfully.", { 
         query: formattedQuery, 
-        resultCount: videoResults.length,
+        contentType,
+        resultCount: results.length,
         userId: interaction.user.id 
       });
       
     } catch (error) {
-      // Log and report any unexpected errors.
-      logger.error("Error in YouTube command.", { 
-        error: error.message, 
-        stack: error.stack,
-        userId: interaction.user?.id 
-      });
-      
-      await interaction.editReply({ 
-        content: '⚠️ An unexpected error occurred. Please try again later.', 
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
 
   /**
-   * Searches for YouTube videos based on the given parameters.
-   * 
-   * @param {string} query - The search query.
-   * @param {string} sortMethod - How to sort the results.
-   * @param {string} duration - Duration filter for videos.
-   * @returns {Promise<Array|null>} - Array of video objects or null on error.
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
    */
-  async searchYouTubeVideos(query, sortMethod, duration) {
+  async handleError(interaction, error) {
+    logger.error("Error executing YouTube command.", { 
+      error: error.message,
+      stack: error.stack,
+      userId: interaction.user?.id
+    });
+    
+    // If the interaction hasn't been replied to yet, reply with an error message
+    if (interaction.deferred && !interaction.replied) {
+      await interaction.editReply({ 
+        content: "⚠️ An error occurred while processing your request. Please try again later."
+      }).catch(err => {
+        logger.error("Failed to send error message.", { error: err.message });
+      });
+    }
+  },
+  
+  /**
+   * Retrieves cached search results if they exist and haven't expired.
+   * @param {string} key - The cache key.
+   * @returns {Array|null} The cached results or null if not found or expired.
+   */
+  getCachedResults(key) {
+    if (cache.has(key)) {
+      const { timestamp, data } = cache.get(key);
+      if (Date.now() - timestamp < CACHE_TTL) {
+        return data;
+      }
+      // Remove expired cache entry
+      cache.delete(key);
+    }
+    return null;
+  },
+  
+  /**
+   * Caches search results for future use.
+   * @param {string} key - The cache key.
+   * @param {Array} data - The data to cache.
+   */
+  cacheResults(key, data) {
+    cache.set(key, {
+      timestamp: Date.now(),
+      data
+    });
+  },
+  
+  /**
+   * Searches YouTube for content based on the provided parameters.
+   * @param {string} query - The search query.
+   * @param {string} contentType - The type of content to search for (video, channel, playlist).
+   * @param {string} sortMethod - The method to sort results by.
+   * @param {string} duration - The duration filter for videos.
+   * @returns {Promise<Array>} The search results.
+   */
+  async searchYouTube(query, contentType, sortMethod, duration) {
     try {
-      // Construct the YouTube API URL with the search parameters.
-      const params = new URLSearchParams({
-        key: config.googleApiKey,
+      // Build search parameters
+      const params = {
         part: 'snippet',
         q: query,
-        type: 'video',
-        maxResults: YOUTUBE_SEARCH_MAX_RESULTS,
-        order: sortMethod
-      });
-      
-      // Add duration parameter only if it's not 'any'.
-      if (duration !== 'any') {
-        params.append('videoDuration', duration);
-      }
-      
-      const requestUrl = `${YOUTUBE_API_SEARCH_URL}?${params.toString()}`;
-      logger.debug("Making YouTube API search request.", { requestUrl });
-      
-      // Make the API request with a timeout.
-      const response = await axios.get(requestUrl, { 
-        timeout: YOUTUBE_API_TIMEOUT_MS 
-      });
-      
-      if (response.status !== 200) {
-        logger.warn("YouTube API returned non-200 status.", { 
-          status: response.status,
-          statusText: response.statusText
-        });
-        return null;
-      }
-      
-      // Parse the JSON response.
-      const data = response.data;
-      
-      // Check if the API returned any items.
-      if (!data.items || data.items.length === 0) {
-        return null;
-      }
-      
-      logger.debug("YouTube search results received.", { 
-        resultCount: data.items.length 
-      });
-      
-      // Get the video IDs from the search results.
-      const videoIds = data.items.map(item => item.id.videoId);
-      
-      // Get detailed video information.
-      return await this.fetchVideoDetails(videoIds);
-      
-    } catch (error) {
-      logger.error("Error searching YouTube.", { 
-        error: error.message, 
-        stack: error.stack 
-      });
-      return null;
-    }
-  },
-
-  /**
-   * Fetches detailed information about specific videos.
-   * 
-   * @param {Array<string>} videoIds - Array of video IDs.
-   * @returns {Promise<Array|null>} - Array of video details or null on error.
-   */
-  async fetchVideoDetails(videoIds) {
-    try {
-      const detailsParams = new URLSearchParams({
+        type: contentType,
+        maxResults: YOUTUBE_SEARCH_MAX_RESULTS * 2, // Get more results than needed for filtering
         key: config.googleApiKey,
-        id: videoIds.join(','),
-        part: 'snippet,statistics,contentDetails'
-      });
+        order: sortMethod,
+        safeSearch: 'moderate'
+      };
       
-      const detailsRequestUrl = `${YOUTUBE_API_VIDEOS_URL}?${detailsParams.toString()}`;
-      logger.debug("Making YouTube API video details request.", { detailsRequestUrl });
-      
-      const detailsResponse = await axios.get(detailsRequestUrl, { 
-        timeout: YOUTUBE_API_TIMEOUT_MS 
-      });
-      
-      if (detailsResponse.status !== 200 || !detailsResponse.data.items) {
-        return null;
+      // Add duration filter for videos if specified
+      if (contentType === 'video' && duration !== 'any') {
+        params.videoDuration = duration;
       }
       
-      const videoDetails = detailsResponse.data.items;
-      logger.debug("Video details received.", { count: videoDetails.length });
-      
-      // Sort videos by a custom relevance algorithm (views + likes).
-      return this.sortVideosByRelevance(videoDetails);
-      
-    } catch (error) {
-      logger.error("Error fetching video details.", { 
-        error: error.message, 
-        stack: error.stack 
+      // Make the API request
+      const response = await axios.get(YOUTUBE_API_SEARCH_URL, {
+        params,
+        timeout: YOUTUBE_API_TIMEOUT_MS
       });
-      return null;
+      
+      if (!response.data || !response.data.items || response.data.items.length === 0) {
+        logger.debug("YouTube API returned no results.", { query, contentType });
+        return [];
+      }
+      
+      // Process and enrich the results based on content type
+      let results = response.data.items;
+      
+      if (contentType === 'video') {
+        // Get additional video details like view count, likes, etc.
+        results = await this.enrichVideoResults(results);
+      } else if (contentType === 'channel') {
+        // Get additional channel details like subscriber count
+        results = await this.enrichChannelResults(results);
+      } else if (contentType === 'playlist') {
+        // Get additional playlist details like item count
+        results = await this.enrichPlaylistResults(results);
+      }
+      
+      return results;
+    } catch (error) {
+      logger.error("YouTube API search failed.", {
+        error: error.message,
+        query,
+        contentType
+      });
+      throw error;
     }
   },
-
+  
   /**
-   * Sorts videos by a custom relevance algorithm.
-   * 
-   * @param {Array} videos - Array of video details.
-   * @returns {Array} - Sorted array of videos.
+   * Enriches video results with additional details.
+   * @param {Array} videos - The video search results.
+   * @returns {Promise<Array>} The enriched video results.
    */
-  sortVideosByRelevance(videos) {
-    return [...videos].sort((a, b) => {
-      const aViews = parseInt(a.statistics.viewCount) || 0;
-      const bViews = parseInt(b.statistics.viewCount) || 0;
-      const aLikes = parseInt(a.statistics.likeCount) || 0;
-      const bLikes = parseInt(b.statistics.likeCount) || 0;
+  async enrichVideoResults(videos) {
+    if (!videos || videos.length === 0) return [];
+    
+    try {
+      // Extract video IDs
+      const videoIds = videos.map(video => video.id.videoId).join(',');
       
-      // Simple algorithm: views × (likes × factor)
-      const aScore = aViews * (aLikes * YOUTUBE_RELEVANCE_LIKES_WEIGHT);
-      const bScore = bViews * (bLikes * YOUTUBE_RELEVANCE_LIKES_WEIGHT);
-      return bScore - aScore;
-    });
-  },
-
-  /**
-   * Creates an interactive navigation interface for the search results.
-   * 
-   * @param {Interaction} interaction - The Discord interaction object.
-   * @param {Array} results - Array of video results.
-   * @returns {Promise<void>}
-   */
-  async createInteractiveNavigation(interaction, results) {
-    // Always use interactive mode for all videos (up to 5).
-    const videosToDisplay = results.slice(0, 5);
-    
-    // Initial state - show the first video.
-    let currentIndex = 0;
-    
-    await interaction.editReply({ 
-      components: this.createArrowButtons(currentIndex, videosToDisplay.length),
-      embeds: [this.createVideoEmbed(videosToDisplay[currentIndex], currentIndex, videosToDisplay.length)]
-    });
-    
-    // Create a button collector.
-    const filter = i => 
-      (i.customId.startsWith('yt_prev_') || 
-       i.customId.startsWith('yt_next_')) && 
-      i.customId.includes(interaction.user.id) &&
-      i.user.id === interaction.user.id;
-    
-    const collector = interaction.channel.createMessageComponentCollector({ 
-      filter, 
-      time: YOUTUBE_COLLECTOR_TIMEOUT_MS
-    });
-    
-    collector.on('collect', async i => {
-      const buttonType = i.customId.split('_')[1];
-      
-      if (buttonType === 'prev') {
-        // Previous button clicked.
-        currentIndex = Math.max(0, currentIndex - 1);
-        logger.debug("User navigated to previous video.", { 
-          userId: i.user.id, 
-          newIndex: currentIndex 
-        });
-      } else if (buttonType === 'next') {
-        // Next button clicked.
-        currentIndex = Math.min(videosToDisplay.length - 1, currentIndex + 1);
-        logger.debug("User navigated to next video.", { 
-          userId: i.user.id, 
-          newIndex: currentIndex 
-        });
-      }
-      
-      await i.update({ 
-        components: this.createArrowButtons(currentIndex, videosToDisplay.length),
-        embeds: [this.createVideoEmbed(videosToDisplay[currentIndex], currentIndex, videosToDisplay.length)]
+      // Get detailed video information
+      const response = await axios.get(YOUTUBE_API_VIDEOS_URL, {
+        params: {
+          part: 'snippet,statistics,contentDetails',
+          id: videoIds,
+          key: config.googleApiKey
+        },
+        timeout: YOUTUBE_API_TIMEOUT_MS
       });
-    });
-    
-    collector.on('end', async (collected, reason) => {
-      if (reason === 'time') {
-        logger.debug("Navigation timeout reached.", { 
-          userId: interaction.user.id, 
-          buttonsPressed: collected.size 
-        });
-        
-        // Disable buttons when timed out.
-        const disabledButtons = this.createDisabledButtons();
-        
-        await interaction.editReply({
-          components: [disabledButtons]
-        }).catch(err => {
-          logger.error("Failed to update timed out message.", { 
-            error: err.message 
-          });
-        });
+      
+      if (!response.data || !response.data.items) {
+        return videos;
       }
-    });
-  },
-
-  /**
-   * Creates navigation buttons for the video carousel.
-   * 
-   * @param {number} currentIndex - Current video index.
-   * @param {number} totalCount - Total number of videos.
-   * @returns {Array} - Array of ActionRowBuilders with button components.
-   */
-  createArrowButtons(currentIndex, totalCount) {
-    // Create arrow buttons for navigation in YouTube red color.
-    const prevButton = new ButtonBuilder()
-      .setCustomId(`yt_prev_${currentIndex}`)
-      .setLabel('◀')
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(currentIndex === 0); // Disable when on first item.
       
-    const nextButton = new ButtonBuilder()
-      .setCustomId(`yt_next_${currentIndex}`)
-      .setLabel('▶')
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(currentIndex === totalCount - 1); // Disable when on last item.
-    
-    const navRow = new ActionRowBuilder().addComponents(prevButton, nextButton);
-    return [navRow];
-  },
-
-  /**
-   * Creates disabled navigation buttons for when the interaction times out.
-   * 
-   * @returns {ActionRowBuilder} - ActionRowBuilder with disabled button components.
-   */
-  createDisabledButtons() {
-    const disabledPrevButton = new ButtonBuilder()
-      .setCustomId('yt_prev_disabled')
-      .setLabel('◀')
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(true);
+      // Combine search results with detailed information
+      const detailedVideos = response.data.items;
       
-    const disabledNextButton = new ButtonBuilder()
-      .setCustomId('yt_next_disabled')
-      .setLabel('▶')
-      .setStyle(ButtonStyle.Danger)
-      .setDisabled(true);
-    
-    return new ActionRowBuilder().addComponents(
-      disabledPrevButton, disabledNextButton
-    );
+      // Map detailed info back to the original search results
+      return videos.map(searchResult => {
+        const detailedInfo = detailedVideos.find(
+          video => video.id === searchResult.id.videoId
+        );
+        
+        if (!detailedInfo) return searchResult;
+        
+        return {
+          ...searchResult,
+          statistics: detailedInfo.statistics,
+          contentDetails: detailedInfo.contentDetails
+        };
+      });
+    } catch (error) {
+      logger.error("Failed to enrich video results.", {
+        error: error.message
+      });
+      return videos;
+    }
   },
-
+  
   /**
-   * Creates an embed for a video.
-   * 
-   * @param {Object} video - Video data object.
-   * @param {number} currentIndex - Current index in the results.
-   * @param {number} totalCount - Total number of results.
-   * @returns {EmbedBuilder} - Discord embed with video information.
+   * Enriches channel results with additional details.
+   * @param {Array} channels - The channel search results.
+   * @returns {Promise<Array>} The enriched channel results.
    */
-  createVideoEmbed(video, currentIndex, totalCount) {
+  async enrichChannelResults(channels) {
+    if (!channels || channels.length === 0) return [];
+    
+    try {
+      // Extract channel IDs
+      const channelIds = channels.map(channel => channel.id.channelId).join(',');
+      
+      // Get detailed channel information
+      const response = await axios.get(YOUTUBE_API_CHANNELS_URL, {
+        params: {
+          part: 'snippet,statistics',
+          id: channelIds,
+          key: config.googleApiKey
+        },
+        timeout: YOUTUBE_API_TIMEOUT_MS
+      });
+      
+      if (!response.data || !response.data.items) {
+        return channels;
+      }
+      
+      // Combine search results with detailed information
+      const detailedChannels = response.data.items;
+      
+      // Map detailed info back to the original search results
+      return channels.map(searchResult => {
+        const detailedInfo = detailedChannels.find(
+          channel => channel.id === searchResult.id.channelId
+        );
+        
+        if (!detailedInfo) return searchResult;
+        
+        return {
+          ...searchResult,
+          statistics: detailedInfo.statistics
+        };
+      });
+    } catch (error) {
+      logger.error("Failed to enrich channel results.", {
+        error: error.message
+      });
+      return channels;
+    }
+  },
+  
+  /**
+   * Enriches playlist results with additional details.
+   * @param {Array} playlists - The playlist search results.
+   * @returns {Promise<Array>} The enriched playlist results.
+   */
+  async enrichPlaylistResults(playlists) {
+    if (!playlists || playlists.length === 0) return [];
+    
+    try {
+      // Extract playlist IDs
+      const playlistIds = playlists.map(playlist => playlist.id.playlistId).join(',');
+      
+      // Get detailed playlist information
+      const response = await axios.get(YOUTUBE_API_PLAYLISTS_URL, {
+        params: {
+          part: 'snippet,contentDetails',
+          id: playlistIds,
+          key: config.googleApiKey
+        },
+        timeout: YOUTUBE_API_TIMEOUT_MS
+      });
+      
+      if (!response.data || !response.data.items) {
+        return playlists;
+      }
+      
+      // Combine search results with detailed information
+      const detailedPlaylists = response.data.items;
+      
+      // Map detailed info back to the original search results
+      return playlists.map(searchResult => {
+        const detailedInfo = detailedPlaylists.find(
+          playlist => playlist.id === searchResult.id.playlistId
+        );
+        
+        if (!detailedInfo) return searchResult;
+        
+        return {
+          ...searchResult,
+          contentDetails: detailedInfo.contentDetails
+        };
+      });
+    } catch (error) {
+      logger.error("Failed to enrich playlist results.", {
+        error: error.message
+      });
+      return playlists;
+    }
+  },
+  
+  /**
+   * Creates an embed for a search result.
+   * @param {Object} item - The search result item.
+   * @param {string} contentType - The type of content.
+   * @param {number} index - The index of the current item.
+   * @param {number} totalItems - The total number of items.
+   * @returns {EmbedBuilder} The generated embed.
+   */
+  createContentEmbed(item, contentType, index, totalItems) {
+    const embed = new EmbedBuilder()
+      .setColor(YOUTUBE_EMBED_COLOR)
+      .setFooter({ 
+        text: `Result ${index + 1} of ${totalItems} • Powered by YouTube`
+      });
+    
+    switch (contentType) {
+      case 'video':
+        return this.createVideoEmbed(item, embed, index, totalItems);
+      case 'channel':
+        return this.createChannelEmbed(item, embed, index, totalItems);
+      case 'playlist':
+        return this.createPlaylistEmbed(item, embed, index, totalItems);
+      default:
+        return embed.setDescription('Unknown content type');
+    }
+  },
+  
+  /**
+   * Creates an embed for a video search result.
+   * @param {Object} video - The video search result.
+   * @param {EmbedBuilder} embed - The embed builder.
+   * @param {number} index - The index of the current item.
+   * @param {number} totalItems - The total number of items.
+   * @returns {EmbedBuilder} The generated embed.
+   */
+  createVideoEmbed(video, embed, index, totalItems) {
     const snippet = video.snippet;
     const statistics = video.statistics || {};
+    const videoId = video.id.videoId;
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // Extract video details with fallbacks.
-    const title = snippet.title || "No Title";
-    const description = snippet.description || "No Description";
-    const channelTitle = snippet.channelTitle || "Unknown Channel";
-    const publishedAt = snippet.publishedAt;
-    const viewCount = parseInt(statistics.viewCount) || 0;
-    const likeCount = parseInt(statistics.likeCount) || 0;
-    const duration = this.formatDuration(video.contentDetails?.duration || "PT0S");
-    const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
-    const thumbnail = snippet.thumbnails.high?.url || snippet.thumbnails.default?.url;
+    // Format view count and likes if available
+    const viewCount = statistics.viewCount ? 
+      `👁️ ${parseInt(statistics.viewCount).toLocaleString()} views` : '';
+    const likeCount = statistics.likeCount ? 
+      `👍 ${parseInt(statistics.likeCount).toLocaleString()} likes` : '';
+    const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
     
-    const truncatedDescription = description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH ? 
-      `${description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH)}...` : 
-      description;
+    // Format the description, truncating if necessary
+    let description = snippet.description || 'No description available';
+    if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
+      description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
+    }
     
-    return new EmbedBuilder()
-      .setTitle(`🎬 ${title}`)
-      .setDescription(truncatedDescription)
+    // Format the upload date
+    const uploadDate = snippet.publishedAt ? 
+      `📅 ${new Date(snippet.publishedAt).toLocaleDateString()}` : '';
+    
+    return embed
+      .setTitle(`🎬 ${snippet.title}`)
       .setURL(videoUrl)
-      .setColor(YOUTUBE_EMBED_COLOR)
-      .addFields(
-        { name: "👁️ Views", value: viewCount.toLocaleString(), inline: true },
-        { name: "👍 Likes", value: likeCount.toLocaleString(), inline: true },
-        { name: "⏱️ Duration", value: duration, inline: true },
-        { name: "📅 Published", value: new Date(publishedAt).toLocaleDateString(), inline: true },
-        { name: "👤 Channel", value: channelTitle, inline: true }
-      )
-      .setImage(thumbnail)
-      .setFooter({ 
-        text: `Result ${currentIndex + 1} of ${totalCount} • Powered by YouTube Data API`
+      .setDescription(`${description}\n\n${stats}\n${uploadDate}`)
+      .setImage(thumbnailUrl)
+      .setAuthor({
+        name: snippet.channelTitle,
+        url: `https://www.youtube.com/channel/${snippet.channelId}`
       });
   },
-
+  
   /**
-   * Formats video duration from ISO 8601 format to a human-readable string.
-   * 
-   * @param {string} isoDuration - Duration in ISO 8601 format (e.g., "PT1H30M15S").
-   * @returns {string} - Formatted duration string (e.g., "1:30:15").
+   * Creates an embed for a channel search result.
+   * @param {Object} channel - The channel search result.
+   * @param {EmbedBuilder} embed - The embed builder.
+   * @param {number} index - The index of the current item.
+   * @param {number} totalItems - The total number of items.
+   * @returns {EmbedBuilder} The generated embed.
    */
-  formatDuration(isoDuration) {
-    const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return "Unknown";
+  createChannelEmbed(channel, embed, index, totalItems) {
+    const snippet = channel.snippet;
+    const statistics = channel.statistics || {};
+    const channelId = channel.id.channelId;
+    const channelUrl = `https://www.youtube.com/channel/${channelId}`;
+    const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    const hours = match[1] ? `${match[1]}:` : '';
-    const minutes = match[2] ? 
-      (hours && match[2].padStart(2, '0') || match[2]) + ':' : 
-      '0:';
-    const seconds = match[3] ? match[3].padStart(2, '0') : '00';
+    // Format subscriber count if available
+    const subscriberCount = statistics.subscriberCount ? 
+      `👥 ${parseInt(statistics.subscriberCount).toLocaleString()} subscribers` : '';
+    const videoCount = statistics.videoCount ? 
+      `🎬 ${parseInt(statistics.videoCount).toLocaleString()} videos` : '';
+    const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
     
-    return `${hours}${minutes}${seconds}`;
+    // Format the description, truncating if necessary
+    let description = snippet.description || 'No description available';
+    if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
+      description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
+    }
+    
+    return embed
+      .setTitle(`📺 ${snippet.title}`)
+      .setURL(channelUrl)
+      .setDescription(`${description}\n\n${stats}`)
+      .setThumbnail(thumbnailUrl);
+  },
+  
+  /**
+   * Creates an embed for a playlist search result.
+   * @param {Object} playlist - The playlist search result.
+   * @param {EmbedBuilder} embed - The embed builder.
+   * @param {number} index - The index of the current item.
+   * @param {number} totalItems - The total number of items.
+   * @returns {EmbedBuilder} The generated embed.
+   */
+  createPlaylistEmbed(playlist, embed, index, totalItems) {
+    const snippet = playlist.snippet;
+    const contentDetails = playlist.contentDetails || {};
+    const playlistId = playlist.id.playlistId;
+    const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
+    const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
+    
+    // Format item count if available
+    const itemCount = contentDetails.itemCount ? 
+      `🎬 ${contentDetails.itemCount} videos` : '';
+    
+    // Format the description, truncating if necessary
+    let description = snippet.description || 'No description available';
+    if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
+      description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
+    }
+    
+    return embed
+      .setTitle(`📋 ${snippet.title}`)
+      .setURL(playlistUrl)
+      .setDescription(`${description}\n\n${itemCount}`)
+      .setThumbnail(thumbnailUrl)
+      .setAuthor({
+        name: snippet.channelTitle,
+        url: `https://www.youtube.com/channel/${snippet.channelId}`
+      });
   }
 };

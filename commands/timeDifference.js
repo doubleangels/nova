@@ -27,22 +27,15 @@ module.exports = {
     
   /**
    * Executes the /timedifference command.
-   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
     try {
       // Check if Google API key is configured.
-      if (!config.googleApiKey) {
-        logger.error("Google API key is not configured in the application.", {
-          command: 'timedifference',
-          userId: interaction.user.id
+      if (!this.validateConfiguration()) {
+        return await interaction.reply({ 
+          content: '⚠️ Google API key is not configured. This command is currently unavailable.'
         });
-        
-        await interaction.reply({ 
-          content: '⚠️ Google API key is not configured. This command is currently unavailable.', 
-          ephemeral: true 
-        });
-        return;
       }
       
       // Defer reply to allow time for processing.
@@ -57,58 +50,24 @@ module.exports = {
         place2
       });
 
-      // Retrieve UTC offsets for both places in parallel.
-      const [offset1Result, offset2Result] = await Promise.all([
-        getUtcOffset(place1),
-        getUtcOffset(place2)
-      ]);
+      // Get time difference information
+      const timeDiffResult = await this.calculateTimeDifference(place1, place2);
       
-      // Handle specific errors for each place.
-      if (offset1Result.error) {
-        logger.warn("Failed to retrieve timezone for the first location.", {
-          place: place1,
-          errorType: offset1Result.errorType,
-          userId: interaction.user.id
+      if (timeDiffResult.error) {
+        return await interaction.editReply({
+          content: timeDiffResult.message
         });
-        
-        await interaction.editReply({
-          content: formatErrorMessage(place1, offset1Result.errorType),
-          ephemeral: true
-        });
-        return;
       }
       
-      if (offset2Result.error) {
-        logger.warn("Failed to retrieve timezone for the second location.", {
-          place: place2,
-          errorType: offset2Result.errorType,
-          userId: interaction.user.id
-        });
-        
-        await interaction.editReply({
-          content: formatErrorMessage(place2, offset2Result.errorType),
-          ephemeral: true
-        });
-        return;
-      }
-
-      // Calculate the absolute time difference.
-      const timeDiff = Math.abs(offset1Result.offset - offset2Result.offset);
-      
-      // Format the place names (trim and capitalize first letter).
-      const formattedPlace1 = formatPlaceName(place1);
-      const formattedPlace2 = formatPlaceName(place2);
-
-      // Create and send the reply message.
-      const message = `⏳ The time difference between **${formattedPlace1}** and **${formattedPlace2}** is **${timeDiff} hours**.`;
-        
-      await interaction.editReply(message);
-      
+      // Create and send the reply message
+      await interaction.editReply(timeDiffResult.message);
       logger.info("Time difference calculation completed successfully.", {
         userId: interaction.user.id,
-        place1: formattedPlace1,
-        place2: formattedPlace2,
-        timeDiff
+        place1: timeDiffResult.formattedPlace1,
+        place2: timeDiffResult.formattedPlace2,
+        timeDiff: timeDiffResult.timeDiff,
+        timeZone1: timeDiffResult.timeZone1,
+        timeZone2: timeDiffResult.timeZone2
       });
       
     } catch (error) {
@@ -119,9 +78,132 @@ module.exports = {
       });
       
       await interaction.editReply({
-        content: '⚠️ An unexpected error occurred. Please try again later.',
-        ephemeral: true
+        content: '⚠️ An unexpected error occurred. Please try again later.'
       });
+    }
+  },
+  
+  /**
+   * Validates that the required configuration is available.
+   * @returns {boolean} True if configuration is valid, false otherwise.
+   */
+  validateConfiguration() {
+    if (!config.googleApiKey) {
+      logger.error("Google API key is not configured in the application.", {
+        command: 'timedifference'
+      });
+      return false;
+    }
+    return true;
+  },
+  
+  /**
+   * Calculates the time difference between two places.
+   * @param {string} place1 - The first place name.
+   * @param {string} place2 - The second place name.
+   * @returns {Promise<Object>} The time difference result.
+   */
+  async calculateTimeDifference(place1, place2) {
+    // Retrieve UTC offsets for both places in parallel
+    const [offset1Result, offset2Result] = await Promise.all([
+      getUtcOffset(place1),
+      getUtcOffset(place2)
+    ]);
+    
+    // Handle specific errors for each place
+    if (offset1Result.error) {
+      logger.warn("Failed to retrieve timezone for the first location.", {
+        place: place1,
+        errorType: offset1Result.errorType
+      });
+      
+      return {
+        error: true,
+        message: formatErrorMessage(place1, offset1Result.errorType)
+      };
+    }
+
+    if (offset2Result.error) {
+      logger.warn("Failed to retrieve timezone for the second location.", {
+        place: place2,
+        errorType: offset2Result.errorType
+      });
+      
+      return {
+        error: true,
+        message: formatErrorMessage(place2, offset2Result.errorType)
+      };
+    }
+
+    // Format the place names (trim and capitalize first letter)
+    const formattedPlace1 = formatPlaceName(place1);
+    const formattedPlace2 = formatPlaceName(place2);
+    
+    // Calculate the time difference (keeping the sign)
+    const rawTimeDiff = offset1Result.offset - offset2Result.offset;
+    const timeDiff = Math.abs(rawTimeDiff);
+    
+    // Determine which place is ahead
+    const aheadPlace = rawTimeDiff > 0 ? formattedPlace1 : 
+                      rawTimeDiff < 0 ? formattedPlace2 : null;
+    
+    // Format the time difference for display
+    const formattedTimeDiff = this.formatTimeDifference(timeDiff);
+    
+    // Create the response message
+    let message = `⏳ **Time Difference Information:**\n\n`;
+    
+    // Add time zone information
+    message += `• **${formattedPlace1}**: ${this.formatTimeZone(offset1Result)}\n`;
+    message += `• **${formattedPlace2}**: ${this.formatTimeZone(offset2Result)}\n\n`;
+    
+    // Add the time difference
+    if (rawTimeDiff === 0) {
+      message += `**${formattedPlace1}** and **${formattedPlace2}** are in the same time zone.`;
+    } else {
+      message += `The time difference is **${formattedTimeDiff}**.`;
+      message += `\n**${aheadPlace}** is ahead.`;
+    }
+    
+    return {
+      error: false,
+      message,
+      formattedPlace1,
+      formattedPlace2,
+      timeDiff,
+      timeZone1: offset1Result.timeZoneName,
+      timeZone2: offset2Result.timeZoneName
+    };
+  },
+  
+  /**
+   * Formats a time zone for display.
+   * @param {Object} offsetResult - The offset result from getUtcOffset.
+   * @returns {string} The formatted time zone string.
+   */
+  formatTimeZone(offsetResult) {
+    const sign = offsetResult.offset >= 0 ? '+' : '-';
+    const absOffset = Math.abs(offsetResult.offset);
+    const hours = Math.floor(absOffset);
+    const minutes = Math.round((absOffset - hours) * 60);
+    
+    const formattedOffset = `UTC${sign}${hours}${minutes > 0 ? `:${minutes.toString().padStart(2, '0')}` : ''}`;
+    return `${formattedOffset} (${offsetResult.timeZoneName})`;
+  },
+  
+  /**
+   * Formats a time difference for display.
+   * @param {number} timeDiff - The time difference in hours.
+   * @returns {string} The formatted time difference string.
+   */
+  formatTimeDifference(timeDiff) {
+    const hours = Math.floor(timeDiff);
+    const minutes = Math.round((timeDiff - hours) * 60);
+    
+    if (minutes === 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    } else {
+      return `${hours} hour${hours !== 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}`;
     }
   }
 };

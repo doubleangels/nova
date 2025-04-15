@@ -28,7 +28,7 @@ module.exports = {
   
   /**
    * Executes the /anime command.
-   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
     try {
@@ -44,87 +44,31 @@ module.exports = {
 
       // Defer reply to allow additional processing time.
       await interaction.deferReply();
-      logger.info("Anime search requested.", { user: interaction.user.tag });
+      logger.info("Anime search requested.", { 
+        userId: interaction.user.id, 
+        userTag: interaction.user.tag 
+      });
 
       // Retrieve and format the anime title.
       const titleQuery = interaction.options.getString('title');
       logger.debug("Processing search query.", { titleQuery });
       const formattedTitle = titleQuery.trim();
 
-      // Prepare request components.
-      const searchUrl = `${MAL_API_BASE_URL}/anime?q=${encodeURIComponent(formattedTitle)}&limit=${SEARCH_LIMIT}`;
-      const headers = { "X-MAL-CLIENT-ID": config.malClientId };
+      // Search for anime and get details
+      const animeData = await this.searchAndGetAnimeDetails(formattedTitle);
       
-      // Perform the search request using axios.
-      logger.debug("Making MAL search request.", { searchUrl });
-      const searchResponse = await axios.get(searchUrl, { headers });
-      
-      if (searchResponse.status === 200) {
-        const searchData = searchResponse.data;
-        
-        // Check for results.
-        if (searchData.data && searchData.data.length > 0) {
-          const animeNode = searchData.data[0].node;
-          const animeId = animeNode.id;
-          const animeTitle = animeNode.title || "Unknown";
-          const imageUrl = animeNode.main_picture ? animeNode.main_picture.medium : null;
-          const malLink = animeId ? `${MAL_WEBSITE_URL}/${animeId}` : "N/A";
-
-          // Construct the details URL.
-          const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-          
-          // Request detailed anime information.
-          logger.debug("Fetching anime details.", { animeId });
-          const detailsResponse = await axios.get(detailsUrl, { headers });
-          
-          if (detailsResponse.status === 200) {
-            const detailsData = detailsResponse.data;
-            const synopsis = detailsData.synopsis || "No synopsis available.";
-            const rating = detailsData.mean || "N/A";
-            const genresArray = detailsData.genres || [];
-            const genres = genresArray.length > 0 ? genresArray.map(g => g.name).join(", ") : "Unknown";
-            const releaseDate = detailsData.start_date ? dayjs(detailsData.start_date).format('YYYY') : "Unknown";
-            
-            logger.debug("Retrieved anime details successfully.", { animeTitle });
-
-            // Create an embed for the anime details.
-            const embed = new EmbedBuilder()
-              .setTitle(`📺 **${animeTitle} (${releaseDate})**`)
-              .setDescription(`📜 **Synopsis:** ${synopsis}`)
-              .setColor(MAL_EMBED_COLOR)
-              .addFields(
-                { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
-                { name: "⭐ MAL Rating", value: `🌟 ${rating}`, inline: true },
-                { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
-              )
-              .setFooter({ text: "Powered by MyAnimeList API" });
-            
-            if (imageUrl) {
-              embed.setThumbnail(imageUrl);
-            }
-            
-            // Send the embed back to the user.
-            await interaction.editReply({ embeds: [embed] });
-            logger.info("Anime information sent successfully.", { animeTitle, userId: interaction.user.id });
-          } else {
-            logger.warn("Failed to retrieve anime details.", { status: detailsResponse.status, animeId });
-            await interaction.editReply({
-              content: "⚠️ Error fetching additional anime details. Please try again later.",
-              ephemeral: true
-            });
-          }
-        } else {
-          logger.info("No anime results found for query.", { query: formattedTitle });
-          await interaction.editReply({
-            content: `⚠️ No anime found for **${formattedTitle}**. Try another title!`,
-            ephemeral: true
-          });
-        }
+      // Create and send the embed
+      if (animeData) {
+        const embed = this.createAnimeEmbed(animeData);
+        await interaction.editReply({ embeds: [embed] });
+        logger.info("Anime information sent successfully.", { 
+          animeTitle: animeData.title, 
+          userId: interaction.user.id 
+        });
       } else {
-        logger.warn("MAL API search returned an error status.", { status: searchResponse.status });
+        logger.info("No anime results found for query.", { query: formattedTitle });
         await interaction.editReply({
-          content: `⚠️ Error: MAL API returned status code ${searchResponse.status}.`,
-          ephemeral: true
+          content: `⚠️ No anime found for **${formattedTitle}**. Try another title!`
         });
       }
     } catch (error) {
@@ -136,15 +80,104 @@ module.exports = {
       // Determine if the interaction can still be replied to.
       if (interaction.deferred) {
         await interaction.editReply({
-          content: "⚠️ An unexpected error occurred. Please try again later.",
-          ephemeral: true
+          content: `⚠️ Error: ${this.getErrorMessage(error)}`
         });
       } else {
         await interaction.reply({
-          content: "⚠️ An unexpected error occurred. Please try again later.",
+          content: `⚠️ Error: ${this.getErrorMessage(error)}`,
           ephemeral: true
         });
       }
     }
+  },
+
+  /**
+   * Searches for an anime and gets its details.
+   * @param {string} title - The anime title to search for.
+   * @returns {Object|null} - The anime data or null if not found.
+   */
+  async searchAndGetAnimeDetails(title) {
+    const headers = { "X-MAL-CLIENT-ID": config.malClientId };
+    const searchUrl = `${MAL_API_BASE_URL}/anime?q=${encodeURIComponent(title)}&limit=${SEARCH_LIMIT}`;
+    
+    logger.debug("Making MAL search request.", { searchUrl });
+    const searchResponse = await axios.get(searchUrl, { headers });
+    
+    if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
+      return null;
+    }
+    
+    const animeNode = searchResponse.data.data[0].node;
+    const animeId = animeNode.id;
+    
+    // Construct the details URL.
+    const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
+    
+    // Request detailed anime information.
+    logger.debug("Fetching anime details.", { animeId });
+    const detailsResponse = await axios.get(detailsUrl, { headers });
+    
+    if (detailsResponse.status !== 200) {
+      throw new Error(`Failed to retrieve anime details. Status: ${detailsResponse.status}`);
+    }
+    
+    const detailsData = detailsResponse.data;
+    return {
+      id: animeId,
+      title: detailsData.title || "Unknown",
+      synopsis: detailsData.synopsis || "No synopsis available.",
+      rating: detailsData.mean || "N/A",
+      genres: detailsData.genres || [],
+      releaseDate: detailsData.start_date || null,
+      imageUrl: animeNode.main_picture ? animeNode.main_picture.medium : null
+    };
+  },
+
+  /**
+   * Creates an embed for anime details.
+   * @param {Object} animeData - The anime data.
+   * @returns {EmbedBuilder} - The created embed.
+   */
+  createAnimeEmbed(animeData) {
+    const malLink = `${MAL_WEBSITE_URL}/${animeData.id}`;
+    const genres = animeData.genres.length > 0 
+      ? animeData.genres.map(g => g.name).join(", ") 
+      : "Unknown";
+    const releaseDate = animeData.releaseDate 
+      ? dayjs(animeData.releaseDate).format('YYYY') 
+      : "Unknown";
+    
+    const embed = new EmbedBuilder()
+      .setTitle(`📺 **${animeData.title} (${releaseDate})**`)
+      .setDescription(`📜 **Synopsis:** ${animeData.synopsis}`)
+      .setColor(MAL_EMBED_COLOR)
+      .addFields(
+        { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
+        { name: "⭐ MAL Rating", value: `🌟 ${animeData.rating}`, inline: true },
+        { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
+      )
+      .setFooter({ text: "Powered by MyAnimeList API" });
+    
+    if (animeData.imageUrl) {
+      embed.setThumbnail(animeData.imageUrl);
+    }
+    
+    return embed;
+  },
+
+  /**
+   * Gets a user-friendly error message.
+   * @param {Error} error - The error object.
+   * @returns {string} - A user-friendly error message.
+   */
+  getErrorMessage(error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        return `API error: ${error.response.status} - ${error.response.statusText}`;
+      } else if (error.request) {
+        return "Network error: Unable to reach MyAnimeList. Please try again later.";
+      }
+    }
+    return "An unexpected error occurred. Please try again later.";
   }
 };

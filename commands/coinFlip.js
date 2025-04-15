@@ -6,6 +6,7 @@ const logger = require('../logger')(path.basename(__filename));
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
 const HEADS_PROBABILITY = 0.5;
+const COIN_EMOJI = '🪙';
 
 module.exports = {
     /**
@@ -39,7 +40,9 @@ module.exports = {
             });
 
             // Reply to the user with the result (public message).
-            await interaction.editReply({ content: `🪙 The coin landed on **${result}**!` });
+            await interaction.editReply({ 
+                content: `${COIN_EMOJI} The coin landed on **${result}**!` 
+            });
             
             logger.info("Coinflip command completed successfully.", {
                 userId: interaction.user.id,
@@ -50,12 +53,13 @@ module.exports = {
                 error: error.message,
                 stack: error.stack,
                 userId: interaction.user?.id,
-                guildId: interaction.guild?.id
+                guildId: interaction.guild?.id,
+                channelId: interaction.channel?.id
             });
             
+            // Keep consistency with non-ephemeral responses
             await interaction.editReply({
-                content: "⚠️ An unexpected error occurred. Please try again later.",
-                ephemeral: true
+                content: "⚠️ An unexpected error occurred. Please try again later."
             });
         }
     }

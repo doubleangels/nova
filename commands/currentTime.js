@@ -3,14 +3,18 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+const advancedFormat = require('dayjs/plugin/advancedFormat');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, formatErrorMessage } = require('../utils/locationUtils');
 
 // Configuration constants.
 const EMBED_COLOR = 0x1D4ED8;
 
-// Extend dayjs with UTC plugin.
+// Extend dayjs with plugins.
 dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(advancedFormat);
 
 /**
  * Module for the /currenttime command.
@@ -29,7 +33,7 @@ module.exports = {
     
   /**
    * Executes the /currenttime command.
-   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
     try {
@@ -37,11 +41,10 @@ module.exports = {
       await interaction.deferReply();
       
       // Check if Google API key is configured.
-      if (!config.googleApiKey) {
+      if (!this.validateConfiguration()) {
         logger.error("Google API key is not configured.");
         await interaction.editReply({ 
-          content: "⚠️ Google API key is not configured. Please contact the bot administrator.", 
-          ephemeral: true 
+          content: "⚠️ Google API key is not configured. Please contact the bot administrator."
         });
         return;
       }
@@ -53,62 +56,23 @@ module.exports = {
         place: place 
       });
       
-      // Step 1: Get geocoding data for the place.
-      const geocodeResult = await getGeocodingData(place);
+      // Get location and time data
+      const timeData = await this.getLocationTimeData(place);
       
-      if (geocodeResult.error) {
+      if (timeData.error) {
         await interaction.editReply({ 
-          content: formatErrorMessage(place, geocodeResult.type), 
-          ephemeral: true 
+          content: formatErrorMessage(place, timeData.type)
         });
         return;
       }
       
-      const { location, formattedAddress } = geocodeResult;
-      
-      // Get the current timestamp in seconds.
-      const timestamp = dayjs().unix();
-      
-      // Step 2: Get timezone data for the location.
-      const timezoneResult = await getTimezoneData(location, timestamp);
-      
-      if (timezoneResult.error) {
-        await interaction.editReply({ 
-          content: formatErrorMessage(place, timezoneResult.type), 
-          ephemeral: true 
-        });
-        return;
-      }
-      
-      // Extract timezone details.
-      const timezoneName = timezoneResult.timezoneId;
-      const rawOffset = timezoneResult.rawOffset / 3600; // Convert seconds to hours.
-      const dstOffset = timezoneResult.dstOffset / 3600; // Convert seconds to hours.
-      const utcOffset = rawOffset + dstOffset;   // Total UTC offset in hours.
-      const isDST = dstOffset > 0 ? "Yes" : "No";
-      
-      // Calculate the local time by adding the UTC offset to the current UTC time.
-      const localTime = dayjs.utc().add(utcOffset, 'hour');
-      const formattedTime = localTime.format('YYYY-MM-DD HH:mm:ss');
-      
-      // Build the embed message with timezone information.
-      const embed = new EmbedBuilder()
-        .setTitle(`🕒 Current Time in ${formattedAddress}`)
-        .setDescription(`⏰ **${formattedTime}** (UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset})`)
-        .setColor(EMBED_COLOR)
-        .addFields(
-          { name: "🌍 Timezone", value: timezoneName, inline: true },
-          { name: "🕰️ UTC Offset", value: `UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset}`, inline: true },
-          { name: "🌞 Daylight Savings", value: isDST, inline: true }
-        )
-        .setFooter({ text: "Powered by Google Maps Time Zone API" });
-      
-      // Send the embed as the reply.
+      // Build and send the embed with time information
+      const embed = this.createTimeEmbed(timeData);
       await interaction.editReply({ embeds: [embed] });
       logger.info("Current time lookup successful.", { 
         userId: interaction.user.id, 
         place: place,
-        timezone: timezoneName
+        timezone: timeData.timezoneName
       });
     } catch (error) {
       logger.error("Error in /currenttime command.", { 
@@ -116,9 +80,91 @@ module.exports = {
         stack: error.stack 
       });
       await interaction.editReply({ 
-        content: "⚠️ An unexpected error occurred. Please try again later.", 
-        ephemeral: true 
+        content: "⚠️ An unexpected error occurred. Please try again later."
       });
     }
+  },
+  
+  /**
+   * Validates that the required configuration is available.
+   * @returns {boolean} True if configuration is valid, false otherwise.
+   */
+  validateConfiguration() {
+    return !!config.googleApiKey;
+  },
+  
+  /**
+   * Gets location and time data for a specified place.
+   * @param {string} place - The place to look up.
+   * @returns {Object} An object with location and time data or an error.
+   */
+  async getLocationTimeData(place) {
+    // Step 1: Get geocoding data for the place.
+    const geocodeResult = await getGeocodingData(place);
+    
+    if (geocodeResult.error) {
+      return geocodeResult;
+    }
+    
+    const { location, formattedAddress } = geocodeResult;
+    
+    // Get the current timestamp in seconds.
+    const timestamp = dayjs().unix();
+    
+    // Step 2: Get timezone data for the location.
+    const timezoneResult = await getTimezoneData(location, timestamp);
+    
+    if (timezoneResult.error) {
+      return timezoneResult;
+    }
+    
+    // Extract timezone details.
+    const timezoneName = timezoneResult.timezoneId;
+    const rawOffset = timezoneResult.rawOffset / 3600; // Convert seconds to hours.
+    const dstOffset = timezoneResult.dstOffset / 3600; // Convert seconds to hours.
+    const utcOffset = rawOffset + dstOffset;   // Total UTC offset in hours.
+    const isDST = dstOffset > 0 ? "Yes" : "No";
+    
+    // Calculate the local time by adding the UTC offset to the current UTC time.
+    const localTime = dayjs.utc().add(utcOffset, 'hour');
+    const formattedTime = localTime.format('YYYY-MM-DD HH:mm:ss');
+    const formattedDate = localTime.format('dddd, MMMM D, YYYY');
+    
+    return {
+      formattedAddress,
+      timezoneName,
+      utcOffset,
+      isDST,
+      localTime,
+      formattedTime,
+      formattedDate
+    };
+  },
+
+  /**
+   * Creates an embed with time information.
+   * @param {Object} timeData - The time data to display.
+   * @returns {EmbedBuilder} The created embed.
+   */
+  createTimeEmbed(timeData) {
+    const {
+      formattedAddress,
+      timezoneName,
+      utcOffset,
+      isDST,
+      formattedTime,
+      formattedDate
+    } = timeData;
+    
+    return new EmbedBuilder()
+      .setTitle(`🕒 Current Time in ${formattedAddress}`)
+      .setDescription(`⏰ **${formattedTime}**\n📅 ${formattedDate}`)
+      .setColor(EMBED_COLOR)
+      .addFields(
+        { name: "🌍 Timezone", value: timezoneName, inline: true },
+        { name: "🕰️ UTC Offset", value: `UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset}`, inline: true },
+        { name: "🌞 Daylight Savings", value: isDST, inline: true }
+      )
+      .setFooter({ text: "Powered by Google Maps Time Zone API" });
   }
 };
