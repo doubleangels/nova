@@ -1,37 +1,27 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger.js')(path.basename(__filename));
-const { setUserTimezone, getUserTimezone, removeUserTimezone } = require('../utils/database.js');
+const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 
 module.exports = {
-  // Define the slash command using Discord.js builder.
+  // This defines the slash command structure using Discord.js builder.
   data: new SlashCommandBuilder()
       .setName('timezone')
       .setDescription('Manage timezone settings for auto-timezone features.')
       .addSubcommand(subcommand =>
           subcommand
               .setName('set')
-              .setDescription('Set your timezone based on a location')
+              .setDescription('Set your timezone based on a location.')
               .addStringOption(option =>
                   option.setName('place')
-                      .setDescription('What place do you want to use for timezone? (e.g., Tokyo, London, New York)')
+                      .setDescription('What place do you want to to set your timezone? (e.g., Tokyo, London, New York)')
                       .setRequired(true)
               )
               .addUserOption(option =>
                   option.setName('user')
                       .setDescription('What user do you want to set the timezone for? (Admin only)')
-                      .setRequired(false)
-              )
-      )
-      .addSubcommand(subcommand =>
-          subcommand
-              .setName('remove')
-              .setDescription('Remove your timezone setting')
-              .addUserOption(option =>
-                  option.setName('user')
-                      .setDescription('What user do you want to remove the timezone for? (Admin only)')
                       .setRequired(false)
               )
       )
@@ -61,16 +51,14 @@ module.exports = {
               subcommand
           });
           
-          // Route to the appropriate subcommand handler
+          // We route to the appropriate subcommand handler based on the user's choice.
           if (subcommand === 'set') {
               await this.handleSetTimezone(interaction);
-          } else if (subcommand === 'remove') {
-              await this.handleRemoveTimezone(interaction);
           } else if (subcommand === 'status') {
               await this.handleTimezoneStatus(interaction);
           }
       } catch (error) {
-          // Handle any unexpected errors.
+          // We handle any unexpected errors that occur during command execution.
           logger.error("Error executing timezone command.", {
               error: error.message,
               stack: error.stack,
@@ -78,7 +66,7 @@ module.exports = {
               userTag: interaction.user.tag
           });
           
-          // Ensure we respond even if an error occurs
+          // We ensure we respond even if an error occurs to provide feedback.
           try {
               const replyMethod = interaction.deferred ? interaction.editReply : interaction.reply;
               await replyMethod.call(interaction, {
@@ -101,7 +89,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleSetTimezone(interaction) {
-      // Check if Google API key is configured.
+      // We check if the Google API key is configured before proceeding.
       if (!config.googleApiKey) {
           logger.error("Google API key is not configured in the application.", {
               command: 'timezone',
@@ -115,52 +103,55 @@ module.exports = {
           return;
       }
       
-      // Defer the reply to give time for API calls to complete.
-      await interaction.deferReply({ ephemeral: true });
+      // We defer the reply to give time for API calls to complete.
+      await interaction.deferReply();
       
-      // Get command options.
+      // We get the command options provided by the user.
       const place = interaction.options.getString('place', true).trim();
       const targetUser = interaction.options.getUser('user');
       
-      // Check permissions and get target user info
+      // We check permissions and get target user info before proceeding.
       const targetUserInfo = await this.validateUserPermissions(interaction, targetUser);
       if (!targetUserInfo.valid) {
           await interaction.editReply({
-              content: targetUserInfo.message
+              content: targetUserInfo.message,
+              ephemeral: true
           });
           return;
       }
       
       const { memberId, memberTag, isAdminAction } = targetUserInfo;
       
-      // Get the current timezone if it exists
+      // We get the current timezone if it exists for reference.
       const currentTimezone = await getUserTimezone(memberId);
       
-      // Step 1: Geocode the place name to coordinates.
+      // Step 1: We geocode the place name to coordinates using Google's API.
       const geocodeResult = await getGeocodingData(place);
       
       if (geocodeResult.error) {
           await interaction.editReply({ 
-              content: formatErrorMessage(place, geocodeResult.type) 
+              content: formatErrorMessage(place, geocodeResult.type),
+              ephemeral: true
           });
           return;
       }
       
       const { location, formattedAddress } = geocodeResult;
       
-      // Step 2: Get the timezone for the coordinates.
+      // Step 2: We get the timezone for the coordinates from the API.
       const timezoneResult = await getTimezoneData(location);
       
       if (timezoneResult.error) {
           await interaction.editReply({ 
-              content: formatErrorMessage(place, timezoneResult.type) 
+              content: formatErrorMessage(place, timezoneResult.type),
+              ephemeral: true
           });
           return;
       }
       
       const { timezoneId } = timezoneResult;
       
-      // Step 3: Validate the timezone identifier.
+      // Step 3: We validate that the timezone identifier is recognized by JavaScript.
       if (!isValidTimezone(timezoneId)) {
           logger.warn("Invalid timezone identifier returned by API.", {
               timezoneId,
@@ -169,12 +160,13 @@ module.exports = {
           });
           
           await interaction.editReply({
-              content: `⚠️ The timezone identifier returned (${timezoneId}) is not valid. Please try a different location.`
+              content: `⚠️ The timezone identifier returned (${timezoneId}) is not valid. Please try a different location.`,
+              ephemeral: true
           });
           return;
       }
       
-      // Step 4: Store the timezone in the database.
+      // Step 4: We store the timezone in the database for future use.
       await setUserTimezone(memberId, timezoneId);
       
       logger.info("Timezone set successfully.", {
@@ -187,7 +179,7 @@ module.exports = {
           place
       });
       
-      // Step 5: Send confirmation message.
+      // Step 5: We send a confirmation message to the user.
       let responseMessage;
       
       if (isAdminAction) {
@@ -206,66 +198,13 @@ module.exports = {
   },
   
   /**
-   * Handles the 'remove' subcommand to remove a user's timezone.
-   * 
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
-   */
-  async handleRemoveTimezone(interaction) {
-      await interaction.deferReply({ ephemeral: true });
-      
-      const targetUser = interaction.options.getUser('user');
-      
-      // Check permissions and get target user info
-      const targetUserInfo = await this.validateUserPermissions(interaction, targetUser);
-      if (!targetUserInfo.valid) {
-          await interaction.editReply({
-              content: targetUserInfo.message
-          });
-          return;
-      }
-      
-      const { memberId, memberTag, isAdminAction } = targetUserInfo;
-      
-      // Get the current timezone
-      const currentTimezone = await getUserTimezone(memberId);
-      
-      if (!currentTimezone) {
-          const message = isAdminAction 
-              ? `⚠️ ${targetUser.tag} doesn't have a timezone set.` 
-              : "⚠️ You don't have a timezone set.";
-          
-          await interaction.editReply({ content: message });
-          return;
-      }
-      
-      // Remove the timezone
-      await removeUserTimezone(memberId);
-      
-      logger.info("Timezone removed successfully.", {
-          userId: interaction.user.id,
-          userTag: interaction.user.tag,
-          targetUserId: memberId,
-          targetUserTag: memberTag,
-          removedTimezone: currentTimezone
-      });
-      
-      // Send confirmation message
-      const responseMessage = isAdminAction
-          ? `✅ You have removed ${targetUser}'s timezone setting. (Was: \`${currentTimezone}\`)`
-          : `✅ Your timezone setting has been removed. (Was: \`${currentTimezone}\`)`;
-      
-      await interaction.editReply({ content: responseMessage });
-  },
-  
-  /**
    * Handles the 'status' subcommand to check a user's timezone.
    * 
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {Promise<void>}
    */
   async handleTimezoneStatus(interaction) {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
       
       const targetUser = interaction.options.getUser('user');
       const isCheckingOther = targetUser !== null && targetUser.id !== interaction.user.id;
@@ -273,7 +212,7 @@ module.exports = {
       const memberId = isCheckingOther ? targetUser.id : interaction.user.id;
       const memberTag = isCheckingOther ? targetUser.tag : interaction.user.tag;
       
-      // Get the current timezone
+      // We get the current timezone from the database.
       const currentTimezone = await getUserTimezone(memberId);
       
       logger.info("Timezone status check.", {
@@ -284,9 +223,8 @@ module.exports = {
           currentTimezone
       });
       
-      // Format response message
+      // We format a response message based on whether a timezone is set.
       let responseMessage;
-      
       if (isCheckingOther) {
           responseMessage = currentTimezone 
               ? `📌 ${targetUser}'s timezone is set to: \`${currentTimezone}\``
@@ -297,7 +235,7 @@ module.exports = {
               : `📌 You don't have a timezone set. Use \`/timezone set\` to set your timezone.`;
       }
       
-      // Add current time in that timezone if available
+      // We add the current time in that timezone if available for context.
       if (currentTimezone) {
           try {
               const now = new Date();
@@ -334,7 +272,7 @@ module.exports = {
   async validateUserPermissions(interaction, targetUser) {
       const isAdminAction = targetUser !== null && targetUser.id !== interaction.user.id;
       
-      // Check permissions if setting timezone for another user.
+      // We check permissions if setting timezone for another user.
       if (isAdminAction) {
           const member = interaction.member;
           const hasPermission = member.permissions.has(PermissionFlagsBits.Administrator);
@@ -354,7 +292,7 @@ module.exports = {
           }
       }
       
-      // Determine the target user ID and tag.
+      // We determine the target user ID and tag for database operations.
       const memberId = isAdminAction ? targetUser.id : interaction.user.id;
       const memberTag = isAdminAction ? targetUser.tag : interaction.user.tag;
       

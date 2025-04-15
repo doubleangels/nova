@@ -5,12 +5,12 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 
-// Configuration constants.
+// These are the configuration constants for the givePerms command.
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
 const FREN_ROLE_ID = config.givePermsFrenRoleId;
-const MAX_ROLE_NAME_LENGTH = 100; // Discord's maximum role name length.
+const MAX_ROLE_NAME_LENGTH = 100; // Discord enforces a maximum role name length of 100 characters.
 
-// Validate required configuration.
+// We validate that the required configuration values are present.
 if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
     logger.error("Missing required configuration for /giveperms command.", {
         positionAboveRoleId: POSITION_ABOVE_ROLE_ID,
@@ -20,7 +20,7 @@ if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
 
 /**
  * Module for the /giveperms command.
- * Creates a custom role with specified name and color for a user,
+ * This command creates a custom role with specified name and color for a user,
  * and assigns them both this role and a predefined "fren" role.
  */
 module.exports = {
@@ -37,7 +37,7 @@ module.exports = {
                 .setRequired(true))
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('What user should receive the role?')
+                .setDescription('What user should receive the permissions?')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
@@ -46,7 +46,7 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
-        // Check if required configuration is available.
+        // We check if the required configuration values are available before proceeding.
         if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
             logger.error("Command execution failed due to missing configuration.", {
                 commandName: 'giveperms',
@@ -58,20 +58,20 @@ module.exports = {
             });
         }
         
-        // Defer reply since this might take a moment.
-        await interaction.deferReply({ ephemeral: true });
+        // We defer the reply since role creation and assignment might take a moment.
+        await interaction.deferReply();
         logger.info("/giveperms command initiated.", { 
             userId: interaction.user.id, 
             guildId: interaction.guildId 
         });
         
         try {
-            // Extract command options.
+            // We extract the command options provided by the user.
             const roleName = interaction.options.getString('role');
             const colorHex = interaction.options.getString('color');
             const targetUser = interaction.options.getUser('user');
             
-            // Validate inputs
+            // We validate all inputs before proceeding with role creation.
             const validationResult = this.validateInputs(interaction, roleName, colorHex, targetUser);
             if (!validationResult.success) {
                 return await interaction.editReply({
@@ -87,7 +87,7 @@ module.exports = {
                 targetUserTag: targetUser.tag 
             });
             
-            // Fetch the target member from the guild.
+            // We fetch the target member from the guild to ensure they exist.
             const targetMember = await interaction.guild.members.fetch(targetUser.id);
             if (!targetMember) {
                 logger.warn("Target user not found in guild.", { targetUserId: targetUser.id });
@@ -97,7 +97,7 @@ module.exports = {
                 });
             }
             
-            // Validate and normalize color format using the utility function.
+            // We validate and normalize the color format using the utility function.
             const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided.", { colorHex });
@@ -108,10 +108,10 @@ module.exports = {
             }
 
             const normalizedColorHex = colorValidationResult.normalizedColor;
-            // Convert hex to decimal for Discord's color system using the utility function.
+            // We convert the hex color to decimal for Discord's color system using the utility function.
             const colorDecimal = hexToDecimal(normalizedColorHex);
             
-            // Create and assign roles
+            // We create and assign the roles to the target member.
             const rolesResult = await this.createAndAssignRoles(
                 interaction, 
                 roleName.trim(), 
@@ -127,12 +127,11 @@ module.exports = {
             }
             
             await interaction.editReply({
-                content: `✅ Successfully gave <@${targetUser.id}> permissions in the server!`,
-                ephemeral: true
+                content: `✅ Successfully gave <@${targetUser.id}> permissions in the server!`
             });
                         
         } catch (error) {
-            // Log the full error with stack trace.
+            // We log the full error with stack trace for debugging purposes.
             logger.error("Error executing /giveperms command.", { 
                 error: error.message,
                 stack: error.stack,
@@ -147,7 +146,7 @@ module.exports = {
     },
     
     /**
-     * Validates the command inputs.
+     * Validates the command inputs to ensure they meet requirements.
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {string} roleName - The name for the new role.
      * @param {string} colorHex - The color for the new role.
@@ -155,7 +154,7 @@ module.exports = {
      * @returns {Object} An object with success status and message.
      */
     validateInputs(interaction, roleName, colorHex, targetUser) {
-        // Validate role name.
+        // We validate that the role name is not empty and within Discord's length limits.
         if (!roleName || roleName.trim().length === 0) {
             logger.warn("Invalid role name provided.", { roleName });
             return {
@@ -187,7 +186,7 @@ module.exports = {
      * @returns {Object} An object with success status and message.
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        // Get the reference role for positioning.
+        // We get the reference role for positioning the new role in the hierarchy.
         const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
         if (!positionRole) {
             logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
@@ -197,7 +196,7 @@ module.exports = {
             };
         }
         
-        // Get the additional role to assign.
+        // We get the additional role that will be assigned to the user.
         const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
         if (!additionalRole) {
             logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
@@ -207,7 +206,7 @@ module.exports = {
             };
         }
         
-        // Check if the bot can create a role at the desired position
+        // We check if the bot has sufficient permissions to create a role at the desired position.
         const botMember = await interaction.guild.members.fetchMe();
         if (botMember.roles.highest.position <= positionRole.position) {
             logger.warn("Bot's highest role is not high enough to create a role above the reference role.", {
@@ -220,7 +219,7 @@ module.exports = {
             };
         }
         
-        // Create the new role.
+        // We create the new role with the specified name, color, and position.
         const auditReason = `Role created by ${interaction.user.tag} (ID: ${interaction.user.id}) using giveperms command`;
         const newRole = await interaction.guild.roles.create({
             name: roleName,
@@ -236,7 +235,7 @@ module.exports = {
             createdBy: interaction.user.tag
         });
         
-        // Assign both roles to the user.
+        // We assign both the new role and the fren role to the target user.
         await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
         
         logger.info("Permissions successfully granted to user.", { 
@@ -250,9 +249,9 @@ module.exports = {
     },
     
     /**
-     * Gets a user-friendly error message based on the error.
+     * Gets a user-friendly error message based on the error type.
      * @param {Error} error - The error object.
-     * @returns {string} A user-friendly error message.
+     * @returns {string} A user-friendly error message explaining the issue.
      */
     getErrorMessage(error) {
         if (error.code === 50013) {

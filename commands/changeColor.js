@@ -6,7 +6,7 @@ const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils
 
 /**
  * Module for the /changecolor command.
- * Changes the color of a specified role to the provided hex color.
+ * This command changes the color of a specified role to the provided hex color.
  */
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,12 +27,12 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
-        // Defer reply since this might take a moment.
+        // We defer the reply since this operation might take a moment to complete.
         await interaction.deferReply();
         logger.info("Color change command initiated.", { userId: interaction.user.id });
         
         try {
-            // Extract command options.
+            // We extract the command options provided by the user.
             const role = interaction.options.getRole('role');
             const colorHex = interaction.options.getString('color');
             
@@ -42,18 +42,19 @@ module.exports = {
                 colorHex: colorHex
             });
             
-            // Validate permissions and role hierarchy
+            // We validate permissions and role hierarchy before proceeding.
             const permissionCheckResult = await this.checkPermissions(interaction, role);
             if (!permissionCheckResult.success) {
                 return await interaction.editReply({
-                    content: permissionCheckResult.message
+                    content: permissionCheckResult.message,
+                    ephemeral: true
                 });
             }
             
-            // Store the original color before changing.
+            // We store the original color before changing it for reference in the response.
             const originalColor = role.hexColor;
             
-            // Validate and normalize color format using the utility function.
+            // We validate and normalize the color format using the utility function.
             const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided.", { 
@@ -62,19 +63,20 @@ module.exports = {
                 });
                 
                 return await interaction.editReply({
-                    content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB."
+                    content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
+                    ephemeral: true
                 });
             }
             
             const normalizedColorHex = colorValidationResult.normalizedColor;
-            // Convert hex to decimal for Discord's color system using the utility function.
+            // We convert the hex color to decimal for Discord's color system using the utility function.
             const colorDecimal = hexToDecimal(normalizedColorHex);
             logger.debug("Color converted to decimal for Discord API.", { 
                 hex: normalizedColorHex, 
                 decimal: colorDecimal 
             });
             
-            // Attempt to change the role color.
+            // We attempt to change the role color with an audit log reason.
             const auditReason = `Color changed by ${interaction.user.tag} (ID: ${interaction.user.id}) using changecolor command.`;
             await role.setColor(colorDecimal, auditReason);
             
@@ -91,7 +93,7 @@ module.exports = {
             });
             
         } catch (error) {
-            // Log the full error with stack trace.
+            // We log the full error with stack trace for debugging purposes.
             logger.error("Failed to change role color.", { 
                 error: error.message,
                 stack: error.stack,
@@ -99,7 +101,8 @@ module.exports = {
             });
             
             await interaction.editReply({
-                content: this.getErrorMessage(error)
+                content: this.getErrorMessage(error),
+                ephemeral: true
             });
         }
     },
@@ -111,7 +114,7 @@ module.exports = {
      * @returns {Object} An object with success status and message.
      */
     async checkPermissions(interaction, role) {
-        // Check if bot has permission to manage this role.
+        // We check if the bot has permission to manage this role based on role hierarchy.
         if (!role.editable) {
             logger.warn("Permission denied: Role cannot be modified by the bot.", {
                 roleId: role.id,
@@ -125,7 +128,7 @@ module.exports = {
             };
         }
 
-        // Check user's role hierarchy (unless they're the server owner)
+        // We check the user's role hierarchy (unless they're the server owner who can modify any role).
         if (interaction.guild.ownerId !== interaction.user.id) {
             const member = await interaction.guild.members.fetch(interaction.user.id);
             const memberHighestRole = member.roles.highest;

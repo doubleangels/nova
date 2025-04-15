@@ -6,21 +6,21 @@ const config = require('../config');
 const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
 
-// Configuration constants.
+// These are the configuration constants for the YouTube integration.
 const YOUTUBE_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YOUTUBE_API_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
 const YOUTUBE_API_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
 const YOUTUBE_API_PLAYLISTS_URL = 'https://www.googleapis.com/youtube/v3/playlists';
-const YOUTUBE_API_TIMEOUT_MS = 5000;
-const YOUTUBE_SEARCH_MAX_RESULTS = 10;
-const YOUTUBE_EMBED_COLOR = 0xFF0000; // YouTube red
-const YOUTUBE_DESCRIPTION_MAX_LENGTH = 150;
-const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000; // 2 minutes
-const YOUTUBE_RELEVANCE_LIKES_WEIGHT = 0.001; // Factor for relevance calculation
+const YOUTUBE_API_TIMEOUT_MS = 5000; // We set a 5-second timeout for API requests.
+const YOUTUBE_SEARCH_MAX_RESULTS = 10; // We limit to a maximum of 10 results per search.
+const YOUTUBE_EMBED_COLOR = 0xFF0000; // We use YouTube's signature red color for embeds.
+const YOUTUBE_DESCRIPTION_MAX_LENGTH = 150; // We truncate long descriptions to keep embeds clean.
+const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
+const YOUTUBE_RELEVANCE_LIKES_WEIGHT = 0.001; // We use this factor for relevance calculation.
 
-// Simple in-memory cache
+// We use a simple in-memory cache to reduce API calls.
 const cache = new Map();
-const CACHE_TTL = 1000 * 60 * 10; // 10 minutes
+const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay within API limits.
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -83,9 +83,15 @@ module.exports = {
       return durationOption;
     }),
     
+  /**
+   * Executes the YouTube search command.
+   * 
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
-      // Defer the reply to allow time for the API calls.
+      // We defer the reply to allow time for the API calls.
       await interaction.deferReply();
       
       logger.debug("YouTube command received.", { 
@@ -93,16 +99,17 @@ module.exports = {
         userTag: interaction.user.tag 
       });
       
-      // Check if API key is configured.
+      // We check if the API key is configured before proceeding.
       if (!config.googleApiKey) {
         logger.error("YouTube API key is missing in configuration.");
         await interaction.editReply({ 
-          content: '⚠️ YouTube API key is not configured. Please contact the bot administrator.'
+          content: '⚠️ YouTube API key is not configured. Please contact the bot administrator.',
+          ephemeral: true
         });
         return;
       }
       
-      // Retrieve and format the user's search query and options.
+      // We retrieve and format the user's search query and options.
       const query = interaction.options.getString('query');
       const contentType = interaction.options.getString('type') || 'video';
       const sortMethod = interaction.options.getString('sort') || 'relevance';
@@ -118,7 +125,7 @@ module.exports = {
       
       const formattedQuery = query.trim();
       
-      // Check cache for this query
+      // We check the cache for this query to avoid unnecessary API calls.
       const cacheKey = `${contentType}:${formattedQuery}:${sortMethod}:${duration}`;
       const cachedResults = this.getCachedResults(cacheKey);
       
@@ -127,10 +134,10 @@ module.exports = {
         logger.debug("Using cached results.", { cacheKey });
         results = cachedResults;
       } else {
-        // Search for content using the YouTube API.
+        // We search for content using the YouTube API.
         results = await this.searchYouTube(formattedQuery, contentType, sortMethod, duration);
         
-        // Cache the results if valid
+        // We cache the results if valid to reduce API usage.
         if (results && results.length > 0) {
           this.cacheResults(cacheKey, results);
         }
@@ -139,15 +146,16 @@ module.exports = {
       if (!results || results.length === 0) {
         logger.warn("No results found.", { query: formattedQuery, contentType });
         await interaction.editReply({ 
-          content: `⚠️ No ${contentType} results found for **${formattedQuery}**. Try another search!`
+          content: `⚠️ No ${contentType} results found for **${formattedQuery}**. Try another search!`,
+          ephemeral: true
         });
         return;
       }
       
-      // Use the paginated results utility instead of custom implementation
+      // We use the paginated results utility for a consistent user experience.
       const itemsToDisplay = results.slice(0, YOUTUBE_SEARCH_MAX_RESULTS);
       
-      // Create a function that generates an embed for a specific index
+      // We create a function that generates an embed for a specific index.
       const generateEmbed = (index) => {
         return this.createContentEmbed(
           itemsToDisplay[index],
@@ -157,7 +165,7 @@ module.exports = {
         );
       };
       
-      // Use the reusable pagination utility with YouTube-specific styling
+      // We use the reusable pagination utility with YouTube-specific styling.
       await createPaginatedResults(
         interaction,
         itemsToDisplay,
@@ -166,7 +174,7 @@ module.exports = {
         YOUTUBE_COLLECTOR_TIMEOUT_MS,
         logger,
         {
-          buttonStyle: ButtonStyle.Danger, // YouTube red
+          buttonStyle: ButtonStyle.Danger, // We use YouTube red for the buttons.
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',
@@ -187,20 +195,23 @@ module.exports = {
 
   /**
    * Handles errors that occur during command execution.
+   * 
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
+    // We log any unexpected errors and send an error message to the user.
     logger.error("Error executing YouTube command.", { 
       error: error.message,
       stack: error.stack,
       userId: interaction.user?.id
     });
     
-    // If the interaction hasn't been replied to yet, reply with an error message
+    // We check if the interaction hasn't been replied to yet before sending an error.
     if (interaction.deferred && !interaction.replied) {
       await interaction.editReply({ 
-        content: "⚠️ An error occurred while processing your request. Please try again later."
+        content: "⚠️ An error occurred while processing your request. Please try again later.",
+        ephemeral: true
       }).catch(err => {
         logger.error("Failed to send error message.", { error: err.message });
       });
@@ -209,6 +220,7 @@ module.exports = {
   
   /**
    * Retrieves cached search results if they exist and haven't expired.
+   * 
    * @param {string} key - The cache key.
    * @returns {Array|null} The cached results or null if not found or expired.
    */
@@ -218,7 +230,7 @@ module.exports = {
       if (Date.now() - timestamp < CACHE_TTL) {
         return data;
       }
-      // Remove expired cache entry
+      // We remove expired cache entries to keep memory usage in check.
       cache.delete(key);
     }
     return null;
@@ -226,6 +238,7 @@ module.exports = {
   
   /**
    * Caches search results for future use.
+   * 
    * @param {string} key - The cache key.
    * @param {Array} data - The data to cache.
    */
@@ -238,6 +251,7 @@ module.exports = {
   
   /**
    * Searches YouTube for content based on the provided parameters.
+   * 
    * @param {string} query - The search query.
    * @param {string} contentType - The type of content to search for (video, channel, playlist).
    * @param {string} sortMethod - The method to sort results by.
@@ -246,23 +260,23 @@ module.exports = {
    */
   async searchYouTube(query, contentType, sortMethod, duration) {
     try {
-      // Build search parameters
+      // We build search parameters for the YouTube API request.
       const params = {
         part: 'snippet',
         q: query,
         type: contentType,
-        maxResults: YOUTUBE_SEARCH_MAX_RESULTS * 2, // Get more results than needed for filtering
+        maxResults: YOUTUBE_SEARCH_MAX_RESULTS * 2, // We get more results than needed for filtering.
         key: config.googleApiKey,
         order: sortMethod,
         safeSearch: 'moderate'
       };
       
-      // Add duration filter for videos if specified
+      // We add duration filter for videos if specified.
       if (contentType === 'video' && duration !== 'any') {
         params.videoDuration = duration;
       }
       
-      // Make the API request
+      // We make the API request with a timeout for safety.
       const response = await axios.get(YOUTUBE_API_SEARCH_URL, {
         params,
         timeout: YOUTUBE_API_TIMEOUT_MS
@@ -273,17 +287,17 @@ module.exports = {
         return [];
       }
       
-      // Process and enrich the results based on content type
+      // We process and enrich the results based on content type.
       let results = response.data.items;
       
       if (contentType === 'video') {
-        // Get additional video details like view count, likes, etc.
+        // We get additional video details like view count, likes, etc.
         results = await this.enrichVideoResults(results);
       } else if (contentType === 'channel') {
-        // Get additional channel details like subscriber count
+        // We get additional channel details like subscriber count.
         results = await this.enrichChannelResults(results);
       } else if (contentType === 'playlist') {
-        // Get additional playlist details like item count
+        // We get additional playlist details like item count.
         results = await this.enrichPlaylistResults(results);
       }
       
@@ -300,6 +314,7 @@ module.exports = {
   
   /**
    * Enriches video results with additional details.
+   * 
    * @param {Array} videos - The video search results.
    * @returns {Promise<Array>} The enriched video results.
    */
@@ -307,10 +322,10 @@ module.exports = {
     if (!videos || videos.length === 0) return [];
     
     try {
-      // Extract video IDs
+      // We extract video IDs for the detailed information request.
       const videoIds = videos.map(video => video.id.videoId).join(',');
       
-      // Get detailed video information
+      // We get detailed video information including statistics.
       const response = await axios.get(YOUTUBE_API_VIDEOS_URL, {
         params: {
           part: 'snippet,statistics,contentDetails',
@@ -324,10 +339,10 @@ module.exports = {
         return videos;
       }
       
-      // Combine search results with detailed information
+      // We combine search results with detailed information.
       const detailedVideos = response.data.items;
       
-      // Map detailed info back to the original search results
+      // We map detailed info back to the original search results.
       return videos.map(searchResult => {
         const detailedInfo = detailedVideos.find(
           video => video.id === searchResult.id.videoId
@@ -351,6 +366,7 @@ module.exports = {
   
   /**
    * Enriches channel results with additional details.
+   * 
    * @param {Array} channels - The channel search results.
    * @returns {Promise<Array>} The enriched channel results.
    */
@@ -358,10 +374,10 @@ module.exports = {
     if (!channels || channels.length === 0) return [];
     
     try {
-      // Extract channel IDs
+      // We extract channel IDs for the detailed information request.
       const channelIds = channels.map(channel => channel.id.channelId).join(',');
       
-      // Get detailed channel information
+      // We get detailed channel information including statistics.
       const response = await axios.get(YOUTUBE_API_CHANNELS_URL, {
         params: {
           part: 'snippet,statistics',
@@ -375,10 +391,10 @@ module.exports = {
         return channels;
       }
       
-      // Combine search results with detailed information
+      // We combine search results with detailed information.
       const detailedChannels = response.data.items;
       
-      // Map detailed info back to the original search results
+      // We map detailed info back to the original search results.
       return channels.map(searchResult => {
         const detailedInfo = detailedChannels.find(
           channel => channel.id === searchResult.id.channelId
@@ -401,6 +417,7 @@ module.exports = {
   
   /**
    * Enriches playlist results with additional details.
+   * 
    * @param {Array} playlists - The playlist search results.
    * @returns {Promise<Array>} The enriched playlist results.
    */
@@ -408,10 +425,10 @@ module.exports = {
     if (!playlists || playlists.length === 0) return [];
     
     try {
-      // Extract playlist IDs
+      // We extract playlist IDs for the detailed information request.
       const playlistIds = playlists.map(playlist => playlist.id.playlistId).join(',');
       
-      // Get detailed playlist information
+      // We get detailed playlist information including content details.
       const response = await axios.get(YOUTUBE_API_PLAYLISTS_URL, {
         params: {
           part: 'snippet,contentDetails',
@@ -425,10 +442,10 @@ module.exports = {
         return playlists;
       }
       
-      // Combine search results with detailed information
+      // We combine search results with detailed information.
       const detailedPlaylists = response.data.items;
       
-      // Map detailed info back to the original search results
+      // We map detailed info back to the original search results.
       return playlists.map(searchResult => {
         const detailedInfo = detailedPlaylists.find(
           playlist => playlist.id === searchResult.id.playlistId
@@ -451,6 +468,7 @@ module.exports = {
   
   /**
    * Creates an embed for a search result.
+   * 
    * @param {Object} item - The search result item.
    * @param {string} contentType - The type of content.
    * @param {number} index - The index of the current item.
@@ -478,6 +496,7 @@ module.exports = {
   
   /**
    * Creates an embed for a video search result.
+   * 
    * @param {Object} video - The video search result.
    * @param {EmbedBuilder} embed - The embed builder.
    * @param {number} index - The index of the current item.
@@ -491,20 +510,20 @@ module.exports = {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // Format view count and likes if available
+    // We format view count and likes if available.
     const viewCount = statistics.viewCount ? 
       `👁️ ${parseInt(statistics.viewCount).toLocaleString()} views` : '';
     const likeCount = statistics.likeCount ? 
       `👍 ${parseInt(statistics.likeCount).toLocaleString()} likes` : '';
     const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
     
-    // Format the description, truncating if necessary
+    // We format the description, truncating if necessary.
     let description = snippet.description || 'No description available';
     if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
       description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
     }
     
-    // Format the upload date
+    // We format the upload date.
     const uploadDate = snippet.publishedAt ? 
       `📅 ${new Date(snippet.publishedAt).toLocaleDateString()}` : '';
     
@@ -521,6 +540,7 @@ module.exports = {
   
   /**
    * Creates an embed for a channel search result.
+   * 
    * @param {Object} channel - The channel search result.
    * @param {EmbedBuilder} embed - The embed builder.
    * @param {number} index - The index of the current item.
@@ -534,14 +554,14 @@ module.exports = {
     const channelUrl = `https://www.youtube.com/channel/${channelId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // Format subscriber count if available
+    // We format subscriber count if available.
     const subscriberCount = statistics.subscriberCount ? 
       `👥 ${parseInt(statistics.subscriberCount).toLocaleString()} subscribers` : '';
     const videoCount = statistics.videoCount ? 
       `🎬 ${parseInt(statistics.videoCount).toLocaleString()} videos` : '';
     const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
     
-    // Format the description, truncating if necessary
+    // We format the description, truncating if necessary.
     let description = snippet.description || 'No description available';
     if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
       description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
@@ -556,6 +576,7 @@ module.exports = {
   
   /**
    * Creates an embed for a playlist search result.
+   * 
    * @param {Object} playlist - The playlist search result.
    * @param {EmbedBuilder} embed - The embed builder.
    * @param {number} index - The index of the current item.
@@ -569,11 +590,11 @@ module.exports = {
     const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // Format item count if available
+    // We format item count if available.
     const itemCount = contentDetails.itemCount ? 
       `🎬 ${contentDetails.itemCount} videos` : '';
     
-    // Format the description, truncating if necessary
+    // We format the description, truncating if necessary.
     let description = snippet.description || 'No description available';
     if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
       description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';

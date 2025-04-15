@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const logger = require('../logger')('neon.js');
+const logger = require('../logger')('database.js');
 const dayjs = require('dayjs');
 const config = require('../config');
 

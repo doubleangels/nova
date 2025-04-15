@@ -5,17 +5,17 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 
-// Configuration constants
+// These are the configuration constants for the Google Images search.
 const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
 const DEFAULT_RESULTS_COUNT = 5;
 const MAX_RESULTS = 10;
 const MIN_RESULTS = 1;
-const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout
-const EMBED_COLOR = 0x4285F4; // Google blue color
-const SAFE_SEARCH = "medium"; // Can be "off", "medium", or "high"
+const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout for pagination controls
+const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
+const SAFE_SEARCH = "medium"; // Can be "off", "medium", or "high" for content filtering
 
 /**
- * Converts a string to title case.
+ * Converts a string to title case for better presentation.
  * @param {string} str - The input string.
  * @returns {string} The title-cased string.
  */
@@ -48,7 +48,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Validate API configuration
+      // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
@@ -56,14 +56,14 @@ module.exports = {
         });
       }
 
-      // Defer reply to allow processing time
+      // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
       logger.info(`/googleimages command initiated.`, { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
 
-      // Get and validate search parameters
+      // We get and validate the search parameters provided by the user.
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
@@ -73,11 +73,12 @@ module.exports = {
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters.", { reason: searchParams.error });
         return await interaction.editReply({
-          content: "⚠️ Please provide a valid search query."
+          content: "⚠️ Please provide a valid search query.",
+          ephemeral: true
         });
       }
       
-      // Format the query to title case
+      // We format the query to title case for better presentation.
       searchParams.query = titleCase(searchParams.query);
       
       logger.debug("Formatted search parameters.", { 
@@ -85,23 +86,25 @@ module.exports = {
         count: searchParams.count 
       });
 
-      // Fetch image search results
+      // We fetch image search results from the Google API.
       const searchResults = await this.fetchImageResults(searchParams.query, searchParams.count);
       
       if (searchResults.error) {
         return await interaction.editReply({
-          content: searchResults.message
+          content: searchResults.message,
+          ephemeral: true
         });
       }
       
       if (searchResults.items.length === 0) {
         logger.warn("No image results found for query.", { query: searchParams.query });
         return await interaction.editReply({
-          content: `⚠️ No images found for **${searchParams.query}**. Try refining your search query.`
+          content: `⚠️ No images found for **${searchParams.query}**. Try refining your search query.`,
+          ephemeral: true
         });
       }
       
-      // Create paginated results with Google-themed buttons
+      // We create paginated results with Google-themed buttons for navigation.
       await createPaginatedResults(
         interaction,
         searchResults.items,
@@ -110,7 +113,7 @@ module.exports = {
         COLLECTOR_TIMEOUT,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary, // Google blue
+          buttonStyle: ButtonStyle.Primary, // Google blue for consistent branding
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',
@@ -125,13 +128,14 @@ module.exports = {
         guildId: interaction.guildId
       });
       await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later."
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
       });
     }
   },
   
   /**
-   * Validates that the required configuration is available.
+   * Validates that the required API configuration is available.
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -146,13 +150,13 @@ module.exports = {
   },
   
   /**
-   * Fetches image search results from the Google API.
+   * Fetches image search results from the Google Custom Search API.
    * @param {string} query - The search query.
    * @param {number} resultsCount - The number of results to fetch.
    * @returns {Object} The search results or error information.
    */
   async fetchImageResults(query, resultsCount) {
-    // Construct the Google Custom Search API URL and parameters
+    // We construct the Google Custom Search API URL with all necessary parameters.
     const params = new URLSearchParams({
       key: config.googleApiKey,
       cx: config.imageSearchEngineId,
@@ -168,7 +172,7 @@ module.exports = {
       resultsRequested: resultsCount
     });
 
-    // Make the API request using axios
+    // We make the API request using axios and handle the response.
     try {
       const response = await axios.get(requestUrl);
       logger.debug("Google Image API response received.", { 
@@ -194,17 +198,17 @@ module.exports = {
   },
   
   /**
-   * Generates an embed for an image search result.
+   * Generates an embed for an image search result with proper formatting.
    * @param {Array} items - The search result items.
    * @param {number} index - The index of the current item.
-   * @returns {EmbedBuilder} The generated embed.
+   * @returns {EmbedBuilder} The generated embed with image and metadata.
    */
   generateImageEmbed(items, index) {
     const item = items[index];
     const title = item.title || "No Title";
-    // Ensure we have a valid image link
+    // We ensure we have a valid image link for the embed.
     const imageLink = item.link || "";
-    // Use contextLink if available, otherwise fallback to the image link
+    // We use contextLink if available, otherwise fallback to the image link.
     const pageLink = item.image?.contextLink || imageLink;
     
     return new EmbedBuilder()

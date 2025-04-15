@@ -5,7 +5,7 @@ const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { setReminderData, getReminderData } = require('../utils/database');
 
-// Configuration constants.
+// These are the configuration constants for the Disboard bump reminder.
 const SERVICE_TYPE = 'bump';
 const DELAY_SECONDS = 7200;  // 2 hours in seconds
 
@@ -26,33 +26,33 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Log the command initiation with the user's ID for better tracking.
+      // We log the command initiation with the user's ID for better tracking in our system.
       logger.info("Fix command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guild.id
       });
       
-      // Defer the reply to allow processing time.
+      // We defer the reply to allow processing time for database operations.
       await interaction.deferReply();
 
-      // Check if there's already an active reminder
+      // We check if there's already an active reminder in the database.
       const existingReminder = await this.checkExistingReminder();
-      // Generate unique reminder data.
+      // We generate unique reminder data with a random UUID and scheduled time.
       const reminderId = randomUUID();
       const scheduledTime = dayjs().add(DELAY_SECONDS, 'second').toISOString();
       const readableTime = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss');
       
-      // Save the reminder data to the database.
+      // We save the reminder data to the database for future processing.
       await this.saveReminderToDatabase(reminderId, scheduledTime);
       
-      // Prepare the response message
+      // We prepare the response message with details about the scheduled reminder.
       let responseMessage = "✅ Disboard bump reminder successfully fixed!\n";
       responseMessage += `⏰ Next bump reminder scheduled for: **${readableTime}**`;
       
       if (existingReminder) {
         responseMessage += "\n⚠️ Note: An existing reminder was overwritten.";
       }
-      // Inform the user that the fix logic was successfully applied.
+      // We inform the user that the fix logic was successfully applied.
       await interaction.editReply(responseMessage);
       
       logger.info("Fix command completed successfully.", {
@@ -70,7 +70,8 @@ module.exports = {
       });
       
       await interaction.editReply({
-        content: `⚠️ ${this.getErrorMessage(error)}`
+        content: `⚠️ ${this.getErrorMessage(error)}`,
+        ephemeral: true
       });
     }
   },
@@ -93,7 +94,7 @@ module.exports = {
   },
   
   /**
-   * Saves the reminder data to the database.
+   * Saves the reminder data to the database for future processing.
    * @param {string} reminderId - The unique ID for the reminder.
    * @param {string} scheduledTime - The ISO string of the scheduled time.
    * @returns {Promise<void>}
@@ -118,9 +119,9 @@ module.exports = {
   },
   
   /**
-   * Gets a user-friendly error message based on the error.
+   * Gets a user-friendly error message based on the error type.
    * @param {Error} error - The error object.
-   * @returns {string} A user-friendly error message.
+   * @returns {string} A user-friendly error message explaining the issue.
    */
   getErrorMessage(error) {
     if (error.message === "DATABASE_ERROR") {

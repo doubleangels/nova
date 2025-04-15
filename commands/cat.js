@@ -3,14 +3,14 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-// Configuration constants.
+// These are the configuration constants for the cat API.
 const CAT_API_URL = 'https://cataas.com/cat/cute';
 const CAT_EMBED_COLOR = 0xD3D3D3;
 const DEFAULT_FILENAME = 'cat.jpg';
 
 /**
  * Module for the /cat command.
- * Fetches a random cat image from the Cataas API and sends it as an embed.
+ * This command fetches a random cat image from the Cataas API and sends it as an embed.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -23,16 +23,16 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer reply to allow time for asynchronous operations.
+      // We defer the reply to allow time for the asynchronous API operations.
       await interaction.deferReply();
       logger.info("Cat command initiated.", { userId: interaction.user.id });
 
-      // Fetch cat image
+      // We fetch the cat image from the external API.
       const imageBuffer = await this.fetchCatImage();
-      // Create an attachment from the image buffer.
+      // We create an attachment from the image buffer for Discord to display.
       const attachment = new AttachmentBuilder(imageBuffer, { name: DEFAULT_FILENAME });
 
-      // Build an embed with the cat image.
+      // We build an embed with the cat image for a nicer presentation.
       const embed = new EmbedBuilder()
         .setTitle("Random Cat Picture")
         .setDescription("😺 Here's a cat for you!")
@@ -40,7 +40,7 @@ module.exports = {
         .setImage(`attachment://${DEFAULT_FILENAME}`)
         .setFooter({ text: "Powered by Cataas API" });
         
-      // Edit the reply with the embed and attachment.
+      // We edit the reply with the embed and attachment to display the cat image.
       await interaction.editReply({ embeds: [embed], files: [attachment] });
       logger.info("Cat image sent successfully.", { userId: interaction.user.id });
     } catch (error) {
@@ -50,10 +50,11 @@ module.exports = {
         userId: interaction.user.id
       });
       
-      // Determine if interaction can still be replied to
+      // We determine if the interaction can still be replied to and send an appropriate error message.
       if (interaction.deferred) {
         await interaction.editReply({
-          content: `⚠️ ${this.getErrorMessage(error)}`
+          content: `⚠️ ${this.getErrorMessage(error)}`,
+          ephemeral: true
         });
       } else {
         await interaction.reply({
@@ -81,14 +82,14 @@ module.exports = {
         throw new Error(`API returned status code ${response.status}`);
       }
 
-      // Verify that we received an image
+      // We verify that we received an actual image from the API.
       const contentType = response.headers['content-type'];
       if (!contentType || !contentType.startsWith('image/')) {
         logger.warn("API did not return an image.", { contentType });
         throw new Error("The API did not return a valid image");
       }
 
-      // Convert the response data to a buffer.
+      // We convert the response data to a buffer for the attachment.
       return Buffer.from(response.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -98,7 +99,7 @@ module.exports = {
           throw new Error("Network error: Could not connect to the cat API");
         }
       }
-      throw error; // Re-throw any other errors
+      throw error; // We re-throw any other errors for consistent error handling.
     }
   },
 

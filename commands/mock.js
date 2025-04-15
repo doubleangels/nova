@@ -1,15 +1,15 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-// Configuration constants
-const MAX_CONTENT_LENGTH = 2000; // Discord message length limit
-const TRUNCATION_BUFFER = 100; // Buffer for mentions and emoji
-const MOCK_EMOJI = '<a:spongebobmock:1291527476564066387>'; // Complete emoji reference
+// These are the configuration constants for the mock command.
+const MAX_CONTENT_LENGTH = 2000; // Discord enforces a message length limit of 2000 characters.
+const TRUNCATION_BUFFER = 100; // We use a buffer for mentions and emoji to ensure we stay under the limit.
+const MOCK_EMOJI = '<a:spongebobmock:1291527476564066387>'; // This is the complete emoji reference for the mocking SpongeBob.
 const ELLIPSIS = '...';
 
 /**
  * Context menu command that converts a selected message's text into "mOcKiNg" format.
- * This command is triggered when a user selects a message and chooses the "Mock" option.
+ * This command is triggered when a user selects a message and chooses the "Mock" option from the context menu.
  */
 module.exports = {
   data: new ContextMenuCommandBuilder()
@@ -21,21 +21,22 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to handle processing time.
+      // We defer the reply to handle processing time for longer messages.
       await interaction.deferReply();
       logger.info("Mock context menu command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
-      // Validate the message and generate mocked content
+      // We validate the message and generate mocked content only if valid.
       const validationResult = this.validateMessage(interaction);
       if (!validationResult.valid) {
         return await interaction.editReply({
-          content: validationResult.message
+          content: validationResult.message,
+          ephemeral: true
         });
       }
 
-      // Generate the mocked text and reply
+      // We generate the mocked text and reply to the user.
       const { targetMessage } = validationResult;
       const mockedContent = this.generateMockedContent(targetMessage);
       
@@ -56,10 +57,10 @@ module.exports = {
    * @returns {Object} An object containing validation result and message data.
    */
   validateMessage(interaction) {
-    // Retrieve the targeted message.
+    // We retrieve the targeted message from the interaction.
     const targetMessage = interaction.targetMessage;
     
-    // Ensure the target message exists.
+    // We ensure the target message exists before proceeding.
     if (!targetMessage) {
       logger.error("Target message could not be retrieved.", {
         userId: interaction.user.id,
@@ -77,7 +78,7 @@ module.exports = {
       authorId: targetMessage.author.id
     });
         
-    // Check if the message is sent by the bot itself.
+    // We check if the message is sent by the bot itself to prevent mocking our own messages.
     if (targetMessage.author.id === interaction.client.user.id) {
       logger.warn("Attempted to mock the bot's own message.", {
         userId: interaction.user.id,
@@ -92,7 +93,7 @@ module.exports = {
     
     const messageContent = targetMessage.content;
     
-    // Ensure the message has content to mock.
+    // We ensure the message has content to mock, as we can't mock empty messages.
     if (!messageContent || messageContent.trim() === '') {
       logger.warn("No content available to mock.", {
         userId: interaction.user.id,
@@ -115,14 +116,14 @@ module.exports = {
   },
   
   /**
-   * Generates the mocked content from the target message.
+   * Generates the mocked content from the target message by alternating character case.
    * @param {Message} targetMessage - The message to mock.
-   * @returns {string} The mocked content.
+   * @returns {string} The mocked content with proper formatting.
    */
   generateMockedContent(targetMessage) {
     const messageContent = targetMessage.content;
     
-    // Convert the message content to "mOcKiNg" text format.
+    // We convert the message content to "mOcKiNg" text format by alternating character case.
     const mockedText = messageContent
       .split('')
       .map((char, index) => {
@@ -135,17 +136,17 @@ module.exports = {
       mockedLength: mockedText.length
     });
     
-    // Create the reply content with mention and emoji
+    // We create the reply content with mention and emoji for a complete mocking effect.
     const replyContent = `<@${targetMessage.author.id}>: "${mockedText}" ${MOCK_EMOJI}`;
     
-    // Check if the reply would exceed Discord's message length limit.
+    // We check if the reply would exceed Discord's message length limit and truncate if necessary.
     if (replyContent.length > MAX_CONTENT_LENGTH) {
       logger.warn("Mocked text exceeds Discord's message length limit.", {
         contentLength: replyContent.length,
         limit: MAX_CONTENT_LENGTH
       });
       
-      // Calculate safe truncation length
+      // We calculate a safe truncation length to ensure the message fits within Discord's limits.
       const maxTextLength = MAX_CONTENT_LENGTH - TRUNCATION_BUFFER;
       const authorMention = `<@${targetMessage.author.id}>`;
       const safeLength = maxTextLength - authorMention.length - MOCK_EMOJI.length - ELLIPSIS.length - 5; // 5 for quotes and spaces
@@ -173,9 +174,10 @@ module.exports = {
     const errorMessage = "An error occurred while executing this command.";
     
     try {
-      // Try to edit the reply if it was deferred
+      // We try to edit the reply if it was deferred to show the error message.
       await interaction.editReply({
-        content: errorMessage
+        content: errorMessage,
+        ephemeral: true
       });
     } catch (followUpError) {
       logger.error("Failed to edit reply with error message.", {
@@ -184,7 +186,7 @@ module.exports = {
       });
       
       try {
-        // Try to send a new reply if editing failed
+        // We try to send a new reply if editing failed as a fallback.
         await interaction.reply({
           content: errorMessage,
           ephemeral: true

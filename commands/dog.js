@@ -3,14 +3,14 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-// Configuration constants
+// These are the configuration constants for the dog command.
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
 const EMBED_COLOR = 0xD3D3D3;
 const IMAGE_FILENAME = "dog.jpg";
 
 /**
  * Module for the /dog command.
- * Fetches a random dog image from the Dog CEO API and sends it as an embed.
+ * This command fetches a random dog image from the Dog CEO API and sends it as an embed.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -23,16 +23,16 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer reply to allow asynchronous operations.
+      // We defer the reply to allow time for the asynchronous API operations.
       await interaction.deferReply();
       logger.info("Dog command initiated.", { userId: interaction.user.id });
       
-      // Fetch dog image and create embed
+      // We fetch the dog image and create an embed to display it.
       const imageBuffer = await this.fetchDogImage();
       const embed = this.createDogEmbed();
       const attachment = new AttachmentBuilder(imageBuffer, { name: IMAGE_FILENAME });
             
-      // Send the response
+      // We send the response with the dog image to the user.
       await interaction.editReply({ embeds: [embed], files: [attachment] });
       logger.info("Dog image sent successfully.", { userId: interaction.user.id });
     } catch (error) {
@@ -43,7 +43,8 @@ module.exports = {
       });
       
       await interaction.editReply({
-        content: `⚠️ ${this.getErrorMessage(error)}`
+        content: `⚠️ ${this.getErrorMessage(error)}`,
+        ephemeral: true
       });
     }
   },
@@ -56,7 +57,7 @@ module.exports = {
   async fetchDogImage() {
     logger.debug("Fetching random dog image data.", { url: DOG_API_URL });
     
-    // Step 1: Get the image URL from the Dog CEO API
+    // First, we get the image URL from the Dog CEO API.
     const response = await axios.get(DOG_API_URL);
     
     if (response.status !== 200) {
@@ -73,7 +74,7 @@ module.exports = {
     
     logger.debug("Dog image URL received.", { imageUrl });
     
-    // Step 2: Fetch the actual image data
+    // Next, we fetch the actual image data from the URL provided.
     const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     
     if (imageResponse.status !== 200) {
@@ -81,13 +82,13 @@ module.exports = {
       throw new Error("IMAGE_FETCH_ERROR");
     }
     
-    // Return the image as a buffer
+    // We return the image as a buffer for Discord to display.
     return Buffer.from(imageResponse.data);
   },
   
   /**
-   * Creates an embed for the dog image.
-   * @returns {EmbedBuilder} The created embed.
+   * Creates an embed for the dog image with a nice presentation.
+   * @returns {EmbedBuilder} The created embed with formatting for the dog image.
    */
   createDogEmbed() {
     return new EmbedBuilder()
@@ -99,9 +100,9 @@ module.exports = {
   },
   
   /**
-   * Gets a user-friendly error message based on the error.
+   * Gets a user-friendly error message based on the error type.
    * @param {Error} error - The error object.
-   * @returns {string} A user-friendly error message.
+   * @returns {string} A user-friendly error message explaining the issue.
    */
   getErrorMessage(error) {
     if (error.message === "API_ERROR") {

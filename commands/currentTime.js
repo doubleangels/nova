@@ -8,17 +8,17 @@ const advancedFormat = require('dayjs/plugin/advancedFormat');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, formatErrorMessage } = require('../utils/locationUtils');
 
-// Configuration constants.
+// This is the color used for the time information embed.
 const EMBED_COLOR = 0x1D4ED8;
 
-// Extend dayjs with plugins.
+// We extend dayjs with plugins to support timezone operations.
 dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(advancedFormat);
 
 /**
  * Module for the /currenttime command.
- * Retrieves the current local time for a given place.
+ * This command retrieves the current local time for a given place using Google's APIs.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -37,36 +37,38 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to allow time for API calls.
+      // We defer the reply to allow time for the external API calls to complete.
       await interaction.deferReply();
       
-      // Check if Google API key is configured.
+      // We check if the Google API key is properly configured.
       if (!this.validateConfiguration()) {
         logger.error("Google API key is not configured.");
         await interaction.editReply({ 
-          content: "⚠️ Google API key is not configured. Please contact the bot administrator."
+          content: "⚠️ Google API key is not configured. Please contact the bot administrator.",
+          ephemeral: true
         });
         return;
       }
       
-      // Retrieve the place name from the command options.
+      // We retrieve the place name from the command options provided by the user.
       const place = interaction.options.getString('place');
       logger.info("Current time command initiated.", { 
         userId: interaction.user.id, 
         place: place 
       });
       
-      // Get location and time data
+      // We get location and time data from the external APIs.
       const timeData = await this.getLocationTimeData(place);
       
       if (timeData.error) {
         await interaction.editReply({ 
-          content: formatErrorMessage(place, timeData.type)
+          content: formatErrorMessage(place, timeData.type),
+          ephemeral: true
         });
         return;
       }
       
-      // Build and send the embed with time information
+      // We build and send the embed with time information to the user.
       const embed = this.createTimeEmbed(timeData);
       await interaction.editReply({ embeds: [embed] });
       logger.info("Current time lookup successful.", { 
@@ -80,13 +82,14 @@ module.exports = {
         stack: error.stack 
       });
       await interaction.editReply({ 
-        content: "⚠️ An unexpected error occurred. Please try again later."
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
       });
     }
   },
   
   /**
-   * Validates that the required configuration is available.
+   * Validates that the required configuration is available for API access.
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -94,12 +97,12 @@ module.exports = {
   },
   
   /**
-   * Gets location and time data for a specified place.
+   * Gets location and time data for a specified place using Google's APIs.
    * @param {string} place - The place to look up.
    * @returns {Object} An object with location and time data or an error.
    */
   async getLocationTimeData(place) {
-    // Step 1: Get geocoding data for the place.
+    // First, we get geocoding data to convert the place name to coordinates.
     const geocodeResult = await getGeocodingData(place);
     
     if (geocodeResult.error) {
@@ -108,24 +111,24 @@ module.exports = {
     
     const { location, formattedAddress } = geocodeResult;
     
-    // Get the current timestamp in seconds.
+    // We get the current timestamp in seconds for the timezone API.
     const timestamp = dayjs().unix();
     
-    // Step 2: Get timezone data for the location.
+    // Next, we get timezone data for the location coordinates.
     const timezoneResult = await getTimezoneData(location, timestamp);
     
     if (timezoneResult.error) {
       return timezoneResult;
     }
     
-    // Extract timezone details.
+    // We extract timezone details from the API response.
     const timezoneName = timezoneResult.timezoneId;
-    const rawOffset = timezoneResult.rawOffset / 3600; // Convert seconds to hours.
-    const dstOffset = timezoneResult.dstOffset / 3600; // Convert seconds to hours.
-    const utcOffset = rawOffset + dstOffset;   // Total UTC offset in hours.
+    const rawOffset = timezoneResult.rawOffset / 3600; // We convert seconds to hours.
+    const dstOffset = timezoneResult.dstOffset / 3600; // We convert seconds to hours.
+    const utcOffset = rawOffset + dstOffset;   // We calculate the total UTC offset in hours.
     const isDST = dstOffset > 0 ? "Yes" : "No";
     
-    // Calculate the local time by adding the UTC offset to the current UTC time.
+    // We calculate the local time by adding the UTC offset to the current UTC time.
     const localTime = dayjs.utc().add(utcOffset, 'hour');
     const formattedTime = localTime.format('YYYY-MM-DD HH:mm:ss');
     const formattedDate = localTime.format('dddd, MMMM D, YYYY');
@@ -142,9 +145,9 @@ module.exports = {
   },
 
   /**
-   * Creates an embed with time information.
-   * @param {Object} timeData - The time data to display.
-   * @returns {EmbedBuilder} The created embed.
+   * Creates an embed with time information for a visually appealing display.
+   * @param {Object} timeData - The time data to display in the embed.
+   * @returns {EmbedBuilder} The created embed with formatted time information.
    */
   createTimeEmbed(timeData) {
     const {

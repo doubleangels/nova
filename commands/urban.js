@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-// Configuration constants.
+// These are the configuration constants for the Urban Dictionary integration.
 const URBAN_EMBED_COLOR = 0x1D2439;
 const URBAN_DICTIONARY_API_URL = 'https://api.urbandictionary.com/v0/define';
 const URBAN_DICTIONARY_WEB_URL = 'https://www.urbandictionary.com/define.php';
@@ -27,7 +27,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Check if the channel is NSFW
+      // We check if the channel is NSFW before proceeding due to potential adult content.
       if (!this.isNsfwChannel(interaction)) {
         logger.warn("Urban Dictionary command used in non-NSFW channel.", {
           userId: interaction.user.id,
@@ -41,7 +41,7 @@ module.exports = {
         });
       }
       
-      // Get the query term from the interaction options.
+      // We get the query term from the interaction options provided by the user.
       const query = interaction.options.getString('query');
       
       logger.info("Urban Dictionary search initiated.", {
@@ -52,10 +52,10 @@ module.exports = {
         guildId: interaction.guildId
       });
         
-      // Defer the reply to allow time for the API call.
+      // We defer the reply to allow time for the API call to complete.
       await interaction.deferReply();
       
-      // Fetch definitions from Urban Dictionary
+      // We fetch definitions from Urban Dictionary API based on the query.
       const definitions = await this.fetchDefinitions(query);
       
       if (definitions.length === 0) {
@@ -65,11 +65,12 @@ module.exports = {
         });
       
         return await interaction.editReply({ 
-          content: '⚠️ No definitions found for your query. Try refining it.'
+          content: '⚠️ No definitions found for your query. Try refining it.',
+          ephemeral: true
         });
       }
       
-      // Send the first definition with navigation buttons if there are multiple
+      // We send the first definition with navigation buttons if there are multiple definitions.
       await this.sendDefinitionEmbed(interaction, definitions, 0);
       
     } catch (error) {
@@ -78,16 +79,16 @@ module.exports = {
   },
   
   /**
-   * Checks if the channel is marked as NSFW.
+   * Checks if the channel is marked as NSFW for content safety.
    * 
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {boolean} True if the channel is NSFW or a DM, false otherwise.
    */
   isNsfwChannel(interaction) {
-    // DMs are considered "safe" for this purpose
+    // We consider DMs as "safe" for this purpose since they're private.
     if (!interaction.guild) return true;
     
-    // For guild channels, check the nsfw flag
+    // For guild channels, we check the nsfw flag to ensure appropriate content sharing.
     return interaction.channel?.nsfw === true;
   },
   
@@ -98,7 +99,7 @@ module.exports = {
    * @returns {Promise<Array>} Array of definition objects.
    */
   async fetchDefinitions(query) {
-    // Construct the Urban Dictionary API URL with query parameters.
+    // We construct the Urban Dictionary API URL with query parameters.
     const params = new URLSearchParams({ term: query });
     const requestUrl = `${URBAN_DICTIONARY_API_URL}?${params.toString()}`;
     
@@ -108,12 +109,12 @@ module.exports = {
     });
     
     try {
-      // Fetch the definition data using axios.
+      // We fetch the definition data using axios with a timeout for safety.
       const response = await axios.get(requestUrl, { 
-        timeout: 5000 // Add timeout for safety
+        timeout: 5000 // We add a timeout to prevent hanging requests.
       });
       
-      // Process successful API response.
+      // We process the successful API response and extract the definitions.
       if (response.status === 200 && response.data.list && response.data.list.length > 0) {
         return response.data.list;
       }
@@ -153,11 +154,11 @@ module.exports = {
       thumbsDown: thumbsDown
     });
     
-    // Create the Urban Dictionary URL for this term
+    // We create the Urban Dictionary URL for this term for direct linking.
     const urbanUrl = new URL(URBAN_DICTIONARY_WEB_URL);
     urbanUrl.searchParams.append('term', word);
     
-    // Build an embed with the retrieved definition.
+    // We build an embed with the retrieved definition and formatting.
     const embed = new EmbedBuilder()
       .setTitle(`📖 Definition: ${word}`)
       .setDescription(definitionText)
@@ -171,7 +172,7 @@ module.exports = {
       .setURL(urbanUrl.toString())
       .setFooter({ text: '🔍 Powered by Urban Dictionary' });
     
-    // Only add navigation buttons if there are multiple definitions
+    // We only add navigation buttons if there are multiple definitions to browse.
     const components = [];
     
     if (definitions.length > 1) {
@@ -191,24 +192,24 @@ module.exports = {
       components.push(row);
     }
     
-    // Edit the deferred reply with the embed and buttons.
+    // We edit the deferred reply with the embed and buttons.
     await interaction.editReply({ 
       embeds: [embed],
       components: components
     });
     
-    // Set up a collector for button interactions if there are multiple definitions
+    // We set up a collector for button interactions if there are multiple definitions.
     if (definitions.length > 1) {
       const filter = i => i.user.id === interaction.user.id && 
                          (i.customId.startsWith('urban_prev_') || i.customId.startsWith('urban_next_'));
       
       const collector = interaction.channel.createMessageComponentCollector({ 
         filter, 
-        time: 60000 // 1 minute timeout
+        time: 60000 // We set a 1 minute timeout for button interactions.
       });
       
       collector.on('collect', async i => {
-        // Calculate the new index based on which button was clicked
+        // We calculate the new index based on which button was clicked.
         let newIndex = index;
         
         if (i.customId.startsWith('urban_next_') && index < definitions.length - 1) {
@@ -217,16 +218,16 @@ module.exports = {
           newIndex = index - 1;
         }
         
-        // Update the message with the new definition
+        // We update the message with the new definition.
         await i.deferUpdate();
         await this.sendDefinitionEmbed(interaction, definitions, newIndex);
         
-        // Stop the old collector
+        // We stop the old collector to prevent overlapping collectors.
         collector.stop();
       });
       
       collector.on('end', collected => {
-        // If the collector ends due to timeout, remove the buttons
+        // If the collector ends due to timeout, we remove the buttons for cleanliness.
         if (collected.size === 0) {
           interaction.editReply({ 
             embeds: [embed],
@@ -257,11 +258,11 @@ module.exports = {
   sanitizeText(text) {
     if (!text) return '';
     
-    // Replace newlines and carriage returns for proper formatting
+    // We replace newlines and carriage returns for proper formatting in Discord embeds.
     return text.replace(/\r\n/g, '\n')
-      // Truncate if extremely long (Discord has 1024 char limit for embed fields)
+      // We truncate if extremely long to comply with Discord's 1024 character limit for embed fields.
       .substring(0, 1000) 
-      // Add ellipsis if truncated
+      // We add ellipsis if the text was truncated to indicate there's more content.
       + (text.length > 1000 ? '...' : '');
   },
   
@@ -285,12 +286,18 @@ module.exports = {
       errorMessage = '⚠️ Failed to fetch data from Urban Dictionary. Please try again later.';
     }
     
-    // Determine if interaction has already been deferred.
+    // We determine if interaction has already been deferred for proper response.
     try {
       if (interaction.deferred) {
-        await interaction.editReply({ content: errorMessage });
+        await interaction.editReply({ 
+          content: errorMessage,
+          ephemeral: true
+        });
       } else {
-        await interaction.reply({ content: errorMessage });
+        await interaction.reply({ 
+          content: errorMessage,
+          ephemeral: true
+        });
       }
     } catch (replyError) {
       logger.error("Failed to send error response for urban command.", {

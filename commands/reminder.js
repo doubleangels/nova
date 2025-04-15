@@ -6,14 +6,14 @@ const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/database');
 
-// Configuration constants
+// These are the configuration constants for the reminder system.
 const REMINDER_TYPE = 'bump';
 const DB_KEY_CHANNEL = 'reminder_channel';
 const DB_KEY_ROLE = 'reminder_role';
 
 /**
  * Module for the /reminder command.
- * Allows administrators to setup and check bump reminder settings.
+ * This command allows administrators to setup and check bump reminder settings for server management.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,7 +22,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('setup')
-        .setDescription('Configure the channel and role for bump reminders')
+        .setDescription('Configure the channel and role for bump reminders.')
         .addChannelOption(option =>
           option
             .setName('channel')
@@ -40,7 +40,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current reminder settings and next scheduled reminder')
+        .setDescription('Check the current reminder settings and next scheduled reminder.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
@@ -75,6 +75,7 @@ module.exports = {
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async handleReminderSetup(interaction) {
+    // We retrieve the selected channel and role from the command options.
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
     logger.debug("Processing reminder setup.", { 
@@ -85,7 +86,7 @@ module.exports = {
       roleId: roleOption.id 
     });
   
-    // Validate the channel type
+    // We validate that the selected channel is of an appropriate type.
     if (![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(channelOption.type)) {
       logger.warn("Invalid channel type selected.", {
         userId: interaction.user.id,
@@ -94,11 +95,12 @@ module.exports = {
       });
 
       return await interaction.editReply({
-        content: "⚠️ Please select a text channel for reminders."
+        content: "⚠️ Please select a text channel for reminders.",
+        ephemeral: true
       });
     }
 
-    // Validate role is mentionable
+    // We validate that the selected role can be mentioned for reminders.
     if (!roleOption.mentionable) {
       logger.warn("Non-mentionable role selected.", {
         userId: interaction.user.id,
@@ -107,11 +109,12 @@ module.exports = {
       });
 
       return await interaction.editReply({
-        content: "⚠️ The selected role is not mentionable. Please choose a role that can be mentioned."
+        content: "⚠️ The selected role is not mentionable. Please choose a role that can be mentioned.",
+        ephemeral: true
       });
     }
     
-    // Save the selected channel and role in the database
+    // We save the selected channel and role IDs in the database.
     try {
       await Promise.all([
         setValue(DB_KEY_CHANNEL, channelOption.id),
@@ -135,7 +138,7 @@ module.exports = {
       roleId: roleOption.id
     });
 
-    // Respond with a summary of the new configuration
+    // We respond with a summary of the new configuration for confirmation.
     const response = `✅ **Reminder setup complete!**\n\n` +
                     `📢 **Channel:** <#${channelOption.id}>\n` +
                     `🎭 **Role:** <@&${roleOption.id}>\n\n` +
@@ -154,7 +157,7 @@ module.exports = {
     });
 
     try {
-      // Retrieve current configuration and reminder data
+      // We retrieve the current configuration and reminder data from the database.
       const [channelId, roleId, reminderData] = await Promise.all([
         getValue(DB_KEY_CHANNEL),
         getValue(DB_KEY_ROLE),
@@ -168,33 +171,33 @@ module.exports = {
         guildId: interaction.guildId
       });
       
-      // Resolve the channel name from the channel ID
+      // We resolve the channel name from the channel ID for display.
       let channelStr = '⚠️ Not set!';
       if (channelId) {
         const channelObj = interaction.guild.channels.cache.get(channelId);
         channelStr = channelObj ? `<#${channelId}>` : '⚠️ Invalid channel!';
       }
   
-      // Format the role for display
+      // We format the role for display in the status message.
       let roleStr = '⚠️ Not set!';
       if (roleId) {
         const roleObj = interaction.guild.roles.cache.get(roleId);
         roleStr = roleObj ? `<@&${roleId}>` : '⚠️ Invalid role!';
       }
       
-      // Calculate the remaining time until the next reminder
+      // We calculate the remaining time until the next reminder is due.
       const timeStr = this.calculateRemainingTime(reminderData);
       
-      // Check if configuration is incomplete
+      // We check if the configuration is complete with both channel and role set.
       const configComplete = channelId && roleId;
       
-      // Build the summary message
+      // We build a comprehensive summary message with all relevant information.
       let summary = `📌 **Disboard Reminder Status:**\n\n`;
       summary += `📢 **Channel:** ${channelStr}\n`;
       summary += `🎭 **Role:** ${roleStr}\n\n`;
       summary += `⏳ **Next Reminder:** ${timeStr}`;
       
-      // Add a warning if configuration is incomplete
+      // We add a warning if the configuration is incomplete to alert the admin.
       if (!configComplete) {
         summary += `\n\n⚠️ **Warning:** Reminder configuration is incomplete.`;
       }
@@ -263,9 +266,12 @@ module.exports = {
       errorMessage = "⚠️ Failed to retrieve reminder settings. Please try again later.";
     }
 
-    // Handle case where interaction wasn't deferred properly
+    // We handle the case where interaction wasn't deferred properly.
     try {
-      await interaction.editReply({ content: errorMessage });
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true
+      });
     } catch (followUpError) {
       logger.error("Failed to send error response for reminder command.", {
         error: followUpError.message,
@@ -273,11 +279,13 @@ module.exports = {
         userId: interaction.user.id
       });
       
-      // Try replying if editing failed
-      await interaction.reply({ content: errorMessage })
-        .catch(() => {
-          // Silent catch if everything fails
-        });
+      // We try replying if editing failed as a fallback.
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true
+      }).catch(() => {
+        // Silent catch if everything fails to prevent crashing.
+      });
     }
   }
 };

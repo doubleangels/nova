@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-// Configuration constants
+// These are the configuration constants for the coin flip command.
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
 const HEADS_PROBABILITY = 0.5;
@@ -11,7 +11,7 @@ const COIN_EMOJI = '🪙';
 module.exports = {
     /**
      * Slash command definition for flipping a coin.
-     * This command randomly selects either "Heads" or "Tails" and returns the result.
+     * This command randomly selects either "Heads" or "Tails" and returns the result to the user.
      */
     data: new SlashCommandBuilder()
         .setName('coinflip')
@@ -30,7 +30,7 @@ module.exports = {
                 channelId: interaction.channel?.id
             });
 
-            // Generate a random number and determine Heads or Tails.
+            // We generate a random number and determine whether the result is Heads or Tails.
             const randomValue = Math.random();
             const result = randomValue < HEADS_PROBABILITY ? COIN_FACE_HEADS : COIN_FACE_TAILS;
             
@@ -39,7 +39,7 @@ module.exports = {
                 randomValue: randomValue
             });
 
-            // Reply to the user with the result (public message).
+            // We reply to the user with the result as a public message.
             await interaction.editReply({ 
                 content: `${COIN_EMOJI} The coin landed on **${result}**!` 
             });
@@ -57,9 +57,10 @@ module.exports = {
                 channelId: interaction.channel?.id
             });
             
-            // Keep consistency with non-ephemeral responses
+            // We send an ephemeral error message to maintain privacy for errors.
             await interaction.editReply({
-                content: "⚠️ An unexpected error occurred. Please try again later."
+                content: "⚠️ An unexpected error occurred. Please try again later.",
+                ephemeral: true
             });
         }
     }

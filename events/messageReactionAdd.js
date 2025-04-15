@@ -8,7 +8,7 @@ const timezone = require('dayjs/plugin/timezone');
 
 // Configuration constants.
 const CLOCK_EMOJI = '🕒';
-const TIME_CONVERSION_TIMEOUT = 30000; // 30 seconds
+const TIME_CONVERSION_TIMEOUT = 15000; // 15 seconds
 
 // Extend dayjs with timezone capabilities.
 dayjs.extend(utc);

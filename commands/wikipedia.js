@@ -2,47 +2,21 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const he = require('he'); // HTML entity decoder
+const he = require('he'); // This is used for HTML entity decoding.
 
-// Configuration constants.
-const WIKIPEDIA_API_TIMEOUT = 5000;
-const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF;
+// These are the configuration constants for the Wikipedia integration.
+const WIKIPEDIA_API_TIMEOUT = 5000; // We set a 5-second timeout for API requests.
+const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF; // We use white color for Wikipedia embeds.
 const WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
 const WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
 const WIKIPEDIA_HTML_TAG_REGEX = /<[^>]*>/g;
-const WIKIPEDIA_MAX_RESULTS = 5; // Maximum number of results to fetch
-const WIKIPEDIA_CACHE_TTL = 1000 * 60 * 60; // 1 hour cache TTL
+const WIKIPEDIA_MAX_RESULTS = 5; // We limit to a maximum of 5 results to prevent overload.
+const WIKIPEDIA_CACHE_TTL = 1000 * 60 * 60; // We cache results for 1 hour to reduce API calls.
+const WIKIPEDIA_API_BASE_URL = 'https://en.wikipedia.org/w/api.php';
+const WIKIPEDIA_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
+const WIKIPEDIA_FOOTER_TEXT = 'Powered by Wikipedia API';
 
-// Language-specific constants
-const WIKIPEDIA_LANGUAGE_CONFIG = {
-  en: {
-    apiBaseUrl: 'https://en.wikipedia.org/w/api.php',
-    articleUrl: 'https://en.wikipedia.org/?curid=%s',
-    footerText: 'Powered by Wikipedia API'
-  },
-  es: {
-    apiBaseUrl: 'https://es.wikipedia.org/w/api.php',
-    articleUrl: 'https://es.wikipedia.org/?curid=%s',
-    footerText: 'Proporcionado por la API de Wikipedia'
-  },
-  fr: {
-    apiBaseUrl: 'https://fr.wikipedia.org/w/api.php',
-    articleUrl: 'https://fr.wikipedia.org/?curid=%s',
-    footerText: 'Alimenté par l\'API Wikipedia'
-  },
-  de: {
-    apiBaseUrl: 'https://de.wikipedia.org/w/api.php',
-    articleUrl: 'https://de.wikipedia.org/?curid=%s',
-    footerText: 'Unterstützt von der Wikipedia-API'
-  },
-  ja: {
-    apiBaseUrl: 'https://ja.wikipedia.org/w/api.php',
-    articleUrl: 'https://ja.wikipedia.org/?curid=%s',
-    footerText: 'Wikipedia APIを利用'
-  }
-};
-
-// Simple in-memory cache
+// We use a simple in-memory cache to store search results.
 const cache = new Map();
 
 module.exports = {
@@ -54,19 +28,6 @@ module.exports = {
         .setName('query')
         .setDescription('What topic do you want to search for?')
         .setRequired(true)
-    )
-    .addStringOption(option =>
-      option
-        .setName('language')
-        .setDescription('Which Wikipedia language to search (default: English)')
-        .setRequired(false)
-        .addChoices(
-          { name: 'English', value: 'en' },
-          { name: 'Spanish', value: 'es' },
-          { name: 'French', value: 'fr' },
-          { name: 'German', value: 'de' },
-          { name: 'Japanese', value: 'ja' }
-        )
     ),
     
   /**
@@ -77,66 +38,59 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to allow time for the API call.
+      // We defer the reply to allow time for the API call.
       await interaction.deferReply();
       
       const query = interaction.options.getString('query');
-      const language = interaction.options.getString('language') || 'en';
       
       logger.debug("Wikipedia command received.", { 
         userId: interaction.user.id,
         userTag: interaction.user.tag,
-        query,
-        language
+        query
       });
       
-      // Trim the query to remove unnecessary whitespace.
+      // We trim the query to remove unnecessary whitespace.
       const formattedQuery = query.trim();
       
-      // Check if we have cached results for this query and language
-      const cacheKey = `${language}:${formattedQuery.toLowerCase()}`;
+      // We check if we have cached results for this query.
+      const cacheKey = formattedQuery.toLowerCase();
       const cachedResults = this.getCachedResults(cacheKey);
       
       if (cachedResults) {
         logger.debug("Using cached Wikipedia results.", { 
           query: formattedQuery,
-          language,
           resultCount: cachedResults.length
         });
         
-        await this.sendSearchResults(interaction, formattedQuery, cachedResults, language, 0);
+        await this.sendSearchResults(interaction, formattedQuery, cachedResults, 0);
         return;
       }
       
       logger.debug("Processing Wikipedia search query.", { 
-        formattedQuery,
-        language
+        formattedQuery
       });
       
-      // Get language-specific configuration
-      const langConfig = WIKIPEDIA_LANGUAGE_CONFIG[language] || WIKIPEDIA_LANGUAGE_CONFIG.en;
-      
-      // Fetch search results from Wikipedia API
-      const searchResults = await this.fetchWikipediaResults(formattedQuery, language, langConfig);
+      // We fetch search results from the Wikipedia API.
+      const searchResults = await this.fetchWikipediaResults(formattedQuery);
       
       if (!searchResults || searchResults.length === 0) {
         logger.warn("No Wikipedia results found for query.", { 
           query: formattedQuery,
-          language,
           userId: interaction.user.id
         });
         
         await interaction.editReply({ 
-          content: `⚠️ No results found for **${formattedQuery}** in ${this.getLanguageName(language)} Wikipedia. Try refining your search!`
+          content: `⚠️ No results found for **${formattedQuery}** in Wikipedia. Try refining your search!`,
+          ephemeral: true
         });
         return;
       }
       
-      // Cache the results
+      // We cache the results to reduce API calls for repeated searches.
       this.cacheResults(cacheKey, searchResults);
       
-      // Send the first result with pagination if there are multiple results
-      await this.sendSearchResults(interaction, formattedQuery, searchResults, language, 0);
+      // We send the first result with pagination if there are multiple results.
+      await this.sendSearchResults(interaction, formattedQuery, searchResults, 0);
       
     } catch (error) {
       await this.handleError(interaction, error);
@@ -147,13 +101,11 @@ module.exports = {
    * Fetches search results from the Wikipedia API.
    * 
    * @param {string} query - The search query.
-   * @param {string} language - The Wikipedia language code.
-   * @param {Object} langConfig - Language-specific configuration.
    * @returns {Promise<Array>} Array of search results.
    */
-  async fetchWikipediaResults(query, language, langConfig) {
+  async fetchWikipediaResults(query) {
     try {
-      // Build the Wikipedia API URL with query parameters.
+      // We build the Wikipedia API URL with query parameters.
       const params = new URLSearchParams({
         action: 'query',
         format: 'json',
@@ -166,29 +118,27 @@ module.exports = {
         explaintext: '1'
       });
       
-      const requestUrl = `${langConfig.apiBaseUrl}?${params.toString()}`;
+      const requestUrl = `${WIKIPEDIA_API_BASE_URL}?${params.toString()}`;
       
       logger.debug("Making Wikipedia API request.", { 
-        requestUrl,
-        language
+        requestUrl
       });
       
-      // Make the API request using axios with a timeout.
+      // We make the API request using axios with a timeout for safety.
       const response = await axios.get(requestUrl, { timeout: WIKIPEDIA_API_TIMEOUT });
       
       logger.debug("Wikipedia API response received.", { 
-        status: response.status,
-        language
+        status: response.status
       });
       
       if (response.status === 200 && response.data.query && response.data.query.search) {
-        // Get detailed information for each result
+        // We get the search results from the API response.
         const results = response.data.query.search;
         
-        // Enhance results with additional information
+        // We enhance results with additional information for display.
         return results.map(result => ({
           ...result,
-          url: langConfig.articleUrl.replace('%s', result.pageid),
+          url: WIKIPEDIA_ARTICLE_URL.replace('%s', result.pageid),
           formattedSnippet: this.formatSnippet(result.snippet)
         }));
       }
@@ -197,8 +147,7 @@ module.exports = {
     } catch (error) {
       logger.error("Error fetching Wikipedia results.", { 
         error: error.message,
-        query,
-        language
+        query
       });
       throw error;
     }
@@ -213,15 +162,15 @@ module.exports = {
   formatSnippet(snippet) {
     if (!snippet) return "No snippet available.";
     
-    // Replace search match spans with bold markdown
+    // We replace search match spans with bold markdown for better readability.
     let formatted = snippet
       .replace(WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX, '**')
       .replace(WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX, '**');
     
-    // Remove other HTML tags
+    // We remove other HTML tags to clean up the text.
     formatted = formatted.replace(WIKIPEDIA_HTML_TAG_REGEX, '');
     
-    // Decode HTML entities
+    // We decode HTML entities to display proper characters.
     formatted = he.decode(formatted);
     
     return formatted;
@@ -233,28 +182,26 @@ module.exports = {
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {string} query - The search query.
    * @param {Array} results - Array of search results.
-   * @param {string} language - The Wikipedia language code.
    * @param {number} index - Index of the current result to display.
    * @returns {Promise<void>}
    */
-  async sendSearchResults(interaction, query, results, language, index) {
+  async sendSearchResults(interaction, query, results, index) {
     const result = results[index];
-    const langConfig = WIKIPEDIA_LANGUAGE_CONFIG[language] || WIKIPEDIA_LANGUAGE_CONFIG.en;
     
-    // Create the embed
-    const embed = this.createResultEmbed(result, query, language, langConfig, index, results.length);
+    // We create the embed with the current search result.
+    const embed = this.createResultEmbed(result, query, index, results.length);
     
-    // Create pagination buttons if there are multiple results
+    // We create pagination buttons if there are multiple results.
     const components = [];
     if (results.length > 1) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`wiki_prev_${language}_${index}`)
+          .setCustomId(`wiki_prev_${index}`)
           .setLabel('Previous')
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(index === 0),
         new ButtonBuilder()
-          .setCustomId(`wiki_next_${language}_${index}`)
+          .setCustomId(`wiki_next_${index}`)
           .setLabel('Next')
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(index === results.length - 1)
@@ -262,7 +209,7 @@ module.exports = {
       components.push(row);
     }
     
-    // Send or edit the reply
+    // We send or edit the reply with the embed and buttons.
     const message = await interaction.editReply({ 
       embeds: [embed],
       components: components
@@ -272,14 +219,13 @@ module.exports = {
       userId: interaction.user.id,
       userTag: interaction.user.tag,
       query,
-      language,
       resultIndex: index,
       totalResults: results.length
     });
     
-    // Set up button collector for pagination
+    // We set up button collector for pagination if there are multiple results.
     if (results.length > 1) {
-      this.setupPaginationCollector(message, interaction, query, results, language, index);
+      this.setupPaginationCollector(message, interaction, query, results, index);
     }
   },
   
@@ -288,13 +234,11 @@ module.exports = {
    * 
    * @param {Object} result - The search result.
    * @param {string} query - The search query.
-   * @param {string} language - The Wikipedia language code.
-   * @param {Object} langConfig - Language-specific configuration.
    * @param {number} index - Index of the current result.
    * @param {number} total - Total number of results.
    * @returns {EmbedBuilder} - Discord embed with the result.
    */
-  createResultEmbed(result, query, language, langConfig, index, total) {
+  createResultEmbed(result, query, index, total) {
     const title = result.title || "No Title";
     const snippet = result.formattedSnippet;
     const url = result.url;
@@ -303,7 +247,7 @@ module.exports = {
       new Date(result.timestamp).toLocaleDateString() : 
       "Unknown";
     
-    // Create the embed
+    // We create the embed with all the relevant information.
     const embed = new EmbedBuilder()
       .setTitle(`📖 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}`)
@@ -322,7 +266,7 @@ module.exports = {
         }
       )
       .setFooter({ 
-        text: `${langConfig.footerText} • Result ${index + 1} of ${total} for "${query}"`
+        text: `${WIKIPEDIA_FOOTER_TEXT} • Result ${index + 1} of ${total} for "${query}"`
       });
     
     return embed;
@@ -335,49 +279,45 @@ module.exports = {
    * @param {ChatInputCommandInteraction} interaction - The original interaction.
    * @param {string} query - The search query.
    * @param {Array} results - Array of search results.
-   * @param {string} language - The Wikipedia language code.
    * @param {number} currentIndex - Current result index.
    * @returns {void}
    */
-  setupPaginationCollector(message, interaction, query, results, language, currentIndex) {
-    // Create a collector for button interactions
+  setupPaginationCollector(message, interaction, query, results, currentIndex) {
+    // We create a collector to handle button interactions.
     const filter = i => 
       i.user.id === interaction.user.id && 
-      (i.customId.startsWith(`wiki_prev_${language}_`) || 
-       i.customId.startsWith(`wiki_next_${language}_`));
+      (i.customId.startsWith(`wiki_prev_`) || 
+       i.customId.startsWith(`wiki_next_`));
     
     const collector = message.createMessageComponentCollector({ 
       filter, 
-      time: 300000 // 5 minutes
+      time: 300000 // We set a 5-minute timeout for the collector.
     });
     
     collector.on('collect', async i => {
-      // Calculate the new index based on which button was clicked
+      // We calculate the new index based on which button was clicked.
       let newIndex = currentIndex;
       
-      if (i.customId.startsWith(`wiki_next_${language}_`)) {
+      if (i.customId.startsWith(`wiki_next_`)) {
         newIndex = Math.min(results.length - 1, currentIndex + 1);
-      } else if (i.customId.startsWith(`wiki_prev_${language}_`)) {
+      } else if (i.customId.startsWith(`wiki_prev_`)) {
         newIndex = Math.max(0, currentIndex - 1);
       }
       
-      // Update the message with the new result
+      // We update the message with the new result.
       await i.deferUpdate();
-      await this.sendSearchResults(interaction, query, results, language, newIndex);
+      await this.sendSearchResults(interaction, query, results, newIndex);
       
-      // Stop the old collector
+      // We stop the old collector to prevent overlapping collectors.
       collector.stop();
     });
     
     collector.on('end', collected => {
-      // If the collector ends due to timeout, remove the buttons
+      // If the collector ends due to timeout, we remove the buttons.
       if (collected.size === 0) {
-        const langConfig = WIKIPEDIA_LANGUAGE_CONFIG[language] || WIKIPEDIA_LANGUAGE_CONFIG.en;
         const embed = this.createResultEmbed(
           results[currentIndex], 
           query, 
-          language, 
-          langConfig, 
           currentIndex, 
           results.length
         );
@@ -407,7 +347,7 @@ module.exports = {
       return cached.results;
     }
     
-    // Remove expired entry if it exists
+    // We remove expired entries to keep the cache clean.
     if (cached) {
       cache.delete(cacheKey);
     }
@@ -435,30 +375,13 @@ module.exports = {
   },
   
   /**
-   * Gets the display name for a language code.
-   * 
-   * @param {string} code - The language code.
-   * @returns {string} - The language display name.
-   */
-  getLanguageName(code) {
-    const languages = {
-      en: 'English',
-      es: 'Spanish',
-      fr: 'French',
-      de: 'German',
-      ja: 'Japanese'
-    };
-    
-    return languages[code] || code;
-  },
-  
-  /**
    * Handles errors that occur during command execution.
    * 
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
+    // We log any unexpected errors and send an error message to the user.
     logger.error("Error executing Wikipedia command.", { 
       error: error.message,
       stack: error.stack,
@@ -469,11 +392,13 @@ module.exports = {
     try {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.'
+          content: '⚠️ An unexpected error occurred. Please try again later.',
+          ephemeral: true
         });
       } else {
         await interaction.reply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.'
+          content: '⚠️ An unexpected error occurred. Please try again later.',
+          ephemeral: true
         });
       }
     } catch (replyError) {

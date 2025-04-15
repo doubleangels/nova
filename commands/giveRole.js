@@ -5,7 +5,7 @@ const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Module for the /giverole command.
- * Assigns a specified role to a specified user.
+ * This command assigns a specified role to a specified user in the server.
  */
 module.exports = {
     data: new SlashCommandBuilder()
@@ -26,15 +26,15 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
-        // Defer reply since this might take a moment.
-        await interaction.deferReply({ ephemeral: true });
+        // We defer the reply since role assignment might take a moment to complete.
+        await interaction.deferReply();
         logger.info(`/giverole command initiated.`, { 
             userId: interaction.user.id, 
             guildId: interaction.guild.id 
         });
         
         try {
-            // Extract command options.
+            // We extract the command options provided by the user.
             const role = interaction.options.getRole('role');
             const targetUser = interaction.options.getUser('user');
             
@@ -45,7 +45,7 @@ module.exports = {
                 targetUserTag: targetUser.tag
             });
             
-            // Validate permissions and conditions
+            // We validate permissions and conditions before attempting role assignment.
             const validationResult = await this.validateRoleAssignment(interaction, role, targetUser);
             if (!validationResult.success) {
                 return await interaction.editReply({
@@ -54,16 +54,15 @@ module.exports = {
                 });
             }
             
-            // Add the role to the user.
+            // We add the role to the user after validation passes.
             const targetMember = validationResult.targetMember;
             await this.assignRole(interaction, targetMember, role);
             await interaction.editReply({
-                content: `✅ Successfully gave the ${role} role to ${targetUser}!`,
-                ephemeral: true
+                content: `✅ Successfully gave the ${role} role to ${targetUser}!`
             });
             
         } catch (error) {
-            // Log the full error with stack trace.
+            // We log the full error with stack trace for debugging purposes.
             logger.error("Error executing /giverole command.", { 
                 error: error.message,
                 stack: error.stack,
@@ -78,14 +77,14 @@ module.exports = {
     },
     
     /**
-     * Validates that the role assignment can be performed.
+     * Validates that the role assignment can be performed by checking permissions and conditions.
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {Role} role - The role to assign.
      * @param {User} targetUser - The user to receive the role.
      * @returns {Object} An object with success status, message, and targetMember if successful.
      */
     async validateRoleAssignment(interaction, role, targetUser) {
-        // Check if the bot has permission to manage roles.
+        // We check if the bot has permission to manage roles in the server.
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
             logger.warn("Bot lacks ManageRoles permission.", { 
@@ -97,7 +96,7 @@ module.exports = {
             };
         }
 
-        // Check if the bot's highest role is above the role being assigned.
+        // We check if the bot's highest role is above the role being assigned in the hierarchy.
         if (role.position >= botMember.roles.highest.position) {
             logger.warn("Bot's highest role is not high enough to assign the specified role.", {
                 roleId: role.id,
@@ -111,7 +110,7 @@ module.exports = {
             };
         }
         
-        // Check role hierarchy for the user issuing the command.
+        // We check role hierarchy for the user issuing the command to enforce Discord's role hierarchy rules.
         const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
         const issuerHighestRole = issuerMember.roles.highest;
         if (role.position >= issuerHighestRole.position && interaction.guild.ownerId !== interaction.user.id) {
@@ -126,7 +125,7 @@ module.exports = {
             };
         }
         
-        // Fetch the target member from the guild.
+        // We fetch the target member from the guild to ensure they exist.
         let targetMember;
         try {
             targetMember = await interaction.guild.members.fetch(targetUser.id);
@@ -140,7 +139,7 @@ module.exports = {
             };
         }
         
-        // Check if the user already has the role.
+        // We check if the user already has the role to avoid redundant assignments.
         const hasRole = targetMember.roles.cache.has(role.id);
         if (hasRole) {
             logger.debug("User already has the role.", {
@@ -160,7 +159,7 @@ module.exports = {
     },
     
     /**
-     * Assigns a role to a guild member.
+     * Assigns a role to a guild member with an audit log reason.
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {GuildMember} targetMember - The member to receive the role.
      * @param {Role} role - The role to assign.
@@ -181,9 +180,9 @@ module.exports = {
     },
     
     /**
-     * Gets a user-friendly error message based on the error.
+     * Gets a user-friendly error message based on the error type.
      * @param {Error} error - The error object.
-     * @returns {string} A user-friendly error message.
+     * @returns {string} A user-friendly error message explaining the issue.
      */
     getErrorMessage(error) {
         if (error.code === 50013) {

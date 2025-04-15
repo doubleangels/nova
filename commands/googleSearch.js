@@ -5,15 +5,15 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 
-// Configuration constants
+// These are the configuration constants for the Google search command.
 const API_URL = 'https://www.googleapis.com/customsearch/v1';
 const DEFAULT_RESULTS = 5;
 const MIN_RESULTS = 1;
 const MAX_RESULTS = 10;
-const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout
-const EMBED_COLOR = 0x4285F4; // Google blue color
-const REQUEST_TIMEOUT = 10000; // 10 second API request timeout
-const SAFE_SEARCH = 'off'; // Options: 'off', 'medium', 'high'
+const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout for pagination controls
+const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
+const REQUEST_TIMEOUT = 10000; // 10 second API request timeout to prevent hanging
+const SAFE_SEARCH = 'off'; // Options: 'off', 'medium', 'high' for content filtering
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -38,7 +38,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Validate API configuration
+      // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
           content: "⚠️ This command is not properly configured. Please contact a server administrator.",
@@ -46,14 +46,14 @@ module.exports = {
         });
       }
 
-      // Defer reply to allow processing time
+      // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
       logger.info(`/google command initiated.`, { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
 
-      // Get and validate search parameters
+      // We get and validate the search parameters provided by the user.
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
@@ -63,7 +63,8 @@ module.exports = {
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters.", { reason: searchParams.error });
         return await interaction.editReply({
-          content: "⚠️ Please provide a valid search query."
+          content: "⚠️ Please provide a valid search query.",
+          ephemeral: true
         });
       }
 
@@ -72,23 +73,25 @@ module.exports = {
         count: searchParams.count 
       });
 
-      // Fetch search results
+      // We fetch search results from the Google API.
       const searchResults = await this.fetchSearchResults(searchParams.query, searchParams.count);
       
       if (searchResults.error) {
         return await interaction.editReply({
-          content: searchResults.message
+          content: searchResults.message,
+          ephemeral: true
         });
       }
 
       if (searchResults.items.length === 0) {
         logger.warn("No search results found for query.", { query: searchParams.query });
         return await interaction.editReply({ 
-          content: `⚠️ No search results found for **${searchParams.query}**. Try refining your query!`
+          content: `⚠️ No search results found for **${searchParams.query}**. Try refining your query!`,
+          ephemeral: true
         });
       }
       
-      // Create paginated results with Google-themed buttons
+      // We create paginated results with Google-themed buttons for navigation.
       await createPaginatedResults(
         interaction,
         searchResults.items,
@@ -97,7 +100,7 @@ module.exports = {
         COLLECTOR_TIMEOUT,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary, // Google blue
+          buttonStyle: ButtonStyle.Primary, // Google blue for consistent branding
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',
@@ -112,13 +115,14 @@ module.exports = {
         guildId: interaction.guildId
       });
       await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later."
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
       });
     }
   },
   
   /**
-   * Validates that the required configuration is available.
+   * Validates that the required API configuration is available.
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -133,13 +137,13 @@ module.exports = {
   },
   
   /**
-   * Fetches search results from the Google API.
+   * Fetches search results from the Google Custom Search API.
    * @param {string} query - The search query.
    * @param {number} resultsCount - The number of results to fetch.
    * @returns {Object} The search results or error information.
    */
   async fetchSearchResults(query, resultsCount) {
-    // Build the Google Custom Search API request
+    // We build the Google Custom Search API request with all necessary parameters.
     const params = new URLSearchParams({
       key: config.googleApiKey,
       cx: config.searchEngineId,
@@ -154,7 +158,7 @@ module.exports = {
       resultsRequested: resultsCount
     });
 
-    // Fetch data from the API using axios
+    // We fetch data from the API using axios with a timeout to prevent hanging.
     try {
       const response = await axios.get(requestUrl, { timeout: REQUEST_TIMEOUT });
       logger.debug("Google API response received.", { 
@@ -180,10 +184,10 @@ module.exports = {
   },
   
   /**
-   * Generates an embed for a search result.
+   * Generates an embed for a search result with proper formatting.
    * @param {Array} items - The search result items.
    * @param {number} index - The index of the current item.
-   * @returns {EmbedBuilder} The generated embed.
+   * @returns {EmbedBuilder} The generated embed with search result information.
    */
   generateResultEmbed(items, index) {
     const item = items[index];

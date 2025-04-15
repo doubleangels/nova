@@ -8,7 +8,7 @@ const timezone = require('dayjs/plugin/timezone');
 // Configuration constants.
 const TIME_FORMAT = 'h:mm A';
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
-const NEXT_DAY_SUFFIX = '(the next day)';
+const NEXT_DAY_SUFFIX = ' (the next day)';
 const PREVIOUS_DAY_SUFFIX = ' (the previous day)';
 
 // Extend dayjs with plugins for timezone handling.
@@ -210,7 +210,7 @@ function defaultFormatter(conversion) {
     dayIndicator = PREVIOUS_DAY_SUFFIX;
   }
   
-  return `${convertedTime} is ${originalTime} (${dayIndicator}) in your timezone.`;
+  return `${convertedTime} is ${originalTime}${dayIndicator} in your timezone.`;
 }
 
 /**

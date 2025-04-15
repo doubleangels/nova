@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
-// Configuration constants.
+// These are the configuration constants used for database keys.
 const CONFIG_KEYS = {
   CHANNEL: "backup_mode_channel",
   ROLE: "backup_mode_role",
@@ -12,7 +12,7 @@ const CONFIG_KEYS = {
 
 /**
  * Module for the /backupmode command.
- * Configures and toggles backup mode for new members by setting:
+ * This command configures and toggles backup mode for new members by setting:
  * - The channel to send welcome messages.
  * - The role to assign to new members.
  * - The auto-role assignment status.
@@ -24,7 +24,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('set')
-        .setDescription('Configure backup mode settings')
+        .setDescription('Configure backup mode settings.')
         .addStringOption(option =>
           option.setName('enabled')
             .setDescription('Do you want to enable or disable auto-role assignment?')
@@ -48,7 +48,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current backup mode configuration')
+        .setDescription('Check the current backup mode configuration.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
   /**
@@ -81,25 +81,25 @@ module.exports = {
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async handleSetSubcommand(interaction) {
-    // Retrieve command options.
+    // We retrieve the command options provided by the user.
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
     const enabledOption = interaction.options.getString('enabled');
     
-    // Validate inputs if provided
+    // We validate the inputs if they were provided by the user.
     const validationError = await this.validateInputs(interaction, channelOption, roleOption);
     if (validationError) {
       return;
     }
     
-    // If any configuration option is provided, update settings
+    // If any configuration option is provided, we update the settings accordingly.
     if (channelOption || roleOption || enabledOption !== null) {
-      // Get current settings for comparison
+      // We get the current settings for comparison with the new values.
       const currentSettings = await this.getCurrentSettings();
       
       await this.updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings);
     } else {
-      // No options provided: inform user
+      // No options were provided, so we inform the user that at least one setting is required.
       await interaction.editReply({
         content: "⚠️ Please provide at least one setting to update (channel, role, or enabled status)."
       });
@@ -129,7 +129,7 @@ module.exports = {
       return {
         channelId,
         roleId,
-        isEnabled: isEnabled === true // Ensure boolean
+        isEnabled: isEnabled === true // We ensure this is a boolean value.
       };
     } catch (error) {
       logger.error("Failed to retrieve current backup mode settings.", {
@@ -149,26 +149,28 @@ module.exports = {
    * @returns {boolean} True if there was a validation error, false otherwise.
    */
   async validateInputs(interaction, channelOption, roleOption) {
-    // Validate channel type if provided.
+    // We validate the channel type if one was provided.
     if (channelOption && channelOption.type !== ChannelType.GuildText) {
       logger.warn("Invalid channel type selected for backup mode.", { 
         channelId: channelOption.id, 
         type: channelOption.type 
       });
       await interaction.editReply({
-        content: "⚠️ The channel must be a text channel for welcome messages."
+        content: "⚠️ The channel must be a text channel for welcome messages.",
+        ephemeral: true
       });
       return true;
     }
 
-    // Validate role if provided.
+    // We validate the role if one was provided.
     if (roleOption && (!roleOption.editable || roleOption.managed)) {
       logger.warn("Invalid role selected for backup mode.", { 
         roleId: roleOption.id, 
         managed: roleOption.managed 
       });
       await interaction.editReply({
-        content: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role."
+        content: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
+        ephemeral: true
       });
       return true;
     }
@@ -186,12 +188,12 @@ module.exports = {
    */
   async updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings) {
     try {
-      // Track what has changed
+      // We track what settings have changed.
       let newIsEnabled = currentSettings.isEnabled;
       let newChannelId = currentSettings.channelId;
       let newRoleId = currentSettings.roleId;
       
-      // Update configuration values in database
+      // We update the configuration values in the database.
       if (channelOption) {
         newChannelId = channelOption.id;
         await setValue(CONFIG_KEYS.CHANNEL, channelOption.id);
@@ -216,7 +218,7 @@ module.exports = {
         logger.debug("Backup mode enabled status updated.", { enabled: newIsEnabled });
       }
       
-      // Format the response message
+      // We format the response message to show what was updated.
       const responseMessage = this.formatUpdateMessage(
         currentSettings.isEnabled, newIsEnabled,
         currentSettings.channelId, newChannelId,
@@ -268,8 +270,6 @@ module.exports = {
     }
   },
 
-  // Only updating the formatUpdateMessage and formatStatusMessage methods
-
   /**
    * Formats an update message based on the old and new settings.
    * @param {boolean} oldEnabled - The previous enabled state.
@@ -284,17 +284,17 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     let message = `🔄 **Backup Mode Updated**\n\n`;
     
-    // Status
+    // We display the current status with an appropriate emoji.
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
     
-    // Channel
+    // We include the channel information if it exists.
     if (newChannelId) {
       message += `• Welcome Channel: <#${newChannelId}>\n`;
     }
     
-    // Role
+    // We include the role information if it exists.
     if (newRoleId) {
       message += `• New Member Role: <@&${newRoleId}>\n`;
     }
@@ -316,13 +316,13 @@ module.exports = {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     
-    // Get channel name from ID
+    // We get the channel name from its ID or show "Not set" if it doesn't exist.
     let channelStr = "Not set";
     if (settings.channelId) {
       channelStr = `<#${settings.channelId}>`;
     }
     
-    // Get role name from ID
+    // We get the role name from its ID or show "Not set" if it doesn't exist.
     const roleStr = settings.roleId ? `<@&${settings.roleId}>` : "Not set";
     
     let message = `🔄 **Backup Mode Status**\n\n`;
@@ -358,9 +358,12 @@ module.exports = {
       errorMessage = "⚠️ Failed to save settings. Please try again later.";
     }
     
-    // Handle case where interaction wasn't deferred properly
+    // We handle the case where the interaction wasn't deferred properly.
     try {
-      await interaction.editReply({ content: errorMessage });
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
     } catch (followUpError) {
       logger.error("Failed to send error response for backupmode command.", {
         error: followUpError.message,
@@ -368,11 +371,13 @@ module.exports = {
         userId: interaction.user?.id
       });
       
-      // Try replying if editing failed
-      await interaction.reply({ content: errorMessage })
-        .catch(() => {
-          // Silent catch if everything fails
-        });
+      // We try replying if editing failed.
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
     }
   }
 };

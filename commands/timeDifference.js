@@ -6,7 +6,7 @@ const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/
 
 /**
  * Module for the /timedifference command.
- * Calculates the time difference between two places by retrieving their UTC offsets.
+ * This command calculates the time difference between two places by retrieving their UTC offsets from the Google API.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -15,13 +15,13 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('place1')
-        .setDescription('Enter the first city name (e.g., New York)')
+        .setDescription('What is the first place? (e.g., Tokyo, London, New York)')
         .setRequired(true)
     )
     .addStringOption(option =>
       option
         .setName('place2')
-        .setDescription('Enter the second city name (e.g., London)')
+        .setDescription('What is the second place? (e.g., Tokyo, London, New York)')
         .setRequired(true)
     ),
     
@@ -31,14 +31,15 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Check if Google API key is configured.
+      // We check if the Google API key is configured before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({ 
-          content: '⚠️ Google API key is not configured. This command is currently unavailable.'
+          content: '⚠️ Google API key is not configured. This command is currently unavailable.',
+          ephemeral: true
         });
       }
       
-      // Defer reply to allow time for processing.
+      // We defer the reply to allow time for API requests and processing.
       await interaction.deferReply();
       
       const place1 = interaction.options.getString('place1');
@@ -50,16 +51,17 @@ module.exports = {
         place2
       });
 
-      // Get time difference information
+      // We get the time difference information between the two places.
       const timeDiffResult = await this.calculateTimeDifference(place1, place2);
       
       if (timeDiffResult.error) {
         return await interaction.editReply({
-          content: timeDiffResult.message
+          content: timeDiffResult.message,
+          ephemeral: true
         });
       }
       
-      // Create and send the reply message
+      // We create and send the reply message with the time difference information.
       await interaction.editReply(timeDiffResult.message);
       logger.info("Time difference calculation completed successfully.", {
         userId: interaction.user.id,
@@ -78,7 +80,8 @@ module.exports = {
       });
       
       await interaction.editReply({
-        content: '⚠️ An unexpected error occurred. Please try again later.'
+        content: '⚠️ An unexpected error occurred. Please try again later.',
+        ephemeral: true
       });
     }
   },
@@ -98,19 +101,19 @@ module.exports = {
   },
   
   /**
-   * Calculates the time difference between two places.
+   * Calculates the time difference between two places using their UTC offsets.
    * @param {string} place1 - The first place name.
    * @param {string} place2 - The second place name.
-   * @returns {Promise<Object>} The time difference result.
+   * @returns {Promise<Object>} The time difference result with formatted message.
    */
   async calculateTimeDifference(place1, place2) {
-    // Retrieve UTC offsets for both places in parallel
+    // We retrieve UTC offsets for both places in parallel for efficiency.
     const [offset1Result, offset2Result] = await Promise.all([
       getUtcOffset(place1),
       getUtcOffset(place2)
     ]);
     
-    // Handle specific errors for each place
+    // We handle specific errors for each place and provide helpful error messages.
     if (offset1Result.error) {
       logger.warn("Failed to retrieve timezone for the first location.", {
         place: place1,
@@ -135,29 +138,29 @@ module.exports = {
       };
     }
 
-    // Format the place names (trim and capitalize first letter)
+    // We format the place names (trim and capitalize first letter) for consistent display.
     const formattedPlace1 = formatPlaceName(place1);
     const formattedPlace2 = formatPlaceName(place2);
     
-    // Calculate the time difference (keeping the sign)
+    // We calculate the time difference, preserving the sign to determine which place is ahead.
     const rawTimeDiff = offset1Result.offset - offset2Result.offset;
     const timeDiff = Math.abs(rawTimeDiff);
     
-    // Determine which place is ahead
+    // We determine which place is ahead based on the sign of the time difference.
     const aheadPlace = rawTimeDiff > 0 ? formattedPlace1 : 
                       rawTimeDiff < 0 ? formattedPlace2 : null;
     
-    // Format the time difference for display
+    // We format the time difference for human-readable display.
     const formattedTimeDiff = this.formatTimeDifference(timeDiff);
     
-    // Create the response message
+    // We create a comprehensive response message with all the time information.
     let message = `⏳ **Time Difference Information:**\n\n`;
     
-    // Add time zone information
+    // We add time zone information for both places.
     message += `• **${formattedPlace1}**: ${this.formatTimeZone(offset1Result)}\n`;
     message += `• **${formattedPlace2}**: ${this.formatTimeZone(offset2Result)}\n\n`;
     
-    // Add the time difference
+    // We add the time difference with appropriate wording based on whether they're in the same zone.
     if (rawTimeDiff === 0) {
       message += `**${formattedPlace1}** and **${formattedPlace2}** are in the same time zone.`;
     } else {
@@ -177,7 +180,7 @@ module.exports = {
   },
   
   /**
-   * Formats a time zone for display.
+   * Formats a time zone for display with UTC offset and time zone name.
    * @param {Object} offsetResult - The offset result from getUtcOffset.
    * @returns {string} The formatted time zone string.
    */
@@ -192,7 +195,7 @@ module.exports = {
   },
   
   /**
-   * Formats a time difference for display.
+   * Formats a time difference for display with appropriate pluralization.
    * @param {number} timeDiff - The time difference in hours.
    * @returns {string} The formatted time difference string.
    */

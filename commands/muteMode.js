@@ -3,16 +3,16 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 
-// Configuration constants
-const DEFAULT_TIME_LIMIT = 2; // Default time limit in hours
-const MIN_TIME_LIMIT = 1; // Minimum allowed time limit in hours
-const MAX_TIME_LIMIT = 72; // Maximum allowed time limit in hours (3 days)
+// These are the configuration constants for the mute mode feature.
+const DEFAULT_TIME_LIMIT = 2; // Default time limit is 2 hours before kicking inactive users.
+const MIN_TIME_LIMIT = 1; // Minimum allowed time limit is 1 hour to prevent abuse.
+const MAX_TIME_LIMIT = 72; // Maximum allowed time limit is 72 hours (3 days) for reasonable bounds.
 const DB_KEY_ENABLED = "mute_mode_enabled";
 const DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
 
 /**
  * Module for the /mutemode command.
- * Toggles auto-kicking of users who don't send a message within a specified time limit.
+ * This command toggles auto-kicking of users who don't send a message within a specified time limit.
  * Only users with Administrator permissions can execute this command.
  */
 module.exports = {
@@ -22,7 +22,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('set')
-        .setDescription('Configure mute mode settings')
+        .setDescription('Configure mute mode settings.')
         .addStringOption(option =>
           option
             .setName('enabled')
@@ -45,7 +45,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current mute mode status')
+        .setDescription('Check the current mute mode status.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
   /**
@@ -80,8 +80,10 @@ module.exports = {
    */
   async handleStatusSubcommand(interaction) {
     try {
+      // We retrieve the current settings from the database.
       const currentSettings = await this.getCurrentSettings();
       
+      // We format a user-friendly status message with the current settings.
       const statusMessage = this.formatStatusMessage(currentSettings);
       await interaction.editReply(statusMessage);
       
@@ -98,7 +100,7 @@ module.exports = {
         guildId: interaction.guildId
       });
         
-      throw error; // Propagate to main error handler
+      throw error; // We propagate to the main error handler for consistent error handling.
     }
   },
   
@@ -108,14 +110,14 @@ module.exports = {
    */
   async handleSetSubcommand(interaction) {
     try {
-      // Get current settings first
+      // We get the current settings first as a reference point.
       const currentSettings = await this.getCurrentSettings();
       
-      // Get the 'enabled' input
+      // We get the 'enabled' input from the command options.
       const enabledInput = interaction.options.getString('enabled');
       const isEnabled = enabledInput === 'enabled';
       
-      // Get and validate the time limit
+      // We get and validate the time limit, falling back to the current value if not provided.
       let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
       
       if (timeLimit < MIN_TIME_LIMIT || timeLimit > MAX_TIME_LIMIT) {
@@ -136,16 +138,16 @@ module.exports = {
         guildId: interaction.guildId
       });
 
-      // Update the settings in the database
+      // We update the settings in the database with the new values.
       await this.updateSettings(isEnabled, timeLimit);
 
-      // Prepare the response message
+      // We prepare a user-friendly response message highlighting the changes.
       const responseMessage = this.formatUpdateMessage(
         currentSettings.isEnabled, isEnabled,
         currentSettings.timeLimit, timeLimit
       );
 
-      // Reply to the interaction
+      // We reply to the interaction with the update confirmation.
       await interaction.editReply(responseMessage);
       
       logger.info("Mutemode configuration updated successfully.", {
@@ -162,7 +164,7 @@ module.exports = {
         guildId: interaction.guildId
       });
       
-      throw error; // Propagate to main error handler
+      throw error; // We propagate to the main error handler for consistent error handling.
     }
   },
   
@@ -172,13 +174,14 @@ module.exports = {
    */
   async getCurrentSettings() {
     try {
+      // We retrieve both settings in parallel for efficiency.
       const [isEnabled, timeLimit] = await Promise.all([
         getValue(DB_KEY_ENABLED),
         getValue(DB_KEY_TIME_LIMIT)
       ]);
       
       return {
-        isEnabled: isEnabled === true, // Ensure boolean
+        isEnabled: isEnabled === true, // We ensure this is a boolean value.
         timeLimit: timeLimit ? Number(timeLimit) : DEFAULT_TIME_LIMIT
       };
     } catch (error) {
@@ -199,6 +202,7 @@ module.exports = {
    */
   async updateSettings(isEnabled, timeLimit) {
     try {
+      // We update both settings in parallel for efficiency.
       await Promise.all([
         setValue(DB_KEY_ENABLED, isEnabled),
         setValue(DB_KEY_TIME_LIMIT, timeLimit)
@@ -244,12 +248,12 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
     let message = `🔇 **Mute Mode Updated**\n\n`;
     
-    // Status
+    // We display the current status with an appropriate emoji.
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
     
-    // Time limit
+    // We show the time limit change if it was modified.
     if (oldTimeLimit !== newTimeLimit) {
       message += `• Time Limit: **${oldTimeLimit}** → **${newTimeLimit}** hours\n`;
     } else {
@@ -284,9 +288,12 @@ module.exports = {
       errorMessage = "⚠️ Failed to save settings. Please try again later.";
     }
     
-    // Handle case where interaction wasn't deferred properly
+    // We handle the case where interaction wasn't deferred properly.
     try {
-      await interaction.editReply({ content: errorMessage });
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true
+      });
     } catch (followUpError) {
       logger.error("Failed to send error response for mutemode command.", {
         error: followUpError.message,
@@ -294,11 +301,13 @@ module.exports = {
         userId: interaction.user?.id
       });
       
-      // Try replying if editing failed
-      await interaction.reply({ content: errorMessage })
-        .catch(() => {
-          // Silent catch if everything fails
-        });
+      // We try replying if editing failed as a fallback.
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true
+      }).catch(() => {
+        // Silent catch if everything fails to prevent crashing.
+      });
     }
   }
 };

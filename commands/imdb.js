@@ -4,15 +4,15 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
-// Configuration constants
+// These are the configuration constants for the IMDb search command.
 const OMDB_API_URL = 'https://www.omdbapi.com/';
 const IMDB_BASE_URL = 'https://www.imdb.com/title/';
-const EMBED_COLOR = 0xFFD700; // IMDb gold color
-const REQUEST_TIMEOUT = 10000; // 10 second API request timeout
+const EMBED_COLOR = 0xFFD700; // IMDb gold color for consistent branding
+const REQUEST_TIMEOUT = 10000; // 10 second API request timeout to prevent hanging
 
 /**
  * Module for the /imdb command.
- * Searches for a movie or TV show on IMDB using the OMDb API.
+ * This command searches for a movie or TV show on IMDb using the OMDb API and displays detailed information.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -48,38 +48,41 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Validate API configuration before proceeding.
+      // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: "⚠️ This command is not properly configured. Please contact a server administrator."
+          content: "⚠️ This command is not properly configured. Please contact a server administrator.",
+          ephemeral: true
         });
       }
         
-      // Defer the reply to allow time for processing.
+      // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
       logger.info(`/imdb command initiated.`, {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
       
-      // Get and validate search parameters
+      // We get and validate the search parameters provided by the user.
       const searchParams = this.getSearchParameters(interaction);
       if (!searchParams.valid) {
         return await interaction.editReply({
-          content: searchParams.message
+          content: searchParams.message,
+          ephemeral: true
         });
       }
       
-      // Fetch movie data from the API
+      // We fetch movie data from the OMDb API using the validated parameters.
       const movieData = await this.fetchMovieData(searchParams);
       
       if (movieData.error) {
         return await interaction.editReply({
-          content: movieData.message
+          content: movieData.message,
+          ephemeral: true
         });
       }
       
-      // Create and send the embed with movie information
+      // We create and send the embed with detailed movie information.
       const embed = this.createMovieEmbed(movieData);
       await interaction.editReply({ embeds: [embed] });
       
@@ -91,13 +94,14 @@ module.exports = {
         guildId: interaction.guildId
       });
       await interaction.editReply({ 
-        content: "⚠️ An unexpected error occurred. Please try again later."
+        content: "⚠️ An unexpected error occurred. Please try again later.",
+        ephemeral: true
       });
     }
   },
   
   /**
-   * Validates that the required configuration is available.
+   * Validates that the required API configuration is available.
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -114,12 +118,12 @@ module.exports = {
    * @returns {Object} An object with search parameters or error information.
    */
   getSearchParameters(interaction) {
-    // Retrieve the user's inputs
+    // We retrieve the user's inputs from the command options.
     const titleQuery = interaction.options.getString('title');
     const type = interaction.options.getString('type');
     const year = interaction.options.getString('year');
     
-    // Trim any extra whitespace from the title and validate
+    // We trim any extra whitespace from the title and validate it's not empty.
     const formattedTitle = titleQuery?.trim();
     if (!formattedTitle) {
       logger.warn("Empty title provided after trimming.", {
@@ -132,7 +136,7 @@ module.exports = {
       };
     }
 
-    // Validate year if provided
+    // We validate the year format if it was provided.
     if (year && !/^\d{4}$/.test(year)) {
       logger.warn("Invalid year format provided.", {
         userId: interaction.user.id,
@@ -165,13 +169,13 @@ module.exports = {
    * @returns {Object} The movie data or error information.
    */
   async fetchMovieData(searchParams) {
-    // Construct the OMDb API request URL with query parameters
+    // We construct the OMDb API request URL with all necessary query parameters.
     const params = new URLSearchParams({
       t: searchParams.title,
       apikey: config.omdbApiKey
     });
     
-    // Add optional parameters if provided
+    // We add optional parameters if they were provided by the user.
     if (searchParams.type) {
       params.append('type', searchParams.type);
     }
@@ -182,7 +186,7 @@ module.exports = {
     
     const requestUrl = `${OMDB_API_URL}?${params.toString()}`;
     
-    // Fetch data from the OMDb API using axios
+    // We fetch data from the OMDb API using axios with a timeout to prevent hanging.
     try {
       const response = await axios.get(requestUrl, { 
         timeout: REQUEST_TIMEOUT 
@@ -194,7 +198,7 @@ module.exports = {
       
       const data = response.data;
       
-      // Check if the API response indicates success
+      // We check if the API response indicates success or failure.
       if (data.Response === "True") {
         logger.info("Media information retrieved successfully.", {
           title: data.Title,
@@ -230,12 +234,12 @@ module.exports = {
   },
   
   /**
-   * Creates an embed with movie information.
+   * Creates an embed with movie information for a visually appealing display.
    * @param {Object} data - The movie data from the OMDb API.
-   * @returns {EmbedBuilder} The created embed.
+   * @returns {EmbedBuilder} The created embed with formatted movie information.
    */
   createMovieEmbed(data) {
-    // Extract data from the API response
+    // We extract all relevant data from the API response.
     const movieTitle = data.Title || "Unknown";
     const year = data.Year || "Unknown";
     const genre = data.Genre || "Unknown";
@@ -248,7 +252,7 @@ module.exports = {
     const director = data.Director || "Unknown";
     const actors = data.Actors || "Unknown";
     
-    // Build the embed message with movie details
+    // We build the embed message with all movie details in an organized format.
     const embed = new EmbedBuilder()
       .setTitle(`🎬 ${movieTitle} (${year})`)
       .setDescription(`📜 **Plot:** ${plot}`)
@@ -263,7 +267,7 @@ module.exports = {
       )
       .setFooter({ text: "Powered by OMDb API" });
     
-    // Set the poster as thumbnail if available
+    // We set the poster as thumbnail if available to enhance the visual appeal.
     if (poster) {
       embed.setThumbnail(poster);
     }

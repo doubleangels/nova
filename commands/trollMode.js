@@ -3,13 +3,12 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 
-// Configuration constants.
+// These are the configuration constants for the troll mode feature.
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
 const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
 const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
 const MIN_ACCOUNT_AGE = 1;
-const MAX_ACCOUNT_AGE = 365; // 1 year maximum
-
+const MAX_ACCOUNT_AGE = 365; // We set a maximum of 1 year to prevent unreasonable values.
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('trollmode')
@@ -17,7 +16,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('set')
-        .setDescription('Configure troll mode settings')
+        .setDescription('Configure troll mode settings.')
         .addStringOption(option =>
           option
             .setName('enabled')
@@ -40,7 +39,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current troll mode settings')
+        .setDescription('Check the current troll mode settings.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
@@ -52,7 +51,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to allow time for database operations.
+      // We defer the reply to allow time for database operations to complete.
       await interaction.deferReply();
       
       const subcommand = interaction.options.getSubcommand();
@@ -80,7 +79,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleSetTrollMode(interaction) {
-    // Retrieve the command options.
+    // We retrieve the command options provided by the user.
     const enabledInput = interaction.options.getString('enabled');
     const age = interaction.options.getInteger('age') ?? DEFAULT_TROLL_MODE_AGE_DAYS;
     const isEnabled = enabledInput.toLowerCase() === 'enabled';
@@ -92,7 +91,7 @@ module.exports = {
       guildId: interaction.guildId
     });
       
-    // Validate the age parameter.
+    // We validate the age parameter is within acceptable bounds.
     if (age < MIN_ACCOUNT_AGE || age > MAX_ACCOUNT_AGE) {
       logger.warn("Invalid age parameter for trollmode.", {
         age,
@@ -101,15 +100,16 @@ module.exports = {
         max: MAX_ACCOUNT_AGE
       });
       await interaction.editReply({
-        content: `⚠️ Age must be between ${MIN_ACCOUNT_AGE} and ${MAX_ACCOUNT_AGE} days.`
+        content: `⚠️ Age must be between ${MIN_ACCOUNT_AGE} and ${MAX_ACCOUNT_AGE} days.`,
+        ephemeral: true
       });
       return;
     }
 
-    // Get current settings for comparison
+    // We get current settings for comparison to show what changed.
     const currentSettings = await this.getCurrentSettings();
     
-    // Save the troll mode settings in the database.
+    // We save the troll mode settings in the database.
     try {
       await Promise.all([
         setValue(TROLL_MODE_ENABLED_KEY, isEnabled),
@@ -133,13 +133,13 @@ module.exports = {
       throw new Error("DATABASE_WRITE_ERROR");
     }
 
-    // Prepare the response message.
+    // We prepare a user-friendly response message highlighting the changes.
     const responseMessage = this.formatUpdateMessage(
       currentSettings.isEnabled, isEnabled,
       currentSettings.age, age
     );
 
-    // Reply to the interaction.
+    // We reply to the interaction with the update confirmation.
     await interaction.editReply(responseMessage);
     
     logger.info("Trollmode settings updated successfully.", {
@@ -161,8 +161,10 @@ module.exports = {
    */
   async handleTrollModeStatus(interaction) {
     try {
+      // We retrieve the current settings from the database.
       const settings = await this.getCurrentSettings();
       
+      // We format a user-friendly status message with the current settings.
       const statusMessage = this.formatStatusMessage(settings);
       
       await interaction.editReply(statusMessage);
@@ -193,13 +195,14 @@ module.exports = {
    */
   async getCurrentSettings() {
     try {
+      // We retrieve both settings in parallel for efficiency.
       const [isEnabled, age] = await Promise.all([
         getValue(TROLL_MODE_ENABLED_KEY),
         getValue(TROLL_MODE_ACCOUNT_AGE_KEY)
       ]);
       
       return {
-        isEnabled: isEnabled === true, // Ensure boolean
+        isEnabled: isEnabled === true, // We ensure this is a boolean value.
         age: age ? Number(age) : DEFAULT_TROLL_MODE_AGE_DAYS
       };
     } catch (error) {
@@ -224,12 +227,12 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldAge, newAge) {
     let message = `👹 **Troll Mode Updated**\n\n`;
     
-    // Status
+    // We display the current status with an appropriate emoji.
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
     
-    // Age change
+    // We show the age change if it was modified.
     if (oldAge !== newAge) {
       message += `• Minimum Account Age: **${oldAge}** → **${newAge}** days\n`;
     } else {
@@ -286,12 +289,18 @@ module.exports = {
       errorMessage = "⚠️ Failed to retrieve trollmode settings. Please try again later.";
     }
     
-    // If the reply hasn't been sent yet, send it. Otherwise, edit it.
+    // We handle the case where interaction wasn't deferred properly.
     try {
       if (interaction.deferred) {
-        await interaction.editReply({ content: errorMessage });
+        await interaction.editReply({ 
+          content: errorMessage,
+          ephemeral: true
+        });
       } else {
-        await interaction.reply({ content: errorMessage });
+        await interaction.reply({ 
+          content: errorMessage,
+          ephemeral: true
+        });
       }
     } catch (replyError) {
       logger.error("Failed to send error response for trollmode command.", {

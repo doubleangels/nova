@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Module for the /takerole command.
- * Removes a specified role from a specified user.
+ * This command allows moderators to remove a specified role from a user for moderation purposes.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -29,7 +29,7 @@ module.exports = {
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
-    // Defer reply since this might take a moment.
+    // We defer the reply since role operations might take a moment to complete.
     await interaction.deferReply();
     
     logger.info("Take role command initiated.", {
@@ -38,7 +38,7 @@ module.exports = {
     });
     
     try {
-      // Extract command options.
+      // We extract all command options provided by the user.
       const role = interaction.options.getRole('role');
       const targetUser = interaction.options.getUser('user');
       const reason = interaction.options.getString('reason');
@@ -51,15 +51,16 @@ module.exports = {
         reason
       });
       
-      // Validate permissions and role assignment
+      // We validate permissions and role assignment before proceeding.
       const validationResult = await this.validateRoleRemoval(interaction, role, targetUser);
       if (!validationResult.valid) {
         return await interaction.editReply({
-          content: validationResult.message
+          content: validationResult.message,
+          ephemeral: true
         });
       }
       
-      // Remove the role from the user
+      // We remove the role from the user after validation passes.
       const { targetMember } = validationResult;
       await this.removeRoleFromMember(interaction, targetMember, role, reason);
     } catch (error) {
@@ -71,7 +72,8 @@ module.exports = {
       });
       
       await interaction.editReply({ 
-        content: '⚠️ An unexpected error occurred. Please try again later.'
+        content: '⚠️ An unexpected error occurred. Please try again later.',
+        ephemeral: true
       });
     }
   },
@@ -83,7 +85,7 @@ module.exports = {
    * @returns {Promise<Object>} Validation result with success status and message.
    */
   async validateRoleRemoval(interaction, role, targetUser) {
-    // Check if the bot has permission to manage roles.
+    // We check if the bot has permission to manage roles in the server.
     if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
       logger.warn("Bot missing required permissions to manage roles.", {
         guildId: interaction.guildId
@@ -94,7 +96,7 @@ module.exports = {
       };
     }
     
-    // Fetch the target member from the guild.
+    // We fetch the target member from the guild to access their roles.
     const targetMember = await this.fetchGuildMember(interaction, targetUser.id);
     
     if (!targetMember) {
@@ -104,7 +106,7 @@ module.exports = {
       };
     }
 
-    // Check if the user has the role.
+    // We check if the user actually has the role that needs to be removed.
     if (!targetMember.roles.cache.has(role.id)) {
       logger.debug("User doesn't have the specified role.", {
         userId: targetUser.id,
@@ -118,7 +120,7 @@ module.exports = {
       };
     }
     
-    // Check if the bot's highest role is higher than the role to be removed.
+    // We check if the bot's highest role is higher than the role to be removed.
     const botMember = interaction.guild.members.me;
     if (botMember.roles.highest.position <= role.position) {
       logger.warn("Role hierarchy prevents role removal.", {
@@ -133,7 +135,7 @@ module.exports = {
       };
     }
     
-    // Check if the command executor's highest role is higher than the role to be removed
+    // We check if the command executor's highest role is higher than the role to be removed.
     const executorMember = await this.fetchGuildMember(interaction, interaction.user.id);
     if (executorMember && executorMember.roles.highest.position <= role.position) {
       logger.warn("Role hierarchy prevents role removal by executor.", {
@@ -162,11 +164,11 @@ module.exports = {
    * @param {string|null} reason - The reason for removing the role.
    */
   async removeRoleFromMember(interaction, targetMember, role, reason) {
-    // Format audit log reason
+    // We format the audit log reason to include the executor and optional custom reason.
     const customReason = reason ? `: "${reason}"` : '';
     const auditReason = `Role removed by ${interaction.user.tag} using takerole command${customReason}`;
     
-    // Remove the role from the user
+    // We remove the role from the user with the formatted audit reason.
     await targetMember.roles.remove(role, auditReason);
     
     logger.info("Role successfully removed from user.", { 
@@ -178,10 +180,10 @@ module.exports = {
       reason
     });
     
-    // Format success message
+    // We format a success message to inform the moderator.
     let successMessage = `✅ Successfully removed the ${role} role from ${targetMember.user}!`;
     
-    // Add reason if provided
+    // We add the reason to the success message if one was provided.
     if (reason) {
       successMessage += `\n📝 **Reason:** ${reason}`;
     }

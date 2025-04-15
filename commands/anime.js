@@ -5,7 +5,7 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
-// Configuration constants.
+// These are the configuration constants for the MyAnimeList API.
 const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
 const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
 const MAL_EMBED_COLOR = 0x2E51A2;
@@ -13,7 +13,7 @@ const SEARCH_LIMIT = 1;
 
 /**
  * Module for the /anime command.
- * Searches for an anime on MyAnimeList based on the provided title,
+ * This module searches for an anime on MyAnimeList based on the provided title,
  * retrieves its details, and sends an embed with the information.
  */
 module.exports = {
@@ -32,7 +32,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Verify API key is configured.
+      // We need to verify that the API key is properly configured.
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
@@ -42,22 +42,22 @@ module.exports = {
         return;
       }
 
-      // Defer reply to allow additional processing time.
+      // We defer the reply to allow additional processing time for the API request.
       await interaction.deferReply();
       logger.info("Anime search requested.", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag 
       });
 
-      // Retrieve and format the anime title.
+      // We retrieve and format the anime title from the user's input.
       const titleQuery = interaction.options.getString('title');
       logger.debug("Processing search query.", { titleQuery });
       const formattedTitle = titleQuery.trim();
 
-      // Search for anime and get details
+      // We search for the anime and get its details from the API.
       const animeData = await this.searchAndGetAnimeDetails(formattedTitle);
       
-      // Create and send the embed
+      // We create and send the embed with the anime information.
       if (animeData) {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
@@ -77,10 +77,11 @@ module.exports = {
         stack: error.stack 
       });
       
-      // Determine if the interaction can still be replied to.
+      // We determine if the interaction can still be replied to and send an appropriate error message.
       if (interaction.deferred) {
         await interaction.editReply({
-          content: `⚠️ Error: ${this.getErrorMessage(error)}`
+          content: `⚠️ Error: ${this.getErrorMessage(error)}`,
+          ephemeral: true
         });
       } else {
         await interaction.reply({
@@ -92,7 +93,7 @@ module.exports = {
   },
 
   /**
-   * Searches for an anime and gets its details.
+   * Searches for an anime and gets its details from the MyAnimeList API.
    * @param {string} title - The anime title to search for.
    * @returns {Object|null} - The anime data or null if not found.
    */
@@ -110,10 +111,10 @@ module.exports = {
     const animeNode = searchResponse.data.data[0].node;
     const animeId = animeNode.id;
     
-    // Construct the details URL.
+    // We construct the URL for fetching detailed information about the anime.
     const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
     
-    // Request detailed anime information.
+    // We request detailed anime information from the API.
     logger.debug("Fetching anime details.", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
     
@@ -134,9 +135,9 @@ module.exports = {
   },
 
   /**
-   * Creates an embed for anime details.
-   * @param {Object} animeData - The anime data.
-   * @returns {EmbedBuilder} - The created embed.
+   * Creates an embed for displaying anime details in a visually appealing format.
+   * @param {Object} animeData - The anime data to display.
+   * @returns {EmbedBuilder} - The created embed with formatted anime information.
    */
   createAnimeEmbed(animeData) {
     const malLink = `${MAL_WEBSITE_URL}/${animeData.id}`;
@@ -166,9 +167,9 @@ module.exports = {
   },
 
   /**
-   * Gets a user-friendly error message.
-   * @param {Error} error - The error object.
-   * @returns {string} - A user-friendly error message.
+   * Gets a user-friendly error message based on the type of error encountered.
+   * @param {Error} error - The error object to process.
+   * @returns {string} - A user-friendly error message explaining the issue.
    */
   getErrorMessage(error) {
     if (axios.isAxiosError(error)) {

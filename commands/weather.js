@@ -6,14 +6,14 @@ const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
 
-// Configuration constants.
+// These are the configuration constants for the weather command.
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
 const WEATHER_EMBED_COLOR = 0xFF6E42;
 const WEATHER_EMBED_TITLE_FORMAT = 'Weather in %s';
 const WEATHER_EMBED_FOOTER = 'Powered by PirateWeather';
 const WEATHER_DATE_FORMAT = 'MM/DD/YYYY';
 
-// Field names.
+// These are the field names for the weather embed.
 const WEATHER_FIELD_LOCATION = '🌍 Location';
 const WEATHER_FIELD_TEMPERATURE = '🌡 Temperature';
 const WEATHER_FIELD_FEELS_LIKE = '🤔 Feels Like';
@@ -28,7 +28,7 @@ const WEATHER_FIELD_PRECIP = '🌧 Precipitation';
 const WEATHER_FIELD_PRECIP_PROB = '🌧 Precip. Probability';
 const WEATHER_FIELD_FORECAST = '📅 %d-Day Forecast';
 
-// Units.
+// These are the units used for different measurement systems.
 const WEATHER_UNIT_TEMP_C = '°C';
 const WEATHER_UNIT_TEMP_F = '°F';
 const WEATHER_UNIT_PERCENTAGE = '%';
@@ -41,7 +41,7 @@ const WEATHER_UNIT_PRESSURE_INHG = 'inHg';
 const WEATHER_UNIT_PRECIP_MM = 'mm/hr';
 const WEATHER_UNIT_PRECIP_IN = 'in/hr';
 
-// Weather condition icons
+// These are the weather condition icons for different weather states.
 const WEATHER_ICONS = {
   'clear-day': '☀️',
   'clear-night': '🌙',
@@ -81,7 +81,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('forecast_days')
-        .setDescription('What number of forecast days do you want data for? (1-7)')
+        .setDescription('What number of days do you want forecast data for? (1-7)')
         .setRequired(false)
         .setMinValue(1)
         .setMaxValue(7)
@@ -95,7 +95,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Defer the reply to allow time for processing and API calls.
+      // We defer the reply to allow time for processing and API calls.
       await interaction.deferReply();
       
       logger.debug("Weather command received.", { 
@@ -103,16 +103,17 @@ module.exports = {
         userTag: interaction.user.tag 
       });
 
-      // Check if API key is configured.
+      // We check if the API key is configured before proceeding.
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: '⚠️ Weather API key is not configured. Please contact the bot administrator.'
+          content: '⚠️ Weather API key is not configured. Please contact the bot administrator.',
+          ephemeral: true
         });
         return;
       }
 
-      // Get command options
+      // We get the command options provided by the user.
       const place = interaction.options.getString('place');
       const unitsOption = interaction.options.getString('units') || 'metric';
       const forecastDays = interaction.options.getInteger('forecast_days') || 3;
@@ -126,7 +127,7 @@ module.exports = {
         userId: interaction.user.id 
       });
       
-      // Get geocoding data for the provided place
+      // We get geocoding data for the provided place.
       const geocodeResult = await getGeocodingData(place);
       
       if (geocodeResult.error) {
@@ -137,7 +138,8 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: `⚠️ Could not find the location for '${place}'. Try another city.`
+          content: `⚠️ Could not find the location for '${place}'. Try another city.`,
+          ephemeral: true
         });
         return;
       }
@@ -151,7 +153,7 @@ module.exports = {
         lon 
       });
       
-      // Fetch weather data from PirateWeather API
+      // We fetch weather data from the PirateWeather API.
       const weatherData = await this.fetchWeatherData(lat, lon, units);
       
       if (!weatherData) {
@@ -162,12 +164,13 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred while fetching weather data. Please try again later.'
+          content: '⚠️ An unexpected error occurred while fetching weather data. Please try again later.',
+          ephemeral: true
         });
         return;
       }
       
-      // Create an embed with the weather data.
+      // We create an embed with the weather data.
       const embed = this.createWeatherEmbed(
         formattedAddress, 
         lat, 
@@ -177,7 +180,7 @@ module.exports = {
         forecastDays
       );
       
-      // Send the embed as the reply.
+      // We send the embed as the reply.
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Weather information sent successfully.", { 
@@ -202,18 +205,18 @@ module.exports = {
    */
   async fetchWeatherData(lat, lon, units) {
     try {
-      // Build the PirateWeather API URL using the coordinates.
+      // We build the PirateWeather API URL using the coordinates.
       const url = `${WEATHER_API_BASE_URL}${config.pirateWeatherApiKey}/${lat},${lon}`;
-      // Set additional parameters
+      // We set additional parameters for the API request.
       const params = new URLSearchParams({ 
         units: units,
-        extend: 'hourly' // Get hourly data for more detailed forecasts
+        extend: 'hourly' // We get hourly data for more detailed forecasts.
       });
       const requestUrl = `${url}?${params.toString()}`;
       
       logger.debug("Making PirateWeather API request.", { requestUrl });
       
-      // Fetch weather data from PirateWeather using axios.
+      // We fetch weather data from PirateWeather using axios with a timeout.
       const response = await axios.get(requestUrl, { timeout: 5000 });
       
       if (response.status === 200) {
@@ -248,16 +251,16 @@ module.exports = {
    * @returns {EmbedBuilder} - Discord embed with weather information.
    */
   createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
-    // Extract current weather details from the response.
+    // We extract current weather details from the response.
     const currently = data.currently || {};
-    // Get daily forecast data.
+    // We get daily forecast data.
     const daily = data.daily?.data || [];
     
-    // Get weather icon
+    // We get the appropriate weather icon for the current conditions.
     const icon = currently.icon || 'default';
     const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
     
-    // Extract weather information with defaults for missing data.
+    // We extract weather information with defaults for missing data.
     const weatherInfo = {
       summary: currently.summary || "Unknown",
       icon: icon,
@@ -274,7 +277,7 @@ module.exports = {
       precipProbability: (currently.precipProbability ?? 0) * 100
     };
 
-    // Format units based on user preference
+    // We format units based on user preference.
     const isMetric = unitsOption === 'metric';
     
     const tempUnit = isMetric ? WEATHER_UNIT_TEMP_C : WEATHER_UNIT_TEMP_F;
@@ -283,22 +286,22 @@ module.exports = {
     const pressureUnit = isMetric ? WEATHER_UNIT_PRESSURE_HPA : WEATHER_UNIT_PRESSURE_INHG;
     const precipUnit = isMetric ? WEATHER_UNIT_PRECIP_MM : WEATHER_UNIT_PRECIP_IN;
     
-    // Convert pressure if using imperial units
+    // We convert pressure if using imperial units.
     if (!isMetric && typeof weatherInfo.pressure === 'number') {
       weatherInfo.pressure = (weatherInfo.pressure * 0.02953).toFixed(2);
     }
     
-    // Get wind direction
+    // We get the wind direction from the bearing.
     const windDirection = this.getWindDirection(weatherInfo.windBearing);
     
-    // Build a forecast text for the specified number of days
+    // We build a forecast text for the specified number of days.
     const forecastText = this.createForecastText(daily, unitsOption, forecastDays);
     
-    // Get the current timestamp
+    // We get the current timestamp for the footer.
     const timestamp = new Date();
     const formattedTime = timestamp.toLocaleString();
     
-    // Create an embed to display the weather data.
+    // We create an embed to display the weather data.
     const embed = new EmbedBuilder()
       .setTitle(`${weatherIcon} ${WEATHER_EMBED_TITLE_FORMAT.replace('%s', place)}`)
       .setDescription(`**${weatherInfo.summary}**`)
@@ -389,7 +392,7 @@ module.exports = {
     const isMetric = unitsOption === 'metric';
     const tempUnit = isMetric ? WEATHER_UNIT_TEMP_C : WEATHER_UNIT_TEMP_F;
     
-    // Limit to available days or requested days, whichever is smaller
+    // We limit to available days or requested days, whichever is smaller.
     const days = Math.min(daysToShow, daily.length);
     
     for (let i = 0; i < days; i++) {
@@ -400,7 +403,7 @@ module.exports = {
       
       const daySummary = day.summary || "No data";
       
-      // Get weather icon
+      // We get the appropriate weather icon for this day's forecast.
       const icon = day.icon || 'default';
       const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
       
@@ -446,7 +449,7 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    // Log any unexpected errors and send an error message to the user.
+    // We log any unexpected errors and send an error message to the user.
     logger.error("Error executing weather command.", { 
       error: error.message, 
       stack: error.stack,
@@ -456,11 +459,13 @@ module.exports = {
     try {
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.'
+          content: '⚠️ An unexpected error occurred. Please try again later.',
+          ephemeral: true
         });
       } else {
         await interaction.reply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.'
+          content: '⚠️ An unexpected error occurred. Please try again later.',
+          ephemeral: true
         });
       }
     } catch (replyError) {
