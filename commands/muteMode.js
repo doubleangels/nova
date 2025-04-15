@@ -220,7 +220,7 @@ module.exports = {
    */
   formatStatusMessage(settings) {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
-    const statusText = settings.isEnabled ? "ENABLED" : "DISABLED";
+    const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     
     let message = `🔇 **Mute Mode Status**\n\n`;
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
@@ -246,7 +246,7 @@ module.exports = {
     
     // Status
     const statusEmoji = newEnabled ? "✅" : "❌";
-    const statusText = newEnabled ? "ENABLED" : "DISABLED";
+    const statusText = newEnabled ? "Enabled" : "Disabled";
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
     
     // Time limit

@@ -264,6 +264,7 @@ module.exports = {
     }
   },
 
+
   /**
    * Formats an update message based on the old and new settings.
    * @param {boolean} oldEnabled - The previous enabled state.
@@ -280,7 +281,7 @@ module.exports = {
     
     // Status
     const statusEmoji = newEnabled ? "✅" : "❌";
-    const statusText = newEnabled ? "ENABLED" : "DISABLED";
+    const statusText = newEnabled ? "Enabled" : "Disabled";
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
     
     // Channel
@@ -308,7 +309,7 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
-    const statusText = settings.isEnabled ? "ENABLED" : "DISABLED";
+    const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     
     // Get channel name from ID
     let channelStr = "Not set";
