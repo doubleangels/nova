@@ -45,7 +45,7 @@ module.exports = {
         await handleClockReaction(reaction, user);
       }
     } catch (error) {
-      // Add Sentry error tracking
+      // We track errors with Sentry to monitor issues in production.
       Sentry.captureException(error, {
         extra: {
           event: 'messageReactionAdd',
@@ -59,7 +59,7 @@ module.exports = {
         stack: error.stack 
       });
     }
-}
+  }
 };
 
 /**
@@ -153,7 +153,7 @@ async function handleClockReaction(reaction, user) {
     } else {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ <@${user.id}>, I couldn't find any time references in that message. *This message will self-destruct in 15 seconds.*`
+        `⚠️ <@${user.id}>, I couldn't find any time references in that message.`
       );
     }
   } catch (error) {
@@ -226,7 +226,7 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
     
     // We format the converted times into a readable message for the user.
     const formattedTimes = formatConvertedTimes(convertedTimes);
-    const messageContent = `${CLOCK_EMOJI} <@${userId}>, ${formattedTimes}\n\n*This message will self-destruct in 15 seconds.*`;
+    const messageContent = `${CLOCK_EMOJI} <@${userId}>, ${formattedTimes}`;
     
     await sendTemporaryMessage(channel, messageContent, 15000);
   } catch (error) {
@@ -255,18 +255,18 @@ async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_
     const reply = await channel.send(content);
     
     setTimeout(() => {
-      reply.delete().catch(err => 
-        Sentry.captureException(err, {
+      reply.delete().catch(error => {
+        Sentry.captureException(error, {
           extra: {
             event: 'deleteTemporaryMessage',
             channelId: channel.id,
             messageId: reply.id
           }
-        }),
+        });
         logger.error("Failed to delete temporary message:", { 
-          error: err.message || err.toString() 
-        })
-      );
+          error: error.message || error.toString() 
+        });
+      });
     }, timeout);
     
     return reply;

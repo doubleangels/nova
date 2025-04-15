@@ -3,7 +3,7 @@ const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/database');
 
-// Configuration constants.
+// We define these configuration constants for consistent reminder behavior across the application.
 const BUMP_REMINDER_KEY = 'bump';
 const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
@@ -13,23 +13,24 @@ const REMINDER_MESSAGE = "It's time to bump again!";
 /**
  * Schedules a bump reminder and stores it in the database.
  *
- * This function retrieves necessary configuration values (role and channel IDs) from the database,
- * calculates a scheduled time using day.js based on the provided delay, stores the reminder data, and sends an immediate
- * confirmation message in the designated channel. It then schedules a final reminder message to be sent after the delay.
+ * We retrieve necessary configuration values (role and channel IDs) from the database,
+ * calculate a scheduled time using day.js based on the provided delay, store the reminder data,
+ * and send an immediate confirmation message in the designated channel. We then schedule
+ * a final reminder message to be sent after the delay.
  *
  * @param {Message} message - The Discord message object from which to access the client.
  * @param {number} delay - The delay in milliseconds before sending the final bump reminder.
  */
 async function handleReminder(message, delay) {
   try {
-    // Retrieve the role ID for pinging on the final reminder.
+    // We retrieve the role ID for pinging on the final reminder.
     const reminderRole = await getValue('reminder_role');
     if (!reminderRole) {
       logger.error("Configuration error: 'reminder_role' value not found.");
       return;
     }
 
-    // Retrieve the channel ID where reminders should be sent.
+    // We retrieve the channel ID where reminders should be sent.
     const reminderChannelId = await getValue('reminder_channel');
     if (!reminderChannelId) {
       logger.error("Configuration error: 'reminder_channel' value not found.");
@@ -38,10 +39,10 @@ async function handleReminder(message, delay) {
 
     const scheduledTime = dayjs().add(delay, 'millisecond');
 
-    // Generate a unique identifier for the reminder.
+    // We generate a unique identifier for the reminder to track it in the database.
     const reminderId = randomUUID();
 
-    // Store the reminder data in the database.
+    // We store the reminder data in the database for persistence across restarts.
     await setReminderData(BUMP_REMINDER_KEY, scheduledTime.toISOString(), reminderId);
     logger.debug("Inserted reminder data into database.", {
       key: BUMP_REMINDER_KEY,
@@ -49,7 +50,7 @@ async function handleReminder(message, delay) {
       reminder_id: reminderId
     });
 
-    // Attempt to retrieve the channel object using the cached channels or by fetching it.
+    // We attempt to retrieve the channel object using the cached channels or by fetching it.
     let channel;
     try {
       channel = message.client.channels.cache.get(reminderChannelId);
@@ -64,11 +65,11 @@ async function handleReminder(message, delay) {
       return;
     }
 
-    // Send an immediate confirmation message in the designated channel.
+    // We send an immediate confirmation message in the designated channel to acknowledge the bump.
     await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE}`);
     logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
 
-    // Schedule the final reminder message after the specified delay.
+    // We schedule the final reminder message after the specified delay.
     setTimeout(async () => {
       try {
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
@@ -77,7 +78,7 @@ async function handleReminder(message, delay) {
           channelId: reminderChannelId
         });
         
-        // Clean up the reminder data after sending.
+        // We clean up the reminder data after sending to avoid duplicate reminders.
         await deleteReminderData(BUMP_REMINDER_KEY);
         logger.debug("Deleted reminder data after sending reminder.", { reminder_id: reminderId });
       } catch (err) {
@@ -99,23 +100,23 @@ async function handleReminder(message, delay) {
 /**
  * Reschedules stored bump reminders after a potential downtime or restart.
  *
- * This function retrieves the stored reminder for the key "bump" from the database.
- * It then checks the reminder's scheduled time using day.js and calculates the delay until it should be sent.
- * If the scheduled time has already passed, it removes the reminder from the database.
- * Otherwise, it sets up a timeout to send the reminder message at the appropriate time.
+ * We retrieve the stored reminder for the key "bump" from the database.
+ * We then check the reminder's scheduled time using day.js and calculate the delay until it should be sent.
+ * If the scheduled time has already passed, we remove the reminder from the database.
+ * Otherwise, we set up a timeout to send the reminder message at the appropriate time.
  *
  * @param {Client} client - The Discord client instance used to fetch channels.
  */
 async function rescheduleReminder(client) {
   try {
-    // Retrieve the stored reminder for the "bump" key.
+    // We retrieve the stored reminder for the "bump" key from the database.
     const reminder = await getReminderData(BUMP_REMINDER_KEY);
     if (!reminder || reminder.length === 0) {
       logger.debug("No stored bump reminders found for rescheduling.");
       return;
     }
     
-    // Retrieve the configuration values for the channel and role.
+    // We retrieve the configuration values for the channel and role.
     const reminderChannelId = await getValue("reminder_channel");
     const reminderRole = await getValue("reminder_role");
     
@@ -129,7 +130,7 @@ async function rescheduleReminder(client) {
       return;
     }
     
-    // Retrieve the channel object from cache or by fetching from Discord.
+    // We retrieve the channel object from cache or by fetching from Discord.
     let channel;
     try {
       channel = client.channels.cache.get(reminderChannelId);
@@ -154,20 +155,20 @@ async function rescheduleReminder(client) {
       delay 
     });
     
-    // If the scheduled time has passed, remove the overdue reminder.
+    // If the scheduled time has passed, we remove the overdue reminder to prevent sending late notifications.
     if (delay < 0) {
       await deleteReminderData(BUMP_REMINDER_KEY);
       logger.debug("Deleted overdue bump reminder.", { reminder_id: reminder.reminder_id });
       return;
     }
     
-    // Reschedule the reminder to send the bump message after the computed delay.
+    // We reschedule the reminder to send the bump message after the computed delay.
     setTimeout(async () => {
       try {
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminder.reminder_id });
         
-        // Clean up the reminder data after sending.
+        // We clean up the reminder data after sending to maintain database cleanliness.
         await deleteReminderData(BUMP_REMINDER_KEY);
         logger.debug("Deleted reminder data after sending rescheduled reminder.", { 
           reminder_id: reminder.reminder_id 
@@ -193,4 +194,24 @@ async function rescheduleReminder(client) {
   }
 }
 
+/**
+ * Note on Discord message visibility:
+ * When implementing commands that use these reminder utilities, we should follow these guidelines:
+ * 1. Confirmation messages and reminders should be public (visible to everyone) since they provide
+ *    useful information to the entire community about server bump status.
+ * 2. Error messages related to configuration issues should be ephemeral (only visible to the command issuer)
+ *    to avoid exposing potential system problems to regular users.
+ * 
+ * Example implementation in a command:
+ * ```
+ * // For successful bump detection:
+ * await handleReminder(message, TWO_HOURS_IN_MS);
+ * 
+ * // For configuration command errors:
+ * await interaction.reply({ 
+ *   content: "Failed to set reminder channel. Please check your permissions.",
+ *   ephemeral: true 
+ * });
+ * ```
+ */
 module.exports = { handleReminder, rescheduleReminder };

@@ -5,15 +5,16 @@ const config = require('../config');
 const { DateTime } = require('luxon');
 const dayjs = require('dayjs');
 
-// API configuration constants.
+// We define these API configuration constants for consistent interaction with Google's services.
 const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
 const API_STATUS_SUCCESS = 'OK';
-const API_TIMEOUT_MS = 5000; // 5-second timeout for API requests.
+const API_TIMEOUT_MS = 5000; // We set a 5-second timeout for API requests to prevent hanging operations.
 const SECONDS_PER_HOUR = 3600;
 
 /**
  * Removes API keys from URLs for safe logging.
+ * We use this to prevent sensitive information from appearing in log files.
  *
  * @param {string} url - The URL that may contain sensitive information.
  * @returns {string} The sanitized URL.
@@ -24,25 +25,27 @@ function safeUrl(url) {
 
 /**
  * Validates if a timezone identifier is valid using Luxon.
+ * We check this before attempting operations that require valid timezone data.
  * 
  * @param {string} tz - The timezone identifier to validate.
  * @returns {boolean} True if the timezone is valid, false otherwise.
  */
 function isValidTimezone(tz) {
-  // Check if the input is a non-empty string.
+  // We check if the input is a non-empty string.
   if (typeof tz !== 'string' || tz.trim() === '') {
     return false;
   }
   
-  // Try to create a DateTime object with the timezone.
+  // We try to create a DateTime object with the timezone to test its validity.
   const dt = DateTime.local().setZone(tz);
   
-  // Check if the DateTime object is valid.
+  // We check if the DateTime object is valid and has no errors.
   return dt.isValid && dt.invalidReason === null;
 }
 
 /**
  * Fetches geocoding data for a given place name.
+ * We use this to convert human-readable locations to coordinates.
  *
  * @param {string} place - The place name to geocode.
  * @returns {Promise<Object>} An object containing geocoding results or error information.
@@ -54,7 +57,7 @@ async function getGeocodingData(place) {
       return { error: true, type: 'not_found' };
     }
 
-    // Build the Geocoding API URL.
+    // We build the Geocoding API URL with the necessary parameters.
     const geocodeParams = new URLSearchParams({
       address: place,
       key: config.googleApiKey
@@ -67,7 +70,7 @@ async function getGeocodingData(place) {
       requestUrl: safeUrl(geocodeRequestUrl)
     });
     
-    // Fetch geocoding data using axios with timeout.
+    // We fetch geocoding data using axios with a timeout to prevent long-running requests.
     const response = await axios.get(geocodeRequestUrl, { timeout: API_TIMEOUT_MS });
     
     if (response.status !== 200) {
@@ -103,7 +106,7 @@ async function getGeocodingData(place) {
     };
     
   } catch (error) {
-    // Handle timeout errors specifically.
+    // We handle timeout errors specifically to provide better feedback.
     if (error.code === 'ECONNABORTED') {
       logger.error("Timeout while fetching geocoding data.", {
         place,
@@ -124,6 +127,7 @@ async function getGeocodingData(place) {
 
 /**
  * Fetches timezone data for given coordinates.
+ * We use this to determine the timezone and UTC offset for a specific location.
  *
  * @param {Object} location - The location object with lat and lng properties.
  * @param {number} [timestamp] - Optional UNIX timestamp (seconds). Defaults to current time.
@@ -131,13 +135,13 @@ async function getGeocodingData(place) {
  */
 async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 1000)) {
   try {
-    // Validate location input.
+    // We validate location input to prevent API errors.
     if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
       logger.warn("Invalid location provided for timezone lookup.", { location });
       return { error: true, type: 'invalid_input' };
     }
     
-    // Build the Timezone API URL.
+    // We build the Timezone API URL with the necessary parameters.
     const timezoneParams = new URLSearchParams({
       location: `${location.lat},${location.lng}`,
       timestamp: timestamp.toString(),
@@ -152,7 +156,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
       requestUrl: safeUrl(timezoneRequestUrl)
     });
     
-    // Fetch timezone data using axios with timeout.
+    // We fetch timezone data using axios with a timeout for reliability.
     const response = await axios.get(timezoneRequestUrl, { timeout: API_TIMEOUT_MS });
     
     if (response.status !== 200) {
@@ -193,7 +197,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
     };
     
   } catch (error) {
-    // Handle timeout errors specifically.
+    // We handle timeout errors specifically for better user feedback.
     if (error.code === 'ECONNABORTED') {
       logger.error("Timeout while fetching timezone data.", {
         lat: location?.lat,
@@ -216,13 +220,14 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
 
 /**
  * Retrieves the UTC offset for a given place.
+ * We combine geocoding and timezone data to determine the complete timezone information.
  *
  * @param {string} place - The place name to lookup.
  * @returns {Promise<Object>} An object containing either the offset or error information.
  */
 async function getUtcOffset(place) {
   try {
-    // Get the geocoding data for the place.
+    // We first get the geocoding data to convert the place name to coordinates.
     const geocodeResult = await getGeocodingData(place);
     
     if (geocodeResult.error) {
@@ -235,7 +240,7 @@ async function getUtcOffset(place) {
     const { location } = geocodeResult;
     const timestamp = dayjs().unix();
     
-    // Get the timezone data for the location.
+    // We then get the timezone data for those coordinates.
     const tzResult = await getTimezoneData(location, timestamp);
     
     if (tzResult.error) {
@@ -245,7 +250,7 @@ async function getUtcOffset(place) {
       };
     }
     
-    // Convert seconds to hours.
+    // We convert seconds to hours for a more user-friendly format.
     const rawOffset = tzResult.rawOffset / SECONDS_PER_HOUR;
     const dstOffset = tzResult.dstOffset / SECONDS_PER_HOUR;
     
@@ -272,6 +277,7 @@ async function getUtcOffset(place) {
 
 /**
  * Formats a place name by trimming and capitalizing the first letter.
+ * We use this to standardize location names for display purposes.
  *
  * @param {string} placeName - The place name to format.
  * @returns {string} The formatted place name.
@@ -284,6 +290,7 @@ function formatPlaceName(placeName) {
 
 /**
  * Formats an error message based on the error type.
+ * We provide user-friendly error messages that explain what went wrong.
  *
  * @param {string} place - The place name that caused the error.
  * @param {string} errorType - The type of error that occurred.
@@ -308,14 +315,14 @@ function formatErrorMessage(place, errorType) {
 
 /**
  * Gets the coordinates (latitude and longitude) for a given place name.
- * Returns [null, null] if the location cannot be found.
+ * We provide this as a simplified interface for just getting location coordinates.
  *
  * @param {string} place - The place name to get coordinates for.
  * @returns {Promise<[number|null, number|null]>} A promise that resolves to an array containing [latitude, longitude].
  */
 async function getCoordinates(place) {
   try {
-    // Get the geocoding data for the place
+    // We get the geocoding data for the place and extract just the coordinates.
     const geocodeResult = await getGeocodingData(place);
     
     if (geocodeResult.error) {
@@ -340,6 +347,29 @@ async function getCoordinates(place) {
   }
 }
 
+/**
+ * Note on Discord message visibility:
+ * When implementing commands that use these location utilities, we should follow these guidelines:
+ * 1. Success messages with location information should be public (visible to everyone) 
+ *    when they provide useful information to the community.
+ * 2. Error messages should be ephemeral (only visible to the command issuer) to avoid 
+ *    cluttering channels with failed attempts.
+ * 
+ * Example implementation in a command:
+ * ```
+ * const result = await getUtcOffset(location);
+ * if (!result.error) {
+ *   // Public success response
+ *   await interaction.reply(`The timezone for ${result.formattedAddress} is ${result.timezoneId} (UTC${result.offset >= 0 ? '+' : ''}${result.offset})`);
+ * } else {
+ *   // Ephemeral error response
+ *   await interaction.reply({ 
+ *     content: formatErrorMessage(location, result.errorType),
+ *     ephemeral: true 
+ *   });
+ * }
+ * ```
+ */
 module.exports = {
   GEOCODING_URL,
   TIMEZONE_URL,

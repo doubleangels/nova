@@ -2,6 +2,8 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 
 /**
  * Creates a paginated collector for search results.
+ * We use this to display search results with navigation buttons for better user experience.
+ * 
  * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
  * @param {Array} items - The search result items.
  * @param {Function} generateEmbed - Function to generate an embed for a specific index.
@@ -27,14 +29,20 @@ async function createPaginatedResults(
 ) {
   let currentIndex = 0;
 
-  // Default options
+  // We set default options for button styling and labels.
   const buttonStyle = options.buttonStyle || ButtonStyle.Primary;
   const prevLabel = options.prevLabel || '◀';
   const nextLabel = options.nextLabel || '▶';
   const prevEmoji = options.prevEmoji || null;
   const nextEmoji = options.nextEmoji || null;
 
-  // Create arrow buttons for navigation
+  /**
+   * Creates arrow buttons for navigation based on the current index.
+   * We disable buttons when at the first or last page to prevent invalid navigation.
+   * 
+   * @param {number} index - The current page index.
+   * @returns {ActionRowBuilder} A row of navigation buttons.
+   */
   const createArrowButtons = (index) => {
     const prevButton = new ButtonBuilder()
       .setCustomId(`${prefix}_prev_${interaction.user.id}_${Date.now()}`)
@@ -46,14 +54,14 @@ async function createPaginatedResults(
       .setStyle(buttonStyle)
       .setDisabled(index === items.length - 1);
     
-    // Add label or emoji based on provided options
+    // We add label or emoji based on provided options for better accessibility.
     if (prevEmoji) {
       prevButton.setEmoji(prevEmoji);
       if (prevLabel !== '◀') prevButton.setLabel(prevLabel);
     } else {
       prevButton.setLabel(prevLabel);
     }
-    
+
     if (nextEmoji) {
       nextButton.setEmoji(nextEmoji);
       if (nextLabel !== '▶') nextButton.setLabel(nextLabel);
@@ -62,15 +70,15 @@ async function createPaginatedResults(
     }
     
     return new ActionRowBuilder().addComponents(prevButton, nextButton);
-  };
+};
 
-  // Send the initial embed with buttons
+  // We send the initial embed with navigation buttons.
   const message = await interaction.editReply({ 
     embeds: [generateEmbed(currentIndex)], 
     components: [createArrowButtons(currentIndex)] 
   });
 
-  // Create a collector to handle button interactions
+  // We create a collector to handle button interactions from the user.
   const filter = i => 
     (i.customId.startsWith(`${prefix}_prev_`) || 
      i.customId.startsWith(`${prefix}_next_`)) && 
@@ -80,7 +88,7 @@ async function createPaginatedResults(
   const collector = message.createMessageComponentCollector({ 
     filter, 
     time: timeout,
-    idle: 60000 // Expire after 1 minute of inactivity
+    idle: 60000 // We expire after 1 minute of inactivity to clean up resources.
   });
   
   collector.on('collect', async i => {
@@ -92,19 +100,21 @@ async function createPaginatedResults(
       userId: i.user.id
     });
     
+    // We update the current index based on which button was pressed.
     if (buttonType === 'prev') {
       currentIndex = Math.max(0, currentIndex - 1);
     } else if (buttonType === 'next') {
       currentIndex = Math.min(items.length - 1, currentIndex + 1);
 }
 
+    // We update the message with the new embed and buttons for the new index.
     await i.update({ 
       embeds: [generateEmbed(currentIndex)],
       components: [createArrowButtons(currentIndex)]
     });
   });
 
-  // Disable buttons after the collector expires
+  // We disable buttons after the collector expires to prevent further interaction.
   collector.on('end', async (collected) => {
     logger.debug("Button collector ended.", {
       reason: collected.size ? "timeout" : "idle",
@@ -122,7 +132,7 @@ async function createPaginatedResults(
       .setStyle(buttonStyle)
       .setDisabled(true);
     
-    // Add label or emoji based on provided options
+    // We maintain the same appearance for disabled buttons to avoid confusion.
     if (prevEmoji) {
       disabledPrevButton.setEmoji(prevEmoji);
       if (prevLabel !== '◀') disabledPrevButton.setLabel(prevLabel);
@@ -141,6 +151,7 @@ async function createPaginatedResults(
       disabledPrevButton, disabledNextButton
     );
     
+    // We update the message with disabled buttons to indicate timeout.
     await interaction.editReply({
       components: [disabledNavRow]
     }).catch(err => logger.error("Failed to update timed out message.", { error: err.message }));
@@ -149,6 +160,8 @@ async function createPaginatedResults(
 
 /**
  * Validates and normalizes search parameters.
+ * We ensure the query is valid and the results count is within acceptable bounds.
+ * 
  * @param {string} query - The search query.
  * @param {number} resultsCount - The requested number of results.
  * @param {number} defaultCount - Default number of results.
@@ -161,6 +174,7 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
     return { valid: false, error: "Empty query" };
 }
 
+  // We trim the query and enforce limits on the results count.
   const normalizedQuery = query.trim();
   const normalizedCount = Math.max(minResults, Math.min(resultsCount || defaultCount, maxResults));
   
@@ -173,6 +187,8 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
 
 /**
  * Formats an error message from the Google API response.
+ * We extract relevant information to provide a clear error message to users.
+ * 
  * @param {Error} apiError - The API error.
  * @returns {string} Formatted error message.
  */
@@ -181,6 +197,42 @@ function formatApiError(apiError) {
   const errorMessage = apiError.response?.data?.error?.message || apiError.message;
   return `⚠️ Google API error (${statusCode}): ${errorMessage}`;
 }
+
+/**
+ * Note on Discord message visibility:
+ * When implementing commands that use these search utilities, we should follow these guidelines:
+ * 1. Search results should be public (visible to everyone) when they provide useful information
+ *    that others might benefit from seeing.
+ * 2. Error messages should be ephemeral (only visible to the command issuer) to avoid cluttering
+ *    the channel with failed search attempts.
+ * 
+ * Example implementation in a command:
+ * ```
+ * const searchParams = normalizeSearchParams(query, count, 5, 1, 10);
+ * 
+ * if (!searchParams.valid) {
+ *   // Ephemeral error response
+ *   return interaction.reply({ 
+ *     content: `⚠️ ${searchParams.error}. Please provide a valid search query.`,
+ *     ephemeral: true 
+ *   });
+ * }
+ * 
+ * try {
+ *   const results = await performSearch(searchParams.query, searchParams.count);
+ *   
+ *   // Public search results with pagination
+ *   await interaction.reply({ content: `🔍 Search results for "${searchParams.query}":` });
+ *   await createPaginatedResults(interaction, results, generateEmbed, 'search', 300000, logger);
+ * } catch (error) {
+ *   // Ephemeral error response
+ *   await interaction.reply({ 
+ *     content: formatApiError(error),
+ *     ephemeral: true 
+ *   });
+ * }
+ * ```
+ */
 
 module.exports = {
   createPaginatedResults,

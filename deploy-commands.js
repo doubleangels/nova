@@ -1,44 +1,45 @@
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
-const path = require('path'); // Move this up
-const logger = require('./logger')(path.basename(__filename)); // Now path is available
+const path = require('path');
+const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
 /**
- * Deploys all slash commands to Discord API
- * This function collects all command modules from the commands directory,
- * converts them to the format required by Discord, and registers them globally
- * for the application.
+ * Deploys all slash commands to Discord API.
  * 
- * @returns {Promise<void>} A promise that resolves when commands are successfully registered
- * @throws {Error} If command registration fails
+ * We collect all command modules from the commands directory,
+ * convert them to the format required by Discord, and register them globally
+ * for the application. This ensures our bot's commands are available to users.
+ * 
+ * @returns {Promise<void>} A promise that resolves when commands are successfully registered.
+ * @throws {Error} If command registration fails.
  */
 async function deployCommands() {
-  // Array to store command data
+  // We create an array to store command data for registration.
   const commands = [];
   
-  // Path to the commands directory
+  // We define the path to the commands directory.
   const commandsPath = path.join(__dirname, 'commands');
   
-  // Get all JavaScript files from the commands directory
+  // We get all JavaScript files from the commands directory.
   const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
   
-  // Load each command and add its data to the commands array
+  // We load each command and add its data to the commands array.
   for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
     commands.push(command.data.toJSON());
     logger.debug(`Loaded command: ${file}`);
   }
   
-  // Create REST instance for Discord API interaction
+  // We create a REST instance for Discord API interaction.
   const rest = new REST({ version: '10' }).setToken(config.token);
   
-  // Get client ID from environment variables or config
+  // We get the client ID from environment variables or config.
   const clientId = process.env.DISCORD_CLIENT_ID || config.clientId;
   logger.info(`Deploying commands for application ID: ${clientId}`);
   
   try {    
-    // Register all commands globally for the application
+    // We register all commands globally for the application.
     await rest.put(
       Routes.applicationCommands(clientId), 
       { body: commands }
@@ -47,19 +48,19 @@ async function deployCommands() {
     logger.info(`Successfully registered ${commands.length} application (/) commands.`);
   } catch (error) {
     logger.error('Failed to deploy commands:', { error });
-    throw error; // Re-throw for handling by caller
+    throw error; // We re-throw for handling by the caller.
   }
 }
 
-// Export function for importing in other files
+// We export the function for importing in other files.
 module.exports = deployCommands;
 
-// If this script is run directly, execute the deployment
+// If this script is run directly, we execute the deployment.
 if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully'))
     .catch(err => {
       logger.error('Failed to deploy commands:', err);
-      process.exit(1);
+      process.exit(1); // We exit with error code if deployment fails.
     });
 }
