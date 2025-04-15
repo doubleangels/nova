@@ -58,7 +58,7 @@ module.exports = deployCommands;
 // If this script is run directly, we execute the deployment.
 if (require.main === module) {
   deployCommands()
-    .then(() => logger.info('Command deployment completed successfully'))
+    .then(() => logger.info('Command deployment completed successfully.'))
     .catch(err => {
       logger.error('Failed to deploy commands:', err);
       process.exit(1); // We exit with error code if deployment fails.
