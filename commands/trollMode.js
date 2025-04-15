@@ -224,25 +224,19 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldAge, newAge) {
     let message = `👹 **Troll Mode Updated**\n\n`;
     
-    // Status change
-    if (oldEnabled !== newEnabled) {
-      const statusEmoji = newEnabled ? "✅" : "❌";
-      const statusText = newEnabled ? "enabled" : "disabled";
-      message += `• Status: ${statusEmoji} **${statusText}**\n`;
-    } else {
-      const statusEmoji = newEnabled ? "✅" : "❌";
-      const statusText = newEnabled ? "enabled" : "disabled";
-      message += `• Status: ${statusEmoji} **${statusText}** (unchanged)\n`;
-    }
+    // Status
+    const statusEmoji = newEnabled ? "✅" : "❌";
+    const statusText = newEnabled ? "ENABLED" : "DISABLED";
+    message += `• Status: ${statusEmoji} **${statusText}**\n`;
     
     // Age change
+    if (oldAge !== newAge) {
+      message += `• Minimum Account Age: **${oldAge}** → **${newAge}** days\n`;
+    } else {
+      message += `• Minimum Account Age: **${newAge}** days\n`;
+    }
+    
     if (newEnabled) {
-      if (oldAge !== newAge) {
-        message += `• Minimum Account Age: **${oldAge}** → **${newAge}** days\n`;
-      } else {
-        message += `• Minimum Account Age: **${newAge}** days (unchanged)\n`;
-      }
-      
       message += `\nAccounts younger than **${newAge}** days will be automatically kicked.`;
     }
     
@@ -257,14 +251,14 @@ module.exports = {
    */
   formatStatusMessage(settings) {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
-    const statusText = settings.isEnabled ? "enabled" : "disabled";
+    const statusText = settings.isEnabled ? "ENABLED" : "DISABLED";
     
     let message = `👹 **Troll Mode Status**\n\n`;
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
+    message += `• Minimum Account Age: **${settings.age}** days`;
     
     if (settings.isEnabled) {
-      message += `• Minimum Account Age: **${settings.age}** days\n`;
-      message += `\nAccounts younger than **${settings.age}** days will be automatically kicked.`;
+      message += `\n\nAccounts younger than **${settings.age}** days will be automatically kicked.`;
     }
     
     return message;

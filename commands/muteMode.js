@@ -220,14 +220,14 @@ module.exports = {
    */
   formatStatusMessage(settings) {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
-    const statusText = settings.isEnabled ? "enabled" : "disabled";
+    const statusText = settings.isEnabled ? "ENABLED" : "DISABLED";
     
     let message = `🔇 **Mute Mode Status**\n\n`;
     message += `• Status: ${statusEmoji} **${statusText}**\n`;
+    message += `• Time Limit: **${settings.timeLimit}** hours`;
     
     if (settings.isEnabled) {
-      message += `• Time Limit: **${settings.timeLimit}** hours\n`;
-      message += `\nNew users must send a message within **${settings.timeLimit}** hours or they will be kicked.`;
+      message += `\n\nNew users must send a message within **${settings.timeLimit}** hours or they will be kicked.`;
     }
     
     return message;
@@ -244,25 +244,19 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
     let message = `🔇 **Mute Mode Updated**\n\n`;
     
-    // Status change
-    if (oldEnabled !== newEnabled) {
-      const statusEmoji = newEnabled ? "✅" : "❌";
-      const statusText = newEnabled ? "enabled" : "disabled";
-      message += `• Status: ${statusEmoji} **${statusText}**\n`;
+    // Status
+    const statusEmoji = newEnabled ? "✅" : "❌";
+    const statusText = newEnabled ? "ENABLED" : "DISABLED";
+    message += `• Status: ${statusEmoji} **${statusText}**\n`;
+    
+    // Time limit
+    if (oldTimeLimit !== newTimeLimit) {
+      message += `• Time Limit: **${oldTimeLimit}** → **${newTimeLimit}** hours\n`;
     } else {
-      const statusEmoji = newEnabled ? "✅" : "❌";
-      const statusText = newEnabled ? "enabled" : "disabled";
-      message += `• Status: ${statusEmoji} **${statusText}** (unchanged)\n`;
+      message += `• Time Limit: **${newTimeLimit}** hours\n`;
     }
     
-    // Time limit change
     if (newEnabled) {
-      if (oldTimeLimit !== newTimeLimit) {
-        message += `• Time Limit: **${oldTimeLimit}** → **${newTimeLimit}** hours\n`;
-      } else {
-        message += `• Time Limit: **${newTimeLimit}** hours (unchanged)\n`;
-      }
-      
       message += `\nNew users must send a message within **${newTimeLimit}** hours or they will be kicked.`;
     }
     
