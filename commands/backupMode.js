@@ -85,6 +85,7 @@ module.exports = {
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
     const enabledOption = interaction.options.getString('enabled');
+    
     // Validate inputs if provided
     const validationError = await this.validateInputs(interaction, channelOption, roleOption);
     if (validationError) {
@@ -95,6 +96,7 @@ module.exports = {
     if (channelOption || roleOption || enabledOption !== null) {
       // Get current settings for comparison
       const currentSettings = await this.getCurrentSettings();
+      
       await this.updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings);
     } else {
       // No options provided: inform user
@@ -134,7 +136,7 @@ module.exports = {
         error: error.message,
         stack: error.stack
       });
-    
+
       throw new Error("DATABASE_READ_ERROR");
     }
   },
@@ -158,7 +160,7 @@ module.exports = {
       });
       return true;
     }
-    
+
     // Validate role if provided.
     if (roleOption && (!roleOption.editable || roleOption.managed)) {
       logger.warn("Invalid role selected for backup mode.", { 
@@ -221,6 +223,7 @@ module.exports = {
         currentSettings.roleId, newRoleId,
         interaction
       );
+      
       await interaction.editReply(responseMessage);
       logger.info("Backup mode configuration updated successfully.", { 
         userId: interaction.user.id,
@@ -249,6 +252,7 @@ module.exports = {
     try {
       const settings = await this.getCurrentSettings();
       const statusMessage = this.formatStatusMessage(settings, interaction);
+      
       await interaction.editReply(statusMessage);
       logger.info("Backup mode status check completed successfully.", { 
         userId: interaction.user.id,
@@ -264,6 +268,7 @@ module.exports = {
     }
   },
 
+  // Only updating the formatUpdateMessage and formatStatusMessage methods
 
   /**
    * Formats an update message based on the old and new settings.
