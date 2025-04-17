@@ -439,15 +439,6 @@ async function getUserTimezone(memberId) {
   }
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these database functions, we should follow these guidelines:
- * 1. Success messages should be public (visible to everyone) when the action affects or informs the community.
- * 2. Error messages should be ephemeral (only visible to the command issuer) to avoid cluttering channels.
- * 
- * This pattern helps maintain a clean chat experience while still providing necessary feedback.
- */
-
 module.exports = {
   initializeDatabase,
   getValue,
