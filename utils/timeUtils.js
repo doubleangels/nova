@@ -236,44 +236,6 @@ function formatConvertedTimes(convertedTimes, formatter = defaultFormatter) {
   return convertedTimes.map(formatter).join('\n');
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these time utilities, we should follow these guidelines:
- * 1. Time conversion results should be public (visible to everyone) when they provide
- *    useful information that others in different timezones might benefit from seeing.
- * 2. Error messages for invalid timezones or parsing failures should be ephemeral
- *    (only visible to the command issuer) to avoid cluttering the channel.
- * 
- * Example implementation in a command:
- * ```
- * const userTimezone = await getUserTimezone(interaction.user.id) || 'UTC';
- * const targetTimezone = args.timezone || userTimezone;
- * 
- * if (!isValidTimezone(targetTimezone)) {
- *   // Ephemeral error response
- *   return interaction.reply({ 
- *     content: `⚠️ Invalid timezone: "${targetTimezone}". Please provide a valid timezone.`,
- *     ephemeral: true 
- *   });
- * }
- * 
- * const timeRefs = extractTimeReferences(args.timeString);
- * if (timeRefs.length === 0) {
- *   // Ephemeral error response
- *   return interaction.reply({ 
- *     content: "⚠️ No valid time references found in your message.",
- *     ephemeral: true 
- *   });
- * }
- * 
- * const conversions = timeRefs.map(ref => 
- *   convertTimeZones(ref, userTimezone, targetTimezone)
- * );
- * 
- * // Public response with time conversions
- * await interaction.reply(formatConvertedTimes(conversions));
- * ```
- */
 module.exports = {
   extractTimeReferences,
   convertTimeZones,
