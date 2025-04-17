@@ -7,6 +7,7 @@ const timezone = require('dayjs/plugin/timezone');
 
 // We define these configuration constants for consistent time formatting and parsing.
 const TIME_FORMAT = 'h:mm A';
+const DATE_FORMAT = 'MMM D'; // Format for displaying the date (e.g., "Apr 17")
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 const NEXT_DAY_SUFFIX = ' (next day)';
 const PREVIOUS_DAY_SUFFIX = ' (previous day)';
@@ -152,6 +153,9 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     const originalTimeFormatted = correctDate.format(TIME_FORMAT);
     const convertedTimeFormatted = timeInTargetTZ.format(TIME_FORMAT);
     
+    // We store the full date information for both timezones
+    const originalDateFormatted = correctDate.format(DATE_FORMAT);
+    const convertedDateFormatted = timeInTargetTZ.format(DATE_FORMAT);
     // We calculate day difference to detect if the time crosses midnight.
     const dayDifference = timeInTargetTZ.date() - correctDate.date();
     const monthDifference = timeInTargetTZ.month() - correctDate.month();
@@ -165,6 +169,8 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       text: timeRef.text,
       originalTime: originalTimeFormatted,
       convertedTime: convertedTimeFormatted,
+      originalDate: originalDateFormatted,
+      convertedDate: convertedDateFormatted,
       fromTimezone,
       toTimezone,
       dayDifference,
@@ -199,23 +205,29 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
  * @returns {string} Formatted string representation.
  */
 function defaultFormatter(conversion) {
-  const { originalTime, convertedTime, fromTimezone, toTimezone, isNextDay, isPreviousDay } = conversion;
+  const { 
+    originalTime, 
+    convertedTime, 
+    originalDate, 
+    convertedDate, 
+    fromTimezone, 
+    toTimezone, 
+    isNextDay, 
+    isPreviousDay 
+  } = conversion;
   
   if (!originalTime) {
     return conversion.convertedTime;
   }
   
-  // We add a day indicator if the time crosses midnight in either direction.
-  let dayIndicator = '';
-  if (isNextDay) {
-    dayIndicator = NEXT_DAY_SUFFIX;
-  } else if (isPreviousDay) {
-    dayIndicator = PREVIOUS_DAY_SUFFIX;
+  // If dates are different, include them in the output
+  if (isNextDay || isPreviousDay) {
+    return `${convertedTime} (${convertedDate}) is ${originalTime} (${originalDate}) in your timezone.`;
   }
   
-  return `${convertedTime} is ${originalTime}${dayIndicator} in your timezone.`;
+  // If same day, use simpler format
+  return `${convertedTime} is ${originalTime} in your timezone.`;
 }
-
 /**
  * Formats an array of converted time objects into a human-readable string.
  * 
