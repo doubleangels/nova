@@ -347,29 +347,6 @@ async function getCoordinates(place) {
   }
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these location utilities, we should follow these guidelines:
- * 1. Success messages with location information should be public (visible to everyone) 
- *    when they provide useful information to the community.
- * 2. Error messages should be ephemeral (only visible to the command issuer) to avoid 
- *    cluttering channels with failed attempts.
- * 
- * Example implementation in a command:
- * ```
- * const result = await getUtcOffset(location);
- * if (!result.error) {
- *   // Public success response
- *   await interaction.reply(`The timezone for ${result.formattedAddress} is ${result.timezoneId} (UTC${result.offset >= 0 ? '+' : ''}${result.offset})`);
- * } else {
- *   // Ephemeral error response
- *   await interaction.reply({ 
- *     content: formatErrorMessage(location, result.errorType),
- *     ephemeral: true 
- *   });
- * }
- * ```
- */
 module.exports = {
   GEOCODING_URL,
   TIMEZONE_URL,
