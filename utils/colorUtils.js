@@ -45,28 +45,6 @@ function hexToDecimal(hexColor) {
     return parseInt(hex, 16);
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these color utilities, we should follow these guidelines:
- * 1. Success messages and color displays should be public (visible to everyone).
- * 2. Error messages should be ephemeral (only visible to the command issuer).
- * 
- * Example implementation in a command:
- * ```
- * const result = validateAndNormalizeColor(input);
- * if (result.success) {
- *   // Public success response
- *   interaction.reply({ content: `Color set to ${result.normalizedColor}!` });
- * } else {
- *   // Ephemeral error response
- *   interaction.reply({ 
- *     content: 'Invalid color format. Please use #RRGGBB or RRGGBB format.',
- *     ephemeral: true 
- * });
- * }
- * ```
- */
-
 module.exports = {
     validateAndNormalizeColor,
     hexToDecimal
