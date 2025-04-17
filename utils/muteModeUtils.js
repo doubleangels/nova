@@ -182,29 +182,6 @@ async function rescheduleAllMuteKicks(client) {
   }
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these mute mode utilities, we should follow these guidelines:
- * 1. Success messages for administrative actions should be public when they affect server operation.
- * 2. Error messages should be ephemeral (only visible to the command issuer) to avoid exposing issues.
- * 
- * Example implementation in a command:
- * ```
- * const muteModeEnabled = await getValue("mute_mode_enabled") === "true";
- * 
- * if (muteModeEnabled) {
- *   // Public response for server status changes
- *   await interaction.reply("Mute mode is currently enabled. New members must send a message to avoid being kicked.");
- * } else {
- *   // Ephemeral response for errors or sensitive information
- *   await interaction.reply({ 
- *     content: "Failed to check mute mode status. Please try again later.",
- *     ephemeral: true 
- *   });
- * }
- * ```
- */
-
 module.exports = {
   scheduleMuteKick,
   rescheduleAllMuteKicks
