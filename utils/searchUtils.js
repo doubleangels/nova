@@ -198,42 +198,6 @@ function formatApiError(apiError) {
   return `⚠️ Google API error (${statusCode}): ${errorMessage}`;
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these search utilities, we should follow these guidelines:
- * 1. Search results should be public (visible to everyone) when they provide useful information
- *    that others might benefit from seeing.
- * 2. Error messages should be ephemeral (only visible to the command issuer) to avoid cluttering
- *    the channel with failed search attempts.
- * 
- * Example implementation in a command:
- * ```
- * const searchParams = normalizeSearchParams(query, count, 5, 1, 10);
- * 
- * if (!searchParams.valid) {
- *   // Ephemeral error response
- *   return interaction.reply({ 
- *     content: `⚠️ ${searchParams.error}. Please provide a valid search query.`,
- *     ephemeral: true 
- *   });
- * }
- * 
- * try {
- *   const results = await performSearch(searchParams.query, searchParams.count);
- *   
- *   // Public search results with pagination
- *   await interaction.reply({ content: `🔍 Search results for "${searchParams.query}":` });
- *   await createPaginatedResults(interaction, results, generateEmbed, 'search', 300000, logger);
- * } catch (error) {
- *   // Ephemeral error response
- *   await interaction.reply({ 
- *     content: formatApiError(error),
- *     ephemeral: true 
- *   });
- * }
- * ```
- */
-
 module.exports = {
   createPaginatedResults,
   normalizeSearchParams,
