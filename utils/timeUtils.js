@@ -245,11 +245,11 @@ function defaultFormatter(conversion) {
   
   // If dates are different, include them in the output
   if (isNextDay || isPreviousDay) {
-    return `${convertedTime} (${convertedDate}) in ${formattedToTimezone} is ${originalTime} (${originalDate}) in ${formattedFromTimezone}`;
+    return `${convertedTime} (${convertedDate}) in ${formattedToTimezone} is ${originalTime} (${originalDate}) in ${formattedFromTimezone}.`;
   }
   
   // If same day, use simpler format but include timezones
-  return `${convertedTime} in ${formattedToTimezone} is ${originalTime} in ${formattedFromTimezone}`;
+  return `${convertedTime} in ${formattedToTimezone} is ${originalTime} in ${formattedFromTimezone}.`;
 }
 
 /**
