@@ -99,12 +99,13 @@ module.exports = {
             return { success: true };
         }
 
-        // Users can change their own nickname if they have the permission
+        // Users can change their own nickname
         if (targetMember.id === interaction.user.id) {
-            if (!member.permissions.has(PermissionFlagsBits.ChangeNickname)) {
+            // Check if the bot has permission to change the user's nickname
+            if (!targetMember.manageable) {
                 return {
                     success: false,
-                    message: "⚠️ You don't have permission to change your own nickname."
+                    message: "⚠️ I don't have permission to change your nickname. Please check role hierarchy."
                 };
             }
             return { success: true };
