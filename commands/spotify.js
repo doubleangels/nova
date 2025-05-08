@@ -185,10 +185,10 @@ module.exports = {
           result = await this.searchPlaylist(query, accessToken);
           break;
         case 'related-artist':
-          result = await this.searchRelatedArtists(query, accessToken);
+          result = await this.searchRelatedArtists(interaction.options.getString('artist'), accessToken);
           break;
         case 'similar-songs':
-          result = await this.searchSimilarSongs(query, accessToken);
+          result = await this.searchSimilarSongs(interaction.options.getString('track'), accessToken);
           break;
         case 'podcast':
           result = await this.searchPodcast(query, accessToken);
@@ -200,16 +200,20 @@ module.exports = {
           result = await this.searchTopArtists(interaction.options.getString('country') || 'global', accessToken);
           break;
         case 'year':
-          result = await this.searchByYear(query, accessToken);
+          result = await this.searchByYear(interaction.options.getString('year'), accessToken);
           break;
         case 'decade':
-          result = await this.searchByDecade(query, accessToken);
+          result = await this.searchByDecade(interaction.options.getString('decade'), accessToken);
           break;
       }
 
       if (!result) {
         return await interaction.editReply({
-          content: `⚠️ No results found for "${query}"`,
+          content: `⚠️ No results found for "${interaction.options.getString(subcommand === 'related-artist' ? 'artist' : 
+            subcommand === 'similar-songs' ? 'track' : 
+            subcommand === 'year' ? 'year' :
+            subcommand === 'decade' ? 'decade' :
+            'query')}"`,
           ephemeral: true
         });
       }
@@ -481,6 +485,14 @@ module.exports = {
         timeout: REQUEST_TIMEOUT
       });
 
+      // Format the last modified date
+      const lastModified = new Date(playlistDetails.data.modified_at);
+      const formattedDate = lastModified.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
       return {
         type: 'playlist',
         name: playlist.name,
@@ -490,7 +502,7 @@ module.exports = {
         tracks: playlist.tracks.total,
         description: playlist.description,
         followers: playlistDetails.data.followers.total,
-        lastUpdated: playlistDetails.data.snapshot_id,
+        lastUpdated: formattedDate,
         collaborative: playlistDetails.data.collaborative,
         public: playlistDetails.data.public
       };
@@ -910,7 +922,6 @@ module.exports = {
             { name: 'Tracks', value: result.totalTracks.toString(), inline: true },
             { name: 'Album Type', value: result.albumType || 'Unknown', inline: true },
             { name: 'Label', value: result.label || 'Unknown', inline: true },
-            { name: 'Popularity', value: `${result.popularity}%`, inline: true },
             { name: 'Genres', value: result.genres?.join(', ') || 'No genres listed', inline: false }
           );
         break;
