@@ -24,6 +24,7 @@ Before deploying Nova, ensure you have the following:
   - OMDB
   - PirateWeather
   - MAL (MyAnimeList) Client ID
+  - Spotify (Client ID and Client Secret)
 
 ## Docker Compose Setup
 
@@ -44,6 +45,8 @@ services:
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
       - MAL_CLIENT_ID=your_mal_client_id_here
+      - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+      - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
       - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
       - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
       - LOG_LEVEL=your_desired_log_level_here
@@ -67,6 +70,8 @@ Here is a table of all available environment variables:
 | `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |    -    | -                                                                                |
 | `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |    -    | -                                                                                |
 | `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |    -    | -                                                                                |
+| `SPOTIFY_CLIENT_ID`                 | Client ID for Spotify API                                 |    ✅    |    -    | -                                                                                |
+| `SPOTIFY_CLIENT_SECRET`             | Client Secret for Spotify API                             |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ✅    |    -    | -                                                                                |
 | `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `error`, `warn`, `info`, `debug`                                                 |
