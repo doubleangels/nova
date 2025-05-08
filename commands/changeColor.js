@@ -89,7 +89,7 @@ module.exports = {
             });
             
             await interaction.editReply({
-                content: `✅ Successfully changed the color of ${role} from ${originalColor} to ${normalizedColorHex}!`
+                content: `✅ Successfully changed the color of ${role} from \`${originalColor}\` to \`${normalizedColorHex}\`!`
             });
             
         } catch (error) {
