@@ -16,7 +16,7 @@ module.exports = {
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('nickname')
-                .setDescription('What would you like to change the nickname to? (Blank = reset)')
+                .setDescription('What would you like to change the nickname to? (Leave blank to reset)')
                 .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ChangeNickname),
 
@@ -62,8 +62,8 @@ module.exports = {
 
             // Send confirmation message
             const responseMessage = newNickname 
-                ? `✅ Successfully changed nickname from "${originalNickname}" to "${newNickname}"!`
-                : `✅ Successfully reset nickname from "${originalNickname}"!`;
+                ? `✅ Successfully changed ${targetUser}'s nickname from "${originalNickname}" to "${newNickname}"!`
+                : `✅ Successfully reset ${targetUser}'s nickname from "${originalNickname}"!`;
 
             await interaction.editReply({
                 content: responseMessage,
@@ -99,13 +99,12 @@ module.exports = {
             return { success: true };
         }
 
-        // Users can change their own nickname
+        // Users can change their own nickname if they have the permission
         if (targetMember.id === interaction.user.id) {
-            // Check if the bot has permission to change the user's nickname
-            if (!targetMember.manageable) {
+            if (!member.permissions.has(PermissionFlagsBits.ChangeNickname)) {
                 return {
                     success: false,
-                    message: "⚠️ I don't have permission to change your nickname. Please check role hierarchy."
+                    message: "⚠️ You don't have permission to change your own nickname."
                 };
             }
             return { success: true };
