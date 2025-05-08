@@ -82,8 +82,7 @@ async function createPaginatedResults(
   const filter = i => 
     (i.customId.startsWith(`${prefix}_prev_`) || 
      i.customId.startsWith(`${prefix}_next_`)) && 
-    i.customId.includes(interaction.user.id) &&
-    i.user.id === interaction.user.id;
+    i.customId.includes(interaction.user.id);
 
   const collector = message.createMessageComponentCollector({ 
     filter, 
