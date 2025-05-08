@@ -11,7 +11,7 @@ const REQUEST_TIMEOUT = 10000; // 10 second timeout for API requests
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('music')
+    .setName('spotify')
     .setDescription('Search for music on Spotify')
     .addSubcommand(subcommand =>
       subcommand
@@ -59,7 +59,7 @@ module.exports = {
     ),
 
   /**
-   * Executes the music command.
+   * Executes the spotify command.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -74,7 +74,7 @@ module.exports = {
 
       // Defer the reply to allow time for API requests
       await interaction.deferReply();
-      logger.info(`/music command initiated.`, {
+      logger.info(`/spotify command initiated.`, {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -121,7 +121,7 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
-      logger.error("Error executing /music command.", {
+      logger.error("Error executing /spotify command.", {
         error: error.message,
         stack: error.stack,
         userId: interaction.user.id,
@@ -205,6 +205,15 @@ module.exports = {
       }
 
       const track = response.data.tracks.items[0];
+      
+      // Get additional track details
+      const trackDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/tracks/${track.id}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        timeout: REQUEST_TIMEOUT
+      });
+
       return {
         type: 'song',
         name: track.name,
@@ -213,7 +222,11 @@ module.exports = {
         url: track.external_urls.spotify,
         imageUrl: track.album.images[0]?.url,
         duration: this.formatDuration(track.duration_ms),
-        popularity: track.popularity
+        popularity: track.popularity,
+        releaseDate: track.album.release_date,
+        trackNumber: track.track_number,
+        totalTracks: track.album.total_tracks,
+        explicit: track.explicit
       };
     } catch (error) {
       logger.error("Failed to search for song:", {
@@ -249,6 +262,15 @@ module.exports = {
       }
 
       const album = response.data.albums.items[0];
+      
+      // Get additional album details
+      const albumDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/albums/${album.id}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        timeout: REQUEST_TIMEOUT
+      });
+
       return {
         type: 'album',
         name: album.name,
@@ -256,7 +278,11 @@ module.exports = {
         url: album.external_urls.spotify,
         imageUrl: album.images[0]?.url,
         releaseDate: album.release_date,
-        totalTracks: album.total_tracks
+        totalTracks: album.total_tracks,
+        albumType: album.album_type,
+        label: albumDetails.data.label,
+        popularity: album.popularity,
+        genres: albumDetails.data.genres
       };
     } catch (error) {
       logger.error("Failed to search for album:", {
@@ -292,6 +318,18 @@ module.exports = {
       }
 
       const artist = response.data.artists.items[0];
+      
+      // Get artist's top tracks
+      const topTracksResponse = await axios.get(
+        `${SPOTIFY_API_BASE_URL}/artists/${artist.id}/top-tracks?market=US`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          },
+          timeout: REQUEST_TIMEOUT
+        }
+      );
+
       return {
         type: 'artist',
         name: artist.name,
@@ -299,7 +337,8 @@ module.exports = {
         imageUrl: artist.images[0]?.url,
         followers: artist.followers.total,
         popularity: artist.popularity,
-        genres: artist.genres.slice(0, 3).join(', ')
+        genres: artist.genres.slice(0, 3).join(', '),
+        topTracks: topTracksResponse.data.tracks.map(track => track.name).slice(0, 5)
       };
     } catch (error) {
       logger.error("Failed to search for artist:", {
@@ -335,6 +374,15 @@ module.exports = {
       }
 
       const playlist = response.data.playlists.items[0];
+      
+      // Get additional playlist details
+      const playlistDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/playlists/${playlist.id}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        },
+        timeout: REQUEST_TIMEOUT
+      });
+
       return {
         type: 'playlist',
         name: playlist.name,
@@ -342,7 +390,11 @@ module.exports = {
         url: playlist.external_urls.spotify,
         imageUrl: playlist.images[0]?.url,
         tracks: playlist.tracks.total,
-        description: playlist.description
+        description: playlist.description,
+        followers: playlistDetails.data.followers.total,
+        lastUpdated: playlistDetails.data.snapshot_id,
+        collaborative: playlistDetails.data.collaborative,
+        public: playlistDetails.data.public
       };
     } catch (error) {
       logger.error("Failed to search for playlist:", {
@@ -364,7 +416,8 @@ module.exports = {
       .setColor(SPOTIFY_EMBED_COLOR)
       .setTitle(result.name)
       .setURL(result.url)
-      .setThumbnail(result.imageUrl);
+      .setThumbnail(result.imageUrl)
+      .setFooter({ text: 'Powered by Spotify API' });
 
     switch (type) {
       case 'song':
@@ -373,7 +426,10 @@ module.exports = {
           .addFields(
             { name: 'Album', value: result.album, inline: true },
             { name: 'Duration', value: result.duration, inline: true },
-            { name: 'Popularity', value: `${result.popularity}%`, inline: true }
+            { name: 'Popularity', value: `${result.popularity}%`, inline: true },
+            { name: 'Release Date', value: result.releaseDate || 'Unknown', inline: true },
+            { name: 'Track Number', value: result.trackNumber ? `${result.trackNumber}/${result.totalTracks}` : 'Unknown', inline: true },
+            { name: 'Explicit', value: result.explicit ? 'Yes' : 'No', inline: true }
           );
         break;
 
@@ -382,7 +438,11 @@ module.exports = {
           .setDescription(`👤 ${result.artists}`)
           .addFields(
             { name: 'Release Date', value: result.releaseDate, inline: true },
-            { name: 'Tracks', value: result.totalTracks.toString(), inline: true }
+            { name: 'Tracks', value: result.totalTracks.toString(), inline: true },
+            { name: 'Album Type', value: result.albumType || 'Unknown', inline: true },
+            { name: 'Label', value: result.label || 'Unknown', inline: true },
+            { name: 'Popularity', value: `${result.popularity}%`, inline: true },
+            { name: 'Genres', value: result.genres?.join(', ') || 'No genres listed', inline: false }
           );
         break;
 
@@ -391,7 +451,8 @@ module.exports = {
           .addFields(
             { name: 'Followers', value: this.formatNumber(result.followers), inline: true },
             { name: 'Popularity', value: `${result.popularity}%`, inline: true },
-            { name: 'Genres', value: result.genres || 'No genres listed', inline: false }
+            { name: 'Genres', value: result.genres || 'No genres listed', inline: false },
+            { name: 'Top Tracks', value: result.topTracks?.join('\n') || 'No top tracks available', inline: false }
           );
         break;
 
@@ -400,7 +461,11 @@ module.exports = {
           .setDescription(result.description || 'No description available')
           .addFields(
             { name: 'Created by', value: result.owner, inline: true },
-            { name: 'Tracks', value: result.tracks.toString(), inline: true }
+            { name: 'Tracks', value: result.tracks.toString(), inline: true },
+            { name: 'Followers', value: this.formatNumber(result.followers) || 'Unknown', inline: true },
+            { name: 'Last Updated', value: result.lastUpdated || 'Unknown', inline: true },
+            { name: 'Collaborative', value: result.collaborative ? 'Yes' : 'No', inline: true },
+            { name: 'Public', value: result.public ? 'Yes' : 'No', inline: true }
           );
         break;
     }
