@@ -25,7 +25,7 @@ module.exports = {
      * @param {import('discord.js').CommandInteraction} interaction - The interaction object from Discord.
      */
     async execute(interaction) {
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply();
         try {
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
@@ -66,8 +66,7 @@ module.exports = {
                 : `✅ Successfully reset ${targetUser}'s nickname!`;
 
             await interaction.editReply({
-                content: responseMessage,
-                ephemeral: true
+                content: responseMessage
             });
 
         } catch (error) {
