@@ -198,6 +198,26 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
 }
 
 /**
+ * Formats a timezone identifier into a more readable format.
+ * @param {string} timezone - The timezone identifier (e.g., "America/New_York")
+ * @returns {string} Formatted timezone name (e.g., "America/New York")
+ */
+function formatTimezoneName(timezone) {
+  if (!timezone) return '';
+  
+  return timezone
+    .split('/')
+    .map(part => {
+      // Split by underscore and capitalize each word
+      return part
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    })
+    .join('/');
+}
+
+/**
  * Default formatter for time conversion results.
  * We use this to create a consistent, human-readable output format.
  * 
@@ -220,17 +240,16 @@ function defaultFormatter(conversion) {
     return conversion.convertedTime;
   }
   
-  // If dates are different, include them in the output
-  if (isNextDay) {
-    return `${convertedTime} (${convertedDate}) in ${toTimezone} is ${originalTime} (${originalDate}) in ${fromTimezone}`;
-  }
+  const formattedFromTimezone = formatTimezoneName(fromTimezone);
+  const formattedToTimezone = formatTimezoneName(toTimezone);
   
-  if (isPreviousDay) {
-    return `${convertedTime} (${convertedDate}) in ${toTimezone} is ${originalTime} (${originalDate}) in ${fromTimezone}`;
+  // If dates are different, include them in the output
+  if (isNextDay || isPreviousDay) {
+    return `${convertedTime} (${convertedDate}) in ${formattedToTimezone} is ${originalTime} (${originalDate}) in ${formattedFromTimezone}`;
   }
   
   // If same day, use simpler format but include timezones
-  return `${convertedTime} in ${toTimezone} is ${originalTime} in ${fromTimezone}`;
+  return `${convertedTime} in ${formattedToTimezone} is ${originalTime} in ${formattedFromTimezone}`;
 }
 
 /**
