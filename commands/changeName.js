@@ -62,8 +62,8 @@ module.exports = {
 
             // Send confirmation message
             const responseMessage = newNickname 
-                ? `✅ Successfully changed nickname from "${originalNickname}" to "${newNickname}"!`
-                : `✅ Successfully reset nickname from "${originalNickname}"!`;
+                ? `✅ Successfully updated ${targetUser}'s nickname!`
+                : `✅ Successfully reset ${targetUser}'s nickname!`;
 
             await interaction.editReply({
                 content: responseMessage,
