@@ -232,6 +232,7 @@ module.exports = {
         name: track.name,
         artists: track.artists.map(artist => artist.name).join(', '),
         album: track.album.name,
+        albumUrl: track.album.external_urls.spotify,
         url: track.external_urls.spotify,
         imageUrl: track.album.images[0]?.url,
         duration: this.formatDuration(track.duration_ms),
@@ -239,7 +240,10 @@ module.exports = {
         releaseDate: track.album.release_date,
         trackNumber: track.track_number,
         totalTracks: track.album.total_tracks,
-        explicit: track.explicit
+        explicit: track.explicit,
+        discNumber: track.disc_number,
+        isrc: track.external_ids?.isrc,
+        previewUrl: track.preview_url
       };
     } catch (error) {
       logger.error("Failed to search for song:", {
@@ -294,8 +298,9 @@ module.exports = {
         totalTracks: album.total_tracks,
         albumType: album.album_type,
         label: albumDetails.data.label,
-        popularity: album.popularity,
-        genres: albumDetails.data.genres
+        copyrights: albumDetails.data.copyrights,
+        availableMarkets: albumDetails.data.available_markets,
+        externalIds: albumDetails.data.external_ids
       };
     } catch (error) {
       logger.error("Failed to search for album:", {
@@ -350,8 +355,12 @@ module.exports = {
         imageUrl: artist.images[0]?.url,
         followers: artist.followers.total,
         popularity: artist.popularity,
-        genres: artist.genres.slice(0, 3).join(', '),
-        topTracks: topTracksResponse.data.tracks.map(track => track.name).slice(0, 5)
+        genres: artist.genres,
+        topTracks: topTracksResponse.data.tracks.map(track => ({
+          name: track.name,
+          url: track.external_urls.spotify
+        })),
+        externalUrls: artist.external_urls
       };
     } catch (error) {
       logger.error("Failed to search for artist:", {
@@ -408,6 +417,7 @@ module.exports = {
         type: 'playlist',
         name: playlist.name,
         owner: playlist.owner.display_name,
+        ownerUrl: playlist.owner.external_urls.spotify,
         url: playlist.external_urls.spotify,
         imageUrl: playlist.images[0]?.url,
         tracks: playlist.tracks.total,
@@ -415,7 +425,9 @@ module.exports = {
         followers: playlistDetails.data.followers.total,
         lastUpdated: formattedDate,
         collaborative: playlistDetails.data.collaborative,
-        public: playlistDetails.data.public
+        public: playlistDetails.data.public,
+        snapshotId: playlistDetails.data.snapshot_id,
+        externalUrls: playlistDetails.data.external_urls
       };
     } catch (error) {
       logger.error("Failed to search for playlist:", {
@@ -470,6 +482,9 @@ module.exports = {
         totalEpisodes: show.total_episodes,
         languages: show.languages.join(', '),
         explicit: show.explicit,
+        mediaType: show.media_type,
+        copyrights: showDetails.data.copyrights,
+        availableMarkets: showDetails.data.available_markets,
         episodes: showDetails.data.episodes.items.map(episode => ({
           name: episode.name,
           duration: this.formatDuration(episode.duration_ms),
@@ -505,12 +520,15 @@ module.exports = {
         embed
           .setDescription(`🎵 ${result.artists}`)
           .addFields(
-            { name: 'Album', value: result.album, inline: true },
+            { name: 'Album', value: `[${result.album}](${result.albumUrl})`, inline: true },
             { name: 'Duration', value: result.duration, inline: true },
             { name: 'Popularity', value: `${result.popularity}%`, inline: true },
             { name: 'Release Date', value: result.releaseDate || 'Unknown', inline: true },
             { name: 'Track Number', value: result.trackNumber ? `${result.trackNumber}/${result.totalTracks}` : 'Unknown', inline: true },
-            { name: 'Explicit', value: result.explicit ? 'Yes' : 'No', inline: true }
+            { name: 'Explicit', value: result.explicit ? 'Yes' : 'No', inline: true },
+            { name: 'Disc Number', value: result.discNumber?.toString() || 'Unknown', inline: true },
+            { name: 'ISRC', value: result.isrc || 'Unknown', inline: true },
+            { name: 'Preview', value: result.previewUrl ? `[Listen](${result.previewUrl})` : 'Not available', inline: true }
           );
         break;
 
@@ -521,7 +539,10 @@ module.exports = {
             { name: 'Release Date', value: result.releaseDate, inline: true },
             { name: 'Tracks', value: result.totalTracks.toString(), inline: true },
             { name: 'Album Type', value: result.albumType || 'Unknown', inline: true },
-            { name: 'Label', value: result.label || 'Unknown', inline: true }
+            { name: 'Label', value: result.label || 'Unknown', inline: true },
+            { name: 'Copyright', value: result.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
+            { name: 'Available Markets', value: result.availableMarkets?.length ? `${result.availableMarkets.length} markets` : 'Unknown', inline: true },
+            { name: 'External IDs', value: result.externalIds ? Object.entries(result.externalIds).map(([key, value]) => `${key}: ${value}`).join('\n') : 'None', inline: false }
           );
         break;
 
@@ -530,7 +551,9 @@ module.exports = {
           .addFields(
             { name: 'Followers', value: this.formatNumber(result.followers), inline: true },
             { name: 'Popularity', value: `${result.popularity}%`, inline: true },
-            { name: 'Genres', value: result.genres || 'No genres listed', inline: false }
+            { name: 'Genres', value: result.genres?.join(', ') || 'No genres listed', inline: false },
+            { name: 'Top Tracks', value: result.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false },
+            { name: 'External URLs', value: Object.entries(result.externalUrls || {}).map(([key, value]) => `[${key}](${value})`).join(' • ') || 'None', inline: false }
           );
         break;
 
@@ -538,12 +561,14 @@ module.exports = {
         embed
           .setDescription(result.description || 'No description available')
           .addFields(
-            { name: 'Created by', value: result.owner, inline: true },
+            { name: 'Created by', value: `[${result.owner}](${result.ownerUrl})`, inline: true },
             { name: 'Tracks', value: result.tracks.toString(), inline: true },
             { name: 'Followers', value: this.formatNumber(result.followers) || 'Unknown', inline: true },
             { name: 'Last Updated', value: result.lastUpdated || 'Unknown', inline: true },
             { name: 'Collaborative', value: result.collaborative ? 'Yes' : 'No', inline: true },
-            { name: 'Public', value: result.public ? 'Yes' : 'No', inline: true }
+            { name: 'Public', value: result.public ? 'Yes' : 'No', inline: true },
+            { name: 'Snapshot ID', value: result.snapshotId || 'Unknown', inline: true },
+            { name: 'External URLs', value: Object.entries(result.externalUrls || {}).map(([key, value]) => `[${key}](${value})`).join(' • ') || 'None', inline: false }
           );
         break;
 
@@ -555,6 +580,9 @@ module.exports = {
             { name: 'Total Episodes', value: result.totalEpisodes.toString(), inline: true },
             { name: 'Languages', value: result.languages, inline: true },
             { name: 'Explicit', value: result.explicit ? 'Yes' : 'No', inline: true },
+            { name: 'Media Type', value: result.mediaType || 'Unknown', inline: true },
+            { name: 'Copyright', value: result.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
+            { name: 'Available Markets', value: result.availableMarkets?.length ? `${result.availableMarkets.length} markets` : 'Unknown', inline: true },
             { 
               name: 'Latest Episodes', 
               value: result.episodes.slice(0, 5).map(episode => 
