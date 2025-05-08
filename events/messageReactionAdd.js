@@ -9,7 +9,7 @@ const Sentry = require('../sentry');
 
 // We use these configuration constants for consistent time conversion behavior.
 const CLOCK_EMOJI = '🕒';
-const TIME_CONVERSION_TIMEOUT = 15000; // We set a 15-second timeout for temporary messages.
+const TIME_CONVERSION_TIMEOUT = 30000; // We set a 30-second timeout for temporary messages.
 
 // We extend dayjs with timezone capabilities for accurate time conversions.
 dayjs.extend(utc);
