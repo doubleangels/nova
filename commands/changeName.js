@@ -15,7 +15,7 @@ module.exports = {
                 .setDescription('Which user would you like to change the nickname for?')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('nickname')
+            option.setName('name')
                 .setDescription('What would you like to change the nickname to? (Leave blank to reset)')
                 .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ChangeNickname),
