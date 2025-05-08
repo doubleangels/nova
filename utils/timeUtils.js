@@ -221,13 +221,18 @@ function defaultFormatter(conversion) {
   }
   
   // If dates are different, include them in the output
-  if (isNextDay || isPreviousDay) {
-    return `${convertedTime} (${convertedDate}) is ${originalTime} (${originalDate}) in your timezone.`;
+  if (isNextDay) {
+    return `${convertedTime} (${convertedDate}) in ${toTimezone} is ${originalTime} (${originalDate}) in ${fromTimezone}`;
   }
   
-  // If same day, use simpler format
-  return `${convertedTime} is ${originalTime} in your timezone.`;
+  if (isPreviousDay) {
+    return `${convertedTime} (${convertedDate}) in ${toTimezone} is ${originalTime} (${originalDate}) in ${fromTimezone}`;
+  }
+  
+  // If same day, use simpler format but include timezones
+  return `${convertedTime} in ${toTimezone} is ${originalTime} in ${fromTimezone}`;
 }
+
 /**
  * Formats an array of converted time objects into a human-readable string.
  * 
