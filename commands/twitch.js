@@ -114,6 +114,7 @@ module.exports = {
 
   async fetchChannelInfo(channelName, accessToken) {
     try {
+      logger.debug('Twitch API request initiated.', { channelName });
       const response = await axios.get(`${TWITCH_API_BASE_URL}/users`, {
         params: {
           login: channelName
@@ -126,10 +127,12 @@ module.exports = {
       });
 
       if (!response.data.data.length) {
+        logger.debug('Twitch API response received.', { channelName, result: 'no results' });
         return null;
       }
 
       const channel = response.data.data[0];
+      logger.debug('Twitch API response received.', { channelName, result: 'success' });
       return {
         name: channel.display_name,
         description: channel.description,

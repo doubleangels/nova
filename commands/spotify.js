@@ -133,6 +133,8 @@ module.exports = {
       const embed = this.createEmbed(result, subcommand);
       await interaction.editReply({ embeds: [embed] });
 
+      logger.debug('Spotify API response received.', { subcommand, result: result ? 'success' : 'no results' });
+
     } catch (error) {
       logger.error("Error executing /spotify command.", {
         error: error.message,
@@ -201,6 +203,7 @@ module.exports = {
    */
   async searchSong(query, accessToken) {
     try {
+      logger.debug('Spotify API request initiated.', { subcommand: 'song', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -261,6 +264,7 @@ module.exports = {
    */
   async searchAlbum(query, accessToken) {
     try {
+      logger.debug('Spotify API request initiated.', { subcommand: 'album', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -317,6 +321,7 @@ module.exports = {
    */
   async searchArtist(query, accessToken) {
     try {
+      logger.debug('Spotify API request initiated.', { subcommand: 'artist', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -376,6 +381,7 @@ module.exports = {
    */
   async searchPlaylist(query, accessToken) {
     try {
+      logger.debug('Spotify API request initiated.', { subcommand: 'playlist', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -442,6 +448,7 @@ module.exports = {
    */
   async searchPodcast(query, accessToken) {
     try {
+      logger.debug('Spotify API request initiated.', { subcommand: 'podcast', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,

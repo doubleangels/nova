@@ -121,6 +121,7 @@ module.exports = {
       language: 'en'
     });
     const requestUrl = `${NEWS_API_URL}?${params.toString()}`;
+    logger.debug('NewsAPI request initiated.', { topic, sortBy });
     logger.debug('Preparing NewsAPI request.', {
       topic,
       resultsRequested: 10,
@@ -128,10 +129,7 @@ module.exports = {
     });
     try {
       const response = await axios.get(requestUrl, { timeout: REQUEST_TIMEOUT });
-      logger.debug('NewsAPI response received.', {
-        status: response.status,
-        articlesReturned: response.data?.articles?.length || 0
-      });
+      logger.debug('NewsAPI response received.', { status: response.status, articlesReturned: response.data?.articles?.length || 0 });
       return {
         articles: response.data.articles || []
       };
