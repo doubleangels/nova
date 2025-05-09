@@ -27,4 +27,6 @@ module.exports = {
   givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
   givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
   newsApiKey: process.env.NEWS_API_KEY,
+  twitchClientId: process.env.TWITCH_CLIENT_ID,
+  twitchClientSecret: process.env.TWITCH_CLIENT_SECRET,
 };

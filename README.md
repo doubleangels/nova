@@ -27,6 +27,7 @@ Before deploying Nova, ensure you have the following:
   - MAL (MyAnimeList) Client ID
   - Spotify (Client ID and Client Secret)
   - NewsAPI (for /news command)
+  - Twitch (Client ID and Client Secret)
 
 ## Docker Compose Setup
 
@@ -50,6 +51,8 @@ services:
       - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
       - NEWS_API_KEY=your_newsapi_key_here
+      - TWITCH_CLIENT_ID=your_twitch_client_id_here
+      - TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
       - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
       - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
       - LOG_LEVEL=your_desired_log_level_here
@@ -74,6 +77,8 @@ Here is a table of all available environment variables:
 | `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |    -    | -                                                                                |
 | `NEWS_API_KEY`                      | API key for NewsAPI (for /news command)                   |    ✅    |    -    | -                                                                                |
 | `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |    -    | -                                                                                |
+| `TWITCH_CLIENT_ID`                  | Client ID for Twitch API                                  |    ✅    |    -    | -                                                                                |
+| `TWITCH_CLIENT_SECRET`              | Client Secret for Twitch API                              |    ✅    |    -    | -                                                                                |
 | `SPOTIFY_CLIENT_ID`                 | Client ID for Spotify API                                 |    ✅    |    -    | -                                                                                |
 | `SPOTIFY_CLIENT_SECRET`             | Client Secret for Spotify API                             |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
