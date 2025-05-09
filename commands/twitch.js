@@ -50,6 +50,8 @@ module.exports = {
 
       // Fetch channel information
       const channelInfo = await this.fetchChannelInfo(channelName, accessToken);
+      const streamInfo = await this.fetchStreamInfo(channelName, accessToken);
+
       if (!channelInfo) {
         return await interaction.editReply({
           content: `⚠️ No information found for channel "${channelName}"`,
@@ -58,7 +60,7 @@ module.exports = {
       }
 
       // Create and send the embed
-      const embed = this.createEmbed(channelInfo);
+      const embed = this.createEmbed(channelInfo, streamInfo);
       await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
@@ -151,8 +153,32 @@ module.exports = {
     }
   },
 
-  createEmbed(channelInfo) {
-    return new EmbedBuilder()
+  async fetchStreamInfo(channelName, accessToken) {
+    try {
+      const response = await axios.get(`${TWITCH_API_BASE_URL}/streams`, {
+        params: {
+          user_login: channelName
+        },
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Client-Id': config.twitchClientId
+        },
+        timeout: REQUEST_TIMEOUT
+      });
+
+      return response.data.data.length > 0 ? response.data.data[0] : null;
+    } catch (error) {
+      logger.error("Failed to fetch stream information:", {
+        error: error.message,
+        channelName
+      });
+      return null;
+    }
+  },
+
+  createEmbed(channelInfo, streamInfo) {
+    const isOnline = streamInfo !== null;
+    const embed = new EmbedBuilder()
       .setColor(TWITCH_EMBED_COLOR)
       .setTitle(channelInfo.name)
       .setURL(channelInfo.url)
@@ -161,8 +187,18 @@ module.exports = {
       .addFields(
         { name: 'View Count', value: channelInfo.viewCount.toString(), inline: true },
         { name: 'Broadcaster Type', value: channelInfo.broadcasterType || 'Unknown', inline: true },
-        { name: 'Created At', value: new Date(channelInfo.createdAt).toLocaleDateString(), inline: true }
+        { name: 'Created At', value: new Date(channelInfo.createdAt).toLocaleDateString(), inline: true },
+        { name: 'Status', value: isOnline ? '🟢 Online' : '🔴 Offline', inline: true }
       )
       .setFooter({ text: 'Powered by Twitch API' });
+
+    if (isOnline) {
+      embed.addFields(
+        { name: 'Game', value: streamInfo.game_name || 'Unknown', inline: true },
+        { name: 'Viewers', value: streamInfo.viewer_count.toString(), inline: true }
+      );
+    }
+
+    return embed;
   }
 }; 
