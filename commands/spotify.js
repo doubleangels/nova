@@ -513,7 +513,7 @@ module.exports = {
     switch (type) {
       case 'song':
         embed
-          .setDescription(`🎵 ${result.artists}`)
+          .setDescription(`🎵 **Artists:** ${result.artists}`)
           .addFields(
             { name: 'Album', value: `[${result.album}](${result.albumUrl})`, inline: true },
             { name: 'Duration', value: result.duration, inline: true },
@@ -528,7 +528,7 @@ module.exports = {
 
       case 'album':
         embed
-          .setDescription(`👤 ${result.artists}`)
+          .setDescription(`👤 **Artists:** ${result.artists}`)
           .addFields(
             { name: 'Release Date', value: result.releaseDate, inline: true },
             { name: 'Tracks', value: result.totalTracks.toString(), inline: true },
@@ -541,10 +541,10 @@ module.exports = {
 
       case 'artist':
         embed
+          .setDescription(`🎤 **Genres:** ${result.genres?.join(', ') || 'No genres listed'}`)
           .addFields(
             { name: 'Followers', value: this.formatNumber(result.followers), inline: true },
             { name: 'Popularity', value: `${result.popularity}%`, inline: true },
-            { name: 'Genres', value: result.genres?.join(', ') || 'No genres listed', inline: false },
             { name: 'Top Tracks', value: result.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false }
           );
         break;
