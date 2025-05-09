@@ -6,7 +6,7 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams } = require('../utils/searchUtils');
 
 const NEWS_API_URL = 'https://newsapi.org/v2/everything';
-const DEFAULT_RESULTS = 5;
+const DEFAULT_RESULTS = 10;
 const MIN_RESULTS = 1;
 const MAX_RESULTS = 10;
 const COLLECTOR_TIMEOUT = 120000; // 2 minutes
