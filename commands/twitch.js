@@ -185,7 +185,6 @@ module.exports = {
       .setThumbnail(channelInfo.profileImageUrl)
       .setDescription(channelInfo.description || 'No description available')
       .addFields(
-        { name: 'View Count', value: channelInfo.viewCount.toString(), inline: true },
         { name: 'Status', value: isOnline ? '🟢 Online' : '🔴 Offline', inline: true }
       )
       .setFooter({ text: 'Powered by Twitch API' });
