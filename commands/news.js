@@ -101,7 +101,7 @@ module.exports = {
         COLLECTOR_TIMEOUT,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary,
+          buttonStyle: ButtonStyle.Secondary,
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',
