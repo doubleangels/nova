@@ -5,12 +5,12 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams } = require('../utils/searchUtils');
 
-const NEWS_API_URL = 'https://newsapi.org/v2/top-headlines';
+const NEWS_API_URL = 'https://newsapi.org/v2/everything';
 const DEFAULT_RESULTS = 5;
 const MIN_RESULTS = 1;
 const MAX_RESULTS = 10;
 const COLLECTOR_TIMEOUT = 120000; // 2 minutes
-const EMBED_COLOR = 0x1E90FF; // Dodger blue for news
+const EMBED_COLOR = 0x1E90FF;
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 module.exports = {
@@ -122,6 +122,7 @@ module.exports = {
     const params = new URLSearchParams({
       q: topic,
       pageSize: resultsCount.toString(),
+      sortBy: 'publishedAt',
       apiKey: config.newsApiKey,
       language: 'en'
     });
