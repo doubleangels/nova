@@ -22,17 +22,6 @@ module.exports = {
         .setName('topic')
         .setDescription('What topic do you want news about?')
         .setRequired(true)
-    )
-    .addStringOption(option =>
-      option
-        .setName('sort')
-        .setDescription('How should the results be sorted?')
-        .setRequired(false)
-        .addChoices(
-          { name: 'Most Recent', value: 'publishedAt' },
-          { name: 'Most Relevant', value: 'relevancy' },
-          { name: 'Most Popular', value: 'popularity' }
-        )
     ),
 
   async execute(interaction) {
@@ -51,7 +40,7 @@ module.exports = {
       });
 
       const topic = interaction.options.getString('topic');
-      const sortBy = interaction.options.getString('sort') || 'publishedAt';
+      const sortBy = 'publishedAt';
       const searchParams = normalizeSearchParams(
         topic, DEFAULT_RESULTS, DEFAULT_RESULTS, DEFAULT_RESULTS, DEFAULT_RESULTS
       );
