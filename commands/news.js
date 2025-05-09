@@ -10,7 +10,7 @@ const DEFAULT_RESULTS = 5;
 const MIN_RESULTS = 1;
 const MAX_RESULTS = 10;
 const COLLECTOR_TIMEOUT = 120000; // 2 minutes
-const EMBED_COLOR = 0x1E90FF;
+const EMBED_COLOR = 0x1A73E8;
 const REQUEST_TIMEOUT = 10000; // 10 seconds
 
 module.exports = {
