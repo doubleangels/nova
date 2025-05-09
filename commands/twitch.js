@@ -186,8 +186,6 @@ module.exports = {
       .setDescription(channelInfo.description || 'No description available')
       .addFields(
         { name: 'View Count', value: channelInfo.viewCount.toString(), inline: true },
-        { name: 'Broadcaster Type', value: channelInfo.broadcasterType || 'Unknown', inline: true },
-        { name: 'Created At', value: new Date(channelInfo.createdAt).toLocaleDateString(), inline: true },
         { name: 'Status', value: isOnline ? '🟢 Online' : '🔴 Offline', inline: true }
       )
       .setFooter({ text: 'Powered by Twitch API' });
