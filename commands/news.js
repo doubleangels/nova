@@ -28,6 +28,17 @@ module.exports = {
         .setName('results')
         .setDescription(`How many results do you want? (${MIN_RESULTS}-${MAX_RESULTS}, Default: ${DEFAULT_RESULTS})`)
         .setRequired(false)
+    )
+    .addStringOption(option =>
+      option
+        .setName('sort')
+        .setDescription('How should the results be sorted?')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Most Recent', value: 'publishedAt' },
+          { name: 'Most Relevant', value: 'relevancy' },
+          { name: 'Most Popular', value: 'popularity' }
+        )
     ),
 
   async execute(interaction) {
@@ -47,6 +58,7 @@ module.exports = {
 
       const topic = interaction.options.getString('topic');
       const resultsCount = interaction.options.getInteger('results');
+      const sortBy = interaction.options.getString('sort') || 'publishedAt';
       const searchParams = normalizeSearchParams(
         topic, resultsCount, DEFAULT_RESULTS, MIN_RESULTS, MAX_RESULTS
       );
@@ -64,7 +76,7 @@ module.exports = {
         count: searchParams.count
       });
 
-      const newsResults = await this.fetchNewsResults(searchParams.query, searchParams.count);
+      const newsResults = await this.fetchNewsResults(searchParams.query, searchParams.count, sortBy);
 
       if (newsResults.error) {
         return await interaction.editReply({
@@ -118,18 +130,19 @@ module.exports = {
     return true;
   },
 
-  async fetchNewsResults(topic, resultsCount) {
+  async fetchNewsResults(topic, resultsCount, sortBy) {
     const params = new URLSearchParams({
       q: topic,
       pageSize: resultsCount.toString(),
-      sortBy: 'publishedAt',
+      sortBy,
       apiKey: config.newsApiKey,
       language: 'en'
     });
     const requestUrl = `${NEWS_API_URL}?${params.toString()}`;
     logger.debug('Preparing NewsAPI request.', {
       topic,
-      resultsRequested: resultsCount
+      resultsRequested: resultsCount,
+      sortBy
     });
     try {
       const response = await axios.get(requestUrl, { timeout: REQUEST_TIMEOUT });
