@@ -23,12 +23,6 @@ module.exports = {
         .setDescription('What topic do you want news about?')
         .setRequired(true)
     )
-    .addIntegerOption(option =>
-      option
-        .setName('results')
-        .setDescription(`How many results do you want? (${MIN_RESULTS}-${MAX_RESULTS}, Default: ${DEFAULT_RESULTS})`)
-        .setRequired(false)
-    )
     .addStringOption(option =>
       option
         .setName('sort')
@@ -57,10 +51,9 @@ module.exports = {
       });
 
       const topic = interaction.options.getString('topic');
-      const resultsCount = interaction.options.getInteger('results');
       const sortBy = interaction.options.getString('sort') || 'publishedAt';
       const searchParams = normalizeSearchParams(
-        topic, resultsCount, DEFAULT_RESULTS, MIN_RESULTS, MAX_RESULTS
+        topic, DEFAULT_RESULTS, DEFAULT_RESULTS, DEFAULT_RESULTS, DEFAULT_RESULTS
       );
 
       if (!searchParams.valid) {
@@ -76,7 +69,7 @@ module.exports = {
         count: searchParams.count
       });
 
-      const newsResults = await this.fetchNewsResults(searchParams.query, searchParams.count, sortBy);
+      const newsResults = await this.fetchNewsResults(searchParams.query, sortBy);
 
       if (newsResults.error) {
         return await interaction.editReply({
@@ -130,10 +123,10 @@ module.exports = {
     return true;
   },
 
-  async fetchNewsResults(topic, resultsCount, sortBy) {
+  async fetchNewsResults(topic, sortBy) {
     const params = new URLSearchParams({
       q: topic,
-      pageSize: resultsCount.toString(),
+      pageSize: '10',
       sortBy,
       apiKey: config.newsApiKey,
       language: 'en'
@@ -141,7 +134,7 @@ module.exports = {
     const requestUrl = `${NEWS_API_URL}?${params.toString()}`;
     logger.debug('Preparing NewsAPI request.', {
       topic,
-      resultsRequested: resultsCount,
+      resultsRequested: 10,
       sortBy
     });
     try {
