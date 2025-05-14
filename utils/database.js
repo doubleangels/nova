@@ -24,7 +24,8 @@ const TABLES = {
   REMINDERS: `${SCHEMA}.reminders`,
   TRACKED_MEMBERS: `${SCHEMA}.tracked_members`,
   TIMEZONES: `${SCHEMA}.timezones`,
-  MESSAGE_COUNTS: `${SCHEMA}.message_counts`
+  MESSAGE_COUNTS: `${SCHEMA}.message_counts`,
+  VOICE_TIME: `${SCHEMA}.voice_time`
 };
 
 /**
@@ -490,6 +491,77 @@ async function getTopMessageSenders(limit = 10) {
   }
 }
 
+/**
+ * Updates or creates a voice time tracking record for a user.
+ * We track the total time spent in voice channels.
+ * 
+ * @param {string} memberId - The Discord user ID.
+ * @param {string} username - The current username of the user.
+ * @param {number} minutesSpent - The number of minutes to add to their total.
+ * @returns {Promise<void>}
+ */
+async function updateVoiceTime(memberId, username, minutesSpent) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO ${TABLES.VOICE_TIME} (member_id, username, minutes_spent, last_updated)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (member_id) DO UPDATE SET
+         username = $2,
+         minutes_spent = ${TABLES.VOICE_TIME}.minutes_spent + $3,
+         last_updated = CURRENT_TIMESTAMP`,
+      [memberId, username, minutesSpent]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the top voice channel users by time spent.
+ * We retrieve users sorted by their total voice time.
+ * 
+ * @param {number} limit - The maximum number of users to return.
+ * @returns {Promise<Array>} Array of user records with voice time data.
+ */
+async function getTopVoiceUsers(limit = 10) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT member_id, username, minutes_spent, last_updated
+       FROM ${TABLES.VOICE_TIME}
+       ORDER BY minutes_spent DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the voice time for a specific user.
+ * We retrieve the total time spent in voice channels.
+ * 
+ * @param {string} memberId - The Discord user ID.
+ * @returns {Promise<Object|null>} The user's voice time record or null if not found.
+ */
+async function getUserVoiceTime(memberId) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT member_id, username, minutes_spent, last_updated
+       FROM ${TABLES.VOICE_TIME}
+       WHERE member_id = $1`,
+      [memberId]
+    );
+    return result.rows[0] || null;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -506,5 +578,8 @@ module.exports = {
   setUserTimezone,
   getUserTimezone,
   incrementMessageCount,
-  getTopMessageSenders
+  getTopMessageSenders,
+  updateVoiceTime,
+  getTopVoiceUsers,
+  getUserVoiceTime
 };
