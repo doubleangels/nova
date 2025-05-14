@@ -76,6 +76,14 @@ async function initializeDatabase() {
     } else {
       throw new Error("Database read/write test failed");
     }
+
+    // Clean up test data
+    await client.query(
+      `DELETE FROM ${TABLES.CONFIG} WHERE id = $1`,
+      [testKey]
+    );
+    logger.debug("Cleaned up database test data.");
+    
   } catch (err) {
     logger.error("Error testing database connection:", { error: err });
     throw err;
