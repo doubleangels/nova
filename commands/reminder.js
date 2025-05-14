@@ -416,7 +416,7 @@ module.exports = {
       const [channelId, roleId, reminderData] = await Promise.all([
         getValue(DB_KEY_CHANNEL),
         getValue(DB_KEY_ROLE),
-        getReminderData(REMINDER_TYPE)
+        getReminderData('bump')
       ]);
       
       logger.debug("Retrieved reminder configuration.", { 
