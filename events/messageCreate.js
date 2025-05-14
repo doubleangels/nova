@@ -1,8 +1,7 @@
-const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember, incrementMessageCount } = require('../utils/database');
-const { handleReminder, checkReminders } = require('../utils/reminderUtils');
+const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 
@@ -17,7 +16,7 @@ const Sentry = require('../sentry');
  * @param {Message} message - The message object from Discord.
  */
 module.exports = {
-  name: Events.MessageCreate,
+  name: 'messageCreate',
   async execute(message) {
     try {
       // We handle partial messages by fetching their full content when needed.

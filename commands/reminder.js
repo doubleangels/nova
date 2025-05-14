@@ -3,120 +3,22 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
-const { randomUUID } = require('crypto');
 dayjs.extend(duration);
-const { getValue, setValue, getReminderData, setReminderData, deleteReminderData, getUserReminders } = require('../utils/database');
+const { getValue, setValue, getReminderData } = require('../utils/database');
 
 // These are the configuration constants for the reminder system.
+const REMINDER_TYPE = 'bump';
 const DB_KEY_CHANNEL = 'reminder_channel';
 const DB_KEY_ROLE = 'reminder_role';
 
 /**
  * Module for the /reminder command.
- * This command allows users to create, manage, and check custom reminders.
+ * This command allows administrators to setup and check bump reminder settings for server management.
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
-    .setDescription('Create and manage custom reminders.')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('create')
-        .setDescription('Create a new custom reminder.')
-        .addStringOption(option =>
-          option
-            .setName('name')
-            .setDescription('What should this reminder be called?')
-            .setRequired(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('message')
-            .setDescription('What message should be sent when the reminder triggers?')
-            .setRequired(true)
-        )
-        .addChannelOption(option =>
-          option
-            .setName('channel')
-            .setDescription('Which channel should the reminder be sent to?')
-            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-            .setRequired(true)
-        )
-        .addIntegerOption(option =>
-          option
-            .setName('hours')
-            .setDescription('How many hours until the reminder?')
-            .setRequired(true)
-            .setMinValue(1)
-            .setMaxValue(168) // 1 week
-        )
-        .addIntegerOption(option =>
-          option
-            .setName('minutes')
-            .setDescription('How many minutes until the reminder?')
-            .setRequired(false)
-            .setMinValue(0)
-            .setMaxValue(59)
-        )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('list')
-        .setDescription('List all your active reminders.')
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('delete')
-        .setDescription('Delete a specific reminder.')
-        .addStringOption(option =>
-          option
-            .setName('name')
-            .setDescription('The name of the reminder to delete.')
-            .setRequired(true)
-            .setAutocomplete(true)
-        )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('edit')
-        .setDescription('Edit an existing reminder.')
-        .addStringOption(option =>
-          option
-            .setName('name')
-            .setDescription('The name of the reminder to edit.')
-            .setRequired(true)
-            .setAutocomplete(true)
-        )
-        .addStringOption(option =>
-          option
-            .setName('message')
-            .setDescription('The new message for the reminder.')
-            .setRequired(false)
-        )
-        .addChannelOption(option =>
-          option
-            .setName('channel')
-            .setDescription('Which channel should the reminder be sent to?')
-            .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-            .setRequired(false)
-        )
-        .addIntegerOption(option =>
-          option
-            .setName('hours')
-            .setDescription('How many hours until the reminder?')
-            .setRequired(false)
-            .setMinValue(1)
-            .setMaxValue(168)
-        )
-        .addIntegerOption(option =>
-          option
-            .setName('minutes')
-            .setDescription('How many minutes until the reminder?')
-            .setRequired(false)
-            .setMinValue(0)
-            .setMaxValue(59)
-        )
-    )
+    .setDescription('Setup and check the status of bump reminders.')
     .addSubcommand(subcommand =>
       subcommand
         .setName('setup')
@@ -124,14 +26,14 @@ module.exports = {
         .addChannelOption(option =>
           option
             .setName('channel')
-            .setDescription('What channel do you want bump reminders in?')
+            .setDescription('What channel do you want reminders in?')
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
             .setRequired(true)
         )
         .addRoleOption(option =>
           option
             .setName('role')
-            .setDescription('What role do you want to ping for bump reminders?')
+            .setDescription('What role do you want to ping for reminders?')
             .setRequired(true)
         )
     )
@@ -158,173 +60,16 @@ module.exports = {
       
       const subcommand = interaction.options.getSubcommand();
       
-      switch (subcommand) {
-        case 'create':
-          await this.handleReminderCreate(interaction);
-          break;
-        case 'list':
-          await this.handleReminderList(interaction);
-          break;
-        case 'delete':
-          await this.handleReminderDelete(interaction);
-          break;
-        case 'edit':
-          await this.handleReminderEdit(interaction);
-          break;
-        case 'setup':
-          await this.handleReminderSetup(interaction);
-          break;
-        case 'status':
-          await this.handleReminderStatus(interaction);
-          break;
+      if (subcommand === 'setup') {
+        await this.handleReminderSetup(interaction);
+      } else if (subcommand === 'status') {
+        await this.handleReminderStatus(interaction);
       }
       
     } catch (error) {
       await this.handleError(interaction, error);
     }
   },
-
-  /**
-   * Handles creating a new custom reminder.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   */
-  async handleReminderCreate(interaction) {
-    const name = interaction.options.getString('name');
-    const message = interaction.options.getString('message');
-    const channel = interaction.options.getChannel('channel');
-    const hours = interaction.options.getInteger('hours');
-    const minutes = interaction.options.getInteger('minutes') || 0;
-
-    // Calculate total delay in milliseconds
-    const totalDelay = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
-    const scheduledTime = dayjs().add(totalDelay, 'millisecond');
-    const reminderId = randomUUID();
-
-    // Store the reminder data
-    await setReminderData(
-      `custom_${interaction.user.id}_${name}`,
-      scheduledTime.toISOString(),
-      reminderId,
-      {
-        type: 'custom',
-        message,
-        userId: interaction.user.id,
-        username: interaction.user.tag,
-        channelId: channel.id
-      }
-    );
-
-    // Format the time for display
-    const readableTime = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss');
-    
-    await interaction.editReply({
-      content: `✅ Reminder "${name}" created!\n\n` +
-               `📝 **Message:** ${message}\n` +
-               `📢 **Channel:** <#${channel.id}>\n` +
-               `⏰ **Scheduled for:** ${readableTime}`
-    });
-  },
-
-  /**
-   * Handles listing all active reminders for the user.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   */
-  async handleReminderList(interaction) {
-    // Get all reminders for this user
-    const reminders = await getUserReminders(interaction.user.id);
-    
-    if (reminders.length === 0) {
-      return await interaction.editReply({
-        content: "You don't have any active reminders."
-      });
-    }
-
-    let response = "📋 **Your Active Reminders:**\n\n";
-    for (const reminder of reminders) {
-      const scheduledTime = dayjs(reminder.scheduled_time);
-      const timeStr = scheduledTime.format('YYYY-MM-DD HH:mm:ss');
-      response += `**${reminder.name}**\n` +
-                 `📝 Message: ${reminder.message}\n` +
-                 `📢 Channel: <#${reminder.channel_id}>\n` +
-                 `⏰ Scheduled for: ${timeStr}\n\n`;
-    }
-
-    await interaction.editReply(response);
-  },
-
-  /**
-   * Handles deleting a specific reminder.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   */
-  async handleReminderDelete(interaction) {
-    const name = interaction.options.getString('name');
-    const reminderKey = `custom_${interaction.user.id}_${name}`;
-    
-    const reminder = await getReminderData(reminderKey);
-    if (!reminder) {
-      return await interaction.editReply({
-        content: `⚠️ No reminder found with name "${name}".`,
-        ephemeral: true
-      });
-    }
-
-    await deleteReminderData(reminderKey);
-    await interaction.editReply({
-      content: `✅ Reminder "${name}" has been deleted.`
-    });
-  },
-
-  /**
-   * Handles editing an existing reminder.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   */
-  async handleReminderEdit(interaction) {
-    const name = interaction.options.getString('name');
-    const reminderKey = `custom_${interaction.user.id}_${name}`;
-    
-    const reminder = await getReminderData(reminderKey);
-    if (!reminder) {
-      return await interaction.editReply({
-        content: `⚠️ No reminder found with name "${name}".`,
-        ephemeral: true
-      });
-    }
-
-    const message = interaction.options.getString('message') || reminder.message;
-    const channel = interaction.options.getChannel('channel') || { id: reminder.channel_id };
-    const hours = interaction.options.getInteger('hours');
-    const minutes = interaction.options.getInteger('minutes') || 0;
-
-    let scheduledTime;
-    if (hours !== null) {
-      const totalDelay = (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
-      scheduledTime = dayjs().add(totalDelay, 'millisecond').toISOString();
-    } else {
-      scheduledTime = reminder.scheduled_time;
-    }
-
-    await setReminderData(
-      reminderKey,
-      scheduledTime,
-      reminder.reminder_id,
-      {
-        type: 'custom',
-        message,
-        userId: interaction.user.id,
-        username: interaction.user.tag,
-        channelId: channel.id
-      }
-    );
-
-    const readableTime = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss');
-    await interaction.editReply({
-      content: `✅ Reminder "${name}" updated!\n\n` +
-               `📝 **Message:** ${message}\n` +
-               `📢 **Channel:** <#${channel.id}>\n` +
-               `⏰ **Scheduled for:** ${readableTime}`
-    });
-  },
-
   /**
    * Handles the setup of a new reminder configuration.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
@@ -416,7 +161,7 @@ module.exports = {
       const [channelId, roleId, reminderData] = await Promise.all([
         getValue(DB_KEY_CHANNEL),
         getValue(DB_KEY_ROLE),
-        getReminderData('bump')
+        getReminderData(REMINDER_TYPE)
       ]);
       
       logger.debug("Retrieved reminder configuration.", { 
