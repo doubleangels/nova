@@ -205,10 +205,10 @@ async function setReminderData(key, scheduled_time, reminder_id) {
     
     // We use an upsert pattern for better performance and code simplicity.
     await client.query(
-      `INSERT INTO ${TABLES.REMINDERS} (key, scheduled_time, reminder_id) 
-       VALUES ($1, $2, $3)
+      `INSERT INTO ${TABLES.REMINDERS} (key, scheduled_time, reminder_id, inserted_at) 
+       VALUES ($1, $2, $3, NOW())
        ON CONFLICT (key) 
-       DO UPDATE SET scheduled_time = $2, reminder_id = $3`,
+       DO UPDATE SET scheduled_time = $2, reminder_id = $3, inserted_at = NOW()`,
       [key, scheduled_time, reminder_id]
     );
     logger.info(`Set reminder data for key "${key}" successfully.`);
