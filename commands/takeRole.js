@@ -95,6 +95,18 @@ module.exports = {
         message: '⚠️ I don\'t have permission to manage roles. Please check my role permissions.'
       };
     }
+
+    // We check if the role is managed (bot or integration role).
+    if (role.managed) {
+      logger.warn("Attempted to remove a managed role.", {
+        roleId: role.id,
+        roleName: role.name
+      });
+      return {
+        valid: false,
+        message: '⚠️ I cannot remove managed roles (bot or integration roles).'
+      };
+    }
     
     // We fetch the target member from the guild to access their roles.
     const targetMember = await this.fetchGuildMember(interaction, targetUser.id);
@@ -135,19 +147,22 @@ module.exports = {
       };
     }
     
-    // We check if the command executor's highest role is higher than the role to be removed.
-    const executorMember = await this.fetchGuildMember(interaction, interaction.user.id);
-    if (executorMember && executorMember.roles.highest.position <= role.position) {
-      logger.warn("Role hierarchy prevents role removal by executor.", {
-        executorHighestRole: executorMember.roles.highest.id,
-        targetRoleId: role.id,
-        guildId: interaction.guildId
-      });
-      
-      return {
-        valid: false,
-        message: '⚠️ You cannot remove this role because it\'s positioned higher than or equal to your highest role.'
-      };
+    // We check role hierarchy for the user issuing the command to enforce Discord's role hierarchy rules.
+    // Server owners can manage any role regardless of hierarchy.
+    if (interaction.guild.ownerId !== interaction.user.id) {
+      const executorMember = await this.fetchGuildMember(interaction, interaction.user.id);
+      if (executorMember && executorMember.roles.highest.position <= role.position) {
+        logger.warn("Role hierarchy prevents role removal by executor.", {
+          executorHighestRole: executorMember.roles.highest.id,
+          targetRoleId: role.id,
+          guildId: interaction.guildId
+        });
+        
+        return {
+          valid: false,
+          message: '⚠️ You cannot remove this role because it\'s positioned higher than or equal to your highest role.'
+        };
+      }
     }
     
     return {

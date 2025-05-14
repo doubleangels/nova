@@ -14,9 +14,10 @@ const YOUTUBE_API_PLAYLISTS_URL = 'https://www.googleapis.com/youtube/v3/playlis
 const YOUTUBE_API_TIMEOUT_MS = 5000; // We set a 5-second timeout for API requests.
 const YOUTUBE_SEARCH_MAX_RESULTS = 10; // We limit to a maximum of 10 results per search.
 const YOUTUBE_EMBED_COLOR = 0xFF0000; // We use YouTube's signature red color for embeds.
-const YOUTUBE_DESCRIPTION_MAX_LENGTH = 150; // We truncate long descriptions to keep embeds clean.
+const YOUTUBE_DESCRIPTION_MAX_LENGTH = 1024; // We truncate long descriptions to keep embeds clean.
 const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
 const YOUTUBE_RELEVANCE_LIKES_WEIGHT = 0.001; // We use this factor for relevance calculation.
+const YOUTUBE_REQUEST_TIMEOUT = 10000;
 
 // We use a simple in-memory cache to reduce API calls.
 const cache = new Map();
@@ -24,204 +25,139 @@ const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay wit
 
 /**
  * Module for the /youtube command.
- * We search YouTube for videos, channels, or playlists.
+ * We search for and display YouTube video information.
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
-    .setDescription('Search YouTube for videos, channels, or playlists.')
+    .setDescription('We search for a video on YouTube.')
     .addStringOption(option =>
-      option
-        .setName('query')
-        .setDescription('What do you want to search for?')
-        .setRequired(true)
-    )
-    .addStringOption(option => {
-      const typeOption = option
-        .setName('type')
-        .setDescription('What type of content do you want to search for?')
-        .setRequired(false);
-      
-      [
-        { name: 'Videos', value: 'video' },
-        { name: 'Channels', value: 'channel' },
-        { name: 'Playlists', value: 'playlist' }
-      ].forEach(choice => {
-        typeOption.addChoices(choice);
-      });
-      
-      return typeOption;
-    })
-    .addStringOption(option => {
-      const sortOption = option
-        .setName('sort')
-        .setDescription('How do you want to sort the results?')
-        .setRequired(false);
-      
-      [
-        { name: 'Relevance', value: 'relevance' },
-        { name: 'View Count', value: 'viewCount' },
-        { name: 'Upload Date', value: 'date' },
-        { name: 'Rating', value: 'rating' }
-      ].forEach(choice => {
-        sortOption.addChoices(choice);
-      });
-      
-      return sortOption;
-    })
-    .addStringOption(option => {
-      const durationOption = option
-        .setName('duration')
-        .setDescription('How long should the videos be?')
-        .setRequired(false);
-      
-      [
-        { name: 'Any', value: 'any' },
-        { name: 'Short (<4 min)', value: 'short' },
-        { name: 'Medium (4-20 min)', value: 'medium' },
-        { name: 'Long (>20 min)', value: 'long' }
-      ].forEach(choice => {
-        durationOption.addChoices(choice);
-      });
-      
-      return durationOption;
-    }),
-    
-  /**
-   * Executes the YouTube search command.
-   * 
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
-   */
+      option.setName('query')
+        .setDescription('What would you like to search for?')
+        .setRequired(true)),
+
   async execute(interaction) {
+    await interaction.deferReply();
+    const query = interaction.options.getString('query');
+
     try {
-      // We defer the reply to allow time for the API calls.
-      await interaction.deferReply();
-      
-      logger.debug("YouTube command received.", { 
-        userId: interaction.user.id,
-        userTag: interaction.user.tag 
+      const response = await axios.get(`${YOUTUBE_API_SEARCH_URL}`, {
+        params: {
+          part: 'snippet',
+          q: query,
+          type: 'video',
+          maxResults: 1,
+          key: config.googleApiKey
+        },
+        timeout: YOUTUBE_REQUEST_TIMEOUT
       });
-      
-      // We check if the API key is configured before proceeding.
-      if (!config.googleApiKey) {
-        logger.error("YouTube API key is missing in configuration.");
-        await interaction.editReply({ 
-          content: '⚠️ YouTube API key is not configured. Please contact the bot administrator.',
-          ephemeral: true
+
+      if (!response.data.items || response.data.items.length === 0) {
+        return await interaction.editReply({
+          content: `We couldn't find any videos matching "${query}".`
         });
-        return;
       }
-      
-      // We retrieve and format the user's search query and options.
-      const query = interaction.options.getString('query');
-      const contentType = interaction.options.getString('type') || 'video';
-      const sortMethod = interaction.options.getString('sort') || 'relevance';
-      const duration = interaction.options.getString('duration') || 'any';
-      
-      logger.debug("Processing search request.", { 
-        query, 
-        contentType,
-        sortMethod, 
-        duration,
-        userId: interaction.user.id 
-      });
-      
-      const formattedQuery = query.trim();
-      
-      // We check the cache for this query to avoid unnecessary API calls.
-      const cacheKey = `${contentType}:${formattedQuery}:${sortMethod}:${duration}`;
-      const cachedResults = this.getCachedResults(cacheKey);
-      
-      let results;
-      if (cachedResults) {
-        logger.debug("Using cached results.", { cacheKey });
-        results = cachedResults;
-      } else {
-        // We search for content using the YouTube API.
-        results = await this.searchYouTube(formattedQuery, contentType, sortMethod, duration);
-        
-        // We cache the results if valid to reduce API usage.
-        if (results && results.length > 0) {
-          this.cacheResults(cacheKey, results);
-        }
-      }
-      
-      if (!results || results.length === 0) {
-        logger.warn("No results found.", { query: formattedQuery, contentType });
-        await interaction.editReply({ 
-          content: `⚠️ No ${contentType} results found for **${formattedQuery}**. Try another search!`,
-          ephemeral: true
-        });
-        return;
-      }
-      
-      // We use the paginated results utility for a consistent user experience.
-      const itemsToDisplay = results.slice(0, YOUTUBE_SEARCH_MAX_RESULTS);
-      
-      // We create a function that generates an embed for a specific index.
-      const generateEmbed = (index) => {
-        return this.createContentEmbed(
-          itemsToDisplay[index],
-          contentType,
-          index,
-          itemsToDisplay.length
-        );
-      };
-      
-      // We use the reusable pagination utility with YouTube-specific styling.
-      await createPaginatedResults(
-        interaction,
-        itemsToDisplay,
-        generateEmbed,
-        'yt',
-        YOUTUBE_COLLECTOR_TIMEOUT_MS,
-        logger,
-        {
-          buttonStyle: ButtonStyle.Danger, // We use YouTube red for the buttons.
-          prevLabel: 'Previous',
-          nextLabel: 'Next',
-          prevEmoji: '◀️',
-          nextEmoji: '▶️'
-        }
-      );
-      logger.info("YouTube search results sent successfully.", { 
-        query: formattedQuery, 
-        contentType,
-        resultCount: results.length,
-        userId: interaction.user.id 
-      });
-      
+
+      const video = response.data.items[0];
+      const videoDetails = await this.getVideoDetails(video.id.videoId);
+
+      const embed = new EmbedBuilder()
+        .setColor(YOUTUBE_EMBED_COLOR)
+        .setTitle(video.snippet.title)
+        .setURL(`https://www.youtube.com/watch?v=${video.id.videoId}`)
+        .setDescription(this.truncateText(video.snippet.description, YOUTUBE_DESCRIPTION_MAX_LENGTH))
+        .setThumbnail(video.snippet.thumbnails.high.url)
+        .addFields(
+          { name: 'Channel', value: video.snippet.channelTitle, inline: true },
+          { name: 'Views', value: videoDetails.viewCount.toLocaleString(), inline: true },
+          { name: 'Duration', value: this.formatDuration(videoDetails.duration), inline: true }
+        )
+        .setFooter({ text: `Published on ${new Date(video.snippet.publishedAt).toLocaleDateString()}` });
+
+      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       await this.handleError(interaction, error);
     }
   },
 
   /**
+   * Gets detailed information about a YouTube video.
+   * @param {string} videoId - The ID of the video to get details for.
+   * @returns {Promise<Object>} The video details.
+   */
+  async getVideoDetails(videoId) {
+    const response = await axios.get(`${YOUTUBE_API_VIDEOS_URL}`, {
+      params: {
+        part: 'contentDetails,statistics',
+        id: videoId,
+        key: config.googleApiKey
+      },
+      timeout: YOUTUBE_REQUEST_TIMEOUT
+    });
+
+    return {
+      duration: response.data.items[0].contentDetails.duration,
+      viewCount: parseInt(response.data.items[0].statistics.viewCount)
+    };
+  },
+
+  /**
+   * Formats a YouTube duration string into a human-readable format.
+   * @param {string} duration - The duration in ISO 8601 format.
+   * @returns {string} The formatted duration.
+   */
+  formatDuration(duration) {
+    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+    const hours = (match[1] || '').replace('H', '');
+    const minutes = (match[2] || '').replace('M', '');
+    const seconds = (match[3] || '').replace('S', '');
+
+    let result = '';
+    if (hours) result += `${hours}:`;
+    result += `${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}`;
+    return result;
+  },
+
+  /**
+   * Truncates text to a maximum length and adds ellipsis if needed.
+   * @param {string} text - The text to truncate.
+   * @param {number} maxLength - The maximum length allowed.
+   * @returns {string} The truncated text.
+   */
+  truncateText(text, maxLength) {
+    if (!text) return 'No description available.';
+    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+  },
+
+  /**
    * Handles errors that occur during command execution.
-   * 
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {CommandInteraction} interaction - The interaction that triggered the command.
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    // We log any unexpected errors and send an error message to the user.
-    logger.error("Error executing YouTube command.", { 
+    logger.error('YouTube command error:', {
       error: error.message,
-      stack: error.stack,
-      userId: interaction.user?.id
+      userId: interaction.user.id,
+      guildId: interaction.guildId
     });
+
+    let errorMessage = 'We encountered an error while searching YouTube.';
     
-    // We check if the interaction hasn't been replied to yet before sending an error.
-    if (interaction.deferred && !interaction.replied) {
-      await interaction.editReply({ 
-        content: "⚠️ An error occurred while processing your request. Please try again later.",
-        ephemeral: true
-      }).catch(err => {
-        logger.error("Failed to send error message.", { error: err.message });
-      });
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'The request to YouTube timed out. Please try again later.';
+    } else if (error.response) {
+      if (error.response.status === 403) {
+        errorMessage = 'We\'re having trouble accessing the YouTube API. Please try again later.';
+      } else if (error.response.status === 429) {
+        errorMessage = 'We\'ve hit the rate limit for YouTube. Please try again later.';
+      } else if (error.response.status >= 500) {
+        errorMessage = 'YouTube is currently experiencing issues. Please try again later.';
+      }
     }
+
+    await interaction.editReply({ content: errorMessage });
   },
-  
+
   /**
    * Retrieves cached search results if they exist and haven't expired.
    * 

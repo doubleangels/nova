@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const Sentry = require('../sentry');
 
 // We define these configuration constants for consistent time formatting and parsing.
 const TIME_FORMAT = 'h:mm A';
@@ -12,9 +13,14 @@ const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 const NEXT_DAY_SUFFIX = ' (next day)';
 const PREVIOUS_DAY_SUFFIX = ' (previous day)';
 
-// We extend dayjs with plugins for timezone handling to support global time conversions.
+// We extend dayjs with timezone support.
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// We use these configuration constants for timezone handling.
+const TIMEZONE_CACHE_DURATION = 3600000; // 1 hour cache duration
+const TIMEZONE_CACHE = new Map(); // We store timezone validation results
+const VALID_TIMEZONES = new Set(dayjs.tz.names()); // We cache valid timezone names
 
 /**
  * Validates if the provided string is a valid timezone identifier.
@@ -35,6 +41,32 @@ function isValidTimezone(tz) {
     logger.debug("Invalid timezone identifier.", { timezone: tz });
     return false;
   }
+}
+
+/**
+ * We validate a timezone string.
+ * @param {string} timezone - The timezone to validate.
+ * @returns {boolean} True if the timezone is valid.
+ */
+function validateTimezone(timezone) {
+  // We check the cache first.
+  if (TIMEZONE_CACHE.has(timezone)) {
+    const { isValid, expiresAt } = TIMEZONE_CACHE.get(timezone);
+    if (Date.now() < expiresAt) {
+      return isValid;
+    }
+  }
+
+  // We validate the timezone.
+  const isValid = VALID_TIMEZONES.has(timezone);
+  
+  // We cache the result.
+  TIMEZONE_CACHE.set(timezone, {
+    isValid,
+    expiresAt: Date.now() + TIMEZONE_CACHE_DURATION
+  });
+
+  return isValid;
 }
 
 /**
@@ -109,7 +141,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   }
 
   // We validate timezones to ensure they are recognized by the system.
-  if (!isValidTimezone(fromTimezone) || !isValidTimezone(toTimezone)) {
+  if (!validateTimezone(fromTimezone) || !validateTimezone(toTimezone)) {
     logger.debug("Invalid timezone in conversion request.", { fromTimezone, toTimezone });
     return {
       text: timeRef.text,
@@ -184,6 +216,14 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       timeRef,
       fromTimezone,
       toTimezone 
+    });
+    
+    Sentry.captureException(error, {
+      extra: {
+        timeRef,
+        fromTimezone,
+        toTimezone
+      }
     });
     
     return {
@@ -277,5 +317,6 @@ module.exports = {
   convertTimeZones,
   formatConvertedTimes,
   isValidTimezone,
-  defaultFormatter
+  defaultFormatter,
+  validateTimezone
 };

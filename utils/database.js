@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
+const Sentry = require('../sentry');
 
 // We define these configuration constants for database connectivity and operations.
 // We set a 30-second timeout for queries to prevent hanging operations.
@@ -18,6 +19,17 @@ const CONNECTION_OPTIONS = {
 
 // We initialize the PostgreSQL client with connection details from our configuration.
 const pool = new Pool(CONNECTION_OPTIONS);
+
+// We handle pool errors.
+pool.on('error', (err, client) => {
+  logger.error('Unexpected error on idle client', { error: err });
+  Sentry.captureException(err, {
+    extra: {
+      context: 'database-pool',
+      clientId: client?.processID
+    }
+  });
+});
 
 // We define table names for consistent reference throughout the codebase.
 const TABLES = {
@@ -617,6 +629,62 @@ async function getUserVoiceTime(memberId) {
   }
 }
 
+/**
+ * We execute a database query with timeout handling and connection management.
+ * @param {string} text - The SQL query text.
+ * @param {Array} params - The query parameters.
+ * @param {Object} options - Additional options for the query.
+ * @returns {Promise<QueryResult>} The query result.
+ */
+async function query(text, params = [], options = {}) {
+  const client = await pool.connect();
+  const timeout = options.timeout || DEFAULT_QUERY_TIMEOUT;
+  
+  try {
+    // We set the statement timeout for this query.
+    await client.query(`SET statement_timeout = ${timeout}`);
+    
+    // We execute the query with a timeout.
+    const result = await Promise.race([
+      client.query(text, params),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout')), timeout)
+      )
+    ]);
+    
+    return result;
+  } catch (error) {
+    // We handle specific database errors.
+    if (error.code === '40P01') {
+      logger.error('Deadlock detected in database query:', { error });
+      throw new Error('We encountered a deadlock while processing your request. Please try again.');
+    }
+    
+    if (error.message === 'Query timeout') {
+      logger.error('Query timeout:', { 
+        query: text,
+        params,
+        timeout
+      });
+      throw new Error('We took too long to process your request. Please try again.');
+    }
+    
+    // We log and report other errors.
+    logger.error('Database query error:', { error });
+    Sentry.captureException(error, {
+      extra: {
+        query: text,
+        params,
+        timeout
+      }
+    });
+    throw error;
+  } finally {
+    // We always release the client back to the pool.
+    client.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -636,5 +704,6 @@ module.exports = {
   getTopMessageSenders,
   updateVoiceTime,
   getTopVoiceUsers,
-  getUserVoiceTime
+  getUserVoiceTime,
+  query
 };

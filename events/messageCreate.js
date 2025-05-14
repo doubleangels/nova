@@ -5,6 +5,15 @@ const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 
+// We use these configuration constants for message rate limiting and spam detection.
+const MESSAGE_RATE_LIMIT = 5; // Maximum messages per time window
+const MESSAGE_RATE_WINDOW = 5000; // Time window in milliseconds (5 seconds)
+const SPAM_THRESHOLD = 3; // Number of similar messages to trigger spam detection
+const SPAM_WINDOW = 10000; // Time window for spam detection (10 seconds)
+
+// We store message history for rate limiting and spam detection.
+const messageHistory = new Map();
+
 /**
  * Event handler for the 'messageCreate' event.
  * We process incoming messages to perform several important functions:
@@ -12,6 +21,7 @@ const Sentry = require('../sentry');
  *  - We trigger a Disboard reminder when a message embed indicates a bump was done.
  *  - We react with a clock emoji when a message contains time references.
  *  - We track message counts for the yappers leaderboard.
+ *  - We implement rate limiting and spam detection.
  *
  * @param {Message} message - The message object from Discord.
  */
@@ -27,6 +37,14 @@ module.exports = {
           logger.error("Failed to fetch partial message:", { error: fetchError });
           return;
         }
+      }
+
+      // We skip processing for bot messages.
+      if (message.author.bot) return;
+
+      // We check for rate limiting and spam.
+      if (await this.isRateLimited(message) || await this.isSpam(message)) {
+        return;
       }
 
       // We log the received message with limited content for privacy reasons.
@@ -53,6 +71,90 @@ module.exports = {
       });
       logger.error("Error processing messageCreate event:", { error });
     }
+  },
+
+  /**
+   * Checks if a message should be rate limited.
+   * @param {Message} message - The message to check.
+   * @returns {Promise<boolean>} True if the message should be rate limited.
+   */
+  async isRateLimited(message) {
+    const userId = message.author.id;
+    const now = Date.now();
+    
+    if (!messageHistory.has(userId)) {
+      messageHistory.set(userId, []);
+    }
+    
+    const userHistory = messageHistory.get(userId);
+    
+    // We remove old messages from the history.
+    while (userHistory.length > 0 && now - userHistory[0] > MESSAGE_RATE_WINDOW) {
+      userHistory.shift();
+    }
+    
+    // We check if the user has exceeded the rate limit.
+    if (userHistory.length >= MESSAGE_RATE_LIMIT) {
+      logger.warn("User rate limited:", {
+        userId: message.author.id,
+        username: message.author.tag,
+        messageCount: userHistory.length
+      });
+      
+      try {
+        await message.reply("We're detecting too many messages from you. Please slow down.");
+      } catch (error) {
+        logger.error("Failed to send rate limit message:", { error });
+      }
+      
+      return true;
+    }
+    
+    // We add the current message to the history.
+    userHistory.push(now);
+    return false;
+  },
+
+  /**
+   * Checks if a message is spam.
+   * @param {Message} message - The message to check.
+   * @returns {Promise<boolean>} True if the message is spam.
+   */
+  async isSpam(message) {
+    const userId = message.author.id;
+    const now = Date.now();
+    
+    if (!messageHistory.has(userId)) {
+      messageHistory.set(userId, []);
+    }
+    
+    const userHistory = messageHistory.get(userId);
+    const recentMessages = userHistory.filter(time => now - time <= SPAM_WINDOW);
+    
+    // We check for similar messages in the recent history.
+    const similarMessages = recentMessages.filter(time => {
+      const index = userHistory.indexOf(time);
+      return index >= 0 && userHistory[index + 1] && 
+             Math.abs(userHistory[index + 1] - time) <= 1000; // Messages within 1 second
+    });
+    
+    if (similarMessages.length >= SPAM_THRESHOLD) {
+      logger.warn("Spam detected:", {
+        userId: message.author.id,
+        username: message.author.tag,
+        similarMessageCount: similarMessages.length
+      });
+      
+      try {
+        await message.reply("We're detecting spam-like behavior. Please stop sending similar messages repeatedly.");
+      } catch (error) {
+        logger.error("Failed to send spam warning:", { error });
+      }
+      
+      return true;
+    }
+    
+    return false;
   }
 };
 

@@ -8,6 +8,9 @@ const config = require('../config');
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
 const SPOTIFY_EMBED_COLOR = 0x1DB954; // We use Spotify's brand color.
 const REQUEST_TIMEOUT = 10000; // We set a 10 second timeout for API requests.
+const SPOTIFY_SEARCH_MAX_RESULTS = 10; // We limit to a maximum of 10 results per search.
+const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150; // We truncate long descriptions to keep embeds clean.
+const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
 
 /**
  * Module for the /spotify command.
@@ -209,7 +212,7 @@ module.exports = {
         params: {
           q: query,
           type: 'track',
-          limit: 1
+          limit: SPOTIFY_SEARCH_MAX_RESULTS
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -221,17 +224,8 @@ module.exports = {
         return null;
       }
 
-      const track = response.data.tracks.items[0];
-      
-      // Get additional track details
-      const trackDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/tracks/${track.id}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        timeout: REQUEST_TIMEOUT
-      });
-
-      return {
+      const tracks = response.data.tracks.items.map((track, index) => ({
+        index,
         type: 'song',
         name: track.name,
         artists: track.artists.map(artist => artist.name).join(', '),
@@ -247,7 +241,9 @@ module.exports = {
         explicit: track.explicit,
         discNumber: track.disc_number,
         isrc: track.external_ids?.isrc
-      };
+      }));
+
+      return tracks;
     } catch (error) {
       logger.error("Failed to search for song:", {
         error: error.message,
@@ -269,7 +265,7 @@ module.exports = {
         params: {
           q: query,
           type: 'album',
-          limit: 1
+          limit: SPOTIFY_SEARCH_MAX_RESULTS
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -281,17 +277,8 @@ module.exports = {
         return null;
       }
 
-      const album = response.data.albums.items[0];
-      
-      // Get additional album details
-      const albumDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/albums/${album.id}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        timeout: REQUEST_TIMEOUT
-      });
-
-      return {
+      const albums = response.data.albums.items.map((album, index) => ({
+        index,
         type: 'album',
         name: album.name,
         artists: album.artists.map(artist => artist.name).join(', '),
@@ -300,10 +287,12 @@ module.exports = {
         releaseDate: album.release_date,
         totalTracks: album.total_tracks,
         albumType: album.album_type,
-        label: albumDetails.data.label,
-        copyrights: albumDetails.data.copyrights,
-        availableMarkets: albumDetails.data.available_markets
-      };
+        label: album.label,
+        copyrights: album.copyrights,
+        availableMarkets: album.available_markets
+      }));
+
+      return albums;
     } catch (error) {
       logger.error("Failed to search for album:", {
         error: error.message,
@@ -325,7 +314,7 @@ module.exports = {
         params: {
           q: query,
           type: 'artist',
-          limit: 1
+          limit: SPOTIFY_SEARCH_MAX_RESULTS
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -337,20 +326,8 @@ module.exports = {
         return null;
       }
 
-      const artist = response.data.artists.items[0];
-      
-      // Get artist's top tracks
-      const topTracksResponse = await axios.get(
-        `${SPOTIFY_API_BASE_URL}/artists/${artist.id}/top-tracks?market=US`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          },
-          timeout: REQUEST_TIMEOUT
-        }
-      );
-
-      return {
+      const artists = response.data.artists.items.map((artist, index) => ({
+        index,
         type: 'artist',
         name: artist.name,
         url: artist.external_urls.spotify,
@@ -358,11 +335,13 @@ module.exports = {
         followers: artist.followers.total,
         popularity: artist.popularity,
         genres: artist.genres,
-        topTracks: topTracksResponse.data.tracks.map(track => ({
+        topTracks: artist.top_tracks?.tracks.map(track => ({
           name: track.name,
           url: track.external_urls.spotify
         }))
-      };
+      }));
+
+      return artists;
     } catch (error) {
       logger.error("Failed to search for artist:", {
         error: error.message,
@@ -384,7 +363,7 @@ module.exports = {
         params: {
           q: query,
           type: 'playlist',
-          limit: 1
+          limit: SPOTIFY_SEARCH_MAX_RESULTS
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -396,25 +375,8 @@ module.exports = {
         return null;
       }
 
-      const playlist = response.data.playlists.items[0];
-      
-      // Get additional playlist details
-      const playlistDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/playlists/${playlist.id}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        timeout: REQUEST_TIMEOUT
-      });
-
-      // Format the last modified date
-      const lastModified = new Date(playlistDetails.data.modified_at);
-      const formattedDate = lastModified.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-
-      return {
+      const playlists = response.data.playlists.items.map((playlist, index) => ({
+        index,
         type: 'playlist',
         name: playlist.name,
         owner: playlist.owner.display_name,
@@ -423,12 +385,18 @@ module.exports = {
         imageUrl: playlist.images[0]?.url,
         tracks: playlist.tracks.total,
         description: playlist.description,
-        followers: playlistDetails.data.followers.total,
-        lastUpdated: formattedDate,
-        collaborative: playlistDetails.data.collaborative,
-        public: playlistDetails.data.public,
-        snapshotId: playlistDetails.data.snapshot_id
-      };
+        followers: playlist.followers.total,
+        lastUpdated: new Date(playlist.modified_at).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        collaborative: playlist.collaborative,
+        public: playlist.public,
+        snapshotId: playlist.snapshot_id
+      }));
+
+      return playlists;
     } catch (error) {
       logger.error("Failed to search for playlist:", {
         error: error.message,
@@ -450,7 +418,7 @@ module.exports = {
         params: {
           q: query,
           type: 'show',
-          limit: 1
+          limit: SPOTIFY_SEARCH_MAX_RESULTS
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
@@ -462,17 +430,8 @@ module.exports = {
         return null;
       }
 
-      const show = response.data.shows.items[0];
-
-      // Get show details
-      const showDetails = await axios.get(`${SPOTIFY_API_BASE_URL}/shows/${show.id}`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`
-        },
-        timeout: REQUEST_TIMEOUT
-      });
-
-      return {
+      const shows = response.data.shows.items.map((show, index) => ({
+        index,
         type: 'podcast',
         name: show.name,
         publisher: show.publisher,
@@ -482,15 +441,17 @@ module.exports = {
         totalEpisodes: show.total_episodes,
         languages: show.languages.join(', '),
         explicit: show.explicit,
-        copyrights: showDetails.data.copyrights,
-        availableMarkets: showDetails.data.available_markets,
-        episodes: showDetails.data.episodes.items.map(episode => ({
+        copyrights: show.copyrights,
+        availableMarkets: show.available_markets,
+        episodes: show.episodes.items.map(episode => ({
           name: episode.name,
           duration: this.formatDuration(episode.duration_ms),
           releaseDate: episode.release_date,
           url: episode.external_urls.spotify
         }))
-      };
+      }));
+
+      return shows;
     } catch (error) {
       logger.error("Failed to search for podcast:", {
         error: error.message,
@@ -512,7 +473,9 @@ module.exports = {
       .setTitle(result.name)
       .setURL(result.url)
       .setThumbnail(result.imageUrl)
-      .setFooter({ text: 'Powered by Spotify API' });
+      .setFooter({ 
+        text: `Result ${result.index + 1} of ${SPOTIFY_SEARCH_MAX_RESULTS} • Powered by Spotify`
+      });
 
     switch (type) {
       case 'song':

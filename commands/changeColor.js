@@ -55,7 +55,7 @@ module.exports = {
             const originalColor = role.hexColor;
             
             // We validate and normalize the color format using the utility function.
-            const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
+            const colorValidationResult = this.validateColor(colorHex);
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided.", { 
                     colorHex: colorHex,
@@ -63,7 +63,7 @@ module.exports = {
                 });
                 
                 return await interaction.editReply({
-                    content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
+                    content: colorValidationResult.message,
                     ephemeral: true
                 });
             }
@@ -169,5 +169,44 @@ module.exports = {
             return "⚠️ The color provided is invalid. Please use a valid hex color code.";
         }
         return "⚠️ An unexpected error occurred. Please try again later.";
+    },
+
+    /**
+     * Validates and normalizes a hex color code.
+     * @param {string} colorHex - The hex color code to validate.
+     * @returns {Object} An object containing validation result and normalized color.
+     */
+    validateColor(colorHex) {
+        // We remove the # if present and ensure the color is 6 characters.
+        const normalizedColor = colorHex.replace(/^#/, '');
+        
+        // We check if the color is exactly 6 characters.
+        if (normalizedColor.length !== 6) {
+            return {
+                success: false,
+                message: "⚠️ Color must be exactly 6 characters (e.g., #RRGGBB or RRGGBB)."
+            };
+        }
+        
+        // We check if the color contains only valid hex characters.
+        if (!/^[0-9A-Fa-f]{6}$/.test(normalizedColor)) {
+            return {
+                success: false,
+                message: "⚠️ Color must contain only valid hex characters (0-9, A-F)."
+            };
+        }
+        
+        // We check if the color is not all zeros or all F's.
+        if (normalizedColor === '000000' || normalizedColor === 'FFFFFF') {
+            return {
+                success: false,
+                message: "⚠️ Color cannot be pure black (#000000) or pure white (#FFFFFF)."
+            };
+        }
+        
+        return {
+            success: true,
+            normalizedColor: `#${normalizedColor.toUpperCase()}`
+        };
     }
 };

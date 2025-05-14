@@ -3,6 +3,12 @@ const logger = require('../logger')(path.basename(__filename));
 const Sentry = require('../sentry');
 const { MessageFlags } = require('discord.js');
 
+// We use these configuration constants for command cooldowns.
+const DEFAULT_COOLDOWN = 3000; // 3 seconds default cooldown
+const COOLDOWN_CACHE = new Map(); // We store cooldowns in memory
+const PERMISSION_CACHE = new Map(); // We store permission checks in memory
+const CACHE_DURATION = 60000; // 1 minute cache duration
+
 /**
  * Handles command execution and error reporting for both slash commands and context menu commands.
  * We use this function to centralize error handling and logging for all interaction types.
@@ -74,42 +80,149 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
 /**
  * Event handler for Discord interaction events.
  * We process all interactions to route them to the appropriate command handlers.
- * This includes both slash commands and context menu commands.
+ * We implement command cooldowns and permission caching for better performance.
+ *
+ * @param {Interaction} interaction - The interaction object from Discord.
  */
 module.exports = {
   name: 'interactionCreate',
   once: false,
-  execute: async (interaction, client) => {
-    // We handle slash commands by retrieving the command from the client's collection.
-    if (interaction.isChatInputCommand()) {
-      const command = client.commands.get(interaction.commandName);
-      if (!command) {
-        logger.warn("Unknown slash command:", { command: interaction.commandName });
-        return;
+  async execute(interaction) {
+    try {
+      // We handle command execution and error reporting for both slash commands and context menu commands.
+      if (interaction.isCommand()) {
+        await handleCommand(interaction, 'commands');
+      } else if (interaction.isContextMenu()) {
+        await handleCommand(interaction, 'contextMenus');
       }
-      
-      // We delegate execution to our centralized handler for consistent error management.
-      await handleCommandExecution(
-        interaction, 
-        'slashCommand',
-        () => command.execute(interaction)
-      );
-    }
-    
-    // We handle context menu commands similarly to slash commands.
-    else if (interaction.isContextMenuCommand()) {
-      const command = client.commands.get(interaction.commandName);
-      if (!command) {
-        logger.warn("Unknown context menu command:", { command: interaction.commandName });
-        return;
-      }
-      
-      // We use the same execution handler for consistency across command types.
-      await handleCommandExecution(
-        interaction, 
-        'contextMenu',
-        () => command.execute(interaction)
-      );
+    } catch (error) {
+      // We log the error and report it to Sentry.
+      logger.error("Error in interactionCreate event:", { error });
+      Sentry.captureException(error, {
+        extra: {
+          event: 'interactionCreate',
+          interactionId: interaction.id,
+          userId: interaction.user?.id || 'unknown'
+        }
+      });
     }
   }
 };
+
+/**
+ * We handle command execution with cooldowns and permission caching.
+ * @param {Interaction} interaction - The interaction to handle.
+ * @param {string} commandType - The type of command ('commands' or 'contextMenus').
+ */
+async function handleCommand(interaction, commandType) {
+  const command = interaction.client[commandType]?.get(interaction.commandName);
+  
+  if (!command) {
+    logger.warn(`Command not found: ${interaction.commandName}`);
+    return;
+  }
+
+  // We check for command cooldown.
+  if (await isOnCooldown(interaction, command)) {
+    return;
+  }
+
+  // We check for permissions with caching.
+  if (!await hasRequiredPermissions(interaction, command)) {
+    return;
+  }
+
+  try {
+    await command.execute(interaction);
+  } catch (error) {
+    logger.error(`Error executing ${commandType} ${interaction.commandName}:`, { error });
+    Sentry.captureException(error, {
+      extra: {
+        command: interaction.commandName,
+        type: commandType,
+        userId: interaction.user.id,
+        guildId: interaction.guild?.id
+      }
+    });
+
+    const errorMessage = {
+      content: 'We encountered an error while executing this command.',
+      ephemeral: true
+    };
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp(errorMessage);
+    } else {
+      await interaction.reply(errorMessage);
+    }
+  }
+}
+
+/**
+ * We check if a command is on cooldown.
+ * @param {Interaction} interaction - The interaction to check.
+ * @param {Command} command - The command to check.
+ * @returns {Promise<boolean>} True if the command is on cooldown.
+ */
+async function isOnCooldown(interaction, command) {
+  const cooldownAmount = command.cooldown || DEFAULT_COOLDOWN;
+  const key = `${interaction.user.id}-${interaction.commandName}`;
+  const now = Date.now();
+  
+  if (COOLDOWN_CACHE.has(key)) {
+    const expirationTime = COOLDOWN_CACHE.get(key);
+    if (now < expirationTime) {
+      const remainingTime = Math.ceil((expirationTime - now) / 1000);
+      await interaction.reply({
+        content: `We're still processing your previous request. Please wait ${remainingTime} seconds.`,
+        ephemeral: true
+      });
+      return true;
+    }
+  }
+  
+  COOLDOWN_CACHE.set(key, now + cooldownAmount);
+  return false;
+}
+
+/**
+ * We check if a user has the required permissions for a command.
+ * @param {Interaction} interaction - The interaction to check.
+ * @param {Command} command - The command to check.
+ * @returns {Promise<boolean>} True if the user has the required permissions.
+ */
+async function hasRequiredPermissions(interaction, command) {
+  if (!command.permissions) return true;
+  
+  const key = `${interaction.guild.id}-${interaction.user.id}-${interaction.commandName}`;
+  const now = Date.now();
+  
+  // We check the permission cache first.
+  if (PERMISSION_CACHE.has(key)) {
+    const { hasPermission, expiresAt } = PERMISSION_CACHE.get(key);
+    if (now < expiresAt) {
+      return hasPermission;
+    }
+  }
+  
+  // We check the actual permissions.
+  const member = interaction.member;
+  const hasPermission = command.permissions.every(permission => 
+    member.permissions.has(permission)
+  );
+  
+  // We cache the result.
+  PERMISSION_CACHE.set(key, {
+    hasPermission,
+    expiresAt: now + CACHE_DURATION
+  });
+  
+  if (!hasPermission) {
+    await interaction.reply({
+      content: 'We cannot execute this command because you lack the required permissions.',
+      ephemeral: true
+    });
+  }
+  
+  return hasPermission;
+}

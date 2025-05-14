@@ -96,6 +96,18 @@ module.exports = {
             };
         }
 
+        // We check if the role is managed (bot or integration role).
+        if (role.managed) {
+            logger.warn("Attempted to assign a managed role.", {
+                roleId: role.id,
+                roleName: role.name
+            });
+            return {
+                success: false,
+                message: "⚠️ I cannot assign managed roles (bot or integration roles)."
+            };
+        }
+
         // We check if the bot's highest role is above the role being assigned in the hierarchy.
         if (role.position >= botMember.roles.highest.position) {
             logger.warn("Bot's highest role is not high enough to assign the specified role.", {
@@ -111,18 +123,21 @@ module.exports = {
         }
         
         // We check role hierarchy for the user issuing the command to enforce Discord's role hierarchy rules.
-        const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
-        const issuerHighestRole = issuerMember.roles.highest;
-        if (role.position >= issuerHighestRole.position && interaction.guild.ownerId !== interaction.user.id) {
-            logger.warn("User attempted to assign a role higher than their highest role.", {
-                userId: interaction.user.id,
-                roleId: role.id,
-                userHighestRoleId: issuerHighestRole.id
-            });
-            return {
-                success: false,
-                message: "⚠️ You don't have permission to assign a role higher than your highest role."
-            };
+        // Server owners can manage any role regardless of hierarchy.
+        if (interaction.guild.ownerId !== interaction.user.id) {
+            const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
+            const issuerHighestRole = issuerMember.roles.highest;
+            if (role.position >= issuerHighestRole.position) {
+                logger.warn("User attempted to assign a role higher than their highest role.", {
+                    userId: interaction.user.id,
+                    roleId: role.id,
+                    userHighestRoleId: issuerHighestRole.id
+                });
+                return {
+                    success: false,
+                    message: "⚠️ You don't have permission to assign a role higher than your highest role."
+                };
+            }
         }
         
         // We fetch the target member from the guild to ensure they exist.
