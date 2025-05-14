@@ -17,14 +17,14 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
-        .setDescription('We change the color of a specified role to the provided hex color.')
+        .setDescription('Change the color of a specified role to the provided hex color.')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('The role whose color you want to change')
+                .setDescription('What role do you want to change the color of?')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('The hex color code (e.g., #FF0000)')
+                .setDescription('What color do you want to change the role to? (e.g., #RRGGBB, RRGGBB)')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageRoles),
     

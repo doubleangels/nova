@@ -26,7 +26,7 @@ const SEARCH_LIMIT = 1;
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
-    .setDescription('We search for anime on MyAnimeList and display detailed information.')
+    .setDescription('Search for anime on MyAnimeList and display detailed information.')
     .addStringOption(option =>
       option.setName('title')
         .setDescription('What anime do you want to search for?')

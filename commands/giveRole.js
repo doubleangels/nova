@@ -18,7 +18,7 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giverole')
-        .setDescription('We assign a specified role to a user in the server.')
+        .setDescription('Assign a specified role to a user in the server.')
         .addRoleOption(option =>
             option.setName('role')
                 .setDescription('What role would you like to assign?')

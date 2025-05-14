@@ -22,7 +22,7 @@ const DEFAULT_FILENAME = 'cat.jpg';
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cat')
-    .setDescription('We fetch and display a random cat image.'),
+    .setDescription('Fetch and display a random cat image.'),
 
   async execute(interaction) {
     try {

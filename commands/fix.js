@@ -26,7 +26,7 @@ const DELAY_SECONDS = 7200;  // 2 hours in seconds
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
-    .setDescription('We fix Disboard bump reminder data in the database.')
+    .setDescription('Fix Disboard bump reminder data in the database.')
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**

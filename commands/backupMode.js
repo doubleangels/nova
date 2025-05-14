@@ -25,11 +25,11 @@ const CONFIG_KEYS = {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('backupmode')
-    .setDescription('We configure and manage backup mode settings for new members.')
+    .setDescription('Configure and manage backup mode settings for new members.')
     .addSubcommand(subcommand =>
       subcommand
         .setName('set')
-        .setDescription('We configure backup mode settings.')
+        .setDescription('Configure backup mode settings.')
         .addStringOption(option =>
           option.setName('enabled')
             .setDescription('Do you want to enable or disable auto-role assignment?')
@@ -53,7 +53,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('We check the current backup mode configuration.')
+        .setDescription('Check the current backup mode configuration.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 

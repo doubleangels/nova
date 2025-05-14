@@ -31,7 +31,7 @@ dayjs.extend(advancedFormat);
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('currenttime')
-    .setDescription('We display the current time in a specified timezone or UTC by default.')
+    .setDescription('Display the current time in a specified timezone or UTC by default.')
     .addStringOption(option =>
       option.setName('timezone')
         .setDescription('The IANA timezone name (e.g., America/New_York)')

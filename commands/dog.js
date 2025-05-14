@@ -22,7 +22,7 @@ const IMAGE_FILENAME = "dog.jpg";
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
-    .setDescription('We fetch and display a random dog image.'),
+    .setDescription('Fetch and display a random dog image.'),
   
   /**
    * Executes the /dog command.

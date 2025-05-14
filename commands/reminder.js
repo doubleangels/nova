@@ -12,16 +12,8 @@ const DB_KEY_CHANNEL = 'reminder_channel';
 const DB_KEY_ROLE = 'reminder_role';
 
 /**
- * We handle the reminder command.
- * This function allows administrators to manage bump reminders for server promotion.
- *
- * We perform several tasks:
- * 1. Configure reminder channels and roles
- * 2. Set up automated bump reminders
- * 3. Display current reminder settings
- * 4. Track and show next scheduled reminder
- *
- * @param {Interaction} interaction - The Discord interaction object
+ * Module for the /reminder command.
+ * We allow administrators to setup and check bump reminder settings for server management.
  */
 module.exports = {
   data: new SlashCommandBuilder()

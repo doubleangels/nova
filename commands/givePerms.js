@@ -34,14 +34,14 @@ if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giveperms')
-        .setDescription('We give a user a custom role and the fren role.')
+        .setDescription('Give a user permissions in the server.')
         .addStringOption(option =>
             option.setName('role')
                 .setDescription("What do you want the name of the user's role to be?")
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription("What color should the user's role be? (#RRGGBB or RRGGBB)")
+                .setDescription("What color should the user's role be? (e.g., #RRGGBB, RRGGBB)")
                 .setRequired(true))
         .addUserOption(option =>
             option.setName('user')

@@ -19,10 +19,10 @@ module.exports = {
      */
     data: new SlashCommandBuilder()
         .setName('ghostping')
-        .setDescription('We send a message that mentions a user but immediately deletes the mention.')
+        .setDescription('Send a message that mentions a user but then immediately delete the mention.')
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('The user to ghost ping')
+                .setDescription('What user do you want to ghost ping?')
                 .setRequired(true)),
 
     /**
