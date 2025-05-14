@@ -4,6 +4,7 @@ const { updateVoiceTime, getValue, setValue } = require('../utils/database');
 const Sentry = require('../sentry');
 const { Pool } = require('pg');
 const config = require('../config');
+const { randomUUID } = require('crypto');
 
 // Setup a pool for direct SQL queries
 const pool = new Pool({
@@ -52,10 +53,11 @@ async function saveVoiceJoinTimes() {
     
     // Then insert all current voice join times
     for (const [userId, joinTime] of voiceJoinTimes.entries()) {
+      const id = randomUUID();
       await pool.query(
-        `INSERT INTO main.recovery (type, user_id, join_time) 
-         VALUES ('voice_join', $1, to_timestamp($2 / 1000.0) AT TIME ZONE 'UTC')`,
-        [userId, joinTime]
+        `INSERT INTO main.recovery (id, type, user_id, join_time) 
+         VALUES ($1, 'voice_join', $2, to_timestamp($3 / 1000.0) AT TIME ZONE 'UTC')`,
+        [id, userId, joinTime]
       );
     }
   } catch (error) {
