@@ -5,6 +5,15 @@ const { query, queryOne } = require('./database');
 const Sentry = require('../sentry');
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
+const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/database');
+const { Pool } = require('pg');
+const config = require('../config');
+
+// Setup a pool for direct SQL queries for sent_reminders
+const pool = new Pool({
+  connectionString: config.neonConnectionString,
+  ssl: { rejectUnauthorized: true }
+});
 
 // We define these configuration constants for consistent reminder behavior across the application.
 const BUMP_REMINDER_KEY = 'bump';
@@ -12,6 +21,25 @@ const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
 const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again in 2 hours.";
 const REMINDER_MESSAGE = "It's time to bump again!";
+
+/**
+ * Cleans up old sent reminder records from the database
+ * @param {string} channelId - The Discord channel ID
+ * @param {string} messageId - The message ID that was just edited/handled
+ */
+async function cleanupOldSentReminders(channelId, messageId) {
+  try {
+    await pool.query(
+      `DELETE FROM main.sent_reminders 
+       WHERE channel_id = $1 
+       AND message_id = $2`,
+      [channelId, messageId]
+    );
+    logger.debug("Cleaned up old sent reminder record", { channelId, messageId });
+  } catch (err) {
+    logger.error("Error cleaning up old sent reminder:", { error: err });
+  }
+}
 
 /**
  * We schedule a reminder for the next Disboard bump.
@@ -24,27 +52,12 @@ const REMINDER_MESSAGE = "It's time to bump again!";
  */
 async function scheduleReminder(client, channelId, scheduledTime) {
   try {
-    // We create a unique ID for this reminder.
-    const reminderId = randomUUID();
+    // We create a unique key for this reminder.
+    const key = `bump_reminder_${channelId}`;
     
-    // We store the reminder data in the recovery table.
-    await query(`
-      INSERT INTO main.recovery (
-        id, 
-        channel_id, 
-        scheduled_time, 
-        status, 
-        type
-      )
-      VALUES ($1, $2, $3, 'pending', 'reminder')
-      ON CONFLICT (channel_id, scheduled_time) DO UPDATE 
-      SET status = 'pending'
-    `, [reminderId, channelId, scheduledTime.toISOString()]);
-
     // We schedule the reminder using Discord's setTimeout.
-    const timeoutId = setTimeout(async () => {
+    const reminderId = setTimeout(async () => {
       try {
-        // We fetch the channel to ensure it still exists.
         const channel = await client.channels.fetch(channelId);
         if (!channel) {
           logger.error("Channel not found for reminder:", { channelId });
@@ -58,22 +71,13 @@ async function scheduleReminder(client, channelId, scheduledTime) {
           .setDescription('It\'s been 2 hours since the last bump. Use `/bump` to keep our server active!')
           .setTimestamp();
 
-        // We send the reminder message to the channel.
         await channel.send({ embeds: [embed] });
         logger.info("Sent bump reminder:", { channelId });
 
-        // We update the reminder status to completed in the database.
-        await query(`
-          UPDATE main.recovery 
-          SET status = 'completed' 
-          WHERE id = $1
-        `, [reminderId]);
-
-        // We schedule the next reminder for 2 hours from now.
-        const nextScheduledTime = new Date(Date.now() + 2 * 60 * 60 * 1000);
+        // We schedule the next reminder.
+        const nextScheduledTime = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours from now.
         await scheduleReminder(client, channelId, nextScheduledTime);
       } catch (error) {
-        // We log and track any errors that occur during reminder execution.
         logger.error("Error sending bump reminder:", { error });
         Sentry.captureException(error, {
           extra: { 
@@ -84,15 +88,21 @@ async function scheduleReminder(client, channelId, scheduledTime) {
       }
     }, scheduledTime.getTime() - Date.now());
 
-    // We log the successful scheduling of the reminder.
+    // We store the reminder data in the database.
+    await query(`
+      INSERT INTO reminders (key, scheduled_time, reminder_id)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (key) DO UPDATE 
+      SET scheduled_time = $2, reminder_id = $3
+    `, [key, scheduledTime.toISOString(), reminderId.toString()]);
+
     logger.info("Scheduled bump reminder:", { 
       channelId, 
       scheduledTime: scheduledTime.toISOString() 
     });
 
-    return reminderId;
+    return reminderId.toString();
   } catch (error) {
-    // We log and track any errors that occur during reminder scheduling.
     logger.error("Failed to schedule reminder:", { error });
     Sentry.captureException(error, {
       extra: { 
@@ -114,43 +124,38 @@ async function rescheduleReminder(client) {
   try {
     // We get all active reminders from the database.
     const result = await query(`
-      SELECT id, channel_id, scheduled_time
-      FROM main.recovery
-      WHERE type = 'reminder'
-      AND status = 'pending'
-      AND scheduled_time > NOW()
+      SELECT key, scheduled_time, reminder_id
+      FROM reminders
+      WHERE scheduled_time > NOW()
     `);
 
     let rescheduledCount = 0;
     for (const row of result.rows) {
       try {
-        // We convert the scheduled time to a Date object.
+        const channelId = row.key.replace('bump_reminder_', '');
         const scheduledTime = new Date(row.scheduled_time);
         
         // We only reschedule future reminders.
         if (scheduledTime > new Date()) {
-          await scheduleReminder(client, row.channel_id, scheduledTime);
+          await scheduleReminder(client, channelId, scheduledTime);
           rescheduledCount++;
         }
       } catch (error) {
-        // We log and track any errors that occur during individual reminder rescheduling.
         logger.error("Failed to reschedule reminder:", { 
           error,
-          reminderId: row.id 
+          key: row.key 
         });
         Sentry.captureException(error, {
           extra: { 
             function: 'rescheduleReminder',
-            reminderId: row.id
+            key: row.key
           }
         });
       }
     }
 
-    // We log the total number of successfully rescheduled reminders.
     logger.info(`Rescheduled ${rescheduledCount} reminders.`);
   } catch (error) {
-    // We log and track any errors that occur during the rescheduling process.
     logger.error("Failed to reschedule reminders:", { error });
     Sentry.captureException(error, {
       extra: { function: 'rescheduleReminder' }
@@ -159,42 +164,4 @@ async function rescheduleReminder(client) {
   }
 }
 
-/**
- * We clean up old reminder records from the database.
- * This prevents the database from growing too large with completed reminders.
- * 
- * @param {string} channelId - The Discord channel ID.
- * @param {string} messageId - The message ID that was just edited/handled.
- */
-async function cleanupOldReminders(channelId, messageId) {
-  try {
-    // We delete completed reminders that are older than one day.
-    await query(`
-      DELETE FROM main.recovery 
-      WHERE channel_id = $1 
-      AND type = 'reminder'
-      AND status = 'completed'
-      AND scheduled_time < NOW() - INTERVAL '1 day'
-    `, [channelId]);
-    
-    // We log the successful cleanup of old reminders.
-    logger.debug("Cleaned up old reminder records", { channelId });
-  } catch (error) {
-    // We log any errors that occur during cleanup.
-    logger.error("Error cleaning up old reminders:", { error });
-    Sentry.captureException(error, {
-      extra: { 
-        function: 'cleanupOldReminders',
-        channelId,
-        messageId
-      }
-    });
-  }
-}
-
-// We export our reminder utility functions for use in other modules.
-module.exports = { 
-  scheduleReminder, 
-  rescheduleReminder, 
-  cleanupOldReminders 
-};
+module.exports = { scheduleReminder, rescheduleReminder, cleanupOldSentReminders };

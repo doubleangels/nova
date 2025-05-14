@@ -1,7 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember, incrementMessageCount } = require('../utils/database');
-const { handleReminder, cleanupOldReminders } = require('../utils/reminderUtils');
+const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 
@@ -155,9 +155,6 @@ async function checkForBumpMessages(message) {
     );
     
     if (bumpEmbed) {
-      // We clean up old reminders before scheduling a new one.
-      await cleanupOldReminders(message.channel.id, message.id);
-      
       // We schedule a 2-hour reminder since that's when the next bump can be done.
       await handleReminder(message, 7200000); // 2 hours = 7200000 milliseconds
       logger.debug("Bump reminder scheduled for 2 hours.");
