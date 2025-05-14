@@ -113,7 +113,7 @@ module.exports = {
         COLLECTOR_TIMEOUT,
         logger,
         {
-          buttonStyle: ButtonStyle.Secondary,
+          buttonStyle: ButtonStyle.Primary, // Google blue for consistent branding
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',

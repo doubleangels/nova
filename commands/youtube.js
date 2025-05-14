@@ -174,7 +174,7 @@ module.exports = {
         YOUTUBE_COLLECTOR_TIMEOUT_MS,
         logger,
         {
-          buttonStyle: ButtonStyle.Secondary,
+          buttonStyle: ButtonStyle.Danger, // We use YouTube red for the buttons.
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',

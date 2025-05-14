@@ -133,8 +133,6 @@ module.exports = {
       const embed = this.createEmbed(result, subcommand);
       await interaction.editReply({ embeds: [embed] });
 
-      logger.debug('Spotify API response received.', { subcommand, result: result ? 'success' : 'no results' });
-
     } catch (error) {
       logger.error("Error executing /spotify command.", {
         error: error.message,
@@ -203,7 +201,6 @@ module.exports = {
    */
   async searchSong(query, accessToken) {
     try {
-      logger.debug('Spotify API request initiated.', { subcommand: 'song', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -264,7 +261,6 @@ module.exports = {
    */
   async searchAlbum(query, accessToken) {
     try {
-      logger.debug('Spotify API request initiated.', { subcommand: 'album', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -321,7 +317,6 @@ module.exports = {
    */
   async searchArtist(query, accessToken) {
     try {
-      logger.debug('Spotify API request initiated.', { subcommand: 'artist', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -381,7 +376,6 @@ module.exports = {
    */
   async searchPlaylist(query, accessToken) {
     try {
-      logger.debug('Spotify API request initiated.', { subcommand: 'playlist', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -448,7 +442,6 @@ module.exports = {
    */
   async searchPodcast(query, accessToken) {
     try {
-      logger.debug('Spotify API request initiated.', { subcommand: 'podcast', query });
       const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
         params: {
           q: query,
@@ -520,7 +513,7 @@ module.exports = {
     switch (type) {
       case 'song':
         embed
-          .setDescription(`🎵 **Artists:** ${result.artists}`)
+          .setDescription(`🎵 ${result.artists}`)
           .addFields(
             { name: 'Album', value: `[${result.album}](${result.albumUrl})`, inline: true },
             { name: 'Duration', value: result.duration, inline: true },
@@ -535,7 +528,7 @@ module.exports = {
 
       case 'album':
         embed
-          .setDescription(`👤 **Artists:** ${result.artists}`)
+          .setDescription(`👤 ${result.artists}`)
           .addFields(
             { name: 'Release Date', value: result.releaseDate, inline: true },
             { name: 'Tracks', value: result.totalTracks.toString(), inline: true },
@@ -548,10 +541,10 @@ module.exports = {
 
       case 'artist':
         embed
-          .setDescription(`🎤 **Genres:** ${result.genres?.join(', ') || 'No genres listed'}`)
           .addFields(
             { name: 'Followers', value: this.formatNumber(result.followers), inline: true },
             { name: 'Popularity', value: `${result.popularity}%`, inline: true },
+            { name: 'Genres', value: result.genres?.join(', ') || 'No genres listed', inline: false },
             { name: 'Top Tracks', value: result.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false }
           );
         break;
