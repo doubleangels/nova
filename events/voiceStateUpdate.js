@@ -22,14 +22,14 @@ const voiceJoinTimes = new Map();
 async function loadVoiceJoinTimes() {
   try {
     const { rows } = await pool.query(
-      `SELECT user_id, join_time FROM main.recovery WHERE type = 'voice_join'`
+      `SELECT user_id, join_time FROM main.voice_recovery WHERE type = 'voice_join'`
     );
     
     for (const row of rows) {
       voiceJoinTimes.set(row.user_id, row.join_time);
     }
     
-    logger.info(`Loaded ${voiceJoinTimes.size} voice join times from recovery table`);
+    logger.info(`Loaded ${voiceJoinTimes.size} voice join times from voice_recovery table`);
   } catch (error) {
     logger.error("Error loading voice join times:", { error });
     Sentry.captureException(error, {
@@ -48,14 +48,14 @@ async function saveVoiceJoinTimes() {
   try {
     // First, clear existing voice join times
     await pool.query(
-      `DELETE FROM main.recovery WHERE type = 'voice_join'`
+      `DELETE FROM main.voice_recovery WHERE type = 'voice_join'`
     );
     
     // Then insert all current voice join times
     for (const [userId, joinTime] of voiceJoinTimes.entries()) {
       const id = randomUUID();
       await pool.query(
-        `INSERT INTO main.recovery (id, type, user_id, join_time) 
+        `INSERT INTO main.voice_recovery (id, type, user_id, join_time) 
          VALUES ($1, 'voice_join', $2, to_timestamp($3 / 1000.0) AT TIME ZONE 'UTC')`,
         [id, userId, joinTime]
       );
