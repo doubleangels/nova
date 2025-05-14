@@ -1,6 +1,7 @@
 const logger = require('../logger')('muteModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
+const { EmbedBuilder } = require('discord.js');
 
 // We define these configuration constants for consistent mute mode behavior.
 const DEFAULT_MUTE_KICK_TIME_HOURS = 4;
@@ -127,7 +128,14 @@ async function performKick(guild, memberId, username, kickType) {
     
     // Send DM to user before kicking
     try {
-      await member.send("You have been kicked from Da Frens because you did not send a message within the required time limit. You can rejoin the server and try again.");
+      const embed = new EmbedBuilder()
+        .setColor(0xCD41FF)
+        .setTitle('Mute Mode Kick')
+        .setDescription('You have been kicked from Da Frens because you did not send a message within the required time limit.')
+        .addFields(
+          { name: 'Want to rejoin?', value: 'You can rejoin at [dafrens.games](https://dafrens.games).' }
+        );
+      await member.send({ embeds: [embed] });
     } catch (dmError) {
       logger.warn(`Failed to send DM to member '${username}' (ID: ${memberId}) before kick:`, { error: dmError.message });
     }

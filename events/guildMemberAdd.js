@@ -72,7 +72,14 @@ module.exports = {
         });
         try {
           // Send DM to user before kicking
-          await member.send(`Your account needs to be older than ${trollModeAccountAge} days to join Da Frens. Your account is ${accountAgeDays} days old.`);
+          const embed = new EmbedBuilder()
+            .setColor(0xCD41FF)
+            .setTitle('Account Age Requirement')
+            .setDescription(`Your account needs to be older than ${trollModeAccountAge} days to join Da Frens. Your account is ${accountAgeDays} days old.`)
+            .addFields(
+              { name: 'Want to rejoin?', value: 'Once your account is old enough, you can rejoin at [dafrens.games](https://dafrens.games).' }
+            );
+          await member.send({ embeds: [embed] });
           await member.kick("Account is too new!");
           logger.info("Member kicked for troll mode:", { memberTag: member.user.tag });
         } catch (err) {
