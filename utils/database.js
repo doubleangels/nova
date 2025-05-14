@@ -9,8 +9,8 @@ const Sentry = require('../sentry');
  * This allows us to reuse connections and handle multiple concurrent requests.
  */
 const pool = new Pool({
-  connectionString: config.database.url,
-  ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
+  connectionString: config.neonConnectionString,
+  ssl: { rejectUnauthorized: false }, // We require SSL for Neon database connections.
   max: 20, // We limit the maximum number of clients to prevent resource exhaustion.
   idleTimeoutMillis: 30000, // We close idle clients after 30 seconds to free up resources.
   connectionTimeoutMillis: 2000 // We return an error after 2 seconds if connection could not be established.
