@@ -66,16 +66,26 @@ module.exports = {
 
       const userId = newState.member.id;
       const username = newState.member.user.tag;
+      const guildName = newState.guild.name;
 
       // User joined a voice channel
       if (!oldState.channelId && newState.channelId) {
         const joinTime = Date.now();
         voiceJoinTimes.set(userId, joinTime);
         await saveVoiceJoinTimes(); // Save state after update
-        logger.debug("User joined voice channel:", {
+        
+        // Log detailed join information
+        logger.info("User joined voice channel:", {
           userId,
           username,
-          channelId: newState.channelId
+          guildName,
+          channelName: newState.channel.name,
+          channelId: newState.channelId,
+          timestamp: new Date(joinTime).toISOString(),
+          selfMute: newState.selfMute,
+          selfDeaf: newState.selfDeaf,
+          serverMute: newState.serverMute,
+          serverDeaf: newState.serverDeaf
         });
       }
       // User left a voice channel
@@ -85,10 +95,20 @@ module.exports = {
           const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60)); // Convert to minutes
           if (timeSpent > 0) {
             await updateVoiceTime(userId, username, timeSpent);
-            logger.debug("Updated voice time for user:", {
+            
+            // Log detailed leave information
+            logger.info("User left voice channel:", {
               userId,
               username,
-              minutesSpent: timeSpent
+              guildName,
+              channelName: oldState.channel.name,
+              channelId: oldState.channelId,
+              timeSpentMinutes: timeSpent,
+              timestamp: new Date().toISOString(),
+              selfMute: oldState.selfMute,
+              selfDeaf: oldState.selfDeaf,
+              serverMute: oldState.serverMute,
+              serverDeaf: oldState.serverDeaf
             });
           }
           voiceJoinTimes.delete(userId);
@@ -102,10 +122,22 @@ module.exports = {
           const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60));
           if (timeSpent > 0) {
             await updateVoiceTime(userId, username, timeSpent);
-            logger.debug("Updated voice time for user switching channels:", {
+            
+            // Log detailed channel switch information
+            logger.info("User switched voice channels:", {
               userId,
               username,
-              minutesSpent: timeSpent
+              guildName,
+              oldChannelName: oldState.channel.name,
+              oldChannelId: oldState.channelId,
+              newChannelName: newState.channel.name,
+              newChannelId: newState.channelId,
+              timeSpentMinutes: timeSpent,
+              timestamp: new Date().toISOString(),
+              selfMute: newState.selfMute,
+              selfDeaf: newState.selfDeaf,
+              serverMute: newState.serverMute,
+              serverDeaf: newState.serverDeaf
             });
           }
         }
