@@ -4,6 +4,7 @@ const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 const Sentry = require('./sentry');
+const { initializeDatabase } = require('./utils/database');
 
 // We define these configuration constants for consistent behavior throughout the application.
 const COMMAND_EXTENSION = '.js';
@@ -114,7 +115,17 @@ for (const file of eventFiles) {
 
 // We set up an event triggered when the bot is ready to operate.
 client.once('ready', async () => {
-  logger.info("Bot is online:", { tag: client.user.tag });
+  try {
+    await initializeDatabase();
+    logger.info("Bot is online:", { tag: client.user.tag });
+  } catch (error) {
+    logger.error("Failed to initialize database:", { error });
+    Sentry.captureException(error, {
+      extra: { context: 'database_initialization_failure' }
+    });
+    // We exit if database initialization fails since it's critical
+    process.exit(1);
+  }
 });
 
 // We log the bot in using the token from the config file.
