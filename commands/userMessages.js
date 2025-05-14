@@ -31,7 +31,7 @@ const MESSAGE_FETCH_BATCH_SIZE = 100; // We fetch messages in batches of 100 for
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')
-    .setDescription('Lists the last messages from a specific user in a specified channel.')
+    .setDescription('List the last messages from a specific user in a specified channel.')
     .addUserOption(option => 
       option
         .setName('user')

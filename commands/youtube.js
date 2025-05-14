@@ -38,7 +38,7 @@ const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay wit
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
-    .setDescription('We search for a video on YouTube.')
+    .setDescription('Search for a video on YouTube.')
     .addStringOption(option =>
       option.setName('query')
         .setDescription('What would you like to search for?')

@@ -17,7 +17,7 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('takerole')
-    .setDescription('Removes a specified role from a user.')
+    .setDescription('Remove a specified role from a user.')
     .addRoleOption(option =>
       option.setName('role')
         .setDescription('What role would you like to remove?')

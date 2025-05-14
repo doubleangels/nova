@@ -24,7 +24,7 @@ const URBAN_REQUEST_TIMEOUT = 10000;
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('urban')
-        .setDescription('We fetch and display definitions from Urban Dictionary.')
+        .setDescription('Fetch and display definitions from Urban Dictionary.')
         .addStringOption(option =>
             option.setName('term')
                 .setDescription('The term to look up')

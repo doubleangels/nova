@@ -34,7 +34,7 @@ const cache = new Map();
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('wikipedia')
-    .setDescription('We fetch and display Wikipedia article summaries.')
+    .setDescription('Fetch and display Wikipedia article summaries.')
     .addStringOption(option =>
       option.setName('query')
         .setDescription('The topic to search for')

@@ -34,7 +34,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('album')
-        .setDescription('Search for an album.')
+        .setDescription('Search for an album on Spotify.')
         .addStringOption(option =>
           option
             .setName('query')
@@ -45,7 +45,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('artist')
-        .setDescription('Search for an artist.')
+        .setDescription('Search for an artist on Spotify.')
         .addStringOption(option =>
           option
             .setName('query')
@@ -56,7 +56,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('playlist')
-        .setDescription('Search for a playlist.')
+        .setDescription('Search for a playlist on Spotify.')
         .addStringOption(option =>
           option
             .setName('query')
@@ -67,7 +67,7 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('podcast')
-        .setDescription('Search for a podcast.')
+        .setDescription('Search for a podcast on Spotify.')
         .addStringOption(option =>
           option
             .setName('query')

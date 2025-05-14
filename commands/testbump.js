@@ -17,7 +17,7 @@ const { handleReminder } = require('../utils/reminderUtils');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('testbump')
-    .setDescription('We simulate a server bump for testing purposes.'),
+    .setDescription('Simulate a server bump for testing purposes.'),
 
   /**
    * Executes the /testbump command.
