@@ -3,10 +3,10 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
-const { setReminderData, getReminderData } = require('../utils/database');
+const { query } = require('../utils/database');
+const { scheduleReminder } = require('../utils/reminderUtils');
 
 // These are the configuration constants for the Disboard bump reminder.
-const SERVICE_TYPE = 'bump';
 const DELAY_SECONDS = 7200;  // 2 hours in seconds
 
 /**
@@ -36,14 +36,14 @@ module.exports = {
       await interaction.deferReply();
 
       // We check if there's already an active reminder in the database.
-      const existingReminder = await this.checkExistingReminder();
-      // We generate unique reminder data with a random UUID and scheduled time.
-      const reminderId = randomUUID();
-      const scheduledTime = dayjs().add(DELAY_SECONDS, 'second').toISOString();
+      const existingReminder = await this.checkExistingReminder(interaction.channelId);
+      
+      // We generate the scheduled time for the reminder.
+      const scheduledTime = dayjs().add(DELAY_SECONDS, 'second').toDate();
       const readableTime = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss');
       
-      // We save the reminder data to the database for future processing.
-      await this.saveReminderToDatabase(reminderId, scheduledTime);
+      // We schedule the reminder using reminderUtils.
+      const reminderId = await scheduleReminder(interaction.client, interaction.channelId, scheduledTime);
       
       // We prepare the response message with details about the scheduled reminder.
       let responseMessage = "✅ Disboard bump reminder successfully fixed!\n";
@@ -52,6 +52,7 @@ module.exports = {
       if (existingReminder) {
         responseMessage += "\n⚠️ Note: An existing reminder was overwritten.";
       }
+      
       // We inform the user that the fix logic was successfully applied.
       await interaction.editReply(responseMessage);
       
@@ -59,7 +60,7 @@ module.exports = {
         userId: interaction.user.id,
         guildId: interaction.guild.id,
         reminderId: reminderId,
-        scheduledTime: scheduledTime
+        scheduledTime: scheduledTime.toISOString()
       });
     } catch (error) {
       logger.error("Error in /fix command.", { 
@@ -78,43 +79,26 @@ module.exports = {
   
   /**
    * Checks if there's an existing reminder in the database.
+   * @param {string} channelId - The channel ID to check for existing reminders.
    * @returns {Promise<boolean>} True if a reminder exists, false otherwise.
    */
-  async checkExistingReminder() {
+  async checkExistingReminder(channelId) {
     try {
-      const existingData = await getReminderData(SERVICE_TYPE);
-      return !!existingData;
+      const result = await query(`
+        SELECT id 
+        FROM main.recovery 
+        WHERE channel_id = $1 
+        AND type = 'reminder' 
+        AND status = 'pending'
+      `, [channelId]);
+      
+      return result.rows.length > 0;
     } catch (error) {
       logger.warn("Error checking for existing reminder.", { 
         error: error.message,
-        serviceType: SERVICE_TYPE
+        channelId
       });
       return false;
-    }
-  },
-  
-  /**
-   * Saves the reminder data to the database for future processing.
-   * @param {string} reminderId - The unique ID for the reminder.
-   * @param {string} scheduledTime - The ISO string of the scheduled time.
-   * @returns {Promise<void>}
-   */
-  async saveReminderToDatabase(reminderId, scheduledTime) {
-    try {
-      await setReminderData(SERVICE_TYPE, scheduledTime, reminderId);
-      
-      logger.debug("Reminder data saved to database.", { 
-        reminderId: reminderId,
-        scheduledTime: scheduledTime,
-        serviceType: SERVICE_TYPE
-      });
-    } catch (error) {
-      logger.error("Database error while saving reminder.", {
-        error: error.message,
-        reminderId: reminderId,
-        serviceType: SERVICE_TYPE
-      });
-      throw new Error("DATABASE_ERROR");
     }
   },
   
