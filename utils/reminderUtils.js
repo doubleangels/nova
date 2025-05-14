@@ -2,6 +2,14 @@ const logger = require('../logger')('reminderUtils.js');
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue, setReminderData, getReminderData, deleteReminderData } = require('../utils/database');
+const { Pool } = require('pg');
+const config = require('../config');
+
+// Setup a pool for direct SQL queries for sent_reminders
+const pool = new Pool({
+  connectionString: config.neonConnectionString,
+  ssl: { rejectUnauthorized: true }
+});
 
 // We define these configuration constants for consistent reminder behavior across the application.
 const BUMP_REMINDER_KEY = 'bump';
@@ -65,6 +73,24 @@ async function handleReminder(message, delay) {
       return;
     }
 
+    // Delete previous bump reminder message in this channel
+    try {
+      const { rows } = await pool.query(
+        `SELECT message_id FROM main.sent_reminders WHERE channel_id = $1 ORDER BY sent_at DESC LIMIT 1`,
+        [reminderChannelId]
+      );
+      if (rows.length > 0) {
+        try {
+          const oldMsg = await channel.messages.fetch(rows[0].message_id);
+          if (oldMsg) await oldMsg.delete();
+        } catch (e) {
+          // Ignore if not found or already deleted
+        }
+      }
+    } catch (e) {
+      logger.error("Error checking/deleting previous bump reminder message:", { error: e });
+    }
+
     // We send an immediate confirmation message in the designated channel to acknowledge the bump.
     await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE}`);
     logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
@@ -72,13 +98,31 @@ async function handleReminder(message, delay) {
     // We schedule the final reminder message after the specified delay.
     setTimeout(async () => {
       try {
-        await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
+        // Delete previous bump reminder message again before sending
+        try {
+          const { rows } = await pool.query(
+            `SELECT message_id FROM main.sent_reminders WHERE channel_id = $1 ORDER BY sent_at DESC LIMIT 1`,
+            [reminderChannelId]
+          );
+          if (rows.length > 0) {
+            try {
+              const oldMsg = await channel.messages.fetch(rows[0].message_id);
+              if (oldMsg) await oldMsg.delete();
+            } catch (e) {}
+          }
+        } catch (e) {}
+        // Send the new bump reminder
+        const sentMsg = await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent scheduled bump reminder ping.", {
           role: reminderRole,
           channelId: reminderChannelId
         });
-        
-        // We clean up the reminder data after sending to avoid duplicate reminders.
+        // Store the new message in sent_reminders (no reminder_type)
+        await pool.query(
+          `INSERT INTO main.sent_reminders (channel_id, message_id) VALUES ($1, $2)`,
+          [reminderChannelId, sentMsg.id]
+        );
+        // Clean up the reminder data
         await deleteReminderData(BUMP_REMINDER_KEY);
         logger.debug("Deleted reminder data after sending reminder.", { reminder_id: reminderId });
       } catch (err) {
