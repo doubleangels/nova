@@ -73,7 +73,7 @@ async function handleReminder(message, delay) {
       return;
     }
 
-    // Delete previous bump reminder message in this channel
+    // Edit previous bump reminder message in this channel to remove the role ping
     try {
       const { rows } = await pool.query(
         `SELECT message_id FROM main.sent_reminders WHERE channel_id = $1 ORDER BY sent_at DESC LIMIT 1`,
@@ -82,13 +82,17 @@ async function handleReminder(message, delay) {
       if (rows.length > 0) {
         try {
           const oldMsg = await channel.messages.fetch(rows[0].message_id);
-          if (oldMsg) await oldMsg.delete();
+          if (oldMsg) {
+            await oldMsg.edit({
+              content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+            });
+          }
         } catch (e) {
           // Ignore if not found or already deleted
         }
       }
     } catch (e) {
-      logger.error("Error checking/deleting previous bump reminder message:", { error: e });
+      logger.error("Error checking/editing previous bump reminder message:", { error: e });
     }
 
     // We send an immediate confirmation message in the designated channel to acknowledge the bump.
@@ -98,7 +102,7 @@ async function handleReminder(message, delay) {
     // We schedule the final reminder message after the specified delay.
     setTimeout(async () => {
       try {
-        // Delete previous bump reminder message again before sending
+        // Edit previous bump reminder message again before sending
         try {
           const { rows } = await pool.query(
             `SELECT message_id FROM main.sent_reminders WHERE channel_id = $1 ORDER BY sent_at DESC LIMIT 1`,
@@ -107,7 +111,11 @@ async function handleReminder(message, delay) {
           if (rows.length > 0) {
             try {
               const oldMsg = await channel.messages.fetch(rows[0].message_id);
-              if (oldMsg) await oldMsg.delete();
+              if (oldMsg) {
+                await oldMsg.edit({
+                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+                });
+              }
             } catch (e) {}
           }
         } catch (e) {}
@@ -117,10 +125,10 @@ async function handleReminder(message, delay) {
           role: reminderRole,
           channelId: reminderChannelId
         });
-        // Store the new message in sent_reminders (no reminder_type)
+        // Store the new message in sent_reminders with the uuid reminder_id
         await pool.query(
-          `INSERT INTO main.sent_reminders (channel_id, message_id) VALUES ($1, $2)`,
-          [reminderChannelId, sentMsg.id]
+          `INSERT INTO main.sent_reminders (reminder_id, channel_id, message_id) VALUES ($1, $2, $3)`,
+          [reminderId, reminderChannelId, sentMsg.id]
         );
         // Clean up the reminder data
         await deleteReminderData(BUMP_REMINDER_KEY);
