@@ -28,56 +28,38 @@ const TABLES = {
 };
 
 /**
- * Initializes the database by creating necessary tables if they don't exist.
- * We ensure our database structure is ready before the application starts.
+ * Initializes the database by performing a simple read/write test.
+ * We ensure our database connection is working properly.
  */
 async function initializeDatabase() {
   const client = await pool.connect();
   try {
-    logger.info("Initializing database tables in schema 'main'...");
+    logger.info("Testing database connection...");
     
-    // We create the schema if it doesn't exist to contain our tables.
-    await client.query(`CREATE SCHEMA IF NOT EXISTS ${SCHEMA};`);
+    // We perform a simple read/write test using the config table
+    const testKey = 'db_test_key';
+    const testValue = 'test_value';
     
-    // We create the config table to store application settings.
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLES.CONFIG} (
-        id TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      );
-    `);
+    // Write test
+    await client.query(
+      `INSERT INTO ${TABLES.CONFIG} (id, value) VALUES ($1, $2)
+       ON CONFLICT (id) DO UPDATE SET value = $2`,
+      [testKey, JSON.stringify(testValue)]
+    );
     
-    // We create the reminders table to track scheduled reminders.
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLES.REMINDERS} (
-        key TEXT PRIMARY KEY,
-        scheduled_time TEXT NOT NULL,
-        reminder_id TEXT NOT NULL
-      );
-    `);
+    // Read test
+    const result = await client.query(
+      `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
+      [testKey]
+    );
     
-    // We create the tracked_members table to monitor users in mute mode.
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLES.TRACKED_MEMBERS} (
-        member_id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        join_time TEXT NOT NULL
-      );
-    `);
-    
-    // We create the message_counts table to track user message activity.
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${TABLES.MESSAGE_COUNTS} (
-        member_id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        message_count INTEGER DEFAULT 0,
-        last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    
-    logger.info("Database initialization complete.");
+    if (result.rows.length > 0 && JSON.parse(result.rows[0].value) === testValue) {
+      logger.info("Database connection test successful.");
+    } else {
+      throw new Error("Database read/write test failed");
+    }
   } catch (err) {
-    logger.error("Error initializing database:", { error: err });
+    logger.error("Error testing database connection:", { error: err });
     throw err;
   } finally {
     client.release();
