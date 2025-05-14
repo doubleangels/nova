@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
+const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const Sentry = require('../sentry');
 
 // We import the deploy-commands module to register slash commands with Discord.
@@ -122,6 +123,20 @@ module.exports = {
         );
       } else {
         logger.debug("Mute kick rescheduling skipped (disabled in config).");
+      }
+
+      // We load voice join times from the database
+      try {
+        logger.info("Loading voice join times...");
+        await loadVoiceJoinTimes();
+        logger.info("Successfully loaded voice join times.");
+      } catch (error) {
+        logger.error("Failed to load voice join times:", { error });
+        Sentry.captureException(error, {
+          extra: {
+            function: 'loadVoiceJoinTimes'
+          }
+        });
       }
 
       // We log the setup completion status to provide a clear summary of initialization.

@@ -1,10 +1,54 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { updateVoiceTime } = require('../utils/database');
+const { updateVoiceTime, getValue, setValue } = require('../utils/database');
 const Sentry = require('../sentry');
 
 // We store the join times for users in voice channels
 const voiceJoinTimes = new Map();
+
+/**
+ * Loads voice join times from the database on bot startup.
+ * This ensures we don't lose track of users who were in voice when the bot restarted.
+ */
+async function loadVoiceJoinTimes() {
+  try {
+    const storedTimes = await getValue('voice_join_times');
+    if (storedTimes) {
+      for (const [userId, joinTime] of Object.entries(storedTimes)) {
+        voiceJoinTimes.set(userId, joinTime);
+      }
+      logger.info(`Loaded ${voiceJoinTimes.size} voice join times from database`);
+    }
+  } catch (error) {
+    logger.error("Error loading voice join times:", { error });
+    Sentry.captureException(error, {
+      extra: {
+        function: 'loadVoiceJoinTimes'
+      }
+    });
+  }
+}
+
+/**
+ * Saves voice join times to the database.
+ * This ensures we can recover the state if the bot restarts.
+ */
+async function saveVoiceJoinTimes() {
+  try {
+    const times = {};
+    for (const [userId, joinTime] of voiceJoinTimes.entries()) {
+      times[userId] = joinTime;
+    }
+    await setValue('voice_join_times', times);
+  } catch (error) {
+    logger.error("Error saving voice join times:", { error });
+    Sentry.captureException(error, {
+      extra: {
+        function: 'saveVoiceJoinTimes'
+      }
+    });
+  }
+}
 
 /**
  * Event handler for the 'voiceStateUpdate' event.
@@ -25,7 +69,9 @@ module.exports = {
 
       // User joined a voice channel
       if (!oldState.channelId && newState.channelId) {
-        voiceJoinTimes.set(userId, Date.now());
+        const joinTime = Date.now();
+        voiceJoinTimes.set(userId, joinTime);
+        await saveVoiceJoinTimes(); // Save state after update
         logger.debug("User joined voice channel:", {
           userId,
           username,
@@ -46,6 +92,7 @@ module.exports = {
             });
           }
           voiceJoinTimes.delete(userId);
+          await saveVoiceJoinTimes(); // Save state after update
         }
       }
       // User switched voice channels
@@ -62,7 +109,9 @@ module.exports = {
             });
           }
         }
-        voiceJoinTimes.set(userId, Date.now());
+        const newJoinTime = Date.now();
+        voiceJoinTimes.set(userId, newJoinTime);
+        await saveVoiceJoinTimes(); // Save state after update
       }
     } catch (error) {
       logger.error("Error in voiceStateUpdate event:", { error });
@@ -75,4 +124,7 @@ module.exports = {
       });
     }
   }
-}; 
+};
+
+// Export the load function so it can be called on bot startup
+module.exports.loadVoiceJoinTimes = loadVoiceJoinTimes; 
