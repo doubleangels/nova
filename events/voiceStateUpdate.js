@@ -92,29 +92,6 @@ module.exports = {
               AND left_at IS NULL
             `, [now, duration, userId, guildId]);
             
-            // Add/update time tracked in voice_time table
-            const minutesSpent = Math.round(duration / 60000);
-            const username = newState.member.user.username;
-            const memberId = userId;
-            const lastUpdated = now;
-            try {
-              await query(`
-                INSERT INTO voice_time (member_id, username, minutes_spent, last_updated)
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (member_id) DO UPDATE
-                SET 
-                  username = EXCLUDED.username,
-                  minutes_spent = voice_time.minutes_spent + EXCLUDED.minutes_spent,
-                  last_updated = EXCLUDED.last_updated
-              `, [memberId, username, minutesSpent, lastUpdated]);
-              logger.debug("Updated voice_time table:", { memberId, username, minutesSpent, lastUpdated });
-            } catch (error) {
-              logger.error("Failed to update voice_time table:", { error });
-              Sentry.captureException(error, {
-                extra: { function: 'voiceStateUpdate', action: 'voice_time_upsert', memberId }
-              });
-            }
-            
             logger.debug("User left voice channel:", { 
               userId, 
               guildId, 
