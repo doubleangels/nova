@@ -1,127 +1,182 @@
-const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { query, queryOne } = require('../utils/database');
+const { updateVoiceTime, getValue, setValue } = require('../utils/database');
 const Sentry = require('../sentry');
+const { Pool } = require('pg');
+const config = require('../config');
+const { randomUUID } = require('crypto');
 
-// We store voice join times in memory for quick access during voice state updates.
+// Setup a pool for direct SQL queries
+const pool = new Pool({
+  connectionString: config.neonConnectionString,
+  ssl: { rejectUnauthorized: true }
+});
+
+// We store the join times for users in voice channels
 const voiceJoinTimes = new Map();
 
 /**
- * We load voice join times from the database to maintain voice tracking across bot restarts.
- * This ensures we don't lose track of users who were in voice channels when the bot restarted.
+ * Loads voice join times from the recovery table on bot startup.
+ * This ensures we don't lose track of users who were in voice when the bot restarted.
  */
 async function loadVoiceJoinTimes() {
   try {
-    const result = await query(`
-      SELECT user_id, joined_at 
-      FROM recovery 
-      WHERE left_at IS NULL
-    `);
+    const { rows } = await pool.query(
+      `SELECT user_id, join_time FROM main.recovery WHERE type = 'voice_join'`
+    );
     
-    for (const row of result.rows) {
-      voiceJoinTimes.set(row.user_id, new Date(row.joined_at));
+    for (const row of rows) {
+      voiceJoinTimes.set(row.user_id, row.join_time);
     }
     
-    logger.info(`Loaded ${result.rows.length} voice join times from database.`);
+    logger.info(`Loaded ${voiceJoinTimes.size} voice join times from recovery table`);
   } catch (error) {
-    logger.error("Failed to load voice join times:", { error });
+    logger.error("Error loading voice join times:", { error });
     Sentry.captureException(error, {
-      extra: { function: 'loadVoiceJoinTimes' }
+      extra: {
+        function: 'loadVoiceJoinTimes'
+      }
     });
   }
 }
 
 /**
- * We handle voice state updates to track when users join and leave voice channels.
- * This allows us to calculate voice time and maintain accurate voice activity records.
+ * Saves voice join times to the recovery table.
+ * This ensures we can recover the state if the bot restarts.
+ */
+async function saveVoiceJoinTimes() {
+  try {
+    // First, clear existing voice join times
+    await pool.query(
+      `DELETE FROM main.recovery WHERE type = 'voice_join'`
+    );
+    
+    // Then insert all current voice join times
+    for (const [userId, joinTime] of voiceJoinTimes.entries()) {
+      const id = randomUUID();
+      await pool.query(
+        `INSERT INTO main.recovery (id, type, user_id, join_time) 
+         VALUES ($1, 'voice_join', $2, to_timestamp($3 / 1000.0) AT TIME ZONE 'UTC')`,
+        [id, userId, joinTime]
+      );
+    }
+  } catch (error) {
+    logger.error("Error saving voice join times:", { error });
+    Sentry.captureException(error, {
+      extra: {
+        function: 'saveVoiceJoinTimes'
+      }
+    });
+  }
+}
+
+/**
+ * Event handler for the 'voiceStateUpdate' event.
+ * We track when users join and leave voice channels to calculate time spent.
  * 
- * @param {VoiceState} oldState - The previous voice state of the user.
- * @param {VoiceState} newState - The new voice state of the user.
+ * @param {VoiceState} oldState - The previous voice state.
+ * @param {VoiceState} newState - The new voice state.
  */
 module.exports = {
-  name: Events.VoiceStateUpdate,
+  name: 'voiceStateUpdate',
   async execute(oldState, newState) {
     try {
+      // We ignore bot users
+      if (newState.member.user.bot) return;
+
       const userId = newState.member.id;
-      const guildId = newState.guild.id;
-      
-      // We handle the case when a user joins a voice channel.
+      const username = newState.member.user.tag;
+      const guildName = newState.guild.name;
+
+      // User joined a voice channel
       if (!oldState.channelId && newState.channelId) {
-        const now = new Date();
-        voiceJoinTimes.set(userId, now);
+        const joinTime = Date.now();
+        voiceJoinTimes.set(userId, joinTime);
+        await saveVoiceJoinTimes(); // Save state after update
         
-        try {
-          await query(`
-            INSERT INTO recovery (id, user_id, guild_id, joined_at)
-            VALUES (gen_random_uuid(), $1, $2, $3)
-          `, [userId, guildId, now]);
-          
-          logger.debug("User joined voice channel:", { 
-            userId, 
-            guildId, 
-            channelId: newState.channelId 
-          });
-        } catch (error) {
-          logger.error("Failed to record voice join time:", { error });
-          Sentry.captureException(error, {
-            extra: { 
-              function: 'voiceStateUpdate',
-              action: 'join',
-              userId,
-              guildId
-            }
-          });
-        }
+        // Log detailed join information
+        logger.info("User joined voice channel:", {
+          userId,
+          username,
+          guildName,
+          channelName: newState.channel.name,
+          channelId: newState.channelId,
+          timestamp: new Date(joinTime).toISOString(),
+          selfMute: newState.selfMute,
+          selfDeaf: newState.selfDeaf,
+          serverMute: newState.serverMute,
+          serverDeaf: newState.serverDeaf
+        });
       }
-      
-      // We handle the case when a user leaves a voice channel.
-      if (oldState.channelId && !newState.channelId) {
+      // User left a voice channel
+      else if (oldState.channelId && !newState.channelId) {
         const joinTime = voiceJoinTimes.get(userId);
         if (joinTime) {
-          const now = new Date();
-          const duration = now - joinTime;
-          voiceJoinTimes.delete(userId);
-          
-          try {
-            await query(`
-              UPDATE recovery 
-              SET left_at = $1, duration = $2
-              WHERE user_id = $3 
-              AND guild_id = $4 
-              AND left_at IS NULL
-            `, [now, duration, userId, guildId]);
+          const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60)); // Convert to minutes
+          if (timeSpent > 0) {
+            await updateVoiceTime(userId, username, timeSpent);
             
-            logger.debug("User left voice channel:", { 
-              userId, 
-              guildId, 
-              duration 
+            // Log detailed leave information
+            logger.info("User left voice channel:", {
+              userId,
+              username,
+              guildName,
+              channelName: oldState.channel.name,
+              channelId: oldState.channelId,
+              timeSpentMinutes: timeSpent,
+              timestamp: new Date().toISOString(),
+              selfMute: oldState.selfMute,
+              selfDeaf: oldState.selfDeaf,
+              serverMute: oldState.serverMute,
+              serverDeaf: oldState.serverDeaf
             });
-          } catch (error) {
-            logger.error("Failed to record voice leave time:", { error });
-            Sentry.captureException(error, {
-              extra: { 
-                function: 'voiceStateUpdate',
-                action: 'leave',
-                userId,
-                guildId
-              }
+          }
+          voiceJoinTimes.delete(userId);
+          await saveVoiceJoinTimes(); // Save state after update
+        }
+      }
+      // User switched voice channels
+      else if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
+        const joinTime = voiceJoinTimes.get(userId);
+        if (joinTime) {
+          const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60));
+          if (timeSpent > 0) {
+            await updateVoiceTime(userId, username, timeSpent);
+            
+            // Log detailed channel switch information
+            logger.info("User switched voice channels:", {
+              userId,
+              username,
+              guildName,
+              oldChannelName: oldState.channel.name,
+              oldChannelId: oldState.channelId,
+              newChannelName: newState.channel.name,
+              newChannelId: newState.channelId,
+              timeSpentMinutes: timeSpent,
+              timestamp: new Date().toISOString(),
+              selfMute: newState.selfMute,
+              selfDeaf: newState.selfDeaf,
+              serverMute: newState.serverMute,
+              serverDeaf: newState.serverDeaf
             });
           }
         }
+        const newJoinTime = Date.now();
+        voiceJoinTimes.set(userId, newJoinTime);
+        await saveVoiceJoinTimes(); // Save state after update
       }
     } catch (error) {
-      logger.error("Error in voice state update:", { error });
+      logger.error("Error in voiceStateUpdate event:", { error });
       Sentry.captureException(error, {
-        extra: { 
-          function: 'voiceStateUpdate',
+        extra: {
           userId: newState.member.id,
-          guildId: newState.guild.id
+          oldChannelId: oldState.channelId,
+          newChannelId: newState.channelId
         }
       });
     }
   }
 };
 
-// We export the loadVoiceJoinTimes function for use in the ready event.
+// Export the load function so it can be called on bot startup
 module.exports.loadVoiceJoinTimes = loadVoiceJoinTimes; 
