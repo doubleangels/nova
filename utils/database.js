@@ -23,7 +23,8 @@ const TABLES = {
   CONFIG: `${SCHEMA}.config`,
   REMINDERS: `${SCHEMA}.reminders`,
   TRACKED_MEMBERS: `${SCHEMA}.tracked_members`,
-  TIMEZONES: `${SCHEMA}.timezones`
+  TIMEZONES: `${SCHEMA}.timezones`,
+  MESSAGE_COUNTS: `${SCHEMA}.message_counts`
 };
 
 /**
@@ -61,6 +62,16 @@ async function initializeDatabase() {
         member_id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
         join_time TEXT NOT NULL
+      );
+    `);
+    
+    // We create the message_counts table to track user message activity.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ${TABLES.MESSAGE_COUNTS} (
+        member_id TEXT PRIMARY KEY,
+        username TEXT NOT NULL,
+        message_count INTEGER DEFAULT 0,
+        last_updated TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
     
@@ -439,6 +450,64 @@ async function getUserTimezone(memberId) {
   }
 }
 
+/**
+ * Increments the message count for a user and updates their username if it has changed.
+ * 
+ * @param {string} memberId - The Discord member ID.
+ * @param {string} username - The current username of the member.
+ * @returns {Promise<void>}
+ */
+async function incrementMessageCount(memberId, username) {
+  const client = await pool.connect();
+  try {
+    logger.debug(`Incrementing message count for member "${username}" (ID: ${memberId}).`);
+    
+    await client.query(`
+      INSERT INTO ${TABLES.MESSAGE_COUNTS} (member_id, username, message_count)
+      VALUES ($1, $2, 1)
+      ON CONFLICT (member_id) 
+      DO UPDATE SET 
+        message_count = ${TABLES.MESSAGE_COUNTS}.message_count + 1,
+        username = $2,
+        last_updated = CURRENT_TIMESTAMP;
+    `, [memberId, username]);
+    
+    logger.debug(`Successfully incremented message count for member "${username}" (ID: ${memberId}).`);
+  } catch (err) {
+    logger.error(`Error incrementing message count for member "${username}":`, { error: err });
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the top message senders in the server.
+ * 
+ * @param {number} limit - The maximum number of users to return.
+ * @returns {Promise<Array<Object>>} Array of objects containing member_id, username, and message_count.
+ */
+async function getTopMessageSenders(limit = 10) {
+  const client = await pool.connect();
+  try {
+    logger.debug(`Retrieving top ${limit} message senders.`);
+    
+    const result = await client.query(`
+      SELECT member_id, username, message_count
+      FROM ${TABLES.MESSAGE_COUNTS}
+      ORDER BY message_count DESC
+      LIMIT $1;
+    `, [limit]);
+    
+    logger.debug(`Retrieved ${result.rows.length} top message senders.`);
+    return result.rows;
+  } catch (err) {
+    logger.error("Error retrieving top message senders:", { error: err });
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -454,4 +523,6 @@ module.exports = {
   getAllTrackedMembers,
   setUserTimezone,
   getUserTimezone,
+  incrementMessageCount,
+  getTopMessageSenders
 };

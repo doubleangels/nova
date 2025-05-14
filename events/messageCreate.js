@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getTrackedMember, removeTrackedMember } = require('../utils/database');
+const { getTrackedMember, removeTrackedMember, incrementMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
@@ -11,6 +11,7 @@ const Sentry = require('../sentry');
  *  - We remove users from mute tracking when they send a message.
  *  - We trigger a Disboard reminder when a message embed indicates a bump was done.
  *  - We react with a clock emoji when a message contains time references.
+ *  - We track message counts for the yappers leaderboard.
  *
  * @param {Message} message - The message object from Discord.
  */
@@ -54,9 +55,10 @@ module.exports = {
     }
   }
 };
+
 /**
  * Process messages from real users (not webhooks or bots).
- * We handle user verification and time reference detection.
+ * We handle user verification, time reference detection, and message tracking.
  * 
  * @param {Message} message - The Discord message object.
  */
@@ -74,6 +76,10 @@ async function processUserMessage(message) {
     
     // We check if the message contains time references for timezone conversion.
     await processTimeReferences(message);
+
+    // We increment the message count for the user.
+    await incrementMessageCount(message.author.id, message.author.tag);
+    
   } catch (error) {
     // Add Sentry error tracking
     Sentry.captureException(error, {
@@ -86,7 +92,7 @@ async function processUserMessage(message) {
       userId: message.author.id, 
       error 
     });
-}
+  }
 }
 
 /**
