@@ -21,7 +21,7 @@ const pool = new Pool(CONNECTION_OPTIONS);
 // We define table names for consistent reference throughout the codebase.
 const TABLES = {
   CONFIG: `${SCHEMA}.config`,
-  REMINDERS: `${SCHEMA}.reminders`,
+  REMINDERS: `${SCHEMA}.reminder_data`,
   TRACKED_MEMBERS: `${SCHEMA}.tracked_members`,
   TIMEZONES: `${SCHEMA}.timezones`,
   MESSAGE_COUNTS: `${SCHEMA}.message_counts`,
