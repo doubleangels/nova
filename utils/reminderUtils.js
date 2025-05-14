@@ -301,24 +301,4 @@ async function rescheduleReminder(client) {
   }
 }
 
-/**
- * Note on Discord message visibility:
- * When implementing commands that use these reminder utilities, we should follow these guidelines:
- * 1. Confirmation messages and reminders should be public (visible to everyone) since they provide
- *    useful information to the entire community about server bump status.
- * 2. Error messages related to configuration issues should be ephemeral (only visible to the command issuer)
- *    to avoid exposing potential system problems to regular users.
- * 
- * Example implementation in a command:
- * ```
- * // For successful bump detection:
- * await handleReminder(message, TWO_HOURS_IN_MS);
- * 
- * // For configuration command errors:
- * await interaction.reply({ 
- *   content: "Failed to set reminder channel. Please check your permissions.",
- *   ephemeral: true 
- * });
- * ```
- */
 module.exports = { handleReminder, rescheduleReminder, cleanupOldSentReminders };
