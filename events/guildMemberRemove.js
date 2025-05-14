@@ -5,35 +5,56 @@ const Sentry = require('../sentry');
 
 /**
  * Event handler for the 'guildMemberRemove' event.
- * We clean up any tracking data when a member leaves the server.
- * 
- * @param {GuildMember} member - The member that left the server.
+ * We handle members leaving or being removed from the guild by cleaning up their data.
+ * This removes the member from the mute tracking database to prevent unnecessary checks.
+ *
+ * @param {GuildMember} member - The guild member that has left.
  */
 module.exports = {
   name: 'guildMemberRemove',
   async execute(member) {
     try {
-      logger.debug("Member left server:", { 
-        userId: member.id, 
-        username: member.user.tag 
+      // We skip processing for bot accounts since they aren't tracked in the mute system.
+      if (member.user.bot) {
+        logger.debug("Bot member left; skipping tracking removal:", { botTag: member.user.tag });
+        return;
+      }
+      
+      // We log the start of the removal process with the member's details for tracking.
+      logger.debug("Processing guildMemberRemove event:", { 
+        memberId: member.id,
+        username: member.user.username,
+        guildName: member.guild.name 
       });
-
-      // We remove any mute tracking data for the member
+      
+      // We remove the member from the mute tracking database to keep our data clean.
       const wasRemoved = await removeTrackedMember(member.id);
       
+      // We log the outcome differently based on whether the member was being tracked.
       if (wasRemoved) {
-        logger.info("Removed mute tracking data for member:", { 
-          userId: member.id, 
-          username: member.user.tag 
+        logger.debug("Successfully removed tracking data for member:", { 
+          memberId: member.id, 
+          username: member.user.username 
+        });
+      } else {
+        logger.debug("Member was not being tracked in mute system:", { 
+          memberId: member.id, 
+          username: member.user.username 
         });
       }
     } catch (error) {
-      logger.error("Error in guildMemberRemove event:", { error });
+      // Add Sentry error tracking
       Sentry.captureException(error, {
         extra: {
-          userId: member.id,
-          username: member.user.tag
+          event: 'guildMemberRemove',
+          memberId: member.id,
+          username: member.user?.username || "Unknown",
         }
+      });
+      logger.error("Error processing guildMemberRemove event:", { 
+        memberId: member.id, 
+        username: member.user?.username || "Unknown",
+        error 
       });
     }
   }

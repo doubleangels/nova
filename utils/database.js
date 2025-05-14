@@ -246,11 +246,11 @@ async function deleteReminderData(key) {
  * @param {string} username - The username of the member.
  * @param {string} joinTime - The ISO string representing when the member joined.
  */
-async function trackMuteMember(memberId, username, joinTime) {
+async function trackNewMember(memberId, username, joinTime) {
   const client = await pool.connect();
   try {
     const formattedJoinTime = dayjs(joinTime).toISOString();
-    logger.debug(`Tracking muted member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
+    logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
     
     // We use the message_counts table and store the join time in the config table
     await client.query(
@@ -270,25 +270,25 @@ async function trackMuteMember(memberId, username, joinTime) {
       [`mute_join_${memberId}`, JSON.stringify(formattedJoinTime)]
     );
     
-    logger.info(`Successfully tracked muted member "${username}" (ID: ${memberId}).`);
+    logger.info(`Successfully tracked member "${username}" (ID: ${memberId}).`);
   } catch (err) {
-    logger.error(`Error tracking muted member "${username}":`, { error: err });
+    logger.error(`Error tracking new member "${username}":`, { error: err });
   } finally {
     client.release();
   }
 }
 
 /**
- * Retrieves mute data for a specific member.
+ * Retrieves tracking data for a specific member.
  * We use this to check if a member is being monitored in mute mode.
  *
  * @param {string} memberId - The Discord member ID.
- * @returns {Promise<Object|null>} The mute data if found, otherwise null.
+ * @returns {Promise<Object|null>} The tracking data if found, otherwise null.
  */
-async function getMuteMember(memberId) {
+async function getTrackedMember(memberId) {
   const client = await pool.connect();
   try {
-    logger.debug(`Retrieving mute data for member ID "${memberId}".`);
+    logger.debug(`Retrieving tracking data for member ID "${memberId}".`);
     
     // Get the join time from config table
     const joinTimeResult = await client.query(
@@ -309,14 +309,14 @@ async function getMuteMember(memberId) {
         join_time: JSON.parse(joinTimeResult.rows[0].value),
         message_count: messageResult.rows[0].message_count
       };
-      logger.debug(`Found mute data for member ID "${memberId}": ${JSON.stringify(data)}`);
+      logger.debug(`Found tracking data for member ID "${memberId}": ${JSON.stringify(data)}`);
       return data;
     }
     
-    logger.debug(`No mute data found for member ID "${memberId}".`);
+    logger.debug(`No tracking data found for member ID "${memberId}".`);
     return null;
   } catch (err) {
-    logger.error(`Error retrieving mute data for member ID "${memberId}":`, { error: err });
+    logger.error(`Error retrieving tracking data for member ID "${memberId}":`, { error: err });
     return null;
   } finally {
     client.release();
@@ -324,16 +324,16 @@ async function getMuteMember(memberId) {
 }
 
 /**
- * Removes mute data for a specific member.
+ * Removes tracking data for a specific member.
  * We use this when a member sends a message (verification) or leaves the server.
  *
  * @param {string} memberId - The Discord member ID.
  * @returns {Promise<boolean>} True if a record was removed, false otherwise.
  */
-async function removeMuteMember(memberId) {
+async function removeTrackedMember(memberId) {
   const client = await pool.connect();
   try {
-    logger.debug(`Removing mute data for member ID "${memberId}".`);
+    logger.debug(`Removing tracking data for member ID "${memberId}".`);
     
     // Remove the join time from config table
     const result = await client.query(
@@ -342,14 +342,14 @@ async function removeMuteMember(memberId) {
     );
     
     if (result.rowCount === 0) {
-      logger.debug(`No mute data found for member ID "${memberId}" to remove.`);
+      logger.debug(`No tracking data found for member ID "${memberId}" to remove.`);
       return false;
     } else {
-      logger.info(`Successfully removed mute data for member ID "${memberId}".`);
+      logger.info(`Successfully removed tracking data for member ID "${memberId}".`);
       return true;
     }
   } catch (err) {
-    logger.error("Error removing muted member:", { error: err });
+    logger.error("Error removing tracked member:", { error: err });
     return false;
   } finally {
     client.release();
@@ -357,15 +357,15 @@ async function removeMuteMember(memberId) {
 }
 
 /**
- * Retrieves all muted members.
+ * Retrieves all tracked members.
  * We use this to check all members being monitored in mute mode, typically after a bot restart.
  *
  * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time.
  */
-async function getAllMuteMembers() {
+async function getAllTrackedMembers() {
   const client = await pool.connect();
   try {
-    logger.debug("Retrieving all muted members.");
+    logger.debug("Retrieving all tracked members.");
     
     // Get all mute join times from config table
     const joinTimesResult = await client.query(
@@ -378,7 +378,7 @@ async function getAllMuteMembers() {
     );
 
     // Combine the data
-    const muteMembers = joinTimesResult.rows.map(row => {
+    const trackedMembers = joinTimesResult.rows.map(row => {
       const memberId = row.id.replace('mute_join_', '');
       const messageData = messageResult.rows.find(m => m.member_id === memberId);
       return {
@@ -389,10 +389,10 @@ async function getAllMuteMembers() {
       };
     });
 
-    logger.info(`Retrieved ${muteMembers.length} muted member(s).`);
-    return muteMembers;
+    logger.info(`Retrieved ${trackedMembers.length} tracked member(s).`);
+    return trackedMembers;
   } catch (err) {
-    logger.error("Error retrieving all muted members:", { error: err });
+    logger.error("Error retrieving all tracked members:", { error: err });
     return [];
   } finally {
     client.release();
@@ -616,10 +616,10 @@ module.exports = {
   getReminderData,
   setReminderData,
   deleteReminderData,
-  trackMuteMember,
-  getMuteMember,
-  removeMuteMember,
-  getAllMuteMembers,
+  trackNewMember,
+  getTrackedMember,
+  removeTrackedMember,
+  getAllTrackedMembers,
   setUserTimezone,
   getUserTimezone,
   incrementMessageCount,
