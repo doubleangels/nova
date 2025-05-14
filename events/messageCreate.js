@@ -39,8 +39,8 @@ module.exports = {
         }
       }
 
-      // We skip processing for bot messages.
-      if (message.author.bot) return;
+      // We skip processing for bot messages except Disboard's bump messages.
+      if (message.author.bot && !message.author.username.includes('Disboard')) return;
 
       // We check for rate limiting and spam.
       if (await this.isRateLimited(message) || await this.isSpam(message)) {
