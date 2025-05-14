@@ -26,6 +26,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,     // We need this to access guild member information.
     GatewayIntentBits.GuildPresences,   // We need this to track member presence (online/offline).
     GatewayIntentBits.GuildMessageReactions, // We need this to receive reaction events.
+    GatewayIntentBits.GuildVoiceStates, // Ensure this intent is included
   ],
   partials: [
     Partials.Message,    // We include this to handle reactions on uncached messages.
@@ -112,6 +113,12 @@ for (const file of eventFiles) {
     });
   }
 }
+
+const voiceStateUpdateHandler = require('./events/voiceStateUpdate');
+
+client.on('voiceStateUpdate', (oldState, newState) => {
+  voiceStateUpdateHandler.execute(oldState, newState);
+});
 
 // We set up an event triggered when the bot is ready to operate.
 client.once('ready', async () => {
