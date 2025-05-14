@@ -68,6 +68,15 @@ module.exports = {
       const username = newState.member.user.tag;
       const guildName = newState.guild.name;
 
+      // Debug logging for all voice state changes
+      logger.debug("Voice state update received:", {
+        userId,
+        username,
+        oldChannelId: oldState.channelId,
+        newChannelId: newState.channelId,
+        hasJoinTime: voiceJoinTimes.has(userId)
+      });
+
       // User joined a voice channel
       if (!oldState.channelId && newState.channelId) {
         const joinTime = Date.now();
@@ -90,9 +99,23 @@ module.exports = {
       }
       // User left a voice channel
       else if (oldState.channelId && !newState.channelId) {
+        logger.debug("Processing voice channel leave:", {
+          userId,
+          username,
+          oldChannelId: oldState.channelId,
+          joinTime: voiceJoinTimes.get(userId)
+        });
+
         const joinTime = voiceJoinTimes.get(userId);
         if (joinTime) {
           const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60)); // Convert to minutes
+          logger.debug("Calculated time spent:", {
+            userId,
+            timeSpentMinutes: timeSpent,
+            joinTime: new Date(joinTime).toISOString(),
+            currentTime: new Date().toISOString()
+          });
+
           if (timeSpent > 0) {
             await updateVoiceTime(userId, username, timeSpent);
             
@@ -110,9 +133,20 @@ module.exports = {
               serverMute: oldState.serverMute,
               serverDeaf: oldState.serverDeaf
             });
+          } else {
+            logger.debug("Time spent was 0 or negative, skipping leave log:", {
+              userId,
+              timeSpent,
+              joinTime: new Date(joinTime).toISOString()
+            });
           }
           voiceJoinTimes.delete(userId);
           await saveVoiceJoinTimes(); // Save state after update
+        } else {
+          logger.debug("No join time found for user:", {
+            userId,
+            username
+          });
         }
       }
       // User switched voice channels

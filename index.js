@@ -114,12 +114,6 @@ for (const file of eventFiles) {
   }
 }
 
-const voiceStateUpdateHandler = require('./events/voiceStateUpdate');
-
-client.on('voiceStateUpdate', (oldState, newState) => {
-  voiceStateUpdateHandler.execute(oldState, newState);
-});
-
 // We set up an event triggered when the bot is ready to operate.
 client.once('ready', async () => {
   try {
