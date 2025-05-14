@@ -19,6 +19,25 @@ const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again in 2 hou
 const REMINDER_MESSAGE = "It's time to bump again!";
 
 /**
+ * Cleans up old sent reminder records from the database
+ * @param {string} channelId - The Discord channel ID
+ * @param {string} messageId - The message ID that was just edited/handled
+ */
+async function cleanupOldSentReminders(channelId, messageId) {
+  try {
+    await pool.query(
+      `DELETE FROM main.sent_reminders 
+       WHERE channel_id = $1 
+       AND message_id = $2`,
+      [channelId, messageId]
+    );
+    logger.debug("Cleaned up old sent reminder record", { channelId, messageId });
+  } catch (err) {
+    logger.error("Error cleaning up old sent reminder:", { error: err });
+  }
+}
+
+/**
  * Schedules a bump reminder and stores it in the database.
  *
  * We retrieve necessary configuration values (role and channel IDs) from the database,
@@ -86,6 +105,8 @@ async function handleReminder(message, delay) {
             await oldMsg.edit({
               content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
             });
+            // Add cleanup after successful edit
+            await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
           }
         } catch (e) {
           // Ignore if not found or already deleted
@@ -96,8 +117,14 @@ async function handleReminder(message, delay) {
     }
 
     // We send an immediate confirmation message in the designated channel to acknowledge the bump.
-    await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE}`);
+    const confirmMsg = await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE}`);
     logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
+
+    // Store the confirmation message in sent_reminders
+    await pool.query(
+      `INSERT INTO main.sent_reminders (reminder_id, channel_id, message_id) VALUES ($1, $2, $3)`,
+      [reminderId, reminderChannelId, confirmMsg.id]
+    );
 
     // We schedule the final reminder message after the specified delay.
     setTimeout(async () => {
@@ -115,6 +142,8 @@ async function handleReminder(message, delay) {
                 await oldMsg.edit({
                   content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
                 });
+                // Add cleanup after successful edit
+                await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
               }
             } catch (e) {}
           }
@@ -217,10 +246,36 @@ async function rescheduleReminder(client) {
     // We reschedule the reminder to send the bump message after the computed delay.
     setTimeout(async () => {
       try {
-        await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
+        // Edit previous bump reminder message before sending new one
+        try {
+          const { rows } = await pool.query(
+            `SELECT message_id FROM main.sent_reminders WHERE channel_id = $1 ORDER BY sent_at DESC LIMIT 1`,
+            [reminderChannelId]
+          );
+          if (rows.length > 0) {
+            try {
+              const oldMsg = await channel.messages.fetch(rows[0].message_id);
+              if (oldMsg) {
+                await oldMsg.edit({
+                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+                });
+                await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
+              }
+            } catch (e) {}
+          }
+        } catch (e) {}
+
+        // Send the new reminder message
+        const sentMsg = await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminder.reminder_id });
         
-        // We clean up the reminder data after sending to maintain database cleanliness.
+        // Store the new message in sent_reminders
+        await pool.query(
+          `INSERT INTO main.sent_reminders (reminder_id, channel_id, message_id) VALUES ($1, $2, $3)`,
+          [reminder.reminder_id, reminderChannelId, sentMsg.id]
+        );
+        
+        // Clean up the reminder data after sending
         await deleteReminderData(BUMP_REMINDER_KEY);
         logger.debug("Deleted reminder data after sending rescheduled reminder.", { 
           reminder_id: reminder.reminder_id 
@@ -266,4 +321,4 @@ async function rescheduleReminder(client) {
  * });
  * ```
  */
-module.exports = { handleReminder, rescheduleReminder };
+module.exports = { handleReminder, rescheduleReminder, cleanupOldSentReminders };
