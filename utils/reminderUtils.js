@@ -108,7 +108,7 @@ async function handleReminder(message, delay) {
           const oldMsg = await channel.messages.fetch(rows[0].message_id);
           if (oldMsg) {
             await oldMsg.edit({
-              content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow!`
+              content: `${REMINDER_EMOJI}${REMINDER_MESSAGE}`
             });
             // Add cleanup after successful edit
             await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
@@ -134,7 +134,7 @@ async function handleReminder(message, delay) {
     // We schedule the final reminder message after the specified delay.
     setTimeout(async () => {
       try {
-        // Edit previous bump reminder message again before sending
+        // Edit previous bump reminder message before sending new one
         try {
           const { rows } = await pool.query(
             `SELECT message_id FROM main.sent_reminders WHERE channel_id = $1 ORDER BY sent_at DESC LIMIT 1`,
@@ -145,9 +145,8 @@ async function handleReminder(message, delay) {
               const oldMsg = await channel.messages.fetch(rows[0].message_id);
               if (oldMsg) {
                 await oldMsg.edit({
-                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow!`
+                  content: `${REMINDER_EMOJI}${REMINDER_MESSAGE}`
                 });
-                // Add cleanup after successful edit
                 await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
               }
             } catch (e) {}
@@ -262,7 +261,7 @@ async function rescheduleReminder(client) {
               const oldMsg = await channel.messages.fetch(rows[0].message_id);
               if (oldMsg) {
                 await oldMsg.edit({
-                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow!`
+                  content: `${REMINDER_EMOJI}${REMINDER_MESSAGE}`
                 });
                 await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
               }
