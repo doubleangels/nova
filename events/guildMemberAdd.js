@@ -71,6 +71,8 @@ module.exports = {
           requiredAge: trollModeAccountAge
         });
         try {
+          // Send DM to user before kicking
+          await member.send(`Your account needs to be older than ${trollModeAccountAge} days to join Da Frens. Your account is ${accountAgeDays} days old.`);
           await member.kick("Account is too new!");
           logger.info("Member kicked for troll mode:", { memberTag: member.user.tag });
         } catch (err) {

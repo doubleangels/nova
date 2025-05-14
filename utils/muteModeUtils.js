@@ -125,6 +125,13 @@ async function performKick(guild, memberId, username, kickType) {
       }
     }
     
+    // Send DM to user before kicking
+    try {
+      await member.send("You have been kicked from Da Frens because you did not send a message within the required time limit. You can rejoin the server and try again.");
+    } catch (dmError) {
+      logger.warn(`Failed to send DM to member '${username}' (ID: ${memberId}) before kick:`, { error: dmError.message });
+    }
+    
     await member.kick(KICK_REASON_TIMEOUT);
     await removeTrackedMember(memberId);
     logger.info(`Member '${username}' (ID: ${memberId}) kicked ${kickType === "immediate" ? "immediately" : "after scheduled delay"} due to mute timeout.`);
