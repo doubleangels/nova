@@ -194,7 +194,7 @@ module.exports = {
       // We build a comprehensive summary message with all relevant information.
       let summary = `📌 **Disboard Reminder Status:**\n\n`;
       summary += `📢 **Channel:** ${channelStr}\n`;
-      summary += `🎭 **Role:** ${roleStr}\n\n`;
+      summary += `🎭 **Role:** ${roleStr}\n`;
       summary += `⏳ **Next Reminder:** ${timeStr}`;
       
       // We add a warning if the configuration is incomplete to alert the admin.
