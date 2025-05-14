@@ -5,7 +5,7 @@ const { getValue, setReminderData, getReminderData, deleteReminderData } = requi
 const { Pool } = require('pg');
 const config = require('../config');
 
-// Setup a pool for direct SQL queries for sent_reminders
+// Setup a pool for direct SQL queries for reminder_recovery
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
@@ -15,13 +15,29 @@ const pool = new Pool({
 const BUMP_REMINDER_KEY = 'bump';
 const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
-const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again in 2 hours.";
+const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
 const REMINDER_MESSAGE = " Time to bump the server! Use /bump to help us grow!";
 
 // We define these configuration constants for consistent reminder behavior.
 const DEFAULT_REMINDER_INTERVAL = 30; // minutes
 const MAX_REMINDER_LENGTH = 1000; // characters
 const MAX_REMINDER_COUNT = 5; // per user
+
+/**
+ * Gets the latest reminder data
+ * @returns {Promise<Object|null>} The reminder data if found, otherwise null
+ */
+async function getLatestReminderData() {
+  try {
+    const result = await pool.query(
+      `SELECT reminder_id, remind_at FROM main.reminder_recovery ORDER BY remind_at DESC LIMIT 1`
+    );
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (err) {
+    logger.error("Error getting latest reminder data:", { error: err });
+    return null;
+  }
+}
 
 /**
  * Schedules a bump reminder and stores it in the database.
@@ -51,17 +67,10 @@ async function handleReminder(message, delay) {
     }
 
     const scheduledTime = dayjs().add(delay, 'millisecond');
+    const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
     // We generate a unique identifier for the reminder to track it in the database.
     const reminderId = randomUUID();
-
-    // We store the reminder data in the database for persistence across restarts.
-    await setReminderData(BUMP_REMINDER_KEY, scheduledTime.toISOString(), reminderId);
-    logger.debug("Inserted reminder data into database.", {
-      key: BUMP_REMINDER_KEY,
-      scheduled_time: scheduledTime.toISOString(),
-      reminder_id: reminderId
-    });
 
     // We attempt to retrieve the channel object using the cached channels or by fetching it.
     let channel;
@@ -79,34 +88,24 @@ async function handleReminder(message, delay) {
     }
 
     // We send an immediate confirmation message in the designated channel to acknowledge the bump.
-    const confirmMsg = await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE}`);
+    await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE.replace('%s', unixTimestamp)}`);
     logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
 
-    // Store the confirmation message in sent_reminders
+    // Store only reminder_id and remind_at
     await pool.query(
-      `INSERT INTO main.reminder_recovery (reminder_id, channel_id, message_id) VALUES ($1, $2, $3)`,
-      [reminderId, reminderChannelId, confirmMsg.id]
+      `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
+      [reminderId, scheduledTime.toISOString()]
     );
 
     // We schedule the final reminder message after the specified delay.
     setTimeout(async () => {
       try {
         // Send the new bump reminder
-        const sentMsg = await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
+        await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent scheduled bump reminder ping.", {
           role: reminderRole,
           channelId: reminderChannelId
         });
-        
-        // Store the new message in sent_reminders
-        await pool.query(
-          `INSERT INTO main.reminder_recovery (reminder_id, channel_id, message_id) VALUES ($1, $2, $3)`,
-          [reminderId, reminderChannelId, sentMsg.id]
-        );
-        
-        // Clean up the reminder data
-        await deleteReminderData(BUMP_REMINDER_KEY);
-        logger.debug("Deleted reminder data after sending reminder.", { reminder_id: reminderId });
       } catch (err) {
         logger.error("Error while sending scheduled bump reminder.", { 
           error: err.message,
@@ -126,22 +125,15 @@ async function handleReminder(message, delay) {
 /**
  * Reschedules stored bump reminders after a potential downtime or restart.
  *
- * We retrieve the stored reminder for the key "bump" from the database.
+ * We retrieve the stored reminder from the reminder_recovery table.
  * We then check the reminder's scheduled time using day.js and calculate the delay until it should be sent.
- * If the scheduled time has already passed, we remove the reminder from the database.
+ * If the scheduled time has already passed, we skip rescheduling.
  * Otherwise, we set up a timeout to send the reminder message at the appropriate time.
  *
  * @param {Client} client - The Discord client instance used to fetch channels.
  */
 async function rescheduleReminder(client) {
   try {
-    // We retrieve the stored reminder for the "bump" key from the database.
-    const reminder = await getReminderData(BUMP_REMINDER_KEY);
-    if (!reminder || reminder.length === 0) {
-      logger.debug("No stored bump reminders found for rescheduling.");
-      return;
-    }
-    
     // We retrieve the configuration values for the channel and role.
     const reminderChannelId = await getValue("reminder_channel");
     const reminderRole = await getValue("reminder_role");
@@ -153,6 +145,13 @@ async function rescheduleReminder(client) {
     
     if (!reminderRole) {
       logger.error("Configuration error: Missing reminder role value.");
+      return;
+    }
+
+    // Get the latest reminder data for this channel
+    const reminderData = await getLatestReminderData();
+    if (!reminderData) {
+      logger.debug("No stored bump reminders found for rescheduling.");
       return;
     }
     
@@ -171,7 +170,7 @@ async function rescheduleReminder(client) {
       return;
     }
     
-    const scheduledTime = dayjs(reminder.scheduled_time);
+    const scheduledTime = dayjs(reminderData.remind_at);
     const now = dayjs();
     const delay = scheduledTime.diff(now, 'millisecond');
     
@@ -181,10 +180,9 @@ async function rescheduleReminder(client) {
       delay 
     });
     
-    // If the scheduled time has passed, we remove the overdue reminder to prevent sending late notifications.
+    // If the scheduled time has passed, we skip rescheduling
     if (delay < 0) {
-      await deleteReminderData(BUMP_REMINDER_KEY);
-      logger.debug("Deleted overdue bump reminder.", { reminder_id: reminder.reminder_id });
+      logger.debug("Skipping overdue reminder.", { reminder_id: reminderData.reminder_id });
       return;
     }
     
@@ -192,20 +190,8 @@ async function rescheduleReminder(client) {
     setTimeout(async () => {
       try {
         // Send the new reminder message
-        const sentMsg = await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
-        logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminder.reminder_id });
-        
-        // Store the new message in sent_reminders
-        await pool.query(
-          `INSERT INTO main.reminder_recovery (reminder_id, channel_id, message_id) VALUES ($1, $2, $3)`,
-          [reminder.reminder_id, reminderChannelId, sentMsg.id]
-        );
-        
-        // Clean up the reminder data after sending
-        await deleteReminderData(BUMP_REMINDER_KEY);
-        logger.debug("Deleted reminder data after sending rescheduled reminder.", { 
-          reminder_id: reminder.reminder_id 
-        });
+        await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
+        logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminderData.reminder_id });
       } catch (err) {
         logger.error("Error while sending rescheduled bump reminder.", { 
           error: err.message,
@@ -215,7 +201,7 @@ async function rescheduleReminder(client) {
     }, delay);
     
     logger.debug("Successfully rescheduled bump reminder.", {
-      reminder_id: reminder.reminder_id,
+      reminder_id: reminderData.reminder_id,
       delayMs: delay,
       scheduledFor: new Date(Date.now() + delay).toISOString()
     });

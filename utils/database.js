@@ -188,80 +188,6 @@ async function getAllConfigs() {
 }
 
 /**
- * We retrieve reminder data from the 'reminders' table for a given key.
- * This function checks if a reminder exists and when it's scheduled.
- *
- * @param {string} key - The reminder key
- * @returns {Promise<Object|null>} The reminder data if found, otherwise null
- */
-async function getReminderData(key) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Getting reminder data for key "${key}".`);
-    const result = await client.query(
-      `SELECT scheduled_time, reminder_id FROM ${TABLES.REMINDERS} WHERE key = $1`,
-      [key]
-    );
-    const data = result.rows.length > 0 ? result.rows[0] : null;
-    logger.debug(`Reminder data for key "${key}": ${JSON.stringify(data)}`);
-    return data;
-  } catch (err) {
-    logger.error(`Error getting reminder data for key "${key}":`, { error: err });
-    return null;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * We set reminder data in the 'reminders' table for a given key.
- * This function schedules reminders with proper error handling.
- *
- * @param {string} key - The reminder key
- * @param {string} scheduled_time - The scheduled time as an ISO string
- * @param {string} reminder_id - A unique identifier for the reminder
- */
-async function setReminderData(key, scheduled_time, reminder_id) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Setting reminder data for key "${key}".`);
-    
-    // We use an upsert pattern for better performance and code simplicity.
-    await client.query(
-      `INSERT INTO ${TABLES.REMINDERS} (key, scheduled_time, reminder_id, inserted_at) 
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (key) 
-       DO UPDATE SET scheduled_time = $2, reminder_id = $3, inserted_at = NOW()`,
-      [key, scheduled_time, reminder_id]
-    );
-    logger.info(`Set reminder data for key "${key}" successfully.`);
-  } catch (err) {
-    logger.error(`Error setting reminder data for key "${key}":`, { error: err });
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * We delete reminder data from the 'reminders' table for a given key.
- * This function cleans up reminders that have been triggered or cancelled.
- *
- * @param {string} key - The reminder key
- */
-async function deleteReminderData(key) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Deleting reminder data for key "${key}".`);
-    await client.query(`DELETE FROM ${TABLES.REMINDERS} WHERE key = $1`, [key]);
-    logger.info(`Deleted reminder data for key "${key}".`);
-  } catch (err) {
-    logger.error(`Error deleting reminder data for key "${key}":`, { error: err });
-  } finally {
-    client.release();
-  }
-}
-
-/**
  * We track a new member by inserting or updating their information.
  * This function handles mute mode verification to ensure members send a message before a deadline.
  *
@@ -697,9 +623,6 @@ module.exports = {
   setValue,
   deleteValue,
   getAllConfigs,
-  getReminderData,
-  setReminderData,
-  deleteReminderData,
   trackNewMember,
   getTrackedMember,
   removeTrackedMember,

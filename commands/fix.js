@@ -3,7 +3,15 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
-const { setReminderData, getReminderData } = require('../utils/database');
+const { getValue } = require('../utils/database');
+const { Pool } = require('pg');
+const config = require('../config');
+
+// Setup a pool for direct SQL queries
+const pool = new Pool({
+  connectionString: config.neonConnectionString,
+  ssl: { rejectUnauthorized: true }
+});
 
 // We use these configuration constants for the Disboard bump reminder.
 const SERVICE_TYPE = 'bump';
@@ -44,23 +52,36 @@ module.exports = {
       // We defer the reply to allow processing time for database operations.
       await interaction.deferReply();
 
+      // Get the reminder channel ID
+      const reminderChannelId = await getValue('reminder_channel');
+      if (!reminderChannelId) {
+        await interaction.editReply("⚠️ No reminder channel configured. Please set up the reminder system first.");
+        return;
+      }
+
       // We check if there's already an active reminder in the database.
       const existingReminder = await this.checkExistingReminder();
+      
       // We generate unique reminder data with a random UUID and scheduled time.
       const reminderId = randomUUID();
-      const scheduledTime = dayjs().add(DELAY_SECONDS, 'second').toISOString();
-      const readableTime = dayjs(scheduledTime).format('YYYY-MM-DD HH:mm:ss');
+      const scheduledTime = dayjs().add(DELAY_SECONDS, 'second');
+      const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
+
+      // Get the channel and send a message
+      const channel = await interaction.client.channels.fetch(reminderChannelId);
+      const sentMsg = await channel.send(`⏰ Next bump reminder scheduled for: <t:${unixTimestamp}:R>`);
       
       // We save the reminder data to the database for future processing.
-      await this.saveReminderToDatabase(reminderId, scheduledTime);
+      await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
       // We prepare the response message with details about the scheduled reminder.
       let responseMessage = "✅ Disboard bump reminder successfully fixed!\n";
-      responseMessage += `⏰ Next bump reminder scheduled for: **${readableTime}**`;
+      responseMessage += `⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`;
       
       if (existingReminder) {
         responseMessage += "\n⚠️ Note: An existing reminder was overwritten.";
       }
+      
       // We inform the user that the fix logic was successfully applied.
       await interaction.editReply(responseMessage);
       
@@ -68,7 +89,7 @@ module.exports = {
         userId: interaction.user.id,
         guildId: interaction.guild.id,
         reminderId: reminderId,
-        scheduledTime: scheduledTime
+        scheduledTime: scheduledTime.toISOString()
       });
     } catch (error) {
       logger.error("Error in /fix command.", { 
@@ -91,13 +112,12 @@ module.exports = {
    */
   async checkExistingReminder() {
     try {
-      const existingData = await getReminderData(SERVICE_TYPE);
-      return !!existingData;
+      const result = await pool.query(
+        `SELECT COUNT(*) FROM main.reminder_recovery WHERE remind_at > NOW()`
+      );
+      return parseInt(result.rows[0].count) > 0;
     } catch (error) {
-      logger.warn("Error checking for existing reminder.", { 
-        error: error.message,
-        serviceType: SERVICE_TYPE
-      });
+      logger.warn("Error checking for existing reminder.", { error: error.message });
       return false;
     }
   },
@@ -110,19 +130,13 @@ module.exports = {
    */
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
-      await setReminderData(SERVICE_TYPE, scheduledTime, reminderId);
-      
-      logger.debug("Reminder data saved to database.", { 
-        reminderId: reminderId,
-        scheduledTime: scheduledTime,
-        serviceType: SERVICE_TYPE
-      });
+      await pool.query(
+        `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
+        [reminderId, scheduledTime]
+      );
+      logger.debug("Reminder data saved to database.", { reminderId: reminderId, scheduledTime: scheduledTime });
     } catch (error) {
-      logger.error("Database error while saving reminder.", {
-        error: error.message,
-        reminderId: reminderId,
-        serviceType: SERVICE_TYPE
-      });
+      logger.error("Database error while saving reminder.", { error: error.message, reminderId: reminderId });
       throw new Error("DATABASE_ERROR");
     }
   },
