@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Module for the /takerole command.
- * This command allows moderators to remove a specified role from a user for moderation purposes.
+ * We allow moderators to remove a specified role from a user for moderation purposes.
  */
 module.exports = {
   data: new SlashCommandBuilder()

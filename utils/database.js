@@ -5,8 +5,9 @@ const dayjs = require('dayjs');
 const config = require('../config');
 
 // We define these configuration constants for database connectivity and operations.
+// We set a 30-second timeout for queries to prevent hanging operations.
 const SCHEMA = 'main';
-const DEFAULT_QUERY_TIMEOUT = 30000; // We set a 30-second timeout for queries to prevent hanging operations.
+const DEFAULT_QUERY_TIMEOUT = 30000;
 const CONNECTION_OPTIONS = {
   connectionString: config.neonConnectionString,
   ssl: {
@@ -31,6 +32,10 @@ const TABLES = {
 /**
  * Initializes the database by performing a simple read/write test.
  * We ensure our database connection is working properly.
+ * We perform a simple read/write test using the config table.
+ * Write test.
+ * Read test.
+ * We parse the value if it exists to convert from JSON string to JavaScript object.
  */
 async function initializeDatabase() {
   const client = await pool.connect();
@@ -99,6 +104,7 @@ async function getValue(key) {
 /**
  * Sets a value in the 'config' table for a given key.
  * We use this to store configuration settings, inserting a new record or updating an existing one.
+ * We use an upsert pattern for efficiency instead of separate get and set operations.
  *
  * @param {string} key - The key to set.
  * @param {any} value - The value to store, which will be serialized to JSON.
@@ -193,6 +199,7 @@ async function getReminderData(key) {
 /**
  * Sets reminder data in the 'reminders' table for a given key.
  * We use this to schedule reminders, inserting a new record or updating an existing one.
+ * We use an upsert pattern for better performance and code simplicity.
  *
  * @param {string} key - The reminder key.
  * @param {string} scheduled_time - The scheduled time as an ISO string.
@@ -241,6 +248,8 @@ async function deleteReminderData(key) {
 /**
  * Tracks a new member by inserting or updating their information in the message_counts table.
  * We use this for mute mode verification to ensure members send a message before a deadline.
+ * We use the message_counts table and store the join time in the config table.
+ * Store the join time in the config table with a special key format.
  *
  * @param {string} memberId - The Discord member ID.
  * @param {string} username - The username of the member.
@@ -281,6 +290,7 @@ async function trackNewMember(memberId, username, joinTime) {
 /**
  * Retrieves tracking data for a specific member.
  * We use this to check if a member is being monitored in mute mode.
+ * Get the join time from config table.
  *
  * @param {string} memberId - The Discord member ID.
  * @returns {Promise<Object|null>} The tracking data if found, otherwise null.

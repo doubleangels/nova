@@ -22,6 +22,10 @@ const YOUTUBE_RELEVANCE_LIKES_WEIGHT = 0.001; // We use this factor for relevanc
 const cache = new Map();
 const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay within API limits.
 
+/**
+ * Module for the /youtube command.
+ * We search YouTube for videos, channels, or playlists.
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')

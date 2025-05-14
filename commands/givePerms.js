@@ -5,10 +5,10 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 
-// These are the configuration constants for the givePerms command.
+// We use these configuration constants for the givePerms command.
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
 const FREN_ROLE_ID = config.givePermsFrenRoleId;
-const MAX_ROLE_NAME_LENGTH = 100; // Discord enforces a maximum role name length of 100 characters.
+const MAX_ROLE_NAME_LENGTH = 100; // We enforce a maximum role name length of 100 characters.
 
 // We validate that the required configuration values are present.
 if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
@@ -20,8 +20,8 @@ if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
 
 /**
  * Module for the /giveperms command.
- * This command creates a custom role with specified name and color for a user,
- * and assigns them both this role and a predefined "fren" role.
+ * We create a custom role with specified name and color for a user,
+ * and assign them both this role and a predefined "fren" role.
  */
 module.exports = {
     data: new SlashCommandBuilder()

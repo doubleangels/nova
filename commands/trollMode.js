@@ -3,12 +3,17 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 
-// These are the configuration constants for the troll mode feature.
+// We use these configuration constants for the troll mode feature.
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
 const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
 const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
 const MIN_ACCOUNT_AGE = 1;
 const MAX_ACCOUNT_AGE = 365; // We set a maximum of 1 year to prevent unreasonable values.
+
+/**
+ * Module for the /trollmode command.
+ * We manage auto-kicking of accounts younger than a specified age.
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('trollmode')

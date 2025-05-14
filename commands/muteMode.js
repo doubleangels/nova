@@ -3,16 +3,16 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 
-// These are the configuration constants for the mute mode feature.
-const DEFAULT_TIME_LIMIT = 2; // Default time limit is 2 hours before kicking inactive users.
-const MIN_TIME_LIMIT = 1; // Minimum allowed time limit is 1 hour to prevent abuse.
-const MAX_TIME_LIMIT = 72; // Maximum allowed time limit is 72 hours (3 days) for reasonable bounds.
+// We use these configuration constants for the mute mode feature.
+const DEFAULT_TIME_LIMIT = 2; // We set a default time limit of 2 hours before kicking inactive users.
+const MIN_TIME_LIMIT = 1; // We set a minimum time limit of 1 hour to prevent abuse.
+const MAX_TIME_LIMIT = 72; // We set a maximum time limit of 72 hours (3 days) for reasonable bounds.
 const DB_KEY_ENABLED = "mute_mode_enabled";
 const DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
 
 /**
  * Module for the /mutemode command.
- * This command toggles auto-kicking of users who don't send a message within a specified time limit.
+ * We toggle auto-kicking of users who don't send a message within a specified time limit.
  * Only users with Administrator permissions can execute this command.
  */
 module.exports = {

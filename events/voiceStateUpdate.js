@@ -17,7 +17,7 @@ const voiceJoinTimes = new Map();
 
 /**
  * Loads voice join times from the recovery table on bot startup.
- * This ensures we don't lose track of users who were in voice when the bot restarted.
+ * We ensure we don't lose track of users who were in voice when the bot restarted.
  */
 async function loadVoiceJoinTimes() {
   try {
@@ -42,7 +42,7 @@ async function loadVoiceJoinTimes() {
 
 /**
  * Saves voice join times to the recovery table.
- * This ensures we can recover the state if the bot restarts.
+ * We ensure we can recover the state if the bot restarts.
  */
 async function saveVoiceJoinTimes() {
   try {

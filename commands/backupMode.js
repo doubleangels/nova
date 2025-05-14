@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
-// These are the configuration constants used for database keys.
+// We use these configuration constants for database keys.
 const CONFIG_KEYS = {
   CHANNEL: "backup_mode_channel",
   ROLE: "backup_mode_role",
@@ -12,7 +12,7 @@ const CONFIG_KEYS = {
 
 /**
  * Module for the /backupmode command.
- * This command configures and toggles backup mode for new members by setting:
+ * We configure and toggle backup mode for new members by setting:
  * - The channel to send welcome messages.
  * - The role to assign to new members.
  * - The auto-role assignment status.

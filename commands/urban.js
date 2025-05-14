@@ -79,7 +79,7 @@ module.exports = {
   },
   
   /**
-   * Checks if the channel is marked as NSFW for content safety.
+   * We check if the channel is marked as NSFW for content safety.
    * 
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {boolean} True if the channel is NSFW or a DM, false otherwise.
@@ -88,7 +88,7 @@ module.exports = {
     // We consider DMs as "safe" for this purpose since they're private.
     if (!interaction.guild) return true;
     
-    // For guild channels, we check the nsfw flag to ensure appropriate content sharing.
+    // We check the nsfw flag to ensure appropriate content sharing.
     return interaction.channel?.nsfw === true;
   },
   

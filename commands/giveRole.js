@@ -5,7 +5,7 @@ const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Module for the /giverole command.
- * This command assigns a specified role to a specified user in the server.
+ * We assign a specified role to a specified user in the server.
  */
 module.exports = {
     data: new SlashCommandBuilder()

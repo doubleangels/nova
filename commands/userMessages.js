@@ -16,6 +16,10 @@ const TIME_INDICATOR = '⏰';
 const NO_CONTENT_TEXT = '[No text content]';
 const MESSAGE_FETCH_BATCH_SIZE = 100; // We fetch messages in batches of 100 for efficiency.
 
+/**
+ * Module for the /usermessages command.
+ * We list the last messages from a specific user in a specified channel.
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')

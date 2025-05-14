@@ -5,6 +5,11 @@ const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 
+/**
+ * Module for the /timezone command.
+ * We manage timezone settings for auto-timezone features.
+ */
+
 module.exports = {
   // This defines the slash command structure using Discord.js builder.
   data: new SlashCommandBuilder()

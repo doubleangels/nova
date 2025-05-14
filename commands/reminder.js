@@ -6,14 +6,14 @@ const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/database');
 
-// These are the configuration constants for the reminder system.
+// We use these configuration constants for the reminder system.
 const REMINDER_TYPE = 'bump';
 const DB_KEY_CHANNEL = 'reminder_channel';
 const DB_KEY_ROLE = 'reminder_role';
 
 /**
  * Module for the /reminder command.
- * This command allows administrators to setup and check bump reminder settings for server management.
+ * We allow administrators to setup and check bump reminder settings for server management.
  */
 module.exports = {
   data: new SlashCommandBuilder()

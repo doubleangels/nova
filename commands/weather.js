@@ -41,7 +41,7 @@ const WEATHER_UNIT_PRESSURE_INHG = 'inHg';
 const WEATHER_UNIT_PRECIP_MM = 'mm/hr';
 const WEATHER_UNIT_PRECIP_IN = 'in/hr';
 
-// These are the weather condition icons for different weather states.
+// We use these weather condition icons for different weather states.
 const WEATHER_ICONS = {
   'clear-day': '☀️',
   'clear-night': '🌙',
@@ -58,6 +58,10 @@ const WEATHER_ICONS = {
   'default': '🌤️'
 };
 
+/**
+ * Module for the /weather command.
+ * We get weather information for a location.
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('weather')

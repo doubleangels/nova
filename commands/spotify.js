@@ -4,11 +4,15 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
-// Configuration constants for Spotify integration
+// We use these configuration constants for Spotify integration.
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
-const SPOTIFY_EMBED_COLOR = 0x1DB954; // Spotify's brand color
-const REQUEST_TIMEOUT = 10000; // 10 second timeout for API requests
+const SPOTIFY_EMBED_COLOR = 0x1DB954; // We use Spotify's brand color.
+const REQUEST_TIMEOUT = 10000; // We set a 10 second timeout for API requests.
 
+/**
+ * Module for the /spotify command.
+ * We search for music on Spotify.
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('spotify')

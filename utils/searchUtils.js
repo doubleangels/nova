@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 
 /**
  * Creates a paginated collector for search results.
- * We use this to display search results with navigation buttons for better user experience.
+ * This function is used to display search results with navigation buttons for better user experience.
  * 
  * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
  * @param {Array} items - The search result items.
@@ -38,7 +38,7 @@ async function createPaginatedResults(
 
   /**
    * Creates arrow buttons for navigation based on the current index.
-   * We disable buttons when at the first or last page to prevent invalid navigation.
+   * Buttons are disabled when at the first or last page to prevent invalid navigation.
    * 
    * @param {number} index - The current page index.
    * @returns {ActionRowBuilder} A row of navigation buttons.
@@ -159,7 +159,7 @@ async function createPaginatedResults(
 
 /**
  * Validates and normalizes search parameters.
- * We ensure the query is valid and the results count is within acceptable bounds.
+ * This function ensures the query is valid and the results count is within acceptable bounds.
  * 
  * @param {string} query - The search query.
  * @param {number} resultsCount - The requested number of results.
@@ -186,7 +186,7 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
 
 /**
  * Formats an error message from the Google API response.
- * We extract relevant information to provide a clear error message to users.
+ * This function extracts relevant information to provide a clear error message to users.
  * 
  * @param {Error} apiError - The API error.
  * @returns {string} Formatted error message.

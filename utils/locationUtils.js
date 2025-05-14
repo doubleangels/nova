@@ -6,10 +6,25 @@ const { DateTime } = require('luxon');
 const dayjs = require('dayjs');
 
 // We define these API configuration constants for consistent interaction with Google's services.
+// We set a 5-second timeout for API requests to prevent hanging operations.
+// We use this to prevent sensitive information from appearing in log files.
+// We check this before attempting operations that require valid timezone data.
+// We use this to convert human-readable locations to coordinates.
+// We build the Geocoding API URL with the necessary parameters.
+// We fetch geocoding data using axios with a timeout to prevent long-running requests.
+// We handle timeout errors specifically to provide better feedback.
+// We validate location input to prevent API errors.
+// We build the Timezone API URL with the necessary parameters.
+// We fetch timezone data using axios with a timeout for reliability.
+// We handle timeout errors specifically for better user feedback.
+// We first get the geocoding data to convert the place name to coordinates.
+// We then get the timezone data for those coordinates.
+// We convert seconds to hours for a more user-friendly format.
+// We get the geocoding data for the place and extract just the coordinates.
 const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
 const API_STATUS_SUCCESS = 'OK';
-const API_TIMEOUT_MS = 5000; // We set a 5-second timeout for API requests to prevent hanging operations.
+const API_TIMEOUT_MS = 5000;
 const SECONDS_PER_HOUR = 3600;
 
 /**

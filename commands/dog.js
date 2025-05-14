@@ -3,14 +3,14 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-// These are the configuration constants for the dog command.
+// We use these configuration constants for the dog command.
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
 const EMBED_COLOR = 0xD3D3D3;
 const IMAGE_FILENAME = "dog.jpg";
 
 /**
  * Module for the /dog command.
- * This command fetches a random dog image from the Dog CEO API and sends it as an embed.
+ * We fetch a random dog image from the Dog CEO API and send it as an embed.
  */
 module.exports = {
   data: new SlashCommandBuilder()

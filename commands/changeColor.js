@@ -6,7 +6,7 @@ const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils
 
 /**
  * Module for the /changecolor command.
- * This command changes the color of a specified role to the provided hex color.
+ * We change the color of a specified role to the provided hex color.
  */
 module.exports = {
     data: new SlashCommandBuilder()

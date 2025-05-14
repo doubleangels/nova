@@ -5,7 +5,10 @@ const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
 /**
  * Validates and normalizes a hex color code.
  * We check if the provided string is a valid hex color and standardize its format.
- * 
+ * If it's just RRGGBB without #, we add the # prefix for consistency.
+ * If it already has the correct format with #, we use it as is.
+ * If it doesn't match either format, we consider it invalid.
+ *
  * @param {string} colorHex - The color hex code to validate.
  * @param {object} logger - Optional logger instance for debug information.
  * @returns {Object} An object with success status and normalized color.
@@ -35,7 +38,8 @@ function validateAndNormalizeColor(colorHex, logger = null) {
 /**
  * Converts a hex color to a decimal value for Discord's color system.
  * We transform the hex string to the numeric format that Discord's API expects.
- * 
+ * We remove # if present before converting to a decimal number.
+ *
  * @param {string} hexColor - The hex color code (with or without #).
  * @returns {number} The decimal color value.
  */

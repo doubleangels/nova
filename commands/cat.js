@@ -3,14 +3,14 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-// These are the configuration constants for the cat API.
+// We use these configuration constants for the cat API.
 const CAT_API_URL = 'https://cataas.com/cat/cute';
 const CAT_EMBED_COLOR = 0xD3D3D3;
 const DEFAULT_FILENAME = 'cat.jpg';
 
 /**
  * Module for the /cat command.
- * This command fetches a random cat image from the Cataas API and sends it as an embed.
+ * We fetch a random cat image from the Cataas API and send it as an embed.
  */
 module.exports = {
   data: new SlashCommandBuilder()
