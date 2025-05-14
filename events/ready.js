@@ -125,7 +125,7 @@ module.exports = {
         logger.debug("Mute kick rescheduling skipped (disabled in config).");
       }
 
-      // We load voice join times from the database
+      // We load voice join times from the database to maintain voice tracking across restarts.
       try {
         logger.info("Loading voice join times...");
         await loadVoiceJoinTimes();

@@ -26,7 +26,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,     // We need this to access guild member information.
     GatewayIntentBits.GuildPresences,   // We need this to track member presence (online/offline).
     GatewayIntentBits.GuildMessageReactions, // We need this to receive reaction events.
-    GatewayIntentBits.GuildVoiceStates, // Ensure this intent is included
+    GatewayIntentBits.GuildVoiceStates, // We need this to track voice channel activity.
   ],
   partials: [
     Partials.Message,    // We include this to handle reactions on uncached messages.
@@ -53,7 +53,7 @@ if (hasDisabledCommands) {
 let loadedCount = 0;
 let skippedCount = 0;
 
-// We process each command file to register it with the bot.
+// We process each command file to register its handlers with the client.
 for (const file of commandFiles) {
   const commandName = file.replace(COMMAND_EXTENSION, ''); 
   
@@ -67,13 +67,18 @@ for (const file of commandFiles) {
   try {
     const filePath = path.join(commandsPath, file);
     const command = require(filePath);
-    client.commands.set(command.data.name, command);
-    logger.info("Loaded command:", { command: command.data.name });
-    loadedCount++;
+    
+    if ('data' in command && 'execute' in command) {
+      client.commands.set(command.data.name, command);
+      logger.info("Loaded command:", { command: command.data.name });
+      loadedCount++;
+    } else {
+      logger.warn(`Command at ${filePath} is missing required properties.`);
+    }
   } catch (error) {
-    logger.error(`Failed to load command ${commandName}:`, { error });
+    logger.error(`Failed to load command from ${file}:`, { error });
     Sentry.captureException(error, {
-      extra: { context: 'command_loading_failure', commandName }
+      extra: { context: 'command_loading_failure', commandFile: file }
     });
   }
 }
@@ -124,17 +129,18 @@ client.once('ready', async () => {
     Sentry.captureException(error, {
       extra: { context: 'database_initialization_failure' }
     });
-    // We exit if database initialization fails since it's critical
+    // We exit if database initialization fails since it's critical.
     process.exit(1);
   }
 });
 
-// We log the bot in using the token from the config file.
-client.login(config.token).catch(err => {
-  Sentry.captureException(err, {
-    extra: { context: 'bot_login_failure' }
+// We log in to Discord with the bot's token.
+client.login(config.token).catch(error => {
+  logger.error("Failed to log in:", { error });
+  Sentry.captureException(error, {
+    extra: { context: 'login_failure' }
   });
-  logger.error("Error logging in:", { error: err });
+  process.exit(1);
 });
 
 // We add global unhandled error handlers to prevent the bot from crashing silently.
