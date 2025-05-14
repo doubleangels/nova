@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { removeMuteMember } = require('../utils/database');
+const { removeTrackedMember } = require('../utils/database');
 const Sentry = require('../sentry');
 
 /**
@@ -19,7 +19,7 @@ module.exports = {
       });
 
       // We remove any mute tracking data for the member
-      const wasRemoved = await removeMuteMember(member.id);
+      const wasRemoved = await removeTrackedMember(member.id);
       
       if (wasRemoved) {
         logger.info("Removed mute tracking data for member:", { 

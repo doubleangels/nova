@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, getAllMuteMembers, removeMuteMember, getMuteMember } = require('../utils/database');
+const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
 const Sentry = require('../sentry');
 
 /**
@@ -34,8 +34,8 @@ async function scheduleMuteKick(memberId, username, joinTime, kickTimeHours, gui
     setTimeout(async () => {
       try {
         // We check if the member is still being tracked
-        const muted = await getMuteMember(memberId);
-        if (!muted) {
+        const tracked = await getTrackedMember(memberId);
+        if (!tracked) {
           logger.debug("Member is no longer being tracked; skipping kick:", {
             memberId,
             username
@@ -55,7 +55,7 @@ async function scheduleMuteKick(memberId, username, joinTime, kickTimeHours, gui
         });
 
         // We remove the tracking data
-        await removeMuteMember(memberId);
+        await removeTrackedMember(memberId);
       } catch (error) {
         logger.error("Error in mute kick timeout:", {
           memberId,
@@ -94,17 +94,17 @@ async function scheduleMuteKick(memberId, username, joinTime, kickTimeHours, gui
 }
 
 /**
- * Checks all muted members and kicks those who haven't verified.
+ * Reschedules mute kicks for all tracked members.
  * We use this after bot restarts to ensure no members are missed.
  * 
  * @param {Client} client - The Discord client.
  */
-async function checkMutedMembers(client) {
+async function rescheduleAllMuteKicks(client) {
   try {
     logger.info("Checking all muted members...");
-    const muteMembers = await getAllMuteMembers();
+    const trackedMembers = await getAllTrackedMembers();
     
-    for (const member of muteMembers) {
+    for (const member of trackedMembers) {
       try {
         const guild = await client.guilds.fetch(member.guildId);
         const discordMember = await guild.members.fetch(member.member_id);
@@ -119,7 +119,7 @@ async function checkMutedMembers(client) {
         }
         
         // We remove the tracking data
-        await removeMuteMember(member.member_id);
+        await removeTrackedMember(member.member_id);
       } catch (error) {
         logger.error("Error processing muted member:", {
           memberId: member.member_id,
@@ -134,7 +134,7 @@ async function checkMutedMembers(client) {
     logger.error("Error checking muted members:", { error });
     Sentry.captureException(error, {
       extra: {
-        function: 'checkMutedMembers'
+        function: 'rescheduleAllMuteKicks'
       }
     });
   }
@@ -142,5 +142,5 @@ async function checkMutedMembers(client) {
 
 module.exports = {
   scheduleMuteKick,
-  checkMutedMembers
+  rescheduleAllMuteKicks
 };

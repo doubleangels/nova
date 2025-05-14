@@ -2,7 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
-const { getValue, trackMuteMember } = require('../utils/database');
+const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const Sentry = require('../sentry');
 
@@ -48,7 +48,7 @@ module.exports = {
 
       // We record the join time for mute mode verification.
       const joinTime = new Date().toISOString();
-      await trackMuteMember(member.id, member.user.tag, joinTime);
+      await trackNewMember(member.id, member.user.tag, joinTime);
       
       logger.info("Started mute tracking for new member:", { 
         memberId: member.id,
