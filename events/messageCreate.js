@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getTrackedMember, removeTrackedMember, incrementMessageCount } = require('../utils/database');
+const { getMuteMember, removeMuteMember, incrementMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
@@ -68,9 +68,9 @@ async function processUserMessage(message) {
   }
   try {
     // We check if the message author is being tracked for mute mode verification.
-    const tracked = await getTrackedMember(message.author.id);
-    if (tracked) {
-      await removeTrackedMember(message.author.id);
+    const muted = await getMuteMember(message.author.id);
+    if (muted) {
+      await removeMuteMember(message.author.id);
       logger.debug("User removed from mute tracking:", { user: message.author.tag });
     }
     
