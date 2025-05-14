@@ -4,7 +4,9 @@
   "description": "Dockerized multi-purpose bot for Discord servers.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate": "node scripts/run-migration.js",
+    "start": "npm run migrate && node index.js"
   },
   "repository": {
     "type": "git",

@@ -195,6 +195,98 @@ async function rescheduleReminder(client) {
 }
 
 /**
+ * Handles checking and triggering reminders.
+ * We check for due reminders every minute and send notifications.
+ */
+async function checkReminders(client) {
+  try {
+    // Get all reminders that are due
+    const now = dayjs();
+    const result = await client.query(
+      `SELECT * FROM main.reminders 
+       WHERE scheduled_time <= $1`,
+      [now.toISOString()]
+    );
+
+    for (const reminder of result.rows) {
+      try {
+        // Get the channel for this reminder
+        const channel = await client.channels.fetch(reminder.channel_id);
+        if (!channel) {
+          logger.error(`Could not find channel ${reminder.channel_id} for reminder ${reminder.key}`);
+          continue;
+        }
+
+        // Handle different types of reminders
+        switch (reminder.reminder_type) {
+          case 'bump':
+            await handleBumpReminder(channel, reminder);
+            break;
+          case 'custom':
+            await handleCustomReminder(channel, reminder);
+            break;
+          default:
+            logger.warn(`Unknown reminder type: ${reminder.reminder_type}`);
+        }
+
+        // Delete the reminder after handling
+        await deleteReminderData(reminder.key);
+      } catch (err) {
+        logger.error(`Error handling reminder ${reminder.key}:`, { error: err });
+      }
+    }
+  } catch (err) {
+    logger.error('Error checking reminders:', { error: err });
+  }
+}
+
+/**
+ * Handles a bump reminder by sending a notification to the channel.
+ * @param {TextChannel} channel - The channel to send the notification to.
+ * @param {Object} reminder - The reminder data.
+ */
+async function handleBumpReminder(channel, reminder) {
+  // Get the bump role
+  const reminderRoleId = await getValue('reminder_role');
+  if (!reminderRoleId) {
+    logger.error('Bump role not configured');
+    return;
+  }
+
+  const role = channel.guild.roles.cache.get(reminderRoleId);
+  if (!role) {
+    logger.error(`Could not find bump role with ID ${reminderRoleId}`);
+    return;
+  }
+
+  await channel.send({
+    content: `${role} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+  });
+}
+
+/**
+ * Handles a custom reminder by sending the user's message to the channel.
+ * @param {TextChannel} channel - The channel to send the notification to.
+ * @param {Object} reminder - The reminder data.
+ */
+async function handleCustomReminder(channel, reminder) {
+  if (!reminder.message) {
+    logger.warn(`Custom reminder ${reminder.key} has no message`);
+    return;
+  }
+
+  const user = await channel.client.users.fetch(reminder.user_id);
+  if (!user) {
+    logger.warn(`Could not find user ${reminder.user_id} for reminder ${reminder.key}`);
+    return;
+  }
+
+  await channel.send({
+    content: `🔔 Reminder for ${user}: ${reminder.message}`
+  });
+}
+
+/**
  * Note on Discord message visibility:
  * When implementing commands that use these reminder utilities, we should follow these guidelines:
  * 1. Confirmation messages and reminders should be public (visible to everyone) since they provide
@@ -214,4 +306,4 @@ async function rescheduleReminder(client) {
  * });
  * ```
  */
-module.exports = { handleReminder, rescheduleReminder };
+module.exports = { handleReminder, rescheduleReminder, checkReminders };

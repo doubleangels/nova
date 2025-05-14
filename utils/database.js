@@ -197,19 +197,40 @@ async function getReminderData(key) {
  * @param {string} key - The reminder key.
  * @param {string} scheduled_time - The scheduled time as an ISO string.
  * @param {string} reminder_id - A unique identifier for the reminder.
+ * @param {Object} metadata - Additional reminder metadata (message, userId, username, etc.)
  */
-async function setReminderData(key, scheduled_time, reminder_id) {
+async function setReminderData(key, scheduled_time, reminder_id, metadata = {}) {
   const client = await pool.connect();
   try {
     logger.debug(`Setting reminder data for key "${key}".`);
     
     // We use an upsert pattern for better performance and code simplicity.
     await client.query(
-      `INSERT INTO ${TABLES.REMINDERS} (key, scheduled_time, reminder_id, inserted_at) 
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (key) 
-       DO UPDATE SET scheduled_time = $2, reminder_id = $3, inserted_at = NOW()`,
-      [key, scheduled_time, reminder_id]
+      `INSERT INTO ${TABLES.REMINDERS} (
+        key, scheduled_time, reminder_id, inserted_at,
+        reminder_type, message, user_id, username, channel_id
+      ) 
+      VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7, $8)
+      ON CONFLICT (key) 
+      DO UPDATE SET 
+        scheduled_time = $2, 
+        reminder_id = $3, 
+        inserted_at = NOW(),
+        reminder_type = $4,
+        message = $5,
+        user_id = $6,
+        username = $7,
+        channel_id = $8`,
+      [
+        key,
+        scheduled_time,
+        reminder_id,
+        metadata.type || 'bump',
+        metadata.message || null,
+        metadata.userId || null,
+        metadata.username || null,
+        metadata.channelId || null
+      ]
     );
     logger.info(`Set reminder data for key "${key}" successfully.`);
   } catch (err) {
@@ -607,6 +628,42 @@ async function getUserVoiceTime(memberId) {
   }
 }
 
+/**
+ * Gets all reminders for a specific user.
+ * We use this to list a user's active reminders.
+ *
+ * @param {string} userId - The Discord user ID.
+ * @returns {Promise<Array>} Array of reminder objects.
+ */
+async function getUserReminders(userId) {
+  const client = await pool.connect();
+  try {
+    logger.debug(`Getting reminders for user "${userId}".`);
+    
+    const result = await client.query(
+      `SELECT key, scheduled_time, reminder_id, message, username
+       FROM ${TABLES.REMINDERS}
+       WHERE user_id = $1
+       ORDER BY scheduled_time ASC`,
+      [userId]
+    );
+    
+    // Extract reminder name from key (format: custom_userId_name)
+    const reminders = result.rows.map(row => ({
+      ...row,
+      name: row.key.split('_').slice(2).join('_') // Get everything after userId_
+    }));
+    
+    logger.debug(`Found ${reminders.length} reminders for user "${userId}".`);
+    return reminders;
+  } catch (err) {
+    logger.error(`Error getting reminders for user "${userId}":`, { error: err });
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -626,5 +683,6 @@ module.exports = {
   getTopMessageSenders,
   updateVoiceTime,
   getTopVoiceUsers,
-  getUserVoiceTime
+  getUserVoiceTime,
+  getUserReminders
 };

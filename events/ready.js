@@ -1,8 +1,8 @@
-const { ActivityType } = require('discord.js');
+const { ActivityType, Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
-const { rescheduleReminder } = require('../utils/reminderUtils');
+const { rescheduleReminder, checkReminders } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const Sentry = require('../sentry');
@@ -59,7 +59,7 @@ async function performSetupTask(taskName, task, startMessage, successMessage) {
  * @param {Client} client - The Discord client instance.
  */
 module.exports = {
-  name: 'ready',
+  name: Events.ClientReady,
   once: true,
   async execute(client) {
     try {
@@ -148,6 +148,13 @@ module.exports = {
       } else {
         logger.warn(`Bot is ready but only ${successCount}/${totalTasks} setup tasks completed successfully.`, { setupResults });
       }
+
+      // Start checking for reminders every minute
+      setInterval(() => {
+        checkReminders(client).catch(err => {
+          logger.error('Error in reminder check interval:', { error: err });
+        });
+      }, 60000); // Check every minute
     } catch (error) {
       // We capture any unexpected errors in the main execute function with Sentry.
       Sentry.captureException(error, {
