@@ -10,7 +10,10 @@ const Sentry = require('../sentry');
  */
 const pool = new Pool({
   connectionString: config.database.url,
-  ssl: config.database.ssl ? { rejectUnauthorized: false } : false
+  ssl: config.database.ssl ? { rejectUnauthorized: false } : false,
+  max: 20, // We limit the maximum number of clients to prevent resource exhaustion.
+  idleTimeoutMillis: 30000, // We close idle clients after 30 seconds to free up resources.
+  connectionTimeoutMillis: 2000 // We return an error after 2 seconds if connection could not be established.
 });
 
 /**
@@ -19,16 +22,21 @@ const pool = new Pool({
  */
 async function initializeDatabase() {
   try {
-    // We create the recovery table to track voice channel join times.
+    // We create the recovery table to track voice channel join times and reminders.
     await pool.query(`
       CREATE TABLE IF NOT EXISTS recovery (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id TEXT NOT NULL,
-        guild_id TEXT NOT NULL,
-        joined_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        user_id TEXT,
+        guild_id TEXT,
+        channel_id TEXT,
+        joined_at TIMESTAMP WITH TIME ZONE,
         left_at TIMESTAMP WITH TIME ZONE,
         duration BIGINT,
-        UNIQUE(user_id, guild_id, joined_at)
+        scheduled_time TIMESTAMP WITH TIME ZONE,
+        status TEXT DEFAULT 'pending',
+        type TEXT NOT NULL,
+        UNIQUE(user_id, guild_id, joined_at),
+        UNIQUE(channel_id, scheduled_time)
       )
     `);
     
