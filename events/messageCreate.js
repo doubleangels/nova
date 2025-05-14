@@ -39,8 +39,18 @@ module.exports = {
         }
       }
 
+      // Log all bot messages for debugging
+      if (message.author.bot) {
+        logger.debug("Received bot message:", {
+          botName: message.author.tag,
+          content: message.content?.substring(0, 100),
+          hasEmbeds: !!message.embeds,
+          embedCount: message.embeds?.length
+        });
+      }
+
       // We skip processing for bot messages except Disboard's bump messages.
-      if (message.author.bot && !message.author.username.includes('Disboard')) return;
+      if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
       // We check for rate limiting and spam.
       if (await this.isRateLimited(message) || await this.isSpam(message)) {
@@ -248,18 +258,35 @@ async function processTimeReferences(message) {
  * @param {Message} message - The Discord message object.
  */
 async function checkForBumpMessages(message) {
-  if (!message.embeds || message.embeds.length === 0) return;
+  logger.debug("Checking message for bump:", {
+    author: message.author?.tag,
+    hasEmbeds: !!message.embeds,
+    embedCount: message.embeds?.length,
+    content: message.content?.substring(0, 100)
+  });
+
+  if (!message.embeds || message.embeds.length === 0) {
+    logger.debug("No embeds found in message");
+    return;
+  }
   
   try {
     // We look for embeds containing the "Bump done!" text that indicates a successful bump.
-    const bumpEmbed = message.embeds.find(embed =>
-      embed.description && embed.description.includes("Bump done!")
-    );
+    const bumpEmbed = message.embeds.find(embed => {
+      logger.debug("Checking embed:", {
+        description: embed.description?.substring(0, 100),
+        hasDescription: !!embed.description
+      });
+      return embed.description && embed.description.includes("Bump done!");
+    });
     
     if (bumpEmbed) {
+      logger.info("Bump detected, scheduling reminder");
       // We schedule a 2-hour reminder since that's when the next bump can be done.
       await handleReminder(message, 7200000); // 2 hours = 7200000 milliseconds
       logger.debug("Bump reminder scheduled for 2 hours.");
+    } else {
+      logger.debug("No bump embed found in message");
     }
   } catch (error) {
     // Add Sentry error tracking
@@ -269,6 +296,10 @@ async function checkForBumpMessages(message) {
         messageId: message.id
       }
     });
-    logger.error("Failed to process bump message:", { error });
+    logger.error("Failed to process bump message:", { 
+      error,
+      messageId: message.id,
+      author: message.author?.tag
+    });
   }
 }
