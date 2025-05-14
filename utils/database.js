@@ -56,13 +56,6 @@ async function initializeDatabase() {
     
     if (result.rows.length > 0 && JSON.parse(result.rows[0].value) === testValue) {
       logger.info("Database connection test successful.");
-      
-      // Clean up the test record
-      await client.query(
-        `DELETE FROM ${TABLES.CONFIG} WHERE id = $1`,
-        [testKey]
-      );
-      logger.debug("Cleaned up test record from database.");
     } else {
       throw new Error("Database read/write test failed");
     }
@@ -382,3 +375,256 @@ async function getAllTrackedMembers() {
     // Get all message counts
     const messageResult = await client.query(
       `SELECT member_id, username, message_count FROM ${TABLES.MESSAGE_COUNTS}`
+    );
+
+    // Combine the data
+    const trackedMembers = joinTimesResult.rows.map(row => {
+      const memberId = row.id.replace('mute_join_', '');
+      const messageData = messageResult.rows.find(m => m.member_id === memberId);
+      return {
+        member_id: memberId,
+        username: messageData?.username || 'Unknown',
+        join_time: JSON.parse(row.value),
+        message_count: messageData?.message_count || 0
+      };
+    });
+
+    logger.info(`Retrieved ${trackedMembers.length} tracked member(s).`);
+    return trackedMembers;
+  } catch (err) {
+    logger.error("Error retrieving all tracked members:", { error: err });
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Sets or updates the timezone for a given Discord member ID.
+ * We use this to store user timezone preferences for time conversion features.
+ *
+ * @param {string} memberId - The Discord member ID (passed as a string).
+ * @param {string} timezone - The timezone string (e.g., 'America/New_York').
+ */
+async function setUserTimezone(memberId, timezone) {
+  const client = await pool.connect();
+  try {
+    // We validate the timezone to ensure it's a non-empty string.
+    if (typeof timezone !== 'string' || timezone.trim() === '') {
+        throw new Error(`Invalid timezone provided: ${timezone}`);
+    }
+    // We validate the memberId to ensure it's a string representing a large integer.
+    if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
+        throw new Error(`Invalid memberId provided (must be a string representing an integer): ${memberId}`);
+    }
+
+    logger.debug(`Setting timezone for member ID "${memberId}" to "${timezone}".`);
+
+    // We use an explicit cast to bigint since member_id column is BIGINT and timezone is TEXT.
+    const query = `
+      INSERT INTO ${TABLES.TIMEZONES} (member_id, timezone)
+      VALUES ($1::bigint, $2) -- Explicit cast of $1 to bigint
+      ON CONFLICT (member_id)
+      DO UPDATE SET timezone = $2;
+    `;
+    // We pass memberId as a string; the pg driver handles conversion correctly with the cast.
+    await client.query(query, [memberId, timezone.trim()]);
+
+    logger.info(`Successfully set timezone for member ID "${memberId}".`);
+  } catch (err) {
+    logger.error(`Error setting timezone for member ID "${memberId}":`, { error: err });
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Retrieves the timezone for a given Discord member ID.
+ * We use this to get a user's preferred timezone for time conversion features.
+ *
+ * @param {string} memberId - The Discord member ID (passed as a string).
+ * @returns {Promise<string|null>} The timezone string if found, otherwise null.
+ */
+async function getUserTimezone(memberId) {
+  const client = await pool.connect();
+  try {
+    // We validate the memberId to ensure it's a string representing a large integer.
+    if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
+        logger.warn(`Attempted to get timezone with invalid memberId format: ${memberId}`);
+        return null; // We return null for invalid format to prevent database errors.
+    }
+
+    logger.debug(`Getting timezone for member ID "${memberId}".`);
+
+    // We use an explicit cast since member_id column is BIGINT.
+    const result = await client.query(
+      `SELECT timezone FROM ${TABLES.TIMEZONES} WHERE member_id = $1::bigint`, // Explicit cast.
+      [memberId] // We pass memberId as string; the pg driver handles conversion with the cast.
+    );
+
+    if (result.rows.length > 0) {
+      const timezone = result.rows[0].timezone;
+      logger.debug(`Found timezone for member ID "${memberId}": ${timezone}`);
+      return timezone;
+    } else {
+      logger.debug(`No timezone found for member ID "${memberId}".`);
+      return null;
+    }
+  } catch (err) {
+    logger.error(`Error getting timezone for member ID "${memberId}":`, { error: err });
+    return null; // We return null on error to prevent application crashes.
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Increments the message count for a user and updates their username if it has changed.
+ * 
+ * @param {string} memberId - The Discord member ID.
+ * @param {string} username - The current username of the member.
+ * @returns {Promise<void>}
+ */
+async function incrementMessageCount(memberId, username) {
+  const client = await pool.connect();
+  try {
+    logger.debug(`Incrementing message count for member "${username}" (ID: ${memberId}).`);
+    
+    await client.query(`
+      INSERT INTO ${TABLES.MESSAGE_COUNTS} (member_id, username, message_count)
+      VALUES ($1, $2, 1)
+      ON CONFLICT (member_id) 
+      DO UPDATE SET 
+        message_count = ${TABLES.MESSAGE_COUNTS}.message_count + 1,
+        username = $2,
+        last_updated = CURRENT_TIMESTAMP;
+    `, [memberId, username]);
+    
+    logger.debug(`Successfully incremented message count for member "${username}" (ID: ${memberId}).`);
+  } catch (err) {
+    logger.error(`Error incrementing message count for member "${username}":`, { error: err });
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the top message senders in the server.
+ * 
+ * @param {number} limit - The maximum number of users to return.
+ * @returns {Promise<Array<Object>>} Array of objects containing member_id, username, and message_count.
+ */
+async function getTopMessageSenders(limit = 10) {
+  const client = await pool.connect();
+  try {
+    logger.debug(`Retrieving top ${limit} message senders.`);
+    
+    const result = await client.query(`
+      SELECT member_id, username, message_count
+      FROM ${TABLES.MESSAGE_COUNTS}
+      ORDER BY message_count DESC
+      LIMIT $1;
+    `, [limit]);
+    
+    logger.debug(`Retrieved ${result.rows.length} top message senders.`);
+    return result.rows;
+  } catch (err) {
+    logger.error("Error retrieving top message senders:", { error: err });
+    return [];
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Updates or creates a voice time tracking record for a user.
+ * We track the total time spent in voice channels.
+ * 
+ * @param {string} memberId - The Discord user ID.
+ * @param {string} username - The current username of the user.
+ * @param {number} minutesSpent - The number of minutes to add to their total.
+ * @returns {Promise<void>}
+ */
+async function updateVoiceTime(memberId, username, minutesSpent) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO ${TABLES.VOICE_TIME} (member_id, username, minutes_spent, last_updated)
+       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+       ON CONFLICT (member_id) DO UPDATE SET
+         username = $2,
+         minutes_spent = ${TABLES.VOICE_TIME}.minutes_spent + $3,
+         last_updated = CURRENT_TIMESTAMP`,
+      [memberId, username, minutesSpent]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the top voice channel users by time spent.
+ * We retrieve users sorted by their total voice time.
+ * 
+ * @param {number} limit - The maximum number of users to return.
+ * @returns {Promise<Array>} Array of user records with voice time data.
+ */
+async function getTopVoiceUsers(limit = 10) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT member_id, username, minutes_spent, last_updated
+       FROM ${TABLES.VOICE_TIME}
+       ORDER BY minutes_spent DESC
+       LIMIT $1`,
+      [limit]
+    );
+    return result.rows;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the voice time for a specific user.
+ * We retrieve the total time spent in voice channels.
+ * 
+ * @param {string} memberId - The Discord user ID.
+ * @returns {Promise<Object|null>} The user's voice time record or null if not found.
+ */
+async function getUserVoiceTime(memberId) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `SELECT member_id, username, minutes_spent, last_updated
+       FROM ${TABLES.VOICE_TIME}
+       WHERE member_id = $1`,
+      [memberId]
+    );
+    return result.rows[0] || null;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = {
+  initializeDatabase,
+  getValue,
+  setValue,
+  deleteValue,
+  getAllConfigs,
+  getReminderData,
+  setReminderData,
+  deleteReminderData,
+  trackNewMember,
+  getTrackedMember,
+  removeTrackedMember,
+  getAllTrackedMembers,
+  setUserTimezone,
+  getUserTimezone,
+  incrementMessageCount,
+  getTopMessageSenders,
+  updateVoiceTime,
+  getTopVoiceUsers,
+  getUserVoiceTime
+};
