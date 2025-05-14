@@ -90,7 +90,7 @@ async function scheduleReminder(client, channelId, scheduledTime) {
 
     // We store the reminder data in the database.
     await query(`
-      INSERT INTO reminders (key, scheduled_time, reminder_id)
+      INSERT INTO reminder_data (key, scheduled_time, reminder_id)
       VALUES ($1, $2, $3)
       ON CONFLICT (key) DO UPDATE 
       SET scheduled_time = $2, reminder_id = $3
@@ -125,7 +125,7 @@ async function rescheduleReminder(client) {
     // We get all active reminders from the database.
     const result = await query(`
       SELECT key, scheduled_time, reminder_id
-      FROM reminders
+      FROM reminder_data
       WHERE scheduled_time > NOW()
     `);
 

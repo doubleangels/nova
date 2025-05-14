@@ -21,7 +21,7 @@ async function initializeDatabase() {
   try {
     // We create the recovery table to track voice channel join times.
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS main.recovery (
+      CREATE TABLE IF NOT EXISTS main.voice_recovery (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id TEXT NOT NULL,
         guild_id TEXT NOT NULL,
