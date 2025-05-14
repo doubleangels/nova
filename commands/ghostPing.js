@@ -1,7 +1,17 @@
 const { SlashCommandBuilder } = require('discord.js');
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('ghostPing.js');
 
+/**
+ * We handle the ghost ping command.
+ * This function creates a message that mentions a user but immediately deletes the mention.
+ *
+ * We perform several tasks:
+ * 1. Create a message with a user mention
+ * 2. Delete the message after a short delay
+ * 3. Log the ghost ping action
+ *
+ * @param {Interaction} interaction - The Discord interaction object
+ */
 module.exports = {
     /**
      * Slash command definition for ghost pinging a user.
@@ -9,10 +19,10 @@ module.exports = {
      */
     data: new SlashCommandBuilder()
         .setName('ghostping')
-        .setDescription('Ghost pings a user.')
+        .setDescription('We send a message that mentions a user but immediately deletes the mention.')
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('What user would youn like to ghost ping?')
+                .setDescription('The user to ghost ping')
                 .setRequired(true)),
 
     /**
@@ -22,6 +32,7 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply({ ephemeral: true });
         try {
+            // We get the target user from the interaction options.
             const targetUser = interaction.options.getUser('user');
             
             logger.info("Ghost ping command initiated.", {
@@ -31,20 +42,25 @@ module.exports = {
                 channelId: interaction.channel?.id
             });
 
-            // Send the ping message
-            const pingMessage = await interaction.channel.send(`${targetUser}`);
+            // We create a message that mentions the target user.
+            const message = await interaction.reply({
+                content: `Hey ${targetUser}!`,
+                fetchReply: true
+            });
             
-            // Delete the message after a very short delay
+            // We delete the message after a short delay to create the ghost ping effect.
             setTimeout(async () => {
                 try {
-                    await pingMessage.delete();
+                    await message.delete();
                 } catch (error) {
                     logger.error("Error deleting ghost ping message.", {
                         error: error.message,
-                        messageId: pingMessage.id
+                        messageId: message.id
                     });
                 }
-            }, 100);
+            }, 1000);
+            
+            logger.debug(`Ghost ping executed by ${interaction.user.tag} targeting ${targetUser.tag}`);
 
             // Confirm to the command user that the ghost ping was sent
             await interaction.editReply({

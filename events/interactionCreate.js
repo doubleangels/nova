@@ -2,6 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const Sentry = require('../sentry');
 const { MessageFlags } = require('discord.js');
+const { Collection } = require('discord.js');
 
 // We use these configuration constants for command cooldowns.
 const DEFAULT_COOLDOWN = 3000; // 3 seconds default cooldown
@@ -78,32 +79,86 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
 }
 
 /**
- * Event handler for Discord interaction events.
- * We process all interactions to route them to the appropriate command handlers.
- * We implement command cooldowns and permission caching for better performance.
+ * We handle Discord interactions (slash commands, buttons, etc.).
+ * This function manages the processing of all interaction types.
  *
- * @param {Interaction} interaction - The interaction object from Discord.
+ * We perform several tasks for each interaction:
+ * 1. Validate the interaction type
+ * 2. Execute the appropriate command handler
+ * 3. Handle any errors that occur
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   name: 'interactionCreate',
-  once: false,
   async execute(interaction) {
     try {
-      // We handle command execution and error reporting for both slash commands and context menu commands.
-      if (interaction.isCommand()) {
-        await handleCommand(interaction, 'commands');
-      } else if (interaction.isContextMenu()) {
-        await handleCommand(interaction, 'contextMenus');
+      // We handle slash commands.
+      if (interaction.isChatInputCommand()) {
+        const command = interaction.client.commands.get(interaction.commandName);
+        if (!command) {
+          logger.warn(`No command matching ${interaction.commandName} was found.`);
+          return;
+        }
+
+        // We execute the command with proper error handling.
+        try {
+          await command.execute(interaction);
+          logger.debug(`Executed command ${interaction.commandName} for user ${interaction.user.tag}`);
+        } catch (error) {
+          logger.error(`Error executing command ${interaction.commandName}:`, {
+            error: error.message,
+            stack: error.stack
+          });
+          
+          const errorMessage = 'There was an error executing this command.';
+          if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: errorMessage, ephemeral: true });
+          } else {
+            await interaction.reply({ content: errorMessage, ephemeral: true });
+          }
+        }
+      }
+      // We handle button interactions.
+      else if (interaction.isButton()) {
+        const [action, ...params] = interaction.customId.split('_');
+        const buttonHandler = interaction.client.buttonHandlers.get(action);
+        
+        if (buttonHandler) {
+          try {
+            await buttonHandler(interaction, params);
+            logger.debug(`Handled button interaction ${action} for user ${interaction.user.tag}`);
+          } catch (error) {
+            logger.error(`Error handling button interaction ${action}:`, {
+              error: error.message,
+              stack: error.stack
+            });
+            await interaction.reply({ content: 'There was an error processing this button.', ephemeral: true });
+          }
+        }
+      }
+      // We handle select menu interactions.
+      else if (interaction.isStringSelectMenu()) {
+        const [action, ...params] = interaction.customId.split('_');
+        const selectHandler = interaction.client.selectHandlers.get(action);
+        
+        if (selectHandler) {
+          try {
+            await selectHandler(interaction, params);
+            logger.debug(`Handled select menu interaction ${action} for user ${interaction.user.tag}`);
+          } catch (error) {
+            logger.error(`Error handling select menu interaction ${action}:`, {
+              error: error.message,
+              stack: error.stack
+            });
+            await interaction.reply({ content: 'There was an error processing this selection.', ephemeral: true });
+          }
+        }
       }
     } catch (error) {
-      // We log the error and report it to Sentry.
-      logger.error("Error in interactionCreate event:", { error });
-      Sentry.captureException(error, {
-        extra: {
-          event: 'interactionCreate',
-          interactionId: interaction.id,
-          userId: interaction.user?.id || 'unknown'
-        }
+      logger.error('Error in interactionCreate event:', {
+        error: error.message,
+        stack: error.stack
       });
     }
   }

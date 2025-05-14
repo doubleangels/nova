@@ -19,14 +19,22 @@ if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
 }
 
 /**
- * Module for the /giveperms command.
- * We create a custom role with specified name and color for a user,
- * and assign them both this role and a predefined "fren" role.
+ * We handle the giveperms command.
+ * This function creates a custom role with specified name and color for a user,
+ * and assigns them both this role and a predefined "fren" role.
+ *
+ * We perform several tasks:
+ * 1. Validate command inputs and configuration
+ * 2. Create a new role with the specified name and color
+ * 3. Assign the new role and the fren role to the target user
+ * 4. Handle errors and provide user feedback
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giveperms')
-        .setDescription('Gives user permissions in the server.')
+        .setDescription('We give a user a custom role and the fren role.')
         .addStringOption(option =>
             option.setName('role')
                 .setDescription("What do you want the name of the user's role to be?")
@@ -41,10 +49,6 @@ module.exports = {
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
-    /**
-     * Executes the /giveperms command.
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     */
     async execute(interaction) {
         // We check if the required configuration values are available before proceeding.
         if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
@@ -146,12 +150,14 @@ module.exports = {
     },
     
     /**
-     * Validates the command inputs to ensure they meet requirements.
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {string} roleName - The name for the new role.
-     * @param {string} colorHex - The color for the new role.
-     * @param {User} targetUser - The user to receive the role.
-     * @returns {Object} An object with success status and message.
+     * We validate the command inputs to ensure they meet requirements.
+     * This function checks the role name, color, and user validity.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+     * @param {string} roleName - The name for the new role
+     * @param {string} colorHex - The color for the new role
+     * @param {User} targetUser - The user to receive the role
+     * @returns {Object} An object with success status and message
      */
     validateInputs(interaction, roleName, colorHex, targetUser) {
         // We validate that the role name is not empty and within Discord's length limits.
@@ -178,12 +184,14 @@ module.exports = {
     },
     
     /**
-     * Creates a new role and assigns it along with the fren role to the target member.
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {string} roleName - The name for the new role.
-     * @param {number} colorDecimal - The color for the new role in decimal format.
-     * @param {GuildMember} targetMember - The member to receive the roles.
-     * @returns {Object} An object with success status and message.
+     * We create a new role and assign it along with the fren role to the target member.
+     * This function creates the role, positions it, and assigns both roles to the user.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+     * @param {string} roleName - The name for the new role
+     * @param {number} colorDecimal - The color for the new role in decimal format
+     * @param {GuildMember} targetMember - The member to receive the roles
+     * @returns {Object} An object with success status and message
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
         // We get the reference role for positioning the new role in the hierarchy.
@@ -249,9 +257,11 @@ module.exports = {
     },
     
     /**
-     * Gets a user-friendly error message based on the error type.
-     * @param {Error} error - The error object.
-     * @returns {string} A user-friendly error message explaining the issue.
+     * We get a user-friendly error message based on the error type.
+     * This function translates technical errors into messages users can understand.
+     *
+     * @param {Error} error - The error object
+     * @returns {string} A user-friendly error message explaining the issue
      */
     getErrorMessage(error) {
         if (error.code === 50013) {

@@ -5,8 +5,16 @@ const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
 
 /**
- * Module for the /timedifference command.
- * This command calculates the time difference between two places by retrieving their UTC offsets from the Google API.
+ * We handle the timedifference command.
+ * This function allows users to calculate the time difference between two locations.
+ *
+ * We perform several tasks:
+ * 1. Validate Google API configuration
+ * 2. Process location search requests
+ * 3. Calculate time differences between locations
+ * 4. Format and display time zone information
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

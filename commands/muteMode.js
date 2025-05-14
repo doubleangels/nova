@@ -11,9 +11,16 @@ const DB_KEY_ENABLED = "mute_mode_enabled";
 const DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
 
 /**
- * Module for the /mutemode command.
- * We toggle auto-kicking of users who don't send a message within a specified time limit.
- * Only users with Administrator permissions can execute this command.
+ * We handle the mutemode command.
+ * This function allows administrators to manage auto-kicking of inactive users.
+ *
+ * We perform several tasks:
+ * 1. Configure mute mode settings (enable/disable)
+ * 2. Set time limits for user inactivity
+ * 3. Display current mute mode status
+ * 4. Handle database operations for settings
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

@@ -5,19 +5,28 @@ const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { setReminderData, getReminderData } = require('../utils/database');
 
-// These are the configuration constants for the Disboard bump reminder.
+// We use these configuration constants for the Disboard bump reminder.
 const SERVICE_TYPE = 'bump';
 const DELAY_SECONDS = 7200;  // 2 hours in seconds
 
 /**
- * Module for the /fix command.
- * This command runs the fix logic for Disboard by adding the service data to the database.
+ * We handle the fix command.
+ * This function runs the fix logic for Disboard by adding the service data to the database.
+ *
+ * We perform several tasks:
+ * 1. Check if there is already an active reminder in the database
+ * 2. Generate unique reminder data with a random UUID and scheduled time
+ * 3. Save the reminder data to the database
+ * 4. Inform the user of the result
+ *
  * Only users with Administrator permissions can execute this command.
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
-    .setDescription('Fix Disboard bump reminder data in the database.')
+    .setDescription('We fix Disboard bump reminder data in the database.')
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**

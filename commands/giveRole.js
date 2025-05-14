@@ -4,13 +4,21 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
 /**
- * Module for the /giverole command.
- * We assign a specified role to a specified user in the server.
+ * We handle the giverole command.
+ * This function assigns a specified role to a specified user in the server.
+ *
+ * We perform several tasks:
+ * 1. Validate permissions and role hierarchy
+ * 2. Check if the user already has the role
+ * 3. Assign the role to the user
+ * 4. Handle errors and provide user feedback
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giverole')
-        .setDescription('Gives a specified role to a user.')
+        .setDescription('We assign a specified role to a user in the server.')
         .addRoleOption(option =>
             option.setName('role')
                 .setDescription('What role would you like to assign?')
@@ -28,7 +36,7 @@ module.exports = {
     async execute(interaction) {
         // We defer the reply since role assignment might take a moment to complete.
         await interaction.deferReply();
-        logger.info(`/giverole command initiated.`, { 
+        logger.info("/giverole command initiated.", { 
             userId: interaction.user.id, 
             guildId: interaction.guild.id 
         });
@@ -77,11 +85,13 @@ module.exports = {
     },
     
     /**
-     * Validates that the role assignment can be performed by checking permissions and conditions.
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {Role} role - The role to assign.
-     * @param {User} targetUser - The user to receive the role.
-     * @returns {Object} An object with success status, message, and targetMember if successful.
+     * We validate that the role assignment can be performed by checking permissions and conditions.
+     * This function checks bot and user permissions, role hierarchy, and if the user already has the role.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+     * @param {Role} role - The role to assign
+     * @param {User} targetUser - The user to receive the role
+     * @returns {Object} An object with success status, message, and targetMember if successful
      */
     async validateRoleAssignment(interaction, role, targetUser) {
         // We check if the bot has permission to manage roles in the server.
@@ -174,10 +184,12 @@ module.exports = {
     },
     
     /**
-     * Assigns a role to a guild member with an audit log reason.
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {GuildMember} targetMember - The member to receive the role.
-     * @param {Role} role - The role to assign.
+     * We assign a role to a guild member with an audit log reason.
+     * This function adds the role to the user and logs the action.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+     * @param {GuildMember} targetMember - The member to receive the role
+     * @param {Role} role - The role to assign
      */
     async assignRole(interaction, targetMember, role) {
         const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;
@@ -195,9 +207,11 @@ module.exports = {
     },
     
     /**
-     * Gets a user-friendly error message based on the error type.
-     * @param {Error} error - The error object.
-     * @returns {string} A user-friendly error message explaining the issue.
+     * We get a user-friendly error message based on the error type.
+     * This function translates technical errors into messages users can understand.
+     *
+     * @param {Error} error - The error object
+     * @returns {string} A user-friendly error message explaining the issue
      */
     getErrorMessage(error) {
         if (error.code === 50013) {

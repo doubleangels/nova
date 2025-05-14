@@ -11,8 +11,16 @@ const MIN_ACCOUNT_AGE = 1;
 const MAX_ACCOUNT_AGE = 365; // We set a maximum of 1 year to prevent unreasonable values.
 
 /**
- * Module for the /trollmode command.
- * We manage auto-kicking of accounts younger than a specified age.
+ * We handle the trollmode command.
+ * This function allows administrators to manage auto-kicking of accounts based on age.
+ *
+ * We perform several tasks:
+ * 1. Configure troll mode settings (enable/disable)
+ * 2. Set minimum account age requirements
+ * 3. Display current troll mode status
+ * 4. Handle database operations for settings
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

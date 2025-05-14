@@ -6,8 +6,16 @@ const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 
 /**
- * Module for the /timezone command.
- * We manage timezone settings for auto-timezone features.
+ * We handle the timezone command.
+ * This function manages timezone settings for users in the server.
+ *
+ * We perform several tasks:
+ * 1. Set timezone based on location input
+ * 2. Validate timezone data
+ * 3. Store timezone preferences
+ * 4. Display current timezone settings
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 
 module.exports = {

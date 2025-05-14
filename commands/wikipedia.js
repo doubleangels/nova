@@ -19,81 +19,109 @@ const WIKIPEDIA_FOOTER_TEXT = 'Powered by Wikipedia API';
 // We use a simple in-memory cache to store search results.
 const cache = new Map();
 
+/**
+ * We handle the wikipedia command.
+ * This function fetches and displays Wikipedia article summaries.
+ *
+ * We perform several tasks:
+ * 1. Search for the article on Wikipedia
+ * 2. Fetch the article summary
+ * 3. Create an embed with the article details
+ * 4. Send the embed to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('wikipedia')
-    .setDescription('Search Wikipedia for articles.')
+    .setDescription('We fetch and display Wikipedia article summaries.')
     .addStringOption(option =>
-      option
-        .setName('query')
-        .setDescription('What topic do you want to search for?')
-        .setRequired(true)
-    ),
-    
-  /**
-   * Executes the /wikipedia command.
-   * 
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
-   */
+      option.setName('query')
+        .setDescription('The topic to search for')
+        .setRequired(true)),
+
   async execute(interaction) {
     try {
-      // We defer the reply to allow time for the API call.
+      // We defer the reply since the API calls might take a moment.
       await interaction.deferReply();
       
+      // We get the search query from the interaction options.
       const query = interaction.options.getString('query');
       
-      logger.debug("Wikipedia command received.", { 
+      logger.info("Wikipedia command initiated.", {
         userId: interaction.user.id,
-        userTag: interaction.user.tag,
+        guildId: interaction.guild?.id,
         query
       });
-      
-      // We trim the query to remove unnecessary whitespace.
-      const formattedQuery = query.trim();
-      
-      // We check if we have cached results for this query.
-      const cacheKey = formattedQuery.toLowerCase();
-      const cachedResults = this.getCachedResults(cacheKey);
-      
-      if (cachedResults) {
-        logger.debug("Using cached Wikipedia results.", { 
-          query: formattedQuery,
-          resultCount: cachedResults.length
-        });
-        
-        await this.sendSearchResults(interaction, formattedQuery, cachedResults, 0);
-        return;
-      }
-      
-      logger.debug("Processing Wikipedia search query.", { 
-        formattedQuery
+
+      // We search for the article on Wikipedia.
+      const searchResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
+        params: {
+          action: 'query',
+          list: 'search',
+          srsearch: query,
+          format: 'json',
+          origin: '*'
+        }
       });
-      
-      // We fetch search results from the Wikipedia API.
-      const searchResults = await this.fetchWikipediaResults(formattedQuery);
+
+      const searchResults = searchResponse.data.query.search;
       
       if (!searchResults || searchResults.length === 0) {
-        logger.warn("No Wikipedia results found for query.", { 
-          query: formattedQuery,
-          userId: interaction.user.id
-        });
-        
-        await interaction.editReply({ 
-          content: `⚠️ No results found for **${formattedQuery}** in Wikipedia. Try refining your search!`,
+        // We inform the user if no article was found.
+        await interaction.editReply({
+          content: `We couldn't find any Wikipedia articles for "${query}".`,
           ephemeral: true
         });
         return;
       }
+
+      // We get the first search result and fetch its summary.
+      const article = searchResults[0];
+      const summaryResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
+        params: {
+          action: 'query',
+          prop: 'extracts',
+          exintro: true,
+          explaintext: true,
+          titles: article.title,
+          format: 'json',
+          origin: '*'
+        }
+      });
+
+      const pages = summaryResponse.data.query.pages;
+      const pageId = Object.keys(pages)[0];
+      const summary = pages[pageId].extract;
+
+      // We create an embed with the article details.
+      const embed = new EmbedBuilder()
+        .setColor('#FFFFFF')
+        .setTitle(article.title)
+        .setDescription(summary)
+        .setURL(`https://en.wikipedia.org/wiki/${encodeURIComponent(article.title)}`)
+        .setFooter({ text: 'Powered by Wikipedia' });
       
-      // We cache the results to reduce API calls for repeated searches.
-      this.cacheResults(cacheKey, searchResults);
+      // We send the embed to the user.
+      await interaction.editReply({ embeds: [embed] });
       
-      // We send the first result with pagination if there are multiple results.
-      await this.sendSearchResults(interaction, formattedQuery, searchResults, 0);
-      
+      logger.info("Wikipedia command completed successfully.", {
+        userId: interaction.user.id,
+        query,
+        articleTitle: article.title
+      });
     } catch (error) {
-      await this.handleError(interaction, error);
+      logger.error("Error executing wikipedia command:", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user?.id
+      });
+      
+      // We inform the user if something goes wrong.
+      await interaction.editReply({
+        content: "⚠️ We couldn't fetch the Wikipedia article. Please try again later.",
+        ephemeral: true
+      });
     }
   },
   

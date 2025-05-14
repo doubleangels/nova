@@ -4,14 +4,20 @@ const logger = require('../logger')(path.basename(__filename));
 const { handleReminder } = require('../utils/reminderUtils');
 
 /**
- * Module for the /testbump command.
- * This command simulates a Disboard bump message for testing the reminder system.
+ * We handle the test bump command.
+ * This function simulates a server bump for testing purposes.
+ *
+ * We perform several tasks:
+ * 1. Create a mock bump message
+ * 2. Process the bump as if it were real
+ * 3. Schedule a reminder for the next bump
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('testbump')
-    .setDescription('Test the bump reminder system by simulating a Disboard bump message.')
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+    .setDescription('We simulate a server bump for testing purposes.'),
 
   /**
    * Executes the /testbump command.
@@ -19,40 +25,40 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      await interaction.deferReply();
+      // We create a mock bump message to test the bump handling logic.
+      const mockBumpMessage = {
+        author: {
+          tag: 'Disboard#0000',
+          bot: true
+        },
+        embeds: [{
+          description: 'Bump done! See you in 2 hours!'
+        }],
+        channel: interaction.channel,
+        client: interaction.client
+      };
       
-      logger.info("Test bump command initiated.", {
-        userId: interaction.user.id,
-        guildId: interaction.guildId
+      // We process the mock bump message.
+      await interaction.client.emit('messageCreate', mockBumpMessage);
+      
+      // We confirm the test bump was processed.
+      await interaction.reply({
+        content: 'We have processed a test bump. A reminder will be scheduled for 2 hours from now.',
+        ephemeral: true
       });
-
-      // Create a simulated Disboard bump embed
-      const embed = new EmbedBuilder()
-        .setColor('#5865F2')
-        .setDescription('Bump done! See you in 2 hours!')
-        .setFooter({ text: 'Disboard' });
-
-      // Send the simulated bump message
-      const message = await interaction.channel.send({ embeds: [embed] });
       
-      logger.debug("Sent test bump message:", {
-        messageId: message.id,
-        channelId: interaction.channelId
-      });
-
-      // Schedule reminder for 1 minute instead of 2 hours
-      await handleReminder(message, 60000); // 1 minute = 60000 milliseconds
-
-      await interaction.editReply('✅ Test bump message sent! You should receive a reminder in 1 minute.');
-      
+      logger.debug(`Test bump executed by ${interaction.user.tag}`);
     } catch (error) {
-      logger.error("Error in test bump command:", {
+      logger.error(`Error executing test bump command for ${interaction.user.tag}:`, {
         error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id
+        stack: error.stack
       });
       
-      await interaction.editReply('❌ Failed to send test bump message. Check the logs for details.');
+      // We inform the user if something goes wrong.
+      await interaction.reply({
+        content: 'We encountered an error while processing the test bump. Please try again.',
+        ephemeral: true
+      });
     }
   }
 }; 

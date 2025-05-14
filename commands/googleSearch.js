@@ -33,8 +33,16 @@ module.exports = {
     ),
 
   /**
-   * Executes the /google command.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * We handle the google command.
+   * This function allows users to search the web using Google's Custom Search API.
+   *
+   * We perform several tasks:
+   * 1. Validate Google API configuration
+   * 2. Process web search requests
+   * 3. Format and display search results
+   * 4. Handle pagination and user interaction
+   *
+   * @param {Interaction} interaction - The Discord interaction object
    */
   async execute(interaction) {
     try {

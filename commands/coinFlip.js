@@ -8,6 +8,17 @@ const COIN_FACE_TAILS = 'Tails';
 const HEADS_PROBABILITY = 0.5;
 const COIN_EMOJI = '🪙';
 
+/**
+ * We handle the coin flip command.
+ * This function simulates flipping a coin and provides the result.
+ *
+ * We perform several tasks:
+ * 1. Generate a random result (heads or tails)
+ * 2. Format the response with appropriate emojis
+ * 3. Send the result to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
+ */
 module.exports = {
     /**
      * Slash command definition for flipping a coin.
@@ -15,7 +26,7 @@ module.exports = {
      */
     data: new SlashCommandBuilder()
         .setName('coinflip')
-        .setDescription('Flips a coin and returns heads or tails.'),
+        .setDescription('We flip a coin and tell you the result.'),
 
     /**
      * Executes the /coinflip command.

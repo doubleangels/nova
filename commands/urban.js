@@ -1,12 +1,18 @@
 /**
- * Module for the /urban command.
- * We fetch and display definitions from Urban Dictionary.
+ * We handle the urban command.
+ * This function fetches and displays definitions from Urban Dictionary.
+ *
+ * We perform several tasks:
+ * 1. Fetch the definition from Urban Dictionary API
+ * 2. Create an embed with the definition details
+ * 3. Send the embed to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
-const { EmbedBuilder } = require('discord.js');
-const logger = require('../logger');
+const logger = require('../logger')('urban.js');
 
 // We use these configuration constants for the Urban Dictionary API.
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
@@ -18,44 +24,72 @@ const URBAN_REQUEST_TIMEOUT = 10000;
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('urban')
-        .setDescription('We look up a term on Urban Dictionary.')
+        .setDescription('We fetch and display definitions from Urban Dictionary.')
         .addStringOption(option =>
             option.setName('term')
                 .setDescription('The term to look up')
                 .setRequired(true)),
 
     async execute(interaction) {
-        await interaction.deferReply();
-        const term = interaction.options.getString('term');
-
         try {
-            const response = await axios.get(URBAN_API_URL, {
-                params: { term },
-                timeout: URBAN_REQUEST_TIMEOUT
+            // We defer the reply since the API call might take a moment.
+            await interaction.deferReply();
+            
+            // We get the search term from the interaction options.
+            const term = interaction.options.getString('term');
+            
+            logger.info("Urban Dictionary command initiated.", {
+                userId: interaction.user.id,
+                guildId: interaction.guild?.id,
+                term
             });
 
-            if (!response.data.list || response.data.list.length === 0) {
-                return await interaction.editReply({
-                    content: `We couldn't find any definitions for "${term}".`
+            // We fetch the definition from Urban Dictionary.
+            const response = await axios.get(`https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`);
+            const definitions = response.data.list;
+
+            if (!definitions || definitions.length === 0) {
+                // We inform the user if no definition was found.
+                await interaction.editReply({
+                    content: `We couldn't find a definition for "${term}".`,
+                    ephemeral: true
                 });
+                return;
             }
 
-            const definition = response.data.list[0];
+            // We get the first definition and create an embed.
+            const definition = definitions[0];
             const embed = new EmbedBuilder()
-                .setColor(URBAN_EMBED_COLOR)
-                .setTitle(definition.word)
-                .setURL(definition.permalink)
-                .setDescription(this.truncateText(definition.definition, URBAN_DESCRIPTION_MAX_LENGTH))
+                .setColor('#1DB954')
+                .setTitle(`Urban Dictionary: ${definition.word}`)
+                .setDescription(definition.definition)
                 .addFields(
-                    { name: 'Example', value: this.truncateText(definition.example, URBAN_EXAMPLE_MAX_LENGTH) },
+                    { name: 'Example', value: definition.example || 'No example provided.' },
+                    { name: 'Author', value: definition.author },
                     { name: '👍', value: definition.thumbs_up.toString(), inline: true },
                     { name: '👎', value: definition.thumbs_down.toString(), inline: true }
                 )
-                .setFooter({ text: `Written by ${definition.author}` });
-
+                .setFooter({ text: 'Powered by Urban Dictionary' });
+            
+            // We send the embed to the user.
             await interaction.editReply({ embeds: [embed] });
+            
+            logger.info("Urban Dictionary command completed successfully.", {
+                userId: interaction.user.id,
+                term
+            });
         } catch (error) {
-            await this.handleError(interaction, error);
+            logger.error("Error executing urban command:", {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user?.id
+            });
+            
+            // We inform the user if something goes wrong.
+            await interaction.editReply({
+                content: "⚠️ We couldn't fetch the definition. Please try again later.",
+                ephemeral: true
+            });
         }
     },
 

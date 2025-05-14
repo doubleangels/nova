@@ -12,24 +12,27 @@ const MAL_EMBED_COLOR = 0x2E51A2;
 const SEARCH_LIMIT = 1;
 
 /**
- * Module for the /anime command.
- * This module searches for an anime on MyAnimeList based on the provided title,
- * retrieves its details, and sends an embed with the information.
+ * We handle the anime command.
+ * This function searches for anime on MyAnimeList and displays detailed information.
+ *
+ * We perform several tasks:
+ * 1. Search for the anime on MyAnimeList
+ * 2. Fetch detailed information about the anime
+ * 3. Create an embed with the anime details
+ * 4. Send the embed to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
-    .setDescription('Search for an anime on MyAnimeList.')
+    .setDescription('We search for anime on MyAnimeList and display detailed information.')
     .addStringOption(option =>
       option.setName('title')
         .setDescription('What anime do you want to search for?')
         .setRequired(true)
     ),
   
-  /**
-   * Executes the /anime command.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   */
   async execute(interaction) {
     try {
       // We need to verify that the API key is properly configured.
@@ -44,6 +47,7 @@ module.exports = {
 
       // We defer the reply to allow additional processing time for the API request.
       await interaction.deferReply();
+      
       logger.info("Anime search requested.", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag 
@@ -61,6 +65,7 @@ module.exports = {
       if (animeData) {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
+        
         logger.info("Anime information sent successfully.", { 
           animeTitle: animeData.title, 
           userId: interaction.user.id 
@@ -93,9 +98,11 @@ module.exports = {
   },
 
   /**
-   * Searches for an anime and gets its details from the MyAnimeList API.
-   * @param {string} title - The anime title to search for.
-   * @returns {Object|null} - The anime data or null if not found.
+   * We search for an anime and get its details from the MyAnimeList API.
+   * This function performs both the search and detailed information retrieval.
+   *
+   * @param {string} title - The anime title to search for
+   * @returns {Object|null} The anime data or null if not found
    */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
@@ -135,9 +142,11 @@ module.exports = {
   },
 
   /**
-   * Creates an embed for displaying anime details in a visually appealing format.
-   * @param {Object} animeData - The anime data to display.
-   * @returns {EmbedBuilder} - The created embed with formatted anime information.
+   * We create an embed for displaying anime details in a visually appealing format.
+   * This function formats all the anime information into a Discord embed.
+   *
+   * @param {Object} animeData - The anime data to display
+   * @returns {EmbedBuilder} The created embed with formatted anime information
    */
   createAnimeEmbed(animeData) {
     const malLink = `${MAL_WEBSITE_URL}/${animeData.id}`;
@@ -167,9 +176,11 @@ module.exports = {
   },
 
   /**
-   * Gets a user-friendly error message based on the type of error encountered.
-   * @param {Error} error - The error object to process.
-   * @returns {string} - A user-friendly error message explaining the issue.
+   * We get a user-friendly error message based on the type of error encountered.
+   * This function translates technical errors into messages users can understand.
+   *
+   * @param {Error} error - The error object to process
+   * @returns {string} A user-friendly error message explaining the issue
    */
   getErrorMessage(error) {
     if (axios.isAxiosError(error)) {

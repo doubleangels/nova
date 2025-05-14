@@ -9,18 +9,19 @@ const KICK_REASON_TIMEOUT = "User did not send a message in time.";
 const IMMEDIATE_TIMEOUT_MS = 0;
 
 /**
- * Schedules a mute kick for a member if they do not send a message within the allowed mute time.
+ * We schedule a mute kick for a member if they do not send a message within the allowed mute time.
+ * This function handles the timing and execution of mute mode kicks.
  *
  * We calculate the remaining time based on the member's join time and the allowed mute time.
  * If the remaining time is less than or equal to zero, we kick the member immediately.
  * Otherwise, we schedule a delayed kick for the appropriate time.
  *
- * @param {string} memberId - The ID of the member to be kicked.
- * @param {string} username - The username of the member.
- * @param {string} joinTime - The ISO string representing when the member joined.
- * @param {number} muteKickTime - The allowed mute time in hours before a kick.
- * @param {string} guildId - The ID of the guild.
- * @param {Client} client - The Discord client instance.
+ * @param {string} memberId - The ID of the member to be kicked
+ * @param {string} username - The username of the member
+ * @param {string} joinTime - The ISO string representing when the member joined
+ * @param {number} muteKickTime - The allowed mute time in hours before a kick
+ * @param {string} guildId - The ID of the guild
+ * @param {Client} client - The Discord client instance
  */
 async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guildId, client) {
   try {
@@ -53,7 +54,7 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
       return;
     }
     
-    // If remaining time is less than or equal to 0, we kick immediately.
+    // We kick immediately if the remaining time is less than or equal to 0.
     if (remainingTime <= 0) {
       await performKick(guildObj, memberId, username, "immediate");
       return;
@@ -67,10 +68,10 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
   }
   
   /**
-   * Performs the delayed kick after the scheduled time has passed.
-   * We use this nested function to maintain context of the member information.
+   * We perform the delayed kick after the scheduled time has passed.
+   * This function maintains context of the member information for the delayed operation.
    * 
-   * @param {number} delaySeconds - The delay in seconds before executing the kick.
+   * @param {number} delaySeconds - The delay in seconds before executing the kick
    */
   async function delayedKick(delaySeconds) {
     try {
@@ -102,13 +103,13 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
 }
 
 /**
- * Helper function to perform the actual kick operation.
- * We centralize the kick logic here to avoid code duplication between immediate and delayed kicks.
+ * We perform the actual kick operation for a member.
+ * This function centralizes the kick logic to avoid code duplication.
  * 
- * @param {Guild} guild - The Discord guild object.
- * @param {string} memberId - The ID of the member to be kicked.
- * @param {string} username - The username of the member.
- * @param {string} kickType - The type of kick ("immediate" or "delayed").
+ * @param {Guild} guild - The Discord guild object
+ * @param {string} memberId - The ID of the member to be kicked
+ * @param {string} username - The username of the member
+ * @param {string} kickType - The type of kick ("immediate" or "delayed")
  */
 async function performKick(guild, memberId, username, kickType) {
   try {
@@ -126,7 +127,7 @@ async function performKick(guild, memberId, username, kickType) {
       }
     }
     
-    // Send DM to user before kicking.
+    // We send a DM to the user before kicking them.
     try {
       const embed = new EmbedBuilder()
         .setColor(0xCD41FF)
@@ -149,13 +150,14 @@ async function performKick(guild, memberId, username, kickType) {
 }
 
 /**
- * Reschedules mute kicks for all tracked members.
+ * We reschedule mute kicks for all tracked members.
+ * This function ensures no members escape moderation due to bot downtime.
  *
  * We retrieve all tracked members from the database and schedule a mute kick for each
  * based on the configured mute kick time. This is typically used after a bot restart
  * to ensure no members escape moderation due to downtime.
  *
- * @param {Client} client - The Discord client instance.
+ * @param {Client} client - The Discord client instance
  */
 async function rescheduleAllMuteKicks(client) {
   try {
@@ -197,6 +199,10 @@ async function rescheduleAllMuteKicks(client) {
   }
 }
 
+/**
+ * We export the mute mode utility functions for use throughout the application.
+ * This module provides consistent mute mode management capabilities.
+ */
 module.exports = {
   scheduleMuteKick,
   performKick,

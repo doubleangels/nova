@@ -15,15 +15,15 @@ const SPAM_WINDOW = 10000; // Time window for spam detection (10 seconds)
 const messageHistory = new Map();
 
 /**
- * Event handler for the 'messageCreate' event.
- * We process incoming messages to perform several important functions:
- *  - We remove users from mute tracking when they send a message.
- *  - We trigger a Disboard reminder when a message embed indicates a bump was done.
- *  - We react with a clock emoji when a message contains time references.
- *  - We track message counts for the yappers leaderboard.
- *  - We implement rate limiting and spam detection.
+ * We handle new messages in the server.
+ * This function manages message processing and tracking.
  *
- * @param {Message} message - The message object from Discord.
+ * We perform several tasks for each message:
+ * 1. Track message counts for users
+ * 2. Handle mute mode verification
+ * 3. Process any commands or special message content
+ *
+ * @param {Message} message - The Discord message object
  */
 module.exports = {
   name: 'messageCreate',
@@ -53,7 +53,7 @@ module.exports = {
       if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
       // We check for rate limiting and spam.
-      if (await this.isRateLimited(message) || await this.isSpam(message)) {
+      if (await isRateLimited(message) || await isSpam(message)) {
         return;
       }
 
@@ -64,12 +64,37 @@ module.exports = {
         content: message.content?.substring(0, 50) || "No Content" // We log only first 50 chars for privacy
       });
       
+      // We increment the message count for the user.
+      await incrementMessageCount(message.author.id, message.author.username);
+      logger.debug(`Incremented message count for user ${message.author.tag}`);
+
+      // We check if the user was being tracked in mute mode.
+      const wasTracked = await removeTrackedMember(message.author.id);
+      if (wasTracked) {
+        logger.info(`User ${message.author.tag} sent their first message and was removed from mute tracking.`);
+      }
+
+      // We process any commands or special message content.
+      if (message.content.startsWith('!')) {
+        const args = message.content.slice(1).trim().split(/ +/);
+        const command = args.shift().toLowerCase();
+
+        // We handle specific commands here.
+        switch (command) {
+          case 'ping':
+            await message.reply('Pong!');
+            break;
+          // Add more commands as needed.
+        }
+      }
+
       // We process messages from real users, filtering out webhooks and bots.
       await processUserMessage(message);
       
       // We check for bump messages from any source, including bots.
       await checkForBumpMessages(message);
-    
+
+      logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}`);
     } catch (error) {
       // Add Sentry error tracking
       Sentry.captureException(error, {
@@ -81,92 +106,92 @@ module.exports = {
       });
       logger.error("Error processing messageCreate event:", { error });
     }
-  },
-
-  /**
-   * Checks if a message should be rate limited.
-   * @param {Message} message - The message to check.
-   * @returns {Promise<boolean>} True if the message should be rate limited.
-   */
-  async isRateLimited(message) {
-    const userId = message.author.id;
-    const now = Date.now();
-    
-    if (!messageHistory.has(userId)) {
-      messageHistory.set(userId, []);
-    }
-    
-    const userHistory = messageHistory.get(userId);
-    
-    // We remove old messages from the history.
-    while (userHistory.length > 0 && now - userHistory[0] > MESSAGE_RATE_WINDOW) {
-      userHistory.shift();
-    }
-    
-    // We check if the user has exceeded the rate limit.
-    if (userHistory.length >= MESSAGE_RATE_LIMIT) {
-      logger.warn("User rate limited:", {
-        userId: message.author.id,
-        username: message.author.tag,
-        messageCount: userHistory.length
-      });
-      
-      try {
-        await message.reply("We're detecting too many messages from you. Please slow down.");
-      } catch (error) {
-        logger.error("Failed to send rate limit message:", { error });
-      }
-      
-      return true;
-    }
-    
-    // We add the current message to the history.
-    userHistory.push(now);
-    return false;
-  },
-
-  /**
-   * Checks if a message is spam.
-   * @param {Message} message - The message to check.
-   * @returns {Promise<boolean>} True if the message is spam.
-   */
-  async isSpam(message) {
-    const userId = message.author.id;
-    const now = Date.now();
-    
-    if (!messageHistory.has(userId)) {
-      messageHistory.set(userId, []);
-    }
-    
-    const userHistory = messageHistory.get(userId);
-    const recentMessages = userHistory.filter(time => now - time <= SPAM_WINDOW);
-    
-    // We check for similar messages in the recent history.
-    const similarMessages = recentMessages.filter(time => {
-      const index = userHistory.indexOf(time);
-      return index >= 0 && userHistory[index + 1] && 
-             Math.abs(userHistory[index + 1] - time) <= 1000; // Messages within 1 second
-    });
-    
-    if (similarMessages.length >= SPAM_THRESHOLD) {
-      logger.warn("Spam detected:", {
-        userId: message.author.id,
-        username: message.author.tag,
-        similarMessageCount: similarMessages.length
-      });
-      
-      try {
-        await message.reply("We're detecting spam-like behavior. Please stop sending similar messages repeatedly.");
-      } catch (error) {
-        logger.error("Failed to send spam warning:", { error });
-      }
-      
-      return true;
-    }
-    
-    return false;
   }
 };
+
+/**
+ * Checks if a message should be rate limited.
+ * @param {Message} message - The message to check.
+ * @returns {Promise<boolean>} True if the message should be rate limited.
+ */
+async function isRateLimited(message) {
+  const userId = message.author.id;
+  const now = Date.now();
+  
+  if (!messageHistory.has(userId)) {
+    messageHistory.set(userId, []);
+  }
+  
+  const userHistory = messageHistory.get(userId);
+  
+  // We remove old messages from the history.
+  while (userHistory.length > 0 && now - userHistory[0] > MESSAGE_RATE_WINDOW) {
+    userHistory.shift();
+  }
+  
+  // We check if the user has exceeded the rate limit.
+  if (userHistory.length >= MESSAGE_RATE_LIMIT) {
+    logger.warn("User rate limited:", {
+      userId: message.author.id,
+      username: message.author.tag,
+      messageCount: userHistory.length
+    });
+    
+    try {
+      await message.reply("We're detecting too many messages from you. Please slow down.");
+    } catch (error) {
+      logger.error("Failed to send rate limit message:", { error });
+    }
+    
+    return true;
+  }
+  
+  // We add the current message to the history.
+  userHistory.push(now);
+  return false;
+}
+
+/**
+ * Checks if a message is spam.
+ * @param {Message} message - The message to check.
+ * @returns {Promise<boolean>} True if the message is spam.
+ */
+async function isSpam(message) {
+  const userId = message.author.id;
+  const now = Date.now();
+  
+  if (!messageHistory.has(userId)) {
+    messageHistory.set(userId, []);
+  }
+  
+  const userHistory = messageHistory.get(userId);
+  const recentMessages = userHistory.filter(time => now - time <= SPAM_WINDOW);
+  
+  // We check for similar messages in the recent history.
+  const similarMessages = recentMessages.filter(time => {
+    const index = userHistory.indexOf(time);
+    return index >= 0 && userHistory[index + 1] && 
+           Math.abs(userHistory[index + 1] - time) <= 1000; // Messages within 1 second
+  });
+  
+  if (similarMessages.length >= SPAM_THRESHOLD) {
+    logger.warn("Spam detected:", {
+      userId: message.author.id,
+      username: message.author.tag,
+      similarMessageCount: similarMessages.length
+    });
+    
+    try {
+      await message.reply("We're detecting spam-like behavior. Please stop sending similar messages repeatedly.");
+    } catch (error) {
+      logger.error("Failed to send spam warning:", { error });
+    }
+    
+    return true;
+  }
+  
+  return false;
+}
 
 /**
  * Process messages from real users (not webhooks or bots).

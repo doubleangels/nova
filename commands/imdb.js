@@ -11,8 +11,16 @@ const EMBED_COLOR = 0xFFD700; // IMDb gold color for consistent branding
 const REQUEST_TIMEOUT = 10000; // 10 second API request timeout to prevent hanging
 
 /**
- * Module for the /imdb command.
- * This command searches for a movie or TV show on IMDb using the OMDb API and displays detailed information.
+ * We handle the imdb command.
+ * This function allows users to search for movies and TV shows using the OMDb API.
+ *
+ * We perform several tasks:
+ * 1. Validate OMDb API configuration
+ * 2. Process search requests for movies and TV shows
+ * 3. Format and display detailed media information
+ * 4. Handle errors and provide user feedback
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

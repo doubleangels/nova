@@ -11,20 +11,25 @@ const CONFIG_KEYS = {
 };
 
 /**
- * Module for the /backupmode command.
- * We configure and toggle backup mode for new members by setting:
- * - The channel to send welcome messages.
- * - The role to assign to new members.
- * - The auto-role assignment status.
+ * We handle the backupmode command.
+ * This function configures and manages backup mode settings for new members.
+ *
+ * We perform several tasks:
+ * 1. Configure welcome channel for new members
+ * 2. Set up auto-role assignment
+ * 3. Toggle backup mode status
+ * 4. Display current configuration
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('backupmode')
-    .setDescription('Configure and toggle backup mode for new members.')
+    .setDescription('We configure and manage backup mode settings for new members.')
     .addSubcommand(subcommand =>
       subcommand
         .setName('set')
-        .setDescription('Configure backup mode settings.')
+        .setDescription('We configure backup mode settings.')
         .addStringOption(option =>
           option.setName('enabled')
             .setDescription('Do you want to enable or disable auto-role assignment?')
@@ -48,13 +53,10 @@ module.exports = {
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current backup mode configuration.')
+        .setDescription('We check the current backup mode configuration.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
-  /**
-   * Executes the /backupmode command.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object from Discord.
-   */
+
   async execute(interaction) {
     await interaction.deferReply();
     try {
@@ -77,8 +79,10 @@ module.exports = {
   },
 
   /**
-   * Handles the 'set' subcommand to update backup mode settings.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * We handle the 'set' subcommand to update backup mode settings.
+   * This function processes user input and updates the configuration.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
    */
   async handleSetSubcommand(interaction) {
     // We retrieve the command options provided by the user.
@@ -107,16 +111,20 @@ module.exports = {
   },
 
   /**
-   * Handles the 'status' subcommand to show current backup mode settings.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * We handle the 'status' subcommand to show current backup mode settings.
+   * This function retrieves and displays the current configuration.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
    */
   async handleStatusSubcommand(interaction) {
     await this.showBackupModeStatus(interaction);
   },
 
   /**
-   * Gets the current backup mode settings from the database.
-   * @returns {Promise<Object>} The current settings.
+   * We get the current backup mode settings from the database.
+   * This function retrieves all configuration values in parallel.
+   *
+   * @returns {Promise<Object>} The current settings
    */
   async getCurrentSettings() {
     try {
@@ -142,11 +150,13 @@ module.exports = {
   },
 
   /**
-   * Validates the channel and role inputs.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object.
-   * @param {Channel|null} channelOption - The channel option if provided.
-   * @param {Role|null} roleOption - The role option if provided.
-   * @returns {boolean} True if there was a validation error, false otherwise.
+   * We validate the channel and role inputs.
+   * This function ensures the selected options are valid and usable.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Channel|null} channelOption - The channel option if provided
+   * @param {Role|null} roleOption - The role option if provided
+   * @returns {boolean} True if there was a validation error, false otherwise
    */
   async validateInputs(interaction, channelOption, roleOption) {
     // We validate the channel type if one was provided.
@@ -179,12 +189,14 @@ module.exports = {
   },
 
   /**
-   * Updates backup mode settings in the database.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object.
-   * @param {Channel|null} channelOption - The channel to set for welcome messages.
-   * @param {Role|null} roleOption - The role to assign to new members.
-   * @param {string|null} enabledOption - Whether backup mode is enabled.
-   * @param {Object} currentSettings - Current backup mode settings.
+   * We update backup mode settings in the database.
+   * This function saves the new configuration values.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Channel|null} channelOption - The channel to set for welcome messages
+   * @param {Role|null} roleOption - The role to assign to new members
+   * @param {string|null} enabledOption - Whether backup mode is enabled
+   * @param {Object} currentSettings - Current backup mode settings
    */
   async updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings) {
     try {
@@ -245,8 +257,10 @@ module.exports = {
   },
 
   /**
-   * Shows the current backup mode status.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object.
+   * We show the current backup mode status.
+   * This function retrieves and displays the current configuration.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The interaction object
    */
   async showBackupModeStatus(interaction) {
     logger.debug("Retrieving current backup mode configuration.");
@@ -271,15 +285,17 @@ module.exports = {
   },
 
   /**
-   * Formats an update message based on the old and new settings.
-   * @param {boolean} oldEnabled - The previous enabled state.
-   * @param {boolean} newEnabled - The new enabled state.
-   * @param {string} oldChannelId - The previous channel ID.
-   * @param {string} newChannelId - The new channel ID.
-   * @param {string} oldRoleId - The previous role ID.
-   * @param {string} newRoleId - The new role ID.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object.
-   * @returns {string} The formatted update message.
+   * We format an update message based on the old and new settings.
+   * This function creates a user-friendly message showing what changed.
+   *
+   * @param {boolean} oldEnabled - The previous enabled state
+   * @param {boolean} newEnabled - The new enabled state
+   * @param {string} oldChannelId - The previous channel ID
+   * @param {string} newChannelId - The new channel ID
+   * @param {string} oldRoleId - The previous role ID
+   * @param {string} newRoleId - The new role ID
+   * @param {ChatInputCommandInteraction} interaction - The interaction object
+   * @returns {string} The formatted update message
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     let message = `🔄 **Backup Mode Updated**\n\n`;
@@ -307,10 +323,12 @@ module.exports = {
   },
 
   /**
-   * Formats a status message based on the current settings.
-   * @param {Object} settings - The current backup mode settings.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object.
-   * @returns {string} The formatted status message.
+   * We format a status message based on the current settings.
+   * This function creates a user-friendly message showing the current configuration.
+   *
+   * @param {Object} settings - The current backup mode settings
+   * @param {ChatInputCommandInteraction} interaction - The interaction object
+   * @returns {string} The formatted status message
    */
   formatStatusMessage(settings, interaction) {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
@@ -338,9 +356,11 @@ module.exports = {
   },
 
   /**
-   * Handles errors that occur during command execution.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logger.error("Error in /backupmode command execution.", { 

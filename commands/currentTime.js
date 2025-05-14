@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -17,157 +17,118 @@ dayjs.extend(timezone);
 dayjs.extend(advancedFormat);
 
 /**
- * Module for the /currenttime command.
- * This command retrieves the current local time for a given place using Google's APIs.
+ * We handle the currenttime command.
+ * This function displays the current time in a specified timezone or UTC by default.
+ *
+ * We perform several tasks:
+ * 1. Parse the timezone input from the user
+ * 2. Validate the timezone
+ * 3. Get the current time in the specified timezone
+ * 4. Send the formatted time to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('currenttime')
-    .setDescription('Get the current time in a place.')
+    .setDescription('We display the current time in a specified timezone or UTC by default.')
     .addStringOption(option =>
-      option
-        .setName('place')
-        .setDescription('What place do you want the time for?')
-        .setRequired(true)
+      option.setName('timezone')
+        .setDescription('The IANA timezone name (e.g., America/New_York)')
+        .setRequired(false)
     ),
-    
-  /**
-   * Executes the /currenttime command.
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   */
+
   async execute(interaction) {
+    await interaction.deferReply();
     try {
-      // We defer the reply to allow time for the external API calls to complete.
-      await interaction.deferReply();
-      
-      // We check if the Google API key is properly configured.
-      if (!this.validateConfiguration()) {
-        logger.error("Google API key is not configured.");
-        await interaction.editReply({ 
-          content: "⚠️ Google API key is not configured. Please contact the bot administrator.",
-          ephemeral: true
-        });
-        return;
-      }
-      
-      // We retrieve the place name from the command options provided by the user.
-      const place = interaction.options.getString('place');
-      logger.info("Current time command initiated.", { 
-        userId: interaction.user.id, 
-        place: place 
+      logger.info("Current time command initiated.", {
+        userId: interaction.user.id,
+        guildId: interaction.guild.id
       });
-      
-      // We get location and time data from the external APIs.
-      const timeData = await this.getLocationTimeData(place);
-      
-      if (timeData.error) {
-        await interaction.editReply({ 
-          content: formatErrorMessage(place, timeData.type),
+
+      // We get the timezone from the command options, defaulting to UTC.
+      const tzInput = interaction.options.getString('timezone') || 'UTC';
+      logger.debug("Timezone input received.", { tzInput });
+
+      // We validate the timezone.
+      if (!this.isValidTimezone(tzInput)) {
+        await interaction.editReply({
+          content: `⚠️ Invalid timezone. Please provide a valid IANA timezone (e.g., America/New_York).`,
           ephemeral: true
         });
         return;
       }
-      
-      // We build and send the embed with time information to the user.
-      const embed = this.createTimeEmbed(timeData);
-      await interaction.editReply({ embeds: [embed] });
-      logger.info("Current time lookup successful.", { 
-        userId: interaction.user.id, 
-        place: place,
-        timezone: timeData.timezoneName
+
+      // We get the current time in the specified timezone.
+      const now = dayjs().tz(tzInput);
+      const formatted = now.format('YYYY-MM-DD HH:mm:ss z');
+
+      await interaction.editReply({
+        content: `🕒 The current time in **${tzInput}** is: 
+
+	t${formatted}`
+      });
+
+      logger.info("Current time sent successfully.", {
+        timezone: tzInput,
+        userId: interaction.user.id,
+        guildId: interaction.guild.id
       });
     } catch (error) {
-      logger.error("Error in /currenttime command.", { 
-        error: error.message,
-        stack: error.stack 
-      });
-      await interaction.editReply({ 
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
-  },
-  
-  /**
-   * Validates that the required configuration is available for API access.
-   * @returns {boolean} True if configuration is valid, false otherwise.
-   */
-  validateConfiguration() {
-    return !!config.googleApiKey;
-  },
-  
-  /**
-   * Gets location and time data for a specified place using Google's APIs.
-   * @param {string} place - The place to look up.
-   * @returns {Object} An object with location and time data or an error.
-   */
-  async getLocationTimeData(place) {
-    // First, we get geocoding data to convert the place name to coordinates.
-    const geocodeResult = await getGeocodingData(place);
-    
-    if (geocodeResult.error) {
-      return geocodeResult;
-    }
-    
-    const { location, formattedAddress } = geocodeResult;
-    
-    // We get the current timestamp in seconds for the timezone API.
-    const timestamp = dayjs().unix();
-    
-    // Next, we get timezone data for the location coordinates.
-    const timezoneResult = await getTimezoneData(location, timestamp);
-    
-    if (timezoneResult.error) {
-      return timezoneResult;
-    }
-    
-    // We extract timezone details from the API response.
-    const timezoneName = timezoneResult.timezoneId;
-    const rawOffset = timezoneResult.rawOffset / 3600; // We convert seconds to hours.
-    const dstOffset = timezoneResult.dstOffset / 3600; // We convert seconds to hours.
-    const utcOffset = rawOffset + dstOffset;   // We calculate the total UTC offset in hours.
-    const isDST = dstOffset > 0 ? "Yes" : "No";
-    
-    // We calculate the local time by adding the UTC offset to the current UTC time.
-    const localTime = dayjs.utc().add(utcOffset, 'hour');
-    const formattedTime = localTime.format('YYYY-MM-DD HH:mm:ss');
-    const formattedDate = localTime.format('dddd, MMMM D, YYYY');
-    
-    return {
-      formattedAddress,
-      timezoneName,
-      utcOffset,
-      isDST,
-      localTime,
-      formattedTime,
-      formattedDate
-    };
   },
 
   /**
-   * Creates an embed with time information for a visually appealing display.
-   * @param {Object} timeData - The time data to display in the embed.
-   * @returns {EmbedBuilder} The created embed with formatted time information.
+   * We validate if the provided string is a valid IANA timezone.
+   * This function checks if the timezone is recognized by dayjs.
+   *
+   * @param {string} tz - The timezone string to validate
+   * @returns {boolean} True if the timezone is valid, false otherwise
    */
-  createTimeEmbed(timeData) {
-    const {
-      formattedAddress,
-      timezoneName,
-      utcOffset,
-      isDST,
-      formattedTime,
-      formattedDate
-    } = timeData;
-    
-    return new EmbedBuilder()
-      .setTitle(`🕒 Current Time in ${formattedAddress}`)
-      .setDescription(`⏰ **${formattedTime}**\n📅 ${formattedDate}`)
-      .setColor(EMBED_COLOR)
-      .addFields(
-        { name: "🌍 Timezone", value: timezoneName, inline: true },
-        { name: "🕰️ UTC Offset", value: `UTC ${utcOffset >= 0 ? '+' : ''}${utcOffset}`, inline: true },
-        { name: "🌞 Daylight Savings", value: isDST, inline: true }
-      )
-      .setFooter({ text: "Powered by Google Maps Time Zone API" });
+  isValidTimezone(tz) {
+    try {
+      return !!dayjs.tz.zone(tz);
+    } catch {
+      return false;
+    }
+  },
+
+  /**
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+   * @param {Error} error - The error that occurred
+   */
+  async handleError(interaction, error) {
+    logger.error("Error in /currenttime command execution.", {
+      error: error.message,
+      stack: error.stack,
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+
+    let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
+
+    try {
+      await interaction.editReply({
+        content: errorMessage,
+        ephemeral: true
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for currenttime command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+
+      await interaction.reply({
+        content: errorMessage,
+        ephemeral: true
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

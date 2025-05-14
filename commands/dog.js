@@ -9,13 +9,20 @@ const EMBED_COLOR = 0xD3D3D3;
 const IMAGE_FILENAME = "dog.jpg";
 
 /**
- * Module for the /dog command.
- * We fetch a random dog image from the Dog CEO API and send it as an embed.
+ * We handle the dog command.
+ * This function fetches and displays a random dog image.
+ *
+ * We perform several tasks:
+ * 1. Fetch a random dog image from the API
+ * 2. Create an embed with the dog image
+ * 3. Send the embed to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
-    .setDescription('Get a random dog picture.'),
+    .setDescription('We fetch and display a random dog image.'),
   
   /**
    * Executes the /dog command.
@@ -23,27 +30,42 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // We defer the reply to allow time for the asynchronous API operations.
+      // We defer the reply since the API call might take a moment.
       await interaction.deferReply();
-      logger.info("Dog command initiated.", { userId: interaction.user.id });
       
-      // We fetch the dog image and create an embed to display it.
-      const imageBuffer = await this.fetchDogImage();
-      const embed = this.createDogEmbed();
-      const attachment = new AttachmentBuilder(imageBuffer, { name: IMAGE_FILENAME });
-            
-      // We send the response with the dog image to the user.
-      await interaction.editReply({ embeds: [embed], files: [attachment] });
-      logger.info("Dog image sent successfully.", { userId: interaction.user.id });
-    } catch (error) {
-      logger.error("Error in dog command execution.", { 
-        error: error.message, 
-        stack: error.stack,
-        userId: interaction.user.id
+      logger.info("Dog command initiated.", {
+        userId: interaction.user.id,
+        guildId: interaction.guild?.id
       });
       
+      // We fetch a random dog image from the API.
+      const response = await axios.get('https://api.thedogapi.com/v1/images/search');
+      const dogData = response.data[0];
+      
+      // We create an embed to display the dog image.
+      const embed = new EmbedBuilder()
+        .setColor('#A0522D')
+        .setTitle('🐕 Random Dog')
+        .setImage(dogData.url)
+        .setFooter({ text: 'Powered by The Dog API' });
+      
+      // We send the embed to the user.
+      await interaction.editReply({ embeds: [embed] });
+      
+      logger.info("Dog command completed successfully.", {
+        userId: interaction.user.id,
+        imageUrl: dogData.url
+      });
+    } catch (error) {
+      logger.error("Error executing dog command:", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user?.id
+      });
+      
+      // We inform the user if something goes wrong.
       await interaction.editReply({
-        content: `⚠️ ${this.getErrorMessage(error)}`,
+        content: "⚠️ We couldn't fetch a dog image. Please try again later.",
         ephemeral: true
       });
     }

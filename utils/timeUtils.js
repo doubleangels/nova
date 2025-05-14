@@ -21,6 +21,15 @@ const TIMEZONE_CACHE = new Map(); // We store timezone validation results.
 // Get all valid timezone names from moment.
 const VALID_TIMEZONES = new Set(moment.tz.names());
 
+// We define these configuration constants for consistent time handling.
+const DEFAULT_TIMEZONE = 'UTC';
+const TIME_FORMATS = {
+  SHORT: 'HH:mm',
+  MEDIUM: 'HH:mm:ss',
+  LONG: 'YYYY-MM-DD HH:mm:ss',
+  ISO: 'YYYY-MM-DDTHH:mm:ss.SSSZ'
+};
+
 /**
  * Validates if the provided string is a valid timezone identifier.
  * We use this to prevent errors when working with user-provided timezone strings.
@@ -316,11 +325,153 @@ function formatConvertedTimes(convertedTimes, formatter = defaultFormatter) {
   return convertedTimes.map(formatter).join('\n');
 }
 
+/**
+ * We format a date according to the specified format.
+ * This function handles date formatting with timezone support.
+ *
+ * We validate the input date and format string.
+ * We apply the specified timezone and format the date accordingly.
+ * We handle invalid dates gracefully with appropriate error messages.
+ *
+ * @param {Date|string} date - The date to format
+ * @param {string} format - The format string to use
+ * @param {string} timezone - The timezone to use (defaults to UTC)
+ * @returns {string} The formatted date string
+ * @throws {Error} If the date is invalid or format is unsupported
+ */
+function formatDate(date, format = DATE_FORMAT, timezone = DEFAULT_TIMEZONE) {
+  try {
+    // We validate the input date.
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      throw new Error('Invalid date provided.');
+    }
+
+    // We validate the format string.
+    if (!Object.values(TIME_FORMATS).includes(format)) {
+      throw new Error('Unsupported date format.');
+    }
+
+    // We format the date using the specified timezone.
+    return dayjs(dateObj).tz(timezone).format(format);
+  } catch (error) {
+    logger.error(`Error formatting date: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * We parse a date string into a Date object.
+ * This function handles various date string formats.
+ *
+ * We attempt to parse the date string using multiple formats.
+ * We validate the parsed date and return it if valid.
+ * We handle invalid dates gracefully with appropriate error messages.
+ *
+ * @param {string} dateString - The date string to parse
+ * @param {string} format - The expected format of the date string
+ * @returns {Date} The parsed Date object
+ * @throws {Error} If the date string cannot be parsed
+ */
+function parseDate(dateString, format = DATE_FORMAT) {
+  try {
+    // We validate the input string.
+    if (!dateString || typeof dateString !== 'string') {
+      throw new Error('Invalid date string provided.');
+    }
+
+    // We parse the date using the specified format.
+    const parsedDate = dayjs(dateString, format);
+    if (!parsedDate.isValid()) {
+      throw new Error('Date string could not be parsed.');
+    }
+
+    return parsedDate.toDate();
+  } catch (error) {
+    logger.error(`Error parsing date string "${dateString}": ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * We calculate the time difference between two dates.
+ * This function handles various time units and formats.
+ *
+ * We validate both input dates and ensure they are valid.
+ * We calculate the difference in the specified unit.
+ * We handle invalid dates gracefully with appropriate error messages.
+ *
+ * @param {Date|string} date1 - The first date
+ * @param {Date|string} date2 - The second date
+ * @param {string} unit - The unit to calculate the difference in (e.g., 'days', 'hours')
+ * @returns {number} The time difference in the specified unit
+ * @throws {Error} If either date is invalid
+ */
+function getTimeDifference(date1, date2, unit = 'days') {
+  try {
+    // We validate both input dates.
+    const dateObj1 = date1 instanceof Date ? date1 : new Date(date1);
+    const dateObj2 = date2 instanceof Date ? date2 : new Date(date2);
+    
+    if (isNaN(dateObj1.getTime()) || isNaN(dateObj2.getTime())) {
+      throw new Error('Invalid date provided.');
+    }
+
+    // We calculate the difference in the specified unit.
+    return dayjs(dateObj1).diff(dayjs(dateObj2), unit);
+  } catch (error) {
+    logger.error(`Error calculating time difference: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * We check if a date is within a specified range.
+ * This function handles date range validation.
+ *
+ * We validate all input dates and ensure they are valid.
+ * We check if the target date falls within the range.
+ * We handle invalid dates gracefully with appropriate error messages.
+ *
+ * @param {Date|string} date - The date to check
+ * @param {Date|string} startDate - The start of the range
+ * @param {Date|string} endDate - The end of the range
+ * @returns {boolean} Whether the date is within the range
+ * @throws {Error} If any date is invalid
+ */
+function isDateInRange(date, startDate, endDate) {
+  try {
+    // We validate all input dates.
+    const dateObj = date instanceof Date ? date : new Date(date);
+    const startObj = startDate instanceof Date ? startDate : new Date(startDate);
+    const endObj = endDate instanceof Date ? endDate : new Date(endDate);
+    
+    if (isNaN(dateObj.getTime()) || isNaN(startObj.getTime()) || isNaN(endObj.getTime())) {
+      throw new Error('Invalid date provided.');
+    }
+
+    // We check if the date is within the range.
+    return dayjs(dateObj).isAfter(startObj) && dayjs(dateObj).isBefore(endObj);
+  } catch (error) {
+    logger.error(`Error checking date range: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * We export the time utility functions for use throughout the application.
+ * This module provides consistent time handling capabilities.
+ */
 module.exports = {
   extractTimeReferences,
   convertTimeZones,
   formatConvertedTimes,
   isValidTimezone,
   defaultFormatter,
-  validateTimezone
+  validateTimezone,
+  formatDate,
+  parseDate,
+  getTimeDifference,
+  isDateInRange,
+  TIME_FORMATS
 };

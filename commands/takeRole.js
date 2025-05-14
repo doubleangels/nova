@@ -3,8 +3,16 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
 /**
- * Module for the /takerole command.
- * We allow moderators to remove a specified role from a user for moderation purposes.
+ * We handle the takerole command.
+ * This function allows moderators to remove a specified role from a user.
+ *
+ * We perform several tasks:
+ * 1. Validate permissions and role hierarchy
+ * 2. Check if the user has the role
+ * 3. Remove the role from the user
+ * 4. Log the action and provide feedback
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

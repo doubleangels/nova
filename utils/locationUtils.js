@@ -6,29 +6,29 @@ const { DateTime } = require('luxon');
 const dayjs = require('dayjs');
 const NodeCache = require('node-cache');
 
-// We define these configuration constants.
+// We define these configuration constants for consistent interaction with Google's services.
 const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
 const API_STATUS_SUCCESS = 'OK';
 const API_TIMEOUT_MS = 5000;
 const SECONDS_PER_HOUR = 3600;
 
-// Cache configuration
+// We configure the cache with a one-hour TTL to reduce API calls and improve performance.
 const CACHE_TTL = 3600; // 1 hour in seconds
 const locationCache = new NodeCache({ stdTTL: CACHE_TTL });
 
-// Rate limiting configuration
+// We set up rate limiting parameters to prevent API abuse and ensure fair usage.
 const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
 const MAX_REQUESTS_PER_WINDOW = 50;
 const requestCounts = new Map();
 
-// Coordinate validation constants
+// We define valid coordinate ranges to ensure data integrity and prevent invalid API calls.
 const MIN_LATITUDE = -90;
 const MAX_LATITUDE = 90;
 const MIN_LONGITUDE = -180;
 const MAX_LONGITUDE = 180;
 
-// Error types
+// We define standard error types for consistent error handling across the application.
 const ErrorTypes = {
   INVALID_INPUT: 'invalid_input',
   NOT_FOUND: 'not_found',
@@ -40,10 +40,12 @@ const ErrorTypes = {
 };
 
 /**
- * Validates coordinates are within valid ranges.
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @returns {boolean} True if coordinates are valid
+ * We validate coordinates are within valid ranges to ensure data integrity.
+ * This function checks both the type and range of latitude and longitude values.
+ * 
+ * @param {number} lat - Latitude value to validate
+ * @param {number} lng - Longitude value to validate
+ * @returns {boolean} True if coordinates are valid, false otherwise
  */
 function isValidCoordinates(lat, lng) {
   return (
@@ -57,21 +59,23 @@ function isValidCoordinates(lat, lng) {
 }
 
 /**
- * Checks if we've exceeded the rate limit.
- * @returns {boolean} True if rate limit is exceeded
+ * We check if we've exceeded the rate limit to prevent API abuse.
+ * This function implements a sliding window rate limiter that tracks requests over time.
+ * 
+ * @returns {boolean} True if rate limit is exceeded, false otherwise
  */
 function isRateLimited() {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
   
-  // Clean up old requests
+  // We clean up old requests to prevent memory leaks and ensure accurate rate limiting.
   for (const [timestamp] of requestCounts) {
     if (timestamp < windowStart) {
       requestCounts.delete(timestamp);
     }
   }
   
-  // Count requests in current window
+  // We count requests in current window to determine if we've exceeded the limit.
   let currentWindowCount = 0;
   for (const [timestamp, count] of requestCounts) {
     if (timestamp >= windowStart) {
@@ -83,7 +87,8 @@ function isRateLimited() {
 }
 
 /**
- * Records an API request for rate limiting.
+ * We record an API request for rate limiting purposes.
+ * This function maintains a timestamp-based count of requests for rate limiting.
  */
 function recordRequest() {
   const now = Date.now();
@@ -91,52 +96,48 @@ function recordRequest() {
 }
 
 /**
- * Removes API keys from URLs for safe logging.
- * We use this to prevent sensitive information from appearing in log files.
- *
- * @param {string} url - The URL that may contain sensitive information.
- * @returns {string} The sanitized URL.
+ * We remove API keys from URLs for safe logging.
+ * This function prevents sensitive information from appearing in log files.
+ * 
+ * @param {string} url - The URL that may contain sensitive information
+ * @returns {string} The sanitized URL with API keys redacted
  */
 function safeUrl(url) {
   return url.replace(/key=([^&]+)/, 'key=REDACTED');
 }
 
 /**
- * Validates if a timezone identifier is valid using Luxon.
- * We check this before attempting operations that require valid timezone data.
+ * We validate if a timezone identifier is valid using Luxon.
+ * This function ensures that timezone operations will work correctly.
  * 
- * @param {string} tz - The timezone identifier to validate.
- * @returns {boolean} True if the timezone is valid, false otherwise.
+ * @param {string} tz - The timezone identifier to validate
+ * @returns {boolean} True if the timezone is valid, false otherwise
  */
 function isValidTimezone(tz) {
-  // We check if the input is a non-empty string.
   if (typeof tz !== 'string' || tz.trim() === '') {
     return false;
   }
   
-  // We try to create a DateTime object with the timezone to test its validity.
   const dt = DateTime.local().setZone(tz);
-  
-  // We check if the DateTime object is valid and has no errors.
   return dt.isValid && dt.invalidReason === null;
 }
 
 /**
- * Fetches geocoding data for a given place name with caching and rate limiting.
- * We use this to convert human-readable locations to coordinates.
- *
- * @param {string} place - The place name to geocode.
- * @returns {Promise<Object>} An object containing geocoding results or error information.
+ * We fetch geocoding data for a given place name with caching and rate limiting.
+ * This function handles the conversion of human-readable locations to coordinates.
+ * 
+ * @param {string} place - The place name to geocode
+ * @returns {Promise<Object>} An object containing geocoding results or error information
  */
 async function getGeocodingData(place) {
   try {
-    // Input validation
+    // We validate the input to prevent API errors and ensure data quality.
     if (!place || typeof place !== 'string' || place.trim() === '') {
       logger.warn("Invalid place name provided.", { place });
       return { error: true, type: ErrorTypes.INVALID_INPUT };
     }
 
-    // Check cache
+    // We check the cache to improve performance and reduce API calls.
     const cacheKey = `geocode:${place.toLowerCase().trim()}`;
     const cachedResult = locationCache.get(cacheKey);
     if (cachedResult) {
@@ -144,13 +145,13 @@ async function getGeocodingData(place) {
       return cachedResult;
     }
 
-    // Check rate limit
+    // We check rate limits to prevent API abuse and ensure fair usage.
     if (isRateLimited()) {
       logger.warn("Rate limit exceeded for geocoding API.", { place });
       return { error: true, type: ErrorTypes.RATE_LIMIT };
     }
 
-    // Build request
+    // We build the request with proper parameters and error handling.
     const geocodeParams = new URLSearchParams({
       address: place,
       key: config.googleApiKey
@@ -163,10 +164,10 @@ async function getGeocodingData(place) {
       requestUrl: safeUrl(geocodeRequestUrl)
     });
     
-    // Record request for rate limiting
+    // We record the request for rate limiting purposes.
     recordRequest();
     
-    // Make request
+    // We make the API call with proper timeout and error handling.
     const response = await axios.get(geocodeRequestUrl, { timeout: API_TIMEOUT_MS });
     
     if (response.status !== 200) {
@@ -188,7 +189,7 @@ async function getGeocodingData(place) {
     const formattedAddress = geoData.results[0].formatted_address;
     const location = geoData.results[0].geometry.location;
     
-    // Validate coordinates
+    // We validate the coordinates to ensure data integrity.
     if (!isValidCoordinates(location.lat, location.lng)) {
       logger.warn("Invalid coordinates received from API.", { location });
       return { error: true, type: ErrorTypes.INVALID_INPUT };
@@ -200,7 +201,7 @@ async function getGeocodingData(place) {
       formattedAddress: formattedAddress
     };
     
-    // Cache the result
+    // We cache the result to improve future performance.
     locationCache.set(cacheKey, result);
     
     logger.debug("Successfully retrieved coordinates.", {
@@ -213,7 +214,6 @@ async function getGeocodingData(place) {
     return result;
     
   } catch (error) {
-    // We handle timeout errors specifically to provide better feedback.
     if (error.code === 'ECONNABORTED') {
       logger.error("Timeout while fetching geocoding data.", {
         place,
@@ -233,22 +233,22 @@ async function getGeocodingData(place) {
 }
 
 /**
- * Fetches timezone data for given coordinates.
- * We use this to determine the timezone and UTC offset for a specific location.
- *
- * @param {Object} location - The location object with lat and lng properties.
- * @param {number} [timestamp] - Optional UNIX timestamp (seconds). Defaults to current time.
- * @returns {Promise<Object>} An object containing timezone results or error information.
+ * We fetch timezone data for given coordinates.
+ * This function determines the timezone and UTC offset for a specific location.
+ * 
+ * @param {Object} location - The location object with lat and lng properties
+ * @param {number} [timestamp] - Optional UNIX timestamp (seconds). Defaults to current time
+ * @returns {Promise<Object>} An object containing timezone results or error information
  */
 async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 1000)) {
   try {
-    // We validate location input to prevent API errors.
+    // We validate the location input to prevent API errors.
     if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
       logger.warn("Invalid location provided for timezone lookup.", { location });
       return { error: true, type: ErrorTypes.INVALID_INPUT };
     }
     
-    // We build the Timezone API URL with the necessary parameters.
+    // We build the timezone request with proper parameters.
     const timezoneParams = new URLSearchParams({
       location: `${location.lat},${location.lng}`,
       timestamp: timestamp.toString(),
@@ -263,7 +263,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
       requestUrl: safeUrl(timezoneRequestUrl)
     });
     
-    // We fetch timezone data using axios with a timeout for reliability.
+    // We make the API call with proper timeout and error handling.
     const response = await axios.get(timezoneRequestUrl, { timeout: API_TIMEOUT_MS });
     
     if (response.status !== 200) {
@@ -304,7 +304,6 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
     };
     
   } catch (error) {
-    // We handle timeout errors specifically for better user feedback.
     if (error.code === 'ECONNABORTED') {
       logger.error("Timeout while fetching timezone data.", {
         lat: location?.lat,
@@ -326,15 +325,15 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
 }
 
 /**
- * Retrieves the UTC offset for a given place.
- * We combine geocoding and timezone data to determine the complete timezone information.
- *
- * @param {string} place - The place name to lookup.
- * @returns {Promise<Object>} An object containing either the offset or error information.
+ * We retrieve the UTC offset for a given place.
+ * This function combines geocoding and timezone data to determine the complete timezone information.
+ * 
+ * @param {string} place - The place name to lookup
+ * @returns {Promise<Object>} An object containing either the offset or error information
  */
 async function getUtcOffset(place) {
   try {
-    // We first get the geocoding data to convert the place name to coordinates.
+    // We get the geocoding data first to convert the place name to coordinates.
     const geocodeResult = await getGeocodingData(place);
     
     if (geocodeResult.error) {
@@ -347,7 +346,7 @@ async function getUtcOffset(place) {
     const { location } = geocodeResult;
     const timestamp = dayjs().unix();
     
-    // We then get the timezone data for those coordinates.
+    // We get the timezone data for the coordinates.
     const tzResult = await getTimezoneData(location, timestamp);
     
     if (tzResult.error) {
@@ -383,11 +382,11 @@ async function getUtcOffset(place) {
 }
 
 /**
- * Formats a place name by trimming and capitalizing the first letter.
- * We use this to standardize location names for display purposes.
- *
- * @param {string} placeName - The place name to format.
- * @returns {string} The formatted place name.
+ * We format a place name by trimming and capitalizing the first letter.
+ * This function standardizes location names for display purposes.
+ * 
+ * @param {string} placeName - The place name to format
+ * @returns {string} The formatted place name
  */
 function formatPlaceName(placeName) {
   if (!placeName || typeof placeName !== 'string') return '';
@@ -396,12 +395,12 @@ function formatPlaceName(placeName) {
 }
 
 /**
- * Formats an error message based on the error type.
- * We provide user-friendly error messages that explain what went wrong.
- *
- * @param {string} place - The place name that caused the error.
- * @param {string} errorType - The type of error that occurred.
- * @returns {string} The formatted error message.
+ * We format an error message based on the error type.
+ * This function provides user-friendly error messages that explain what went wrong.
+ * 
+ * @param {string} place - The place name that caused the error
+ * @param {string} errorType - The type of error that occurred
+ * @returns {string} The formatted error message
  */
 function formatErrorMessage(place, errorType) {
   switch (errorType) {
@@ -424,15 +423,15 @@ function formatErrorMessage(place, errorType) {
 }
 
 /**
- * Gets the coordinates (latitude and longitude) for a given place name.
- * We provide this as a simplified interface for just getting location coordinates.
- *
- * @param {string} place - The place name to get coordinates for.
- * @returns {Promise<[number|null, number|null]>} A promise that resolves to an array containing [latitude, longitude].
+ * We get the coordinates (latitude and longitude) for a given place name.
+ * This function provides a simplified interface for just getting location coordinates.
+ * 
+ * @param {string} place - The place name to get coordinates for
+ * @returns {Promise<[number|null, number|null]>} A promise that resolves to an array containing [latitude, longitude]
  */
 async function getCoordinates(place) {
   try {
-    // We get the geocoding data for the place and extract just the coordinates.
+    // We get the geocoding data and extract just the coordinates.
     const geocodeResult = await getGeocodingData(place);
     
     if (geocodeResult.error) {

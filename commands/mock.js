@@ -8,25 +8,32 @@ const MOCK_EMOJI = '<a:spongebobmock:1291527476564066387>'; // This is the compl
 const ELLIPSIS = '...';
 
 /**
- * Context menu command that converts a selected message's text into "mOcKiNg" format.
- * This command is triggered when a user selects a message and chooses the "Mock" option from the context menu.
+ * We handle the mock command.
+ * This function converts a selected message's text into a mocking format (alternating case).
+ *
+ * We perform several tasks:
+ * 1. Validate the target message
+ * 2. Convert the text to alternating case
+ * 3. Format the response with mentions and emoji
+ * 4. Handle message length limits
+ *
+ * @param {MessageContextMenuCommandInteraction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new ContextMenuCommandBuilder()
     .setName('Mock')
     .setType(ApplicationCommandType.Message),
-  /**
-   * Executes the Mock context menu command.
-   * @param {MessageContextMenuCommandInteraction} interaction - The Discord interaction object.
-   */
+
   async execute(interaction) {
     try {
       // We defer the reply to handle processing time for longer messages.
       await interaction.deferReply();
+      
       logger.info("Mock context menu command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
+
       // We validate the message and generate mocked content only if valid.
       const validationResult = this.validateMessage(interaction);
       if (!validationResult.valid) {
@@ -41,6 +48,7 @@ module.exports = {
       const mockedContent = this.generateMockedContent(targetMessage);
       
       await interaction.editReply(mockedContent);
+      
       logger.info("Mock command executed successfully.", {
         userId: interaction.user.id,
         targetMessageId: targetMessage.id
@@ -52,9 +60,12 @@ module.exports = {
   },
   
   /**
-   * Validates the target message to ensure it can be mocked.
-   * @param {MessageContextMenuCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Object} An object containing validation result and message data.
+   * We validate the target message to ensure it can be mocked.
+   * This function checks if the message exists, is not from the bot,
+   * and contains text content to mock.
+   *
+   * @param {MessageContextMenuCommandInteraction} interaction - The Discord interaction object
+   * @returns {Object} An object containing validation result and message data
    */
   validateMessage(interaction) {
     // We retrieve the targeted message from the interaction.
@@ -116,9 +127,11 @@ module.exports = {
   },
   
   /**
-   * Generates the mocked content from the target message by alternating character case.
-   * @param {Message} targetMessage - The message to mock.
-   * @returns {string} The mocked content with proper formatting.
+   * We generate the mocked content from the target message.
+   * This function converts text to alternating case and handles message length limits.
+   *
+   * @param {Message} targetMessage - The message to mock
+   * @returns {string} The mocked content with proper formatting
    */
   generateMockedContent(targetMessage) {
     const messageContent = targetMessage.content;
@@ -159,9 +172,11 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
-   * @param {MessageContextMenuCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
+   * @param {MessageContextMenuCommandInteraction} interaction - The Discord interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logger.error("Error executing mock command.", {

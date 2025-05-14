@@ -1,212 +1,145 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 
 /**
- * Module for the /changecolor command.
- * We change the color of a specified role to the provided hex color.
+ * We handle the changecolor command.
+ * This function changes the color of a specified role to the provided hex color.
+ *
+ * We perform several tasks:
+ * 1. Validate the provided hex color
+ * 2. Check if the role exists and is editable
+ * 3. Update the role's color
+ * 4. Notify the user of the change
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
-        .setDescription('Changes the color of a role.')
+        .setDescription('We change the color of a specified role to the provided hex color.')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('What role would you like to change the color for?')
+                .setDescription('The role whose color you want to change')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('What color should the role have? (#RRGGBB or RRGGBB)')
+                .setDescription('The hex color code (e.g., #FF0000)')
                 .setRequired(true))
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+        .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageRoles),
     
     /**
      * Executes the /changecolor command.
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
-        // We defer the reply since this operation might take a moment to complete.
         await interaction.deferReply();
-        logger.info("Color change command initiated.", { userId: interaction.user.id });
+        try {
+            logger.info("Change color command initiated.", { 
+                userId: interaction.user.id, 
+                guildId: interaction.guild.id 
+            });
+
+            // We get the role and color from the command options.
+            const role = interaction.options.getRole('role');
+            const color = interaction.options.getString('color');
+            
+            // We validate the role and color.
+            if (!this.isValidRole(role)) {
+                await interaction.editReply({
+                    content: "⚠️ I cannot edit this role. Please choose a role that is below my highest role.",
+                    ephemeral: true
+                });
+                return;
+            }
+
+            if (!this.isValidHexColor(color)) {
+                await interaction.editReply({
+                    content: "⚠️ Please provide a valid hex color code (e.g., #FF0000).",
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // We update the role's color.
+            await role.setColor(color);
+            
+            await interaction.editReply({
+                content: `✅ Successfully changed the color of ${role} to ${color}.`
+            });
+
+            logger.info("Role color changed successfully.", { 
+                roleId: role.id, 
+                color: color,
+                userId: interaction.user.id,
+                guildId: interaction.guild.id
+            });
+        } catch (error) {
+            await this.handleError(interaction, error);
+        }
+    },
+
+    /**
+     * We validate if the role can be edited by the bot.
+     * This function checks if the role is manageable and not managed.
+     *
+     * @param {Role} role - The role to validate
+     * @returns {boolean} True if the role is valid, false otherwise
+     */
+    isValidRole(role) {
+        return role.editable && !role.managed;
+    },
+
+    /**
+     * We validate if the provided string is a valid hex color code.
+     * This function checks if the color matches the hex color format.
+     *
+     * @param {string} color - The color code to validate
+     * @returns {boolean} True if the color is valid, false otherwise
+     */
+    isValidHexColor(color) {
+        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+    },
+
+    /**
+     * We handle errors that occur during command execution.
+     * This function logs the error and attempts to notify the user.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
+     * @param {Error} error - The error that occurred
+     */
+    async handleError(interaction, error) {
+        logger.error("Error in /changecolor command execution.", { 
+            error: error.message, 
+            stack: error.stack,
+            userId: interaction.user?.id,
+            guildId: interaction.guild?.id
+        });
+        
+        let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
+        
+        if (error.code === 50013) {
+            errorMessage = "⚠️ I don't have permission to edit this role. Please check my role hierarchy.";
+        }
         
         try {
-            // We extract the command options provided by the user.
-            const role = interaction.options.getRole('role');
-            const colorHex = interaction.options.getString('color');
-            
-            logger.debug("Received command options.", { 
-                roleId: role.id,
-                roleName: role.name,
-                colorHex: colorHex
+            await interaction.editReply({ 
+                content: errorMessage,
+                ephemeral: true 
+            });
+        } catch (followUpError) {
+            logger.error("Failed to send error response for changecolor command.", {
+                error: followUpError.message,
+                originalError: error.message,
+                userId: interaction.user?.id
             });
             
-            // We validate permissions and role hierarchy before proceeding.
-            const permissionCheckResult = await this.checkPermissions(interaction, role);
-            if (!permissionCheckResult.success) {
-                return await interaction.editReply({
-                    content: permissionCheckResult.message,
-                    ephemeral: true
-                });
-            }
-            
-            // We store the original color before changing it for reference in the response.
-            const originalColor = role.hexColor;
-            
-            // We validate and normalize the color format using the utility function.
-            const colorValidationResult = this.validateColor(colorHex);
-            if (!colorValidationResult.success) {
-                logger.warn("Invalid color format provided.", { 
-                    colorHex: colorHex,
-                    userId: interaction.user.id 
-                });
-                
-                return await interaction.editReply({
-                    content: colorValidationResult.message,
-                    ephemeral: true
-                });
-            }
-            
-            const normalizedColorHex = colorValidationResult.normalizedColor;
-            // We convert the hex color to decimal for Discord's color system using the utility function.
-            const colorDecimal = hexToDecimal(normalizedColorHex);
-            logger.debug("Color converted to decimal for Discord API.", { 
-                hex: normalizedColorHex, 
-                decimal: colorDecimal 
-            });
-            
-            // We attempt to change the role color with an audit log reason.
-            const auditReason = `Color changed by ${interaction.user.tag} (ID: ${interaction.user.id}) using changecolor command.`;
-            await role.setColor(colorDecimal, auditReason);
-            
-            logger.info("Role color successfully changed.", { 
-                roleId: role.id, 
-                roleName: role.name,
-                oldColor: originalColor,
-                newColor: normalizedColorHex,
-                changedBy: interaction.user.id
-            });
-            
-            await interaction.editReply({
-                content: `✅ Successfully changed the color of ${role} from \`${originalColor}\` to \`${normalizedColorHex}\`!`
-            });
-            
-        } catch (error) {
-            // We log the full error with stack trace for debugging purposes.
-            logger.error("Failed to change role color.", { 
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user.id
-            });
-            
-            await interaction.editReply({
-                content: this.getErrorMessage(error),
-                ephemeral: true
+            await interaction.reply({ 
+                content: errorMessage,
+                ephemeral: true 
+            }).catch(() => {
+                // Silent catch if everything fails.
             });
         }
-    },
-
-    /**
-     * Checks if the user and bot have permission to modify the role.
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {Role} role - The role to check permissions for.
-     * @returns {Object} An object with success status and message.
-     */
-    async checkPermissions(interaction, role) {
-        // We check if the bot has permission to manage this role based on role hierarchy.
-        if (!role.editable) {
-            logger.warn("Permission denied: Role cannot be modified by the bot.", {
-                roleId: role.id,
-                roleName: role.name,
-                userId: interaction.user.id
-            });
-            
-            return {
-                success: false,
-                message: "⚠️ I don't have permission to modify this role. Please check that the role is below my highest role."
-            };
-        }
-
-        // We check the user's role hierarchy (unless they're the server owner who can modify any role).
-        if (interaction.guild.ownerId !== interaction.user.id) {
-            const member = await interaction.guild.members.fetch(interaction.user.id);
-            const memberHighestRole = member.roles.highest;
-            
-            if (memberHighestRole.position <= role.position) {
-                logger.warn("Permission denied: User cannot modify a role equal to or higher than their highest role.", {
-                    roleId: role.id,
-                    roleName: role.name,
-                    userId: interaction.user.id,
-                    userHighestRoleId: memberHighestRole.id,
-                    userHighestRolePosition: memberHighestRole.position,
-                    targetRolePosition: role.position
-                });
-                
-                return {
-                    success: false,
-                    message: "⚠️ You don't have permission to modify a role that is equal to or higher than your highest role."
-                };
-            }
-        }
-        
-        return { success: true };
-    },
-
-    /**
-     * Gets a user-friendly error message based on the error.
-     * @param {Error} error - The error object.
-     * @returns {string} A user-friendly error message.
-     */
-    getErrorMessage(error) {
-        if (error.code === 50013) {
-            return "⚠️ I don't have permission to modify this role. Please check role hierarchy and permissions.";
-        } else if (error.message.includes('rate limit')) {
-            return "⚠️ Discord is currently rate limiting this action. Please try again in a few moments.";
-        } else if (error.message.includes('Maximum number of server roles reached')) {
-            return "⚠️ This server has reached the maximum number of roles allowed by Discord.";
-        } else if (error.message.includes('Invalid color')) {
-            return "⚠️ The color provided is invalid. Please use a valid hex color code.";
-        }
-        return "⚠️ An unexpected error occurred. Please try again later.";
-    },
-
-    /**
-     * Validates and normalizes a hex color code.
-     * @param {string} colorHex - The hex color code to validate.
-     * @returns {Object} An object containing validation result and normalized color.
-     */
-    validateColor(colorHex) {
-        // We remove the # if present and ensure the color is 6 characters.
-        const normalizedColor = colorHex.replace(/^#/, '');
-        
-        // We check if the color is exactly 6 characters.
-        if (normalizedColor.length !== 6) {
-            return {
-                success: false,
-                message: "⚠️ Color must be exactly 6 characters (e.g., #RRGGBB or RRGGBB)."
-            };
-        }
-        
-        // We check if the color contains only valid hex characters.
-        if (!/^[0-9A-Fa-f]{6}$/.test(normalizedColor)) {
-            return {
-                success: false,
-                message: "⚠️ Color must contain only valid hex characters (0-9, A-F)."
-            };
-        }
-        
-        // We check if the color is not all zeros or all F's.
-        if (normalizedColor === '000000' || normalizedColor === 'FFFFFF') {
-            return {
-                success: false,
-                message: "⚠️ Color cannot be pure black (#000000) or pure white (#FFFFFF)."
-            };
-        }
-        
-        return {
-            success: true,
-            normalizedColor: `#${normalizedColor.toUpperCase()}`
-        };
     }
 };

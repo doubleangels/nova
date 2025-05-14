@@ -71,34 +71,37 @@ async function saveVoiceJoinTimes() {
 }
 
 /**
- * Event handler for the 'voiceStateUpdate' event.
- * We track when users join and leave voice channels to calculate time spent.
- * 
- * @param {VoiceState} oldState - The previous voice state.
- * @param {VoiceState} newState - The new voice state.
+ * We handle voice state changes in the server.
+ * This function manages voice channel events and tracking.
+ *
+ * We perform several tasks for each voice state change:
+ * 1. Track voice channel joins and leaves
+ * 2. Handle voice channel moderation
+ * 3. Update user voice statistics
+ *
+ * @param {VoiceState} oldState - The previous voice state
+ * @param {VoiceState} newState - The new voice state
  */
 module.exports = {
   name: 'voiceStateUpdate',
   async execute(oldState, newState) {
     try {
-      // We ignore bot users
-      if (newState.member.user.bot) return;
+      // We ignore state changes from bots.
+      if (oldState.member.user.bot) return;
 
-      const userId = newState.member.id;
-      const username = newState.member.user.tag;
-      const guildName = newState.guild.name;
-
-      // User joined a voice channel
+      // We handle voice channel joins.
       if (!oldState.channelId && newState.channelId) {
+        logger.debug(`User ${oldState.member.user.tag} joined voice channel ${newState.channel.name}`);
+        // We track voice channel joins here.
         const joinTime = Date.now();
-        voiceJoinTimes.set(userId, joinTime);
+        voiceJoinTimes.set(oldState.member.id, joinTime);
         await saveVoiceJoinTimes(); // Save state after update
         
         // Log detailed join information
         logger.info("User joined voice channel:", {
-          userId,
-          username,
-          guildName,
+          userId: oldState.member.id,
+          username: oldState.member.user.tag,
+          guildName: newState.guild.name,
           channelName: newState.channel.name,
           channelId: newState.channelId,
           timestamp: new Date(joinTime).toISOString(),
@@ -108,19 +111,22 @@ module.exports = {
           serverDeaf: newState.serverDeaf
         });
       }
-      // User left a voice channel
-      else if (oldState.channelId && !newState.channelId) {
-        const joinTime = voiceJoinTimes.get(userId);
+
+      // We handle voice channel leaves.
+      if (oldState.channelId && !newState.channelId) {
+        logger.debug(`User ${oldState.member.user.tag} left voice channel ${oldState.channel.name}`);
+        // We track voice channel leaves here.
+        const joinTime = voiceJoinTimes.get(oldState.member.id);
         if (joinTime) {
           const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60)); // Convert to minutes
           if (timeSpent > 0) {
-            await updateVoiceTime(userId, username, timeSpent);
+            await updateVoiceTime(oldState.member.id, oldState.member.user.tag, timeSpent);
             
             // Log detailed leave information
             logger.info("User left voice channel:", {
-              userId,
-              username,
-              guildName,
+              userId: oldState.member.id,
+              username: oldState.member.user.tag,
+              guildName: newState.guild.name,
               channelName: oldState.channel.name,
               channelId: oldState.channelId,
               timeSpentMinutes: timeSpent,
@@ -131,23 +137,26 @@ module.exports = {
               serverDeaf: oldState.serverDeaf
             });
           }
-          voiceJoinTimes.delete(userId);
+          voiceJoinTimes.delete(oldState.member.id);
           await saveVoiceJoinTimes(); // Save state after update
         }
       }
-      // User switched voice channels
-      else if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
-        const joinTime = voiceJoinTimes.get(userId);
+
+      // We handle voice channel switches.
+      if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
+        logger.debug(`User ${oldState.member.user.tag} switched from ${oldState.channel.name} to ${newState.channel.name}`);
+        // We track voice channel switches here.
+        const joinTime = voiceJoinTimes.get(oldState.member.id);
         if (joinTime) {
           const timeSpent = Math.floor((Date.now() - joinTime) / (1000 * 60));
           if (timeSpent > 0) {
-            await updateVoiceTime(userId, username, timeSpent);
+            await updateVoiceTime(oldState.member.id, oldState.member.user.tag, timeSpent);
             
             // Log detailed channel switch information
             logger.info("User switched voice channels:", {
-              userId,
-              username,
-              guildName,
+              userId: oldState.member.id,
+              username: oldState.member.user.tag,
+              guildName: newState.guild.name,
               oldChannelName: oldState.channel.name,
               oldChannelId: oldState.channelId,
               newChannelName: newState.channel.name,
@@ -162,14 +171,36 @@ module.exports = {
           }
         }
         const newJoinTime = Date.now();
-        voiceJoinTimes.set(userId, newJoinTime);
+        voiceJoinTimes.set(oldState.member.id, newJoinTime);
         await saveVoiceJoinTimes(); // Save state after update
       }
+
+      // We handle mute state changes.
+      if (oldState.mute !== newState.mute) {
+        logger.debug(`User ${oldState.member.user.tag} ${newState.mute ? 'muted' : 'unmuted'} in ${newState.channel?.name || 'no channel'}`);
+        // We track mute state changes here.
+      }
+
+      // We handle deafen state changes.
+      if (oldState.deaf !== newState.deaf) {
+        logger.debug(`User ${oldState.member.user.tag} ${newState.deaf ? 'deafened' : 'undeafened'} in ${newState.channel?.name || 'no channel'}`);
+        // We track deafen state changes here.
+      }
+
+      // We handle streaming state changes.
+      if (oldState.streaming !== newState.streaming) {
+        logger.debug(`User ${oldState.member.user.tag} ${newState.streaming ? 'started' : 'stopped'} streaming in ${newState.channel?.name || 'no channel'}`);
+        // We track streaming state changes here.
+      }
+
     } catch (error) {
-      logger.error("Error in voiceStateUpdate event:", { error });
+      logger.error(`Error processing voice state update for ${oldState.member.user.tag}:`, {
+        error: error.message,
+        stack: error.stack
+      });
       Sentry.captureException(error, {
         extra: {
-          userId: newState.member.id,
+          userId: oldState.member.id,
           oldChannelId: oldState.channelId,
           newChannelId: newState.channelId
         }

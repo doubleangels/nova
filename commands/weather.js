@@ -59,8 +59,16 @@ const WEATHER_ICONS = {
 };
 
 /**
- * Module for the /weather command.
- * We get weather information for a location.
+ * We handle the weather command.
+ * This function allows users to get detailed weather information for any location.
+ *
+ * We perform several tasks:
+ * 1. Validate weather API configuration
+ * 2. Process location search requests
+ * 3. Fetch and format weather data
+ * 4. Display current conditions and forecasts
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

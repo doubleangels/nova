@@ -9,59 +9,61 @@ const CAT_EMBED_COLOR = 0xD3D3D3;
 const DEFAULT_FILENAME = 'cat.jpg';
 
 /**
- * Module for the /cat command.
- * We fetch a random cat image from the Cataas API and send it as an embed.
+ * We handle the cat command.
+ * This function fetches and displays a random cat image.
+ *
+ * We perform several tasks:
+ * 1. Fetch a random cat image from the API
+ * 2. Create an embed with the cat image
+ * 3. Send the embed to the user
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cat')
-    .setDescription('Get a random cat picture.'),
-  
-  /**
-   * Executes the /cat command.
-   * @param {ChatInputCommandInteraction} interaction - The interaction object from Discord.
-   */
+    .setDescription('We fetch and display a random cat image.'),
+
   async execute(interaction) {
     try {
-      // We defer the reply to allow time for the asynchronous API operations.
+      // We defer the reply since the API call might take a moment.
       await interaction.deferReply();
-      logger.info("Cat command initiated.", { userId: interaction.user.id });
+      
+      logger.info("Cat command initiated.", {
+        userId: interaction.user.id,
+        guildId: interaction.guild?.id
+      });
 
-      // We fetch the cat image from the external API.
-      const imageBuffer = await this.fetchCatImage();
-      // We create an attachment from the image buffer for Discord to display.
-      const attachment = new AttachmentBuilder(imageBuffer, { name: DEFAULT_FILENAME });
-
-      // We build an embed with the cat image for a nicer presentation.
+      // We fetch a random cat image from the API.
+      const response = await axios.get('https://api.thecatapi.com/v1/images/search');
+      const catData = response.data[0];
+      
+      // We create an embed to display the cat image.
       const embed = new EmbedBuilder()
-        .setTitle("Random Cat Picture")
-        .setDescription("😺 Here's a cat for you!")
-        .setColor(CAT_EMBED_COLOR)
-        .setImage(`attachment://${DEFAULT_FILENAME}`)
-        .setFooter({ text: "Powered by Cataas API" });
-        
-      // We edit the reply with the embed and attachment to display the cat image.
-      await interaction.editReply({ embeds: [embed], files: [attachment] });
-      logger.info("Cat image sent successfully.", { userId: interaction.user.id });
+        .setColor('#FFB6C1')
+        .setTitle('🐱 Random Cat')
+        .setImage(catData.url)
+        .setFooter({ text: 'Powered by The Cat API' });
+      
+      // We send the embed to the user.
+      await interaction.editReply({ embeds: [embed] });
+      
+      logger.info("Cat command completed successfully.", {
+        userId: interaction.user.id,
+        imageUrl: catData.url
+      });
     } catch (error) {
-      logger.error("Error in cat command execution.", { 
-        error: error.message, 
+      logger.error("Error executing cat command:", {
+        error: error.message,
         stack: error.stack,
-        userId: interaction.user.id
+        userId: interaction.user?.id
       });
       
-      // We determine if the interaction can still be replied to and send an appropriate error message.
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: `⚠️ ${this.getErrorMessage(error)}`,
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({
-          content: `⚠️ ${this.getErrorMessage(error)}`,
-          ephemeral: true
-        });
-      }
+      // We inform the user if something goes wrong.
+      await interaction.editReply({
+        content: "⚠️ We couldn't fetch a cat image. Please try again later.",
+        ephemeral: true
+      });
     }
   },
 

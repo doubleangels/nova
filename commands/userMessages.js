@@ -17,8 +17,16 @@ const NO_CONTENT_TEXT = '[No text content]';
 const MESSAGE_FETCH_BATCH_SIZE = 100; // We fetch messages in batches of 100 for efficiency.
 
 /**
- * Module for the /usermessages command.
- * We list the last messages from a specific user in a specified channel.
+ * We handle the usermessages command.
+ * This function allows users to search and display messages from a specific user in a channel.
+ *
+ * We perform several tasks:
+ * 1. Validate command parameters and permissions
+ * 2. Search for messages in the specified channel
+ * 3. Filter messages based on user and optional criteria
+ * 4. Format and display the results
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

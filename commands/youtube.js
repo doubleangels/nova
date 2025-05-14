@@ -24,8 +24,16 @@ const cache = new Map();
 const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay within API limits.
 
 /**
- * Module for the /youtube command.
- * We search for and display YouTube video information.
+ * We handle the youtube command.
+ * This function allows users to search for videos on YouTube.
+ *
+ * We perform several tasks:
+ * 1. Validate YouTube API configuration
+ * 2. Process search requests for videos
+ * 3. Format and display search results
+ * 4. Handle errors and provide user feedback
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()

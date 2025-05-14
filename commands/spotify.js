@@ -13,8 +13,16 @@ const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150; // We truncate long descriptions to 
 const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
 
 /**
- * Module for the /spotify command.
- * We search for music on Spotify.
+ * We handle the spotify command.
+ * This function allows users to search for various types of content on Spotify.
+ *
+ * We perform several tasks:
+ * 1. Validate Spotify API configuration
+ * 2. Authenticate with Spotify API
+ * 3. Process search requests for different content types
+ * 4. Format and display search results
+ *
+ * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
   data: new SlashCommandBuilder()
