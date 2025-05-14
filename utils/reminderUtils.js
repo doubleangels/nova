@@ -16,7 +16,7 @@ const BUMP_REMINDER_KEY = 'bump';
 const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
 const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again in 2 hours.";
-const REMINDER_MESSAGE = "It's time to bump again!";
+const REMINDER_MESSAGE = " Time to bump the server! Use /bump to help us grow!";
 
 // We define these configuration constants for consistent reminder behavior.
 const DEFAULT_REMINDER_INTERVAL = 30; // minutes
@@ -108,7 +108,7 @@ async function handleReminder(message, delay) {
           const oldMsg = await channel.messages.fetch(rows[0].message_id);
           if (oldMsg) {
             await oldMsg.edit({
-              content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+              content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow!`
             });
             // Add cleanup after successful edit
             await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
@@ -145,7 +145,7 @@ async function handleReminder(message, delay) {
               const oldMsg = await channel.messages.fetch(rows[0].message_id);
               if (oldMsg) {
                 await oldMsg.edit({
-                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow!`
                 });
                 // Add cleanup after successful edit
                 await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
@@ -262,7 +262,7 @@ async function rescheduleReminder(client) {
               const oldMsg = await channel.messages.fetch(rows[0].message_id);
               if (oldMsg) {
                 await oldMsg.edit({
-                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow! 🚀`
+                  content: `${REMINDER_EMOJI} Time to bump the server! Use \`/bump\` to help us grow!`
                 });
                 await cleanupOldSentReminders(reminderChannelId, rows[0].message_id);
               }
