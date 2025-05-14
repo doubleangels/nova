@@ -70,7 +70,7 @@ async function createPaginatedResults(
     }
     
     return new ActionRowBuilder().addComponents(prevButton, nextButton);
-};
+  };
 
   // We send the initial embed with navigation buttons.
   const message = await interaction.editReply({ 
@@ -104,7 +104,7 @@ async function createPaginatedResults(
       currentIndex = Math.max(0, currentIndex - 1);
     } else if (buttonType === 'next') {
       currentIndex = Math.min(items.length - 1, currentIndex + 1);
-}
+    }
 
     // We update the message with the new embed and buttons for the new index.
     await i.update({ 
@@ -171,7 +171,7 @@ async function createPaginatedResults(
 function normalizeSearchParams(query, resultsCount, defaultCount, minResults, maxResults) {
   if (!query || query.trim().length === 0) {
     return { valid: false, error: "Empty query" };
-}
+  }
 
   // We trim the query and enforce limits on the results count.
   const normalizedQuery = query.trim();
@@ -181,7 +181,7 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
     valid: true,
     query: normalizedQuery,
     count: normalizedCount
-};
+  };
 }
 
 /**

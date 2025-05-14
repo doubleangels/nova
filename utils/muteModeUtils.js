@@ -126,7 +126,7 @@ async function performKick(guild, memberId, username, kickType) {
       }
     }
     
-    // Send DM to user before kicking
+    // Send DM to user before kicking.
     try {
       const embed = new EmbedBuilder()
         .setColor(0xCD41FF)
@@ -199,5 +199,6 @@ async function rescheduleAllMuteKicks(client) {
 
 module.exports = {
   scheduleMuteKick,
+  performKick,
   rescheduleAllMuteKicks
 };

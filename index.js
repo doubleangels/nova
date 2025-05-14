@@ -8,6 +8,7 @@ const { initializeDatabase } = require('./utils/database');
 
 // We define these configuration constants for consistent behavior throughout the application.
 const COMMAND_EXTENSION = '.js';
+const EVENT_EXTENSION = '.js';
 const SENTRY_FLUSH_TIMEOUT = 2000;
 
 /**
@@ -83,13 +84,17 @@ logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} sk
 
 // We load and register event files from the events directory.
 const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(COMMAND_EXTENSION));
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(EVENT_EXTENSION));
 
 // We process each event file to register its handlers with the client.
 for (const file of eventFiles) {
   try {
     const filePath = path.join(eventsPath, file);
     const event = require(filePath);
+    
+    if (!event.name || !event.execute) {
+      throw new Error(`Event file ${file} is missing required properties (name or execute)`);
+    }
     
     if (event.once) {
       client.once(event.name, (...args) => {
@@ -107,9 +112,16 @@ for (const file of eventFiles) {
     }
     logger.info("Loaded event:", { event: event.name });
   } catch (error) {
-    logger.error(`Failed to load event from ${file}:`, { error });
+    logger.error(`Failed to load event from ${file}:`, { 
+      error: error.message || error,
+      stack: error.stack
+    });
     Sentry.captureException(error, {
-      extra: { context: 'event_loading_failure', eventFile: file }
+      extra: { 
+        context: 'event_loading_failure', 
+        eventFile: file,
+        errorDetails: error.message || error
+      }
     });
   }
 }

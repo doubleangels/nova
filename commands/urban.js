@@ -6,7 +6,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const axios = require('axios');
 const { EmbedBuilder } = require('discord.js');
-const logger = require('../utils/logger');
+const logger = require('../logger');
 
 // We use these configuration constants for the Urban Dictionary API.
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';

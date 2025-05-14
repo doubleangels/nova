@@ -3,24 +3,23 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
+const moment = require('moment-timezone');
 const Sentry = require('../sentry');
 
 // We define these configuration constants for consistent time formatting and parsing.
 const TIME_FORMAT = 'h:mm A';
-const DATE_FORMAT = 'MMM D'; // Format for displaying the date (e.g., "Apr 17")
+const DATE_FORMAT = 'MMM D'; // Format for displaying the date (e.g., "Apr 17").
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
-const NEXT_DAY_SUFFIX = ' (next day)';
-const PREVIOUS_DAY_SUFFIX = ' (previous day)';
 
-// We extend dayjs with timezone support.
+// We extend dayjs with UTC support for time conversions.
 dayjs.extend(utc);
-dayjs.extend(timezone);
 
 // We use these configuration constants for timezone handling.
-const TIMEZONE_CACHE_DURATION = 3600000; // 1 hour cache duration
-const TIMEZONE_CACHE = new Map(); // We store timezone validation results
-const VALID_TIMEZONES = new Set(dayjs.tz.names()); // We cache valid timezone names
+const TIMEZONE_CACHE_DURATION = 3600000; // 1 hour cache duration.
+const TIMEZONE_CACHE = new Map(); // We store timezone validation results.
+
+// Get all valid timezone names from moment.
+const VALID_TIMEZONES = new Set(moment.tz.names());
 
 /**
  * Validates if the provided string is a valid timezone identifier.
@@ -49,6 +48,10 @@ function isValidTimezone(tz) {
  * @returns {boolean} True if the timezone is valid.
  */
 function validateTimezone(timezone) {
+  if (!timezone || typeof timezone !== 'string') {
+    return false;
+  }
+
   // We check the cache first.
   if (TIMEZONE_CACHE.has(timezone)) {
     const { isValid, expiresAt } = TIMEZONE_CACHE.get(timezone);
@@ -57,10 +60,10 @@ function validateTimezone(timezone) {
     }
   }
 
-  // We validate the timezone.
+  // Check if the timezone is in our list of valid timezones.
   const isValid = VALID_TIMEZONES.has(timezone);
   
-  // We cache the result.
+  // Cache the result.
   TIMEZONE_CACHE.set(timezone, {
     isValid,
     expiresAt: Date.now() + TIMEZONE_CACHE_DURATION
@@ -185,9 +188,10 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     const originalTimeFormatted = correctDate.format(TIME_FORMAT);
     const convertedTimeFormatted = timeInTargetTZ.format(TIME_FORMAT);
     
-    // We store the full date information for both timezones
+    // We store the full date information for both timezones.
     const originalDateFormatted = correctDate.format(DATE_FORMAT);
     const convertedDateFormatted = timeInTargetTZ.format(DATE_FORMAT);
+    
     // We calculate day difference to detect if the time crosses midnight.
     const dayDifference = timeInTargetTZ.date() - correctDate.date();
     const monthDifference = timeInTargetTZ.month() - correctDate.month();
@@ -239,8 +243,8 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
 
 /**
  * Formats a timezone identifier into a more readable format.
- * @param {string} timezone - The timezone identifier (e.g., "America/New_York")
- * @returns {string} Formatted timezone name (e.g., "America/New York")
+ * @param {string} timezone - The timezone identifier (e.g., "America/New_York").
+ * @returns {string} Formatted timezone name (e.g., "America/New York").
  */
 function formatTimezoneName(timezone) {
   if (!timezone) return '';
@@ -248,7 +252,7 @@ function formatTimezoneName(timezone) {
   return timezone
     .split('/')
     .map(part => {
-      // Split by underscore and capitalize each word
+      // Split by underscore and capitalize each word.
       return part
         .split('_')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -283,12 +287,12 @@ function defaultFormatter(conversion) {
   const formattedFromTimezone = formatTimezoneName(fromTimezone);
   const formattedToTimezone = formatTimezoneName(toTimezone);
   
-  // If dates are different, include them in the output
+  // If dates are different, include them in the output.
   if (isNextDay || isPreviousDay) {
     return `${convertedTime} (${convertedDate}) in ${formattedToTimezone} is ${originalTime} (${originalDate}) in ${formattedFromTimezone}.`;
   }
   
-  // If same day, use simpler format but include timezones
+  // If same day, use simpler format but include timezones.
   return `${convertedTime} in ${formattedToTimezone} is ${originalTime} in ${formattedFromTimezone}.`;
 }
 
