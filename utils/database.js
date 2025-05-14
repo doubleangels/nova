@@ -22,9 +22,14 @@ const pool = new Pool({
  */
 async function initializeDatabase() {
   try {
+    // We create the main schema if it doesn't exist.
+    await pool.query(`
+      CREATE SCHEMA IF NOT EXISTS main;
+    `);
+
     // We create the recovery table to track voice channel join times and reminders.
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS recovery (
+      CREATE TABLE IF NOT EXISTS main.recovery (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id TEXT,
         guild_id TEXT,
