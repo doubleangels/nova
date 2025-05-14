@@ -47,6 +47,12 @@ module.exports = {
         }
       }
 
+      // We handle clock reactions for time conversion
+      if (reaction.emoji.name === CLOCK_EMOJI) {
+        await handleClockReaction(reaction, user);
+        return;
+      }
+
       // We process role assignments based on reactions.
       if (reaction.message.guild) {
         const member = reaction.message.guild.members.cache.get(user.id);
