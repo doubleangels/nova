@@ -53,7 +53,8 @@ async function saveVoiceJoinTimes() {
     // Then insert all current voice join times
     for (const [userId, joinTime] of voiceJoinTimes.entries()) {
       await pool.query(
-        `INSERT INTO main.recovery (type, user_id, join_time) VALUES ('voice_join', $1, $2)`,
+        `INSERT INTO main.recovery (type, user_id, join_time) 
+         VALUES ('voice_join', $1, to_timestamp($2 / 1000.0) AT TIME ZONE 'UTC')`,
         [userId, joinTime]
       );
     }
