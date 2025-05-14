@@ -26,7 +26,7 @@ module.exports = {
      */
     data: new SlashCommandBuilder()
         .setName('coinflip')
-        .setDescription('Flip a coin and tell you the result.'),
+        .setDescription('Flip a coin and return heads or tails.'),
 
     /**
      * Executes the /coinflip command.
