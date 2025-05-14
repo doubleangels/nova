@@ -239,7 +239,7 @@ async function deleteReminderData(key) {
 }
 
 /**
- * Tracks a new member by inserting or updating their information in the 'tracked_members' table.
+ * Tracks a new member by inserting or updating their information in the message_counts table.
  * We use this for mute mode verification to ensure members send a message before a deadline.
  *
  * @param {string} memberId - The Discord member ID.
@@ -252,13 +252,22 @@ async function trackNewMember(memberId, username, joinTime) {
     const formattedJoinTime = dayjs(joinTime).toISOString();
     logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
     
-    // We use ON CONFLICT for upsert functionality to simplify the code.
+    // We use the message_counts table and store the join time in the config table
     await client.query(
-      `INSERT INTO ${TABLES.TRACKED_MEMBERS} (member_id, join_time, username) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO ${TABLES.MESSAGE_COUNTS} (member_id, username, message_count, last_updated) 
+       VALUES ($1, $2, 0, CURRENT_TIMESTAMP) 
        ON CONFLICT (member_id) 
-       DO UPDATE SET join_time = $2, username = $3`,
-      [memberId, formattedJoinTime, username]
+       DO UPDATE SET username = $2`,
+      [memberId, username]
+    );
+
+    // Store the join time in the config table with a special key format
+    await client.query(
+      `INSERT INTO ${TABLES.CONFIG} (id, value) 
+       VALUES ($1, $2) 
+       ON CONFLICT (id) 
+       DO UPDATE SET value = $2`,
+      [`mute_join_${memberId}`, JSON.stringify(formattedJoinTime)]
     );
     
     logger.info(`Successfully tracked member "${username}" (ID: ${memberId}).`);
@@ -270,7 +279,7 @@ async function trackNewMember(memberId, username, joinTime) {
 }
 
 /**
- * Retrieves tracking data for a specific member from the 'tracked_members' table.
+ * Retrieves tracking data for a specific member.
  * We use this to check if a member is being monitored in mute mode.
  *
  * @param {string} memberId - The Discord member ID.
@@ -280,14 +289,28 @@ async function getTrackedMember(memberId) {
   const client = await pool.connect();
   try {
     logger.debug(`Retrieving tracking data for member ID "${memberId}".`);
-    const result = await client.query(
-      `SELECT * FROM ${TABLES.TRACKED_MEMBERS} WHERE member_id = $1`,
+    
+    // Get the join time from config table
+    const joinTimeResult = await client.query(
+      `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
+      [`mute_join_${memberId}`]
+    );
+
+    // Get the message count data
+    const messageResult = await client.query(
+      `SELECT * FROM ${TABLES.MESSAGE_COUNTS} WHERE member_id = $1`,
       [memberId]
     );
     
-    if (result.rows.length > 0) {
-      logger.debug(`Found tracking data for member ID "${memberId}": ${JSON.stringify(result.rows[0])}`);
-      return result.rows[0];
+    if (joinTimeResult.rows.length > 0 && messageResult.rows.length > 0) {
+      const data = {
+        member_id: memberId,
+        username: messageResult.rows[0].username,
+        join_time: JSON.parse(joinTimeResult.rows[0].value),
+        message_count: messageResult.rows[0].message_count
+      };
+      logger.debug(`Found tracking data for member ID "${memberId}": ${JSON.stringify(data)}`);
+      return data;
     }
     
     logger.debug(`No tracking data found for member ID "${memberId}".`);
@@ -301,7 +324,7 @@ async function getTrackedMember(memberId) {
 }
 
 /**
- * Removes tracking data for a specific member from the 'tracked_members' table.
+ * Removes tracking data for a specific member.
  * We use this when a member sends a message (verification) or leaves the server.
  *
  * @param {string} memberId - The Discord member ID.
@@ -311,9 +334,11 @@ async function removeTrackedMember(memberId) {
   const client = await pool.connect();
   try {
     logger.debug(`Removing tracking data for member ID "${memberId}".`);
+    
+    // Remove the join time from config table
     const result = await client.query(
-      `DELETE FROM ${TABLES.TRACKED_MEMBERS} WHERE member_id = $1 RETURNING *`,
-      [memberId]
+      `DELETE FROM ${TABLES.CONFIG} WHERE id = $1 RETURNING *`,
+      [`mute_join_${memberId}`]
     );
     
     if (result.rowCount === 0) {
@@ -332,7 +357,7 @@ async function removeTrackedMember(memberId) {
 }
 
 /**
- * Retrieves all tracked members from the 'tracked_members' table.
+ * Retrieves all tracked members.
  * We use this to check all members being monitored in mute mode, typically after a bot restart.
  *
  * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time.
@@ -341,11 +366,31 @@ async function getAllTrackedMembers() {
   const client = await pool.connect();
   try {
     logger.debug("Retrieving all tracked members.");
-    const result = await client.query(
-      `SELECT member_id, username, join_time FROM ${TABLES.TRACKED_MEMBERS}`
+    
+    // Get all mute join times from config table
+    const joinTimesResult = await client.query(
+      `SELECT id, value FROM ${TABLES.CONFIG} WHERE id LIKE 'mute_join_%'`
     );
-    logger.info(`Retrieved ${result.rows.length} tracked member(s).`);
-    return result.rows;
+
+    // Get all message counts
+    const messageResult = await client.query(
+      `SELECT member_id, username, message_count FROM ${TABLES.MESSAGE_COUNTS}`
+    );
+
+    // Combine the data
+    const trackedMembers = joinTimesResult.rows.map(row => {
+      const memberId = row.id.replace('mute_join_', '');
+      const messageData = messageResult.rows.find(m => m.member_id === memberId);
+      return {
+        member_id: memberId,
+        username: messageData?.username || 'Unknown',
+        join_time: JSON.parse(row.value),
+        message_count: messageData?.message_count || 0
+      };
+    });
+
+    logger.info(`Retrieved ${trackedMembers.length} tracked member(s).`);
+    return trackedMembers;
   } catch (err) {
     logger.error("Error retrieving all tracked members:", { error: err });
     return [];
