@@ -30,7 +30,10 @@ const MAX_REMINDER_COUNT = 5; // per user
 async function getLatestReminderData() {
   try {
     const result = await pool.query(
-      `SELECT reminder_id, remind_at FROM main.reminder_recovery ORDER BY remind_at DESC LIMIT 1`
+      `SELECT reminder_id, remind_at FROM main.reminder_recovery 
+       WHERE remind_at > NOW() 
+       ORDER BY remind_at ASC 
+       LIMIT 1`
     );
     return result.rows.length > 0 ? result.rows[0] : null;
   } catch (err) {

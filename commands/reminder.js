@@ -212,11 +212,10 @@ module.exports = {
     
     try {
       const result = await pool.query(
-        `SELECT reminder_id, sent_at FROM main.reminder_recovery 
-         WHERE channel_id = $1 
-         ORDER BY sent_at DESC 
-         LIMIT 1`,
-        [channelId]
+        `SELECT reminder_id, remind_at FROM main.reminder_recovery 
+         WHERE remind_at > NOW()
+         ORDER BY remind_at ASC 
+         LIMIT 1`
       );
       return result.rows.length > 0 ? result.rows[0] : null;
     } catch (err) {
@@ -231,12 +230,12 @@ module.exports = {
    * @returns {string} A formatted string showing the remaining time.
    */
   calculateRemainingTime(reminderData) {
-    if (!reminderData || !reminderData.sent_at) {
+    if (!reminderData || !reminderData.remind_at) {
       return '⚠️ Not scheduled!';
     }
   
     const now = dayjs();
-    const scheduled = dayjs(reminderData.sent_at);
+    const scheduled = dayjs(reminderData.remind_at);
     const diffMs = scheduled.diff(now);
     
     if (diffMs <= 0) {
