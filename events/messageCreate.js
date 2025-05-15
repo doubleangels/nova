@@ -52,9 +52,11 @@ module.exports = {
         content: message.content?.substring(0, 50) || "No Content"
       });
       
-      // Increment user message count
-      await incrementMessageCount(message.author.id, message.author.username);
-      logger.debug(`Incremented message count for user ${message.author.tag}`);
+      // Increment user message count only for non-bot messages
+      if (!message.author.bot) {
+        await incrementMessageCount(message.author.id, message.author.username);
+        logger.debug(`Incremented message count for user ${message.author.tag}`);
+      }
 
       // Remove from mute tracking if needed
       const wasTracked = await removeTrackedMember(message.author.id);
@@ -77,8 +79,8 @@ module.exports = {
       await processUserMessage(message);
       // Check for bump messages
       await checkForBumpMessages(message);
-      // Increment per-channel message count
-      if (message.channel && message.channel.type === 0) {
+      // Increment per-channel message count only for non-bot messages
+      if (message.channel && message.channel.type === 0 && !message.author.bot) {
         await incrementChannelMessageCount(message.channel.id, message.channel.name);
       }
       logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}`);
