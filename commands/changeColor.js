@@ -62,16 +62,20 @@ module.exports = {
                 return;
             }
             
+            // Store the old color before changing it
+            const oldColor = role.hexColor;
+            
             // We update the role's color.
-            await role.setColor(color);
+            await role.setColor(this.normalizeColor(color));
             
             await interaction.editReply({
-                content: `✅ Successfully changed the color of ${role} to ${color}.`
+                content: `✅ Successfully changed the color of ${role} from ${oldColor} to ${this.normalizeColor(color)}.`
             });
 
             logger.info("Role color changed successfully.", { 
                 roleId: role.id, 
-                color: color,
+                oldColor: oldColor,
+                newColor: color,
                 userId: interaction.user.id,
                 guildId: interaction.guild.id
             });
@@ -99,7 +103,19 @@ module.exports = {
      * @returns {boolean} True if the color is valid, false otherwise
      */
     isValidHexColor(color) {
-        return /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(color);
+        // Remove # if present and check if it's a valid 6-digit hex color
+        const cleanColor = color.startsWith('#') ? color.slice(1) : color;
+        return /^[A-Fa-f0-9]{6}$/.test(cleanColor);
+    },
+
+    /**
+     * Normalizes a hex color code to include the # prefix.
+     * 
+     * @param {string} color - The color code to normalize
+     * @returns {string} The normalized color code with # prefix
+     */
+    normalizeColor(color) {
+        return color.startsWith('#') ? color : `#${color}`;
     },
 
     /**
