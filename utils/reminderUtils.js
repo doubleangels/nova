@@ -16,7 +16,7 @@ const BUMP_REMINDER_KEY = 'bump';
 const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
 const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
-const REMINDER_MESSAGE = " Time to bump the server! Use /bump to help us grow!";
+const REMINDER_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
 
 // We define these configuration constants for consistent reminder behavior.
 const DEFAULT_REMINDER_INTERVAL = 30; // minutes
