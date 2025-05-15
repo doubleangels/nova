@@ -69,7 +69,7 @@ module.exports = {
             await role.setColor(this.normalizeColor(color));
             
             await interaction.editReply({
-                content: `✅ Successfully changed the color of ${role} from ${oldColor} to ${this.normalizeColor(color)}.`
+                content: `✅ Successfully changed the color of ${role} from \`\`\`${oldColor}\`\`\` to \`\`\`${this.normalizeColor(color)}\`\`\`.`
             });
 
             logger.info("Role color changed successfully.", { 
