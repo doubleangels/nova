@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('disco
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for database keys.
 const CONFIG_KEYS = {
@@ -166,7 +167,7 @@ module.exports = {
         type: channelOption.type 
       });
       await interaction.editReply({
-        content: "⚠️ The channel must be a text channel for welcome messages.",
+        content: ERROR_MESSAGES.INVALID_CHANNEL_TYPE,
         ephemeral: true
       });
       return true;
@@ -179,7 +180,7 @@ module.exports = {
         managed: roleOption.managed 
       });
       await interaction.editReply({
-        content: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
+        content: ERROR_MESSAGES.INVALID_ROLE,
         ephemeral: true
       });
       return true;
@@ -247,11 +248,12 @@ module.exports = {
         enabled: enabledOption 
       });
     } catch (dbError) {
-      logger.error("Database operation failed during backup mode update.", { 
-        error: dbError.message, 
-        stack: dbError.stack 
+      logger.error("Failed to update backup mode settings.", {
+        error: dbError.message,
+        stack: dbError.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guild.id
       });
-      
       throw new Error("DATABASE_WRITE_ERROR");
     }
   },
@@ -363,35 +365,31 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logger.error("Error in /backupmode command execution.", { 
-      error: error.message, 
-      stack: error.stack,
+    logError(error, 'backupmode', {
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = "⚠️ Failed to retrieve current settings. Please try again later.";
+      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = "⚠️ Failed to save settings. Please try again later.";
+      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
     }
     
-    // We handle the case where the interaction wasn't deferred properly.
     try {
       await interaction.editReply({ 
         content: errorMessage,
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for backupmode command.", {
+      logger.error("Failed to send error response for backup mode command.", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
       });
       
-      // We try replying if editing failed.
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 

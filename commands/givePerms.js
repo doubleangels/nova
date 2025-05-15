@@ -4,6 +4,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the givePerms command.
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
@@ -57,7 +58,7 @@ module.exports = {
                 guildId: interaction.guildId
             });
             return await interaction.reply({
-                content: "⚠️ This command is not properly configured. Please contact an administrator.",
+                content: ERROR_MESSAGES.CONFIG_MISSING,
                 ephemeral: true
             });
         }
@@ -135,17 +136,7 @@ module.exports = {
             });
                         
         } catch (error) {
-            // We log the full error with stack trace for debugging purposes.
-            logger.error("Error executing /giveperms command.", { 
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user.id,
-                guildId: interaction.guildId
-            });
-            await interaction.editReply({
-                content: this.getErrorMessage(error),
-                ephemeral: true
-            });
+            await this.handleError(interaction, error);
         }
     },
     
@@ -200,7 +191,7 @@ module.exports = {
             logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
             return {
                 success: false,
-                message: "⚠️ Reference role for positioning not found. Please check the positioning role ID."
+                message: ERROR_MESSAGES.ROLE_NOT_FOUND
             };
         }
         
@@ -210,7 +201,7 @@ module.exports = {
             logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
             return {
                 success: false,
-                message: "⚠️ Additional role not found. Please check the Fren role ID."
+                message: ERROR_MESSAGES.ROLE_NOT_FOUND
             };
         }
         
@@ -223,7 +214,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "⚠️ I don't have permission to create a role at the desired position. My highest role must be above the reference role."
+                message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
             };
         }
         
@@ -257,20 +248,35 @@ module.exports = {
     },
     
     /**
-     * We get a user-friendly error message based on the error type.
-     * This function translates technical errors into messages users can understand.
-     *
-     * @param {Error} error - The error object
-     * @returns {string} A user-friendly error message explaining the issue
+     * Handles errors that occur during command execution.
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {Error} error - The error that occurred.
      */
-    getErrorMessage(error) {
-        if (error.code === 50013) {
-            return "⚠️ I don't have permission to manage roles. Please check my permissions.";
-        } else if (error.message.includes('Maximum number of server roles reached')) {
-            return "⚠️ This server has reached the maximum number of roles allowed by Discord.";
-        } else if (error.message.includes('rate limit')) {
-            return "⚠️ Discord is currently rate limiting this action. Please try again in a few moments.";
+    async handleError(interaction, error) {
+        logError(error, 'giveperms', {
+            userId: interaction.user?.id,
+            guildId: interaction.guild?.id,
+            channelId: interaction.channel?.id
+        });
+        
+        try {
+            await interaction.editReply({ 
+                content: getErrorMessage(error),
+                ephemeral: true 
+            });
+        } catch (followUpError) {
+            logger.error("Failed to send error response for giveperms command.", {
+                error: followUpError.message,
+                originalError: error.message,
+                userId: interaction.user?.id
+            });
+            
+            await interaction.reply({ 
+                content: getErrorMessage(error),
+                ephemeral: true 
+            }).catch(() => {
+                // Silent catch if everything fails.
+            });
         }
-        return "⚠️ An unexpected error occurred. Please try again later.";
     }
 };

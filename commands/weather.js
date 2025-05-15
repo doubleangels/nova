@@ -5,6 +5,7 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the weather command.
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
@@ -119,7 +120,7 @@ module.exports = {
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: '⚠️ Weather API key is not configured. Please contact the bot administrator.',
+          content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
         return;
@@ -150,7 +151,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: `⚠️ Could not find the location for '${place}'. Try another city.`,
+          content: ERROR_MESSAGES.WEATHER_INVALID_LOCATION,
           ephemeral: true
         });
         return;
@@ -176,7 +177,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred while fetching weather data. Please try again later.',
+          content: ERROR_MESSAGES.WEATHER_API_ERROR,
           ephemeral: true
         });
         return;
@@ -461,30 +462,40 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    // We log any unexpected errors and send an error message to the user.
-    logger.error("Error executing weather command.", { 
-      error: error.message, 
-      stack: error.stack,
-      userId: interaction.user?.id 
+    logError(error, 'weather', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
     });
     
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.WEATHER_API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "INVALID_LOCATION") {
+      errorMessage = ERROR_MESSAGES.WEATHER_INVALID_LOCATION;
+    }
+    
     try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.',
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
       logger.error("Failed to send error response for weather command.", {
-        error: replyError.message,
+        error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
       });
     }
   }

@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the IMDb search command.
 const OMDB_API_URL = 'https://www.omdbapi.com/';
@@ -59,7 +60,7 @@ module.exports = {
       // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: "⚠️ This command is not properly configured. Please contact a server administrator.",
+          content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -95,16 +96,7 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
       
     } catch (error) {
-      logger.error("Error executing /imdb command.", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      await interaction.editReply({ 
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
   
@@ -140,7 +132,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: "⚠️ Please provide a valid movie or show title."
+        message: ERROR_MESSAGES.INVALID_INPUT
       };
     }
 
@@ -152,7 +144,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: "⚠️ Year must be in the format YYYY (e.g., 2021)."
+        message: ERROR_MESSAGES.INVALID_YEAR_FORMAT
       };
     }
     
@@ -222,7 +214,7 @@ module.exports = {
         });
         return {
           error: true,
-          message: `⚠️ ${errorMessage} for **${searchParams.title}**. Try another title or adjust your search parameters!`
+          message: ERROR_MESSAGES.NO_RESULTS_FOUND
         };
       }
     } catch (apiError) {
@@ -232,12 +224,7 @@ module.exports = {
         title: searchParams.title
       });
       
-      const statusCode = apiError.response?.status || "unknown";
-      const errorMessage = apiError.response?.data?.Error || apiError.message;
-      return {
-        error: true,
-        message: `⚠️ OMDb API error (${statusCode}): ${errorMessage}`
-      };
+      throw new Error("API_ERROR");
     }
   },
   
@@ -281,5 +268,51 @@ module.exports = {
     }
     
     return embed;
+  },
+
+  /**
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+    logError(error, 'imdb', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+    } else if (error.response?.status === 403) {
+      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+    } else if (error.response?.status === 429) {
+      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+    } else if (error.response?.status >= 500) {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    }
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for imdb command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

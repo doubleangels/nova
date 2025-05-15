@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the Google Images search.
 const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
@@ -59,7 +60,7 @@ module.exports = {
       // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: "⚠️ This command is not properly configured. Please contact an administrator.",
+          content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -81,7 +82,7 @@ module.exports = {
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters.", { reason: searchParams.error });
         return await interaction.editReply({
-          content: "⚠️ Please provide a valid search query.",
+          content: ERROR_MESSAGES.INVALID_QUERY,
           ephemeral: true
         });
       }
@@ -107,7 +108,7 @@ module.exports = {
       if (searchResults.items.length === 0) {
         logger.warn("No image results found for query.", { query: searchParams.query });
         return await interaction.editReply({
-          content: `⚠️ No images found for **${searchParams.query}**. Try refining your search query.`,
+          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
           ephemeral: true
         });
       }
@@ -129,16 +130,7 @@ module.exports = {
         }
       );
     } catch (error) {
-      logger.error("Error executing /googleimages command.", { 
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
   
@@ -225,5 +217,38 @@ module.exports = {
       .setColor(EMBED_COLOR)
       .setImage(imageLink)
       .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
+  },
+
+  /**
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+    logError(error, 'googleimages', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
+    });
+    
+    try {
+      await interaction.editReply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for googleimages command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

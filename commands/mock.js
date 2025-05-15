@@ -1,6 +1,8 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+
 // These are the configuration constants for the mock command.
 const MAX_CONTENT_LENGTH = 2000; // Discord enforces a message length limit of 2000 characters.
 const TRUNCATION_BUFFER = 100; // We use a buffer for mentions and emoji to ensure we stay under the limit.
@@ -80,7 +82,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: "Error: Could not retrieve the target message."
+        message: ERROR_MESSAGES.MESSAGE_NOT_FOUND
       };
     }
 
@@ -98,7 +100,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: "I cannot mock my own messages!"
+        message: ERROR_MESSAGES.CANNOT_MOCK_BOT
       };
     }
     
@@ -115,7 +117,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: "There is no text to mock!"
+        message: ERROR_MESSAGES.NO_CONTENT_TO_MOCK
       };
     }
 
@@ -179,39 +181,30 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logger.error("Error executing mock command.", {
-      error: error.message,
-      stack: error.stack,
-      userId: interaction.user.id,
-      interactionId: interaction.id
+    logError(error, 'mock', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
     });
     
-    const errorMessage = "An error occurred while executing this command.";
-    
     try {
-      // We try to edit the reply if it was deferred to show the error message.
-      await interaction.editReply({
-        content: errorMessage,
-        ephemeral: true
+      await interaction.editReply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to edit reply with error message.", {
+      logger.error("Failed to send error response for mock command.", {
         error: followUpError.message,
-        originalError: error.message
+        originalError: error.message,
+        userId: interaction.user?.id
       });
       
-      try {
-        // We try to send a new reply if editing failed as a fallback.
-        await interaction.reply({
-          content: errorMessage,
-          ephemeral: true
-        });
-      } catch (finalError) {
-        logger.error("Failed to send any error response.", {
-          error: finalError.message,
-          originalError: error.message
-        });
-      }
+      await interaction.reply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
     }
   }
 };

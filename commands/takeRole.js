@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 /**
  * We handle the takerole command.
@@ -72,19 +73,43 @@ module.exports = {
       const { targetMember } = validationResult;
       await this.removeRoleFromMember(interaction, targetMember, role, reason);
     } catch (error) {
-      logger.error("Error executing take role command.", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
+      await this.handleError(interaction, error);
+    }
+  },
+
+  /**
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+    logError(error, 'takerole', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
+    });
+    
+    try {
+      await interaction.editReply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for takerole command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
       });
       
-      await interaction.editReply({ 
-        content: '⚠️ An unexpected error occurred. Please try again later.',
-        ephemeral: true
+      await interaction.reply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
       });
     }
   },
+
   /**
    * Validates that the role can be removed from the user.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
@@ -100,7 +125,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: '⚠️ I don\'t have permission to manage roles. Please check my role permissions.'
+        message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
       };
     }
 
@@ -112,7 +137,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: '⚠️ I cannot remove managed roles (bot or integration roles).'
+        message: ERROR_MESSAGES.MANAGED_ROLE
       };
     }
     
@@ -122,7 +147,7 @@ module.exports = {
     if (!targetMember) {
       return {
         valid: false,
-        message: '⚠️ Failed to fetch the guild member. Please try again.'
+        message: ERROR_MESSAGES.USER_NOT_FOUND
       };
     }
 
@@ -136,7 +161,7 @@ module.exports = {
 
       return {
         valid: false,
-        message: `⚠️ ${targetUser} doesn't have the ${role} role.`
+        message: ERROR_MESSAGES.ROLE_NOT_ASSIGNED
       };
     }
     
@@ -151,7 +176,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: '⚠️ I cannot remove this role because it\'s positioned higher than or equal to my highest role.'
+        message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
       };
     }
     
@@ -168,7 +193,7 @@ module.exports = {
         
         return {
           valid: false,
-          message: '⚠️ You cannot remove this role because it\'s positioned higher than or equal to your highest role.'
+          message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
         };
       }
     }

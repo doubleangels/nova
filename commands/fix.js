@@ -6,6 +6,7 @@ const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // Setup a pool for direct SQL queries
 const pool = new Pool({
@@ -55,7 +56,7 @@ module.exports = {
       // Get the reminder channel ID
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
-        await interaction.editReply("⚠️ No reminder channel configured. Please set up the reminder system first.");
+        await interaction.editReply(ERROR_MESSAGES.REMINDER_CONFIG_INCOMPLETE);
         return;
       }
 
@@ -92,17 +93,7 @@ module.exports = {
         scheduledTime: scheduledTime.toISOString()
       });
     } catch (error) {
-      logger.error("Error in /fix command.", { 
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guild.id
-      });
-      
-      await interaction.editReply({
-        content: `⚠️ ${this.getErrorMessage(error)}`,
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
   
@@ -142,14 +133,42 @@ module.exports = {
   },
   
   /**
-   * Gets a user-friendly error message based on the error type.
-   * @param {Error} error - The error object.
-   * @returns {string} A user-friendly error message explaining the issue.
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
    */
-  getErrorMessage(error) {
+  async handleError(interaction, error) {
+    logError(error, 'fix', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
     if (error.message === "DATABASE_ERROR") {
-      return "Failed to save reminder to database. Please check database connectivity and try again.";
+      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+    } else if (error.message === "CHANNEL_NOT_FOUND") {
+      errorMessage = ERROR_MESSAGES.REMINDER_INVALID_CHANNEL;
     }
-    return "An unexpected error occurred. Please try again later.";
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for fix command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

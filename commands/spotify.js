@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for Spotify integration.
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
@@ -85,7 +86,7 @@ module.exports = {
       // Validate Spotify API configuration
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: "⚠️ This command is not properly configured. Please contact a server administrator.",
+          content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -104,7 +105,7 @@ module.exports = {
       const accessToken = await this.getSpotifyAccessToken();
       if (!accessToken) {
         return await interaction.editReply({
-          content: "⚠️ Failed to authenticate with Spotify. Please try again later.",
+          content: ERROR_MESSAGES.API_ACCESS_DENIED,
           ephemeral: true
         });
       }
@@ -131,7 +132,7 @@ module.exports = {
 
       if (!result) {
         return await interaction.editReply({
-          content: `⚠️ No results found for "${interaction.options.getString('query')}"`,
+          content: ERROR_MESSAGES.SPOTIFY_NO_RESULTS,
           ephemeral: true
         });
       }
@@ -141,16 +142,7 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
 
     } catch (error) {
-      logger.error("Error executing /spotify command.", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
 
@@ -572,5 +564,46 @@ module.exports = {
    */
   formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  },
+
+  async handleError(interaction, error) {
+    logError(error, 'spotify', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_ACCESS_DENIED") {
+      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "INVALID_QUERY") {
+      errorMessage = ERROR_MESSAGES.SPOTIFY_INVALID_QUERY;
+    }
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for spotify command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 }; 

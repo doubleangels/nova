@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the troll mode feature.
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
@@ -113,7 +114,7 @@ module.exports = {
         max: MAX_ACCOUNT_AGE
       });
       await interaction.editReply({
-        content: `⚠️ Age must be between ${MIN_ACCOUNT_AGE} and ${MAX_ACCOUNT_AGE} days.`,
+        content: ERROR_MESSAGES.TROLLMODE_INVALID_AGE,
         ephemeral: true
       });
       return;
@@ -136,13 +137,6 @@ module.exports = {
         ageKey: TROLL_MODE_ACCOUNT_AGE_KEY
       });
     } catch (dbError) {
-      logger.error("Database operation failed while saving trollmode settings.", { 
-        error: dbError.message, 
-        stack: dbError.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      
       throw new Error("DATABASE_WRITE_ERROR");
     }
 
@@ -287,39 +281,38 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    logger.error("Error executing trollmode command.", {
-      error: error.message,
-      stack: error.stack,
-      userId: interaction.user.id,
-      guildId: interaction.guildId
+    logError(error, 'trollmode', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
     });
     
-    let errorMessage = '⚠️ An unexpected error occurred. Please try again later.';
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
-    if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = "⚠️ Failed to save trollmode settings. Please try again later.";
-    } else if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = "⚠️ Failed to retrieve trollmode settings. Please try again later.";
+    if (error.message === "DATABASE_READ_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+    } else if (error.message === "DATABASE_WRITE_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+    } else if (error.message === "INVALID_AGE") {
+      errorMessage = ERROR_MESSAGES.TROLLMODE_INVALID_AGE;
     }
     
-    // We handle the case where interaction wasn't deferred properly.
     try {
-      if (interaction.deferred) {
-        await interaction.editReply({ 
-          content: errorMessage,
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({ 
-          content: errorMessage,
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
       logger.error("Failed to send error response for trollmode command.", {
-        error: replyError.message,
+        error: followUpError.message,
         originalError: error.message,
-        userId: interaction.user.id
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
       });
     }
   }

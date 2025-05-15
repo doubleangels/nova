@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const he = require('he'); // This is used for HTML entity decoding.
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the Wikipedia integration.
 const WIKIPEDIA_API_TIMEOUT = 5000; // We set a 5-second timeout for API requests.
@@ -70,7 +71,7 @@ module.exports = {
       if (!searchResults || searchResults.length === 0) {
         // We inform the user if no article was found.
         await interaction.editReply({
-          content: `We couldn't find any Wikipedia articles for "${query}".`,
+          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
           ephemeral: true
         });
         return;
@@ -111,17 +112,7 @@ module.exports = {
         articleTitle: article.title
       });
     } catch (error) {
-      logger.error("Error executing wikipedia command:", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user?.id
-      });
-      
-      // We inform the user if something goes wrong.
-      await interaction.editReply({
-        content: "⚠️ We couldn't fetch the Wikipedia article. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
   
@@ -177,7 +168,7 @@ module.exports = {
         error: error.message,
         query
       });
-      throw error;
+      throw new Error("API_ERROR");
     }
   },
   
@@ -409,31 +400,36 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    // We log any unexpected errors and send an error message to the user.
-    logger.error("Error executing Wikipedia command.", { 
-      error: error.message,
-      stack: error.stack,
+    logError(error, 'wikipedia', {
       userId: interaction.user?.id,
-      query: interaction.options?.getString('query') 
+      guildId: interaction.guild?.id
     });
     
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (axios.isAxiosError(error) && !error.response) {
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+    }
+    
     try {
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.',
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({ 
-          content: '⚠️ An unexpected error occurred. Please try again later.',
-          ephemeral: true
-        });
-      }
-    } catch (replyError) {
-      logger.error("Failed to send error response for Wikipedia command.", {
-        error: replyError.message,
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for wikipedia command.", {
+        error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
       });
     }
   }

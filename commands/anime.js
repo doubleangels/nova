@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the MyAnimeList API.
 const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
@@ -39,7 +40,7 @@ module.exports = {
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
-          content: "⚠️ Bot configuration error: MAL API key not set.",
+          content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
         return;
@@ -73,27 +74,11 @@ module.exports = {
       } else {
         logger.info("No anime results found for query.", { query: formattedTitle });
         await interaction.editReply({
-          content: `⚠️ No anime found for **${formattedTitle}**. Try another title!`
+          content: ERROR_MESSAGES.NO_RESULTS_FOUND
         });
       }
     } catch (error) {
-      logger.error("Error executing anime command.", { 
-        error: error.message, 
-        stack: error.stack 
-      });
-      
-      // We determine if the interaction can still be replied to and send an appropriate error message.
-      if (interaction.deferred) {
-        await interaction.editReply({
-          content: `⚠️ Error: ${this.getErrorMessage(error)}`,
-          ephemeral: true
-        });
-      } else {
-        await interaction.reply({
-          content: `⚠️ Error: ${this.getErrorMessage(error)}`,
-          ephemeral: true
-        });
-      }
+      await this.handleError(interaction, error);
     }
   },
 
@@ -112,6 +97,7 @@ module.exports = {
     const searchResponse = await axios.get(searchUrl, { headers });
     
     if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
+      logger.warn("No anime results found.", { title });
       return null;
     }
     
@@ -126,7 +112,11 @@ module.exports = {
     const detailsResponse = await axios.get(detailsUrl, { headers });
     
     if (detailsResponse.status !== 200) {
-      throw new Error(`Failed to retrieve anime details. Status: ${detailsResponse.status}`);
+      logger.error("Failed to retrieve anime details.", { 
+        status: detailsResponse.status,
+        animeId
+      });
+      throw new Error("API_ERROR");
     }
     
     const detailsData = detailsResponse.data;
@@ -175,21 +165,38 @@ module.exports = {
     return embed;
   },
 
-  /**
-   * We get a user-friendly error message based on the type of error encountered.
-   * This function translates technical errors into messages users can understand.
-   *
-   * @param {Error} error - The error object to process
-   * @returns {string} A user-friendly error message explaining the issue
-   */
-  getErrorMessage(error) {
-    if (axios.isAxiosError(error)) {
-      if (error.response) {
-        return `API error: ${error.response.status} - ${error.response.statusText}`;
-      } else if (error.request) {
-        return "Network error: Unable to reach MyAnimeList. Please try again later.";
-      }
+  async handleError(interaction, error) {
+    logError(error, 'anime', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (axios.isAxiosError(error) && !error.response) {
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     }
-    return "An unexpected error occurred. Please try again later.";
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for anime command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

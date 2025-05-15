@@ -5,6 +5,7 @@ const axios = require('axios');
 const config = require('../config');
 const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the YouTube integration.
 const YOUTUBE_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
@@ -49,6 +50,16 @@ module.exports = {
     const query = interaction.options.getString('query');
 
     try {
+      // We need to verify that the API key is properly configured.
+      if (!config.googleApiKey) {
+        logger.error("YouTube API key is not configured.");
+        await interaction.editReply({
+          content: ERROR_MESSAGES.CONFIG_MISSING,
+          ephemeral: true
+        });
+        return;
+      }
+
       const response = await axios.get(`${YOUTUBE_API_SEARCH_URL}`, {
         params: {
           part: 'snippet',
@@ -62,7 +73,7 @@ module.exports = {
 
       if (!response.data.items || response.data.items.length === 0) {
         return await interaction.editReply({
-          content: `We couldn't find any videos matching "${query}".`
+          content: ERROR_MESSAGES.NO_RESULTS_FOUND
         });
       }
 
@@ -94,19 +105,27 @@ module.exports = {
    * @returns {Promise<Object>} The video details.
    */
   async getVideoDetails(videoId) {
-    const response = await axios.get(`${YOUTUBE_API_VIDEOS_URL}`, {
-      params: {
-        part: 'contentDetails,statistics',
-        id: videoId,
-        key: config.googleApiKey
-      },
-      timeout: YOUTUBE_REQUEST_TIMEOUT
-    });
+    try {
+      const response = await axios.get(`${YOUTUBE_API_VIDEOS_URL}`, {
+        params: {
+          part: 'contentDetails,statistics',
+          id: videoId,
+          key: config.googleApiKey
+        },
+        timeout: YOUTUBE_REQUEST_TIMEOUT
+      });
 
-    return {
-      duration: response.data.items[0].contentDetails.duration,
-      viewCount: parseInt(response.data.items[0].statistics.viewCount)
-    };
+      return {
+        duration: response.data.items[0].contentDetails.duration,
+        viewCount: parseInt(response.data.items[0].statistics.viewCount)
+      };
+    } catch (error) {
+      logger.error("Failed to get video details.", {
+        error: error.message,
+        videoId
+      });
+      throw new Error("API_ERROR");
+    }
   },
 
   /**
@@ -143,27 +162,48 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    logger.error('YouTube command error:', {
-      error: error.message,
-      userId: interaction.user.id,
-      guildId: interaction.guildId
+    logError(error, 'youtube', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
     });
-
-    let errorMessage = 'We encountered an error while searching YouTube.';
     
-    if (error.code === 'ECONNABORTED') {
-      errorMessage = 'The request to YouTube timed out. Please try again later.';
-    } else if (error.response) {
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+    } else if (axios.isAxiosError(error) && error.response) {
       if (error.response.status === 403) {
-        errorMessage = 'We\'re having trouble accessing the YouTube API. Please try again later.';
+        errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
       } else if (error.response.status === 429) {
-        errorMessage = 'We\'ve hit the rate limit for YouTube. Please try again later.';
+        errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
       } else if (error.response.status >= 500) {
-        errorMessage = 'YouTube is currently experiencing issues. Please try again later.';
+        errorMessage = ERROR_MESSAGES.API_ERROR;
       }
+    } else if (axios.isAxiosError(error) && !error.response) {
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     }
-
-    await interaction.editReply({ content: errorMessage });
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for youtube command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   },
 
   /**

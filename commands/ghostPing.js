@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const logger = require('../logger')('ghostPing.js');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 /**
  * We handle the ghost ping command.
@@ -73,17 +74,39 @@ module.exports = {
                 targetUserId: targetUser.id
             });
         } catch (error) {
-            logger.error("Error executing ghost ping command.", {
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user?.id,
-                guildId: interaction.guild?.id,
-                channelId: interaction.channel?.id
+            await this.handleError(interaction, error);
+        }
+    },
+
+    /**
+     * Handles errors that occur during command execution.
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {Error} error - The error that occurred.
+     */
+    async handleError(interaction, error) {
+        logError(error, 'ghostping', {
+            userId: interaction.user?.id,
+            guildId: interaction.guild?.id,
+            channelId: interaction.channel?.id
+        });
+        
+        try {
+            await interaction.editReply({ 
+                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
+                ephemeral: true 
+            });
+        } catch (followUpError) {
+            logger.error("Failed to send error response for ghostping command.", {
+                error: followUpError.message,
+                originalError: error.message,
+                userId: interaction.user?.id
             });
             
-            await interaction.editReply({
-                content: "⚠️ An unexpected error occurred. Please try again later.",
-                ephemeral: true
+            await interaction.reply({ 
+                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
+                ephemeral: true 
+            }).catch(() => {
+                // Silent catch if everything fails.
             });
         }
     }

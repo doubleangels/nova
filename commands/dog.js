@@ -2,6 +2,7 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the dog command.
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
@@ -57,17 +58,7 @@ module.exports = {
         imageUrl: dogData.url
       });
     } catch (error) {
-      logger.error("Error executing dog command:", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user?.id
-      });
-      
-      // We inform the user if something goes wrong.
-      await interaction.editReply({
-        content: "⚠️ We couldn't fetch a dog image. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
   
@@ -121,21 +112,42 @@ module.exports = {
       .setFooter({ text: "Powered by Dog CEO API" });
   },
   
-  /**
-   * Gets a user-friendly error message based on the error type.
-   * @param {Error} error - The error object.
-   * @returns {string} A user-friendly error message explaining the issue.
-   */
-  getErrorMessage(error) {
+  async handleError(interaction, error) {
+    logError(error, 'dog', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
     if (error.message === "API_ERROR") {
-      return "Couldn't fetch a dog picture due to an API error. Try again later.";
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (error.message === "NO_IMAGE_URL") {
-      return "Couldn't find a dog picture. Try again later.";
+      errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
     } else if (error.message === "IMAGE_FETCH_ERROR") {
-      return "Couldn't download the dog picture. Try again later.";
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (axios.isAxiosError(error) && !error.response) {
-      return "Network error: Could not connect to the dog image service. Please check your internet connection.";
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     }
-    return "An unexpected error occurred while fetching the dog image. Please try again later.";
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for dog command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

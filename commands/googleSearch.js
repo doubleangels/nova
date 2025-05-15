@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the Google search command.
 const API_URL = 'https://www.googleapis.com/customsearch/v1';
@@ -49,7 +50,7 @@ module.exports = {
       // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: "⚠️ This command is not properly configured. Please contact a server administrator.",
+          content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -71,7 +72,7 @@ module.exports = {
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters.", { reason: searchParams.error });
         return await interaction.editReply({
-          content: "⚠️ Please provide a valid search query.",
+          content: ERROR_MESSAGES.INVALID_QUERY,
           ephemeral: true
         });
       }
@@ -94,7 +95,7 @@ module.exports = {
       if (searchResults.items.length === 0) {
         logger.warn("No search results found for query.", { query: searchParams.query });
         return await interaction.editReply({ 
-          content: `⚠️ No search results found for **${searchParams.query}**. Try refining your query!`,
+          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
           ephemeral: true
         });
       }
@@ -116,15 +117,39 @@ module.exports = {
         }
       );
     } catch (error) {
-      logger.error("Error executing /google command.", { 
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
+      await this.handleError(interaction, error);
+    }
+  },
+  
+  /**
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+    logError(error, 'google', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
+    });
+    
+    try {
+      await interaction.editReply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
       });
-      await interaction.editReply({
-        content: "⚠️ An unexpected error occurred. Please try again later.",
-        ephemeral: true
+    } catch (followUpError) {
+      logger.error("Failed to send error response for google command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
       });
     }
   },

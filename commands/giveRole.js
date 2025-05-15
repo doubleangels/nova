@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 /**
  * We handle the giverole command.
@@ -70,16 +71,39 @@ module.exports = {
             });
             
         } catch (error) {
-            // We log the full error with stack trace for debugging purposes.
-            logger.error("Error executing /giverole command.", { 
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user.id,
-                guildId: interaction.guild.id
+            await this.handleError(interaction, error);
+        }
+    },
+    
+    /**
+     * Handles errors that occur during command execution.
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {Error} error - The error that occurred.
+     */
+    async handleError(interaction, error) {
+        logError(error, 'giverole', {
+            userId: interaction.user?.id,
+            guildId: interaction.guild?.id,
+            channelId: interaction.channel?.id
+        });
+        
+        try {
+            await interaction.editReply({ 
+                content: getErrorMessage(error),
+                ephemeral: true 
             });
-            await interaction.editReply({
-                content: this.getErrorMessage(error),
-                ephemeral: true
+        } catch (followUpError) {
+            logger.error("Failed to send error response for giverole command.", {
+                error: followUpError.message,
+                originalError: error.message,
+                userId: interaction.user?.id
+            });
+            
+            await interaction.reply({ 
+                content: getErrorMessage(error),
+                ephemeral: true 
+            }).catch(() => {
+                // Silent catch if everything fails.
             });
         }
     },
@@ -102,7 +126,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "⚠️ I don't have permission to manage roles in this server."
+                message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
             };
         }
 
@@ -114,7 +138,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "⚠️ I cannot assign managed roles (bot or integration roles)."
+                message: ERROR_MESSAGES.MANAGED_ROLE
             };
         }
 
@@ -128,7 +152,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "⚠️ I can't assign this role because it's higher than or equal to my highest role."
+                message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
             };
         }
         
@@ -145,7 +169,7 @@ module.exports = {
                 });
                 return {
                     success: false,
-                    message: "⚠️ You don't have permission to assign a role higher than your highest role."
+                    message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
                 };
             }
         }
@@ -160,7 +184,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "⚠️ The specified user could not be found in this server."
+                message: ERROR_MESSAGES.USER_NOT_FOUND
             };
         }
         
@@ -173,7 +197,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: `⚠️ ${targetUser} already has the ${role} role.`
+                message: ERROR_MESSAGES.ROLE_ALREADY_ASSIGNED
             };
         }
         
@@ -204,23 +228,5 @@ module.exports = {
             assignedByTag: interaction.user.tag,
             guildId: interaction.guild.id
         });
-    },
-    
-    /**
-     * We get a user-friendly error message based on the error type.
-     * This function translates technical errors into messages users can understand.
-     *
-     * @param {Error} error - The error object
-     * @returns {string} A user-friendly error message explaining the issue
-     */
-    getErrorMessage(error) {
-        if (error.code === 50013) {
-            return "⚠️ I don't have permission to manage roles. Please check my permissions.";
-        } else if (error.message.includes('Missing Access')) {
-            return "⚠️ I don't have access to manage this role. Please check my permissions.";
-        } else if (error.message.includes('rate limit')) {
-            return "⚠️ Discord is currently rate limiting this action. Please try again in a few moments.";
-        }
-        return "⚠️ An unexpected error occurred. Please try again later.";
     }
 };

@@ -7,6 +7,7 @@ dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // Setup a pool for direct SQL queries
 const pool = new Pool({
@@ -251,42 +252,40 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    logger.error("Error executing reminder command.", {
-      error: error.message,
-      stack: error.stack,
-      userId: interaction.user.id,
-      guildId: interaction.guildId
+    logError(error, 'reminder', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
     });
     
-    let errorMessage = '⚠️ An unexpected error occurred. Please try again later.';
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
-    if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = "⚠️ Failed to save reminder settings. Please try again later.";
-    } else if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = "⚠️ Failed to retrieve reminder settings. Please try again later.";
+    if (error.message === "DATABASE_READ_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+    } else if (error.message === "DATABASE_WRITE_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
     } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = "⚠️ Please select a text channel for reminders.";
+      errorMessage = ERROR_MESSAGES.REMINDER_INVALID_CHANNEL;
+    } else if (error.message === "CONFIG_INCOMPLETE") {
+      errorMessage = ERROR_MESSAGES.REMINDER_CONFIG_INCOMPLETE;
     }
-
-    // We handle the case where interaction wasn't deferred properly.
+    
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true
+        ephemeral: true 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for reminder command.", {
         error: followUpError.message,
         originalError: error.message,
-        userId: interaction.user.id
+        userId: interaction.user?.id
       });
       
-      // We try replying if editing failed as a fallback.
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true
+        ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails to prevent crashing.
+        // Silent catch if everything fails.
       });
     }
   }

@@ -4,6 +4,7 @@ const logger = require('../logger.js')(path.basename(__filename));
 const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 /**
  * We handle the timezone command.
@@ -71,27 +72,7 @@ module.exports = {
               await this.handleTimezoneStatus(interaction);
           }
       } catch (error) {
-          // We handle any unexpected errors that occur during command execution.
-          logger.error("Error executing timezone command.", {
-              error: error.message,
-              stack: error.stack,
-              userId: interaction.user.id,
-              userTag: interaction.user.tag
-          });
-          
-          // We ensure we respond even if an error occurs to provide feedback.
-          try {
-              const replyMethod = interaction.deferred ? interaction.editReply : interaction.reply;
-              await replyMethod.call(interaction, {
-                  content: '⚠️ An unexpected error occurred. Please try again later.',
-                  ephemeral: true
-              });
-          } catch (replyError) {
-              logger.error("Failed to send error response for timezone command.", {
-                  error: replyError.message,
-                  originalError: error.message
-              });
-          }
+          await this.handleError(interaction, error);
       }
   },
   
@@ -110,7 +91,7 @@ module.exports = {
           });
           
           await interaction.reply({
-              content: '⚠️ Google API key is not configured. This command is currently unavailable.',
+              content: ERROR_MESSAGES.CONFIG_MISSING,
               ephemeral: true
           });
           return;
@@ -173,7 +154,7 @@ module.exports = {
           });
           
           await interaction.editReply({
-              content: `⚠️ The timezone identifier returned (${timezoneId}) is not valid. Please try a different location.`,
+              content: ERROR_MESSAGES.INVALID_TIMEZONE,
               ephemeral: true
           });
           return;
@@ -315,5 +296,52 @@ module.exports = {
           memberTag,
           isAdminAction
       };
+  },
+  
+  /**
+   * Handles errors that occur during command execution.
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
+  async handleError(interaction, error) {
+      logError(error, 'timezone', {
+          userId: interaction.user?.id,
+          guildId: interaction.guild?.id
+      });
+      
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "API_ERROR") {
+          errorMessage = ERROR_MESSAGES.API_ERROR;
+      } else if (error.code === 'ECONNABORTED') {
+          errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+      } else if (error.response?.status === 403) {
+          errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+      } else if (error.response?.status === 429) {
+          errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+      } else if (error.response?.status >= 500) {
+          errorMessage = ERROR_MESSAGES.API_ERROR;
+      }
+      
+      try {
+          const replyMethod = interaction.deferred ? interaction.editReply : interaction.reply;
+          await replyMethod.call(interaction, { 
+              content: errorMessage,
+              ephemeral: true 
+          });
+      } catch (followUpError) {
+          logger.error("Failed to send error response for timezone command.", {
+              error: followUpError.message,
+              originalError: error.message,
+              userId: interaction.user?.id
+          });
+          
+          await interaction.reply({ 
+              content: errorMessage,
+              ephemeral: true 
+          }).catch(() => {
+              // Silent catch if everything fails.
+          });
+      }
   }
 };

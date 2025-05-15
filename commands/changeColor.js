@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 /**
  * We handle the changecolor command.
@@ -47,7 +48,7 @@ module.exports = {
             // We validate the role and color.
             if (!this.isValidRole(role)) {
                 await interaction.editReply({
-                    content: "⚠️ I cannot edit this role. Please choose a role that is below my highest role.",
+                    content: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS,
                     ephemeral: true
                 });
                 return;
@@ -55,7 +56,7 @@ module.exports = {
 
             if (!this.isValidHexColor(color)) {
                 await interaction.editReply({
-                    content: "⚠️ Please provide a valid hex color code (e.g., #FF0000).",
+                    content: ERROR_MESSAGES.INVALID_COLOR,
                     ephemeral: true
                 });
                 return;
@@ -109,22 +110,15 @@ module.exports = {
      * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
-        logger.error("Error in /changecolor command execution.", { 
-            error: error.message, 
-            stack: error.stack,
+        logError(error, 'changecolor', {
             userId: interaction.user?.id,
-            guildId: interaction.guild?.id
+            guildId: interaction.guild?.id,
+            channelId: interaction.channel?.id
         });
-        
-        let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
-        
-        if (error.code === 50013) {
-            errorMessage = "⚠️ I don't have permission to edit this role. Please check my role hierarchy.";
-        }
         
         try {
             await interaction.editReply({ 
-                content: errorMessage,
+                content: getErrorMessage(error),
                 ephemeral: true 
             });
         } catch (followUpError) {
@@ -135,7 +129,7 @@ module.exports = {
             });
             
             await interaction.reply({ 
-                content: errorMessage,
+                content: getErrorMessage(error),
                 ephemeral: true 
             }).catch(() => {
                 // Silent catch if everything fails.

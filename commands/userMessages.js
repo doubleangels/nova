@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { createPaginatedResults } = require('../utils/searchUtils');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // These are the configuration constants for the user messages command.
 const MESSAGES_EMBED_COLOR = 0xcd41ff;
@@ -86,7 +87,7 @@ module.exports = {
         });
         
         return await interaction.reply({
-          content: "⚠️ This command can only be used in servers, not in direct messages.",
+          content: ERROR_MESSAGES.DM_NOT_SUPPORTED,
           ephemeral: true
         });
       }
@@ -236,7 +237,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: '⚠️ User not found.'
+        errorMessage: ERROR_MESSAGES.USER_NOT_FOUND
       };
     }
     
@@ -250,7 +251,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: '⚠️ Please select a valid text channel.'
+        errorMessage: ERROR_MESSAGES.INVALID_CHANNEL_TYPE
       };
     }
     
@@ -266,7 +267,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: `⚠️ You don't have permission to view messages in ${targetChannel.name}.`
+        errorMessage: ERROR_MESSAGES.NO_PERMISSION_TO_VIEW_CHANNEL
       };
     }
     
@@ -415,28 +416,33 @@ module.exports = {
   
   /**
    * Handles errors that occur during command execution.
-   * 
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    logger.error("Error executing user messages command.", { 
-      error: error.message,
-      stack: error.stack,
-      userTag: interaction.user?.tag,
-      guildName: interaction.guild?.name
+    logError(error, 'usermessages', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
     });
     
     try {
-      const replyMethod = (interaction.deferred || interaction.replied) ? 'editReply' : 'reply';
-      
-      await interaction[replyMethod]({ 
-        content: '⚠️ There was an error fetching the messages. Please try again later.', 
+      await interaction.editReply({ 
+        content: getErrorMessage(error),
         ephemeral: true 
       });
-    } catch (err) {
-      logger.error("Failed to send error message to user.", { 
-        error: err.message 
+    } catch (followUpError) {
+      logger.error("Failed to send error response for usermessages command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: getErrorMessage(error),
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
       });
     }
   }

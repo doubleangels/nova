@@ -2,6 +2,7 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the cat API.
 const CAT_API_URL = 'https://cataas.com/cat/cute';
@@ -53,17 +54,7 @@ module.exports = {
         imageUrl: catData.url
       });
     } catch (error) {
-      logger.error("Error executing cat command:", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user?.id
-      });
-      
-      // We inform the user if something goes wrong.
-      await interaction.editReply({
-        content: "⚠️ We couldn't fetch a cat image. Please try again later.",
-        ephemeral: true
-      });
+      await this.handleError(interaction, error);
     }
   },
 
@@ -81,14 +72,15 @@ module.exports = {
       });
 
       if (response.status !== 200) {
-        throw new Error(`API returned status code ${response.status}`);
+        logger.warn("API returned non-200 status.", { status: response.status });
+        throw new Error("API_ERROR");
       }
 
       // We verify that we received an actual image from the API.
       const contentType = response.headers['content-type'];
       if (!contentType || !contentType.startsWith('image/')) {
         logger.warn("API did not return an image.", { contentType });
-        throw new Error("The API did not return a valid image");
+        throw new Error("INVALID_RESPONSE");
       }
 
       // We convert the response data to a buffer for the attachment.
@@ -96,28 +88,54 @@ module.exports = {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          throw new Error(`API error: ${error.response.status}`);
+          logger.warn("API error response.", { 
+            status: error.response.status,
+            statusText: error.response.statusText
+          });
+          throw new Error("API_ERROR");
         } else if (error.request) {
-          throw new Error("Network error: Could not connect to the cat API");
+          logger.warn("Network error - no response received.");
+          throw new Error("NETWORK_ERROR");
         }
       }
       throw error; // We re-throw any other errors for consistent error handling.
     }
   },
 
-  /**
-   * Gets a user-friendly error message based on the error.
-   * @param {Error} error - The error object.
-   * @returns {string} A user-friendly error message.
-   */
-  getErrorMessage(error) {
-    if (error.message.includes("API error")) {
-      return "Couldn't fetch a cat picture due to an API error. Try again later.";
-    } else if (error.message.includes("Network error")) {
-      return "Couldn't connect to the cat image service. Please check your internet connection and try again.";
-    } else if (error.message.includes("not return a valid image")) {
-      return "The cat service didn't send a proper image. Please try again.";
+  async handleError(interaction, error) {
+    logError(error, 'cat', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.message === "INVALID_RESPONSE") {
+      errorMessage = ERROR_MESSAGES.INVALID_RESPONSE;
+    } else if (error.message === "NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     }
-    return "An unexpected error occurred while fetching the cat image. Please try again later.";
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for cat command.", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+        // Silent catch if everything fails.
+      });
+    }
   }
 };

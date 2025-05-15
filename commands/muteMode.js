@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the mute mode feature.
 const DEFAULT_TIME_LIMIT = 2; // We set a default time limit of 2 hours before kicking inactive users.
@@ -100,13 +101,6 @@ module.exports = {
         settings: currentSettings
       });
     } catch (error) {
-      logger.error("Error retrieving mute mode status.", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-        
       throw error; // We propagate to the main error handler for consistent error handling.
     }
   },
@@ -164,13 +158,6 @@ module.exports = {
         timeLimit
       });
     } catch (error) {
-      logger.error("Error updating mute mode settings.", {
-        error: error.message,
-        stack: error.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      
       throw error; // We propagate to the main error handler for consistent error handling.
     }
   },
@@ -280,26 +267,25 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    logger.error("Error in /mutemode command execution.", { 
-      error: error.message, 
-      stack: error.stack,
+    logError(error, 'mutemode', {
       userId: interaction.user?.id,
-      guildId: interaction.guildId
+      guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = "⚠️ Failed to retrieve current settings. Please try again later.";
+      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = "⚠️ Failed to save settings. Please try again later.";
+      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+    } else if (error.message === "INVALID_TIME_LIMIT") {
+      errorMessage = ERROR_MESSAGES.MUTEMODE_INVALID_TIME;
     }
     
-    // We handle the case where interaction wasn't deferred properly.
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true
+        ephemeral: true 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for mutemode command.", {
@@ -308,12 +294,11 @@ module.exports = {
         userId: interaction.user?.id
       });
       
-      // We try replying if editing failed as a fallback.
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true
+        ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails to prevent crashing.
+        // Silent catch if everything fails.
       });
     }
   }

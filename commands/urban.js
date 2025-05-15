@@ -13,6 +13,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
+const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the Urban Dictionary API.
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
@@ -51,7 +52,7 @@ module.exports = {
             if (!definitions || definitions.length === 0) {
                 // We inform the user if no definition was found.
                 await interaction.editReply({
-                    content: `We couldn't find a definition for "${term}".`,
+                    content: ERROR_MESSAGES.NO_RESULTS_FOUND,
                     ephemeral: true
                 });
                 return;
@@ -79,17 +80,7 @@ module.exports = {
                 term
             });
         } catch (error) {
-            logger.error("Error executing urban command:", {
-                error: error.message,
-                stack: error.stack,
-                userId: interaction.user?.id
-            });
-            
-            // We inform the user if something goes wrong.
-            await interaction.editReply({
-                content: "⚠️ We couldn't fetch the definition. Please try again later.",
-                ephemeral: true
-            });
+            await this.handleError(interaction, error);
         }
     },
 
@@ -110,24 +101,30 @@ module.exports = {
      * @param {Error} error - The error that occurred.
      */
     async handleError(interaction, error) {
-        logger.error('Urban Dictionary command error:', {
-            error: error.message,
-            userId: interaction.user.id,
-            guildId: interaction.guildId
+        logError(error, 'urban', {
+            userId: interaction.user?.id,
+            guildId: interaction.guild?.id,
+            channelId: interaction.channel?.id
         });
-
-        let errorMessage = 'We encountered an error while fetching the definition.';
         
-        if (error.code === 'ECONNABORTED') {
-            errorMessage = 'The request to Urban Dictionary timed out. Please try again later.';
-        } else if (error.response) {
-            if (error.response.status === 429) {
-                errorMessage = 'We\'ve hit the rate limit for Urban Dictionary. Please try again later.';
-            } else if (error.response.status >= 500) {
-                errorMessage = 'Urban Dictionary is currently experiencing issues. Please try again later.';
-            }
+        try {
+            await interaction.editReply({ 
+                content: getErrorMessage(error),
+                ephemeral: true 
+            });
+        } catch (followUpError) {
+            logger.error("Failed to send error response for urban command.", {
+                error: followUpError.message,
+                originalError: error.message,
+                userId: interaction.user?.id
+            });
+            
+            await interaction.reply({ 
+                content: getErrorMessage(error),
+                ephemeral: true 
+            }).catch(() => {
+                // Silent catch if everything fails.
+            });
         }
-
-        await interaction.editReply({ content: errorMessage });
     }
 };
