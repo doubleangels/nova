@@ -94,6 +94,12 @@ async function handleReminder(message, delay) {
     await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE.replace('%s', unixTimestamp)}`);
     logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
 
+    // Delete any existing reminders before adding the new one
+    await pool.query(
+      `DELETE FROM main.reminder_recovery WHERE remind_at > NOW()`
+    );
+    logger.debug("Cleaned up existing reminders.");
+
     // Store only reminder_id and remind_at
     await pool.query(
       `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
