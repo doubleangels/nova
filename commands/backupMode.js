@@ -249,7 +249,7 @@ module.exports = {
       });
     } catch (dbError) {
       logger.error("Failed to update backup mode settings.", {
-        error: dbError.message,
+        error: dbError.message, 
         stack: dbError.stack,
         userId: interaction.user.id,
         guildId: interaction.guild.id

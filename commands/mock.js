@@ -6,7 +6,7 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 // These are the configuration constants for the mock command.
 const MAX_CONTENT_LENGTH = 2000; // Discord enforces a message length limit of 2000 characters.
 const TRUNCATION_BUFFER = 100; // We use a buffer for mentions and emoji to ensure we stay under the limit.
-const MOCK_EMOJI = '<a:spongebobmock:1291527476564066387>'; // This is the complete emoji reference for the mocking SpongeBob.
+const MOCK_EMOJI = '🤪'; // Using a standard emoji instead of a custom one
 const ELLIPSIS = '...';
 
 /**
@@ -49,7 +49,9 @@ module.exports = {
       const { targetMessage } = validationResult;
       const mockedContent = this.generateMockedContent(targetMessage);
       
-      await interaction.editReply(mockedContent);
+      await interaction.editReply({
+        content: mockedContent
+      });
       
       logger.info("Mock command executed successfully.", {
         userId: interaction.user.id,
@@ -70,62 +72,73 @@ module.exports = {
    * @returns {Object} An object containing validation result and message data
    */
   validateMessage(interaction) {
-    // We retrieve the targeted message from the interaction.
-    const targetMessage = interaction.targetMessage;
-    
-    // We ensure the target message exists before proceeding.
-    if (!targetMessage) {
-      logger.error("Target message could not be retrieved.", {
-        userId: interaction.user.id,
-        interactionId: interaction.id
-      });
+    try {
+      // We retrieve the targeted message from the interaction.
+      const targetMessage = interaction.targetMessage;
       
-      return {
-        valid: false,
-        message: ERROR_MESSAGES.MESSAGE_NOT_FOUND
-      };
-    }
-
-    logger.debug("Retrieved target message.", {
-      targetMessageId: targetMessage.id,
-      authorId: targetMessage.author.id
-    });
+      // We ensure the target message exists before proceeding.
+      if (!targetMessage) {
+        logger.error("Target message could not be retrieved.", {
+          userId: interaction.user.id,
+          interactionId: interaction.id
+        });
         
-    // We check if the message is sent by the bot itself to prevent mocking our own messages.
-    if (targetMessage.author.id === interaction.client.user.id) {
-      logger.warn("Attempted to mock the bot's own message.", {
-        userId: interaction.user.id,
-        targetMessageId: targetMessage.id
-      });
-      
-      return {
-        valid: false,
-        message: ERROR_MESSAGES.CANNOT_MOCK_BOT
-      };
-    }
-    
-    const messageContent = targetMessage.content;
-    
-    // We ensure the message has content to mock, as we can't mock empty messages.
-    if (!messageContent || messageContent.trim() === '') {
-      logger.warn("No content available to mock.", {
-        userId: interaction.user.id,
-        targetMessageId: targetMessage.id,
-        hasEmbeds: targetMessage.embeds?.length > 0,
-        hasAttachments: targetMessage.attachments?.size > 0
-      });
-      
-      return {
-        valid: false,
-        message: ERROR_MESSAGES.NO_CONTENT_TO_MOCK
-      };
-    }
+        return {
+          valid: false,
+          message: ERROR_MESSAGES.MESSAGE_NOT_FOUND
+        };
+      }
 
-    return {
-      valid: true,
-      targetMessage,
-      messageContent
-    };
+      logger.debug("Retrieved target message.", {
+        targetMessageId: targetMessage.id,
+        authorId: targetMessage.author.id
+      });
+          
+      // We check if the message is sent by the bot itself to prevent mocking our own messages.
+      if (targetMessage.author.id === interaction.client.user.id) {
+        logger.warn("Attempted to mock the bot's own message.", {
+          userId: interaction.user.id,
+          targetMessageId: targetMessage.id
+        });
+        
+        return {
+          valid: false,
+          message: ERROR_MESSAGES.CANNOT_MOCK_BOT
+        };
+      }
+      
+      const messageContent = targetMessage.content;
+      
+      // We ensure the message has content to mock, as we can't mock empty messages.
+      if (!messageContent || messageContent.trim() === '') {
+        logger.warn("No content available to mock.", {
+          userId: interaction.user.id,
+          targetMessageId: targetMessage.id,
+          hasEmbeds: targetMessage.embeds?.length > 0,
+          hasAttachments: targetMessage.attachments?.size > 0
+        });
+        
+        return {
+          valid: false,
+          message: ERROR_MESSAGES.NO_CONTENT_TO_MOCK
+        };
+      }
+
+      return {
+        valid: true,
+        targetMessage,
+        messageContent
+      };
+    } catch (error) {
+      logger.error("Error validating message:", {
+        error: error.message,
+        userId: interaction.user.id
+      });
+      return {
+        valid: false,
+        message: ERROR_MESSAGES.UNEXPECTED_ERROR
+      };
+    }
   },
   
   /**
@@ -136,41 +149,49 @@ module.exports = {
    * @returns {string} The mocked content with proper formatting
    */
   generateMockedContent(targetMessage) {
-    const messageContent = targetMessage.content;
-    
-    // We convert the message content to "mOcKiNg" text format by alternating character case.
-    const mockedText = messageContent
-      .split('')
-      .map((char, index) => {
-        return index % 2 === 0 ? char.toLowerCase() : char.toUpperCase();
-      })
-      .join('');
-    
-    logger.debug("Generated mocked text.", {
-      originalLength: messageContent.length,
-      mockedLength: mockedText.length
-    });
-    
-    // We create the reply content with mention and emoji for a complete mocking effect.
-    const replyContent = `<@${targetMessage.author.id}>: "${mockedText}" ${MOCK_EMOJI}`;
-    
-    // We check if the reply would exceed Discord's message length limit and truncate if necessary.
-    if (replyContent.length > MAX_CONTENT_LENGTH) {
-      logger.warn("Mocked text exceeds Discord's message length limit.", {
-        contentLength: replyContent.length,
-        limit: MAX_CONTENT_LENGTH
+    try {
+      const messageContent = targetMessage.content;
+      
+      // We convert the message content to "mOcKiNg" text format by alternating character case.
+      const mockedText = messageContent
+        .split('')
+        .map((char, index) => {
+          return index % 2 === 0 ? char.toLowerCase() : char.toUpperCase();
+        })
+        .join('');
+      
+      logger.debug("Generated mocked text.", {
+        originalLength: messageContent.length,
+        mockedLength: mockedText.length
       });
       
-      // We calculate a safe truncation length to ensure the message fits within Discord's limits.
-      const maxTextLength = MAX_CONTENT_LENGTH - TRUNCATION_BUFFER;
-      const authorMention = `<@${targetMessage.author.id}>`;
-      const safeLength = maxTextLength - authorMention.length - MOCK_EMOJI.length - ELLIPSIS.length - 5; // 5 for quotes and spaces
+      // We create the reply content with mention and emoji for a complete mocking effect.
+      const replyContent = `<@${targetMessage.author.id}>: "${mockedText}" ${MOCK_EMOJI}`;
       
-      const truncatedMockedText = mockedText.substring(0, safeLength) + ELLIPSIS;
-      return `${authorMention}: "${truncatedMockedText}" ${MOCK_EMOJI}`;
+      // We check if the reply would exceed Discord's message length limit and truncate if necessary.
+      if (replyContent.length > MAX_CONTENT_LENGTH) {
+        logger.warn("Mocked text exceeds Discord's message length limit.", {
+          contentLength: replyContent.length,
+          limit: MAX_CONTENT_LENGTH
+        });
+        
+        // We calculate a safe truncation length to ensure the message fits within Discord's limits.
+        const maxTextLength = MAX_CONTENT_LENGTH - TRUNCATION_BUFFER;
+        const authorMention = `<@${targetMessage.author.id}>`;
+        const safeLength = maxTextLength - authorMention.length - MOCK_EMOJI.length - ELLIPSIS.length - 5; // 5 for quotes and spaces
+        
+        const truncatedMockedText = mockedText.substring(0, safeLength) + ELLIPSIS;
+        return `${authorMention}: "${truncatedMockedText}" ${MOCK_EMOJI}`;
+      }
+      
+      return replyContent;
+    } catch (error) {
+      logger.error("Error generating mocked content:", {
+        error: error.message,
+        targetMessageId: targetMessage.id
+      });
+      throw error;
     }
-    
-    return replyContent;
   },
   
   /**
@@ -199,12 +220,18 @@ module.exports = {
         userId: interaction.user?.id
       });
       
-      await interaction.reply({ 
-        content: getErrorMessage(error),
-        ephemeral: true 
-      }).catch(() => {
-        // Silent catch if everything fails.
-      });
+      try {
+        await interaction.reply({ 
+          content: getErrorMessage(error),
+          ephemeral: true 
+        });
+      } catch (finalError) {
+        logger.error("All attempts to send error response failed.", {
+          error: finalError.message,
+          originalError: error.message,
+          userId: interaction.user?.id
+        });
+      }
     }
   }
 };

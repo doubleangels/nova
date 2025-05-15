@@ -17,7 +17,6 @@ const YOUTUBE_SEARCH_MAX_RESULTS = 10; // We limit to a maximum of 10 results pe
 const YOUTUBE_EMBED_COLOR = 0xFF0000; // We use YouTube's signature red color for embeds.
 const YOUTUBE_DESCRIPTION_MAX_LENGTH = 1024; // We truncate long descriptions to keep embeds clean.
 const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
-const YOUTUBE_RELEVANCE_LIKES_WEIGHT = 0.001; // We use this factor for relevance calculation.
 const YOUTUBE_REQUEST_TIMEOUT = 10000;
 
 // We use a simple in-memory cache to reduce API calls.
@@ -43,57 +42,69 @@ module.exports = {
     .addStringOption(option =>
       option.setName('query')
         .setDescription('What would you like to search for?')
-        .setRequired(true)),
+        .setRequired(true))
+    .addStringOption(option =>
+      option.setName('type')
+        .setDescription('The type of content to search for')
+        .addChoices(
+          { name: 'Video', value: 'video' },
+          { name: 'Channel', value: 'channel' },
+          { name: 'Playlist', value: 'playlist' }
+        )),
 
   async execute(interaction) {
-    await interaction.deferReply();
-    const query = interaction.options.getString('query');
-
     try {
-      // We need to verify that the API key is properly configured.
-      if (!config.googleApiKey) {
-        logger.error("YouTube API key is not configured.");
-        await interaction.editReply({
+      // We validate that the API configuration is properly set up before proceeding.
+      if (!this.validateConfiguration()) {
+        return await interaction.reply({
           content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
-        return;
       }
 
-      const response = await axios.get(`${YOUTUBE_API_SEARCH_URL}`, {
-        params: {
-          part: 'snippet',
-          q: query,
-          type: 'video',
-          maxResults: 1,
-          key: config.googleApiKey
-        },
-        timeout: YOUTUBE_REQUEST_TIMEOUT
+      // We defer the reply to allow time for the API request and processing.
+      await interaction.deferReply();
+      logger.info(`/youtube command initiated.`, { 
+        userId: interaction.user.id,
+        guildId: interaction.guildId
       });
 
-      if (!response.data.items || response.data.items.length === 0) {
-        return await interaction.editReply({
-          content: ERROR_MESSAGES.NO_RESULTS_FOUND
+      // We get and validate the search parameters provided by the user.
+      const query = interaction.options.getString('query');
+      const contentType = interaction.options.getString('type') || 'video';
+      const sortMethod = interaction.options.getString('sort') || 'relevance';
+      const duration = interaction.options.getString('duration') || 'any';
+
+      // We fetch search results from the YouTube API.
+      const searchResults = await this.searchYouTube(query, contentType, sortMethod, duration);
+      
+      if (!searchResults || searchResults.length === 0) {
+        logger.warn("No search results found for query.", { query });
+        return await interaction.editReply({ 
+          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
+          ephemeral: true
         });
       }
 
-      const video = response.data.items[0];
-      const videoDetails = await this.getVideoDetails(video.id.videoId);
+      // Create a function to generate embeds for pagination
+      const generateEmbed = (index) => this.createContentEmbed(searchResults[index], contentType, index, searchResults.length);
 
-      const embed = new EmbedBuilder()
-        .setColor(YOUTUBE_EMBED_COLOR)
-        .setTitle(video.snippet.title)
-        .setURL(`https://www.youtube.com/watch?v=${video.id.videoId}`)
-        .setDescription(this.truncateText(video.snippet.description, YOUTUBE_DESCRIPTION_MAX_LENGTH))
-        .setThumbnail(video.snippet.thumbnails.high.url)
-        .addFields(
-          { name: 'Channel', value: video.snippet.channelTitle, inline: true },
-          { name: 'Views', value: videoDetails.viewCount.toLocaleString(), inline: true },
-          { name: 'Duration', value: this.formatDuration(videoDetails.duration), inline: true }
-        )
-        .setFooter({ text: `Published on ${new Date(video.snippet.publishedAt).toLocaleDateString()}` });
+      // Use the pagination utility to display results
+      await createPaginatedResults(
+        interaction,
+        searchResults,
+        generateEmbed,
+        'youtube',
+        YOUTUBE_COLLECTOR_TIMEOUT_MS,
+        logger,
+        {
+          buttonStyle: ButtonStyle.Secondary,
+          nextLabel: 'Next',
+          prevEmoji: '⬅️',
+          nextEmoji: '➡️'
+        }
+      );
 
-      await interaction.editReply({ embeds: [embed] });
     } catch (error) {
       await this.handleError(interaction, error);
     }
@@ -465,7 +476,7 @@ module.exports = {
    */
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
-      .setColor(YOUTUBE_EMBED_COLOR)
+      .setColor(0xFF0000)  // Explicitly set YouTube red color
       .setFooter({ 
         text: `Result ${index + 1} of ${totalItems} • Powered by YouTube`
       });
@@ -597,5 +608,9 @@ module.exports = {
         name: snippet.channelTitle,
         url: `https://www.youtube.com/channel/${snippet.channelId}`
       });
+  },
+
+  validateConfiguration() {
+    return config.googleApiKey;
   }
 };

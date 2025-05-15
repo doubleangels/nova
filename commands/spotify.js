@@ -1,9 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { createPaginatedResults } = require('../utils/searchUtils');
 
 // We use these configuration constants for Spotify integration.
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
@@ -111,35 +112,51 @@ module.exports = {
       }
 
       // Process the search based on subcommand
-      let result;
+      let results;
       switch (subcommand) {
         case 'song':
-          result = await this.searchSong(interaction.options.getString('query'), accessToken);
+          results = await this.searchSong(interaction.options.getString('query'), accessToken);
           break;
         case 'album':
-          result = await this.searchAlbum(interaction.options.getString('query'), accessToken);
+          results = await this.searchAlbum(interaction.options.getString('query'), accessToken);
           break;
         case 'artist':
-          result = await this.searchArtist(interaction.options.getString('query'), accessToken);
+          results = await this.searchArtist(interaction.options.getString('query'), accessToken);
           break;
         case 'playlist':
-          result = await this.searchPlaylist(interaction.options.getString('query'), accessToken);
+          results = await this.searchPlaylist(interaction.options.getString('query'), accessToken);
           break;
         case 'podcast':
-          result = await this.searchPodcast(interaction.options.getString('query'), accessToken);
+          results = await this.searchPodcast(interaction.options.getString('query'), accessToken);
           break;
       }
 
-      if (!result) {
+      if (!results || results.length === 0) {
         return await interaction.editReply({
           content: ERROR_MESSAGES.SPOTIFY_NO_RESULTS,
           ephemeral: true
         });
       }
 
-      // Create and send the embed
-      const embed = this.createEmbed(result, subcommand);
-      await interaction.editReply({ embeds: [embed] });
+      // Create a function to generate embeds for pagination
+      const generateEmbed = (index) => this.createEmbed(results, subcommand, index);
+
+      // Use the pagination utility to display results
+      await createPaginatedResults(
+        interaction,
+        results,
+        generateEmbed,
+        'spotify',
+        SPOTIFY_COLLECTOR_TIMEOUT_MS,
+        logger,
+        {
+          buttonStyle: ButtonStyle.Secondary,
+          prevLabel: 'Previous',
+          nextLabel: 'Next',
+          prevEmoji: '⬅️',
+          nextEmoji: '➡️'
+        }
+      );
 
     } catch (error) {
       await this.handleError(interaction, error);
@@ -455,86 +472,93 @@ module.exports = {
 
   /**
    * Creates an embed for the search result.
-   * @param {Object} result - The search result data.
+   * @param {Array} results - The array of search results.
    * @param {string} type - The type of result (song, album, artist, playlist).
+   * @param {number} index - The index of the result to display.
    * @returns {EmbedBuilder} The formatted embed.
    */
-  createEmbed(result, type) {
+  createEmbed(results, type, index = 0) {
+    const item = results[index];
+    
+    if (!item) {
+      throw new Error("No result data available");
+    }
+
     const embed = new EmbedBuilder()
       .setColor(SPOTIFY_EMBED_COLOR)
-      .setTitle(result.name)
-      .setURL(result.url)
-      .setThumbnail(result.imageUrl)
+      .setTitle(item.name)
+      .setURL(item.url)
+      .setThumbnail(item.imageUrl)
       .setFooter({ 
-        text: `Result ${result.index + 1} of ${SPOTIFY_SEARCH_MAX_RESULTS} • Powered by Spotify`
+        text: `Result ${index + 1} of ${results.length} • Powered by Spotify`
       });
 
     switch (type) {
       case 'song':
         embed
-          .setDescription(`🎵 ${result.artists}`)
+          .setDescription(`🎵 ${item.artists}`)
           .addFields(
-            { name: 'Album', value: `[${result.album}](${result.albumUrl})`, inline: true },
-            { name: 'Duration', value: result.duration, inline: true },
-            { name: 'Popularity', value: `${result.popularity}%`, inline: true },
-            { name: 'Release Date', value: result.releaseDate || 'Unknown', inline: true },
-            { name: 'Track Number', value: result.trackNumber ? `${result.trackNumber}/${result.totalTracks}` : 'Unknown', inline: true },
-            { name: 'Explicit', value: result.explicit ? 'Yes' : 'No', inline: true },
-            { name: 'Disc Number', value: result.discNumber?.toString() || 'Unknown', inline: true },
-            { name: 'ISRC', value: result.isrc || 'Unknown', inline: true }
+            { name: 'Album', value: `[${item.album}](${item.albumUrl})`, inline: true },
+            { name: 'Duration', value: item.duration, inline: true },
+            { name: 'Popularity', value: `${item.popularity}%`, inline: true },
+            { name: 'Release Date', value: item.releaseDate || 'Unknown', inline: true },
+            { name: 'Track Number', value: item.trackNumber ? `${item.trackNumber}/${item.totalTracks}` : 'Unknown', inline: true },
+            { name: 'Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
+            { name: 'Disc Number', value: item.discNumber?.toString() || 'Unknown', inline: true },
+            { name: 'ISRC', value: item.isrc || 'Unknown', inline: true }
           );
         break;
 
       case 'album':
         embed
-          .setDescription(`👤 ${result.artists}`)
+          .setDescription(`👤 ${item.artists}`)
           .addFields(
-            { name: 'Release Date', value: result.releaseDate, inline: true },
-            { name: 'Tracks', value: result.totalTracks.toString(), inline: true },
-            { name: 'Album Type', value: result.albumType || 'Unknown', inline: true },
-            { name: 'Label', value: result.label || 'Unknown', inline: true },
-            { name: 'Copyright', value: result.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
-            { name: 'Available Markets', value: result.availableMarkets?.length ? `${result.availableMarkets.length} markets` : 'Unknown', inline: true }
+            { name: 'Release Date', value: item.releaseDate, inline: true },
+            { name: 'Tracks', value: item.totalTracks.toString(), inline: true },
+            { name: 'Album Type', value: item.albumType || 'Unknown', inline: true },
+            { name: 'Label', value: item.label || 'Unknown', inline: true },
+            { name: 'Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
+            { name: 'Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true }
           );
         break;
 
       case 'artist':
         embed
           .addFields(
-            { name: 'Followers', value: this.formatNumber(result.followers), inline: true },
-            { name: 'Popularity', value: `${result.popularity}%`, inline: true },
-            { name: 'Genres', value: result.genres?.join(', ') || 'No genres listed', inline: false },
-            { name: 'Top Tracks', value: result.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false }
+            { name: 'Followers', value: this.formatNumber(item.followers), inline: true },
+            { name: 'Popularity', value: `${item.popularity}%`, inline: true },
+            { name: 'Genres', value: item.genres?.join(', ') || 'No genres listed', inline: false },
+            { name: 'Top Tracks', value: item.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false }
           );
         break;
 
       case 'playlist':
         embed
-          .setDescription(result.description || 'No description available')
+          .setDescription(item.description || 'No description available')
           .addFields(
-            { name: 'Created by', value: `[${result.owner}](${result.ownerUrl})`, inline: true },
-            { name: 'Tracks', value: result.tracks.toString(), inline: true },
-            { name: 'Followers', value: this.formatNumber(result.followers) || 'Unknown', inline: true },
-            { name: 'Last Updated', value: result.lastUpdated || 'Unknown', inline: true },
-            { name: 'Collaborative', value: result.collaborative ? 'Yes' : 'No', inline: true },
-            { name: 'Public', value: result.public ? 'Yes' : 'No', inline: true },
-            { name: 'Snapshot ID', value: result.snapshotId || 'Unknown', inline: true }
+            { name: 'Created by', value: `[${item.owner}](${item.ownerUrl})`, inline: true },
+            { name: 'Tracks', value: item.tracks.toString(), inline: true },
+            { name: 'Followers', value: this.formatNumber(item.followers) || 'Unknown', inline: true },
+            { name: 'Last Updated', value: item.lastUpdated || 'Unknown', inline: true },
+            { name: 'Collaborative', value: item.collaborative ? 'Yes' : 'No', inline: true },
+            { name: 'Public', value: item.public ? 'Yes' : 'No', inline: true },
+            { name: 'Snapshot ID', value: item.snapshotId || 'Unknown', inline: true }
           );
         break;
 
       case 'podcast':
         embed
-          .setDescription(result.description)
+          .setDescription(item.description)
           .addFields(
-            { name: 'Publisher', value: result.publisher, inline: true },
-            { name: 'Total Episodes', value: result.totalEpisodes.toString(), inline: true },
-            { name: 'Languages', value: result.languages, inline: true },
-            { name: 'Explicit', value: result.explicit ? 'Yes' : 'No', inline: true },
-            { name: 'Copyright', value: result.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
-            { name: 'Available Markets', value: result.availableMarkets?.length ? `${result.availableMarkets.length} markets` : 'Unknown', inline: true },
+            { name: 'Publisher', value: item.publisher, inline: true },
+            { name: 'Total Episodes', value: item.totalEpisodes.toString(), inline: true },
+            { name: 'Languages', value: item.languages, inline: true },
+            { name: 'Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
+            { name: 'Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
+            { name: 'Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true },
             { 
               name: 'Latest Episodes', 
-              value: result.episodes.slice(0, 5).map(episode => 
+              value: item.episodes.slice(0, 5).map(episode => 
                 `[${episode.name}](${episode.url}) - ${episode.duration} (${episode.releaseDate})`
               ).join('\n'),
               inline: false 

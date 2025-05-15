@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { DateTime } = require('luxon');
 const dayjs = require('dayjs');
+const moment = require('moment-timezone');
 const NodeCache = require('node-cache');
 
 // We define these configuration constants for consistent interaction with Google's services.
@@ -325,6 +326,35 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
 }
 
 /**
+ * We get the closest timezone name from moment-timezone based on coordinates.
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @returns {string} The closest timezone name
+ */
+function getClosestTimezone(lat, lng) {
+  const timezones = moment.tz.names();
+  let closestTimezone = 'UTC';
+  let minDistance = Infinity;
+
+  for (const tz of timezones) {
+    const zone = moment.tz.zone(tz);
+    if (!zone) continue;
+
+    const distance = Math.sqrt(
+      Math.pow(zone.lat - lat, 2) + 
+      Math.pow(zone.lng - lng, 2)
+    );
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      closestTimezone = tz;
+    }
+  }
+
+  return closestTimezone;
+}
+
+/**
  * We retrieve the UTC offset for a given place.
  * This function combines geocoding and timezone data to determine the complete timezone information.
  * 
@@ -360,10 +390,14 @@ async function getUtcOffset(place) {
     const rawOffset = tzResult.rawOffset / SECONDS_PER_HOUR;
     const dstOffset = tzResult.dstOffset / SECONDS_PER_HOUR;
     
+    // Use the timezone ID from Google API directly
+    const timezoneName = tzResult.timezoneId;
+    
     return {
       error: false,
       offset: rawOffset + dstOffset,
       timezoneId: tzResult.timezoneId,
+      timeZoneName: timezoneName,
       formattedAddress: geocodeResult.formattedAddress
     };
     

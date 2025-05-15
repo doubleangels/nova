@@ -84,6 +84,7 @@ module.exports = {
           action: 'query',
           prop: 'extracts',
           exintro: true,
+          exsentences: 1,
           explaintext: true,
           titles: article.title,
           format: 'json',
@@ -93,7 +94,12 @@ module.exports = {
 
       const pages = summaryResponse.data.query.pages;
       const pageId = Object.keys(pages)[0];
-      const summary = pages[pageId].extract;
+      let summary = pages[pageId].extract;
+
+      // Ensure summary isn't too long for Discord
+      if (summary.length > 1024) {
+        summary = summary.substring(0, 1021) + '...';
+      }
 
       // We create an embed with the article details.
       const embed = new EmbedBuilder()

@@ -17,7 +17,7 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We use these configuration constants for the Urban Dictionary API.
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
-const URBAN_EMBED_COLOR = 0x1DB954;
+const URBAN_EMBED_COLOR = 0x202C34;
 const URBAN_DESCRIPTION_MAX_LENGTH = 1024;
 const URBAN_EXAMPLE_MAX_LENGTH = 1024;
 const URBAN_REQUEST_TIMEOUT = 10000;
@@ -61,7 +61,7 @@ module.exports = {
             // We get the first definition and create an embed.
             const definition = definitions[0];
             const embed = new EmbedBuilder()
-                .setColor('#1DB954')
+                .setColor(URBAN_EMBED_COLOR)
                 .setTitle(`Urban Dictionary: ${definition.word}`)
                 .setDescription(definition.definition)
                 .addFields(

@@ -38,6 +38,8 @@ const client = new Client({
 
 // We create a collection to store and easily access bot commands.
 client.commands = new Collection();
+client.buttonHandlers = new Collection();
+client.selectHandlers = new Collection();
 
 // We load and register command files from the commands directory.
 const commandsPath = path.join(__dirname, 'commands');
