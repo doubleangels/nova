@@ -112,12 +112,19 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     }
 
     const parsedDate = timeRef.date;
-    const sourceTime = dayjs(parsedDate).tz(fromTimezone);
+    
+    // Create a dayjs object in the source timezone, ensuring we preserve the time
+    const sourceTime = dayjs.tz(parsedDate, fromTimezone);
+    
+    // Convert to target timezone
     const targetTime = sourceTime.tz(toTimezone);
     
     logger.debug("Time conversion completed:", {
       fromTimezone,
-      toTimezone
+      toTimezone,
+      sourceTime: sourceTime.format(),
+      targetTime: targetTime.format(),
+      parsedDate: parsedDate.toISOString()
     });
     
     return {
