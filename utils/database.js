@@ -37,7 +37,9 @@ const TABLES = {
   TRACKED_MEMBERS: `${SCHEMA}.tracked_members`,
   TIMEZONES: `${SCHEMA}.timezones`,
   MESSAGE_COUNTS: `${SCHEMA}.message_counts`,
-  VOICE_TIME: `${SCHEMA}.voice_time`
+  VOICE_TIME: `${SCHEMA}.voice_time`,
+  VOICE_CHANNEL_TIME: `${SCHEMA}.voice_channel_time`,
+  MESSAGE_CHANNEL_COUNTS: `${SCHEMA}.message_channel_counts`
 };
 
 /**
@@ -521,9 +523,9 @@ async function getTopVoiceUsers(limit = 10) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT member_id, username, minutes_spent, last_updated
+      `SELECT member_id, username, seconds_spent, last_updated
        FROM ${TABLES.VOICE_TIME}
-       ORDER BY minutes_spent DESC
+       ORDER BY seconds_spent DESC
        LIMIT $1`,
       [limit]
     );
@@ -544,7 +546,7 @@ async function getUserVoiceTime(memberId) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT member_id, username, minutes_spent, last_updated
+      `SELECT member_id, username, seconds_spent, last_updated
        FROM ${TABLES.VOICE_TIME}
        WHERE member_id = $1`,
       [memberId]
@@ -614,6 +616,78 @@ async function query(text, params = [], options = {}) {
 }
 
 /**
+ * Adds a completed voice session's duration to the user's total in voice_time.
+ * @param {string} userId - The Discord user ID
+ * @param {string} username - The current username of the user
+ * @param {number} durationSeconds - The session duration in seconds
+ */
+async function addVoiceSessionToStats(userId, username, durationSeconds) {
+  const client = await pool.connect();
+  try {
+    if (durationSeconds > 0) {
+      await client.query(
+        `INSERT INTO main.voice_time (member_id, username, seconds_spent, last_updated)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (member_id) DO UPDATE SET
+           username = $2,
+           seconds_spent = main.voice_time.seconds_spent + $3,
+           last_updated = NOW()`,
+        [userId, username, durationSeconds]
+      );
+    }
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Adds a completed voice session's duration to the channel's total in voice_channel_time.
+ * @param {string} channelId - The Discord channel ID
+ * @param {string} channelName - The channel name
+ * @param {number} durationSeconds - The session duration in seconds
+ */
+async function addVoiceSessionToChannelStats(channelId, channelName, durationSeconds) {
+  const client = await pool.connect();
+  try {
+    if (durationSeconds > 0) {
+      await client.query(
+        `INSERT INTO main.voice_channel_time (channel_id, channel_name, total_seconds, last_updated)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (channel_id) DO UPDATE SET
+           channel_name = $2,
+           total_seconds = main.voice_channel_time.total_seconds + $3,
+           last_updated = NOW()`,
+        [channelId, channelName, durationSeconds]
+      );
+    }
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Increments the message count for a channel in message_channel_counts.
+ * @param {string} channelId - The Discord channel ID
+ * @param {string} channelName - The channel name
+ */
+async function incrementChannelMessageCount(channelId, channelName) {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO main.message_channel_counts (channel_id, channel_name, message_count, last_updated)
+       VALUES ($1, $2, 1, NOW())
+       ON CONFLICT (channel_id) DO UPDATE SET
+         channel_name = $2,
+         message_count = main.message_channel_counts.message_count + 1,
+         last_updated = NOW()`,
+      [channelId, channelName]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * We export the database utility functions for use throughout the application.
  * This module provides consistent database access and management capabilities.
  */
@@ -634,5 +708,8 @@ module.exports = {
   updateVoiceTime,
   getTopVoiceUsers,
   getUserVoiceTime,
-  query
+  query,
+  addVoiceSessionToStats,
+  addVoiceSessionToChannelStats,
+  incrementChannelMessageCount
 };
