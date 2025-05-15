@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
 const Sentry = require('../sentry');
 
@@ -11,8 +12,9 @@ const TIME_FORMAT = 'h:mm A';
 const DATE_FORMAT = 'MMM D'; // Format for displaying the date (e.g., "Apr 17").
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 
-// We extend dayjs with UTC support for time conversions.
+// We extend dayjs with UTC and timezone support for time conversions.
 dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // We use these configuration constants for timezone handling.
 const TIMEZONE_CACHE_DURATION = 3600000; // 1 hour cache duration.
@@ -178,17 +180,8 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     // We get the parsed date (which is in the server's timezone).
     const parsedDate = timeRef.date;
     
-    // We extract just the time components to ensure accurate conversion.
-    const hours = parsedDate.getHours();
-    const minutes = parsedDate.getMinutes();
-    const seconds = parsedDate.getSeconds();
-    
-    // We create a new date in the author's timezone with the same time components.
-    const correctDate = dayjs()
-      .tz(fromTimezone)
-      .hour(hours)
-      .minute(minutes)
-      .second(seconds);
+    // We create a dayjs object from the parsed date and set the timezone
+    const correctDate = dayjs(parsedDate).tz(fromTimezone);
     
     // We convert to target timezone while preserving the time point.
     const timeInTargetTZ = correctDate.tz(toTimezone);
