@@ -93,14 +93,14 @@ async function initializeDatabase() {
       );
       logger.debug("Cleaned up database test data.");
       
-      // If we get here, the test was successful
+      // If we get here, the test was successful.
       return;
       
     } catch (err) {
       lastError = err;
       logger.error(`Error testing database connection (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, { error: err });
       
-      // We calculate delay with exponential backoff
+      // We calculate delay with exponential backoff.
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
       retryCount++;
       
@@ -113,15 +113,15 @@ async function initializeDatabase() {
     }
   }
 
-  // If we get here, all retries failed
+  // If we get here, all retries failed.
   logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
   
-  // We log the final error before stopping
+  // We log the final error before stopping.
   if (lastError) {
     logger.error("Final database error:", { error: lastError });
   }
   
-  // We stop the bot with a non-zero exit code to indicate failure
+  // We stop the bot with a non-zero exit code to indicate failure.
   process.exit(1);
 }
 
