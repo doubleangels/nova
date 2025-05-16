@@ -8,10 +8,10 @@ const Sentry = require('../sentry');
  * This function manages cleanup tasks when a member leaves.
  *
  * We perform several tasks when a member leaves:
- * 1. Remove the member from tracking if they were being monitored
- * 2. Log the member's departure information
+ * 1. We remove the member from tracking if they were being monitored for mute mode.
+ * 2. We log the member's departure information for monitoring purposes.
  *
- * @param {GuildMember} member - The member that left the server
+ * @param {GuildMember} member - The member that left the server.
  */
 module.exports = {
   name: 'guildMemberRemove',
@@ -23,18 +23,19 @@ module.exports = {
         return;
       }
       
-      // We log the member's departure information.
+      // We log the member's departure information for monitoring and debugging.
       logger.info(`Member left: ${member.user.tag} (ID: ${member.id})`);
       
-      // We remove the member from tracking if they were being monitored.
+      // We remove the member from tracking if they were being monitored for mute mode.
       const wasTracked = await removeTrackedMember(member.id);
       if (wasTracked) {
         logger.info(`Removed tracked member: ${member.user.tag}`);
       }
 
+      // We log successful processing of the member's departure.
       logger.info(`Successfully processed member departure: ${member.user.tag}`);
     } catch (error) {
-      // Add Sentry error tracking
+      // We capture the error in Sentry for monitoring and debugging.
       Sentry.captureException(error, {
         extra: {
           event: 'guildMemberRemove',

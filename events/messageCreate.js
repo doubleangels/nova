@@ -5,21 +5,21 @@ const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 
-// Message rate limiting and spam detection constants
+// We define rate limiting and spam detection constants for message moderation.
 const MESSAGE_RATE_LIMIT = 5;
 const MESSAGE_RATE_WINDOW = 5000;
 const SPAM_THRESHOLD = 3;
 const SPAM_WINDOW = 10000;
 
-// In-memory message history for rate limiting and spam
+// We maintain an in-memory message history for rate limiting and spam detection.
 const messageHistory = new Map();
 
-// Handle new messages
+// We handle new messages and process them according to our rules.
 module.exports = {
   name: 'messageCreate',
   async execute(message) {
     try {
-      // Fetch full content for partial messages
+      // We fetch full content for partial messages to ensure complete processing.
       if (message.partial) {
         try {
           await message.fetch();
@@ -29,7 +29,7 @@ module.exports = {
         }
       }
 
-      // Log bot messages for debugging
+      // We log bot messages for debugging purposes.
       if (message.author.bot) {
         logger.debug("Received bot message:", {
           botName: message.author.tag,
@@ -39,32 +39,32 @@ module.exports = {
         });
       }
 
-      // Skip non-Disboard/Nova bot messages
+      // We skip non-Disboard/Nova bot messages to focus on relevant interactions.
       if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
-      // Rate limit and spam check
+      // We check for rate limiting and spam before processing the message.
       if (await isRateLimited(message) || await isSpam(message)) return;
 
-      // Log received message
+      // We log received messages for monitoring and debugging.
       logger.debug("Message received:", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
         content: message.content?.substring(0, 50) || "No Content"
       });
       
-      // Increment user message count only for non-bot messages
+      // We increment user message count only for non-bot messages.
       if (!message.author.bot) {
         await incrementMessageCount(message.author.id, message.author.username);
         logger.debug(`Incremented message count for user ${message.author.tag}`);
       }
 
-      // Remove from mute tracking if needed
+      // We remove users from mute tracking when they send their first message.
       const wasTracked = await removeTrackedMember(message.author.id);
       if (wasTracked) {
         logger.info(`User ${message.author.tag} sent their first message and was removed from mute tracking.`);
       }
 
-      // Handle simple prefix commands
+      // We handle simple prefix commands for basic bot interactions.
       if (message.content.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
@@ -75,11 +75,11 @@ module.exports = {
         }
       }
 
-      // Process user messages
+      // We process user messages and handle various features.
       await processUserMessage(message);
-      // Check for bump messages
+      // We check for bump messages to maintain server visibility.
       await checkForBumpMessages(message);
-      // Increment per-channel message count only for non-bot messages
+      // We increment per-channel message count for non-bot messages.
       if (message.channel && message.channel.type === 0 && !message.author.bot) {
         await incrementChannelMessageCount(message.channel.id, message.channel.name);
       }
@@ -97,7 +97,13 @@ module.exports = {
   }
 };
 
-// Rate limiting helper
+/**
+ * We check if a user is sending messages too quickly.
+ * This function implements rate limiting to prevent message spam.
+ * 
+ * @param {Message} message - The Discord message object.
+ * @returns {Promise<boolean>} True if the user is rate limited, false otherwise.
+ */
 async function isRateLimited(message) {
   const userId = message.author.id;
   const now = Date.now();
@@ -117,7 +123,13 @@ async function isRateLimited(message) {
   return false;
 }
 
-// Spam detection helper
+/**
+ * We detect potential spam behavior in user messages.
+ * This function identifies patterns of similar messages sent in quick succession.
+ * 
+ * @param {Message} message - The Discord message object.
+ * @returns {Promise<boolean>} True if spam is detected, false otherwise.
+ */
 async function isSpam(message) {
   const userId = message.author.id;
   const now = Date.now();
@@ -140,7 +152,12 @@ async function isSpam(message) {
   return false;
 }
 
-// Process user messages (not webhooks or bots)
+/**
+ * We process messages from regular users (not webhooks or bots).
+ * This function handles user message tracking and feature processing.
+ * 
+ * @param {Message} message - The Discord message object.
+ */
 async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
   try {
@@ -159,7 +176,12 @@ async function processUserMessage(message) {
   }
 }
 
-// Process time references in messages
+/**
+ * We process time references found in user messages.
+ * This function identifies and marks messages containing time expressions.
+ * 
+ * @param {Message} message - The Discord message object.
+ */
 async function processTimeReferences(message) {
   if (!message.content) return;
   try {
@@ -180,7 +202,12 @@ async function processTimeReferences(message) {
   }
 }
 
-// Check for bump messages to schedule reminders
+/**
+ * We check for bump messages to maintain server visibility.
+ * This function identifies successful server bumps and schedules reminders.
+ * 
+ * @param {Message} message - The Discord message object.
+ */
 async function checkForBumpMessages(message) {
   logger.debug("Checking message for bump:", {
     author: message.author?.tag,

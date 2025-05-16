@@ -4,15 +4,15 @@ const Sentry = require('../sentry');
 const { MessageFlags } = require('discord.js');
 const { Collection } = require('discord.js');
 
-// We use these configuration constants for command cooldowns.
-const DEFAULT_COOLDOWN = 3000; // 3 seconds default cooldown
-const COOLDOWN_CACHE = new Map(); // We store cooldowns in memory
-const PERMISSION_CACHE = new Map(); // We store permission checks in memory
-const CACHE_DURATION = 60000; // 1 minute cache duration
+// We define configuration constants for command cooldowns and caching.
+const DEFAULT_COOLDOWN = 3000; // We set a 3-second default cooldown.
+const COOLDOWN_CACHE = new Map(); // We store command cooldowns in memory.
+const PERMISSION_CACHE = new Map(); // We store permission check results in memory.
+const CACHE_DURATION = 60000; // We set a 1-minute cache duration.
 
 /**
- * Handles command execution and error reporting for both slash commands and context menu commands.
- * We use this function to centralize error handling and logging for all interaction types.
+ * We handle command execution and error reporting for both slash commands and context menu commands.
+ * This function centralizes error handling and logging for all interaction types.
  * 
  * @param {Interaction} interaction - The Discord interaction object.
  * @param {string} commandType - The type of command being executed.
@@ -83,17 +83,17 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
  * This function manages the processing of all interaction types.
  *
  * We perform several tasks for each interaction:
- * 1. Validate the interaction type
- * 2. Execute the appropriate command handler
- * 3. Handle any errors that occur
+ * 1. We validate the interaction type and find the appropriate handler.
+ * 2. We execute the command with proper error handling and logging.
+ * 3. We manage cooldowns and permission checks for commands.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction) {
     try {
-      // We handle slash commands.
+      // We handle slash commands with proper error handling.
       if (interaction.isChatInputCommand()) {
         const command = interaction.client.commands.get(interaction.commandName);
         if (!command) {
@@ -119,7 +119,7 @@ module.exports = {
           }
         }
       }
-      // We handle button interactions.
+      // We handle button interactions with proper error handling.
       else if (interaction.isButton()) {
         const [action, ...params] = interaction.customId.split('_');
         const buttonHandler = interaction.client.buttonHandlers.get(action);
@@ -137,7 +137,7 @@ module.exports = {
           }
         }
       }
-      // We handle select menu interactions.
+      // We handle select menu interactions with proper error handling.
       else if (interaction.isStringSelectMenu()) {
         const [action, ...params] = interaction.customId.split('_');
         const selectHandler = interaction.client.selectHandlers.get(action);
@@ -166,6 +166,8 @@ module.exports = {
 
 /**
  * We handle command execution with cooldowns and permission caching.
+ * This function manages the execution flow for all command types.
+ * 
  * @param {Interaction} interaction - The interaction to handle.
  * @param {string} commandType - The type of command ('commands' or 'contextMenus').
  */
@@ -177,12 +179,12 @@ async function handleCommand(interaction, commandType) {
     return;
   }
 
-  // We check for command cooldown.
+  // We check for command cooldown before execution.
   if (await isOnCooldown(interaction, command)) {
     return;
   }
 
-  // We check for permissions with caching.
+  // We check for required permissions with caching.
   if (!await hasRequiredPermissions(interaction, command)) {
     return;
   }
@@ -214,7 +216,9 @@ async function handleCommand(interaction, commandType) {
 }
 
 /**
- * We check if a command is on cooldown.
+ * We check if a command is on cooldown for a user.
+ * This function manages command cooldown periods to prevent spam.
+ * 
  * @param {Interaction} interaction - The interaction to check.
  * @param {Command} command - The command to check.
  * @returns {Promise<boolean>} True if the command is on cooldown.
@@ -242,6 +246,8 @@ async function isOnCooldown(interaction, command) {
 
 /**
  * We check if a user has the required permissions for a command.
+ * This function implements permission caching to improve performance.
+ * 
  * @param {Interaction} interaction - The interaction to check.
  * @param {Command} command - The command to check.
  * @returns {Promise<boolean>} True if the user has the required permissions.
@@ -252,7 +258,7 @@ async function hasRequiredPermissions(interaction, command) {
   const key = `${interaction.guild.id}-${interaction.user.id}-${interaction.commandName}`;
   const now = Date.now();
   
-  // We check the permission cache first.
+  // We check the permission cache first for performance.
   if (PERMISSION_CACHE.has(key)) {
     const { hasPermission, expiresAt } = PERMISSION_CACHE.get(key);
     if (now < expiresAt) {
@@ -260,13 +266,13 @@ async function hasRequiredPermissions(interaction, command) {
     }
   }
   
-  // We check the actual permissions.
+  // We check the actual permissions if not cached.
   const member = interaction.member;
   const hasPermission = command.permissions.every(permission => 
     member.permissions.has(permission)
   );
   
-  // We cache the result.
+  // We cache the permission check result.
   PERMISSION_CACHE.set(key, {
     hasPermission,
     expiresAt: now + CACHE_DURATION

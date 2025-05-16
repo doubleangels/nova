@@ -7,7 +7,7 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const Sentry = require('../sentry');
 
-// We use these configuration constants for consistent time conversion behavior.
+// We define configuration constants for consistent time conversion behavior.
 const CLOCK_EMOJI = '🕒';
 const TIME_CONVERSION_TIMEOUT = 30000; // We set a 30-second timeout for temporary messages.
 
@@ -17,24 +17,24 @@ dayjs.extend(timezone);
 
 /**
  * We handle reactions being added to messages.
- * This function manages reaction-based interactions.
+ * This function manages reaction-based interactions and time conversions.
  *
  * We perform several tasks for each reaction:
- * 1. Process role assignments based on reactions
- * 2. Handle reaction-based commands
- * 3. Track reaction statistics
+ * 1. We process role assignments based on reaction emojis.
+ * 2. We handle time conversion requests via clock reactions.
+ * 3. We track reaction statistics for monitoring.
  *
- * @param {MessageReaction} reaction - The reaction that was added
- * @param {User} user - The user who added the reaction
+ * @param {MessageReaction} reaction - The reaction that was added.
+ * @param {User} user - The user who added the reaction.
  */
 module.exports = {
   name: 'messageReactionAdd',
   async execute(reaction, user) {
     try {
-      // We ignore reactions from bots to prevent loops.
+      // We ignore reactions from bots to prevent infinite loops.
       if (user.bot) return;
 
-      // We handle partial reactions by fetching their full data.
+      // We handle partial reactions by fetching their complete data.
       if (reaction.partial) {
         try {
           await reaction.fetch();
@@ -47,13 +47,13 @@ module.exports = {
         }
       }
 
-      // We handle clock reactions for time conversion
+      // We handle clock reactions for time conversion requests.
       if (reaction.emoji.name === CLOCK_EMOJI) {
         await handleClockReaction(reaction, user);
         return;
       }
 
-      // We process role assignments based on reactions.
+      // We process role assignments based on reaction emojis.
       if (reaction.message.guild) {
         const member = reaction.message.guild.members.cache.get(user.id);
         if (member) {
@@ -73,13 +73,13 @@ module.exports = {
 };
 
 /**
- * Fetches partial reaction and message data if needed.
- * We ensure we have complete data before processing reactions.
+ * We fetch partial reaction and message data to ensure complete information.
+ * This function handles data fetching for partial Discord objects.
  * 
- * @param {MessageReaction} reaction - The reaction object.
+ * @param {MessageReaction} reaction - The reaction object to fetch data for.
  */
 async function fetchPartialData(reaction) {
-  // We handle partial reactions by fetching the complete data.
+  // We handle partial reactions by fetching their complete data.
   if (reaction.partial) {
     try {
       await reaction.fetch();
@@ -97,7 +97,7 @@ async function fetchPartialData(reaction) {
     }
   }
   
-  // We handle partial messages by fetching the complete data.
+  // We handle partial messages by fetching their complete data.
   if (reaction.message.partial) {
     try {
       await reaction.message.fetch();
@@ -116,18 +116,18 @@ async function fetchPartialData(reaction) {
 }
 
 /**
- * Handles clock emoji reactions for time conversion.
- * We process the request and provide timezone conversions when appropriate.
+ * We handle clock emoji reactions for time conversion requests.
+ * This function processes timezone conversions for users.
  * 
  * @param {MessageReaction} reaction - The reaction object.
  * @param {User} user - The user who reacted.
  */
 async function handleClockReaction(reaction, user) {
   try {
-    // We get the reactor's timezone from database to know their local time.
+    // We get the reactor's timezone from the database for conversion.
     const userTimezone = await getUserTimezone(user.id);
     
-    // We handle the case where the reactor has no timezone set.
+    // We handle cases where the reactor hasn't set their timezone.
     if (!userTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
@@ -136,11 +136,11 @@ async function handleClockReaction(reaction, user) {
       return;
     }
     
-    // We get the message author's timezone from database as the source timezone.
+    // We get the message author's timezone for source time conversion.
     const messageAuthorId = reaction.message.author.id;
     const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
     
-    // We handle the case where the message author has no timezone set.
+    // We handle cases where the message author hasn't set their timezone.
     if (!messageAuthorTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
@@ -149,7 +149,7 @@ async function handleClockReaction(reaction, user) {
       return;
     }
     
-    // We get time references from the message and process them for conversion.
+    // We extract and process time references from the message.
     const timeReferences = await getTimeReferences(reaction.message);
     
     if (timeReferences && timeReferences.length > 0) {
@@ -180,21 +180,21 @@ async function handleClockReaction(reaction, user) {
 }
 
 /**
- * Gets time references from a message, either from cache or by extracting them.
- * We optimize performance by using cached values when available.
+ * We get time references from a message, using cache when available.
+ * This function optimizes performance by caching extracted time references.
  * 
- * @param {Message} message - The Discord message.
- * @returns {Array} Array of time references.
+ * @param {Message} message - The Discord message to process.
+ * @returns {Array} Array of time references found in the message.
  */
 async function getTimeReferences(message) {
-  // We check for cached time references to avoid repeated processing.
+  // We check the cache first for existing time references.
   let timeReferences = global.timeReferenceCache?.get(message.id);
   
-  // We extract time references if they're not in the cache and the message has content.
+  // We extract time references if not found in cache.
   if (!timeReferences && message.content) {
     timeReferences = extractTimeReferences(message.content);
     
-    // We cache the extracted time references if found for future use.
+    // We cache the extracted references for future use.
     if (timeReferences.length > 0) {
       if (!global.timeReferenceCache) {
         global.timeReferenceCache = new Map();
@@ -212,14 +212,14 @@ async function getTimeReferences(message) {
 }
 
 /**
- * Processes time conversion between two timezones.
- * We convert time references from the source timezone to the target timezone.
+ * We process time conversion between two timezones.
+ * This function handles the conversion and formatting of time references.
  * 
- * @param {TextChannel} channel - The Discord channel to send the message to.
- * @param {string} userId - The user ID who requested the conversion.
- * @param {Array} timeReferences - Array of time references.
- * @param {string} fromTimezone - Source timezone.
- * @param {string} toTimezone - Target timezone.
+ * @param {TextChannel} channel - The channel to send the conversion result to.
+ * @param {string} userId - The ID of the user requesting the conversion.
+ * @param {Array} timeReferences - Array of time references to convert.
+ * @param {string} fromTimezone - The source timezone.
+ * @param {string} toTimezone - The target timezone.
  */
 async function processTimeConversion(channel, userId, timeReferences, fromTimezone, toTimezone) {
   try {
@@ -229,12 +229,12 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
       references: timeReferences.map(ref => ref.text)
     });
     
-    // We convert each time reference between the two timezones for accurate local times.
+    // We convert each time reference to the target timezone.
     const convertedTimes = timeReferences.map(ref => {
       return convertTimeZones(ref, fromTimezone, toTimezone);
     });
     
-    // We format the converted times into a readable message for the user.
+    // We format the converted times into a readable message.
     const formattedTimes = formatConvertedTimes(convertedTimes);
     const messageContent = `${CLOCK_EMOJI} <@${userId}>, ${formattedTimes}`;
     
@@ -253,12 +253,13 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
 }
 
 /**
- * Sends a temporary message that deletes itself after a timeout.
- * We use this to keep channels clean while still providing useful information.
+ * We send temporary messages that auto-delete after a timeout.
+ * This function helps keep channels clean while providing information.
  * 
- * @param {TextChannel} channel - The Discord channel to send to.
- * @param {string} content - The message content.
- * @param {number} timeout - Time in ms before deletion (defaults to TIME_CONVERSION_TIMEOUT).
+ * @param {TextChannel} channel - The channel to send the message to.
+ * @param {string} content - The content of the message.
+ * @param {number} timeout - Time in milliseconds before deletion.
+ * @returns {Promise<Message|null>} The sent message or null if failed.
  */
 async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_TIMEOUT) {
   try {
