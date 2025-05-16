@@ -113,17 +113,19 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
 
     const parsedDate = timeRef.date;
     
-    // Create a dayjs object in the source timezone, ensuring we preserve the time
+    // Create a dayjs object in the source timezone
     const sourceTime = dayjs.tz(parsedDate, fromTimezone);
     
     // Convert to target timezone
     const targetTime = sourceTime.tz(toTimezone);
     
-    logger.debug("Time conversion completed:", {
+    logger.debug("Time conversion details:", {
       fromTimezone,
       toTimezone,
       sourceTime: sourceTime.format(),
       targetTime: targetTime.format(),
+      sourceOffset: sourceTime.utcOffset(),
+      targetOffset: targetTime.utcOffset(),
       parsedDate: parsedDate.toISOString()
     });
     
@@ -190,7 +192,7 @@ function defaultFormatter(conversion) {
   }
   
   const targetTimestamp = generateDiscordTimestamp(targetTime, toTimezone);
-  return `your converted time is ${targetTimestamp}.`;
+  return `your converted time is ${targetTimestamp} ${toTimezone}.`;
 }
 
 /**
