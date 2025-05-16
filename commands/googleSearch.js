@@ -6,7 +6,7 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the Google search command.
+// We define configuration constants for the Google search command.
 const API_URL = 'https://www.googleapis.com/customsearch/v1';
 const DEFAULT_RESULTS = 5;
 const MIN_RESULTS = 1;
@@ -38,12 +38,12 @@ module.exports = {
    * This function allows users to search the web using Google's Custom Search API.
    *
    * We perform several tasks:
-   * 1. Validate Google API configuration
-   * 2. Process web search requests
-   * 3. Format and display search results
-   * 4. Handle pagination and user interaction
+   * 1. We validate Google API configuration.
+   * 2. We process web search requests.
+   * 3. We format and display search results.
+   * 4. We handle pagination and user interaction.
    *
-   * @param {Interaction} interaction - The Discord interaction object
+   * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
     try {
@@ -122,7 +122,9 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -149,13 +151,15 @@ module.exports = {
         content: getErrorMessage(error),
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   },
   
   /**
-   * Validates that the required API configuration is available.
+   * We validate that the required API configuration is available.
+   * This function checks for the presence of necessary API keys and IDs.
+   *
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -170,7 +174,9 @@ module.exports = {
   },
   
   /**
-   * Fetches search results from the Google Custom Search API.
+   * We fetch search results from the Google Custom Search API.
+   * This function retrieves and processes the web search results.
+   *
    * @param {string} query - The search query.
    * @param {number} resultsCount - The number of results to fetch.
    * @returns {Object} The search results or error information.
@@ -217,7 +223,9 @@ module.exports = {
   },
   
   /**
-   * Generates an embed for a search result with proper formatting.
+   * We generate an embed for a search result with proper formatting.
+   * This function creates a visually appealing embed for each search result.
+   *
    * @param {Array} items - The search result items.
    * @param {number} index - The index of the current item.
    * @returns {EmbedBuilder} The generated embed with search result information.

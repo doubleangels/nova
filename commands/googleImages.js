@@ -6,7 +6,7 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the Google Images search.
+// We define configuration constants for the Google Images search.
 const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
 const DEFAULT_RESULTS_COUNT = 5;
 const MAX_RESULTS = 10;
@@ -16,7 +16,9 @@ const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
 const SAFE_SEARCH = "medium"; // Can be "off", "medium", or "high" for content filtering
 
 /**
- * Converts a string to title case for better presentation.
+ * We convert a string to title case for better presentation.
+ * This function capitalizes the first letter of each word.
+ *
  * @param {string} str - The input string.
  * @returns {string} The title-cased string.
  */
@@ -48,12 +50,12 @@ module.exports = {
    * This function allows users to search for images using Google's Custom Search API.
    *
    * We perform several tasks:
-   * 1. Validate Google API configuration
-   * 2. Process image search requests
-   * 3. Format and display search results
-   * 4. Handle pagination and user interaction
+   * 1. We validate Google API configuration.
+   * 2. We process image search requests.
+   * 3. We format and display search results.
+   * 4. We handle pagination and user interaction.
    *
-   * @param {Interaction} interaction - The Discord interaction object
+   * @param {Interaction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
     try {
@@ -135,7 +137,9 @@ module.exports = {
   },
   
   /**
-   * Validates that the required API configuration is available.
+   * We validate that the required API configuration is available.
+   * This function checks for the presence of necessary API keys and IDs.
+   *
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -150,7 +154,9 @@ module.exports = {
   },
   
   /**
-   * Fetches image search results from the Google Custom Search API.
+   * We fetch image search results from the Google Custom Search API.
+   * This function retrieves and processes the image search results.
+   *
    * @param {string} query - The search query.
    * @param {number} resultsCount - The number of results to fetch.
    * @returns {Object} The search results or error information.
@@ -198,7 +204,9 @@ module.exports = {
   },
   
   /**
-   * Generates an embed for an image search result with proper formatting.
+   * We generate an embed for an image search result with proper formatting.
+   * This function creates a visually appealing embed for each image result.
+   *
    * @param {Array} items - The search result items.
    * @param {number} index - The index of the current item.
    * @returns {EmbedBuilder} The generated embed with image and metadata.
@@ -220,7 +228,9 @@ module.exports = {
   },
 
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -247,7 +257,7 @@ module.exports = {
         content: getErrorMessage(error),
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

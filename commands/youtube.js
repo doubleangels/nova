@@ -28,12 +28,12 @@ const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay wit
  * This function allows users to search for videos on YouTube.
  *
  * We perform several tasks:
- * 1. Validate YouTube API configuration
- * 2. Process search requests for videos
- * 3. Format and display search results
- * 4. Handle errors and provide user feedback
+ * 1. We validate YouTube API configuration.
+ * 2. We process search requests for videos.
+ * 3. We format and display search results.
+ * 4. We handle errors and provide user feedback.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -52,6 +52,12 @@ module.exports = {
           { name: 'Playlist', value: 'playlist' }
         )),
 
+  /**
+   * We execute the /youtube command.
+   * This function processes the YouTube search request and displays results.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   */
   async execute(interaction) {
     try {
       // We validate that the API configuration is properly set up before proceeding.
@@ -111,7 +117,9 @@ module.exports = {
   },
 
   /**
-   * Gets detailed information about a YouTube video.
+   * We get detailed information about a YouTube video.
+   * This function retrieves video details from the YouTube API.
+   *
    * @param {string} videoId - The ID of the video to get details for.
    * @returns {Promise<Object>} The video details.
    */
@@ -140,7 +148,9 @@ module.exports = {
   },
 
   /**
-   * Formats a YouTube duration string into a human-readable format.
+   * We format a YouTube duration string into a human-readable format.
+   * This function converts ISO 8601 duration to a readable string.
+   *
    * @param {string} duration - The duration in ISO 8601 format.
    * @returns {string} The formatted duration.
    */
@@ -157,7 +167,9 @@ module.exports = {
   },
 
   /**
-   * Truncates text to a maximum length and adds ellipsis if needed.
+   * We truncate text to a maximum length and add ellipsis if needed.
+   * This function ensures text fits within embed limits.
+   *
    * @param {string} text - The text to truncate.
    * @param {number} maxLength - The maximum length allowed.
    * @returns {string} The truncated text.
@@ -168,7 +180,9 @@ module.exports = {
   },
 
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {CommandInteraction} interaction - The interaction that triggered the command.
    * @param {Error} error - The error that occurred.
    */
@@ -212,7 +226,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   },

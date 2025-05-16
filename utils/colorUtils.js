@@ -10,10 +10,10 @@ const DISCORD_MAX_COLOR = 0xFFFFFF;
  * We validate and normalize a hex color code to ensure consistent color handling.
  * This function standardizes color formats and handles various input patterns.
  * 
- * @param {string} colorHex - The color hex code to validate
- * @param {object} logger - Optional logger instance for debug information
- * @returns {Object} An object with success status and normalized color
- * @throws {Error} If colorHex is not a string or is empty
+ * @param {string} colorHex - The color hex code to validate.
+ * @param {object} logger - Optional logger instance for debug information.
+ * @returns {Object} An object with success status and normalized color.
+ * @throws {Error} If colorHex is not a string or is empty.
  */
 function validateAndNormalizeColor(colorHex, logger = null) {
     // We validate the input to ensure proper color handling.
@@ -63,9 +63,9 @@ function validateAndNormalizeColor(colorHex, logger = null) {
  * We convert a hex color to a decimal value for Discord's color system.
  * This function ensures colors are in the format required by Discord's API.
  * 
- * @param {string} hexColor - The hex color code (with or without #)
- * @returns {number} The decimal color value
- * @throws {Error} If the color is invalid or out of Discord's range
+ * @param {string} hexColor - The hex color code (with or without #).
+ * @returns {number} The decimal color value.
+ * @throws {Error} If the color is invalid or out of Discord's range.
  */
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
@@ -89,9 +89,9 @@ function hexToDecimal(hexColor) {
  * We convert a hex color to RGB values for color manipulation.
  * This function breaks down the hex color into its RGB components.
  * 
- * @param {string} hexColor - The hex color code (with or without #)
- * @returns {Object} Object containing r, g, b values (0-255)
- * @throws {Error} If the color is invalid
+ * @param {string} hexColor - The hex color code (with or without #).
+ * @returns {Object} Object containing r, g, b values (0-255).
+ * @throws {Error} If the color is invalid.
  */
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
@@ -111,11 +111,11 @@ function hexToRgb(hexColor) {
  * We convert RGB values to a hex color code for consistent color representation.
  * This function ensures RGB values are properly formatted as hex colors.
  * 
- * @param {number} r - Red value (0-255)
- * @param {number} g - Green value (0-255)
- * @param {number} b - Blue value (0-255)
- * @returns {string} Hex color code with # prefix
- * @throws {Error} If any RGB value is invalid
+ * @param {number} r - Red value (0-255).
+ * @param {number} g - Green value (0-255).
+ * @param {number} b - Blue value (0-255).
+ * @returns {string} Hex color code with # prefix.
+ * @throws {Error} If any RGB value is invalid.
  */
 function rgbToHex(r, g, b) {
     // We validate RGB values to ensure they are within the valid range.

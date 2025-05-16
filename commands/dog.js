@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We use these configuration constants for the dog command.
+// We define configuration constants for the dog command.
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
 const EMBED_COLOR = 0xD3D3D3;
 const IMAGE_FILENAME = "dog.jpg";
@@ -14,11 +14,11 @@ const IMAGE_FILENAME = "dog.jpg";
  * This function fetches and displays a random dog image.
  *
  * We perform several tasks:
- * 1. Fetch a random dog image from the API
- * 2. Create an embed with the dog image
- * 3. Send the embed to the user
+ * 1. We fetch a random dog image from the API.
+ * 2. We create an embed with the dog image.
+ * 3. We send the embed to the user.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -26,7 +26,9 @@ module.exports = {
     .setDescription('Fetch and display a random dog image.'),
   
   /**
-   * Executes the /dog command.
+   * We execute the /dog command.
+   * This function processes the dog image request and returns the result.
+   *
    * @param {ChatInputCommandInteraction} interaction - The interaction object from Discord.
    */
   async execute(interaction) {
@@ -63,14 +65,16 @@ module.exports = {
   },
   
   /**
-   * Fetches a random dog image from the Dog CEO API.
+   * We fetch a random dog image from the Dog CEO API.
+   * This function retrieves and processes the image data.
+   *
    * @returns {Promise<Buffer>} A buffer containing the image data.
    * @throws {Error} If the image cannot be fetched.
    */
   async fetchDogImage() {
     logger.debug("Fetching random dog image data.", { url: DOG_API_URL });
     
-    // First, we get the image URL from the Dog CEO API.
+    // We get the image URL from the Dog CEO API.
     const response = await axios.get(DOG_API_URL);
     
     if (response.status !== 200) {
@@ -87,7 +91,7 @@ module.exports = {
     
     logger.debug("Dog image URL received.", { imageUrl });
     
-    // Next, we fetch the actual image data from the URL provided.
+    // We fetch the actual image data from the URL provided.
     const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     
     if (imageResponse.status !== 200) {
@@ -100,7 +104,9 @@ module.exports = {
   },
   
   /**
-   * Creates an embed for the dog image with a nice presentation.
+   * We create an embed for the dog image with a nice presentation.
+   * This function formats the embed with appropriate styling and information.
+   *
    * @returns {EmbedBuilder} The created embed with formatting for the dog image.
    */
   createDogEmbed() {
@@ -112,6 +118,13 @@ module.exports = {
       .setFooter({ text: "Powered by Dog CEO API" });
   },
   
+  /**
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
   async handleError(interaction, error) {
     logError(error, 'dog', {
       userId: interaction.user?.id,
@@ -146,7 +159,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

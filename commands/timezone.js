@@ -11,12 +11,12 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
  * This function manages timezone settings for users in the server.
  *
  * We perform several tasks:
- * 1. Set timezone based on location input
- * 2. Validate timezone data
- * 3. Store timezone preferences
- * 4. Display current timezone settings
+ * 1. We set timezone based on location input.
+ * 2. We validate timezone data.
+ * 3. We store timezone preferences.
+ * 4. We display current timezone settings.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 
 module.exports = {
@@ -51,10 +51,11 @@ module.exports = {
       ),
   
   /**
-   * Executes the timezone command, managing user timezone settings.
-   * 
+   * We execute the /timezone command.
+   * This function manages user timezone settings and routes to subcommands.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the command is complete.
    */
   async execute(interaction) {
       try {
@@ -77,10 +78,11 @@ module.exports = {
   },
   
   /**
-   * Handles the 'set' subcommand to set a user's timezone.
-   * 
+   * We handle the 'set' subcommand to set a user's timezone.
+   * This function sets the timezone for a user based on a location.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the timezone is set.
    */
   async handleSetTimezone(interaction) {
       // We check if the Google API key is configured before proceeding.
@@ -192,10 +194,11 @@ module.exports = {
   },
   
   /**
-   * Handles the 'status' subcommand to check a user's timezone.
-   * 
+   * We handle the 'status' subcommand to check a user's timezone.
+   * This function checks and displays the current timezone for a user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the status is displayed.
    */
   async handleTimezoneStatus(interaction) {
       await interaction.deferReply();
@@ -257,8 +260,9 @@ module.exports = {
   },
   
   /**
-   * Validates user permissions for timezone operations.
-   * 
+   * We validate user permissions for timezone operations.
+   * This function checks if the user can set the timezone for another user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {User|null} targetUser - The target user if specified.
    * @returns {Promise<Object>} Object with validation results.
@@ -299,7 +303,9 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -340,7 +346,7 @@ module.exports = {
               content: errorMessage,
               ephemeral: true 
           }).catch(() => {
-              // Silent catch if everything fails.
+              // We silently catch if all error handling attempts fail.
           });
       }
   }

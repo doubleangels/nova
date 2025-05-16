@@ -6,7 +6,7 @@ const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
-// We use these configuration constants for Spotify integration.
+// We define these configuration constants for Spotify integration.
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
 const SPOTIFY_EMBED_COLOR = 0x1DB954; // We use Spotify's brand color.
 const REQUEST_TIMEOUT = 10000; // We set a 10 second timeout for API requests.
@@ -15,8 +15,16 @@ const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150; // We truncate long descriptions to 
 const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
 
 /**
- * Module for the /spotify command.
- * We search for music on Spotify.
+ * We handle the /spotify command.
+ * This function allows users to search for music, albums, artists, playlists, and podcasts on Spotify.
+ *
+ * We perform several tasks:
+ * 1. We validate Spotify API configuration.
+ * 2. We process search requests for different Spotify entities.
+ * 3. We format and display paginated search results.
+ * 4. We handle errors and provide user feedback.
+ *
+ * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -79,7 +87,9 @@ module.exports = {
     ),
 
   /**
-   * Executes the spotify command.
+   * We execute the /spotify command.
+   * This function processes the Spotify search request and displays results.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -164,7 +174,9 @@ module.exports = {
   },
 
   /**
-   * Validates that the required API configuration is available.
+   * We validate that the required API configuration is available.
+   * This function checks for the presence of necessary API keys.
+   *
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -179,7 +191,9 @@ module.exports = {
   },
 
   /**
-   * Gets a Spotify access token using client credentials.
+   * We get a Spotify access token using client credentials.
+   * This function retrieves an access token for API requests.
+   *
    * @returns {Promise<string|null>} The access token or null if failed.
    */
   async getSpotifyAccessToken() {
@@ -210,7 +224,9 @@ module.exports = {
   },
 
   /**
-   * Searches for a song on Spotify.
+   * We search for a song on Spotify.
+   * This function retrieves song data from the Spotify API.
+   *
    * @param {string} query - The search query.
    * @param {string} accessToken - The Spotify access token.
    * @returns {Promise<Object|null>} The song data or null if not found.
@@ -263,7 +279,9 @@ module.exports = {
   },
 
   /**
-   * Searches for an album on Spotify.
+   * We search for an album on Spotify.
+   * This function retrieves album data from the Spotify API.
+   *
    * @param {string} query - The search query.
    * @param {string} accessToken - The Spotify access token.
    * @returns {Promise<Object|null>} The album data or null if not found.
@@ -312,7 +330,9 @@ module.exports = {
   },
 
   /**
-   * Searches for an artist on Spotify.
+   * We search for an artist on Spotify.
+   * This function retrieves artist data from the Spotify API.
+   *
    * @param {string} query - The search query.
    * @param {string} accessToken - The Spotify access token.
    * @returns {Promise<Object|null>} The artist data or null if not found.
@@ -361,7 +381,9 @@ module.exports = {
   },
 
   /**
-   * Searches for a playlist on Spotify.
+   * We search for a playlist on Spotify.
+   * This function retrieves playlist data from the Spotify API.
+   *
    * @param {string} query - The search query.
    * @param {string} accessToken - The Spotify access token.
    * @returns {Promise<Object|null>} The playlist data or null if not found.
@@ -416,7 +438,9 @@ module.exports = {
   },
 
   /**
-   * Searches for a podcast on Spotify.
+   * We search for a podcast on Spotify.
+   * This function retrieves podcast data from the Spotify API.
+   *
    * @param {string} query - The search query.
    * @param {string} accessToken - The Spotify access token.
    * @returns {Promise<Object|null>} The podcast data or null if not found.
@@ -471,9 +495,11 @@ module.exports = {
   },
 
   /**
-   * Creates an embed for the search result.
+   * We create an embed for the search result.
+   * This function formats the result data into a Discord embed.
+   *
    * @param {Array} results - The array of search results.
-   * @param {string} type - The type of result (song, album, artist, playlist).
+   * @param {string} type - The type of result (song, album, artist, playlist, podcast).
    * @param {number} index - The index of the result to display.
    * @returns {EmbedBuilder} The formatted embed.
    */
@@ -571,7 +597,9 @@ module.exports = {
   },
 
   /**
-   * Formats milliseconds into a readable duration string.
+   * We format milliseconds into a readable duration string.
+   * This function converts milliseconds to a mm:ss format.
+   *
    * @param {number} ms - Duration in milliseconds.
    * @returns {string} Formatted duration string.
    */
@@ -582,7 +610,9 @@ module.exports = {
   },
 
   /**
-   * Formats a number with commas for readability.
+   * We format a number with commas for readability.
+   * This function adds commas to large numbers for clarity.
+   *
    * @param {number} num - The number to format.
    * @returns {string} Formatted number string.
    */
@@ -590,6 +620,13 @@ module.exports = {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   },
 
+  /**
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
+   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
   async handleError(interaction, error) {
     logError(error, 'spotify', {
       userId: interaction.user?.id,
@@ -626,7 +663,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

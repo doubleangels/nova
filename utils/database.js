@@ -50,7 +50,7 @@ const TABLES = {
  * If the test fails, we retry with exponential backoff.
  * If all retries fail, we stop the bot as database connectivity is critical.
  * 
- * @throws {Error} If the database connection test fails after all retries
+ * @throws {Error} If the database connection test fails after all retries.
  */
 async function initializeDatabase() {
   const MAX_RETRIES = 3;
@@ -129,8 +129,8 @@ async function initializeDatabase() {
  * We retrieve a value from the 'config' table based on a given key.
  * This function provides access to stored configuration settings.
  * 
- * @param {string} key - The key to retrieve
- * @returns {Promise<any|null>} The parsed value if found, otherwise null
+ * @param {string} key - The key to retrieve.
+ * @returns {Promise<any|null>} The parsed value if found, otherwise null.
  */
 async function getValue(key) {
   const client = await pool.connect();
@@ -158,8 +158,8 @@ async function getValue(key) {
  * We set a value in the 'config' table for a given key.
  * This function stores configuration settings with proper error handling.
  * 
- * @param {string} key - The key to set
- * @param {any} value - The value to store, which will be serialized to JSON
+ * @param {string} key - The key to set.
+ * @param {any} value - The value to store, which will be serialized to JSON.
  */
 async function setValue(key, value) {
   const client = await pool.connect();
@@ -186,7 +186,7 @@ async function setValue(key, value) {
  * We delete a value from the 'config' table for a given key.
  * This function removes configuration settings that are no longer needed.
  * 
- * @param {string} key - The key to delete
+ * @param {string} key - The key to delete.
  */
 async function deleteValue(key) {
   const client = await pool.connect();
@@ -205,7 +205,7 @@ async function deleteValue(key) {
  * We retrieve all configuration records from the 'config' table.
  * This function provides a complete view of all settings at once.
  * 
- * @returns {Promise<Array<Object>>} An array of config objects
+ * @returns {Promise<Array<Object>>} An array of config objects.
  */
 async function getAllConfigs() {
   const client = await pool.connect();
@@ -226,9 +226,9 @@ async function getAllConfigs() {
  * We track a new member by inserting or updating their information.
  * This function handles mute mode verification to ensure members send a message before a deadline.
  * 
- * @param {string} memberId - The Discord member ID
- * @param {string} username - The username of the member
- * @param {string} joinTime - The ISO string representing when the member joined
+ * @param {string} memberId - The Discord member ID.
+ * @param {string} username - The username of the member.
+ * @param {string} joinTime - The ISO string representing when the member joined.
  */
 async function trackNewMember(memberId, username, joinTime) {
   const client = await pool.connect();
@@ -266,8 +266,8 @@ async function trackNewMember(memberId, username, joinTime) {
  * We retrieve tracking data for a specific member.
  * This function checks if a member is being monitored in mute mode.
  * 
- * @param {string} memberId - The Discord member ID
- * @returns {Promise<Object|null>} The tracking data if found, otherwise null
+ * @param {string} memberId - The Discord member ID.
+ * @returns {Promise<Object|null>} The tracking data if found, otherwise null.
  */
 async function getTrackedMember(memberId) {
   const client = await pool.connect();
@@ -311,8 +311,8 @@ async function getTrackedMember(memberId) {
  * We remove tracking data for a specific member.
  * This function handles cleanup when a member sends a message or leaves the server.
  * 
- * @param {string} memberId - The Discord member ID
- * @returns {Promise<boolean>} True if a record was removed, false otherwise
+ * @param {string} memberId - The Discord member ID.
+ * @returns {Promise<boolean>} True if a record was removed, false otherwise.
  */
 async function removeTrackedMember(memberId) {
   const client = await pool.connect();
@@ -344,7 +344,7 @@ async function removeTrackedMember(memberId) {
  * We retrieve all tracked members.
  * This function provides a complete list of members being monitored in mute mode.
  * 
- * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time
+ * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time.
  */
 async function getAllTrackedMembers() {
   const client = await pool.connect();
@@ -387,8 +387,8 @@ async function getAllTrackedMembers() {
  * We set or update the timezone for a given Discord member ID.
  * This function stores user timezone preferences for time conversion features.
  * 
- * @param {string} memberId - The Discord member ID
- * @param {string} timezone - The timezone string (e.g., 'America/New_York')
+ * @param {string} memberId - The Discord member ID.
+ * @param {string} timezone - The timezone string (e.g., 'America/New_York').
  */
 async function setUserTimezone(memberId, timezone) {
   const client = await pool.connect();
@@ -425,8 +425,8 @@ async function setUserTimezone(memberId, timezone) {
  * We retrieve the timezone for a given Discord member ID.
  * This function provides access to user timezone preferences.
  * 
- * @param {string} memberId - The Discord member ID
- * @returns {Promise<string|null>} The timezone string if found, otherwise null
+ * @param {string} memberId - The Discord member ID.
+ * @returns {Promise<string|null>} The timezone string if found, otherwise null.
  */
 async function getUserTimezone(memberId) {
   const client = await pool.connect();
@@ -465,8 +465,8 @@ async function getUserTimezone(memberId) {
  * We increment the message count for a user and update their username.
  * This function tracks user activity in the server.
  * 
- * @param {string} memberId - The Discord member ID
- * @param {string} username - The current username of the member
+ * @param {string} memberId - The Discord member ID.
+ * @param {string} username - The current username of the member.
  */
 async function incrementMessageCount(memberId, username) {
   const client = await pool.connect();
@@ -495,8 +495,8 @@ async function incrementMessageCount(memberId, username) {
  * We get the top message senders in the server.
  * This function provides statistics about user activity.
  * 
- * @param {number} limit - The maximum number of users to return
- * @returns {Promise<Array<Object>>} Array of objects containing member_id, username, and message_count
+ * @param {number} limit - The maximum number of users to return.
+ * @returns {Promise<Array<Object>>} Array of objects containing member_id, username, and message_count.
  */
 async function getTopMessageSenders(limit = 10) {
   const client = await pool.connect();
@@ -524,9 +524,9 @@ async function getTopMessageSenders(limit = 10) {
  * We update or create a voice time tracking record for a user.
  * This function tracks the total time spent in voice channels.
  * 
- * @param {string} memberId - The Discord user ID
- * @param {string} username - The current username of the user
- * @param {number} minutesSpent - The number of minutes to add to their total
+ * @param {string} memberId - The Discord user ID.
+ * @param {string} username - The current username of the user.
+ * @param {number} minutesSpent - The number of minutes to add to their total.
  */
 async function updateVoiceTime(memberId, username, minutesSpent) {
   const client = await pool.connect();
@@ -549,8 +549,8 @@ async function updateVoiceTime(memberId, username, minutesSpent) {
  * We get the top voice channel users by time spent.
  * This function provides statistics about voice channel usage.
  * 
- * @param {number} limit - The maximum number of users to return
- * @returns {Promise<Array>} Array of user records with voice time data
+ * @param {number} limit - The maximum number of users to return.
+ * @returns {Promise<Array>} Array of user records with voice time data.
  */
 async function getTopVoiceUsers(limit = 10) {
   const client = await pool.connect();
@@ -572,8 +572,8 @@ async function getTopVoiceUsers(limit = 10) {
  * We get the voice time for a specific user.
  * This function retrieves the total time spent in voice channels.
  * 
- * @param {string} memberId - The Discord user ID
- * @returns {Promise<Object|null>} The user's voice time record or null if not found
+ * @param {string} memberId - The Discord user ID.
+ * @returns {Promise<Object|null>} The user's voice time record or null if not found.
  */
 async function getUserVoiceTime(memberId) {
   const client = await pool.connect();
@@ -594,10 +594,10 @@ async function getUserVoiceTime(memberId) {
  * We execute a database query with timeout handling and connection management.
  * This function provides a centralized way to execute database queries with proper error handling.
  * 
- * @param {string} text - The SQL query text
- * @param {Array} params - The query parameters
- * @param {Object} options - Additional options for the query
- * @returns {Promise<QueryResult>} The query result
+ * @param {string} text - The SQL query text.
+ * @param {Array} params - The query parameters.
+ * @param {Object} options - Additional options for the query.
+ * @returns {Promise<QueryResult>} The query result.
  */
 async function query(text, params = [], options = {}) {
   const client = await pool.connect();
@@ -652,9 +652,9 @@ async function query(text, params = [], options = {}) {
  * We add a completed voice session's duration to the user's total in voice_time.
  * This function updates user voice time statistics.
  * 
- * @param {string} userId - The Discord user ID
- * @param {string} username - The current username of the user
- * @param {number} durationSeconds - The session duration in seconds
+ * @param {string} userId - The Discord user ID.
+ * @param {string} username - The current username of the user.
+ * @param {number} durationSeconds - The session duration in seconds.
  */
 async function addVoiceSessionToStats(userId, username, durationSeconds) {
   const client = await pool.connect();
@@ -679,9 +679,9 @@ async function addVoiceSessionToStats(userId, username, durationSeconds) {
  * We add a completed voice session's duration to the channel's total in voice_channel_time.
  * This function updates channel voice time statistics.
  * 
- * @param {string} channelId - The Discord channel ID
- * @param {string} channelName - The channel name
- * @param {number} durationSeconds - The session duration in seconds
+ * @param {string} channelId - The Discord channel ID.
+ * @param {string} channelName - The channel name.
+ * @param {number} durationSeconds - The session duration in seconds.
  */
 async function addVoiceSessionToChannelStats(channelId, channelName, durationSeconds) {
   const client = await pool.connect();
@@ -706,8 +706,8 @@ async function addVoiceSessionToChannelStats(channelId, channelName, durationSec
  * We increment the message count for a channel in message_channel_counts.
  * This function tracks channel message activity.
  * 
- * @param {string} channelId - The Discord channel ID
- * @param {string} channelName - The channel name
+ * @param {string} channelId - The Discord channel ID.
+ * @param {string} channelName - The channel name.
  */
 async function incrementChannelMessageCount(channelId, channelName) {
   const client = await pool.connect();

@@ -213,10 +213,10 @@ function formatApiError(apiError) {
  * We search across different data sources in parallel and combine the results.
  * We limit the total number of results to prevent overwhelming responses.
  *
- * @param {string} query - The search query string
- * @param {Object} options - Search options including data sources to search
- * @returns {Promise<Array>} Array of search results
- * @throws {Error} If the search query is invalid or search fails
+ * @param {string} query - The search query string.
+ * @param {Object} options - Search options including data sources to search.
+ * @returns {Promise<Array>} Array of search results.
+ * @throws {Error} If the search query is invalid or search fails.
  */
 async function performSearch(query, options = {}) {
   try {
@@ -269,8 +269,8 @@ async function performSearch(query, options = {}) {
  * We search through user names, nicknames, and other relevant fields.
  * We calculate relevance scores based on match quality.
  *
- * @param {string} query - The search query string
- * @returns {Promise<Array>} Array of matching user results
+ * @param {string} query - The search query string.
+ * @returns {Promise<Array>} Array of matching user results.
  */
 async function searchUsers(query) {
   try {
@@ -303,8 +303,8 @@ async function searchUsers(query) {
  * We search through channel names and topics.
  * We calculate relevance scores based on match quality.
  *
- * @param {string} query - The search query string
- * @returns {Promise<Array>} Array of matching channel results
+ * @param {string} query - The search query string.
+ * @returns {Promise<Array>} Array of matching channel results.
  */
 async function searchChannels(query) {
   try {
@@ -337,8 +337,8 @@ async function searchChannels(query) {
  * We search through message content and attachments.
  * We calculate relevance scores based on match quality.
  *
- * @param {string} query - The search query string
- * @returns {Promise<Array>} Array of matching message results
+ * @param {string} query - The search query string.
+ * @returns {Promise<Array>} Array of matching message results.
  */
 async function searchMessages(query) {
   try {
@@ -373,9 +373,9 @@ async function searchMessages(query) {
  * We use a combination of exact matches, partial matches, and position weighting.
  * We normalize the score to a value between 0 and 1.
  *
- * @param {string} text - The text to calculate relevance for
- * @param {string} query - The search query
- * @returns {number} Relevance score between 0 and 1
+ * @param {string} text - The text to calculate relevance for.
+ * @param {string} query - The search query.
+ * @returns {number} Relevance score between 0 and 1.
  */
 function calculateRelevance(text, query) {
   const normalizedText = text.toLowerCase();

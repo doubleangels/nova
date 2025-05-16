@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We use these configuration constants for the cat API.
+// We define configuration constants for the cat API integration.
 const CAT_API_URL = 'https://cataas.com/cat/cute';
 const CAT_EMBED_COLOR = 0xD3D3D3;
 const DEFAULT_FILENAME = 'cat.jpg';
@@ -14,11 +14,11 @@ const DEFAULT_FILENAME = 'cat.jpg';
  * This function fetches and displays a random cat image.
  *
  * We perform several tasks:
- * 1. Fetch a random cat image from the API
- * 2. Create an embed with the cat image
- * 3. Send the embed to the user
+ * 1. We fetch a random cat image from the API.
+ * 2. We create an embed with the cat image.
+ * 3. We send the embed to the user.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -59,7 +59,9 @@ module.exports = {
   },
 
   /**
-   * Fetches a cat image from the API.
+   * We fetch a cat image from the API.
+   * This function handles the image retrieval and validation.
+   *
    * @returns {Promise<Buffer>} A buffer containing the image data.
    * @throws {Error} If the image cannot be fetched.
    */
@@ -98,10 +100,18 @@ module.exports = {
           throw new Error("NETWORK_ERROR");
         }
       }
-      throw error; // We re-throw any other errors for consistent error handling.
+      // We re-throw any other errors for consistent error handling.
+      throw error;
     }
   },
 
+  /**
+   * We handle errors that occur during the cat command execution.
+   * This function provides appropriate error messages and logging.
+   *
+   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
   async handleError(interaction, error) {
     logError(error, 'cat', {
       userId: interaction.user?.id,
@@ -134,7 +144,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

@@ -16,12 +16,12 @@ const IMMEDIATE_TIMEOUT_MS = 0;
  * If the remaining time is less than or equal to zero, we kick the member immediately.
  * Otherwise, we schedule a delayed kick for the appropriate time.
  *
- * @param {string} memberId - The ID of the member to be kicked
- * @param {string} username - The username of the member
- * @param {string} joinTime - The ISO string representing when the member joined
- * @param {number} muteKickTime - The allowed mute time in hours before a kick
- * @param {string} guildId - The ID of the guild
- * @param {Client} client - The Discord client instance
+ * @param {string} memberId - The ID of the member to be kicked.
+ * @param {string} username - The username of the member.
+ * @param {string} joinTime - The ISO string representing when the member joined.
+ * @param {number} muteKickTime - The allowed mute time in hours before a kick.
+ * @param {string} guildId - The ID of the guild.
+ * @param {Client} client - The Discord client instance.
  */
 async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guildId, client) {
   try {
@@ -71,7 +71,7 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
    * We perform the delayed kick after the scheduled time has passed.
    * This function maintains context of the member information for the delayed operation.
    * 
-   * @param {number} delaySeconds - The delay in seconds before executing the kick
+   * @param {number} delaySeconds - The delay in seconds before executing the kick.
    */
   async function delayedKick(delaySeconds) {
     try {
@@ -106,10 +106,10 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
  * We perform the actual kick operation for a member.
  * This function centralizes the kick logic to avoid code duplication.
  * 
- * @param {Guild} guild - The Discord guild object
- * @param {string} memberId - The ID of the member to be kicked
- * @param {string} username - The username of the member
- * @param {string} kickType - The type of kick ("immediate" or "delayed")
+ * @param {Guild} guild - The Discord guild object.
+ * @param {string} memberId - The ID of the member to be kicked.
+ * @param {string} username - The username of the member.
+ * @param {string} kickType - The type of kick ("immediate" or "delayed").
  */
 async function performKick(guild, memberId, username, kickType) {
   try {
@@ -157,7 +157,7 @@ async function performKick(guild, memberId, username, kickType) {
  * based on the configured mute kick time. This is typically used after a bot restart
  * to ensure no members escape moderation due to downtime.
  *
- * @param {Client} client - The Discord client instance
+ * @param {Client} client - The Discord client instance.
  */
 async function rescheduleAllMuteKicks(client) {
   try {

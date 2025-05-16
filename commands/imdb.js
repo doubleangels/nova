@@ -5,23 +5,23 @@ const axios = require('axios');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the IMDb search command.
+// We define configuration constants for the IMDb search command.
 const OMDB_API_URL = 'https://www.omdbapi.com/';
 const IMDB_BASE_URL = 'https://www.imdb.com/title/';
-const EMBED_COLOR = 0xFFD700; // IMDb gold color for consistent branding
-const REQUEST_TIMEOUT = 10000; // 10 second API request timeout to prevent hanging
+const EMBED_COLOR = 0xFFD700; // We use IMDb gold color for consistent branding.
+const REQUEST_TIMEOUT = 10000; // We set a 10 second API request timeout to prevent hanging.
 
 /**
  * We handle the imdb command.
  * This function allows users to search for movies and TV shows using the OMDb API.
  *
  * We perform several tasks:
- * 1. Validate OMDb API configuration
- * 2. Process search requests for movies and TV shows
- * 3. Format and display detailed media information
- * 4. Handle errors and provide user feedback
+ * 1. We validate OMDb API configuration.
+ * 2. We process search requests for movies and TV shows.
+ * 3. We format and display detailed media information.
+ * 4. We handle errors and provide user feedback.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -52,7 +52,9 @@ module.exports = {
     ),
     
   /**
-   * Executes the /imdb command.
+   * We execute the /imdb command.
+   * This function processes the movie/TV show search request.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -101,7 +103,9 @@ module.exports = {
   },
   
   /**
-   * Validates that the required API configuration is available.
+   * We validate that the required API configuration is available.
+   * This function checks for the presence of necessary API keys.
+   *
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -113,7 +117,9 @@ module.exports = {
   },
   
   /**
-   * Gets and validates search parameters from the interaction.
+   * We get and validate search parameters from the interaction.
+   * This function processes and validates user input for the search.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {Object} An object with search parameters or error information.
    */
@@ -164,7 +170,9 @@ module.exports = {
   },
   
   /**
-   * Fetches movie data from the OMDb API.
+   * We fetch movie data from the OMDb API.
+   * This function retrieves and processes the media information.
+   *
    * @param {Object} searchParams - The search parameters.
    * @returns {Object} The movie data or error information.
    */
@@ -229,7 +237,9 @@ module.exports = {
   },
   
   /**
-   * Creates an embed with movie information for a visually appealing display.
+   * We create an embed with movie information for a visually appealing display.
+   * This function formats the media data into a Discord embed.
+   *
    * @param {Object} data - The movie data from the OMDb API.
    * @returns {EmbedBuilder} The created embed with formatted movie information.
    */
@@ -271,7 +281,9 @@ module.exports = {
   },
 
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -311,7 +323,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

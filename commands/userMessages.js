@@ -22,12 +22,12 @@ const MESSAGE_FETCH_BATCH_SIZE = 100; // We fetch messages in batches of 100 for
  * This function allows users to search and display messages from a specific user in a channel.
  *
  * We perform several tasks:
- * 1. Validate command parameters and permissions
- * 2. Search for messages in the specified channel
- * 3. Filter messages based on user and optional criteria
- * 4. Format and display the results
+ * 1. We validate command parameters and permissions.
+ * 2. We search for messages in the specified channel.
+ * 3. We filter messages based on user and optional criteria.
+ * 4. We format and display the results.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -65,10 +65,11 @@ module.exports = {
         .setMaxValue(365)),
 
   /**
-   * Executes the usermessages command.
-   * 
+   * We execute the /usermessages command.
+   * This function processes the user message search and displays results.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the command is complete.
    */
   async execute(interaction) {
     try {
@@ -205,8 +206,9 @@ module.exports = {
   },
   
   /**
-   * Parses and validates command options.
-   * 
+   * We parse and validate command options.
+   * This function checks and returns validated command options.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @returns {Promise<Object>} Validated command options.
    */
@@ -282,8 +284,9 @@ module.exports = {
   },
 
   /**
-   * Fetches messages from a specific user in a channel.
-   * 
+   * We fetch messages from a specific user in a channel.
+   * This function retrieves and filters messages for the user.
+   *
    * @param {TextChannel} channel - The channel to search in.
    * @param {string} userId - The ID of the user to fetch messages for.
    * @param {number} limit - Maximum number of messages to fetch.
@@ -357,8 +360,9 @@ module.exports = {
   },
 
   /**
-   * Creates embed pages for the messages.
-   * 
+   * We create embed pages for the messages.
+   * This function formats messages into paginated embeds.
+   *
    * @param {Array} messages - Array of message data to display.
    * @param {User} targetUser - The user whose messages are being displayed.
    * @param {Channel} targetChannel - The channel where messages were found.
@@ -415,7 +419,9 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -442,7 +448,7 @@ module.exports = {
         content: getErrorMessage(error),
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

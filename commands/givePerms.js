@@ -6,7 +6,7 @@ const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We use these configuration constants for the givePerms command.
+// We define configuration constants for the givePerms command.
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
 const FREN_ROLE_ID = config.givePermsFrenRoleId;
 const MAX_ROLE_NAME_LENGTH = 100; // We enforce a maximum role name length of 100 characters.
@@ -25,12 +25,12 @@ if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
  * and assigns them both this role and a predefined "fren" role.
  *
  * We perform several tasks:
- * 1. Validate command inputs and configuration
- * 2. Create a new role with the specified name and color
- * 3. Assign the new role and the fren role to the target user
- * 4. Handle errors and provide user feedback
+ * 1. We validate command inputs and configuration.
+ * 2. We create a new role with the specified name and color.
+ * 3. We assign the new role and the fren role to the target user.
+ * 4. We handle errors and provide user feedback.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
     data: new SlashCommandBuilder()
@@ -50,6 +50,12 @@ module.exports = {
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
+    /**
+     * We execute the /giveperms command.
+     * This function processes the permission assignment request.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     */
     async execute(interaction) {
         // We check if the required configuration values are available before proceeding.
         if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
@@ -144,11 +150,11 @@ module.exports = {
      * We validate the command inputs to ensure they meet requirements.
      * This function checks the role name, color, and user validity.
      *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
-     * @param {string} roleName - The name for the new role
-     * @param {string} colorHex - The color for the new role
-     * @param {User} targetUser - The user to receive the role
-     * @returns {Object} An object with success status and message
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {string} roleName - The name for the new role.
+     * @param {string} colorHex - The color for the new role.
+     * @param {User} targetUser - The user to receive the role.
+     * @returns {Object} An object with success status and message.
      */
     validateInputs(interaction, roleName, colorHex, targetUser) {
         // We validate that the role name is not empty and within Discord's length limits.
@@ -178,11 +184,11 @@ module.exports = {
      * We create a new role and assign it along with the fren role to the target member.
      * This function creates the role, positions it, and assigns both roles to the user.
      *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
-     * @param {string} roleName - The name for the new role
-     * @param {number} colorDecimal - The color for the new role in decimal format
-     * @param {GuildMember} targetMember - The member to receive the roles
-     * @returns {Object} An object with success status and message
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {string} roleName - The name for the new role.
+     * @param {number} colorDecimal - The color for the new role in decimal format.
+     * @param {GuildMember} targetMember - The member to receive the roles.
+     * @returns {Object} An object with success status and message.
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
         // We get the reference role for positioning the new role in the hierarchy.
@@ -248,7 +254,9 @@ module.exports = {
     },
     
     /**
-     * Handles errors that occur during command execution.
+     * We handle errors that occur during command execution.
+     * This function logs the error and attempts to notify the user.
+     *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {Error} error - The error that occurred.
      */
@@ -275,7 +283,7 @@ module.exports = {
                 content: getErrorMessage(error),
                 ephemeral: true 
             }).catch(() => {
-                // Silent catch if everything fails.
+                // We silently catch if all error handling attempts fail.
             });
         }
     }

@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We use these configuration constants for the troll mode feature.
+// We define configuration constants for the troll mode feature.
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
 const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
 const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
@@ -16,12 +16,12 @@ const MAX_ACCOUNT_AGE = 365; // We set a maximum of 1 year to prevent unreasonab
  * This function allows administrators to manage auto-kicking of accounts based on age.
  *
  * We perform several tasks:
- * 1. Configure troll mode settings (enable/disable)
- * 2. Set minimum account age requirements
- * 3. Display current troll mode status
- * 4. Handle database operations for settings
+ * 1. We configure troll mode settings (enable/disable).
+ * 2. We set minimum account age requirements.
+ * 3. We display current troll mode status.
+ * 4. We handle database operations for settings.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -58,10 +58,11 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
-   * Executes the trollmode command to manage account-age-based kicking.
-   * 
+   * We execute the /trollmode command.
+   * This function manages account-age-based kicking and routes to subcommands.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the command is complete.
    */
   async execute(interaction) {
     try {
@@ -87,10 +88,11 @@ module.exports = {
   },
   
   /**
-   * Handles the 'set' subcommand to configure troll mode settings.
-   * 
+   * We handle the 'set' subcommand to configure troll mode settings.
+   * This function sets the troll mode configuration in the database.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the settings are updated.
    */
   async handleSetTrollMode(interaction) {
     // We retrieve the command options provided by the user.
@@ -161,10 +163,11 @@ module.exports = {
   },
   
   /**
-   * Handles the 'status' subcommand to check current troll mode settings.
-   * 
+   * We handle the 'status' subcommand to check current troll mode settings.
+   * This function retrieves and displays the current configuration.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
+   * @returns {Promise<void>} Resolves when the status is displayed.
    */
   async handleTrollModeStatus(interaction) {
     try {
@@ -196,8 +199,9 @@ module.exports = {
   },
   
   /**
-   * Gets the current troll mode settings from the database.
-   * 
+   * We get the current troll mode settings from the database.
+   * This function retrieves the current configuration state.
+   *
    * @returns {Promise<Object>} The current settings.
    */
   async getCurrentSettings() {
@@ -223,8 +227,9 @@ module.exports = {
   },
   
   /**
-   * Formats an update message based on the old and new settings.
-   * 
+   * We format an update message based on the old and new settings.
+   * This function creates a user-friendly display of configuration changes.
+   *
    * @param {boolean} oldEnabled - The previous enabled state.
    * @param {boolean} newEnabled - The new enabled state.
    * @param {number} oldAge - The previous age setting.
@@ -254,8 +259,9 @@ module.exports = {
   },
   
   /**
-   * Formats a status message based on the current settings.
-   * 
+   * We format a status message based on the current settings.
+   * This function creates a user-friendly display of the configuration.
+   *
    * @param {Object} settings - The current troll mode settings.
    * @returns {string} The formatted status message.
    */
@@ -275,8 +281,9 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
-   * 
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -312,7 +319,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

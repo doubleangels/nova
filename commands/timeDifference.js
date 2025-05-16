@@ -10,12 +10,12 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
  * This function allows users to calculate the time difference between two locations.
  *
  * We perform several tasks:
- * 1. Validate Google API configuration
- * 2. Process location search requests
- * 3. Calculate time differences between locations
- * 4. Format and display time zone information
+ * 1. We validate Google API configuration.
+ * 2. We process location search requests.
+ * 3. We calculate time differences between locations.
+ * 4. We format and display time zone information.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -35,7 +35,9 @@ module.exports = {
     ),
     
   /**
-   * Executes the /timedifference command.
+   * We execute the /timedifference command.
+   * This function processes the time difference calculation and displays results.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -87,7 +89,9 @@ module.exports = {
   },
   
   /**
-   * Validates that the required configuration is available.
+   * We validate that the required configuration is available.
+   * This function checks for the presence of necessary API keys.
+   *
    * @returns {boolean} True if configuration is valid, false otherwise.
    */
   validateConfiguration() {
@@ -101,7 +105,9 @@ module.exports = {
   },
   
   /**
-   * Calculates the time difference between two places using their UTC offsets.
+   * We calculate the time difference between two places using their UTC offsets.
+   * This function retrieves UTC offsets and formats the result.
+   *
    * @param {string} place1 - The first place name.
    * @param {string} place2 - The second place name.
    * @returns {Promise<Object>} The time difference result with formatted message.
@@ -189,7 +195,9 @@ module.exports = {
   },
   
   /**
-   * Formats a time zone for display with UTC offset and time zone name.
+   * We format a time zone for display with UTC offset and time zone name.
+   * This function creates a formatted string for a time zone.
+   *
    * @param {Object} offsetResult - The offset result from getUtcOffset.
    * @returns {string} The formatted time zone string.
    */
@@ -204,7 +212,9 @@ module.exports = {
   },
   
   /**
-   * Formats a time difference for display with appropriate pluralization.
+   * We format a time difference for display with appropriate pluralization.
+   * This function creates a formatted string for a time difference.
+   *
    * @param {number} timeDiff - The time difference in hours.
    * @returns {string} The formatted time difference string.
    */
@@ -220,7 +230,9 @@ module.exports = {
   },
 
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -260,7 +272,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

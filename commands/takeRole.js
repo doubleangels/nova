@@ -8,12 +8,12 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
  * This function allows moderators to remove a specified role from a user.
  *
  * We perform several tasks:
- * 1. Validate permissions and role hierarchy
- * 2. Check if the user has the role
- * 3. Remove the role from the user
- * 4. Log the action and provide feedback
+ * 1. We validate permissions and role hierarchy.
+ * 2. We check if the user has the role.
+ * 3. We remove the role from the user.
+ * 4. We log the action and provide feedback.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -34,7 +34,9 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
   /**
-   * Executes the /takerole command.
+   * We execute the /takerole command.
+   * This function processes the role removal request and provides feedback.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -78,7 +80,9 @@ module.exports = {
   },
 
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -105,13 +109,15 @@ module.exports = {
         content: getErrorMessage(error),
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   },
 
   /**
-   * Validates that the role can be removed from the user.
+   * We validate that the role can be removed from the user.
+   * This function checks permissions, role hierarchy, and role assignment.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Role} role - The role to be removed.
    * @param {User} targetUser - The user to remove the role from.
@@ -205,7 +211,9 @@ module.exports = {
   },
   
   /**
-   * Removes a role from a guild member and sends a response.
+   * We remove a role from a guild member and send a response.
+   * This function removes the role and notifies the moderator.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {GuildMember} targetMember - The member to remove the role from.
    * @param {Role} role - The role to be removed.
@@ -242,7 +250,9 @@ module.exports = {
   },
   
   /**
-   * Fetches a guild member with error handling.
+   * We fetch a guild member with error handling.
+   * This function retrieves a member from the guild or returns null if not found.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {string} userId - The ID of the user to fetch.
    * @returns {Promise<GuildMember|null>} The guild member or null if not found.

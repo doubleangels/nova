@@ -44,9 +44,9 @@ const ErrorTypes = {
  * We validate coordinates are within valid ranges to ensure data integrity.
  * This function checks both the type and range of latitude and longitude values.
  * 
- * @param {number} lat - Latitude value to validate
- * @param {number} lng - Longitude value to validate
- * @returns {boolean} True if coordinates are valid, false otherwise
+ * @param {number} lat - Latitude value to validate.
+ * @param {number} lng - Longitude value to validate.
+ * @returns {boolean} True if coordinates are valid, false otherwise.
  */
 function isValidCoordinates(lat, lng) {
   return (
@@ -63,7 +63,7 @@ function isValidCoordinates(lat, lng) {
  * We check if we've exceeded the rate limit to prevent API abuse.
  * This function implements a sliding window rate limiter that tracks requests over time.
  * 
- * @returns {boolean} True if rate limit is exceeded, false otherwise
+ * @returns {boolean} True if rate limit is exceeded, false otherwise.
  */
 function isRateLimited() {
   const now = Date.now();
@@ -100,8 +100,8 @@ function recordRequest() {
  * We remove API keys from URLs for safe logging.
  * This function prevents sensitive information from appearing in log files.
  * 
- * @param {string} url - The URL that may contain sensitive information
- * @returns {string} The sanitized URL with API keys redacted
+ * @param {string} url - The URL that may contain sensitive information.
+ * @returns {string} The sanitized URL with API keys redacted.
  */
 function safeUrl(url) {
   return url.replace(/key=([^&]+)/, 'key=REDACTED');
@@ -127,8 +127,8 @@ function isValidTimezone(tz) {
  * We fetch geocoding data for a given place name with caching and rate limiting.
  * This function handles the conversion of human-readable locations to coordinates.
  * 
- * @param {string} place - The place name to geocode
- * @returns {Promise<Object>} An object containing geocoding results or error information
+ * @param {string} place - The place name to geocode.
+ * @returns {Promise<Object>} An object containing geocoding results or error information.
  */
 async function getGeocodingData(place) {
   try {
@@ -237,9 +237,9 @@ async function getGeocodingData(place) {
  * We fetch timezone data for given coordinates.
  * This function determines the timezone and UTC offset for a specific location.
  * 
- * @param {Object} location - The location object with lat and lng properties
- * @param {number} [timestamp] - Optional UNIX timestamp (seconds). Defaults to current time
- * @returns {Promise<Object>} An object containing timezone results or error information
+ * @param {Object} location - The location object with lat and lng properties.
+ * @param {number} [timestamp] - Optional UNIX timestamp (seconds). Defaults to current time.
+ * @returns {Promise<Object>} An object containing timezone results or error information.
  */
 async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 1000)) {
   try {
@@ -327,9 +327,9 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
 
 /**
  * We get the closest timezone name from moment-timezone based on coordinates.
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @returns {string} The closest timezone name
+ * @param {number} lat - Latitude.
+ * @param {number} lng - Longitude.
+ * @returns {string} The closest timezone name.
  */
 function getClosestTimezone(lat, lng) {
   const timezones = moment.tz.names();
@@ -358,8 +358,8 @@ function getClosestTimezone(lat, lng) {
  * We retrieve the UTC offset for a given place.
  * This function combines geocoding and timezone data to determine the complete timezone information.
  * 
- * @param {string} place - The place name to lookup
- * @returns {Promise<Object>} An object containing either the offset or error information
+ * @param {string} place - The place name to lookup.
+ * @returns {Promise<Object>} An object containing either the offset or error information.
  */
 async function getUtcOffset(place) {
   try {
@@ -419,8 +419,8 @@ async function getUtcOffset(place) {
  * We format a place name by trimming and capitalizing the first letter.
  * This function standardizes location names for display purposes.
  * 
- * @param {string} placeName - The place name to format
- * @returns {string} The formatted place name
+ * @param {string} placeName - The place name to format.
+ * @returns {string} The formatted place name.
  */
 function formatPlaceName(placeName) {
   if (!placeName || typeof placeName !== 'string') return '';
@@ -460,8 +460,8 @@ function formatErrorMessage(place, errorType) {
  * We get the coordinates (latitude and longitude) for a given place name.
  * This function provides a simplified interface for just getting location coordinates.
  * 
- * @param {string} place - The place name to get coordinates for
- * @returns {Promise<[number|null, number|null]>} A promise that resolves to an array containing [latitude, longitude]
+ * @param {string} place - The place name to get coordinates for.
+ * @returns {Promise<[number|null, number|null]>} A promise that resolves to an array containing [latitude, longitude].
  */
 async function getCoordinates(place) {
   try {

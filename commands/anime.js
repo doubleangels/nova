@@ -6,7 +6,7 @@ const dayjs = require('dayjs');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the MyAnimeList API.
+// We define configuration constants for the MyAnimeList API integration.
 const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
 const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
 const MAL_EMBED_COLOR = 0x2E51A2;
@@ -17,12 +17,12 @@ const SEARCH_LIMIT = 1;
  * This function searches for anime on MyAnimeList and displays detailed information.
  *
  * We perform several tasks:
- * 1. Search for the anime on MyAnimeList
- * 2. Fetch detailed information about the anime
- * 3. Create an embed with the anime details
- * 4. Send the embed to the user
+ * 1. We search for the anime on MyAnimeList.
+ * 2. We fetch detailed information about the anime.
+ * 3. We create an embed with the anime details.
+ * 4. We send the embed to the user.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -36,7 +36,7 @@ module.exports = {
   
   async execute(interaction) {
     try {
-      // We need to verify that the API key is properly configured.
+      // We verify that the API key is properly configured before proceeding.
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
@@ -86,8 +86,8 @@ module.exports = {
    * We search for an anime and get its details from the MyAnimeList API.
    * This function performs both the search and detailed information retrieval.
    *
-   * @param {string} title - The anime title to search for
-   * @returns {Object|null} The anime data or null if not found
+   * @param {string} title - The anime title to search for.
+   * @returns {Object|null} The anime data or null if not found.
    */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
@@ -135,8 +135,8 @@ module.exports = {
    * We create an embed for displaying anime details in a visually appealing format.
    * This function formats all the anime information into a Discord embed.
    *
-   * @param {Object} animeData - The anime data to display
-   * @returns {EmbedBuilder} The created embed with formatted anime information
+   * @param {Object} animeData - The anime data to display.
+   * @returns {EmbedBuilder} The created embed with formatted anime information.
    */
   createAnimeEmbed(animeData) {
     const malLink = `${MAL_WEBSITE_URL}/${animeData.id}`;
@@ -165,6 +165,13 @@ module.exports = {
     return embed;
   },
 
+  /**
+   * We handle errors that occur during the anime command execution.
+   * This function provides appropriate error messages and logging.
+   *
+   * @param {Interaction} interaction - The Discord interaction object.
+   * @param {Error} error - The error that occurred.
+   */
   async handleError(interaction, error) {
     logError(error, 'anime', {
       userId: interaction.user?.id,
@@ -195,7 +202,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

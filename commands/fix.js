@@ -8,13 +8,13 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// Setup a pool for direct SQL queries
+// We set up a pool for direct SQL queries.
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
-// We use these configuration constants for the Disboard bump reminder.
+// We define configuration constants for the Disboard bump reminder.
 const SERVICE_TYPE = 'bump';
 const DELAY_SECONDS = 7200;  // 2 hours in seconds
 
@@ -23,14 +23,14 @@ const DELAY_SECONDS = 7200;  // 2 hours in seconds
  * This function runs the fix logic for Disboard by adding the service data to the database.
  *
  * We perform several tasks:
- * 1. Check if there is already an active reminder in the database
- * 2. Generate unique reminder data with a random UUID and scheduled time
- * 3. Save the reminder data to the database
- * 4. Inform the user of the result
+ * 1. We check if there is already an active reminder in the database.
+ * 2. We generate unique reminder data with a random UUID and scheduled time.
+ * 3. We save the reminder data to the database.
+ * 4. We inform the user of the result.
  *
  * Only users with Administrator permissions can execute this command.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
   data: new SlashCommandBuilder()
@@ -39,7 +39,9 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
-   * Executes the /fix command.
+   * We execute the /fix command.
+   * This function processes the fix request and updates the reminder data.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -53,7 +55,7 @@ module.exports = {
       // We defer the reply to allow processing time for database operations.
       await interaction.deferReply();
 
-      // Get the reminder channel ID
+      // We get the reminder channel ID.
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
         await interaction.editReply(ERROR_MESSAGES.REMINDER_CONFIG_INCOMPLETE);
@@ -68,7 +70,7 @@ module.exports = {
       const scheduledTime = dayjs().add(DELAY_SECONDS, 'second');
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
-      // Get the channel and send a message
+      // We get the channel and send a message.
       const channel = await interaction.client.channels.fetch(reminderChannelId);
       const sentMsg = await channel.send(`⏰ Next bump reminder scheduled for: <t:${unixTimestamp}:R>`);
       
@@ -98,7 +100,9 @@ module.exports = {
   },
   
   /**
-   * Checks if there's an existing reminder in the database.
+   * We check if there's an existing reminder in the database.
+   * This function queries the database for active reminders.
+   *
    * @returns {Promise<boolean>} True if a reminder exists, false otherwise.
    */
   async checkExistingReminder() {
@@ -114,7 +118,9 @@ module.exports = {
   },
   
   /**
-   * Saves the reminder data to the database for future processing.
+   * We save the reminder data to the database for future processing.
+   * This function inserts the reminder information into the database.
+   *
    * @param {string} reminderId - The unique ID for the reminder.
    * @param {string} scheduledTime - The ISO string of the scheduled time.
    * @returns {Promise<void>}
@@ -133,7 +139,9 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
+   * This function logs the error and attempts to notify the user.
+   *
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */
@@ -167,7 +175,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

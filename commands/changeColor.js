@@ -8,12 +8,12 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
  * This function changes the color of a specified role to the provided hex color.
  *
  * We perform several tasks:
- * 1. Validate the provided hex color
- * 2. Check if the role exists and is editable
- * 3. Update the role's color
- * 4. Notify the user of the change
+ * 1. We validate the provided hex color.
+ * 2. We check if the role exists and is editable.
+ * 3. We update the role's color.
+ * 4. We notify the user of the change.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
     data: new SlashCommandBuilder()
@@ -30,7 +30,9 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageRoles),
     
     /**
-     * Executes the /changecolor command.
+     * We execute the /changecolor command.
+     * This function processes the role color change request.
+     *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
@@ -62,7 +64,7 @@ module.exports = {
                 return;
             }
             
-            // Store the old color before changing it
+            // We store the old color before changing it for the response message.
             const oldColor = role.hexColor;
             
             // We update the role's color.
@@ -88,8 +90,8 @@ module.exports = {
      * We validate if the role can be edited by the bot.
      * This function checks if the role is manageable and not managed.
      *
-     * @param {Role} role - The role to validate
-     * @returns {boolean} True if the role is valid, false otherwise
+     * @param {Role} role - The role to validate.
+     * @returns {boolean} True if the role is valid, false otherwise.
      */
     isValidRole(role) {
         return role.editable && !role.managed;
@@ -99,20 +101,21 @@ module.exports = {
      * We validate if the provided string is a valid hex color code.
      * This function checks if the color matches the hex color format.
      *
-     * @param {string} color - The color code to validate
-     * @returns {boolean} True if the color is valid, false otherwise
+     * @param {string} color - The color code to validate.
+     * @returns {boolean} True if the color is valid, false otherwise.
      */
     isValidHexColor(color) {
-        // Remove # if present and check if it's a valid 6-digit hex color
+        // We remove the # prefix if present and check if it's a valid 6-digit hex color.
         const cleanColor = color.startsWith('#') ? color.slice(1) : color;
         return /^[A-Fa-f0-9]{6}$/.test(cleanColor);
     },
 
     /**
-     * Normalizes a hex color code to include the # prefix.
-     * 
-     * @param {string} color - The color code to normalize
-     * @returns {string} The normalized color code with # prefix
+     * We normalize a hex color code to include the # prefix.
+     * This function ensures consistent color format.
+     *
+     * @param {string} color - The color code to normalize.
+     * @returns {string} The normalized color code with # prefix.
      */
     normalizeColor(color) {
         return color.startsWith('#') ? color : `#${color}`;
@@ -122,8 +125,8 @@ module.exports = {
      * We handle errors that occur during command execution.
      * This function logs the error and attempts to notify the user.
      *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
-     * @param {Error} error - The error that occurred
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {Error} error - The error that occurred.
      */
     async handleError(interaction, error) {
         logError(error, 'changecolor', {
@@ -148,7 +151,7 @@ module.exports = {
                 content: getErrorMessage(error),
                 ephemeral: true 
             }).catch(() => {
-                // Silent catch if everything fails.
+                // We silently catch if all error handling attempts fail.
             });
         }
     }

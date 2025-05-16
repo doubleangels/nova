@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the coin flip command.
+// We define configuration constants for the coin flip command.
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
 const HEADS_PROBABILITY = 0.5;
@@ -14,15 +14,15 @@ const COIN_EMOJI = '🪙';
  * This function simulates flipping a coin and provides the result.
  *
  * We perform several tasks:
- * 1. Generate a random result (heads or tails)
- * 2. Format the response with appropriate emojis
- * 3. Send the result to the user
+ * 1. We generate a random result (heads or tails).
+ * 2. We format the response with appropriate emojis.
+ * 3. We send the result to the user.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
     /**
-     * Slash command definition for flipping a coin.
+     * We define the slash command for flipping a coin.
      * This command randomly selects either "Heads" or "Tails" and returns the result to the user.
      */
     data: new SlashCommandBuilder()
@@ -30,7 +30,9 @@ module.exports = {
         .setDescription('Flip a coin and return heads or tails.'),
 
     /**
-     * Executes the /coinflip command.
+     * We execute the /coinflip command.
+     * This function processes the coin flip request and returns the result.
+     *
      * @param {import('discord.js').CommandInteraction} interaction - The interaction object from Discord.
      */
     async execute(interaction) {
@@ -66,7 +68,9 @@ module.exports = {
     },
 
     /**
-     * Handles errors that occur during command execution.
+     * We handle errors that occur during command execution.
+     * This function logs the error and attempts to notify the user.
+     *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {Error} error - The error that occurred.
      */
@@ -93,7 +97,7 @@ module.exports = {
                 content: ERROR_MESSAGES.UNEXPECTED_ERROR,
                 ephemeral: true 
             }).catch(() => {
-                // Silent catch if everything fails.
+                // We silently catch if all error handling attempts fail.
             });
         }
     }

@@ -54,7 +54,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   /**
-   * Executes the /reminder command.
+   * We execute the /reminder command.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async execute(interaction) {
@@ -81,7 +81,7 @@ module.exports = {
   },
 
   /**
-   * Handles the setup of reminder configuration.
+   * We handle the setup of reminder configuration.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async handleReminderSetup(interaction) {
@@ -127,7 +127,7 @@ module.exports = {
   },
   
   /**
-   * Handles checking the status of the current reminder configuration.
+   * We handle checking the status of the current reminder configuration.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async handleReminderStatus(interaction) {
@@ -203,9 +203,9 @@ module.exports = {
   },
 
   /**
-   * Gets the latest reminder data for a channel
-   * @param {string} channelId - The channel ID to get reminder data for
-   * @returns {Promise<Object|null>} The reminder data if found, otherwise null
+   * We get the latest reminder data for a channel.
+   * @param {string} channelId - The channel ID to get reminder data for.
+   * @returns {Promise<Object|null>} The reminder data if found, otherwise null.
    */
   async getLatestReminderData(channelId) {
     if (!channelId) return null;
@@ -225,7 +225,7 @@ module.exports = {
   },
 
   /**
-   * Calculates the time remaining until the next scheduled reminder.
+   * We calculate the time remaining until the next scheduled reminder.
    * @param {Object} reminderData - The reminder data from the database.
    * @returns {string} A formatted string showing the remaining time.
    */
@@ -246,7 +246,7 @@ module.exports = {
   },
   
   /**
-   * Handles errors that occur during command execution.
+   * We handle errors that occur during command execution.
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
    */

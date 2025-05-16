@@ -9,12 +9,12 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
  * This function assigns a specified role to a specified user in the server.
  *
  * We perform several tasks:
- * 1. Validate permissions and role hierarchy
- * 2. Check if the user already has the role
- * 3. Assign the role to the user
- * 4. Handle errors and provide user feedback
+ * 1. We validate permissions and role hierarchy.
+ * 2. We check if the user already has the role.
+ * 3. We assign the role to the user.
+ * 4. We handle errors and provide user feedback.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 module.exports = {
     data: new SlashCommandBuilder()
@@ -31,7 +31,9 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
     /**
-     * Executes the /giverole command.
+     * We execute the /giverole command.
+     * This function processes the role assignment request.
+     *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
@@ -76,7 +78,9 @@ module.exports = {
     },
     
     /**
-     * Handles errors that occur during command execution.
+     * We handle errors that occur during command execution.
+     * This function logs the error and attempts to notify the user.
+     *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {Error} error - The error that occurred.
      */
@@ -103,7 +107,7 @@ module.exports = {
                 content: getErrorMessage(error),
                 ephemeral: true 
             }).catch(() => {
-                // Silent catch if everything fails.
+                // We silently catch if all error handling attempts fail.
             });
         }
     },
@@ -112,10 +116,10 @@ module.exports = {
      * We validate that the role assignment can be performed by checking permissions and conditions.
      * This function checks bot and user permissions, role hierarchy, and if the user already has the role.
      *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
-     * @param {Role} role - The role to assign
-     * @param {User} targetUser - The user to receive the role
-     * @returns {Object} An object with success status, message, and targetMember if successful
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {Role} role - The role to assign.
+     * @param {User} targetUser - The user to receive the role.
+     * @returns {Object} An object with success status, message, and targetMember if successful.
      */
     async validateRoleAssignment(interaction, role, targetUser) {
         // We check if the bot has permission to manage roles in the server.
@@ -211,9 +215,9 @@ module.exports = {
      * We assign a role to a guild member with an audit log reason.
      * This function adds the role to the user and logs the action.
      *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object
-     * @param {GuildMember} targetMember - The member to receive the role
-     * @param {Role} role - The role to assign
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {GuildMember} targetMember - The member to receive the role.
+     * @param {Role} role - The role to assign.
      */
     async assignRole(interaction, targetMember, role) {
         const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;

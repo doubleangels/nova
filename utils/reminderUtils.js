@@ -23,7 +23,7 @@ const MAX_REMINDER_COUNT = 5;
 
 /**
  * Gets the latest reminder data
- * @returns {Promise<Object|null>} The reminder data if found, otherwise null
+ * @returns {Promise<Object|null>} The reminder data if found, otherwise null.
  */
 async function getLatestReminderData() {
   try {
@@ -242,12 +242,12 @@ async function rescheduleReminder(client) {
  * We ensure the reminder text is not too long and the user hasn't exceeded their reminder limit.
  * We store the reminder in the database and schedule it for the specified time.
  *
- * @param {string} userId - The ID of the user creating the reminder
- * @param {string} reminderText - The text content of the reminder
- * @param {Date} reminderTime - When the reminder should be triggered
- * @param {Client} client - The Discord client instance
- * @returns {Promise<Object>} The created reminder object
- * @throws {Error} If the reminder cannot be created
+ * @param {string} userId - The ID of the user creating the reminder.
+ * @param {string} reminderText - The text content of the reminder.
+ * @param {Date} reminderTime - When the reminder should be triggered.
+ * @param {Client} client - The Discord client instance.
+ * @returns {Promise<Object>} The created reminder object.
+ * @throws {Error} If the reminder cannot be created.
  */
 async function createReminder(userId, reminderText, reminderTime, client) {
   try {
@@ -282,8 +282,8 @@ async function createReminder(userId, reminderText, reminderTime, client) {
  * We calculate the delay until the reminder time and set a timeout to send the notification.
  * We ensure the reminder is still valid before sending the notification.
  *
- * @param {Object} reminder - The reminder object to schedule
- * @param {Client} client - The Discord client instance
+ * @param {Object} reminder - The reminder object to schedule.
+ * @param {Client} client - The Discord client instance.
  */
 function scheduleReminderNotification(reminder, client) {
   const now = new Date();
@@ -327,8 +327,8 @@ function scheduleReminderNotification(reminder, client) {
  * We fetch the reminders from the database and format them for easy reading.
  * We include the reminder text, time, and ID in the formatted output.
  *
- * @param {string} userId - The ID of the user to get reminders for
- * @returns {Promise<Array>} Array of formatted reminder objects
+ * @param {string} userId - The ID of the user to get reminders for.
+ * @returns {Promise<Array>} Array of formatted reminder objects.
  */
 async function getUserReminders(userId) {
   try {
@@ -352,9 +352,9 @@ async function getUserReminders(userId) {
  * We verify the reminder exists and belongs to the user before deleting.
  * We remove the reminder from the database and cancel any pending notifications.
  *
- * @param {string} reminderId - The ID of the reminder to delete
- * @param {string} userId - The ID of the user requesting the deletion
- * @returns {Promise<boolean>} Whether the reminder was successfully deleted
+ * @param {string} reminderId - The ID of the reminder to delete.
+ * @param {string} userId - The ID of the user requesting the deletion.
+ * @returns {Promise<boolean>} Whether the reminder was successfully deleted.
  */
 async function deleteReminder(reminderId, userId) {
   try {

@@ -3,11 +3,11 @@
  * This function fetches and displays definitions from Urban Dictionary.
  *
  * We perform several tasks:
- * 1. Fetch the definition from Urban Dictionary API
- * 2. Create an embed with the definition details
- * 3. Send the embed to the user
+ * 1. We fetch the definition from Urban Dictionary API.
+ * 2. We create an embed with the definition details.
+ * 3. We send the embed to the user.
  *
- * @param {Interaction} interaction - The Discord interaction object
+ * @param {Interaction} interaction - The Discord interaction object.
  */
 
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
@@ -85,7 +85,9 @@ module.exports = {
     },
 
     /**
-     * Truncates text to a maximum length and adds ellipsis if needed.
+     * We truncate text to a maximum length and add ellipsis if needed.
+     * This function ensures text fits within embed limits.
+     *
      * @param {string} text - The text to truncate.
      * @param {number} maxLength - The maximum length allowed.
      * @returns {string} The truncated text.
@@ -96,7 +98,9 @@ module.exports = {
     },
 
     /**
-     * Handles errors that occur during command execution.
+     * We handle errors that occur during command execution.
+     * This function logs the error and attempts to notify the user.
+     *
      * @param {CommandInteraction} interaction - The interaction that triggered the command.
      * @param {Error} error - The error that occurred.
      */
@@ -123,7 +127,7 @@ module.exports = {
                 content: getErrorMessage(error),
                 ephemeral: true 
             }).catch(() => {
-                // Silent catch if everything fails.
+                // We silently catch if all error handling attempts fail.
             });
         }
     }
