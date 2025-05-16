@@ -7,22 +7,21 @@ const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
 const Sentry = require('../sentry');
 
-// Time format constants
+// We define these configuration constants for consistent time formatting and parsing.
 const TIME_FORMAT = 'h:mm A';
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 
-// Configure dayjs plugins for timezone support
+// We extend dayjs with UTC and timezone support for time conversions.
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Initialize valid timezones set
+// Get all valid timezone names from moment.
 const VALID_TIMEZONES = new Set(moment.tz.names());
 
 /**
- * Validates if a timezone identifier is valid.
- * 
- * @param {string} tz - Timezone identifier to validate
- * @returns {boolean} True if the timezone is valid, false otherwise
+ * Validates if the provided string is a valid timezone identifier.
+ * @param {string} tz - The timezone identifier to validate.
+ * @returns {boolean} Whether the timezone is valid.
  */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
@@ -39,11 +38,9 @@ function isValidTimezone(tz) {
 }
 
 /**
- * Extracts time references from a text string.
- * Uses a customized chrono parser to detect time patterns in natural language.
- * 
- * @param {string} content - Text content to parse for time references
- * @returns {Array<Object>} Array of extracted time references with date, text, and timeOnly properties
+ * Extracts time references from a text string using chrono-node.
+ * @param {string} content - The text content to parse for time references.
+ * @returns {Array<Object>} An array of objects containing the parsed date and original text.
  */
 function extractTimeReferences(content) {
   if (!content) {
@@ -51,21 +48,23 @@ function extractTimeReferences(content) {
   }
   
   try {
-    // Create a custom chrono parser instance
+    // Configure chrono to be more precise with time parsing
     const customChrono = chrono.casual.clone();
     
-    // Add custom parser for time-only patterns
+    // Add a custom parser to handle timezone-aware parsing
     customChrono.parsers.push({
       pattern: () => TIME_PATTERN,
       extract: (context, match) => {
         const text = match[0];
         const date = chrono.parseDate(text);
         
+        // If we have a valid date, extract just the time components
         if (date) {
+          // Get the hours and minutes from the parsed date
           const hours = date.getHours();
           const minutes = date.getMinutes();
           
-          // Create a reference date with just the time component
+          // Create a new reference date (without timezone conversion)
           const refDate = new Date();
           refDate.setHours(hours, minutes, 0, 0);
           
@@ -80,14 +79,13 @@ function extractTimeReferences(content) {
           return {
             text: text,
             date: refDate,
-            start: { timeOnly: true }
+            start: { timeOnly: true }  // Flag to indicate this is only time without timezone context
           };
         }
         return null;
       }
     });
 
-    // Parse the content with the enhanced parser
     const results = customChrono.parse(content);
     logger.debug("Parsed time references from content.", { 
       count: results.length, 
@@ -101,7 +99,6 @@ function extractTimeReferences(content) {
       }))
     });
     
-    // Filter and transform results
     return results
       .filter(result => TIME_PATTERN.test(result.text))
       .map(result => ({
@@ -120,12 +117,11 @@ function extractTimeReferences(content) {
 }
 
 /**
- * Converts a time reference from one timezone to another.
- * 
- * @param {Object} timeRef - Time reference object with date and text properties
- * @param {string} fromTimezone - Source timezone identifier
- * @param {string} toTimezone - Target timezone identifier
- * @returns {Object} Conversion result with original and converted time information
+ * Converts a time reference between two specific timezones.
+ * @param {Object} timeRef - The time reference object with text and date properties.
+ * @param {string} fromTimezone - The source timezone identifier.
+ * @param {string} toTimezone - The target timezone identifier.
+ * @returns {Object} An object containing the original text, parsed times, and timezone information.
  */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
@@ -139,7 +135,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     };
   }
 
-  // Validate timezone inputs
   if (!isValidTimezone(fromTimezone) || !isValidTimezone(toTimezone)) {
     logger.debug("Invalid timezone in conversion request.", { fromTimezone, toTimezone });
     return {
@@ -152,7 +147,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   }
 
   try {
-    // Check if timeRef has a valid date
     if (!timeRef.date) {
       return {
         text: timeRef.text,
@@ -163,16 +157,19 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       };
     }
 
-    const isTimeOnly = true;
+    // Always treat time references like "8pm" as time-only
+    const isTimeOnly = true;  // We assume all are time-only for conversion purposes
     
-    // Create source time object
+    // Handle time-only references by creating a time in the source timezone
     let sourceTime;
     if (isTimeOnly) {
-      // For time-only references, use current date with the specified time
+      // For time references, interpret the time in the source timezone
       const hours = timeRef.date.getHours();
       const minutes = timeRef.date.getMinutes();
       
+      // Create a current date in the source timezone
       const now = dayjs().tz(fromTimezone);
+      // Apply just the hours and minutes, keeping the date the same
       sourceTime = now.hour(hours).minute(minutes);
       
       logger.debug("Interpreting time reference in source timezone:", {
@@ -183,11 +180,11 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
         sourceTime: sourceTime.format()
       });
     } else {
-      // For full datetime references
+      // For full datetime references, use the specified date in the source timezone
       sourceTime = dayjs.tz(timeRef.date, fromTimezone);
     }
     
-    // Handle same timezone case
+    // If source and target timezones are the same, return the original time
     if (fromTimezone === toTimezone) {
       return {
         text: timeRef.text,
@@ -216,7 +213,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       isTimeOnly
     });
     
-    // Return successful conversion result
     return {
       text: timeRef.text,
       originalTime: sourceTime.format(TIME_FORMAT),
@@ -224,7 +220,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       toTimezone
     };
   } catch (error) {
-    // Log and report errors
     logger.error("Error converting time zones.", { 
       error: error.message,
       stack: error.stack, 
@@ -245,7 +240,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       }
     });
     
-    // Return error result
     return {
       text: timeRef.text,
       originalTime: null,
@@ -258,25 +252,21 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
 }
 
 /**
- * Generates a Discord timestamp format string for a given date and timezone.
- * 
- * @param {Object} date - dayjs date object
- * @param {string} timezone - Timezone identifier
- * @returns {string} Discord formatted timestamp string
+ * Generates Discord dynamic timestamps for a given date in a specific timezone.
+ * Always shows time only.
+ * @param {dayjs.Dayjs} date - The date object
+ * @param {string} timezone - The timezone to use
+ * @returns {string} Discord timestamp format string
  */
 function generateDiscordTimestamp(date, timezone) {
   const timestamp = date.tz(timezone).unix();
-  return `<t:${timestamp}:t>`;
+  return `<t:${timestamp}:t>`; // 't' format shows time only (e.g., 3:00 PM)
 }
 
 /**
- * Default formatter for a single time conversion.
- * 
- * @param {Object} conversion - Time conversion result
- * @param {string|null} conversion.originalTime - Original time in formatted string
- * @param {Object} conversion.targetTime - Target time as dayjs object
- * @param {string} conversion.toTimezone - Target timezone identifier
- * @returns {string} Formatted conversion result
+ * Default formatter for time conversion results.
+ * @param {Object} conversion - A time conversion result object.
+ * @returns {string} Formatted string representation.
  */
 function defaultFormatter(conversion) {
   const { 
@@ -294,10 +284,9 @@ function defaultFormatter(conversion) {
 }
 
 /**
- * Formats an array of time conversion results into a human-readable string.
- * 
- * @param {Array<Object>} convertedTimes - Array of time conversion results
- * @returns {string} Formatted string of all conversions
+ * Formats an array of converted time objects into a human-readable string.
+ * @param {Array<Object>} convertedTimes - Array of time conversion objects.
+ * @returns {string} A formatted string showing the time conversions.
  */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
@@ -324,4 +313,4 @@ module.exports = {
   convertTimeZones,
   formatConvertedTimes,
   isValidTimezone
-}; 
+};

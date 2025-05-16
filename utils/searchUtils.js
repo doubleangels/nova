@@ -1,26 +1,29 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-// Search configuration constants
+/**
+ * We define these configuration constants for consistent search behavior.
+ * @type {number}
+ */
 const MAX_SEARCH_RESULTS = 10;
 const SEARCH_TIMEOUT_MS = 5000;
 const MIN_SEARCH_LENGTH = 2;
 
 /**
- * Creates a paginated results display with navigation buttons.
+ * Creates a paginated collector for search results.
+ * This function is used to display search results with navigation buttons for better user experience.
  * 
- * @async
- * @param {CommandInteraction} interaction - The Discord interaction that triggered the search
- * @param {Array} items - Array of items to paginate through
- * @param {Function} generateEmbed - Function that takes an index and returns an embed for that item
- * @param {string} prefix - Unique prefix for button IDs to prevent conflicts
- * @param {number} timeout - Time in milliseconds until buttons expire
- * @param {Object} logger - Logger object for debugging
- * @param {Object} [options={}] - Optional configuration
- * @param {ButtonStyle} [options.buttonStyle] - Style for the navigation buttons
- * @param {string} [options.prevLabel] - Label for the previous button
- * @param {string} [options.nextLabel] - Label for the next button
- * @param {string} [options.prevEmoji] - Emoji for the previous button
- * @param {string} [options.nextEmoji] - Emoji for the next button
+ * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+ * @param {Array} items - The search result items.
+ * @param {Function} generateEmbed - Function to generate an embed for a specific index.
+ * @param {string} prefix - Prefix for button IDs (e.g., 'search' or 'img').
+ * @param {number} timeout - Collector timeout in milliseconds.
+ * @param {object} logger - Logger instance.
+ * @param {object} options - Additional options for customization.
+ * @param {ButtonStyle} options.buttonStyle - Button style (e.g., ButtonStyle.Primary, ButtonStyle.Danger).
+ * @param {string} options.prevLabel - Label for the previous button.
+ * @param {string} options.nextLabel - Label for the next button.
+ * @param {string} options.prevEmoji - Emoji for the previous button.
+ * @param {string} options.nextEmoji - Emoji for the next button.
  * @returns {Promise<void>}
  */
 async function createPaginatedResults(
@@ -34,7 +37,7 @@ async function createPaginatedResults(
 ) {
   let currentIndex = 0;
 
-  // Extract options with defaults
+  // We set default options for button styling and labels.
   const buttonStyle = options.buttonStyle || ButtonStyle.Primary;
   const prevLabel = options.prevLabel || '◀';
   const nextLabel = options.nextLabel || '▶';
@@ -42,10 +45,11 @@ async function createPaginatedResults(
   const nextEmoji = options.nextEmoji || null;
 
   /**
-   * Creates navigation buttons based on current index.
+   * Creates arrow buttons for navigation based on the current index.
+   * Buttons are disabled when at the first or last page to prevent invalid navigation.
    * 
-   * @param {number} index - Current index in the items array
-   * @returns {ActionRowBuilder} Row of buttons for navigation
+   * @param {number} index - The current page index.
+   * @returns {ActionRowBuilder} A row of navigation buttons.
    */
   const createArrowButtons = (index) => {
     const prevButton = new ButtonBuilder()
@@ -58,7 +62,7 @@ async function createPaginatedResults(
       .setStyle(buttonStyle)
       .setDisabled(index === items.length - 1);
     
-    // Set emoji and/or label for previous button
+    // We add label or emoji based on provided options for better accessibility.
     if (prevEmoji) {
       prevButton.setEmoji(prevEmoji);
       if (prevLabel !== '◀') prevButton.setLabel(prevLabel);
@@ -66,7 +70,6 @@ async function createPaginatedResults(
       prevButton.setLabel(prevLabel);
     }
 
-    // Set emoji and/or label for next button
     if (nextEmoji) {
       nextButton.setEmoji(nextEmoji);
       if (nextLabel !== '▶') nextButton.setLabel(nextLabel);
@@ -77,26 +80,24 @@ async function createPaginatedResults(
     return new ActionRowBuilder().addComponents(prevButton, nextButton);
   };
 
-  // Send initial message with the first item
+  // We send the initial embed with navigation buttons.
   const message = await interaction.editReply({ 
     embeds: [generateEmbed(currentIndex)], 
     components: [createArrowButtons(currentIndex)] 
   });
 
-  // Create filter to only allow the original user to navigate
+  // We create a collector to handle button interactions from the user.
   const filter = i => 
     (i.customId.startsWith(`${prefix}_prev_`) || 
      i.customId.startsWith(`${prefix}_next_`)) && 
     i.customId.includes(interaction.user.id);
 
-  // Create a collector for button interactions
   const collector = message.createMessageComponentCollector({ 
     filter, 
     time: timeout,
-    idle: 60000
+    idle: 60000 // We expire after 1 minute of inactivity to clean up resources.
   });
   
-  // Handle button clicks
   collector.on('collect', async i => {
     const buttonType = i.customId.split('_')[1];
     
@@ -106,21 +107,21 @@ async function createPaginatedResults(
       userId: i.user.id
     });
     
-    // Update index based on button clicked
+    // We update the current index based on which button was pressed.
     if (buttonType === 'prev') {
       currentIndex = Math.max(0, currentIndex - 1);
     } else if (buttonType === 'next') {
       currentIndex = Math.min(items.length - 1, currentIndex + 1);
     }
 
-    // Update the message with the new embed and buttons
+    // We update the message with the new embed and buttons for the new index.
     await i.update({ 
       embeds: [generateEmbed(currentIndex)],
       components: [createArrowButtons(currentIndex)]
     });
   });
 
-  // Handle collector ending (timeout or idle)
+  // We disable buttons after the collector expires to prevent further interaction.
   collector.on('end', async (collected) => {
     logger.debug("Button collector ended.", {
       reason: collected.size ? "timeout" : "idle",
@@ -128,7 +129,6 @@ async function createPaginatedResults(
       userId: interaction.user.id
     });
     
-    // Create disabled buttons for the final state
     const disabledPrevButton = new ButtonBuilder()
       .setCustomId(`${prefix}_prev_disabled`)
       .setStyle(buttonStyle)
@@ -139,7 +139,7 @@ async function createPaginatedResults(
       .setStyle(buttonStyle)
       .setDisabled(true);
     
-    // Set emoji and/or label for disabled previous button
+    // We maintain the same appearance for disabled buttons to avoid confusion.
     if (prevEmoji) {
       disabledPrevButton.setEmoji(prevEmoji);
       if (prevLabel !== '◀') disabledPrevButton.setLabel(prevLabel);
@@ -147,7 +147,6 @@ async function createPaginatedResults(
       disabledPrevButton.setLabel(prevLabel);
     }
     
-    // Set emoji and/or label for disabled next button
     if (nextEmoji) {
       disabledNextButton.setEmoji(nextEmoji);
       if (nextLabel !== '▶') disabledNextButton.setLabel(nextLabel);
@@ -155,12 +154,11 @@ async function createPaginatedResults(
       disabledNextButton.setLabel(nextLabel);
     }
     
-    // Create a row with disabled buttons
     const disabledNavRow = new ActionRowBuilder().addComponents(
       disabledPrevButton, disabledNextButton
     );
     
-    // Update the message with disabled buttons
+    // We update the message with disabled buttons to indicate timeout.
     await interaction.editReply({
       components: [disabledNavRow]
     }).catch(err => logger.error("Failed to update timed out message.", { error: err.message }));
@@ -168,20 +166,22 @@ async function createPaginatedResults(
 }
 
 /**
- * Normalizes and validates search parameters.
+ * Validates and normalizes search parameters.
+ * This function ensures the query is valid and the results count is within acceptable bounds.
  * 
- * @param {string} query - Search query
- * @param {number} resultsCount - Requested number of results
- * @param {number} defaultCount - Default number of results if not specified
- * @param {number} minResults - Minimum number of results allowed
- * @param {number} maxResults - Maximum number of results allowed
- * @returns {Object} Normalized search parameters or error object
+ * @param {string} query - The search query.
+ * @param {number} resultsCount - The requested number of results.
+ * @param {number} defaultCount - Default number of results.
+ * @param {number} minResults - Minimum allowed results.
+ * @param {number} maxResults - Maximum allowed results.
+ * @returns {Object} Normalized query and results count.
  */
 function normalizeSearchParams(query, resultsCount, defaultCount, minResults, maxResults) {
   if (!query || query.trim().length === 0) {
     return { valid: false, error: "Empty query" };
   }
 
+  // We trim the query and enforce limits on the results count.
   const normalizedQuery = query.trim();
   const normalizedCount = Math.max(minResults, Math.min(resultsCount || defaultCount, maxResults));
   
@@ -193,10 +193,11 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
 }
 
 /**
- * Formats API errors into user-friendly messages.
+ * Formats an error message from the Google API response.
+ * This function extracts relevant information to provide a clear error message to users.
  * 
- * @param {Error} apiError - The API error object
- * @returns {string} Formatted error message
+ * @param {Error} apiError - The API error.
+ * @returns {string} Formatted error message.
  */
 function formatApiError(apiError) {
   const statusCode = apiError.response?.status || "unknown";
@@ -205,25 +206,26 @@ function formatApiError(apiError) {
 }
 
 /**
- * Performs a search across multiple Discord entity types.
- * 
- * @async
- * @param {string} query - Search query
- * @param {Object} [options={}] - Search options
- * @param {boolean} [options.includeUsers=true] - Whether to search users
- * @param {boolean} [options.includeChannels=true] - Whether to search channels
- * @param {boolean} [options.includeMessages=true] - Whether to search messages
- * @returns {Promise<Array>} Combined search results sorted by relevance
- * @throws {Error} If search query is invalid or search times out
+ * We perform a search across multiple data sources.
+ * This function handles the coordination and aggregation of search results.
+ *
+ * We validate the search query and ensure it meets minimum length requirements.
+ * We search across different data sources in parallel and combine the results.
+ * We limit the total number of results to prevent overwhelming responses.
+ *
+ * @param {string} query - The search query string
+ * @param {Object} options - Search options including data sources to search
+ * @returns {Promise<Array>} Array of search results
+ * @throws {Error} If the search query is invalid or search fails
  */
 async function performSearch(query, options = {}) {
   try {
-    // Validate query length
+    // We validate the search query.
     if (!query || query.length < MIN_SEARCH_LENGTH) {
       throw new Error(`Search query must be at least ${MIN_SEARCH_LENGTH} characters long.`);
     }
 
-    // Merge default options with provided options
+    // We prepare the search options with defaults.
     const searchOptions = {
       includeUsers: true,
       includeChannels: true,
@@ -231,7 +233,7 @@ async function performSearch(query, options = {}) {
       ...options
     };
 
-    // Collect search promises based on enabled options
+    // We perform parallel searches across different data sources.
     const searchPromises = [];
     if (searchOptions.includeUsers) {
       searchPromises.push(searchUsers(query));
@@ -243,7 +245,7 @@ async function performSearch(query, options = {}) {
       searchPromises.push(searchMessages(query));
     }
 
-    // Execute searches with timeout protection
+    // We wait for all searches to complete with a timeout.
     const results = await Promise.race([
       Promise.all(searchPromises),
       new Promise((_, reject) => 
@@ -251,7 +253,7 @@ async function performSearch(query, options = {}) {
       )
     ]);
 
-    // Combine, sort, and limit results
+    // We combine and sort the results.
     const combinedResults = results.flat().sort((a, b) => b.relevance - a.relevance);
     return combinedResults.slice(0, MAX_SEARCH_RESULTS);
   } catch (error) {
@@ -261,11 +263,14 @@ async function performSearch(query, options = {}) {
 }
 
 /**
- * Searches users based on username or nickname.
- * 
- * @async
- * @param {string} query - Search query
- * @returns {Promise<Array>} User search results
+ * We search for users matching the query.
+ * This function handles user-specific search logic.
+ *
+ * We search through user names, nicknames, and other relevant fields.
+ * We calculate relevance scores based on match quality.
+ *
+ * @param {string} query - The search query string
+ * @returns {Promise<Array>} Array of matching user results
  */
 async function searchUsers(query) {
   try {
@@ -292,11 +297,14 @@ async function searchUsers(query) {
 }
 
 /**
- * Searches channels based on name or topic.
- * 
- * @async
- * @param {string} query - Search query
- * @returns {Promise<Array>} Channel search results
+ * We search for channels matching the query.
+ * This function handles channel-specific search logic.
+ *
+ * We search through channel names and topics.
+ * We calculate relevance scores based on match quality.
+ *
+ * @param {string} query - The search query string
+ * @returns {Promise<Array>} Array of matching channel results
  */
 async function searchChannels(query) {
   try {
@@ -323,11 +331,14 @@ async function searchChannels(query) {
 }
 
 /**
- * Searches messages based on content or attachment names.
- * 
- * @async
- * @param {string} query - Search query
- * @returns {Promise<Array>} Message search results
+ * We search for messages matching the query.
+ * This function handles message-specific search logic.
+ *
+ * We search through message content and attachments.
+ * We calculate relevance scores based on match quality.
+ *
+ * @param {string} query - The search query string
+ * @returns {Promise<Array>} Array of matching message results
  */
 async function searchMessages(query) {
   try {
@@ -356,10 +367,13 @@ async function searchMessages(query) {
 }
 
 /**
- * Calculates the relevance score for a search result.
- * Higher scores indicate better matches.
- * 
- * @param {string} text - The text to compare against the query
+ * We calculate the relevance score for a search result.
+ * This function determines how well a result matches the search query.
+ *
+ * We use a combination of exact matches, partial matches, and position weighting.
+ * We normalize the score to a value between 0 and 1.
+ *
+ * @param {string} text - The text to calculate relevance for
  * @param {string} query - The search query
  * @returns {number} Relevance score between 0 and 1
  */
@@ -367,19 +381,19 @@ function calculateRelevance(text, query) {
   const normalizedText = text.toLowerCase();
   const normalizedQuery = query.toLowerCase();
   
-  // Exact match gets maximum relevance
+  // We check for exact matches first.
   if (normalizedText === normalizedQuery) {
     return 1.0;
   }
   
-  // Contains match gets relevance based on position (earlier = higher relevance)
+  // We check for partial matches.
   if (normalizedText.includes(normalizedQuery)) {
     const position = normalizedText.indexOf(normalizedQuery);
     const positionWeight = 1 - (position / normalizedText.length);
     return 0.5 + (positionWeight * 0.5);
   }
   
-  // Partial word matches get relevance based on percentage of query words matched
+  // We check for word matches.
   const textWords = normalizedText.split(/\s+/);
   const queryWords = normalizedQuery.split(/\s+/);
   const matchingWords = queryWords.filter(word => 
@@ -389,6 +403,10 @@ function calculateRelevance(text, query) {
   return matchingWords.length / queryWords.length;
 }
 
+/**
+ * We export the search utility functions for use throughout the application.
+ * This module provides consistent search capabilities across different data types.
+ */
 module.exports = {
   createPaginatedResults,
   normalizeSearchParams,
@@ -398,4 +416,4 @@ module.exports = {
   searchChannels,
   searchMessages,
   calculateRelevance
-}; 
+};

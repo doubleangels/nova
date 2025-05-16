@@ -1,20 +1,22 @@
-const { EmbedBuilder } = require('discord.js');
-
-// Regular expression patterns for validating different hex color formats
+// We define these patterns to validate different formats of hex color codes for consistent color handling.
 const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_SHORT = /^#[0-9A-Fa-f]{3}$/;
-const DISCORD_MAX_COLOR = 0xFFFFFF; // Maximum color value supported by Discord (16777215)
+
+// We define Discord's maximum color value to ensure colors stay within valid range.
+const DISCORD_MAX_COLOR = 0xFFFFFF;
 
 /**
- * Validates and normalizes a hex color string.
+ * We validate and normalize a hex color code to ensure consistent color handling.
+ * This function standardizes color formats and handles various input patterns.
  * 
- * @param {string} colorHex - The hex color string to validate (with or without # prefix)
- * @param {Object} [logger=null] - Optional logger for debug information
- * @returns {Object} Result object with success flag and normalized color
- * @throws {Error} If the color is not a string or is empty
+ * @param {string} colorHex - The color hex code to validate
+ * @param {object} logger - Optional logger instance for debug information
+ * @returns {Object} An object with success status and normalized color
+ * @throws {Error} If colorHex is not a string or is empty
  */
 function validateAndNormalizeColor(colorHex, logger = null) {
+    // We validate the input to ensure proper color handling.
     if (typeof colorHex !== 'string') {
         throw new Error('Color must be a string');
     }
@@ -24,7 +26,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
 
     let normalizedColorHex = colorHex.trim();
     
-    // Convert short hex format (#RGB) to full format (#RRGGBB)
+    // We handle 3-digit hex colors by expanding them to 6 digits.
     if (COLOR_PATTERN_HEX_SHORT.test(normalizedColorHex)) {
         normalizedColorHex = '#' + 
             normalizedColorHex[1] + normalizedColorHex[1] +
@@ -38,8 +40,8 @@ function validateAndNormalizeColor(colorHex, logger = null) {
         }
     }
     
-    // Add # prefix if missing
     if (COLOR_PATTERN_HEX_WITHOUT_HASH.test(normalizedColorHex)) {
+        // We add the # prefix for consistency when it's missing.
         normalizedColorHex = `#${normalizedColorHex}`;
         if (logger) {
             logger.debug("Color format normalized.", { 
@@ -49,19 +51,21 @@ function validateAndNormalizeColor(colorHex, logger = null) {
         }
         return { success: true, normalizedColor: normalizedColorHex };
     } else if (COLOR_PATTERN_HEX_WITH_HASH.test(normalizedColorHex)) {
+        // We use the color as is when it's already in the correct format.
         return { success: true, normalizedColor: normalizedColorHex };
     }
     
-    // Return failure if the color doesn't match any valid pattern
+    // We return failure for invalid color formats.
     return { success: false };
 }
 
 /**
- * Converts a hex color string to its decimal representation.
+ * We convert a hex color to a decimal value for Discord's color system.
+ * This function ensures colors are in the format required by Discord's API.
  * 
- * @param {string} hexColor - The hex color string to convert
- * @returns {number} The decimal value of the color
- * @throws {Error} If the hex color format is invalid or exceeds Discord's maximum
+ * @param {string} hexColor - The hex color code (with or without #)
+ * @returns {number} The decimal color value
+ * @throws {Error} If the color is invalid or out of Discord's range
  */
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
@@ -69,10 +73,11 @@ function hexToDecimal(hexColor) {
         throw new Error('Invalid hex color format');
     }
 
+    // We convert the hex string to a decimal number for Discord.
     const hex = validation.normalizedColor.slice(1);
     const decimal = parseInt(hex, 16);
 
-    // Check if the color exceeds Discord's maximum value
+    // We validate that the color is within Discord's allowed range.
     if (decimal > DISCORD_MAX_COLOR) {
         throw new Error('Color value exceeds Discord\'s maximum (0xFFFFFF)');
     }
@@ -81,11 +86,12 @@ function hexToDecimal(hexColor) {
 }
 
 /**
- * Converts a hex color string to its RGB components.
+ * We convert a hex color to RGB values for color manipulation.
+ * This function breaks down the hex color into its RGB components.
  * 
- * @param {string} hexColor - The hex color string to convert
+ * @param {string} hexColor - The hex color code (with or without #)
  * @returns {Object} Object containing r, g, b values (0-255)
- * @throws {Error} If the hex color format is invalid
+ * @throws {Error} If the color is invalid
  */
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
@@ -102,22 +108,24 @@ function hexToRgb(hexColor) {
 }
 
 /**
- * Converts RGB color components to a hex color string.
+ * We convert RGB values to a hex color code for consistent color representation.
+ * This function ensures RGB values are properly formatted as hex colors.
  * 
- * @param {number} r - Red component (0-255)
- * @param {number} g - Green component (0-255)
- * @param {number} b - Blue component (0-255)
- * @returns {string} Hex color string with # prefix
- * @throws {Error} If any RGB value is not an integer between 0 and 255
+ * @param {number} r - Red value (0-255)
+ * @param {number} g - Green value (0-255)
+ * @param {number} b - Blue value (0-255)
+ * @returns {string} Hex color code with # prefix
+ * @throws {Error} If any RGB value is invalid
  */
 function rgbToHex(r, g, b) {
+    // We validate RGB values to ensure they are within the valid range.
     if (!Number.isInteger(r) || r < 0 || r > 255 ||
         !Number.isInteger(g) || g < 0 || g > 255 ||
         !Number.isInteger(b) || b < 0 || b > 255) {
         throw new Error('RGB values must be integers between 0 and 255');
     }
 
-    // Convert each component to two-digit hex value
+    // We convert RGB values to a hex string with proper padding.
     return '#' + 
         r.toString(16).padStart(2, '0') +
         g.toString(16).padStart(2, '0') +
@@ -125,60 +133,12 @@ function rgbToHex(r, g, b) {
 }
 
 /**
- * Checks if a string is a valid hex color.
- * Supports #RGB and #RRGGBB formats, with or without # prefix.
- * 
- * @param {string} color - The color string to validate
- * @returns {boolean} True if the color is a valid hex color, false otherwise
+ * We export the color utility functions for use throughout the application.
+ * This module provides consistent color handling and conversion capabilities.
  */
-function isValidHexColor(color) {
-  return /^#?([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(color);
-}
-
-/**
- * Normalizes a hex color string to the standard #RRGGBB format.
- * Handles #RGB format and adds the # prefix if missing.
- * 
- * @param {string} color - The color string to normalize
- * @returns {string|null} Normalized hex color or null if input is falsy
- */
-function normalizeHexColor(color) {
-  if (!color) return null;
-  
-  const hex = color.replace('#', '');
-  // Convert short hex format (#RGB) to full format (#RRGGBB)
-  if (hex.length === 3) {
-    return '#' + hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
-  }
-  return '#' + hex;
-}
-
-/**
- * Creates a Discord embed displaying a color preview.
- * 
- * @param {string} color - The hex color to display
- * @returns {EmbedBuilder|null} Discord embed with color preview or null if color is invalid
- */
-function createColorEmbed(color) {
-  const normalizedColor = normalizeHexColor(color);
-  if (!normalizedColor) return null;
-
-  // Create embed with color preview image
-  const embed = new EmbedBuilder()
-    .setColor(normalizedColor)
-    .setTitle('Color Preview')
-    .setDescription(`Hex: ${normalizedColor}`)
-    .setImage(`https://via.placeholder.com/150/${normalizedColor.slice(1)}/ffffff?text=+`);
-
-  return embed;
-}
-
 module.exports = {
     validateAndNormalizeColor,
     hexToDecimal,
     hexToRgb,
-    rgbToHex,
-    isValidHexColor,
-    normalizeHexColor,
-    createColorEmbed
-}; 
+    rgbToHex
+};

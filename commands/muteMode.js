@@ -1,12 +1,3 @@
-/**
- * Mute Mode Command Module
- * 
- * This command manages the auto-kicking of inactive users in a Discord server.
- * It allows administrators to enable/disable mute mode and configure time limits
- * for how long new users can remain silent before being automatically kicked.
- * 
- * @module muteMode
- */
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -33,10 +24,6 @@ const DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
  * @param {Interaction} interaction - The Discord interaction object
  */
 module.exports = {
-  /**
-   * Command registration data for the Discord API.
-   * Defines the command structure, options, and permission requirements.
-   */
   data: new SlashCommandBuilder()
     .setName('mutemode')
     .setDescription("Toggle auto-kicking of users who don't send a message within a time limit.")
@@ -71,11 +58,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
   /**
    * Executes the /mutemode command.
-   * Main entry point that handles subcommand routing and error handling.
-   * 
-   * @async
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
    */
   async execute(interaction) {
     await interaction.deferReply();
@@ -101,12 +84,7 @@ module.exports = {
   
   /**
    * Handles the 'status' subcommand to show current mute mode settings.
-   * Retrieves settings from database and formats them for user display.
-   * 
-   * @async
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
-   * @throws {Error} If database retrieval fails
    */
   async handleStatusSubcommand(interaction) {
     try {
@@ -129,12 +107,7 @@ module.exports = {
   
   /**
    * Handles the 'set' subcommand to update mute mode settings.
-   * Validates inputs, updates settings in database, and reports changes to user.
-   * 
-   * @async
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>}
-   * @throws {Error} If validation fails or database update fails
    */
   async handleSetSubcommand(interaction) {
     try {
@@ -191,11 +164,7 @@ module.exports = {
   
   /**
    * Gets the current mute mode settings from the database.
-   * Retrieves both enabled status and time limit settings.
-   * 
-   * @async
-   * @returns {Promise<Object>} The current settings object {isEnabled, timeLimit}
-   * @throws {Error} With message "DATABASE_READ_ERROR" if retrieval fails
+   * @returns {Promise<Object>} The current settings.
    */
   async getCurrentSettings() {
     try {
@@ -221,13 +190,9 @@ module.exports = {
   
   /**
    * Updates the mute mode settings in the database.
-   * Stores both enabled status and time limit settings.
-   * 
-   * @async
    * @param {boolean} isEnabled - Whether mute mode is enabled.
    * @param {number} timeLimit - The time limit in hours.
    * @returns {Promise<void>}
-   * @throws {Error} With message "DATABASE_WRITE_ERROR" if update fails
    */
   async updateSettings(isEnabled, timeLimit) {
     try {
@@ -248,11 +213,7 @@ module.exports = {
   
   /**
    * Formats a status message based on the current settings.
-   * Creates a user-friendly display of mute mode status and configuration.
-   * 
    * @param {Object} settings - The current mute mode settings.
-   * @param {boolean} settings.isEnabled - Whether mute mode is enabled.
-   * @param {number} settings.timeLimit - The time limit in hours.
    * @returns {string} The formatted status message.
    */
   formatStatusMessage(settings) {
@@ -272,8 +233,6 @@ module.exports = {
   
   /**
    * Formats an update message based on the old and new settings.
-   * Creates a user-friendly display highlighting changes made to the configuration.
-   * 
    * @param {boolean} oldEnabled - The previous enabled state.
    * @param {boolean} newEnabled - The new enabled state.
    * @param {number} oldTimeLimit - The previous time limit.
@@ -304,12 +263,8 @@ module.exports = {
   
   /**
    * Handles errors that occur during command execution.
-   * Maps error types to user-friendly messages and logs details.
-   * 
-   * @async
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    * @param {Error} error - The error that occurred.
-   * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
     logError(error, 'mutemode', {
