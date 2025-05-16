@@ -5,23 +5,21 @@ const { getValue, setReminderData, getReminderData, deleteReminderData } = requi
 const { Pool } = require('pg');
 const config = require('../config');
 
-// Setup a pool for direct SQL queries for reminder_recovery
+// We set up a pool for direct SQL queries for reminder_recovery.
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
 // We define these configuration constants for consistent reminder behavior across the application.
-const BUMP_REMINDER_KEY = 'bump';
 const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
 const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
 const REMINDER_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
 
 // We define these configuration constants for consistent reminder behavior.
-const DEFAULT_REMINDER_INTERVAL = 30; // minutes
-const MAX_REMINDER_LENGTH = 1000; // characters
-const MAX_REMINDER_COUNT = 5; // per user
+const MAX_REMINDER_LENGTH = 1000;
+const MAX_REMINDER_COUNT = 5;
 
 /**
  * Gets the latest reminder data
@@ -116,7 +114,7 @@ async function handleReminder(message, delay) {
           channelId: reminderChannelId
         });
 
-        // We delete the reminder from the recovery table after it's sent
+        // We delete the reminder from the recovery table after it's sent.
         await pool.query(
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderId]
@@ -164,7 +162,7 @@ async function rescheduleReminder(client) {
       return;
     }
 
-    // Get the latest reminder data for this channel
+    // Get the latest reminder data for this channel.
     const reminderData = await getLatestReminderData();
     if (!reminderData) {
       logger.debug("No stored bump reminders found for rescheduling.");
@@ -196,7 +194,7 @@ async function rescheduleReminder(client) {
       delay 
     });
     
-    // If the scheduled time has passed, we skip rescheduling
+    // If the scheduled time has passed, we skip rescheduling.
     if (delay < 0) {
       logger.debug("Skipping overdue reminder.", { reminder_id: reminderData.reminder_id });
       return;
@@ -209,7 +207,7 @@ async function rescheduleReminder(client) {
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminderData.reminder_id });
 
-        // We delete the reminder from the recovery table after it's sent
+        // We delete the reminder from the recovery table after it's sent.
         await pool.query(
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderData.reminder_id]

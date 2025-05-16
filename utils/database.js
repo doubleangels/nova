@@ -54,7 +54,7 @@ const TABLES = {
  */
 async function initializeDatabase() {
   const MAX_RETRIES = 3;
-  const INITIAL_RETRY_DELAY = 1000; // 1 second
+  const INITIAL_RETRY_DELAY = 1000;
   let retryCount = 0;
   let lastError = null;
 

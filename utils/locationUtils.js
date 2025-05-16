@@ -390,7 +390,7 @@ async function getUtcOffset(place) {
     const rawOffset = tzResult.rawOffset / SECONDS_PER_HOUR;
     const dstOffset = tzResult.dstOffset / SECONDS_PER_HOUR;
     
-    // Use the timezone ID from Google API directly
+    // Use the timezone ID from Google API directly.
     const timezoneName = tzResult.timezoneId;
     
     return {
