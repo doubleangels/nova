@@ -12,7 +12,7 @@ const EVENT_EXTENSION = '.js';
 const SENTRY_FLUSH_TIMEOUT = 2000;
 
 /**
- * This script initializes and configures a Discord bot using discord.js.
+ * We initialize and configure a Discord bot using discord.js.
  * We load commands and event handlers to manage bot interactions, 
  * including slash commands and context menu commands. This serves as the main
  * entry point for the bot application.
@@ -27,7 +27,7 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,     // We need this to access guild member information.
     GatewayIntentBits.GuildPresences,   // We need this to track member presence (online/offline).
     GatewayIntentBits.GuildMessageReactions, // We need this to receive reaction events.
-    GatewayIntentBits.GuildVoiceStates, // Ensure this intent is included
+    GatewayIntentBits.GuildVoiceStates, // We need this to track voice channel states.
   ],
   partials: [
     Partials.Message,    // We include this to handle reactions on uncached messages.
@@ -169,7 +169,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 /**
- * Handles graceful shutdown when receiving termination signals.
+ * We handle graceful shutdown when receiving termination signals.
  * We use this to ensure clean disconnection and resource cleanup.
  * 
  * @param {string} signal - The signal that triggered the shutdown.

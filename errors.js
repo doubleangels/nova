@@ -1,12 +1,12 @@
 /**
- * Centralized error handling and messages for the bot.
+ * We provide centralized error handling and messages for the bot.
  * This module provides consistent error messages and handling across all commands.
  */
 
 const logger = require('./logger')('errors.js');
 
 /**
- * Common error codes and their corresponding messages
+ * We define common error codes and their corresponding messages
  */
 const ERROR_MESSAGES = {
     // Discord API Errors
@@ -95,7 +95,7 @@ const ERROR_MESSAGES = {
 };
 
 /**
- * Get a user-friendly error message based on the error type
+ * We get a user-friendly error message based on the error type
  * @param {Error} error - The error object
  * @param {string} context - The context where the error occurred (e.g., 'anime', 'google', etc.)
  * @returns {string} A user-friendly error message
@@ -149,7 +149,7 @@ function getErrorMessage(error, context = '') {
 }
 
 /**
- * Log an error with context
+ * We log an error with context
  * @param {Error} error - The error object
  * @param {string} context - The context where the error occurred
  * @param {Object} additionalInfo - Additional information to log
