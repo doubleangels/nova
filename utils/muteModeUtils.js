@@ -1,4 +1,4 @@
-const { logger } = require('./logger');
+const { logger } = require('../logger');
 const { scheduleJob } = require('node-schedule');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
