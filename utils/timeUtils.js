@@ -163,20 +163,13 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
 
 /**
  * Generates Discord dynamic timestamps for a given date in a specific timezone.
- * Shows date if the time is on a different day.
+ * Always shows time only.
  * @param {dayjs.Dayjs} date - The date object
  * @param {string} timezone - The timezone to use
  * @returns {string} Discord timestamp format string
  */
 function generateDiscordTimestamp(date, timezone) {
   const timestamp = date.tz(timezone).unix();
-  const now = dayjs().tz(timezone);
-  
-  // If the date is on a different day, show the date
-  if (date.date() !== now.date() || date.month() !== now.month() || date.year() !== now.year()) {
-    return `<t:${timestamp}:f>`; // 'f' format shows date and time (e.g., April 17, 2024 3:00 PM)
-  }
-  
   return `<t:${timestamp}:t>`; // 't' format shows time only (e.g., 3:00 PM)
 }
 
