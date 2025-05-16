@@ -45,7 +45,10 @@ const TABLES = {
 /**
  * We initialize the database by performing a simple read/write test.
  * This function ensures our database connection is working properly.
+ * 
  * We perform a simple read/write test using the config table.
+ * If the test fails, we retry with exponential backoff.
+ * If all retries fail, we stop the bot as database connectivity is critical.
  * 
  * @throws {Error} If the database connection test fails after all retries
  */
@@ -97,7 +100,7 @@ async function initializeDatabase() {
       lastError = err;
       logger.error(`Error testing database connection (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, { error: err });
       
-      // Calculate delay with exponential backoff
+      // We calculate delay with exponential backoff
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
       retryCount++;
       
@@ -111,14 +114,21 @@ async function initializeDatabase() {
   }
 
   // If we get here, all retries failed
-  logger.error("All database connection attempts failed");
-  throw lastError || new Error("Failed to initialize database after multiple attempts");
+  logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
+  
+  // We log the final error before stopping
+  if (lastError) {
+    logger.error("Final database error:", { error: lastError });
+  }
+  
+  // We stop the bot with a non-zero exit code to indicate failure
+  process.exit(1);
 }
 
 /**
  * We retrieve a value from the 'config' table based on a given key.
  * This function provides access to stored configuration settings.
- *
+ * 
  * @param {string} key - The key to retrieve
  * @returns {Promise<any|null>} The parsed value if found, otherwise null
  */
@@ -147,7 +157,7 @@ async function getValue(key) {
 /**
  * We set a value in the 'config' table for a given key.
  * This function stores configuration settings with proper error handling.
- *
+ * 
  * @param {string} key - The key to set
  * @param {any} value - The value to store, which will be serialized to JSON
  */
@@ -175,7 +185,7 @@ async function setValue(key, value) {
 /**
  * We delete a value from the 'config' table for a given key.
  * This function removes configuration settings that are no longer needed.
- *
+ * 
  * @param {string} key - The key to delete
  */
 async function deleteValue(key) {
@@ -194,7 +204,7 @@ async function deleteValue(key) {
 /**
  * We retrieve all configuration records from the 'config' table.
  * This function provides a complete view of all settings at once.
- *
+ * 
  * @returns {Promise<Array<Object>>} An array of config objects
  */
 async function getAllConfigs() {
@@ -215,7 +225,7 @@ async function getAllConfigs() {
 /**
  * We track a new member by inserting or updating their information.
  * This function handles mute mode verification to ensure members send a message before a deadline.
- *
+ * 
  * @param {string} memberId - The Discord member ID
  * @param {string} username - The username of the member
  * @param {string} joinTime - The ISO string representing when the member joined
@@ -255,7 +265,7 @@ async function trackNewMember(memberId, username, joinTime) {
 /**
  * We retrieve tracking data for a specific member.
  * This function checks if a member is being monitored in mute mode.
- *
+ * 
  * @param {string} memberId - The Discord member ID
  * @returns {Promise<Object|null>} The tracking data if found, otherwise null
  */
@@ -300,7 +310,7 @@ async function getTrackedMember(memberId) {
 /**
  * We remove tracking data for a specific member.
  * This function handles cleanup when a member sends a message or leaves the server.
- *
+ * 
  * @param {string} memberId - The Discord member ID
  * @returns {Promise<boolean>} True if a record was removed, false otherwise
  */
@@ -333,7 +343,7 @@ async function removeTrackedMember(memberId) {
 /**
  * We retrieve all tracked members.
  * This function provides a complete list of members being monitored in mute mode.
- *
+ * 
  * @returns {Promise<Array<Object>>} An array of objects containing member_id, username, and join_time
  */
 async function getAllTrackedMembers() {
@@ -376,7 +386,7 @@ async function getAllTrackedMembers() {
 /**
  * We set or update the timezone for a given Discord member ID.
  * This function stores user timezone preferences for time conversion features.
- *
+ * 
  * @param {string} memberId - The Discord member ID
  * @param {string} timezone - The timezone string (e.g., 'America/New_York')
  */
@@ -414,7 +424,7 @@ async function setUserTimezone(memberId, timezone) {
 /**
  * We retrieve the timezone for a given Discord member ID.
  * This function provides access to user timezone preferences.
- *
+ * 
  * @param {string} memberId - The Discord member ID
  * @returns {Promise<string|null>} The timezone string if found, otherwise null
  */
@@ -639,7 +649,9 @@ async function query(text, params = [], options = {}) {
 }
 
 /**
- * Adds a completed voice session's duration to the user's total in voice_time.
+ * We add a completed voice session's duration to the user's total in voice_time.
+ * This function updates user voice time statistics.
+ * 
  * @param {string} userId - The Discord user ID
  * @param {string} username - The current username of the user
  * @param {number} durationSeconds - The session duration in seconds
@@ -664,7 +676,9 @@ async function addVoiceSessionToStats(userId, username, durationSeconds) {
 }
 
 /**
- * Adds a completed voice session's duration to the channel's total in voice_channel_time.
+ * We add a completed voice session's duration to the channel's total in voice_channel_time.
+ * This function updates channel voice time statistics.
+ * 
  * @param {string} channelId - The Discord channel ID
  * @param {string} channelName - The channel name
  * @param {number} durationSeconds - The session duration in seconds
@@ -689,7 +703,9 @@ async function addVoiceSessionToChannelStats(channelId, channelName, durationSec
 }
 
 /**
- * Increments the message count for a channel in message_channel_counts.
+ * We increment the message count for a channel in message_channel_counts.
+ * This function tracks channel message activity.
+ * 
  * @param {string} channelId - The Discord channel ID
  * @param {string} channelName - The channel name
  */
