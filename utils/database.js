@@ -74,7 +74,7 @@ async function initializeDatabase() {
     if (result.rows.length > 0 && JSON.parse(result.rows[0].value) === testValue) {
       logger.info("Database connection test successful.");
     } else {
-      throw new Error("Database read/write test failed");
+      throw new Error("Database read/write test failed.");
     }
 
     // We clean up test data to maintain database cleanliness.
