@@ -47,49 +47,72 @@ const TABLES = {
  * This function ensures our database connection is working properly.
  * We perform a simple read/write test using the config table.
  * 
- * @throws {Error} If the database connection test fails
+ * @throws {Error} If the database connection test fails after all retries
  */
 async function initializeDatabase() {
-  const client = await pool.connect();
-  try {
-    logger.info("Testing database connection...");
-    
-    // We perform a simple read/write test using the config table.
-    const testKey = 'db_test_key';
-    const testValue = 'test_value';
-    
-    // We write a test value to verify database write operations.
-    await client.query(
-      `INSERT INTO ${TABLES.CONFIG} (id, value) VALUES ($1, $2)
-       ON CONFLICT (id) DO UPDATE SET value = $2`,
-      [testKey, JSON.stringify(testValue)]
-    );
-    
-    // We read the test value to verify database read operations.
-    const result = await client.query(
-      `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
-      [testKey]
-    );
-    
-    if (result.rows.length > 0 && JSON.parse(result.rows[0].value) === testValue) {
-      logger.info("Database connection test successful.");
-    } else {
-      throw new Error("Database read/write test failed.");
-    }
+  const MAX_RETRIES = 3;
+  const INITIAL_RETRY_DELAY = 1000; // 1 second
+  let retryCount = 0;
+  let lastError = null;
 
-    // We clean up test data to maintain database cleanliness.
-    await client.query(
-      `DELETE FROM ${TABLES.CONFIG} WHERE id = $1`,
-      [testKey]
-    );
-    logger.debug("Cleaned up database test data.");
-    
-  } catch (err) {
-    logger.error("Error testing database connection:", { error: err });
-    throw err;
-  } finally {
-    client.release();
+  while (retryCount < MAX_RETRIES) {
+    const client = await pool.connect();
+    try {
+      logger.info(`Testing database connection... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      
+      // We perform a simple read/write test using the config table.
+      const testKey = 'db_test_key';
+      const testValue = 'test_value';
+      
+      // We write a test value to verify database write operations.
+      await client.query(
+        `INSERT INTO ${TABLES.CONFIG} (id, value) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET value = $2`,
+        [testKey, JSON.stringify(testValue)]
+      );
+      
+      // We read the test value to verify database read operations.
+      const result = await client.query(
+        `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
+        [testKey]
+      );
+      
+      if (result.rows.length > 0 && JSON.parse(result.rows[0].value) === testValue) {
+        logger.info("Database connection test successful.");
+      } else {
+        throw new Error("Database read/write test failed.");
+      }
+
+      // We clean up test data to maintain database cleanliness.
+      await client.query(
+        `DELETE FROM ${TABLES.CONFIG} WHERE id = $1`,
+        [testKey]
+      );
+      logger.debug("Cleaned up database test data.");
+      
+      // If we get here, the test was successful
+      return;
+      
+    } catch (err) {
+      lastError = err;
+      logger.error(`Error testing database connection (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, { error: err });
+      
+      // Calculate delay with exponential backoff
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      retryCount++;
+      
+      if (retryCount < MAX_RETRIES) {
+        logger.info(`Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    } finally {
+      client.release();
+    }
   }
+
+  // If we get here, all retries failed
+  logger.error("All database connection attempts failed");
+  throw lastError || new Error("Failed to initialize database after multiple attempts");
 }
 
 /**
