@@ -48,17 +48,63 @@ function extractTimeReferences(content) {
   }
   
   try {
-    const results = chrono.parse(content);
+    // Configure chrono to be more precise with time parsing
+    const customChrono = chrono.casual.clone();
+    
+    // Add a custom parser to handle timezone-aware parsing
+    customChrono.parsers.push({
+      pattern: () => TIME_PATTERN,
+      extract: (context, match) => {
+        const text = match[0];
+        const date = chrono.parseDate(text);
+        
+        // If we have a valid date, extract just the time components
+        if (date) {
+          // Get the hours and minutes from the parsed date
+          const hours = date.getHours();
+          const minutes = date.getMinutes();
+          
+          // Create a new reference date (without timezone conversion)
+          const refDate = new Date();
+          refDate.setHours(hours, minutes, 0, 0);
+          
+          logger.debug("Time parsing details:", {
+            originalText: text,
+            parsedHours: hours,
+            parsedMinutes: minutes,
+            refDate: refDate.toISOString(),
+            timeOnly: true
+          });
+          
+          return {
+            text: text,
+            date: refDate,
+            start: { timeOnly: true }  // Flag to indicate this is only time without timezone context
+          };
+        }
+        return null;
+      }
+    });
+
+    const results = customChrono.parse(content);
     logger.debug("Parsed time references from content.", { 
       count: results.length, 
-      contentLength: content.length 
+      contentLength: content.length,
+      results: results.map(r => ({
+        text: r.text,
+        date: r.start.date().toISOString(),
+        hours: r.start.date().getHours(),
+        minutes: r.start.date().getMinutes(),
+        timeOnly: r.start.timeOnly || false
+      }))
     });
     
     return results
       .filter(result => TIME_PATTERN.test(result.text))
       .map(result => ({
         date: result.start.date(),
-        text: result.text
+        text: result.text,
+        timeOnly: result.start.timeOnly || false
       }));
   } catch (error) {
     logger.error("Error parsing time references.", { 
@@ -111,10 +157,42 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       };
     }
 
-    const parsedDate = timeRef.date;
+    // Always treat time references like "8pm" as time-only
+    const isTimeOnly = true;  // We assume all are time-only for conversion purposes
     
-    // Create a dayjs object in the source timezone
-    const sourceTime = dayjs.tz(parsedDate, fromTimezone);
+    // Handle time-only references by creating a time in the source timezone
+    let sourceTime;
+    if (isTimeOnly) {
+      // For time references, interpret the time in the source timezone
+      const hours = timeRef.date.getHours();
+      const minutes = timeRef.date.getMinutes();
+      
+      // Create a current date in the source timezone
+      const now = dayjs().tz(fromTimezone);
+      // Apply just the hours and minutes, keeping the date the same
+      sourceTime = now.hour(hours).minute(minutes);
+      
+      logger.debug("Interpreting time reference in source timezone:", {
+        text: timeRef.text,
+        hours,
+        minutes,
+        fromTimezone,
+        sourceTime: sourceTime.format()
+      });
+    } else {
+      // For full datetime references, use the specified date in the source timezone
+      sourceTime = dayjs.tz(timeRef.date, fromTimezone);
+    }
+    
+    // If source and target timezones are the same, return the original time
+    if (fromTimezone === toTimezone) {
+      return {
+        text: timeRef.text,
+        originalTime: sourceTime.format(TIME_FORMAT),
+        targetTime: sourceTime,
+        toTimezone
+      };
+    }
     
     // Convert to target timezone
     const targetTime = sourceTime.tz(toTimezone);
@@ -126,7 +204,13 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       targetTime: targetTime.format(),
       sourceOffset: sourceTime.utcOffset(),
       targetOffset: targetTime.utcOffset(),
-      parsedDate: parsedDate.toISOString()
+      parsedDate: timeRef.date.toISOString(),
+      originalText: timeRef.text,
+      sourceFormatted: sourceTime.format(TIME_FORMAT),
+      targetFormatted: targetTime.format(TIME_FORMAT),
+      timezoneDifference: (targetTime.utcOffset() - sourceTime.utcOffset()) / 60,
+      isSameTimezone: fromTimezone === toTimezone,
+      isTimeOnly
     });
     
     return {
@@ -141,14 +225,18 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       stack: error.stack, 
       timeRef,
       fromTimezone,
-      toTimezone 
+      toTimezone,
+      originalText: timeRef.text,
+      parsedDate: timeRef.date?.toISOString()
     });
     
     Sentry.captureException(error, {
       extra: {
         timeRef,
         fromTimezone,
-        toTimezone
+        toTimezone,
+        originalText: timeRef.text,
+        parsedDate: timeRef.date?.toISOString()
       }
     });
     
@@ -201,12 +289,23 @@ function defaultFormatter(conversion) {
  * @returns {string} A formatted string showing the time conversions.
  */
 function formatConvertedTimes(convertedTimes) {
-  if (!Array.isArray(convertedTimes) || convertedTimes.length === 0) {
-    logger.debug("No time conversions to format.");
-    return "";
+  if (!convertedTimes || convertedTimes.length === 0) {
+    return "No times to convert.";
   }
-  
-  return convertedTimes.map(defaultFormatter).join('\n');
+
+  const formattedTimes = convertedTimes.map(conversion => {
+    if (conversion.error) {
+      return `"${conversion.text}" - ${conversion.error}`;
+    }
+    
+    if (!conversion.targetTime) {
+      return `"${conversion.text}" - Could not parse time`;
+    }
+
+    return `"${conversion.text}" → ${conversion.targetTime.format(TIME_FORMAT)} (${conversion.toTimezone})`;
+  });
+
+  return formattedTimes.join('\n');
 }
 
 module.exports = {
