@@ -115,6 +115,13 @@ async function handleReminder(message, delay) {
           role: reminderRole,
           channelId: reminderChannelId
         });
+
+        // We delete the reminder from the recovery table after it's sent
+        await pool.query(
+          `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
+          [reminderId]
+        );
+        logger.debug("Cleaned up sent reminder from recovery table.", { reminderId });
       } catch (err) {
         logger.error("Error while sending scheduled bump reminder.", { 
           error: err.message,
@@ -201,6 +208,13 @@ async function rescheduleReminder(client) {
         // Send the new reminder message
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminderData.reminder_id });
+
+        // We delete the reminder from the recovery table after it's sent
+        await pool.query(
+          `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
+          [reminderData.reminder_id]
+        );
+        logger.debug("Cleaned up sent reminder from recovery table.", { reminderId: reminderData.reminder_id });
       } catch (err) {
         logger.error("Error while sending rescheduled bump reminder.", { 
           error: err.message,
