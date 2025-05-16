@@ -5,27 +5,29 @@ const { getValue, setReminderData, getReminderData, deleteReminderData } = requi
 const { Pool } = require('pg');
 const config = require('../config');
 
-// Setup a pool for direct SQL queries for reminder_recovery
+// Database connection pool
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
-// We define these configuration constants for consistent reminder behavior across the application.
+// Constants for bump reminder feature
 const BUMP_REMINDER_KEY = 'bump';
 const CONFIRMATION_EMOJI = '❤️';
 const REMINDER_EMOJI = '🔔';
 const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
 const REMINDER_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
 
-// We define these configuration constants for consistent reminder behavior.
-const DEFAULT_REMINDER_INTERVAL = 30; // minutes
-const MAX_REMINDER_LENGTH = 1000; // characters
-const MAX_REMINDER_COUNT = 5; // per user
+// Constants for user reminders
+const DEFAULT_REMINDER_INTERVAL = 30;
+const MAX_REMINDER_LENGTH = 1000;
+const MAX_REMINDER_COUNT = 5;
 
 /**
- * Gets the latest reminder data
- * @returns {Promise<Object|null>} The reminder data if found, otherwise null
+ * Retrieves the most recent scheduled reminder from the database.
+ * 
+ * @async
+ * @returns {Promise<Object|null>} Most recent reminder data or null if none found
  */
 async function getLatestReminderData() {
   try {
@@ -43,39 +45,37 @@ async function getLatestReminderData() {
 }
 
 /**
- * Schedules a bump reminder and stores it in the database.
- *
- * We retrieve necessary configuration values (role and channel IDs) from the database,
- * calculate a scheduled time using day.js based on the provided delay, store the reminder data,
- * and send an immediate confirmation message in the designated channel. We then schedule
- * a final reminder message to be sent after the delay.
- *
- * @param {Message} message - The Discord message object from which to access the client.
- * @param {number} delay - The delay in milliseconds before sending the final bump reminder.
+ * Handles scheduling a new bump reminder for a server.
+ * Sets up a reminder with confirmation message and scheduled notification.
+ * 
+ * @async
+ * @param {Message} message - Discord message object that triggered the reminder
+ * @param {number} delay - Time in milliseconds until the reminder should trigger
+ * @returns {Promise<void>}
  */
 async function handleReminder(message, delay) {
   try {
-    // We retrieve the role ID for pinging on the final reminder.
+    // Retrieve reminder configuration values
     const reminderRole = await getValue('reminder_role');
     if (!reminderRole) {
       logger.error("Configuration error: 'reminder_role' value not found.");
       return;
     }
 
-    // We retrieve the channel ID where reminders should be sent.
     const reminderChannelId = await getValue('reminder_channel');
     if (!reminderChannelId) {
       logger.error("Configuration error: 'reminder_channel' value not found.");
       return;
     }
 
+    // Calculate scheduled time for the reminder
     const scheduledTime = dayjs().add(delay, 'millisecond');
     const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
-    // We generate a unique identifier for the reminder to track it in the database.
+    // Generate a unique ID for this reminder
     const reminderId = randomUUID();
 
-    // We attempt to retrieve the channel object using the cached channels or by fetching it.
+    // Get the reminder channel
     let channel;
     try {
       channel = message.client.channels.cache.get(reminderChannelId);
@@ -90,33 +90,32 @@ async function handleReminder(message, delay) {
       return;
     }
 
-    // We send an immediate confirmation message in the designated channel to acknowledge the bump.
+    // Send confirmation message
     await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE.replace('%s', unixTimestamp)}`);
     logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
 
-    // Delete any existing reminders before adding the new one
+    // Clean up any existing reminders
     await pool.query(
       `DELETE FROM main.reminder_recovery WHERE remind_at > NOW()`
     );
     logger.debug("Cleaned up existing reminders.");
 
-    // Store only reminder_id and remind_at
+    // Store the new reminder in the database for recovery
     await pool.query(
       `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
       [reminderId, scheduledTime.toISOString()]
     );
 
-    // We schedule the final reminder message after the specified delay.
+    // Schedule the reminder notification
     setTimeout(async () => {
       try {
-        // Send the new bump reminder
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent scheduled bump reminder ping.", {
           role: reminderRole,
           channelId: reminderChannelId
         });
 
-        // We delete the reminder from the recovery table after it's sent
+        // Clean up the reminder data after sending
         await pool.query(
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderId]
@@ -139,18 +138,16 @@ async function handleReminder(message, delay) {
 }
 
 /**
- * Reschedules stored bump reminders after a potential downtime or restart.
- *
- * We retrieve the stored reminder from the reminder_recovery table.
- * We then check the reminder's scheduled time using day.js and calculate the delay until it should be sent.
- * If the scheduled time has already passed, we skip rescheduling.
- * Otherwise, we set up a timeout to send the reminder message at the appropriate time.
- *
- * @param {Client} client - The Discord client instance used to fetch channels.
+ * Reschedules existing reminders when the bot restarts.
+ * Used for recovery to ensure reminders persist across bot restarts.
+ * 
+ * @async
+ * @param {Client} client - Discord client object
+ * @returns {Promise<void>}
  */
 async function rescheduleReminder(client) {
   try {
-    // We retrieve the configuration values for the channel and role.
+    // Retrieve reminder configuration
     const reminderChannelId = await getValue("reminder_channel");
     const reminderRole = await getValue("reminder_role");
     
@@ -164,14 +161,14 @@ async function rescheduleReminder(client) {
       return;
     }
 
-    // Get the latest reminder data for this channel
+    // Get the most recent reminder that needs to be rescheduled
     const reminderData = await getLatestReminderData();
     if (!reminderData) {
       logger.debug("No stored bump reminders found for rescheduling.");
       return;
     }
     
-    // We retrieve the channel object from cache or by fetching from Discord.
+    // Get the reminder channel
     let channel;
     try {
       channel = client.channels.cache.get(reminderChannelId);
@@ -186,6 +183,7 @@ async function rescheduleReminder(client) {
       return;
     }
     
+    // Calculate how much time is left until the reminder should trigger
     const scheduledTime = dayjs(reminderData.remind_at);
     const now = dayjs();
     const delay = scheduledTime.diff(now, 'millisecond');
@@ -196,20 +194,19 @@ async function rescheduleReminder(client) {
       delay 
     });
     
-    // If the scheduled time has passed, we skip rescheduling
+    // Skip overdue reminders
     if (delay < 0) {
       logger.debug("Skipping overdue reminder.", { reminder_id: reminderData.reminder_id });
       return;
     }
     
-    // We reschedule the reminder to send the bump message after the computed delay.
+    // Schedule the reminder
     setTimeout(async () => {
       try {
-        // Send the new reminder message
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
         logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminderData.reminder_id });
 
-        // We delete the reminder from the recovery table after it's sent
+        // Clean up the reminder data after sending
         await pool.query(
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderData.reminder_id]
@@ -237,37 +234,33 @@ async function rescheduleReminder(client) {
 }
 
 /**
- * We create a new reminder for a user.
- * This function handles the creation and scheduling of user reminders.
- *
- * We validate the reminder text and user ID before creating the reminder.
- * We ensure the reminder text is not too long and the user hasn't exceeded their reminder limit.
- * We store the reminder in the database and schedule it for the specified time.
- *
- * @param {string} userId - The ID of the user creating the reminder
- * @param {string} reminderText - The text content of the reminder
- * @param {Date} reminderTime - When the reminder should be triggered
- * @param {Client} client - The Discord client instance
+ * Creates a new user-defined reminder.
+ * 
+ * @async
+ * @param {string} userId - Discord user ID
+ * @param {string} reminderText - Text content of the reminder
+ * @param {Date|string} reminderTime - When to send the reminder
+ * @param {Client} client - Discord client object
  * @returns {Promise<Object>} The created reminder object
- * @throws {Error} If the reminder cannot be created
+ * @throws {Error} If reminder validation fails or database operation fails
  */
 async function createReminder(userId, reminderText, reminderTime, client) {
   try {
-    // We validate the reminder text length.
+    // Validate reminder text length
     if (reminderText.length > MAX_REMINDER_LENGTH) {
       throw new Error(`Reminder text must be ${MAX_REMINDER_LENGTH} characters or less.`);
     }
 
-    // We check if the user has reached their reminder limit.
+    // Check user's reminder count against the maximum allowed
     const userReminders = await getUserReminders(userId);
     if (userReminders.length >= MAX_REMINDER_COUNT) {
       throw new Error(`You can only have ${MAX_REMINDER_COUNT} active reminders at a time.`);
     }
 
-    // We create the reminder in the database.
+    // Add the reminder to the database
     const reminder = await addReminder(userId, reminderText, reminderTime);
     
-    // We schedule the reminder notification.
+    // Schedule notification for the reminder
     scheduleReminderNotification(reminder, client);
     
     return reminder;
@@ -278,32 +271,29 @@ async function createReminder(userId, reminderText, reminderTime, client) {
 }
 
 /**
- * We schedule a reminder notification to be sent at the specified time.
- * This function handles the timing and delivery of reminder notifications.
- *
- * We calculate the delay until the reminder time and set a timeout to send the notification.
- * We ensure the reminder is still valid before sending the notification.
- *
- * @param {Object} reminder - The reminder object to schedule
- * @param {Client} client - The Discord client instance
+ * Schedules a notification for a user reminder.
+ * Sets up a timeout to send a DM to the user when the reminder is due.
+ * 
+ * @param {Object} reminder - Reminder object with id, user_id, reminder_text, and reminder_time
+ * @param {Client} client - Discord client object
+ * @returns {void}
  */
 function scheduleReminderNotification(reminder, client) {
   const now = new Date();
   const reminderTime = new Date(reminder.reminder_time);
   const delay = reminderTime.getTime() - now.getTime();
 
-  // We only schedule if the reminder time is in the future.
   if (delay > 0) {
     setTimeout(async () => {
       try {
-        // We verify the reminder still exists before sending.
+        // Verify reminder still exists in database
         const existingReminder = await getReminder(reminder.id);
         if (!existingReminder) {
           logger.debug(`Reminder ${reminder.id} no longer exists, skipping notification.`);
           return;
         }
 
-        // We send the reminder notification.
+        // Send DM to user
         const user = await client.users.fetch(reminder.user_id);
         if (user) {
           const embed = new EmbedBuilder()
@@ -323,14 +313,12 @@ function scheduleReminderNotification(reminder, client) {
 }
 
 /**
- * We get all active reminders for a user.
- * This function retrieves and formats the user's reminders for display.
- *
- * We fetch the reminders from the database and format them for easy reading.
- * We include the reminder text, time, and ID in the formatted output.
- *
- * @param {string} userId - The ID of the user to get reminders for
- * @returns {Promise<Array>} Array of formatted reminder objects
+ * Retrieves all reminders for a specific user.
+ * 
+ * @async
+ * @param {string} userId - Discord user ID
+ * @returns {Promise<Array>} List of the user's reminders with formatted data
+ * @throws {Error} If database operation fails
  */
 async function getUserReminders(userId) {
   try {
@@ -348,27 +336,29 @@ async function getUserReminders(userId) {
 }
 
 /**
- * We delete a reminder by its ID.
- * This function handles the removal of reminders from the system.
- *
- * We verify the reminder exists and belongs to the user before deleting.
- * We remove the reminder from the database and cancel any pending notifications.
- *
- * @param {string} reminderId - The ID of the reminder to delete
- * @param {string} userId - The ID of the user requesting the deletion
- * @returns {Promise<boolean>} Whether the reminder was successfully deleted
+ * Deletes a specific reminder.
+ * Validates ownership before deletion.
+ * 
+ * @async
+ * @param {string} reminderId - ID of the reminder to delete
+ * @param {string} userId - Discord user ID requesting deletion
+ * @returns {Promise<boolean>} True if deletion was successful
+ * @throws {Error} If reminder doesn't exist, user doesn't own the reminder, or database operation fails
  */
 async function deleteReminder(reminderId, userId) {
   try {
+    // Verify reminder exists
     const reminder = await getReminder(reminderId);
     if (!reminder) {
       throw new Error('Reminder not found.');
     }
 
+    // Verify user owns the reminder
     if (reminder.user_id !== userId) {
       throw new Error('You can only delete your own reminders.');
     }
 
+    // Delete the reminder
     await removeReminder(reminderId);
     return true;
   } catch (error) {
@@ -377,10 +367,6 @@ async function deleteReminder(reminderId, userId) {
   }
 }
 
-/**
- * We export the reminder utility functions for use throughout the application.
- * This module provides consistent reminder management capabilities.
- */
 module.exports = {
   createReminder,
   getUserReminders,
@@ -388,4 +374,4 @@ module.exports = {
   scheduleReminderNotification,
   handleReminder,
   rescheduleReminder
-};
+}; 
