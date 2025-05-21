@@ -5,6 +5,7 @@ const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 const Sentry = require('./sentry');
 const { initializeDatabase } = require('./utils/database');
+const deployCommands = require('./deploy-commands');
 
 // We define these configuration constants for consistent behavior throughout the application.
 const COMMAND_EXTENSION = '.js';
@@ -144,12 +145,32 @@ client.once('ready', async () => {
 });
 
 // We log the bot in using the token from the config file.
-client.login(config.token).catch(err => {
-  Sentry.captureException(err, {
-    extra: { context: 'bot_login_failure' }
-  });
-  logger.error("Error logging in:", { error: err });
-});
+async function startBot() {
+  try {
+    // We deploy commands if enabled in config
+    if (config.settings.deployCommandsOnStart) {
+      logger.info('Deploying commands before bot start...');
+      await deployCommands();
+      logger.info('Commands deployed successfully');
+    }
+
+    // We initialize the database
+    await initializeDatabase();
+    logger.info('Database initialized successfully');
+
+    // We log in the bot
+    await client.login(config.token);
+  } catch (error) {
+    Sentry.captureException(error, {
+      extra: { context: 'bot_startup_failure' }
+    });
+    logger.error("Error during bot startup:", { error });
+    process.exit(1);
+  }
+}
+
+// We start the bot
+startBot();
 
 // We add global unhandled error handlers to prevent the bot from crashing silently.
 process.on('uncaughtException', (error) => {

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -47,7 +47,8 @@ function formatTime(minutes) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('yappers')
-    .setDescription('Display top chatters, channels, and voice channels statistics'),
+    .setDescription('Display top chatters, channels, and voice channels statistics')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   /**
    * We execute the /yappers command.
