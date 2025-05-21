@@ -13,7 +13,7 @@ const deployCommands = require('../deploy-commands');
 
 // We define the bot's activity and status for consistent presence.
 const BOT_ACTIVITY = {
-  name: "for ways to assist! ❤️",
+  name: "for ways to help my Frens! ❤️",
   type: ActivityType.Watching
 };
 const BOT_STATUS = "online";
@@ -68,7 +68,7 @@ module.exports = {
   async execute(client) {
     try {
       // We set the bot's activity status to indicate it's ready for use.
-      client.user.setActivity('Da Frens', { type: ActivityType.Playing });
+      client.user.setActivity(BOT_ACTIVITY.name, { type: BOT_ACTIVITY.type });
       logger.info(`Logged in as ${client.user.tag}`);
 
       // We initialize the database connection for data persistence.
