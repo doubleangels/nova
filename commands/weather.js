@@ -112,7 +112,7 @@ module.exports = {
       // We defer the reply to allow time for processing and API calls.
       await interaction.deferReply();
       
-      logger.debug("Weather command received.", { 
+      logger.debug("Weather command received:", { 
         userId: interaction.user.id,
         userTag: interaction.user.tag 
       });
@@ -134,7 +134,7 @@ module.exports = {
       
       const units = unitsOption === 'imperial' ? 'us' : 'si';
       
-      logger.debug("Processing weather request.", { 
+      logger.debug("Processing weather request:", { 
         place, 
         units: unitsOption,
         forecastDays,
@@ -145,7 +145,7 @@ module.exports = {
       const geocodeResult = await getGeocodingData(place);
       
       if (geocodeResult.error) {
-        logger.warn("Failed to get coordinates for location.", { 
+        logger.warn("Failed to get coordinates for location:", { 
           place, 
           errorType: geocodeResult.type,
           userId: interaction.user.id 
@@ -161,7 +161,7 @@ module.exports = {
       const { location, formattedAddress } = geocodeResult;
       const { lat, lng: lon } = location;
       
-      logger.debug("Location coordinates retrieved.", { 
+      logger.debug("Location coordinates retrieved:", { 
         formattedAddress, 
         lat, 
         lon 
@@ -171,7 +171,7 @@ module.exports = {
       const weatherData = await this.fetchWeatherData(lat, lon, units);
       
       if (!weatherData) {
-        logger.warn("Failed to fetch weather data.", { 
+        logger.warn("Failed to fetch weather data:", { 
           place: formattedAddress, 
           lat, 
           lon 
@@ -197,7 +197,7 @@ module.exports = {
       // We send the embed as the reply.
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Weather information sent successfully.", { 
+      logger.info("Weather information sent successfully:", { 
         place: formattedAddress, 
         userId: interaction.user.id,
         units: unitsOption,
@@ -229,7 +229,7 @@ module.exports = {
       });
       const requestUrl = `${url}?${params.toString()}`;
       
-      logger.debug("Making PirateWeather API request.", { requestUrl });
+      logger.debug("Making PirateWeather API request:", { requestUrl });
       
       // We fetch weather data from PirateWeather using axios with a timeout.
       const response = await axios.get(requestUrl, { timeout: 5000 });
@@ -238,14 +238,14 @@ module.exports = {
         logger.debug("Weather API data received successfully.");
         return response.data;
       } else {
-        logger.warn("PirateWeather API returned non-200 status.", { 
+        logger.warn("PirateWeather API returned non-200 status:", { 
           status: response.status,
           statusText: response.statusText
         });
         return null;
       }
     } catch (error) {
-      logger.error("Error fetching weather data from API.", { 
+      logger.error("Error fetching weather data from API:", { 
         error: error.message,
         lat,
         lon
@@ -491,7 +491,7 @@ module.exports = {
           ephemeral: true
         });
     } catch (followUpError) {
-      logger.error("Failed to send error response for weather command.", {
+      logger.error("Failed to send error response for weather command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

@@ -73,7 +73,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("User messages command received.", { 
+      logger.debug("User messages command received:", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag,
         guildName: interaction.guild?.name,
@@ -82,7 +82,7 @@ module.exports = {
       
       // We check if the command is being used in a DM, where it's not supported.
       if (!interaction.guild) {
-        logger.warn("Command used in DMs where it's not supported.", {
+        logger.warn("Command used in DMs where it's not supported:", {
           userId: interaction.user.id,
           userTag: interaction.user.tag
         });
@@ -108,7 +108,7 @@ module.exports = {
       
       const { targetUser, targetChannel, messageLimit, filterText, dayLimit } = commandOptions;
       
-      logger.info("Fetching messages for user.", { 
+      logger.info("Fetching messages for user:", { 
         targetUserTag: targetUser.tag, 
         targetUserId: targetUser.id,
         requestedByUserTag: interaction.user.tag,
@@ -128,7 +128,7 @@ module.exports = {
       
       // We handle the case where no messages are found.
       if (allMessages.length === 0) {
-        logger.info("No messages found for user.", { 
+        logger.info("No messages found for user:", { 
           targetUserTag: targetUser.tag,
           channelName: targetChannel.name
         });
@@ -165,7 +165,7 @@ module.exports = {
       // We generate the embeds for pagination.
       const embeds = this.createMessageEmbeds(allMessages, targetUser, targetChannel);
       
-      logger.debug("Created message embeds.", { 
+      logger.debug("Created message embeds:", { 
         embedCount: embeds.length, 
         messagesPerPage: MESSAGES_PER_PAGE,
         totalMessages: allMessages.length
@@ -194,7 +194,7 @@ module.exports = {
         }
       );
       
-      logger.info("User messages response sent.", { 
+      logger.info("User messages response sent:", { 
         messageCount: allMessages.length,
         pageCount: embeds.length,
         targetUserTag: targetUser.tag
@@ -220,7 +220,7 @@ module.exports = {
     const filterText = interaction.options.getString('contains');
     const dayLimit = interaction.options.getInteger('days');
     
-    logger.debug("Command parameters retrieved.", { 
+    logger.debug("Command parameters retrieved:", { 
       targetUserTag: targetUser?.tag,
       targetUserId: targetUser?.id,
       targetChannelName: targetChannel?.name,
@@ -232,7 +232,7 @@ module.exports = {
     
     // We verify that the target user exists.
     if (!targetUser) {
-      logger.warn("Target user not found.", { 
+      logger.warn("Target user not found:", { 
         requestedByUserId: interaction.user.id,
         requestedByUserTag: interaction.user.tag 
       });
@@ -245,7 +245,7 @@ module.exports = {
     
     // We check if the specified channel is a valid text channel.
     if (targetChannel.type !== ChannelType.GuildText && targetChannel.type !== ChannelType.GuildAnnouncement) {
-      logger.warn("Invalid channel type specified.", { 
+      logger.warn("Invalid channel type specified:", { 
         channelName: targetChannel.name, 
         channelId: targetChannel.id,
         channelType: targetChannel.type
@@ -260,7 +260,7 @@ module.exports = {
     // We check if the user has permission to view the channel.
     const member = interaction.member;
     if (!targetChannel.permissionsFor(member).has(PermissionFlagsBits.ViewChannel)) {
-      logger.warn("User lacks permission to view the specified channel.", {
+      logger.warn("User lacks permission to view the specified channel:", {
         userTag: interaction.user.tag,
         userId: interaction.user.id,
         channelName: targetChannel.name,
@@ -438,7 +438,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for usermessages command.", {
+      logger.error("Failed to send error response for usermessages command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

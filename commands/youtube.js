@@ -70,7 +70,7 @@ module.exports = {
 
       // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
-      logger.info(`/youtube command initiated.`, { 
+      logger.info("/youtube command initiated:", { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -85,7 +85,7 @@ module.exports = {
       const searchResults = await this.searchYouTube(query, contentType, sortMethod, duration);
       
       if (!searchResults || searchResults.length === 0) {
-        logger.warn("No search results found for query.", { query });
+        logger.warn("No search results found for query:", { query });
         return await interaction.editReply({ 
           content: ERROR_MESSAGES.NO_RESULTS_FOUND,
           ephemeral: true
@@ -139,7 +139,7 @@ module.exports = {
         viewCount: parseInt(response.data.items[0].statistics.viewCount)
       };
     } catch (error) {
-      logger.error("Failed to get video details.", {
+      logger.error("Failed to get video details:", {
         error: error.message,
         videoId
       });
@@ -216,7 +216,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for youtube command.", {
+      logger.error("Failed to send error response for youtube command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
@@ -316,7 +316,7 @@ module.exports = {
       
       return results;
     } catch (error) {
-      logger.error("YouTube API search failed.", {
+      logger.error("YouTube API search failed:", {
         error: error.message,
         query,
         contentType
@@ -370,7 +370,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich video results.", {
+      logger.error("Failed to enrich video results:", {
         error: error.message
       });
       return videos;
@@ -421,7 +421,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich channel results.", {
+      logger.error("Failed to enrich channel results:", {
         error: error.message
       });
       return channels;
@@ -472,7 +472,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich playlist results.", {
+      logger.error("Failed to enrich playlist results:", {
         error: error.message
       });
       return playlists;

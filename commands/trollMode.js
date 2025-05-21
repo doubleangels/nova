@@ -70,7 +70,7 @@ module.exports = {
       await interaction.deferReply();
       
       const subcommand = interaction.options.getSubcommand();
-      logger.info("Trollmode command received.", {
+      logger.info("Trollmode command received:", {
         userId: interaction.user.id,
         userTag: interaction.user.tag,
         guildId: interaction.guildId,
@@ -100,7 +100,7 @@ module.exports = {
     const age = interaction.options.getInteger('age') ?? DEFAULT_TROLL_MODE_AGE_DAYS;
     const isEnabled = enabledInput.toLowerCase() === 'enabled';
     
-    logger.debug("Parsed trollmode command parameters.", {
+    logger.debug("Parsed trollmode command parameters:", {
       isEnabled,
       age,
       userId: interaction.user.id,
@@ -109,7 +109,7 @@ module.exports = {
       
     // We validate the age parameter is within acceptable bounds.
     if (age < MIN_ACCOUNT_AGE || age > MAX_ACCOUNT_AGE) {
-      logger.warn("Invalid age parameter for trollmode.", {
+      logger.warn("Invalid age parameter for trollmode:", {
         age,
         userId: interaction.user.id,
         min: MIN_ACCOUNT_AGE,
@@ -132,7 +132,7 @@ module.exports = {
         setValue(TROLL_MODE_ACCOUNT_AGE_KEY, age)
       ]);
       
-      logger.debug("Trollmode settings saved to database.", {
+      logger.debug("Trollmode settings saved to database:", {
         isEnabled,
         age,
         enabledKey: TROLL_MODE_ENABLED_KEY,
@@ -151,7 +151,7 @@ module.exports = {
     // We reply to the interaction with the update confirmation.
     await interaction.editReply(responseMessage);
     
-    logger.info("Trollmode settings updated successfully.", {
+    logger.info("Trollmode settings updated successfully:", {
       userId: interaction.user.id,
       userTag: interaction.user.tag,
       guildId: interaction.guildId,
@@ -179,7 +179,7 @@ module.exports = {
       
       await interaction.editReply(statusMessage);
       
-      logger.info("Trollmode status check completed successfully.", {
+      logger.info("Trollmode status check completed successfully:", {
         userId: interaction.user.id,
         userTag: interaction.user.tag,
         guildId: interaction.guildId,
@@ -187,7 +187,7 @@ module.exports = {
         age: settings.age
       });
     } catch (dbError) {
-      logger.error("Database operation failed while retrieving trollmode settings.", { 
+      logger.error("Database operation failed while retrieving trollmode settings:", { 
         error: dbError.message, 
         stack: dbError.stack,
         userId: interaction.user.id,
@@ -217,7 +217,7 @@ module.exports = {
         age: age ? Number(age) : DEFAULT_TROLL_MODE_AGE_DAYS
       };
     } catch (error) {
-      logger.error("Failed to retrieve current troll mode settings.", {
+      logger.error("Failed to retrieve current troll mode settings:", {
         error: error.message,
         stack: error.stack
       });
@@ -309,7 +309,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for trollmode command.", {
+      logger.error("Failed to send error response for trollmode command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

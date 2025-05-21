@@ -49,7 +49,7 @@ module.exports = {
       // We get the search query from the interaction options.
       const query = interaction.options.getString('query');
       
-      logger.info("Wikipedia command initiated.", {
+      logger.info("Wikipedia command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id,
         query
@@ -112,7 +112,7 @@ module.exports = {
       // We send the embed to the user.
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Wikipedia command completed successfully.", {
+      logger.info("Wikipedia command completed successfully:", {
         userId: interaction.user.id,
         query,
         articleTitle: article.title
@@ -145,14 +145,14 @@ module.exports = {
       
       const requestUrl = `${WIKIPEDIA_API_BASE_URL}?${params.toString()}`;
       
-      logger.debug("Making Wikipedia API request.", { 
+      logger.debug("Making Wikipedia API request:", { 
         requestUrl
       });
       
       // We make the API request using axios with a timeout for safety.
       const response = await axios.get(requestUrl, { timeout: WIKIPEDIA_API_TIMEOUT });
       
-      logger.debug("Wikipedia API response received.", { 
+      logger.debug("Wikipedia API response received:", { 
         status: response.status
       });
       
@@ -170,7 +170,7 @@ module.exports = {
       
       return [];
     } catch (error) {
-      logger.error("Error fetching Wikipedia results.", { 
+      logger.error("Error fetching Wikipedia results:", { 
         error: error.message,
         query
       });
@@ -240,7 +240,7 @@ module.exports = {
       components: components
     });
     
-    logger.info("Wikipedia search results sent successfully.", { 
+    logger.info("Wikipedia search results sent successfully:", { 
       userId: interaction.user.id,
       userTag: interaction.user.tag,
       query,
@@ -392,7 +392,7 @@ module.exports = {
       expiry: Date.now() + WIKIPEDIA_CACHE_TTL
     });
     
-    logger.debug("Cached Wikipedia results.", { 
+    logger.debug("Cached Wikipedia results:", { 
       cacheKey,
       resultCount: results.length,
       expiryMinutes: WIKIPEDIA_CACHE_TTL / 60000
@@ -425,7 +425,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for wikipedia command.", {
+      logger.error("Failed to send error response for wikipedia command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

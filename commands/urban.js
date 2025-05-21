@@ -39,7 +39,7 @@ module.exports = {
             // We get the search term from the interaction options.
             const term = interaction.options.getString('term');
             
-            logger.info("Urban Dictionary command initiated.", {
+            logger.info("Urban Dictionary command initiated:", {
                 userId: interaction.user.id,
                 guildId: interaction.guild?.id,
                 term
@@ -75,7 +75,7 @@ module.exports = {
             // We send the embed to the user.
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("Urban Dictionary command completed successfully.", {
+            logger.info("Urban Dictionary command completed successfully:", {
                 userId: interaction.user.id,
                 term
             });
@@ -117,7 +117,7 @@ module.exports = {
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for urban command.", {
+            logger.error("Failed to send error response for urban command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id

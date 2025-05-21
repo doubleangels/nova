@@ -59,7 +59,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("Yappers command received.", {
+      logger.debug("Yappers command received:", {
         userId: interaction.user.id,
         userTag: interaction.user.tag,
         guildName: interaction.guild?.name,
@@ -68,7 +68,7 @@ module.exports = {
 
       // We check if the command is being used in a DM, where it's not supported.
       if (!interaction.guild) {
-        logger.warn("Command used in DMs where it's not supported.", {
+        logger.warn("Command used in DMs where it's not supported:", {
           userId: interaction.user.id,
           userTag: interaction.user.tag
         });
@@ -84,23 +84,23 @@ module.exports = {
       logger.debug("Deferred reply for yappers command.");
 
       // We fetch top message senders from the database.
-      logger.debug("Fetching top message senders.", { limit: TOP_USERS_LIMIT });
+      logger.debug("Fetching top message senders:", { limit: TOP_USERS_LIMIT });
       const topUsers = await db.getTopMessageSenders(TOP_USERS_LIMIT);
-      logger.debug("Retrieved top message senders.", { 
+      logger.debug("Retrieved top message senders:", { 
         count: topUsers.length,
         users: topUsers.map(u => ({ username: u.username, count: u.message_count }))
       });
 
       // We fetch top voice users from the database.
-      logger.debug("Fetching top voice users.", { limit: TOP_VOICE_LIMIT });
+      logger.debug("Fetching top voice users:", { limit: TOP_VOICE_LIMIT });
       const topVoiceUsers = await db.getTopVoiceUsers(TOP_VOICE_LIMIT);
-      logger.debug("Retrieved top voice users.", {
+      logger.debug("Retrieved top voice users:", {
         count: topVoiceUsers.length,
         users: topVoiceUsers.map(u => ({ username: u.username, seconds: u.seconds_spent }))
       });
 
       // We fetch top channels from the database.
-      logger.debug("Fetching top message channels.", { limit: TOP_CHANNELS_LIMIT });
+      logger.debug("Fetching top message channels:", { limit: TOP_CHANNELS_LIMIT });
       const topChannels = await db.query(
         `SELECT channel_id, channel_name, message_count 
          FROM main.message_channel_counts 
@@ -108,13 +108,13 @@ module.exports = {
          LIMIT $1`,
         [TOP_CHANNELS_LIMIT]
       );
-      logger.debug("Retrieved top message channels.", {
+      logger.debug("Retrieved top message channels:", {
         count: topChannels.rows.length,
         channels: topChannels.rows.map(c => ({ name: c.channel_name, count: c.message_count }))
       });
 
       // We fetch top voice channels from the database.
-      logger.debug("Fetching top voice channels.", { limit: TOP_VOICE_LIMIT });
+      logger.debug("Fetching top voice channels:", { limit: TOP_VOICE_LIMIT });
       const topVoiceChannels = await db.query(
         `SELECT channel_id, channel_name, 
          total_seconds / 60 as total_minutes
@@ -123,7 +123,7 @@ module.exports = {
          LIMIT $1`,
         [TOP_VOICE_LIMIT]
       );
-      logger.debug("Retrieved top voice channels.", {
+      logger.debug("Retrieved top voice channels:", {
         count: topVoiceChannels.rows.length,
         channels: topVoiceChannels.rows.map(c => ({ name: c.channel_name, minutes: c.total_minutes }))
       });
@@ -166,7 +166,7 @@ module.exports = {
       logger.debug("Sending statistics embed.");
       await interaction.editReply({ embeds: [embed] });
 
-      logger.info("Yappers statistics sent successfully.", {
+      logger.info("Yappers statistics sent successfully:", {
         guildId: interaction.guild.id,
         guildName: interaction.guild.name,
         stats: {
@@ -191,7 +191,7 @@ module.exports = {
    * @returns {Promise<void>} Resolves when the error is handled.
    */
   async handleError(interaction, error) {
-    logger.error("Error in yappers command.", {
+    logger.error("Error in yappers command:", {
       error: error.message,
       stack: error.stack,
       guildId: interaction.guild?.id,
