@@ -134,13 +134,13 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = ERROR_MESSAGES.DOG_API_ERROR;
     } else if (error.message === "NO_IMAGE_URL") {
-      errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
+      errorMessage = ERROR_MESSAGES.DOG_NO_IMAGE;
     } else if (error.message === "IMAGE_FETCH_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = ERROR_MESSAGES.DOG_IMAGE_FETCH_ERROR;
     } else if (axios.isAxiosError(error) && !error.response) {
-      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
     }
     
     try {
@@ -149,7 +149,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for dog command.", {
+      logger.error("Failed to send error response for dog command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

@@ -5,6 +5,7 @@ const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const Sentry = require('../sentry');
+const { logError } = require('../errors');
 
 // We define the welcome embed color for consistent visual branding.
 const WELCOME_EMBED_COLOR = 0xCD41FF;
@@ -68,6 +69,13 @@ module.exports = {
       logger.error(`Error processing new member ${member.user.tag}:`, {
         error: error.message,
         stack: error.stack
+      });
+      
+      // We log the error with the appropriate error message
+      logError(error, 'guildMemberAdd', {
+        memberId: member.id,
+        memberTag: member.user.tag,
+        guildId: member.guild.id
       });
     }
   }

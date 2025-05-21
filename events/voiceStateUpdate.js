@@ -1,9 +1,11 @@
 const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('voiceStateUpdate.js');
 const { Pool } = require('pg');
 const config = require('../config');
 const { randomUUID } = require('crypto');
 const { addVoiceSessionToStats, addVoiceSessionToChannelStats } = require('../utils/database');
+const { logError } = require('../errors');
+const Sentry = require('../sentry');
 
 // We set up a connection pool for direct SQL queries to the database.
 const pool = new Pool({
@@ -148,6 +150,15 @@ module.exports = {
       logger.error(`Error processing voice state update for ${oldState.member.user.tag}:`, {
         error: error.message,
         stack: error.stack
+      });
+      
+      // We log the error with the appropriate error message
+      logError(error, 'voiceStateUpdate', {
+        userId: oldState.member?.id,
+        userTag: oldState.member?.user?.tag,
+        guildId: oldState.guild?.id,
+        oldChannelId: oldState.channelId,
+        newChannelId: newState.channelId
       });
     }
   }

@@ -296,6 +296,14 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.IMDB_API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "NO_RESULTS") {
+      errorMessage = ERROR_MESSAGES.IMDB_NO_RESULTS;
+    } else if (error.message === "INVALID_TITLE") {
       errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (error.code === 'ECONNABORTED') {
       errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;

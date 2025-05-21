@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
 const Sentry = require('../sentry');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 // We define these configuration constants for database connectivity and operations.
 const SCHEMA = 'main';

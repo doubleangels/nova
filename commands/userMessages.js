@@ -432,9 +432,21 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "DM_NOT_SUPPORTED") {
+      errorMessage = ERROR_MESSAGES.DM_NOT_SUPPORTED;
+    } else if (error.message === "USER_NOT_FOUND") {
+      errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+    } else if (error.message === "INVALID_CHANNEL_TYPE") {
+      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
+    } else if (error.message === "NO_PERMISSION_TO_VIEW_CHANNEL") {
+      errorMessage = ERROR_MESSAGES.NO_PERMISSION_TO_VIEW_CHANNEL;
+    }
+    
     try {
       await interaction.editReply({ 
-        content: getErrorMessage(error),
+        content: errorMessage,
         ephemeral: true 
       });
     } catch (followUpError) {
@@ -445,7 +457,7 @@ module.exports = {
       });
       
       await interaction.reply({ 
-        content: getErrorMessage(error),
+        content: errorMessage,
         ephemeral: true 
       }).catch(() => {
         // We silently catch if all error handling attempts fail.

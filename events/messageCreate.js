@@ -1,9 +1,10 @@
 const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('messageCreate.js');
 const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementChannelMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
+const { logError } = require('../errors');
 
 // We handle new messages and process them according to our rules.
 module.exports = {
@@ -81,6 +82,14 @@ module.exports = {
         }
       });
       logger.error("Error processing messageCreate event:", { error });
+      
+      // We log the error with the appropriate error message
+      logError(error, 'messageCreate', {
+        messageId: message.id,
+        authorId: message.author?.id,
+        channelId: message.channel?.id,
+        guildId: message.guild?.id
+      });
     }
   }
 };

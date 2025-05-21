@@ -262,7 +262,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for time difference command.", {
+      logger.error("Failed to send error response for time difference command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

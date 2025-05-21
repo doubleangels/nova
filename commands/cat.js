@@ -121,11 +121,11 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = ERROR_MESSAGES.CAT_API_ERROR;
     } else if (error.message === "INVALID_RESPONSE") {
-      errorMessage = ERROR_MESSAGES.INVALID_RESPONSE;
+      errorMessage = ERROR_MESSAGES.CAT_INVALID_IMAGE;
     } else if (error.message === "NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+      errorMessage = ERROR_MESSAGES.CAT_NETWORK_ERROR;
     }
     
     try {
@@ -134,7 +134,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for cat command.", {
+      logger.error("Failed to send error response for cat command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

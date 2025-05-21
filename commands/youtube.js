@@ -195,19 +195,15 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
-    } else if (error.code === 'ECONNABORTED') {
-      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
-    } else if (axios.isAxiosError(error) && error.response) {
-      if (error.response.status === 403) {
-        errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
-      } else if (error.response.status === 429) {
-        errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
-      } else if (error.response.status >= 500) {
-        errorMessage = ERROR_MESSAGES.API_ERROR;
-      }
-    } else if (axios.isAxiosError(error) && !error.response) {
-      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+      errorMessage = ERROR_MESSAGES.YOUTUBE_API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "NO_RESULTS") {
+      errorMessage = ERROR_MESSAGES.YOUTUBE_NO_RESULTS;
+    } else if (error.message === "INVALID_VIDEO") {
+      errorMessage = ERROR_MESSAGES.YOUTUBE_INVALID_VIDEO;
     }
     
     try {

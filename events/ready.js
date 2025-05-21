@@ -7,6 +7,7 @@ const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const { initializeDatabase } = require('../utils/database');
 const Sentry = require('../sentry');
+const { logError } = require('../utils/errorUtils');
 
 // We import the deploy-commands module to register slash commands with Discord.
 const deployCommands = require('../deploy-commands');
@@ -90,6 +91,12 @@ module.exports = {
       logger.error('Error during bot initialization:', { 
         error: error.message,
         stack: error.stack
+      });
+      
+      // We log the error with the appropriate error message
+      logError(error, 'ready', {
+        clientId: client.user?.id,
+        clientTag: client.user?.tag
       });
     }
   }

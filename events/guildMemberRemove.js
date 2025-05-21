@@ -1,7 +1,8 @@
 const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('guildMemberRemove.js');
 const { removeTrackedMember } = require('../utils/database');
 const Sentry = require('../sentry');
+const { logError } = require('../errors');
 
 /**
  * We handle members leaving the server.
@@ -46,6 +47,13 @@ module.exports = {
       logger.error(`Error processing member departure ${member.user.tag}:`, {
         error: error.message,
         stack: error.stack
+      });
+      
+      // We log the error with the appropriate error message
+      logError(error, 'guildMemberRemove', {
+        memberId: member.id,
+        memberTag: member.user.tag,
+        guildId: member.guild.id
       });
     }
   }

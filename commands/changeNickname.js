@@ -131,7 +131,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
+                message: ERROR_MESSAGES.CHANGENICKNAME_INSUFFICIENT_PERMISSIONS
             };
         }
 
@@ -142,7 +142,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "Nickname must be 32 characters or less."
+                message: ERROR_MESSAGES.CHANGENICKNAME_TOO_LONG
             };
         }
 
@@ -153,7 +153,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "Cannot change the server owner's nickname."
+                message: ERROR_MESSAGES.CHANGENICKNAME_OWNER
             };
         }
 
@@ -164,7 +164,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: "Cannot change the bot's nickname."
+                message: ERROR_MESSAGES.CHANGENICKNAME_BOT
             };
         }
 
@@ -181,7 +181,7 @@ module.exports = {
                 });
                 return {
                     success: false,
-                    message: "You cannot change the nickname of users with a higher or equal role."
+                    message: ERROR_MESSAGES.CHANGENICKNAME_ROLE_HIERARCHY
                 };
             }
         }

@@ -267,20 +267,34 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
+        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        
+        if (error.message === "CONFIG_MISSING") {
+            errorMessage = ERROR_MESSAGES.CONFIG_MISSING;
+        } else if (error.message === "INSUFFICIENT_PERMISSIONS") {
+            errorMessage = ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS;
+        } else if (error.message === "INVALID_ROLE_NAME") {
+            errorMessage = ERROR_MESSAGES.INVALID_ROLE_NAME;
+        } else if (error.message === "INVALID_COLOR") {
+            errorMessage = ERROR_MESSAGES.INVALID_COLOR;
+        } else if (error.message === "USER_NOT_FOUND") {
+            errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+        }
+        
         try {
             await interaction.editReply({ 
-                content: getErrorMessage(error),
+                content: errorMessage,
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for giveperms command.", {
+            logger.error("Failed to send error response for giveperms command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id
             });
             
             await interaction.reply({ 
-                content: getErrorMessage(error),
+                content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
                 // We silently catch if all error handling attempts fail.

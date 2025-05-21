@@ -4,6 +4,7 @@ const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 // We set up a pool for direct SQL queries for reminder_recovery.
 const pool = new Pool({
@@ -125,10 +126,8 @@ async function handleReminder(message, delay) {
     }, delay);
 
   } catch (error) {
-    logger.error("Unhandled error in handleReminder:", {
-      error: error.message,
-      stack: error.stack
-    });
+    logError('Failed to handle reminder', error);
+    throw new Error(ERROR_MESSAGES.REMINDER_CREATION_FAILED);
   }
 }
 
@@ -223,10 +222,8 @@ async function rescheduleReminder(client) {
       scheduledFor: new Date(Date.now() + delay).toISOString()
     });
   } catch (error) {
-    logger.error("Unhandled error in rescheduleReminder:", {
-      error: error.message,
-      stack: error.stack
-    });
+    logError('Failed to reschedule reminder', error);
+    throw new Error(ERROR_MESSAGES.REMINDER_RESCEDULE_FAILED);
   }
 }
 

@@ -200,7 +200,14 @@ module.exports = {
       userTag: interaction.user.tag
     });
 
-    const errorMessage = getErrorMessage(error);
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "DM_NOT_SUPPORTED") {
+      errorMessage = ERROR_MESSAGES.DM_NOT_SUPPORTED;
+    } else if (error.message === "DATABASE_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+    }
+    
     await interaction.editReply({
       content: errorMessage,
       ephemeral: true

@@ -6,6 +6,7 @@ const { DateTime } = require('luxon');
 const dayjs = require('dayjs');
 const moment = require('moment-timezone');
 const NodeCache = require('node-cache');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 // We define these configuration constants for consistent interaction with Google's services.
 const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
@@ -488,6 +489,33 @@ async function getCoordinates(place) {
     
     return [null, null];
   }
+}
+
+async function getLocationFromCoordinates(latitude, longitude) {
+    try {
+        // ... existing code ...
+    } catch (error) {
+        logError('Failed to get location from coordinates', error);
+        throw new Error(ERROR_MESSAGES.LOCATION_LOOKUP_FAILED);
+    }
+}
+
+async function getCoordinatesFromLocation(location) {
+    try {
+        // ... existing code ...
+    } catch (error) {
+        logError('Failed to get coordinates from location', error);
+        throw new Error(ERROR_MESSAGES.COORDINATES_LOOKUP_FAILED);
+    }
+}
+
+function validateCoordinates(latitude, longitude) {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        throw new Error(ERROR_MESSAGES.INVALID_COORDINATES);
+    }
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        throw new Error(ERROR_MESSAGES.COORDINATES_OUT_OF_RANGE);
+    }
 }
 
 module.exports = {

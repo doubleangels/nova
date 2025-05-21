@@ -414,9 +414,15 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
-    } else if (axios.isAxiosError(error) && !error.response) {
-      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+      errorMessage = ERROR_MESSAGES.WIKIPEDIA_API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "NO_RESULTS") {
+      errorMessage = ERROR_MESSAGES.WIKIPEDIA_NO_RESULTS;
+    } else if (error.message === "INVALID_QUERY") {
+      errorMessage = ERROR_MESSAGES.WIKIPEDIA_INVALID_QUERY;
     }
     
     try {
@@ -435,7 +441,7 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
+        // We silently catch if all error handling attempts fail.
       });
     }
   }

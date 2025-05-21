@@ -1,11 +1,12 @@
 const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('messageReactionAdd.js');
 const { getUserTimezone } = require('../utils/database');
 const { extractTimeReferences, convertTimeZones, formatConvertedTimes } = require('../utils/timeUtils');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const Sentry = require('../sentry');
+const { logError } = require('../errors');
 
 // We define configuration constants for consistent time conversion behavior.
 const CLOCK_EMOJI = '🕒';
@@ -67,6 +68,15 @@ module.exports = {
       logger.error(`Error processing reaction from ${user.tag}:`, {
         error: error.message,
         stack: error.stack
+      });
+      
+      // We log the error with the appropriate error message
+      logError(error, 'messageReactionAdd', {
+        userId: user.id,
+        userTag: user.tag,
+        messageId: reaction.message?.id,
+        channelId: reaction.message?.channel?.id,
+        guildId: reaction.message?.guild?.id
       });
     }
   }

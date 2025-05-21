@@ -81,20 +81,22 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
+        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        
         try {
             await interaction.editReply({ 
-                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
+                content: errorMessage,
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for coinflip command.", {
+            logger.error("Failed to send error response for coinflip command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id
             });
             
             await interaction.reply({ 
-                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
+                content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
                 // We silently catch if all error handling attempts fail.

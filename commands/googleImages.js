@@ -241,20 +241,34 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.GOOGLE_API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "NO_RESULTS") {
+      errorMessage = ERROR_MESSAGES.GOOGLE_NO_RESULTS;
+    } else if (error.message === "INVALID_QUERY") {
+      errorMessage = ERROR_MESSAGES.GOOGLE_INVALID_QUERY;
+    }
+    
     try {
       await interaction.editReply({ 
-        content: getErrorMessage(error),
+        content: errorMessage,
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for googleimages command.", {
+      logger.error("Failed to send error response for googleimages command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
       });
       
       await interaction.reply({ 
-        content: getErrorMessage(error),
+        content: errorMessage,
         ephemeral: true 
       }).catch(() => {
         // We silently catch if all error handling attempts fail.

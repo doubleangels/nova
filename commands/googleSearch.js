@@ -129,11 +129,20 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-    logError(error, 'google', {
+    logError(error, 'googleSearch', {
       userId: interaction.user?.id,
-      guildId: interaction.guild?.id,
-      channelId: interaction.channel?.id
+      guildId: interaction.guild?.id
     });
+    
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.GOOGLE_API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    }
     
     try {
       await interaction.editReply({ 

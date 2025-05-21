@@ -376,6 +376,10 @@ module.exports = {
       errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
     } else if (error.message === "DATABASE_WRITE_ERROR") {
       errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+    } else if (error.message === "INVALID_CHANNEL_TYPE") {
+      errorMessage = ERROR_MESSAGES.BACKUPMODE_INVALID_CHANNEL;
+    } else if (error.message === "INVALID_ROLE") {
+      errorMessage = ERROR_MESSAGES.BACKUPMODE_INVALID_ROLE;
     }
     
     try {
@@ -384,7 +388,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for backup mode command.", {
+      logger.error("Failed to send error response for backup mode command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

@@ -636,15 +636,17 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = ERROR_MESSAGES.SPOTIFY_API_ERROR;
     } else if (error.message === "API_RATE_LIMIT") {
       errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
-    } else if (error.message === "API_ACCESS_DENIED") {
-      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
     } else if (error.message === "API_NETWORK_ERROR") {
       errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
-    } else if (error.message === "INVALID_QUERY") {
-      errorMessage = ERROR_MESSAGES.SPOTIFY_INVALID_QUERY;
+    } else if (error.message === "NO_RESULTS") {
+      errorMessage = ERROR_MESSAGES.SPOTIFY_NO_RESULTS;
+    } else if (error.message === "INVALID_TRACK") {
+      errorMessage = ERROR_MESSAGES.SPOTIFY_INVALID_TRACK;
+    } else if (error.message === "AUTH_ERROR") {
+      errorMessage = ERROR_MESSAGES.SPOTIFY_AUTH_ERROR;
     }
     
     try {
@@ -653,7 +655,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for spotify command.", {
+      logger.error("Failed to send error response for spotify command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

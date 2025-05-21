@@ -3,6 +3,7 @@ const logger = require('../logger')(path.basename(__filename));
 const Sentry = require('../sentry');
 const { MessageFlags } = require('discord.js');
 const { Collection } = require('discord.js');
+const { ERROR_MESSAGES } = require('../errors');
 
 // We define configuration constants for command cooldowns and caching.
 const DEFAULT_COOLDOWN = 3000; // We set a 3-second default cooldown.
@@ -54,7 +55,7 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
     try {
       // We prepare an ephemeral error message to inform the user without cluttering the channel.
       const errorMessage = { 
-        content: 'There was an error executing that command!', 
+        content: ERROR_MESSAGES.UNEXPECTED_ERROR, 
         flags: MessageFlags.Ephemeral 
       };
       

@@ -274,7 +274,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for reminder command.", {
+      logger.error("Failed to send error response for reminder command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

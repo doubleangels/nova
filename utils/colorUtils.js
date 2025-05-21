@@ -1,3 +1,5 @@
+const { logError, ERROR_MESSAGES } = require('../errors');
+
 // We define these patterns to validate different formats of hex color codes for consistent color handling.
 const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
@@ -18,10 +20,10 @@ const DISCORD_MAX_COLOR = 0xFFFFFF;
 function validateAndNormalizeColor(colorHex, logger = null) {
     // We validate the input to ensure proper color handling.
     if (typeof colorHex !== 'string') {
-        throw new Error('Color must be a string');
+        throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
     }
     if (!colorHex.trim()) {
-        throw new Error('Color cannot be empty');
+        throw new Error(ERROR_MESSAGES.EMPTY_COLOR);
     }
 
     let normalizedColorHex = colorHex.trim();
@@ -70,7 +72,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
-        throw new Error('Invalid hex color format');
+        throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
     }
 
     // We convert the hex string to a decimal number for Discord.
@@ -79,7 +81,7 @@ function hexToDecimal(hexColor) {
 
     // We validate that the color is within Discord's allowed range.
     if (decimal > DISCORD_MAX_COLOR) {
-        throw new Error('Color value exceeds Discord\'s maximum (0xFFFFFF)');
+        throw new Error(ERROR_MESSAGES.COLOR_OUT_OF_RANGE);
     }
 
     return decimal;
@@ -96,7 +98,7 @@ function hexToDecimal(hexColor) {
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
-        throw new Error('Invalid hex color format');
+        throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
     }
 
     const hex = validation.normalizedColor.slice(1);
@@ -122,7 +124,7 @@ function rgbToHex(r, g, b) {
     if (!Number.isInteger(r) || r < 0 || r > 255 ||
         !Number.isInteger(g) || g < 0 || g > 255 ||
         !Number.isInteger(b) || b < 0 || b > 255) {
-        throw new Error('RGB values must be integers between 0 and 255');
+        throw new Error(ERROR_MESSAGES.INVALID_RGB_VALUES);
     }
 
     // We convert RGB values to a hex string with proper padding.

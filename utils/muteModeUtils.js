@@ -2,6 +2,7 @@ const logger = require('../logger')('muteModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 // We define these configuration constants for consistent mute mode behavior.
 const DEFAULT_MUTE_KICK_TIME_HOURS = 4;
@@ -208,3 +209,30 @@ module.exports = {
   performKick,
   rescheduleAllMuteKicks
 };
+
+async function setMuteMode(userId, isMuted) {
+    try {
+        // ... existing code ...
+    } catch (error) {
+        logError('Failed to set mute mode', error);
+        throw new Error(ERROR_MESSAGES.MUTE_MODE_UPDATE_FAILED);
+    }
+}
+
+async function getMuteMode(userId) {
+    try {
+        // ... existing code ...
+    } catch (error) {
+        logError('Failed to get mute mode', error);
+        throw new Error(ERROR_MESSAGES.MUTE_MODE_QUERY_FAILED);
+    }
+}
+
+async function toggleMuteMode(userId) {
+    try {
+        // ... existing code ...
+    } catch (error) {
+        logError('Failed to toggle mute mode', error);
+        throw new Error(ERROR_MESSAGES.MUTE_MODE_TOGGLE_FAILED);
+    }
+}

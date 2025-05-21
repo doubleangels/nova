@@ -6,6 +6,7 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
 const Sentry = require('../sentry');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 // We define these configuration constants for consistent time formatting and parsing.
 const TIME_FORMAT = 'h:mm A';
@@ -27,7 +28,7 @@ const VALID_TIMEZONES = new Set(moment.tz.names());
  */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
-    return false;
+    throw new Error(ERROR_MESSAGES.INVALID_TIMEZONE);
   }
   
   try {
@@ -48,7 +49,7 @@ function isValidTimezone(tz) {
  */
 function extractTimeReferences(content) {
   if (!content) {
-    return [];
+    throw new Error(ERROR_MESSAGES.EMPTY_TIME_REFERENCE);
   }
   
   try {
@@ -109,12 +110,8 @@ function extractTimeReferences(content) {
         timeOnly: result.start.timeOnly || false
       }));
   } catch (error) {
-    logger.error("Error parsing time references.", { 
-      error: error.message, 
-      stack: error.stack,
-      content: content.substring(0, 100)
-    });
-    return [];
+    logError('Error parsing time references', error);
+    throw new Error(ERROR_MESSAGES.TIME_PARSE_FAILED);
   }
 }
 
@@ -129,25 +126,11 @@ function extractTimeReferences(content) {
  */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
-    logger.debug("Invalid time reference provided.", { timeRef });
-    return {
-      text: timeRef?.text || "undefined",
-      originalTime: null,
-      convertedTime: "Could not parse time",
-      fromTimezone,
-      toTimezone
-    };
+    throw new Error(ERROR_MESSAGES.INVALID_TIME_REFERENCE);
   }
 
   if (!isValidTimezone(fromTimezone) || !isValidTimezone(toTimezone)) {
-    logger.debug("Invalid timezone in conversion request.", { fromTimezone, toTimezone });
-    return {
-      text: timeRef.text,
-      originalTime: null,
-      convertedTime: "Invalid timezone specified",
-      fromTimezone,
-      toTimezone
-    };
+    throw new Error(ERROR_MESSAGES.INVALID_TIMEZONE);
   }
 
   try {
@@ -217,34 +200,8 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       toTimezone
     };
   } catch (error) {
-    logger.error("Error converting time zones.", { 
-      error: error.message,
-      stack: error.stack, 
-      timeRef,
-      fromTimezone,
-      toTimezone,
-      originalText: timeRef.text,
-      parsedDate: timeRef.date?.toISOString()
-    });
-    
-    Sentry.captureException(error, {
-      extra: {
-        timeRef,
-        fromTimezone,
-        toTimezone,
-        originalText: timeRef.text,
-        parsedDate: timeRef.date?.toISOString()
-      }
-    });
-    
-    return {
-      text: timeRef.text,
-      originalTime: null,
-      convertedTime: "Error converting time",
-      fromTimezone,
-      toTimezone,
-      error: error.message
-    };
+    logError('Error converting time zones', error);
+    throw new Error(ERROR_MESSAGES.TIME_CONVERSION_FAILED);
   }
 }
 
@@ -257,6 +214,9 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
  * @returns {string} Discord timestamp format string.
  */
 function generateDiscordTimestamp(date, timezone) {
+  if (!date || !timezone) {
+    throw new Error(ERROR_MESSAGES.INVALID_TIMESTAMP_PARAMS);
+  }
   const timestamp = date.tz(timezone).unix();
   return `<t:${timestamp}:t>`;
 }
@@ -269,6 +229,9 @@ function generateDiscordTimestamp(date, timezone) {
  * @returns {string} Formatted string representation.
  */
 function defaultFormatter(conversion) {
+  if (!conversion) {
+    throw new Error(ERROR_MESSAGES.INVALID_CONVERSION);
+  }
   const { 
     originalTime, 
     targetTime,
@@ -292,7 +255,7 @@ function defaultFormatter(conversion) {
  */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
-    return "No times to convert.";
+    throw new Error(ERROR_MESSAGES.NO_TIMES_TO_CONVERT);
   }
 
   const formattedTimes = convertedTimes.map(conversion => {

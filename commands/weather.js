@@ -486,10 +486,10 @@ module.exports = {
     }
     
     try {
-        await interaction.editReply({ 
+      await interaction.editReply({ 
         content: errorMessage,
-          ephemeral: true
-        });
+        ephemeral: true 
+      });
     } catch (followUpError) {
       logger.error("Failed to send error response for weather command:", {
         error: followUpError.message,

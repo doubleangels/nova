@@ -6,6 +6,7 @@ const config = require('./config');
 const Sentry = require('./sentry');
 const { initializeDatabase } = require('./utils/database');
 const deployCommands = require('./deploy-commands');
+const { logError, ERROR_MESSAGES } = require('./errors');
 
 // We define these configuration constants for consistent behavior throughout the application.
 const COMMAND_EXTENSION = '.js';
@@ -75,7 +76,7 @@ for (const file of commandFiles) {
     logger.info("Loaded command:", { command: command.data.name });
     loadedCount++;
   } catch (error) {
-    logger.error(`Failed to load command ${commandName}:`, { error });
+    logError('Failed to load command', error);
     Sentry.captureException(error, {
       extra: { context: 'command_loading_failure', commandName }
     });
@@ -96,7 +97,7 @@ for (const file of eventFiles) {
     const event = require(filePath);
     
     if (!event.name || !event.execute) {
-      throw new Error(`Event file ${file} is missing required properties (name or execute)`);
+      throw new Error(ERROR_MESSAGES.INVALID_EVENT_FILE);
     }
     
     if (event.once) {
@@ -106,7 +107,6 @@ for (const file of eventFiles) {
       });
     } else {
       client.on(event.name, (...args) => {
-        // We only log debug for non-frequent events to avoid log spam.
         if (event.name !== 'typingStart' && event.name !== 'presenceUpdate') {
           logger.debug("Executing event:", { event: event.name });
         }
@@ -115,10 +115,7 @@ for (const file of eventFiles) {
     }
     logger.info("Loaded event:", { event: event.name });
   } catch (error) {
-    logger.error(`Failed to load event from ${file}:`, { 
-      error: error.message || error,
-      stack: error.stack
-    });
+    logError('Failed to load event', error);
     Sentry.captureException(error, {
       extra: { 
         context: 'event_loading_failure', 
@@ -135,11 +132,10 @@ client.once('ready', async () => {
     await initializeDatabase();
     logger.info("Bot is online:", { tag: client.user.tag });
   } catch (error) {
-    logger.error("Failed to initialize database:", { error });
+    logError('Failed to initialize database:', error);
     Sentry.captureException(error, {
       extra: { context: 'database_initialization_failure' }
     });
-    // We exit if database initialization fails since it's critical
     process.exit(1);
   }
 });
@@ -147,24 +143,21 @@ client.once('ready', async () => {
 // We log the bot in using the token from the config file.
 async function startBot() {
   try {
-    // We deploy commands if enabled in config
     if (config.settings.deployCommandsOnStart) {
       logger.info('Deploying commands before bot start...');
       await deployCommands();
-      logger.info('Commands deployed successfully');
+      logger.info('Commands deployed successfully.');
     }
 
-    // We initialize the database
     await initializeDatabase();
-    logger.info('Database initialized successfully');
+    logger.info('Database initialized successfully.');
 
-    // We log in the bot
     await client.login(config.token);
   } catch (error) {
+    logError('Error during bot startup', error);
     Sentry.captureException(error, {
       extra: { context: 'bot_startup_failure' }
     });
-    logger.error("Error during bot startup:", { error });
     process.exit(1);
   }
 }
@@ -174,19 +167,18 @@ startBot();
 
 // We add global unhandled error handlers to prevent the bot from crashing silently.
 process.on('uncaughtException', (error) => {
+  logError('Uncaught Exception', error);
   Sentry.captureException(error, {
     extra: { context: 'uncaughtException' }
   });
-  logger.error('Uncaught Exception:', { error });
-  // We don't exit immediately to allow Sentry to send the error report.
   setTimeout(() => process.exit(1), SENTRY_FLUSH_TIMEOUT);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
+  logError('Unhandled Promise Rejection', reason);
   Sentry.captureException(reason, {
     extra: { context: 'unhandledRejection' }
   });
-  logger.error('Unhandled Promise Rejection:', { reason });
 });
 
 /**

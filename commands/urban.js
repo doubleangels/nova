@@ -111,9 +111,17 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
+        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        
+        if (error.message === "NO_DEFINITION") {
+            errorMessage = ERROR_MESSAGES.URBAN_NO_DEFINITION;
+        } else if (error.message === "INVALID_QUERY") {
+            errorMessage = ERROR_MESSAGES.URBAN_INVALID_QUERY;
+        }
+        
         try {
             await interaction.editReply({ 
-                content: getErrorMessage(error),
+                content: errorMessage,
                 ephemeral: true 
             });
         } catch (followUpError) {
@@ -124,7 +132,7 @@ module.exports = {
             });
             
             await interaction.reply({ 
-                content: getErrorMessage(error),
+                content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
                 // We silently catch if all error handling attempts fail.

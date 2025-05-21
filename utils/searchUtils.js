@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 /**
  * We define these configuration constants for consistent search behavior.
@@ -257,8 +258,8 @@ async function performSearch(query, options = {}) {
     const combinedResults = results.flat().sort((a, b) => b.relevance - a.relevance);
     return combinedResults.slice(0, MAX_SEARCH_RESULTS);
   } catch (error) {
-    logger.error(`Error performing search for query "${query}": ${error.message}`);
-    throw error;
+    logError('Search operation failed', error);
+    throw new Error(ERROR_MESSAGES.SEARCH_OPERATION_FAILED);
   }
 }
 
