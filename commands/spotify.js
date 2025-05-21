@@ -163,8 +163,8 @@ module.exports = {
           buttonStyle: ButtonStyle.Secondary,
           prevLabel: 'Previous',
           nextLabel: 'Next',
-          prevEmoji: '⬅️',
-          nextEmoji: '➡️'
+          prevEmoji: '◀️',
+          nextEmoji: '▶️'
         }
       );
 
