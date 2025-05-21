@@ -77,16 +77,16 @@ async function handleReminder(message, delay) {
         channel = await message.client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
-      logger.error("Failed to fetch channel.", { 
+      logger.error("Failed to fetch channel:", {
         channelId: reminderChannelId,
-        error: channelError.message 
+        error: channelError.message
       });
       return;
     }
 
     // We send an immediate confirmation message in the designated channel to acknowledge the bump.
     await channel.send(`${CONFIRMATION_EMOJI} ${CONFIRMATION_MESSAGE.replace('%s', unixTimestamp)}`);
-    logger.debug("Sent confirmation message in channel.", { channelId: reminderChannelId });
+    logger.debug("Sent confirmation message in channel:", { channelId: reminderChannelId });
 
     // Delete any existing reminders before adding the new one
     await pool.query(
@@ -105,7 +105,7 @@ async function handleReminder(message, delay) {
       try {
         // Send the new bump reminder
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
-        logger.debug("Sent scheduled bump reminder ping.", {
+        logger.debug("Sent scheduled bump reminder ping:", {
           role: reminderRole,
           channelId: reminderChannelId
         });
@@ -115,9 +115,9 @@ async function handleReminder(message, delay) {
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderId]
         );
-        logger.debug("Cleaned up sent reminder from recovery table.", { reminderId });
+        logger.debug("Cleaned up sent reminder from recovery table:", { reminderId });
       } catch (err) {
-        logger.error("Error while sending scheduled bump reminder.", { 
+        logger.error("Error while sending scheduled bump reminder:", {
           error: err.message,
           stack: err.stack
         });
@@ -125,7 +125,7 @@ async function handleReminder(message, delay) {
     }, delay);
 
   } catch (error) {
-    logger.error("Unhandled error in handleReminder.", { 
+    logger.error("Unhandled error in handleReminder:", {
       error: error.message,
       stack: error.stack
     });
@@ -173,9 +173,9 @@ async function rescheduleReminder(client) {
         channel = await client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
-      logger.error("Failed to fetch channel for rescheduled reminder.", { 
+      logger.error("Failed to fetch channel for rescheduled reminder:", {
         channelId: reminderChannelId,
-        error: channelError.message 
+        error: channelError.message
       });
       return;
     }
@@ -184,15 +184,15 @@ async function rescheduleReminder(client) {
     const now = dayjs();
     const delay = scheduledTime.diff(now, 'millisecond');
     
-    logger.debug("Calculated scheduled time and delay for reminder.", { 
-      scheduledTime: scheduledTime.toISOString(), 
+    logger.debug("Calculated scheduled time and delay for reminder:", {
+      scheduledTime: scheduledTime.toISOString(),
       currentTime: now.toISOString(),
-      delay 
+      delay
     });
     
     // If the scheduled time has passed, we skip rescheduling.
     if (delay < 0) {
-      logger.debug("Skipping overdue reminder.", { reminder_id: reminderData.reminder_id });
+      logger.debug("Skipping overdue reminder:", { reminder_id: reminderData.reminder_id });
       return;
     }
     
@@ -201,29 +201,29 @@ async function rescheduleReminder(client) {
       try {
         // Send the new reminder message
         await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
-        logger.debug("Sent rescheduled bump reminder.", { reminder_id: reminderData.reminder_id });
+        logger.debug("Sent rescheduled bump reminder:", { reminder_id: reminderData.reminder_id });
 
         // We delete the reminder from the recovery table after it's sent.
         await pool.query(
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderData.reminder_id]
         );
-        logger.debug("Cleaned up sent reminder from recovery table.", { reminderId: reminderData.reminder_id });
+        logger.debug("Cleaned up sent reminder from recovery table:", { reminderId: reminderData.reminder_id });
       } catch (err) {
-        logger.error("Error while sending rescheduled bump reminder.", { 
+        logger.error("Error while sending rescheduled bump reminder:", {
           error: err.message,
           stack: err.stack
         });
       }
     }, delay);
     
-    logger.debug("Successfully rescheduled bump reminder.", {
+    logger.debug("Successfully rescheduled bump reminder:", {
       reminder_id: reminderData.reminder_id,
       delayMs: delay,
       scheduledFor: new Date(Date.now() + delay).toISOString()
     });
   } catch (error) {
-    logger.error("Unhandled error in rescheduleReminder.", { 
+    logger.error("Unhandled error in rescheduleReminder:", {
       error: error.message,
       stack: error.stack
     });
