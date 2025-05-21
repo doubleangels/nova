@@ -38,7 +38,7 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         try {
-            logger.info("Change color command initiated.", { 
+            logger.info("Change color command initiated:", { 
                 userId: interaction.user.id, 
                 guildId: interaction.guild.id 
             });
@@ -74,7 +74,7 @@ module.exports = {
                 content: `✅ Successfully changed the color of ${role} from \`\`\`${oldColor}\`\`\` to \`\`\`${this.normalizeColor(color)}\`\`\`.`
             });
 
-            logger.info("Role color changed successfully.", { 
+            logger.info("Role color changed successfully:", { 
                 roleId: role.id, 
                 oldColor: oldColor,
                 newColor: color,

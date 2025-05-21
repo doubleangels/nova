@@ -69,7 +69,7 @@ module.exports = {
         
       // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
-      logger.info(`/imdb command initiated.`, {
+      logger.info(`/imdb command initiated:`, {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -132,7 +132,7 @@ module.exports = {
     // We trim any extra whitespace from the title and validate it's not empty.
     const formattedTitle = titleQuery?.trim();
     if (!formattedTitle) {
-      logger.warn("Empty title provided after trimming.", {
+      logger.warn("Empty title provided after trimming:", {
         userId: interaction.user.id,
         originalQuery: titleQuery
       });
@@ -144,7 +144,7 @@ module.exports = {
 
     // We validate the year format if it was provided.
     if (year && !/^\d{4}$/.test(year)) {
-      logger.warn("Invalid year format provided.", {
+      logger.warn("Invalid year format provided:", {
         userId: interaction.user.id,
         year
       });
@@ -154,7 +154,7 @@ module.exports = {
       };
     }
     
-    logger.debug("Search parameters validated.", {
+    logger.debug("Search parameters validated:", {
       title: formattedTitle,
       type,
       year,
@@ -200,7 +200,7 @@ module.exports = {
         timeout: REQUEST_TIMEOUT 
       });
       
-      logger.debug("OMDb API response received.", {
+      logger.debug("OMDb API response received:", {
         status: response.status
       });
       
@@ -208,7 +208,7 @@ module.exports = {
       
       // We check if the API response indicates success or failure.
       if (data.Response === "True") {
-        logger.info("Media information retrieved successfully.", {
+        logger.info("Media information retrieved successfully:", {
           title: data.Title,
           year: data.Year,
           imdbId: data.imdbID
@@ -216,7 +216,7 @@ module.exports = {
         return data;
       } else {
         const errorMessage = data.Error || "No results found";
-        logger.warn("No results found for title.", {
+        logger.warn("No results found for title:", {
           title: searchParams.title,
           errorMessage
         });
@@ -226,7 +226,7 @@ module.exports = {
         };
       }
     } catch (apiError) {
-      logger.error("OMDb API request failed.", {
+      logger.error("OMDb API request failed:", {
         error: apiError.message,
         status: apiError.response?.status,
         title: searchParams.title
@@ -321,7 +321,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for imdb command.", {
+      logger.error("Failed to send error response for imdb command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

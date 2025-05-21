@@ -39,7 +39,7 @@ module.exports = {
     async execute(interaction) {
         // We defer the reply since nickname changes might take a moment to complete.
         await interaction.deferReply({ ephemeral: true });
-        logger.info("/changenickname command initiated.", { 
+        logger.info("/changenickname command initiated:", { 
             userId: interaction.user.id, 
             guildId: interaction.guild.id 
         });
@@ -49,7 +49,7 @@ module.exports = {
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
             
-            logger.debug("Processing command options.", { 
+            logger.debug("Processing command options:", { 
                 targetUserId: targetUser.id,
                 targetUserTag: targetUser.tag,
                 newNickname: newNickname
@@ -92,20 +92,36 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
+        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        
+        if (error.message === "INSUFFICIENT_PERMISSIONS") {
+            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_INSUFFICIENT_PERMISSIONS;
+        } else if (error.message === "NICKNAME_TOO_LONG") {
+            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_TOO_LONG;
+        } else if (error.message === "USER_NOT_FOUND") {
+            errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+        } else if (error.message === "ROLE_HIERARCHY") {
+            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_ROLE_HIERARCHY;
+        } else if (error.message === "SERVER_OWNER") {
+            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_OWNER;
+        } else if (error.message === "BOT_NICKNAME") {
+            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_BOT;
+        }
+        
         try {
             await interaction.editReply({ 
-                content: getErrorMessage(error),
+                content: errorMessage,
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for changenickname command.", {
+            logger.error("Failed to send error response for changenickname command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id
             });
             
             await interaction.reply({ 
-                content: getErrorMessage(error),
+                content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
                 // We silently catch if all error handling attempts fail.
@@ -126,7 +142,7 @@ module.exports = {
         // We check if the bot has permission to manage nicknames in the server.
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
-            logger.warn("Bot lacks ManageNicknames permission.", { 
+            logger.warn("Bot lacks ManageNicknames permission:", { 
                 guildId: interaction.guild.id
             });
             return {
@@ -137,7 +153,7 @@ module.exports = {
 
         // We check if the nickname length exceeds Discord's limit of 32 characters.
         if (newNickname.length > 32) {
-            logger.warn("Nickname exceeds maximum length.", {
+            logger.warn("Nickname exceeds maximum length:", {
                 length: newNickname.length
             });
             return {
@@ -148,7 +164,7 @@ module.exports = {
 
         // We check if the target user is the server owner.
         if (targetUser.id === interaction.guild.ownerId) {
-            logger.warn("Attempted to change server owner's nickname.", {
+            logger.warn("Attempted to change server owner's nickname:", {
                 targetUserId: targetUser.id
             });
             return {
@@ -159,7 +175,7 @@ module.exports = {
 
         // We check if the target user is the bot itself.
         if (targetUser.id === interaction.client.user.id) {
-            logger.warn("Attempted to change bot's nickname.", {
+            logger.warn("Attempted to change bot's nickname:", {
                 targetUserId: targetUser.id
             });
             return {
@@ -175,7 +191,7 @@ module.exports = {
             const targetMember = await interaction.guild.members.fetch(targetUser.id);
             
             if (targetMember.roles.highest.position >= issuerMember.roles.highest.position) {
-                logger.warn("User attempted to change nickname of user with higher or equal role.", {
+                logger.warn("User attempted to change nickname of user with higher or equal role:", {
                     userId: interaction.user.id,
                     targetUserId: targetUser.id
                 });
@@ -191,7 +207,7 @@ module.exports = {
         try {
             targetMember = await interaction.guild.members.fetch(targetUser.id);
         } catch (e) {
-            logger.warn("Target user not found in guild.", { 
+            logger.warn("Target user not found in guild:", { 
                 targetUserId: targetUser.id
             });
             return {

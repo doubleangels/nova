@@ -61,7 +61,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {      
-      logger.info("Reminder command initiated.", {
+      logger.info("Reminder command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -101,7 +101,7 @@ module.exports = {
         setValue(DB_KEY_ROLE, roleOption.id)
       ]);
     } catch (dbError) {
-      logger.error("Database operation failed during reminder setup.", { 
+      logger.error("Database operation failed during reminder setup:", { 
         error: dbError.message, 
         stack: dbError.stack,
         userId: interaction.user.id,
@@ -111,7 +111,7 @@ module.exports = {
       throw new Error("DATABASE_WRITE_ERROR");
     }
     
-    logger.info("Reminder configuration updated successfully.", {
+    logger.info("Reminder configuration updated successfully:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       channelId: channelOption.id,
@@ -131,7 +131,7 @@ module.exports = {
    * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
    */
   async handleReminderStatus(interaction) {
-    logger.debug("Processing reminder status check.", { 
+    logger.debug("Processing reminder status check:", { 
       userId: interaction.user.id,
       guildId: interaction.guildId
     });
@@ -146,7 +146,7 @@ module.exports = {
       // Get the latest reminder data
       const reminderData = await this.getLatestReminderData(channelId);
       
-      logger.debug("Retrieved reminder configuration.", { 
+      logger.debug("Retrieved reminder configuration:", { 
         channelId, 
         roleId,
         hasReminderData: !!reminderData,
@@ -185,13 +185,13 @@ module.exports = {
       }
 
       await interaction.editReply(summary);
-      logger.info("Reminder status check completed successfully.", {
+      logger.info("Reminder status check completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         configComplete
       });
     } catch (dbError) {
-      logger.error("Database operation failed while retrieving reminder data.", { 
+      logger.error("Database operation failed while retrieving reminder data:", { 
         error: dbError.message, 
         stack: dbError.stack,
         userId: interaction.user.id,

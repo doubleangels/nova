@@ -73,11 +73,9 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("User messages command received:", { 
-        userId: interaction.user.id, 
-        userTag: interaction.user.tag,
-        guildName: interaction.guild?.name,
-        guildId: interaction.guild?.id
+      logger.info("/usermessages command initiated:", {
+        userId: interaction.user.id,
+        guildId: interaction.guildId
       });
       
       // We check if the command is being used in a DM, where it's not supported.
@@ -194,10 +192,10 @@ module.exports = {
         }
       );
       
-      logger.info("User messages response sent:", { 
+      logger.info("User messages command completed:", {
+        targetUserId: targetUser.id,
         messageCount: allMessages.length,
-        pageCount: embeds.length,
-        targetUserTag: targetUser.tag
+        timeRange: dayLimit ? `last ${dayLimit} day${dayLimit !== 1 ? 's' : ''}` : "all time"
       });
       
     } catch (error) {
@@ -220,21 +218,16 @@ module.exports = {
     const filterText = interaction.options.getString('contains');
     const dayLimit = interaction.options.getInteger('days');
     
-    logger.debug("Command parameters retrieved:", { 
-      targetUserTag: targetUser?.tag,
-      targetUserId: targetUser?.id,
-      targetChannelName: targetChannel?.name,
-      targetChannelId: targetChannel?.id,
-      messageLimit,
-      filterText: filterText || "None",
-      dayLimit: dayLimit || "None"
+    logger.debug("Processing command options:", {
+      targetUser: targetUser.id,
+      timeRange: dayLimit ? `last ${dayLimit} day${dayLimit !== 1 ? 's' : ''}` : "all time"
     });
     
     // We verify that the target user exists.
     if (!targetUser) {
-      logger.warn("Target user not found:", { 
-        requestedByUserId: interaction.user.id,
-        requestedByUserTag: interaction.user.tag 
+      logger.warn("Target user not found in guild:", {
+        userId: targetUser.id,
+        guildId: interaction.guildId
       });
       
       return {

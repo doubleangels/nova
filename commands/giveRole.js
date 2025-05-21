@@ -39,7 +39,7 @@ module.exports = {
     async execute(interaction) {
         // We defer the reply since role assignment might take a moment to complete.
         await interaction.deferReply();
-        logger.info("/giverole command initiated.", { 
+        logger.info("/giverole command initiated:", { 
             userId: interaction.user.id, 
             guildId: interaction.guild.id 
         });
@@ -49,7 +49,7 @@ module.exports = {
             const role = interaction.options.getRole('role');
             const targetUser = interaction.options.getUser('user');
             
-            logger.debug("Processing command options.", { 
+            logger.debug("Processing command options:", { 
                 roleId: role.id,
                 roleName: role.name,
                 targetUserId: targetUser.id,
@@ -137,7 +137,7 @@ module.exports = {
         // We check if the bot has permission to manage roles in the server.
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
-            logger.warn("Bot lacks ManageRoles permission.", { 
+            logger.warn("Bot lacks ManageRoles permission:", { 
                 guildId: interaction.guild.id
             });
             return {
@@ -148,7 +148,7 @@ module.exports = {
 
         // We check if the role is managed (bot or integration role).
         if (role.managed) {
-            logger.warn("Attempted to assign a managed role.", {
+            logger.warn("Attempted to assign a managed role:", {
                 roleId: role.id,
                 roleName: role.name
             });
@@ -160,7 +160,7 @@ module.exports = {
 
         // We check if the bot's highest role is above the role being assigned in the hierarchy.
         if (role.position >= botMember.roles.highest.position) {
-            logger.warn("Bot's highest role is not high enough to assign the specified role.", {
+            logger.warn("Bot's highest role is not high enough to assign the specified role:", {
                 roleId: role.id,
                 roleName: role.name,
                 botHighestRolePosition: botMember.roles.highest.position,
@@ -178,7 +178,7 @@ module.exports = {
             const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
             const issuerHighestRole = issuerMember.roles.highest;
             if (role.position >= issuerHighestRole.position) {
-                logger.warn("User attempted to assign a role higher than their highest role.", {
+                logger.warn("User attempted to assign a role higher than their highest role:", {
                     userId: interaction.user.id,
                     roleId: role.id,
                     userHighestRoleId: issuerHighestRole.id
@@ -195,7 +195,7 @@ module.exports = {
         try {
             targetMember = await interaction.guild.members.fetch(targetUser.id);
         } catch (e) {
-            logger.warn("Target user not found in guild.", { 
+            logger.warn("Target user not found in guild:", { 
                 targetUserId: targetUser.id
             });
             return {
@@ -207,7 +207,7 @@ module.exports = {
         // We check if the user already has the role to avoid redundant assignments.
         const hasRole = targetMember.roles.cache.has(role.id);
         if (hasRole) {
-            logger.debug("User already has the role.", {
+            logger.debug("User already has the role:", {
                 userId: targetUser.id,
                 roleId: role.id
             });
@@ -235,7 +235,7 @@ module.exports = {
         const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;
         await targetMember.roles.add(role, auditReason);
         
-        logger.info("Role successfully assigned.", { 
+        logger.info("Role successfully assigned:", { 
             roleId: role.id, 
             roleName: role.name,
             targetUserId: targetMember.user.id,

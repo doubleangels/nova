@@ -13,7 +13,7 @@ const MAX_ROLE_NAME_LENGTH = 100; // We enforce a maximum role name length of 10
 
 // We validate that the required configuration values are present.
 if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
-    logger.error("Missing required configuration for /giveperms command.", {
+    logger.error("Missing required configuration for /giveperms command:", {
         positionAboveRoleId: POSITION_ABOVE_ROLE_ID,
         frenRoleId: FREN_ROLE_ID
     });
@@ -59,7 +59,7 @@ module.exports = {
     async execute(interaction) {
         // We check if the required configuration values are available before proceeding.
         if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
-            logger.error("Command execution failed due to missing configuration.", {
+            logger.error("Command execution failed due to missing configuration:", {
                 commandName: 'giveperms',
                 guildId: interaction.guildId
             });
@@ -71,7 +71,7 @@ module.exports = {
         
         // We defer the reply since role creation and assignment might take a moment.
         await interaction.deferReply();
-        logger.info("/giveperms command initiated.", { 
+        logger.info("/giveperms command initiated:", { 
             userId: interaction.user.id, 
             guildId: interaction.guildId 
         });
@@ -91,7 +91,7 @@ module.exports = {
                 });
             }
             
-            logger.debug("Processing command options.", { 
+            logger.debug("Processing command options:", { 
                 roleName, 
                 colorHex, 
                 targetUserId: targetUser.id,
@@ -101,7 +101,7 @@ module.exports = {
             // We fetch the target member from the guild to ensure they exist.
             const targetMember = await interaction.guild.members.fetch(targetUser.id);
             if (!targetMember) {
-                logger.warn("Target user not found in guild.", { targetUserId: targetUser.id });
+                logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
                     content: "The specified user could not be found in this server.",
                     ephemeral: true
@@ -111,7 +111,7 @@ module.exports = {
             // We validate and normalize the color format using the utility function.
             const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
             if (!colorValidationResult.success) {
-                logger.warn("Invalid color format provided.", { colorHex });
+                logger.warn("Invalid color format provided:", { colorHex });
                 return await interaction.editReply({
                     content: "Invalid color format. Please use the format #RRGGBB or RRGGBB.",
                     ephemeral: true
@@ -233,7 +233,7 @@ module.exports = {
             reason: auditReason
         });
         
-        logger.info("New role created.", { 
+        logger.info("New role created:", { 
             roleId: newRole.id, 
             roleName: newRole.name, 
             position: newRole.position,
@@ -243,7 +243,7 @@ module.exports = {
         // We assign both the new role and the fren role to the target user.
         await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
         
-        logger.info("Permissions successfully granted to user.", { 
+        logger.info("Permissions successfully granted to user:", { 
             userId: targetMember.id, 
             userTag: targetMember.user.tag,
             roles: [newRole.name, additionalRole.name],

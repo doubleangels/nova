@@ -56,10 +56,9 @@ module.exports = {
       const place1 = interaction.options.getString('place1');
       const place2 = interaction.options.getString('place2');
       
-      logger.info("Time difference command initiated.", {
+      logger.info("/timediff command initiated:", {
         userId: interaction.user.id,
-        place1,
-        place2
+        guildId: interaction.guildId
       });
 
       // We get the time difference information between the two places.
@@ -262,7 +261,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for time difference command:", {
+      logger.error("Failed to send error response for timediff command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

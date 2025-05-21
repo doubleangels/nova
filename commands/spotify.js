@@ -104,7 +104,7 @@ module.exports = {
 
       // Defer the reply to allow time for API requests
       await interaction.deferReply();
-      logger.info(`/spotify command initiated.`, {
+      logger.info(`/spotify command initiated:`, {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -181,7 +181,7 @@ module.exports = {
    */
   validateConfiguration() {
     if (!config.spotifyClientId || !config.spotifyClientSecret) {
-      logger.error("Spotify API configuration is missing.", {
+      logger.error("Spotify API configuration is missing:", {
         hasClientId: !!config.spotifyClientId,
         hasClientSecret: !!config.spotifyClientSecret
       });

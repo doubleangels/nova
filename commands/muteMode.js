@@ -67,7 +67,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {      
-      logger.info("Mutemode command initiated.", {
+      logger.info("Mutemode command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -100,7 +100,7 @@ module.exports = {
       const statusMessage = this.formatStatusMessage(currentSettings);
       await interaction.editReply(statusMessage);
       
-      logger.info("Mutemode status retrieved successfully.", {
+      logger.info("Mutemode status retrieved successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         settings: currentSettings
@@ -129,7 +129,7 @@ module.exports = {
       let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
       
       if (timeLimit < MIN_TIME_LIMIT || timeLimit > MAX_TIME_LIMIT) {
-        logger.warn("Invalid time limit specified.", {
+        logger.warn("Invalid time limit specified:", {
           userId: interaction.user.id,
           guildId: interaction.guildId,
           providedValue: timeLimit
@@ -138,7 +138,7 @@ module.exports = {
         timeLimit = DEFAULT_TIME_LIMIT;
       }
       
-      logger.debug("Processing mutemode update.", {
+      logger.debug("Processing mutemode update:", {
         currentEnabled: currentSettings.isEnabled,
         newEnabled: isEnabled,
         currentTimeLimit: currentSettings.timeLimit,
@@ -158,7 +158,7 @@ module.exports = {
       // We reply to the interaction with the update confirmation.
       await interaction.editReply(responseMessage);
       
-      logger.info("Mutemode configuration updated successfully.", {
+      logger.info("Mutemode configuration updated successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         isEnabled,
@@ -188,7 +188,7 @@ module.exports = {
         timeLimit: timeLimit ? Number(timeLimit) : DEFAULT_TIME_LIMIT
       };
     } catch (error) {
-      logger.error("Failed to retrieve current mute mode settings.", {
+      logger.error("Failed to retrieve current mute mode settings:", {
         error: error.message,
         stack: error.stack
       });
@@ -213,7 +213,7 @@ module.exports = {
         setValue(DB_KEY_TIME_LIMIT, timeLimit)
       ]);
     } catch (error) {
-      logger.error("Database operation failed during mute mode update.", { 
+      logger.error("Database operation failed during mute mode update:", { 
         error: error.message, 
         stack: error.stack
       });
@@ -305,7 +305,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for mutemode command.", {
+      logger.error("Failed to send error response for mutemode command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

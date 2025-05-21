@@ -36,7 +36,7 @@ module.exports = {
       // We defer the reply since the API call might take a moment.
       await interaction.deferReply();
       
-      logger.info("Dog command initiated.", {
+      logger.info("Dog command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });
@@ -55,7 +55,7 @@ module.exports = {
       // We send the embed to the user.
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Dog command completed successfully.", {
+      logger.info("Dog command completed successfully:", {
         userId: interaction.user.id,
         imageUrl: dogData.url
       });
@@ -72,30 +72,30 @@ module.exports = {
    * @throws {Error} If the image cannot be fetched.
    */
   async fetchDogImage() {
-    logger.debug("Fetching random dog image data.", { url: DOG_API_URL });
+    logger.debug("Fetching random dog image data:", { url: DOG_API_URL });
     
     // We get the image URL from the Dog CEO API.
     const response = await axios.get(DOG_API_URL);
     
     if (response.status !== 200) {
-      logger.warn("Dog CEO API error.", { status: response.status });
+      logger.warn("Dog CEO API error:", { status: response.status });
       throw new Error("API_ERROR");
     }
     
     const imageUrl = response.data.message;
     
     if (!imageUrl) {
-      logger.warn("No dog image URL found in API response.", { responseData: response.data });
+      logger.warn("No dog image URL found in API response:", { responseData: response.data });
       throw new Error("NO_IMAGE_URL");
     }
     
-    logger.debug("Dog image URL received.", { imageUrl });
+    logger.debug("Dog image URL received:", { imageUrl });
     
     // We fetch the actual image data from the URL provided.
     const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     
     if (imageResponse.status !== 200) {
-      logger.warn("Error fetching dog image file.", { status: imageResponse.status });
+      logger.warn("Error fetching dog image file:", { status: imageResponse.status });
       throw new Error("IMAGE_FETCH_ERROR");
     }
     

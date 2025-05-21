@@ -38,7 +38,7 @@ module.exports = {
     async execute(interaction) {
         await interaction.deferReply();
         try {
-            logger.info("Coinflip command initiated.", {
+            logger.info("Coinflip command initiated:", {
                 userId: interaction.user.id,
                 guildId: interaction.guild?.id,
                 channelId: interaction.channel?.id
@@ -48,7 +48,7 @@ module.exports = {
             const randomValue = Math.random();
             const result = randomValue < HEADS_PROBABILITY ? COIN_FACE_HEADS : COIN_FACE_TAILS;
             
-            logger.debug("Coin flip result determined.", {
+            logger.debug("Coin flip result determined:", {
                 result: result,
                 randomValue: randomValue
             });
@@ -58,7 +58,7 @@ module.exports = {
                 content: `${COIN_EMOJI} The coin landed on **${result}**!` 
             });
             
-            logger.info("Coinflip command completed successfully.", {
+            logger.info("Coinflip command completed successfully:", {
                 userId: interaction.user.id,
                 result: result
             });

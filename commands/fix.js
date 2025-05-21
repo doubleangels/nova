@@ -47,7 +47,7 @@ module.exports = {
   async execute(interaction) {
     try {
       // We log the command initiation with the user's ID for better tracking in our system.
-      logger.info("Fix command initiated.", {
+      logger.info("Fix command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild.id
       });
@@ -88,7 +88,7 @@ module.exports = {
       // We inform the user that the fix logic was successfully applied.
       await interaction.editReply(responseMessage);
       
-      logger.info("Fix command completed successfully.", {
+      logger.info("Fix command completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guild.id,
         reminderId: reminderId,
@@ -112,7 +112,7 @@ module.exports = {
       );
       return parseInt(result.rows[0].count) > 0;
     } catch (error) {
-      logger.warn("Error checking for existing reminder.", { error: error.message });
+      logger.warn("Error checking for existing reminder:", { error: error.message });
       return false;
     }
   },
@@ -131,9 +131,9 @@ module.exports = {
         `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
         [reminderId, scheduledTime]
       );
-      logger.debug("Reminder data saved to database.", { reminderId: reminderId, scheduledTime: scheduledTime });
+      logger.debug("Reminder data saved to database:", { reminderId: reminderId, scheduledTime: scheduledTime });
     } catch (error) {
-      logger.error("Database error while saving reminder.", { error: error.message, reminderId: reminderId });
+      logger.error("Database error while saving reminder:", { error: error.message, reminderId: reminderId });
       throw new Error("DATABASE_ERROR");
     }
   },
@@ -165,7 +165,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for fix command.", {
+      logger.error("Failed to send error response for fix command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

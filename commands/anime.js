@@ -49,14 +49,14 @@ module.exports = {
       // We defer the reply to allow additional processing time for the API request.
       await interaction.deferReply();
       
-      logger.info("Anime search requested.", { 
+      logger.info("Anime search requested:", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag 
       });
 
       // We retrieve and format the anime title from the user's input.
       const titleQuery = interaction.options.getString('title');
-      logger.debug("Processing search query.", { titleQuery });
+      logger.debug("Processing search query:", { titleQuery });
       const formattedTitle = titleQuery.trim();
 
       // We search for the anime and get its details from the API.
@@ -67,12 +67,12 @@ module.exports = {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
         
-        logger.info("Anime information sent successfully.", { 
+        logger.info("Anime information sent successfully:", { 
           animeTitle: animeData.title, 
           userId: interaction.user.id 
         });
       } else {
-        logger.info("No anime results found for query.", { query: formattedTitle });
+        logger.info("No anime results found for query:", { query: formattedTitle });
         await interaction.editReply({
           content: ERROR_MESSAGES.NO_RESULTS_FOUND
         });
@@ -93,11 +93,11 @@ module.exports = {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
     const searchUrl = `${MAL_API_BASE_URL}/anime?q=${encodeURIComponent(title)}&limit=${SEARCH_LIMIT}`;
     
-    logger.debug("Making MAL search request.", { searchUrl });
+    logger.debug("Making MAL search request:", { searchUrl });
     const searchResponse = await axios.get(searchUrl, { headers });
     
     if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
-      logger.warn("No anime results found.", { title });
+      logger.warn("No anime results found:", { title });
       return null;
     }
     
@@ -108,11 +108,11 @@ module.exports = {
     const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
     
     // We request detailed anime information from the API.
-    logger.debug("Fetching anime details.", { animeId });
+    logger.debug("Fetching anime details:", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
     
     if (detailsResponse.status !== 200) {
-      logger.error("Failed to retrieve anime details.", { 
+      logger.error("Failed to retrieve anime details:", { 
         status: detailsResponse.status,
         animeId
       });

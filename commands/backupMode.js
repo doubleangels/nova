@@ -61,7 +61,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     try {
-      logger.info("Backup mode command initiated.", { 
+      logger.info("Backup mode command initiated:", { 
         userId: interaction.user.id, 
         guildId: interaction.guild.id,
         subcommand: interaction.options.getSubcommand()
@@ -141,7 +141,7 @@ module.exports = {
         isEnabled: isEnabled === true // We ensure this is a boolean value.
       };
     } catch (error) {
-      logger.error("Failed to retrieve current backup mode settings.", {
+      logger.error("Failed to retrieve current backup mode settings:", {
         error: error.message,
         stack: error.stack
       });
@@ -162,7 +162,7 @@ module.exports = {
   async validateInputs(interaction, channelOption, roleOption) {
     // We validate the channel type if one was provided.
     if (channelOption && channelOption.type !== ChannelType.GuildText) {
-      logger.warn("Invalid channel type selected for backup mode.", { 
+      logger.warn("Invalid channel type selected for backup mode:", { 
         channelId: channelOption.id, 
         type: channelOption.type 
       });
@@ -175,7 +175,7 @@ module.exports = {
 
     // We validate the role if one was provided.
     if (roleOption && (!roleOption.editable || roleOption.managed)) {
-      logger.warn("Invalid role selected for backup mode.", { 
+      logger.warn("Invalid role selected for backup mode:", { 
         roleId: roleOption.id, 
         managed: roleOption.managed 
       });
@@ -210,7 +210,7 @@ module.exports = {
       if (channelOption) {
         newChannelId = channelOption.id;
         await setValue(CONFIG_KEYS.CHANNEL, channelOption.id);
-        logger.debug("Backup mode channel updated.", { 
+        logger.debug("Backup mode channel updated:", { 
           channelId: channelOption.id, 
           channelName: channelOption.name 
         });
@@ -219,7 +219,7 @@ module.exports = {
       if (roleOption) {
         newRoleId = roleOption.id;
         await setValue(CONFIG_KEYS.ROLE, roleOption.id);
-        logger.debug("Backup mode role updated.", { 
+        logger.debug("Backup mode role updated:", { 
           roleId: roleOption.id, 
           roleName: roleOption.name 
         });
@@ -228,7 +228,7 @@ module.exports = {
       if (enabledOption !== null) {
         newIsEnabled = enabledOption.toLowerCase() === "enabled";
         await setValue(CONFIG_KEYS.ENABLED, newIsEnabled);
-        logger.debug("Backup mode enabled status updated.", { enabled: newIsEnabled });
+        logger.debug("Backup mode enabled status updated:", { enabled: newIsEnabled });
       }
       
       // We format the response message to show what was updated.
@@ -240,7 +240,7 @@ module.exports = {
       );
       
       await interaction.editReply(responseMessage);
-      logger.info("Backup mode configuration updated successfully.", { 
+      logger.info("Backup mode configuration updated successfully:", { 
         userId: interaction.user.id,
         guildId: interaction.guild.id,
         channel: channelOption?.id, 
@@ -248,7 +248,7 @@ module.exports = {
         enabled: enabledOption 
       });
     } catch (dbError) {
-      logger.error("Failed to update backup mode settings.", {
+      logger.error("Failed to update backup mode settings:", {
         error: dbError.message, 
         stack: dbError.stack,
         userId: interaction.user.id,
@@ -272,12 +272,12 @@ module.exports = {
       const statusMessage = this.formatStatusMessage(settings, interaction);
       
       await interaction.editReply(statusMessage);
-      logger.info("Backup mode status check completed successfully.", { 
+      logger.info("Backup mode status check completed successfully:", { 
         userId: interaction.user.id,
         guildId: interaction.guild.id
       });
     } catch (dbError) {
-      logger.error("Database operation failed during backup mode status check.", { 
+      logger.error("Database operation failed during backup mode status check:", { 
         error: dbError.message, 
         stack: dbError.stack 
       });

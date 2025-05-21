@@ -60,10 +60,9 @@ module.exports = {
   async execute(interaction) {
       try {
           const subcommand = interaction.options.getSubcommand();
-          logger.info("Timezone command initiated.", {
+          logger.info("/timezone command initiated:", {
               userId: interaction.user.id,
-              userTag: interaction.user.tag,
-              subcommand
+              guildId: interaction.guildId
           });
           
           // We route to the appropriate subcommand handler based on the user's choice.
@@ -336,7 +335,7 @@ module.exports = {
               ephemeral: true 
           });
       } catch (followUpError) {
-          logger.error("Failed to send error response for timezone command.", {
+          logger.error("Failed to send error response for timezone command:", {
               error: followUpError.message,
               originalError: error.message,
               userId: interaction.user?.id

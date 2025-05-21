@@ -43,7 +43,7 @@ module.exports = {
     // We defer the reply since role operations might take a moment to complete.
     await interaction.deferReply();
     
-    logger.info("Take role command initiated.", {
+    logger.info("/takerole command initiated:", {
       userId: interaction.user.id,
       guildId: interaction.guildId
     });
@@ -54,12 +54,9 @@ module.exports = {
       const targetUser = interaction.options.getUser('user');
       const reason = interaction.options.getString('reason');
       
-      logger.debug("Processing take role command.", { 
-        roleId: role.id,
-        roleName: role.name,
-        targetUserId: targetUser.id,
-        executorId: interaction.user.id,
-        reason
+      logger.debug("Processing command options:", {
+        targetUser: targetUser.id,
+        roleId: role.id
       });
       
       // We validate permissions and role assignment before proceeding.
@@ -138,8 +135,9 @@ module.exports = {
   async validateRoleRemoval(interaction, role, targetUser) {
     // We check if the bot has permission to manage roles in the server.
     if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
-      logger.warn("Bot missing required permissions to manage roles.", {
-        guildId: interaction.guildId
+      logger.warn("Bot lacks ManageRoles permission:", {
+        guildId: interaction.guildId,
+        botId: interaction.client.user.id
       });
       return {
         valid: false,
@@ -149,7 +147,7 @@ module.exports = {
 
     // We check if the role is managed (bot or integration role).
     if (role.managed) {
-      logger.warn("Attempted to remove a managed role.", {
+      logger.warn("Attempted to remove a managed role:", {
         roleId: role.id,
         roleName: role.name
       });
@@ -171,10 +169,9 @@ module.exports = {
 
     // We check if the user actually has the role that needs to be removed.
     if (!targetMember.roles.cache.has(role.id)) {
-      logger.debug("User doesn't have the specified role.", {
+      logger.debug("User does not have the role:", {
         userId: targetUser.id,
-        roleId: role.id,
-        guildId: interaction.guildId
+        roleId: role.id
       });
 
       return {
@@ -186,10 +183,9 @@ module.exports = {
     // We check if the bot's highest role is higher than the role to be removed.
     const botMember = interaction.guild.members.me;
     if (botMember.roles.highest.position <= role.position) {
-      logger.warn("Role hierarchy prevents role removal.", {
-        botHighestRole: botMember.roles.highest.id,
-        targetRoleId: role.id,
-        guildId: interaction.guildId
+      logger.warn("Bot's highest role is not high enough to remove the specified role:", {
+        botRolePosition: botMember.roles.highest.position,
+        targetRolePosition: role.position
       });
       
       return {
@@ -203,10 +199,9 @@ module.exports = {
     if (interaction.guild.ownerId !== interaction.user.id) {
       const executorMember = await this.fetchGuildMember(interaction, interaction.user.id);
       if (executorMember && executorMember.roles.highest.position <= role.position) {
-        logger.warn("Role hierarchy prevents role removal by executor.", {
-          executorHighestRole: executorMember.roles.highest.id,
-          targetRoleId: role.id,
-          guildId: interaction.guildId
+        logger.warn("User attempted to remove a role higher than their highest role:", {
+          userRolePosition: executorMember.roles.highest.position,
+          targetRolePosition: role.position
         });
         
         return {
@@ -239,13 +234,10 @@ module.exports = {
     // We remove the role from the user with the formatted audit reason.
     await targetMember.roles.remove(role, auditReason);
     
-    logger.info("Role successfully removed from user.", { 
-      roleId: role.id, 
-      roleName: role.name,
-      targetUserId: targetMember.id,
-      executorId: interaction.user.id,
-      guildId: interaction.guildId,
-      reason
+    logger.info("Role successfully removed:", {
+      userId: targetMember.id,
+      roleId: role.id,
+      roleName: role.name
     });
     
     // We format a success message to inform the moderator.
@@ -273,10 +265,9 @@ module.exports = {
     try {
       return await interaction.guild.members.fetch(userId);
     } catch (error) {
-      logger.error("Failed to fetch guild member.", {
-        userId,
-        guildId: interaction.guildId,
-        error: error.message
+      logger.warn("Target user not found in guild:", {
+        userId: userId,
+        guildId: interaction.guildId
       });
       return null;
     }

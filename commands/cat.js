@@ -30,7 +30,7 @@ module.exports = {
       // We defer the reply since the API call might take a moment.
       await interaction.deferReply();
       
-      logger.info("Cat command initiated.", {
+      logger.info("Cat command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });
@@ -49,7 +49,7 @@ module.exports = {
       // We send the embed to the user.
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Cat command completed successfully.", {
+      logger.info("Cat command completed successfully:", {
         userId: interaction.user.id,
         imageUrl: catData.url
       });
@@ -74,14 +74,14 @@ module.exports = {
       });
 
       if (response.status !== 200) {
-        logger.warn("API returned non-200 status.", { status: response.status });
+        logger.warn("API returned non-200 status:", { status: response.status });
         throw new Error("API_ERROR");
       }
 
       // We verify that we received an actual image from the API.
       const contentType = response.headers['content-type'];
       if (!contentType || !contentType.startsWith('image/')) {
-        logger.warn("API did not return an image.", { contentType });
+        logger.warn("API did not return an image:", { contentType });
         throw new Error("INVALID_RESPONSE");
       }
 
@@ -90,7 +90,7 @@ module.exports = {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          logger.warn("API error response.", { 
+          logger.warn("API error response:", { 
             status: error.response.status,
             statusText: error.response.statusText
           });

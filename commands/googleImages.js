@@ -69,7 +69,7 @@ module.exports = {
 
       // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
-      logger.info(`/googleimages command initiated.`, { 
+      logger.info(`/googleimages command initiated:`, { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -82,7 +82,7 @@ module.exports = {
       );
           
       if (!searchParams.valid) {
-        logger.warn("Invalid search parameters.", { reason: searchParams.error });
+        logger.warn("Invalid search parameters:", { reason: searchParams.error });
         return await interaction.editReply({
           content: ERROR_MESSAGES.INVALID_QUERY,
           ephemeral: true
@@ -92,7 +92,7 @@ module.exports = {
       // We format the query to title case for better presentation.
       searchParams.query = titleCase(searchParams.query);
       
-      logger.debug("Formatted search parameters.", { 
+      logger.debug("Formatted search parameters:", { 
         query: searchParams.query, 
         count: searchParams.count 
       });
@@ -108,7 +108,7 @@ module.exports = {
       }
       
       if (searchResults.items.length === 0) {
-        logger.warn("No image results found for query.", { query: searchParams.query });
+        logger.warn("No image results found for query:", { query: searchParams.query });
         return await interaction.editReply({
           content: ERROR_MESSAGES.NO_RESULTS_FOUND,
           ephemeral: true
@@ -144,7 +144,7 @@ module.exports = {
    */
   validateConfiguration() {
     if (!config.googleApiKey || !config.imageSearchEngineId) {
-      logger.error("Google API configuration is missing.", {
+      logger.error("Google API configuration is missing:", {
         hasApiKey: !!config.googleApiKey,
         hasSearchEngineId: !!config.imageSearchEngineId
       });
@@ -173,7 +173,7 @@ module.exports = {
       safe: SAFE_SEARCH
     });
     const requestUrl = `${SEARCH_API_URL}?${params.toString()}`;
-    logger.debug("Preparing Google Image API request.", { 
+    logger.debug("Preparing Google Image API request:", { 
       searchQuery: query,
       resultsRequested: resultsCount
     });
@@ -181,7 +181,7 @@ module.exports = {
     // We make the API request using axios and handle the response.
     try {
       const response = await axios.get(requestUrl);
-      logger.debug("Google Image API response received.", { 
+      logger.debug("Google Image API response received:", { 
         status: response.status,
         itemsReturned: response.data?.items?.length || 0
       });
@@ -190,7 +190,7 @@ module.exports = {
         items: response.data.items || []
       };
     } catch (apiError) {
-      logger.error("Google API request failed.", { 
+      logger.error("Google API request failed:", { 
         error: apiError.message,
         status: apiError.response?.status,
         errorDetails: apiError.response?.data

@@ -39,10 +39,9 @@ module.exports = {
             // We get the search term from the interaction options.
             const term = interaction.options.getString('term');
             
-            logger.info("Urban Dictionary command initiated:", {
+            logger.info("/urban command initiated:", {
                 userId: interaction.user.id,
-                guildId: interaction.guild?.id,
-                term
+                guildId: interaction.guildId
             });
 
             // We fetch the definition from Urban Dictionary.
