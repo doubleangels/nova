@@ -37,6 +37,7 @@ module.exports = {
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      */
     async execute(interaction) {
+        // We defer the reply since nickname changes might take a moment to complete.
         await interaction.deferReply({ ephemeral: true });
         logger.info("/changenickname command initiated.", { 
             userId: interaction.user.id, 
@@ -44,6 +45,7 @@ module.exports = {
         });
         
         try {
+            // We extract the command options provided by the user.
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
             
@@ -53,7 +55,7 @@ module.exports = {
                 newNickname: newNickname
             });
             
-            // Validate permissions and conditions
+            // We validate permissions and conditions before attempting nickname change.
             const validationResult = await this.validateNicknameChange(interaction, targetUser, newNickname);
             if (!validationResult.success) {
                 return await interaction.editReply({
@@ -62,7 +64,7 @@ module.exports = {
                 });
             }
             
-            // Change the nickname
+            // We change the nickname after validation passes.
             const targetMember = validationResult.targetMember;
             await targetMember.setNickname(newNickname);
             
@@ -78,6 +80,7 @@ module.exports = {
     
     /**
      * We handle errors that occur during command execution.
+     * This function logs the error and attempts to notify the user.
      *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {Error} error - The error that occurred.
@@ -112,6 +115,7 @@ module.exports = {
     
     /**
      * We validate that the nickname change can be performed.
+     * This function checks bot and user permissions, nickname length, and role hierarchy.
      *
      * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
      * @param {User} targetUser - The user whose nickname will be changed.
@@ -119,7 +123,7 @@ module.exports = {
      * @returns {Object} An object with success status, message, and targetMember if successful.
      */
     async validateNicknameChange(interaction, targetUser, newNickname) {
-        // Check if the bot has permission to manage nicknames
+        // We check if the bot has permission to manage nicknames in the server.
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
             logger.warn("Bot lacks ManageNicknames permission.", { 
@@ -131,7 +135,7 @@ module.exports = {
             };
         }
 
-        // Check nickname length (Discord's limit is 32 characters)
+        // We check if the nickname length exceeds Discord's limit of 32 characters.
         if (newNickname.length > 32) {
             logger.warn("Nickname exceeds maximum length.", {
                 length: newNickname.length
@@ -142,7 +146,7 @@ module.exports = {
             };
         }
 
-        // Check if the target user is the server owner
+        // We check if the target user is the server owner.
         if (targetUser.id === interaction.guild.ownerId) {
             logger.warn("Attempted to change server owner's nickname.", {
                 targetUserId: targetUser.id
@@ -153,7 +157,7 @@ module.exports = {
             };
         }
 
-        // Check if the target user is the bot itself
+        // We check if the target user is the bot itself.
         if (targetUser.id === interaction.client.user.id) {
             logger.warn("Attempted to change bot's nickname.", {
                 targetUserId: targetUser.id
@@ -164,7 +168,8 @@ module.exports = {
             };
         }
 
-        // Check role hierarchy
+        // We check role hierarchy for the user issuing the command.
+        // Server owners can manage any nickname regardless of hierarchy.
         if (interaction.guild.ownerId !== interaction.user.id) {
             const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
             const targetMember = await interaction.guild.members.fetch(targetUser.id);
@@ -181,7 +186,7 @@ module.exports = {
             }
         }
 
-        // Fetch the target member
+        // We fetch the target member from the guild to ensure they exist.
         let targetMember;
         try {
             targetMember = await interaction.guild.members.fetch(targetUser.id);
