@@ -22,6 +22,7 @@ const ERROR_MESSAGES = {
     DISCORD_USER_HIERARCHY: "⚠️ You don't have permission to assign a role higher than your highest role.",
     DISCORD_USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
     DISCORD_ALREADY_HAS_ROLE: "⚠️ User already has this role.",
+    DISCORD_ROLE_NOT_ASSIGNED: "⚠️ User does not have this role.",
     DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
 
     API_ERROR: "⚠️ An error occurred while communicating with the external service.",

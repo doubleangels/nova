@@ -61,11 +61,15 @@ module.exports = {
       
       // We validate permissions and role assignment before proceeding.
       const validationResult = await this.validateRoleRemoval(interaction, role, targetUser);
-      if (!validationResult.valid) {
-        return await interaction.editReply({
-          content: validationResult.message,
+      
+      // We ensure we have a valid validation result
+      if (!validationResult || !validationResult.valid) {
+        const errorMessage = validationResult?.message || ERROR_MESSAGES.UNEXPECTED_ERROR;
+        await interaction.editReply({
+          content: errorMessage,
           ephemeral: true
         });
+        return;
       }
       
       // We remove the role from the user after validation passes.
@@ -174,13 +178,9 @@ module.exports = {
         roleId: role.id
       });
 
-      await interaction.editReply({
-        content: ERROR_MESSAGES.ROLE_NOT_ASSIGNED,
-        ephemeral: true
-      });
       return {
         valid: false,
-        message: ERROR_MESSAGES.ROLE_NOT_ASSIGNED
+        message: ERROR_MESSAGES.DISCORD_ROLE_NOT_ASSIGNED
       };
     }
     
