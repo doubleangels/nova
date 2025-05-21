@@ -104,7 +104,7 @@ module.exports = {
         // We execute the command with proper error handling.
         try {
           await command.execute(interaction);
-          logger.debug(`Executed command ${interaction.commandName} for user ${interaction.user.tag}`);
+          logger.debug(`Executed command ${interaction.commandName} for user ${interaction.user.tag}.`);
         } catch (error) {
           logger.error(`Error executing command ${interaction.commandName}:`, {
             error: error.message,
@@ -127,7 +127,7 @@ module.exports = {
         if (buttonHandler) {
           try {
             await buttonHandler(interaction, params);
-            logger.debug(`Handled button interaction ${action} for user ${interaction.user.tag}`);
+            logger.debug(`Handled button interaction ${action} for user ${interaction.user.tag}.`);
           } catch (error) {
             logger.error(`Error handling button interaction ${action}:`, {
               error: error.message,
@@ -145,7 +145,7 @@ module.exports = {
         if (selectHandler) {
           try {
             await selectHandler(interaction, params);
-            logger.debug(`Handled select menu interaction ${action} for user ${interaction.user.tag}`);
+            logger.debug(`Handled select menu interaction ${action} for user ${interaction.user.tag}.`);
           } catch (error) {
             logger.error(`Error handling select menu interaction ${action}:`, {
               error: error.message,
