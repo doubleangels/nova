@@ -13,7 +13,7 @@ const deployCommands = require('../deploy-commands');
 
 // We define the bot's activity and status for consistent presence.
 const BOT_ACTIVITY = {
-  name: "for ways to help my Frens! ❤️",
+  name: "for ways to help! ❤️",
   type: ActivityType.Watching
 };
 const BOT_STATUS = "online";
