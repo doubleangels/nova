@@ -174,6 +174,10 @@ module.exports = {
         roleId: role.id
       });
 
+      await interaction.editReply({
+        content: ERROR_MESSAGES.ROLE_NOT_ASSIGNED,
+        ephemeral: true
+      });
       return {
         valid: false,
         message: ERROR_MESSAGES.ROLE_NOT_ASSIGNED
