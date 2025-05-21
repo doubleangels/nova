@@ -5,15 +5,6 @@ const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 
-// We define rate limiting and spam detection constants for message moderation.
-const MESSAGE_RATE_LIMIT = 5;
-const MESSAGE_RATE_WINDOW = 5000;
-const SPAM_THRESHOLD = 3;
-const SPAM_WINDOW = 10000;
-
-// We maintain an in-memory message history for rate limiting and spam detection.
-const messageHistory = new Map();
-
 // We handle new messages and process them according to our rules.
 module.exports = {
   name: 'messageCreate',
@@ -42,9 +33,6 @@ module.exports = {
       // We skip non-Disboard/Nova bot messages to focus on relevant interactions.
       if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
-      // We check for rate limiting and spam before processing the message.
-      if (await isRateLimited(message) || await isSpam(message)) return;
-
       // We log received messages for monitoring and debugging.
       logger.debug("Message received:", {
         author: message.author?.tag || "Unknown Author",
@@ -55,7 +43,7 @@ module.exports = {
       // We increment user message count only for non-bot messages.
       if (!message.author.bot) {
         await incrementMessageCount(message.author.id, message.author.username);
-        logger.debug(`Incremented message count for user ${message.author.tag}`);
+        logger.debug(`Incremented message count for user ${message.author.tag}.`);
       }
 
       // We remove users from mute tracking when they send their first message.
@@ -83,7 +71,7 @@ module.exports = {
       if (message.channel && message.channel.type === 0 && !message.author.bot) {
         await incrementChannelMessageCount(message.channel.id, message.channel.name);
       }
-      logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}`);
+      logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}.`);
     } catch (error) {
       Sentry.captureException(error, {
         extra: {
@@ -96,61 +84,6 @@ module.exports = {
     }
   }
 };
-
-/**
- * We check if a user is sending messages too quickly.
- * This function implements rate limiting to prevent message spam.
- * 
- * @param {Message} message - The Discord message object.
- * @returns {Promise<boolean>} True if the user is rate limited, false otherwise.
- */
-async function isRateLimited(message) {
-  const userId = message.author.id;
-  const now = Date.now();
-  if (!messageHistory.has(userId)) messageHistory.set(userId, []);
-  const userHistory = messageHistory.get(userId);
-  while (userHistory.length > 0 && now - userHistory[0] > MESSAGE_RATE_WINDOW) userHistory.shift();
-  if (userHistory.length >= MESSAGE_RATE_LIMIT) {
-    logger.warn("User rate limited:", {
-      userId: message.author.id,
-      username: message.author.tag,
-      messageCount: userHistory.length
-    });
-    try { await message.reply("We're detecting too many messages from you. Please slow down."); } catch (error) { logger.error("Failed to send rate limit message:", { error }); }
-    return true;
-  }
-  userHistory.push(now);
-  return false;
-}
-
-/**
- * We detect potential spam behavior in user messages.
- * This function identifies patterns of similar messages sent in quick succession.
- * 
- * @param {Message} message - The Discord message object.
- * @returns {Promise<boolean>} True if spam is detected, false otherwise.
- */
-async function isSpam(message) {
-  const userId = message.author.id;
-  const now = Date.now();
-  if (!messageHistory.has(userId)) messageHistory.set(userId, []);
-  const userHistory = messageHistory.get(userId);
-  const recentMessages = userHistory.filter(time => now - time <= SPAM_WINDOW);
-  const similarMessages = recentMessages.filter(time => {
-    const index = userHistory.indexOf(time);
-    return index >= 0 && userHistory[index + 1] && Math.abs(userHistory[index + 1] - time) <= 1000;
-  });
-  if (similarMessages.length >= SPAM_THRESHOLD) {
-    logger.warn("Spam detected:", {
-      userId: message.author.id,
-      username: message.author.tag,
-      similarMessageCount: similarMessages.length
-    });
-    try { await message.reply("We're detecting spam-like behavior. Please stop sending similar messages repeatedly."); } catch (error) { logger.error("Failed to send spam warning:", { error }); }
-    return true;
-  }
-  return false;
-}
 
 /**
  * We process messages from regular users (not webhooks or bots).
