@@ -33,7 +33,7 @@ module.exports = {
       }
 
       // We log successful processing of the member's departure.
-      logger.info(`Successfully processed member departure: ${member.user.tag}`);
+      logger.info(`Successfully processed member departure: ${member.user.tag}.`);
     } catch (error) {
       // We capture the error in Sentry for monitoring and debugging.
       Sentry.captureException(error, {

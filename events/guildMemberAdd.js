@@ -50,11 +50,11 @@ module.exports = {
           member.guild.id,
           member.client
         );
-        logger.info(`Scheduled mute kick for new member: ${member.user.tag}`);
+        logger.info(`Scheduled mute kick for new member: ${member.user.tag}.`);
       }
 
       // We log successful processing of the new member.
-      logger.info(`Successfully processed new member: ${member.user.tag}`);
+      logger.info(`Successfully processed new member: ${member.user.tag}.`);
     } catch (error) {
       // We capture the error in Sentry for monitoring and debugging.
       Sentry.captureException(error, {

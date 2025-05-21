@@ -62,7 +62,7 @@ module.exports = {
         }
       }
 
-      logger.debug(`Processed reaction ${reaction.emoji.name} from ${user.tag}`);
+      logger.debug(`Processed reaction ${reaction.emoji.name} from ${user.tag}.`);
     } catch (error) {
       logger.error(`Error processing reaction from ${user.tag}:`, {
         error: error.message,

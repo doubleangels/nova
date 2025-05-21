@@ -38,7 +38,7 @@ module.exports = {
            VALUES ($1, $2, $3, $4, NOW())`,
           [randomUUID(), newState.member.id, newState.guild.id, newState.channelId]
         );
-        logger.info("Started voice session", { userId: newState.member.id, guildId: newState.guild.id, channelId: newState.channelId });
+        logger.info("Started voice session:", { userId: newState.member.id, guildId: newState.guild.id, channelId: newState.channelId });
       }
 
       // We handle users leaving a voice channel.
@@ -85,7 +85,7 @@ module.exports = {
             [rows[0].session_id]
           );
         }
-        logger.info("Ended voice session", { userId: oldState.member.id, guildId: oldState.guild.id, channelId: oldState.channelId });
+        logger.info("Ended voice session:", { userId: oldState.member.id, guildId: oldState.guild.id, channelId: oldState.channelId });
       }
 
       // We handle users switching between voice channels.
@@ -139,7 +139,7 @@ module.exports = {
            VALUES ($1, $2, $3, $4, NOW())`,
           [randomUUID(), newState.member.id, newState.guild.id, newState.channelId]
         );
-        logger.info("Switched voice session", { userId: newState.member.id, guildId: newState.guild.id, channelId: newState.channelId });
+        logger.info("Switched voice session:", { userId: newState.member.id, guildId: newState.guild.id, channelId: newState.channelId });
       }
 
       // We can add additional tracking for mute/deafen/streaming states if needed.

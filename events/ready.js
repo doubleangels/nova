@@ -69,7 +69,7 @@ module.exports = {
     try {
       // We set the bot's activity status to indicate it's ready for use.
       client.user.setActivity(BOT_ACTIVITY.name, { type: BOT_ACTIVITY.type });
-      logger.info(`Logged in as ${client.user.tag}`);
+      logger.info(`Logged in as ${client.user.tag}.`);
 
       // We initialize the database connection for data persistence.
       await initializeDatabase();
