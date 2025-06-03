@@ -1,4 +1,3 @@
-const chrono = require('chrono-node');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -41,7 +40,7 @@ function isValidTimezone(tz) {
 }
 
 /**
- * We extract time references from a text string using chrono-node.
+ * We extract time references from a text string using dayjs.
  * This function parses natural language time expressions into structured data.
  * 
  * @param {string} content - The text content to parse for time references.
@@ -53,62 +52,55 @@ function extractTimeReferences(content) {
   }
   
   try {
-    // We configure chrono to be more precise with time parsing.
-    const customChrono = chrono.casual.clone();
-    
-    // We add a custom parser to handle timezone-aware parsing.
-    customChrono.parsers.push({
-      pattern: () => TIME_PATTERN,
-      extract: (context, match) => {
-        const text = match[0];
-        const date = chrono.parseDate(text);
-        
-        // We extract just the time components if we have a valid date.
-        if (date) {
-          const hours = date.getHours();
-          const minutes = date.getMinutes();
-          
-          const refDate = new Date();
-          refDate.setHours(hours, minutes, 0, 0);
-          
-          logger.debug("Time parsing details:", {
-            originalText: text,
-            parsedHours: hours,
-            parsedMinutes: minutes,
-            refDate: refDate.toISOString(),
-            timeOnly: true
-          });
-          
-          return {
-            text: text,
-            date: refDate,
-            start: { timeOnly: true }
-          };
-        }
+    const matches = content.match(TIME_PATTERN);
+    if (!matches) return [];
+
+    const results = matches.map(text => {
+      // Try to parse the time using dayjs
+      let parsedTime;
+      
+      // Handle noon/midnight
+      if (text.toLowerCase() === 'noon') {
+        parsedTime = dayjs().hour(12).minute(0);
+      } else if (text.toLowerCase() === 'midnight') {
+        parsedTime = dayjs().hour(0).minute(0);
+      } else {
+        // Handle regular time formats
+        const timeStr = text.replace(/\s+/g, '');
+        parsedTime = dayjs(timeStr, ['h:mma', 'h:mm a', 'h:mm', 'ha', 'h a']);
+      }
+
+      if (!parsedTime.isValid()) {
+        logger.debug("Failed to parse time:", { text });
         return null;
       }
-    });
 
-    const results = customChrono.parse(content);
+      logger.debug("Time parsing details:", {
+        originalText: text,
+        parsedTime: parsedTime.format(),
+        timeOnly: true
+      });
+
+      return {
+        text,
+        date: parsedTime.toDate(),
+        timeOnly: true
+      };
+    }).filter(Boolean);
+
     logger.debug("Parsed time references from content.", { 
       count: results.length, 
       contentLength: content.length,
       results: results.map(r => ({
         text: r.text,
-        date: r.start.date().toISOString(),
-        hours: r.start.date().getHours(),
-        minutes: r.start.date().getMinutes(),
-        timeOnly: r.start.timeOnly || false
+        date: r.date.toISOString(),
+        hours: r.date.getHours(),
+        minutes: r.date.getMinutes(),
+        timeOnly: r.timeOnly
       }))
     });
     
-    return results
-      .filter(result => TIME_PATTERN.test(result.text))
-      .map(result => ({
-        date: result.start.date(),
-        text: result.text,
-        timeOnly: result.start.timeOnly || false
-      }));
+    return results;
   } catch (error) {
     logError('Error parsing time references', error);
     throw new Error(ERROR_MESSAGES.TIME_PARSE_FAILED);

@@ -110,7 +110,11 @@ for (const file of eventFiles) {
         if (event.name !== 'typingStart' && event.name !== 'presenceUpdate') {
           logger.debug("Executing event:", { event: event.name });
         }
-        event.execute(...args, client);
+        if (event.name === 'ready') {
+          event.execute(...args, client);
+        } else {
+          event.execute(...args);
+        }
       });
     }
     logger.info("Loaded event:", { event: event.name });
