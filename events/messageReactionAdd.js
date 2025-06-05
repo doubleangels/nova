@@ -7,7 +7,7 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const Sentry = require('../sentry');
-const { logError } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
@@ -152,7 +152,7 @@ async function handleClockReaction(reaction, user) {
     if (!userTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ <@${user.id}>, you haven't set your timezone yet. Please use the \`/timezone\` command to set your timezone.`
+        `⚠️ ${ERROR_MESSAGES.TIME_CONVERSION_INVALID_TIMEZONE}`
       );
       return;
     }
@@ -165,7 +165,7 @@ async function handleClockReaction(reaction, user) {
     if (!messageAuthorTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ <@${user.id}>, the author of that message hasn't set their timezone yet, so I can't convert the time accurately.`
+        `⚠️ ${ERROR_MESSAGES.TIME_CONVERSION_INVALID_TIMEZONE}`
       );
       return;
     }
@@ -184,7 +184,7 @@ async function handleClockReaction(reaction, user) {
     } else {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ <@${user.id}>, I couldn't find any time references in that message.`
+        `⚠️ ${ERROR_MESSAGES.TIME_MISSING_REFERENCE}`
       );
     }
   } catch (error) {
@@ -350,13 +350,19 @@ async function handleTranslationRequest(reaction, user) {
         // Get the target language
         const flagEmoji = reaction.emoji.name;
         const languageInfo = getLanguageInfo(flagEmoji);
-        if (!languageInfo) return;
+        if (!languageInfo) {
+            throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
+        }
 
         // Get the original message content
         const message = reaction.message;
-        if (!message) return;
+        if (!message) {
+            throw new Error(ERROR_MESSAGES.DISCORD_MESSAGE_NOT_FOUND);
+        }
         const originalText = message.content;
-        if (!originalText) return;
+        if (!originalText) {
+            throw new Error(ERROR_MESSAGES.TRANSLATION_EMPTY_TEXT);
+        }
 
         // Translate the message
         const response = await axios.post(
@@ -415,8 +421,8 @@ async function handleTranslationRequest(reaction, user) {
         // Send a user-friendly error message
         try {
             const errorMessage = error.response?.status === 403 
-                ? 'Translation service is not properly configured. Please check the API key.'
-                : 'Failed to translate the message. Please try again later.';
+                ? ERROR_MESSAGES.TRANSLATION_API_ERROR
+                : ERROR_MESSAGES.TRANSLATION_FAILED;
             
             await reaction.message.reply({
                 content: `⚠️ ${errorMessage}`,

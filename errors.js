@@ -129,6 +129,20 @@ const ERROR_MESSAGES = {
     INVALID_CONVERSION: 'Invalid conversion data.',
     NO_TIMES_TO_CONVERT: 'No times to convert.',
 
+    // Translation related errors
+    TRANSLATION_FAILED: 'Failed to translate the message. Please try again later.',
+    TRANSLATION_API_ERROR: 'Translation service is not properly configured. Please check the API key.',
+    TRANSLATION_INVALID_FLAG: 'Invalid flag emoji provided for translation.',
+    TRANSLATION_EMPTY_TEXT: 'No text to translate.',
+    TRANSLATION_INVALID_LANGUAGE: 'Invalid target language specified.',
+
+    // Time conversion related errors
+    TIME_INVALID_FORMAT: 'Invalid time format provided.',
+    TIME_INVALID_HOURS: 'Invalid hours provided. Hours must be between 0 and 23.',
+    TIME_INVALID_MINUTES: 'Invalid minutes provided. Minutes must be between 0 and 59.',
+    TIME_MISSING_REFERENCE: 'No time reference found in the message.',
+    TIME_CONVERSION_INVALID_TIMEZONE: 'Invalid timezone provided for conversion.',
+
     LOCATION_LOOKUP_FAILED: 'Failed to lookup location.',
     COORDINATES_LOOKUP_FAILED: 'Failed to lookup coordinates.',
     INVALID_COORDINATES: 'Invalid coordinates provided.',
