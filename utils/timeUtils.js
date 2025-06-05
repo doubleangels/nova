@@ -8,7 +8,7 @@ const Sentry = require('../sentry');
 const { logError, ERROR_MESSAGES } = require('../errors');
 
 // We define these configuration constants for consistent time formatting and parsing.
-const TIME_FORMAT = 'h:mm A';
+const TIME_FORMAT = 'h:mm A'; // 12-hour format with AM/PM
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 
 // We extend dayjs with UTC and timezone support for time conversions.
@@ -67,7 +67,19 @@ function extractTimeReferences(content) {
       } else {
         // Handle regular time formats
         const timeStr = text.replace(/\s+/g, '');
-        parsedTime = dayjs(timeStr, ['h:mma', 'h:mm a', 'h:mm', 'ha', 'h a']);
+        // First try parsing with AM/PM formats
+        parsedTime = dayjs(timeStr, ['h:mma', 'h:mm a', 'ha', 'h a']);
+        
+        // If that fails, try parsing as 24-hour format and convert to 12-hour
+        if (!parsedTime.isValid()) {
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
+            // Convert 24-hour to 12-hour format
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const hour12 = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+            parsedTime = dayjs().hour(hours).minute(minutes);
+          }
+        }
       }
 
       if (!parsedTime.isValid()) {

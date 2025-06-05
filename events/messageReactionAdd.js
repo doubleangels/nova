@@ -2,11 +2,15 @@ const path = require('path');
 const logger = require('../logger')('messageReactionAdd.js');
 const { getUserTimezone } = require('../utils/database');
 const { extractTimeReferences, convertTimeZones, formatConvertedTimes } = require('../utils/timeUtils');
+const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
+const { Events } = require('discord.js');
+const axios = require('axios');
+const config = require('../config');
 
 // We define configuration constants for consistent time conversion behavior.
 const CLOCK_EMOJI = '🕒';
@@ -29,7 +33,7 @@ dayjs.extend(timezone);
  * @param {User} user - The user who added the reaction.
  */
 module.exports = {
-  name: 'messageReactionAdd',
+  name: Events.MessageReactionAdd,
   async execute(reaction, user) {
     try {
       // We ignore reactions from bots to prevent infinite loops.
@@ -61,6 +65,13 @@ module.exports = {
           // We handle role assignments here.
           // Example: if (reaction.emoji.name === '✅') { await member.roles.add(roleId); }
         }
+      }
+
+      // Check if the reaction is a flag emoji
+      const flagEmoji = reaction.emoji.name;
+      if (isValidTranslationFlag(flagEmoji)) {
+        await handleTranslationRequest(reaction, user);
+        return;
       }
 
       logger.debug(`Processed reaction ${reaction.emoji.name} from ${user.tag}.`);
@@ -246,9 +257,29 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
     
     // We format the converted times into a readable message.
     const formattedTimes = formatConvertedTimes(convertedTimes);
-    const messageContent = `${CLOCK_EMOJI} <@${userId}>, ${formattedTimes}`;
+
+    // We get the user's highest role color
+    let embedColor = 0x0099ff; // Default Discord blue
+    const member = channel.guild?.members.cache.get(userId);
+    if (member) {
+      const highestRole = member.roles.highest;
+      if (highestRole && highestRole.color !== 0) {
+        embedColor = highestRole.color;
+      }
+    }
+
+    // We create an embed with the time conversion
+    const embed = {
+      color: embedColor,
+      title: `${CLOCK_EMOJI} Time Conversion`,
+      description: formattedTimes,
+      footer: {
+        text: `Requested by: ${member?.user.tag || userId}`
+      },
+      timestamp: new Date()
+    };
     
-    await sendTemporaryMessage(channel, messageContent, 15000);
+    await sendTemporaryMessage(channel, { embeds: [embed] }, 15000);
   } catch (error) {
     Sentry.captureException(error, {
       extra: {
@@ -305,4 +336,97 @@ async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_
     });
     return null;
   }
+}
+
+/**
+ * We handle translation requests based on flag emojis.
+ * This function processes translations for messages.
+ * 
+ * @param {MessageReaction} reaction - The reaction object.
+ * @param {User} user - The user who reacted.
+ */
+async function handleTranslationRequest(reaction, user) {
+    try {
+        // Get the target language
+        const flagEmoji = reaction.emoji.name;
+        const languageInfo = getLanguageInfo(flagEmoji);
+        if (!languageInfo) return;
+
+        // Get the original message content
+        const message = reaction.message;
+        if (!message) return;
+        const originalText = message.content;
+        if (!originalText) return;
+
+        // Translate the message
+        const response = await axios.post(
+            `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
+            {
+                q: originalText,
+                target: languageInfo.code,
+                format: 'text'
+            }
+        );
+
+        const translatedText = response.data.data.translations[0].translatedText;
+
+        // Get the user's highest role color
+        let embedColor = 0x0099ff; // Default Discord blue
+        if (message.guild) {
+            const member = message.guild.members.cache.get(user.id);
+            if (member) {
+                const highestRole = member.roles.highest;
+                if (highestRole && highestRole.color !== 0) {
+                    embedColor = highestRole.color;
+                }
+            }
+        }
+
+        // Create an embed with the translation
+        const embed = {
+            color: embedColor,
+            title: `Translation to ${languageInfo.name} ${flagEmoji}`,
+            description: translatedText,
+            footer: {
+                text: `Translation requested by: ${user.tag}`
+            },
+            timestamp: new Date()
+        };
+
+        // Send the translation as a reply
+        await message.reply({ embeds: [embed] });
+    } catch (error) {
+        // Extract relevant error information without circular references
+        const errorInfo = {
+            message: error.message,
+            code: error.code,
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            config: {
+                url: error.config?.url,
+                method: error.config?.method,
+                headers: error.config?.headers ? Object.keys(error.config.headers) : undefined
+            }
+        };
+
+        logger.error('Error in translation request:', errorInfo);
+        
+        // Send a user-friendly error message
+        try {
+            const errorMessage = error.response?.status === 403 
+                ? 'Translation service is not properly configured. Please check the API key.'
+                : 'Failed to translate the message. Please try again later.';
+            
+            await reaction.message.reply({
+                content: `⚠️ ${errorMessage}`,
+                allowedMentions: { repliedUser: false }
+            });
+        } catch (replyError) {
+            logger.error('Failed to send error message:', {
+                message: replyError.message,
+                code: replyError.code
+            });
+        }
+    }
 }
