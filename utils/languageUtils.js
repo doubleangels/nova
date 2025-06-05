@@ -1,3 +1,9 @@
+/**
+ * Language utilities module for handling translation-related functionality.
+ * Manages language code mapping and flag emoji validation.
+ * @module utils/languageUtils
+ */
+
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { ERROR_MESSAGES } = require('../errors');
@@ -201,18 +207,55 @@ const FLAG_TO_LANGUAGE = {
     '🇿🇼': { code: 'en', name: 'English' }, // Zimbabwe
 };
 
+/**
+ * Gets language information for a flag emoji.
+ * @function getLanguageInfo
+ * @param {string} flagEmoji - The flag emoji to get language info for
+ * @returns {Object|null} Language information object or null if not found
+ * @throws {Error} If flag emoji is invalid
+ */
 function getLanguageInfo(flagEmoji) {
+    logger.debug("Getting language info for flag:", { flagEmoji });
+    
     if (!flagEmoji || typeof flagEmoji !== 'string') {
+        logger.warn("Invalid flag emoji provided:", { flagEmoji });
         throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
     }
-    return FLAG_TO_LANGUAGE[flagEmoji] || null;
+    
+    const languageInfo = FLAG_TO_LANGUAGE[flagEmoji] || null;
+    logger.debug("Language info retrieved:", { 
+        flagEmoji,
+        languageInfo: languageInfo ? {
+            code: languageInfo.code,
+            name: languageInfo.name
+        } : null
+    });
+    
+    return languageInfo;
 }
 
+/**
+ * Validates if a flag emoji is valid for translation.
+ * @function isValidTranslationFlag
+ * @param {string} emoji - The emoji to validate
+ * @returns {boolean} Whether the emoji is a valid translation flag
+ * @throws {Error} If emoji is invalid
+ */
 function isValidTranslationFlag(emoji) {
+    logger.debug("Validating translation flag:", { emoji });
+    
     if (!emoji || typeof emoji !== 'string') {
+        logger.warn("Invalid emoji provided for validation:", { emoji });
         throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
     }
-    return emoji in FLAG_TO_LANGUAGE;
+    
+    const isValid = emoji in FLAG_TO_LANGUAGE;
+    logger.debug("Translation flag validation result:", { 
+        emoji,
+        isValid
+    });
+    
+    return isValid;
 }
 
 module.exports = {

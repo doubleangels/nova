@@ -295,20 +295,43 @@ async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_
 
 async function handleTranslationRequest(reaction, user) {
     try {
+        logger.debug("Handling translation request:", {
+            flagEmoji: reaction.emoji.name,
+            userId: user.id,
+            userTag: user.tag,
+            messageId: reaction.message.id
+        });
+
         const flagEmoji = reaction.emoji.name;
         const languageInfo = getLanguageInfo(flagEmoji);
         if (!languageInfo) {
+            logger.warn("Invalid translation flag:", { flagEmoji });
             throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
         }
 
         const message = reaction.message;
         if (!message) {
+            logger.warn("Message not found for translation:", {
+                messageId: reaction.message?.id,
+                userId: user.id
+            });
             throw new Error(ERROR_MESSAGES.DISCORD_MESSAGE_NOT_FOUND);
         }
+
         const originalText = message.content;
         if (!originalText) {
+            logger.warn("Empty message content for translation:", {
+                messageId: message.id,
+                userId: user.id
+            });
             throw new Error(ERROR_MESSAGES.TRANSLATION_EMPTY_TEXT);
         }
+
+        logger.debug("Making translation API request:", {
+            targetLanguage: languageInfo.code,
+            textLength: originalText.length,
+            userId: user.id
+        });
 
         const response = await axios.post(
             `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
@@ -320,6 +343,11 @@ async function handleTranslationRequest(reaction, user) {
         );
 
         const translatedText = response.data.data.translations[0].translatedText;
+        logger.debug("Translation API response received:", {
+            targetLanguage: languageInfo.code,
+            translatedLength: translatedText.length,
+            userId: user.id
+        });
 
         let embedColor = 0x0099ff; // Default Discord blue
         if (message.guild) {
@@ -342,7 +370,19 @@ async function handleTranslationRequest(reaction, user) {
             timestamp: new Date()
         };
 
+        logger.debug("Sending translation response:", {
+            targetLanguage: languageInfo.name,
+            userId: user.id,
+            messageId: message.id
+        });
+
         await message.reply({ embeds: [embed] });
+        
+        logger.info("Translation completed successfully:", {
+            targetLanguage: languageInfo.name,
+            userId: user.id,
+            messageId: message.id
+        });
     } catch (error) {
         const errorInfo = {
             message: error.message,
@@ -364,6 +404,12 @@ async function handleTranslationRequest(reaction, user) {
                 ? ERROR_MESSAGES.TRANSLATION_API_ERROR
                 : ERROR_MESSAGES.TRANSLATION_FAILED;
             
+            logger.debug("Sending translation error response:", {
+                errorType: error.response?.status === 403 ? 'API_ERROR' : 'GENERAL_ERROR',
+                userId: user.id,
+                messageId: reaction.message?.id
+            });
+
             await reaction.message.reply({
                 content: `⚠️ ${errorMessage}`,
                 allowedMentions: { repliedUser: false }
@@ -371,7 +417,8 @@ async function handleTranslationRequest(reaction, user) {
         } catch (replyError) {
             logger.error('Failed to send error message:', {
                 message: replyError.message,
-                code: replyError.code
+                code: replyError.code,
+                originalError: error.message
             });
         }
     }
