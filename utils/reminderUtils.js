@@ -1,3 +1,9 @@
+/**
+ * Reminder utilities module for handling server bump reminders.
+ * Manages reminder scheduling, persistence, and notifications.
+ * @module utils/reminderUtils
+ */
+
 const logger = require('../logger')('reminderUtils.js');
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
@@ -16,6 +22,13 @@ const REMINDER_EMOJI = '🔔';
 const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
 const REMINDER_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
 
+/**
+ * Retrieves the latest reminder data from the database.
+ * @async
+ * @function getLatestReminderData
+ * @returns {Promise<Object|null>} The latest reminder data or null if none found
+ * @throws {Error} If database query fails
+ */
 async function getLatestReminderData() {
   try {
     const result = await pool.query(
@@ -31,6 +44,14 @@ async function getLatestReminderData() {
   }
 }
 
+/**
+ * Handles the creation and scheduling of a new reminder.
+ * @async
+ * @function handleReminder
+ * @param {Message} message - The message that triggered the reminder
+ * @param {number} delay - The delay in milliseconds before the reminder
+ * @throws {Error} If reminder creation fails
+ */
 async function handleReminder(message, delay) {
   try {
     const reminderRole = await getValue('reminder_role');
@@ -104,6 +125,13 @@ async function handleReminder(message, delay) {
   }
 }
 
+/**
+ * Reschedules any existing reminders on bot startup.
+ * @async
+ * @function rescheduleReminder
+ * @param {Client} client - The Discord client instance
+ * @throws {Error} If rescheduling fails
+ */
 async function rescheduleReminder(client) {
   try {
     const reminderChannelId = await getValue("reminder_channel");

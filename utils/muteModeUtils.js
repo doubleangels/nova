@@ -1,3 +1,9 @@
+/**
+ * Mute mode utilities module for handling server mute mode functionality.
+ * Manages mute timeouts, member tracking, and automatic kicks.
+ * @module utils/muteModeUtils
+ */
+
 const logger = require('../logger')('muteModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
@@ -8,6 +14,18 @@ const DEFAULT_MUTE_KICK_TIME_HOURS = 4;
 const KICK_REASON_TIMEOUT = "User did not send a message in time.";
 const IMMEDIATE_TIMEOUT_MS = 0;
 
+/**
+ * Schedules a mute kick for a member if they don't send a message within the time limit.
+ * @async
+ * @function scheduleMuteKick
+ * @param {string} memberId - The ID of the member to schedule kick for
+ * @param {string} username - The username of the member
+ * @param {string} joinTime - The time the member joined
+ * @param {number} muteKickTime - The time limit in hours
+ * @param {string} guildId - The ID of the guild
+ * @param {Client} client - The Discord client instance
+ * @throws {Error} If scheduling fails
+ */
 async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guildId, client) {
   try {
     logger.debug(
@@ -74,6 +92,16 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
   }
 }
 
+/**
+ * Performs the kick operation on a member.
+ * @async
+ * @function performKick
+ * @param {Guild} guild - The guild to kick from
+ * @param {string} memberId - The ID of the member to kick
+ * @param {string} username - The username of the member
+ * @param {string} kickType - The type of kick ('immediate' or 'delayed')
+ * @throws {Error} If kick operation fails
+ */
 async function performKick(guild, memberId, username, kickType) {
   try {
     let member = guild.members.cache.get(memberId);
@@ -110,6 +138,13 @@ async function performKick(guild, memberId, username, kickType) {
   }
 }
 
+/**
+ * Reschedules all mute kicks on bot startup.
+ * @async
+ * @function rescheduleAllMuteKicks
+ * @param {Client} client - The Discord client instance
+ * @throws {Error} If rescheduling fails
+ */
 async function rescheduleAllMuteKicks(client) {
   try {
     if (!client) {

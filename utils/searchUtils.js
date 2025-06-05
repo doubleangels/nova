@@ -1,3 +1,9 @@
+/**
+ * Search utilities module for handling Discord search functionality.
+ * Manages paginated results, search operations, and result formatting.
+ * @module utils/searchUtils
+ */
+
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { logError, ERROR_MESSAGES } = require('../errors');
 
@@ -5,6 +11,19 @@ const MAX_SEARCH_RESULTS = 10;
 const SEARCH_TIMEOUT_MS = 5000;
 const MIN_SEARCH_LENGTH = 2;
 
+/**
+ * Creates a paginated interface for search results.
+ * @async
+ * @function createPaginatedResults
+ * @param {Interaction} interaction - The interaction to respond to
+ * @param {Array} items - The items to paginate
+ * @param {Function} generateEmbed - Function to generate embed for current page
+ * @param {string} prefix - Prefix for button custom IDs
+ * @param {number} timeout - Timeout in milliseconds
+ * @param {Object} logger - Logger instance
+ * @param {Object} [options={}] - Additional options for customization
+ * @throws {Error} If pagination setup fails
+ */
 async function createPaginatedResults(
   interaction, 
   items, 
@@ -128,6 +147,16 @@ async function createPaginatedResults(
   });
 }
 
+/**
+ * Normalizes search parameters for consistency.
+ * @function normalizeSearchParams
+ * @param {string} query - The search query
+ * @param {number} resultsCount - Requested number of results
+ * @param {number} defaultCount - Default number of results
+ * @param {number} minResults - Minimum allowed results
+ * @param {number} maxResults - Maximum allowed results
+ * @returns {Object} Normalized search parameters
+ */
 function normalizeSearchParams(query, resultsCount, defaultCount, minResults, maxResults) {
   if (!query || query.trim().length === 0) {
     return { valid: false, error: "Empty query" };
@@ -143,12 +172,27 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
   };
 }
 
+/**
+ * Formats an API error message for display.
+ * @function formatApiError
+ * @param {Error} apiError - The API error to format
+ * @returns {string} Formatted error message
+ */
 function formatApiError(apiError) {
   const statusCode = apiError.response?.status || "unknown";
   const errorMessage = apiError.response?.data?.error?.message || apiError.message;
   return `⚠️ Google API error (${statusCode}): ${errorMessage}`;
 }
 
+/**
+ * Performs a search operation across multiple categories.
+ * @async
+ * @function performSearch
+ * @param {string} query - The search query
+ * @param {Object} [options={}] - Search options
+ * @returns {Promise<Array>} Combined search results
+ * @throws {Error} If search operation fails
+ */
 async function performSearch(query, options = {}) {
   try {
     if (!query || query.length < MIN_SEARCH_LENGTH) {
@@ -188,6 +232,14 @@ async function performSearch(query, options = {}) {
   }
 }
 
+/**
+ * Searches for users matching the query.
+ * @async
+ * @function searchUsers
+ * @param {string} query - The search query
+ * @returns {Promise<Array>} Matching users
+ * @throws {Error} If user search fails
+ */
 async function searchUsers(query) {
   try {
     const users = await getAllUsers();
@@ -212,6 +264,14 @@ async function searchUsers(query) {
   }
 }
 
+/**
+ * Searches for channels matching the query.
+ * @async
+ * @function searchChannels
+ * @param {string} query - The search query
+ * @returns {Promise<Array>} Matching channels
+ * @throws {Error} If channel search fails
+ */
 async function searchChannels(query) {
   try {
     const channels = await getAllChannels();
@@ -236,6 +296,14 @@ async function searchChannels(query) {
   }
 }
 
+/**
+ * Searches for messages matching the query.
+ * @async
+ * @function searchMessages
+ * @param {string} query - The search query
+ * @returns {Promise<Array>} Matching messages
+ * @throws {Error} If message search fails
+ */
 async function searchMessages(query) {
   try {
     const messages = await getRecentMessages();
@@ -262,6 +330,13 @@ async function searchMessages(query) {
   }
 }
 
+/**
+ * Calculates relevance score for search results.
+ * @function calculateRelevance
+ * @param {string} text - The text to search in
+ * @param {string} query - The search query
+ * @returns {number} Relevance score between 0 and 1
+ */
 function calculateRelevance(text, query) {
   const normalizedText = text.toLowerCase();
   const normalizedQuery = query.toLowerCase();

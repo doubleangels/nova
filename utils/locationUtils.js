@@ -1,3 +1,9 @@
+/**
+ * Location utilities module for handling geocoding and timezone operations.
+ * Manages Google Maps API interactions, location caching, and rate limiting.
+ * @module utils/locationUtils
+ */
+
 const axios = require('axios');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -36,6 +42,13 @@ const ErrorTypes = {
   GENERAL: 'general'
 };
 
+/**
+ * Validates if the provided coordinates are within valid ranges.
+ * @function isValidCoordinates
+ * @param {number} lat - The latitude to validate
+ * @param {number} lng - The longitude to validate
+ * @returns {boolean} Whether the coordinates are valid
+ */
 function isValidCoordinates(lat, lng) {
   return (
     typeof lat === 'number' &&
@@ -47,6 +60,11 @@ function isValidCoordinates(lat, lng) {
   );
 }
 
+/**
+ * Checks if the current request rate exceeds the limit.
+ * @function isRateLimited
+ * @returns {boolean} Whether the current request rate is limited
+ */
 function isRateLimited() {
   const now = Date.now();
   const windowStart = now - RATE_LIMIT_WINDOW;
@@ -67,15 +85,31 @@ function isRateLimited() {
   return currentWindowCount >= MAX_REQUESTS_PER_WINDOW;
 }
 
+/**
+ * Records a new API request for rate limiting purposes.
+ * @function recordRequest
+ */
 function recordRequest() {
   const now = Date.now();
   requestCounts.set(now, (requestCounts.get(now) || 0) + 1);
 }
 
+/**
+ * Safely formats a URL by redacting the API key.
+ * @function safeUrl
+ * @param {string} url - The URL to format
+ * @returns {string} The URL with redacted API key
+ */
 function safeUrl(url) {
   return url.replace(/key=([^&]+)/, 'key=REDACTED');
 }
 
+/**
+ * Validates if a timezone string is valid.
+ * @function isValidTimezone
+ * @param {string} tz - The timezone to validate
+ * @returns {boolean} Whether the timezone is valid
+ */
 function isValidTimezone(tz) {
   if (typeof tz !== 'string' || tz.trim() === '') {
     return false;
@@ -85,6 +119,14 @@ function isValidTimezone(tz) {
   return dt.isValid && dt.invalidReason === null;
 }
 
+/**
+ * Retrieves geocoding data for a place name.
+ * @async
+ * @function getGeocodingData
+ * @param {string} place - The place name to geocode
+ * @returns {Promise<Object>} The geocoding result with location data
+ * @throws {Error} If geocoding fails
+ */
 async function getGeocodingData(place) {
   try {
     if (!place || typeof place !== 'string' || place.trim() === '') {
@@ -180,6 +222,15 @@ async function getGeocodingData(place) {
   }
 }
 
+/**
+ * Retrieves timezone data for a location.
+ * @async
+ * @function getTimezoneData
+ * @param {Object} location - The location object with lat/lng
+ * @param {number} [timestamp=Date.now()/1000] - The timestamp to use
+ * @returns {Promise<Object>} The timezone data
+ * @throws {Error} If timezone lookup fails
+ */
 async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 1000)) {
   try {
     if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
@@ -261,6 +312,13 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
   }
 }
 
+/**
+ * Finds the closest timezone to given coordinates.
+ * @function getClosestTimezone
+ * @param {number} lat - The latitude
+ * @param {number} lng - The longitude
+ * @returns {string} The closest timezone identifier
+ */
 function getClosestTimezone(lat, lng) {
   const timezones = moment.tz.names();
   let closestTimezone = 'UTC';
@@ -284,6 +342,14 @@ function getClosestTimezone(lat, lng) {
   return closestTimezone;
 }
 
+/**
+ * Gets the UTC offset for a place.
+ * @async
+ * @function getUtcOffset
+ * @param {string} place - The place name
+ * @returns {Promise<Object>} The UTC offset information
+ * @throws {Error} If offset lookup fails
+ */
 async function getUtcOffset(place) {
   try {
     const geocodeResult = await getGeocodingData(place);
@@ -334,12 +400,25 @@ async function getUtcOffset(place) {
   }
 }
 
+/**
+ * Formats a place name for display.
+ * @function formatPlaceName
+ * @param {string} placeName - The place name to format
+ * @returns {string} The formatted place name
+ */
 function formatPlaceName(placeName) {
   if (!placeName || typeof placeName !== 'string') return '';
   const trimmed = placeName.trim();
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 }
 
+/**
+ * Formats an error message for a location-related error.
+ * @function formatErrorMessage
+ * @param {string} place - The place name
+ * @param {string} errorType - The type of error
+ * @returns {string} The formatted error message
+ */
 function formatErrorMessage(place, errorType) {
   switch (errorType) {
     case ErrorTypes.NOT_FOUND:
@@ -360,6 +439,14 @@ function formatErrorMessage(place, errorType) {
   }
 }
 
+/**
+ * Gets coordinates for a place name.
+ * @async
+ * @function getCoordinates
+ * @param {string} place - The place name
+ * @returns {Promise<Array<number>>} Array of [latitude, longitude]
+ * @throws {Error} If coordinate lookup fails
+ */
 async function getCoordinates(place) {
   try {
     const geocodeResult = await getGeocodingData(place);
