@@ -1,3 +1,9 @@
+/**
+ * Google Search command module for searching and displaying web results.
+ * Handles API interactions with Google Custom Search and result formatting.
+ * @module commands/googleSearch
+ */
+
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -15,6 +21,9 @@ const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout for pagination controls
 const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
 const REQUEST_TIMEOUT = 10000; // 10 second API request timeout to prevent hanging
 const SAFE_SEARCH = 'off'; // Options: 'off', 'medium', 'high' for content filtering
+
+const GOOGLE_API_KEY = config.googleApiKey;
+const GOOGLE_CSE_ID = config.googleCseId;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -34,35 +43,33 @@ module.exports = {
     ),
 
   /**
-   * We handle the google command.
-   * This function allows users to search the web using Google's Custom Search API.
-   *
-   * We perform several tasks:
-   * 1. We validate Google API configuration.
-   * 2. We process web search requests.
-   * 3. We format and display search results.
-   * 4. We handle pagination and user interaction.
-   *
-   * @param {Interaction} interaction - The Discord interaction object.
+   * Executes the Google web search command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the API request fails
    */
   async execute(interaction) {
+    await interaction.deferReply();
+    logger.info("/google command initiated:", { 
+      userId: interaction.user.id, 
+      guildId: interaction.guildId 
+    });
+    
     try {
-      // We validate that the API configuration is properly set up before proceeding.
-      if (!this.validateConfiguration()) {
-        return await interaction.reply({
+      if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID) {
+        logger.error("Missing Google API configuration:", {
+          hasApiKey: !!GOOGLE_API_KEY,
+          hasCseId: !!GOOGLE_CSE_ID
+        });
+        return await interaction.editReply({
           content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
       }
-
-      // We defer the reply to allow time for the API request and processing.
-      await interaction.deferReply();
-      logger.info(`/google command initiated:`, { 
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-
-      // We get and validate the search parameters provided by the user.
+      
+      logger.debug("Processing search query:", { query: interaction.options.getString('query') });
+      
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
@@ -82,7 +89,6 @@ module.exports = {
         count: searchParams.count 
       });
 
-      // We fetch search results from the Google API.
       const searchResults = await this.fetchSearchResults(searchParams.query, searchParams.count);
       
       if (searchResults.error) {
@@ -122,16 +128,17 @@ module.exports = {
   },
   
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'googleSearch', {
+    logError(error, 'google', {
       userId: interaction.user?.id,
-      guildId: interaction.guild?.id
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
     });
     
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
@@ -166,23 +173,6 @@ module.exports = {
   },
   
   /**
-   * We validate that the required API configuration is available.
-   * This function checks for the presence of necessary API keys and IDs.
-   *
-   * @returns {boolean} True if configuration is valid, false otherwise.
-   */
-  validateConfiguration() {
-    if (!config.googleApiKey || !config.searchEngineId) {
-      logger.error("Google API configuration is missing:", {
-        hasApiKey: !!config.googleApiKey,
-        hasSearchEngineId: !!config.searchEngineId
-      });
-      return false;
-    }
-    return true;
-  },
-  
-  /**
    * We fetch search results from the Google Custom Search API.
    * This function retrieves and processes the web search results.
    *
@@ -193,8 +183,8 @@ module.exports = {
   async fetchSearchResults(query, resultsCount) {
     // We build the Google Custom Search API request with all necessary parameters.
     const params = new URLSearchParams({
-      key: config.googleApiKey,
-      cx: config.searchEngineId,
+      key: GOOGLE_API_KEY,
+      cx: GOOGLE_CSE_ID,
       q: query,
       num: resultsCount.toString(),
       start: "1",

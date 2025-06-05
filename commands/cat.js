@@ -1,33 +1,33 @@
+/**
+ * Cat command module for fetching and displaying random cat images.
+ * Handles API interactions with The Cat API and image display formatting.
+ * @module commands/cat
+ */
+
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the cat API integration.
 const CAT_API_URL = 'https://cataas.com/cat/cute';
 const CAT_EMBED_COLOR = 0xD3D3D3;
 const DEFAULT_FILENAME = 'cat.jpg';
 
-/**
- * We handle the cat command.
- * This function fetches and displays a random cat image.
- *
- * We perform several tasks:
- * 1. We fetch a random cat image from the API.
- * 2. We create an embed with the cat image.
- * 3. We send the embed to the user.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cat')
     .setDescription('Fetch and display a random cat image.'),
 
+  /**
+   * Executes the cat command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If API request fails
+   */
   async execute(interaction) {
     try {
-      // We defer the reply since the API call might take a moment.
       await interaction.deferReply();
       
       logger.info("Cat command initiated:", {
@@ -35,18 +35,15 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      // We fetch a random cat image from the API.
       const response = await axios.get('https://api.thecatapi.com/v1/images/search');
       const catData = response.data[0];
       
-      // We create an embed to display the cat image.
       const embed = new EmbedBuilder()
         .setColor('#FFB6C1')
         .setTitle('🐱 Random Cat')
         .setImage(catData.url)
         .setFooter({ text: 'Powered by The Cat API' });
       
-      // We send the embed to the user.
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Cat command completed successfully:", {
@@ -59,11 +56,11 @@ module.exports = {
   },
 
   /**
-   * We fetch a cat image from the API.
-   * This function handles the image retrieval and validation.
-   *
-   * @returns {Promise<Buffer>} A buffer containing the image data.
-   * @throws {Error} If the image cannot be fetched.
+   * Fetches a cat image from the API.
+   * @async
+   * @function fetchCatImage
+   * @returns {Promise<Buffer>} The cat image buffer
+   * @throws {Error} If API request fails or returns invalid response
    */
   async fetchCatImage() {
     logger.debug("Fetching cat image from API.");
@@ -78,14 +75,12 @@ module.exports = {
         throw new Error("API_ERROR");
       }
 
-      // We verify that we received an actual image from the API.
       const contentType = response.headers['content-type'];
       if (!contentType || !contentType.startsWith('image/')) {
         logger.warn("API did not return an image:", { contentType });
         throw new Error("INVALID_RESPONSE");
       }
 
-      // We convert the response data to a buffer for the attachment.
       return Buffer.from(response.data);
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -100,17 +95,16 @@ module.exports = {
           throw new Error("NETWORK_ERROR");
         }
       }
-      // We re-throw any other errors for consistent error handling.
       throw error;
     }
   },
 
   /**
-   * We handle errors that occur during the cat command execution.
-   * This function provides appropriate error messages and logging.
-   *
-   * @param {Interaction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'cat', {
@@ -144,7 +138,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

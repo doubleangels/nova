@@ -1,3 +1,9 @@
+/**
+ * Give permissions command module for managing user roles and permissions.
+ * Handles role creation, assignment, and permission validation.
+ * @module commands/givePerms
+ */
+
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits } = require('discord.js');
 const path = require('path');
@@ -51,10 +57,11 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
     /**
-     * We execute the /giveperms command.
-     * This function processes the permission assignment request.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * Executes the give permissions command.
+     * @async
+     * @function execute
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @throws {Error} If role creation or assignment fails
      */
     async execute(interaction) {
         // We check if the required configuration values are available before proceeding.
@@ -147,14 +154,13 @@ module.exports = {
     },
     
     /**
-     * We validate the command inputs to ensure they meet requirements.
-     * This function checks the role name, color, and user validity.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {string} roleName - The name for the new role.
-     * @param {string} colorHex - The color for the new role.
-     * @param {User} targetUser - The user to receive the role.
-     * @returns {Object} An object with success status and message.
+     * Validates command input parameters.
+     * @function validateInputs
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {string} roleName - The name for the new role
+     * @param {string} colorHex - The color for the new role
+     * @param {import('discord.js').User} targetUser - The user to receive the role
+     * @returns {Object} Validation result with success status and message
      */
     validateInputs(interaction, roleName, colorHex, targetUser) {
         // We validate that the role name is not empty and within Discord's length limits.
@@ -181,14 +187,15 @@ module.exports = {
     },
     
     /**
-     * We create a new role and assign it along with the fren role to the target member.
-     * This function creates the role, positions it, and assigns both roles to the user.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {string} roleName - The name for the new role.
-     * @param {number} colorDecimal - The color for the new role in decimal format.
-     * @param {GuildMember} targetMember - The member to receive the roles.
-     * @returns {Object} An object with success status and message.
+     * Creates and assigns roles to a user.
+     * @async
+     * @function createAndAssignRoles
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {string} roleName - The name for the new role
+     * @param {number} colorDecimal - The color for the new role in decimal format
+     * @param {import('discord.js').GuildMember} targetMember - The member to receive the roles
+     * @returns {Object} Result with success status and message
+     * @throws {Error} If role creation or assignment fails
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
         // We get the reference role for positioning the new role in the hierarchy.
@@ -254,11 +261,11 @@ module.exports = {
     },
     
     /**
-     * We handle errors that occur during command execution.
-     * This function logs the error and attempts to notify the user.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {Error} error - The error that occurred.
+     * Handles errors that occur during command execution.
+     * @async
+     * @function handleError
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
         logError(error, 'giveperms', {

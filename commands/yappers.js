@@ -1,3 +1,9 @@
+/**
+ * Yappers command module for displaying server statistics.
+ * Handles message counting, voice time tracking, and result formatting.
+ * @module commands/yappers
+ */
+
 const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -14,10 +20,10 @@ const TOP_CHANNELS_LIMIT = 5;
 const TOP_VOICE_LIMIT = 5;
 
 /**
- * We format time in minutes to a human-readable string with hours and minutes.
- * 
- * @param {number} minutes - The time in minutes to format.
- * @returns {string} A formatted string like "2h 30m" or "45m".
+ * Formats time in minutes to a human-readable string.
+ * @function formatTime
+ * @param {number} minutes - The time in minutes to format
+ * @returns {string} A formatted string like "2h 30m" or "45m"
  */
 function formatTime(minutes) {
   if (!minutes || isNaN(minutes)) return '0m';
@@ -51,11 +57,11 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   /**
-   * We execute the /yappers command.
-   * This function processes the statistics gathering and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the command is complete.
+   * Executes the yappers command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If statistics retrieval fails
    */
   async execute(interaction) {
     try {
@@ -183,12 +189,11 @@ module.exports = {
   },
 
   /**
-   * We handle any errors that occur during command execution.
-   * This function logs the error and sends an appropriate message to the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
-   * @returns {Promise<void>} Resolves when the error is handled.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logger.error("Error in yappers command:", {

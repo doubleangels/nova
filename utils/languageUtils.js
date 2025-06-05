@@ -2,10 +2,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { ERROR_MESSAGES } = require('../errors');
 
-/**
- * We define a map of flag emojis to their corresponding language codes and names.
- * This mapping is used for translation requests in the Discord bot.
- */
 const FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
     '🇦🇱': { code: 'sq', name: 'Albanian' }, // Albania
@@ -205,14 +201,6 @@ const FLAG_TO_LANGUAGE = {
     '🇿🇼': { code: 'en', name: 'English' }, // Zimbabwe
 };
 
-/**
- * We get language information for a given flag emoji.
- * This function retrieves the language code and name for translation requests.
- * 
- * @param {string} flagEmoji - The flag emoji to look up.
- * @returns {Object|null} The language information object or null if not found.
- * @throws {Error} If the flag emoji is invalid.
- */
 function getLanguageInfo(flagEmoji) {
     if (!flagEmoji || typeof flagEmoji !== 'string') {
         throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
@@ -220,14 +208,6 @@ function getLanguageInfo(flagEmoji) {
     return FLAG_TO_LANGUAGE[flagEmoji] || null;
 }
 
-/**
- * We check if a given emoji is a valid flag for translation.
- * This function validates whether an emoji can be used for translation requests.
- * 
- * @param {string} emoji - The emoji to check.
- * @returns {boolean} True if the emoji is a valid flag for translation.
- * @throws {Error} If the emoji is invalid.
- */
 function isValidTranslationFlag(emoji) {
     if (!emoji || typeof emoji !== 'string') {
         throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);

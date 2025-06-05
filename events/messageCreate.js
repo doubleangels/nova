@@ -1,17 +1,32 @@
+/**
+ * Event handler for new messages in Discord channels.
+ * Handles message processing, command parsing, and bot responses.
+ * @module events/messageCreate
+ */
+
 const path = require('path');
 const logger = require('../logger')('messageCreate.js');
 const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementChannelMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
-const { logError } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
-// We handle new messages and process them according to our rules.
+/**
+ * Event handler for message creation events.
+ * @type {Object}
+ */
 module.exports = {
   name: 'messageCreate',
+  /**
+   * Executes when a new message is created.
+   * @async
+   * @function execute
+   * @param {Message} message - The message that was created
+   * @throws {Error} If message processing fails
+   */
   async execute(message) {
     try {
-      // We fetch full content for partial messages to ensure complete processing.
       if (message.partial) {
         try {
           await message.fetch();
@@ -21,7 +36,6 @@ module.exports = {
         }
       }
 
-      // We log bot messages for debugging purposes.
       if (message.author.bot) {
         logger.debug("Received bot message:", {
           botName: message.author.tag,
@@ -31,29 +45,24 @@ module.exports = {
         });
       }
 
-      // We skip non-Disboard/Nova bot messages to focus on relevant interactions.
       if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
-      // We log received messages for monitoring and debugging.
       logger.debug("Message received:", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
         content: message.content?.substring(0, 50) || "No Content"
       });
       
-      // We increment user message count only for non-bot messages.
       if (!message.author.bot) {
         await incrementMessageCount(message.author.id, message.author.username);
         logger.debug(`Incremented message count for user ${message.author.tag}.`);
       }
 
-      // We remove users from mute tracking when they send their first message.
       const wasTracked = await removeTrackedMember(message.author.id);
       if (wasTracked) {
         logger.info(`User ${message.author.tag} sent their first message and was removed from mute tracking.`);
       }
 
-      // We handle simple prefix commands for basic bot interactions.
       if (message.content.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
@@ -64,11 +73,8 @@ module.exports = {
         }
       }
 
-      // We process user messages and handle various features.
       await processUserMessage(message);
-      // We check for bump messages to maintain server visibility.
       await checkForBumpMessages(message);
-      // We increment per-channel message count for non-bot messages.
       if (message.channel && message.channel.type === 0 && !message.author.bot) {
         await incrementChannelMessageCount(message.channel.id, message.channel.name);
       }
@@ -83,23 +89,17 @@ module.exports = {
       });
       logger.error("Error processing messageCreate event:", { error });
       
-      // We log the error with the appropriate error message
       logError(error, 'messageCreate', {
         messageId: message.id,
         authorId: message.author?.id,
         channelId: message.channel?.id,
         guildId: message.guild?.id
       });
+      throw new Error(ERROR_MESSAGES.MESSAGE_PROCESSING_FAILED);
     }
   }
 };
 
-/**
- * We process messages from regular users (not webhooks or bots).
- * This function handles user message tracking and feature processing.
- * 
- * @param {Message} message - The Discord message object.
- */
 async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
   try {
@@ -118,12 +118,6 @@ async function processUserMessage(message) {
   }
 }
 
-/**
- * We process time references found in user messages.
- * This function identifies and marks messages containing time expressions.
- * 
- * @param {Message} message - The Discord message object.
- */
 async function processTimeReferences(message) {
   if (!message.content) return;
   try {
@@ -144,12 +138,6 @@ async function processTimeReferences(message) {
   }
 }
 
-/**
- * We check for bump messages to maintain server visibility.
- * This function identifies successful server bumps and schedules reminders.
- * 
- * @param {Message} message - The Discord message object.
- */
 async function checkForBumpMessages(message) {
   logger.debug("Checking message for bump:", {
     author: message.author?.tag,

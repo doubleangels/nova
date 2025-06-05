@@ -1,24 +1,26 @@
+/**
+ * Utility functions for handling color operations and conversions.
+ * Provides functions for validating, normalizing, and converting between color formats.
+ * @module utils/colorUtils
+ */
+
 const { logError, ERROR_MESSAGES } = require('../errors');
 
-// We define these patterns to validate different formats of hex color codes for consistent color handling.
 const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_SHORT = /^#[0-9A-Fa-f]{3}$/;
 
-// We define Discord's maximum color value to ensure colors stay within valid range.
 const DISCORD_MAX_COLOR = 0xFFFFFF;
 
 /**
- * We validate and normalize a hex color code to ensure consistent color handling.
- * This function standardizes color formats and handles various input patterns.
- * 
- * @param {string} colorHex - The color hex code to validate.
- * @param {object} logger - Optional logger instance for debug information.
- * @returns {Object} An object with success status and normalized color.
- * @throws {Error} If colorHex is not a string or is empty.
+ * Validates and normalizes a hex color string.
+ * @function validateAndNormalizeColor
+ * @param {string} colorHex - The hex color to validate and normalize
+ * @param {Object} [logger=null] - Optional logger instance for debug logging
+ * @returns {{success: boolean, normalizedColor?: string}} Object containing validation result and normalized color if successful
+ * @throws {Error} If color format is invalid or empty
  */
 function validateAndNormalizeColor(colorHex, logger = null) {
-    // We validate the input to ensure proper color handling.
     if (typeof colorHex !== 'string') {
         throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
     }
@@ -28,7 +30,6 @@ function validateAndNormalizeColor(colorHex, logger = null) {
 
     let normalizedColorHex = colorHex.trim();
     
-    // We handle 3-digit hex colors by expanding them to 6 digits.
     if (COLOR_PATTERN_HEX_SHORT.test(normalizedColorHex)) {
         normalizedColorHex = '#' + 
             normalizedColorHex[1] + normalizedColorHex[1] +
@@ -43,7 +44,6 @@ function validateAndNormalizeColor(colorHex, logger = null) {
     }
     
     if (COLOR_PATTERN_HEX_WITHOUT_HASH.test(normalizedColorHex)) {
-        // We add the # prefix for consistency when it's missing.
         normalizedColorHex = `#${normalizedColorHex}`;
         if (logger) {
             logger.debug("Color format normalized.", { 
@@ -53,21 +53,18 @@ function validateAndNormalizeColor(colorHex, logger = null) {
         }
         return { success: true, normalizedColor: normalizedColorHex };
     } else if (COLOR_PATTERN_HEX_WITH_HASH.test(normalizedColorHex)) {
-        // We use the color as is when it's already in the correct format.
         return { success: true, normalizedColor: normalizedColorHex };
     }
     
-    // We return failure for invalid color formats.
     return { success: false };
 }
 
 /**
- * We convert a hex color to a decimal value for Discord's color system.
- * This function ensures colors are in the format required by Discord's API.
- * 
- * @param {string} hexColor - The hex color code (with or without #).
- * @returns {number} The decimal color value.
- * @throws {Error} If the color is invalid or out of Discord's range.
+ * Converts a hex color string to its decimal representation.
+ * @function hexToDecimal
+ * @param {string} hexColor - The hex color to convert
+ * @returns {number} The decimal representation of the color
+ * @throws {Error} If color format is invalid or out of range
  */
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
@@ -75,11 +72,9 @@ function hexToDecimal(hexColor) {
         throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
     }
 
-    // We convert the hex string to a decimal number for Discord.
     const hex = validation.normalizedColor.slice(1);
     const decimal = parseInt(hex, 16);
 
-    // We validate that the color is within Discord's allowed range.
     if (decimal > DISCORD_MAX_COLOR) {
         throw new Error(ERROR_MESSAGES.COLOR_OUT_OF_RANGE);
     }
@@ -88,12 +83,11 @@ function hexToDecimal(hexColor) {
 }
 
 /**
- * We convert a hex color to RGB values for color manipulation.
- * This function breaks down the hex color into its RGB components.
- * 
- * @param {string} hexColor - The hex color code (with or without #).
- * @returns {Object} Object containing r, g, b values (0-255).
- * @throws {Error} If the color is invalid.
+ * Converts a hex color string to RGB components.
+ * @function hexToRgb
+ * @param {string} hexColor - The hex color to convert
+ * @returns {{r: number, g: number, b: number}} Object containing RGB components
+ * @throws {Error} If color format is invalid
  */
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
@@ -110,34 +104,27 @@ function hexToRgb(hexColor) {
 }
 
 /**
- * We convert RGB values to a hex color code for consistent color representation.
- * This function ensures RGB values are properly formatted as hex colors.
- * 
- * @param {number} r - Red value (0-255).
- * @param {number} g - Green value (0-255).
- * @param {number} b - Blue value (0-255).
- * @returns {string} Hex color code with # prefix.
- * @throws {Error} If any RGB value is invalid.
+ * Converts RGB components to a hex color string.
+ * @function rgbToHex
+ * @param {number} r - Red component (0-255)
+ * @param {number} g - Green component (0-255)
+ * @param {number} b - Blue component (0-255)
+ * @returns {string} The hex color string
+ * @throws {Error} If RGB values are invalid
  */
 function rgbToHex(r, g, b) {
-    // We validate RGB values to ensure they are within the valid range.
     if (!Number.isInteger(r) || r < 0 || r > 255 ||
         !Number.isInteger(g) || g < 0 || g > 255 ||
         !Number.isInteger(b) || b < 0 || b > 255) {
         throw new Error(ERROR_MESSAGES.INVALID_RGB_VALUES);
     }
 
-    // We convert RGB values to a hex string with proper padding.
     return '#' + 
         r.toString(16).padStart(2, '0') +
         g.toString(16).padStart(2, '0') +
         b.toString(16).padStart(2, '0');
 }
 
-/**
- * We export the color utility functions for use throughout the application.
- * This module provides consistent color handling and conversion capabilities.
- */
 module.exports = {
     validateAndNormalizeColor,
     hexToDecimal,

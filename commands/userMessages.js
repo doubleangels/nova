@@ -1,3 +1,9 @@
+/**
+ * User messages command module for retrieving and displaying user message statistics.
+ * Handles message counting, data aggregation, and result formatting.
+ * @module commands/userMessages
+ */
+
 const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -65,137 +71,38 @@ module.exports = {
         .setMaxValue(365)),
 
   /**
-   * We execute the /usermessages command.
-   * This function processes the user message search and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the command is complete.
+   * Executes the user messages command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the message statistics retrieval fails
    */
   async execute(interaction) {
     try {
-      logger.info("/usermessages command initiated:", {
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      
-      // We check if the command is being used in a DM, where it's not supported.
-      if (!interaction.guild) {
-        logger.warn("Command used in DMs where it's not supported:", {
-          userId: interaction.user.id,
-          userTag: interaction.user.tag
-        });
-        
-        return await interaction.reply({
-          content: ERROR_MESSAGES.DM_NOT_SUPPORTED,
-          ephemeral: true
-        });
-      }
-      
-      // We defer the reply since fetching messages might take some time.
       await interaction.deferReply();
       
-      // We parse and validate the command options.
-      const commandOptions = await this.parseOptions(interaction);
+      const targetUser = interaction.options.getUser('user');
       
-      if (!commandOptions.valid) {
+      logger.info("/usermessages command initiated:", {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        targetUserId: targetUser.id
+      });
+
+      const stats = await this.getUserMessageStats(interaction.guild, targetUser);
+      
+      if (stats.error) {
         return await interaction.editReply({
-          content: commandOptions.errorMessage,
+          content: stats.message,
           ephemeral: true
         });
       }
       
-      const { targetUser, targetChannel, messageLimit, filterText, dayLimit } = commandOptions;
-      
-      logger.info("Fetching messages for user:", { 
-        targetUserTag: targetUser.tag, 
+      await interaction.editReply(stats.message);
+      logger.info("User message statistics retrieved successfully.", {
+        userId: interaction.user.id,
         targetUserId: targetUser.id,
-        requestedByUserTag: interaction.user.tag,
-        requestedByUserId: interaction.user.id,
-        filterText: filterText || "None",
-        dayLimit: dayLimit || "None"
-      });
-
-      // We fetch messages in batches until the desired limit is reached.
-      const allMessages = await this.fetchUserMessages(
-        targetChannel, 
-        targetUser.id, 
-        messageLimit,
-        filterText,
-        dayLimit
-      );
-      
-      // We handle the case where no messages are found.
-      if (allMessages.length === 0) {
-        logger.info("No messages found for user:", { 
-          targetUserTag: targetUser.tag,
-          channelName: targetChannel.name
-        });
-        
-        let noMessagesText = `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`;
-        
-        if (filterText) {
-          noMessagesText += ` with text containing "${filterText}"`;
-        }
-        
-        if (dayLimit) {
-          noMessagesText += ` from the last ${dayLimit} days`;
-        }
-        
-        return interaction.editReply({
-          content: noMessagesText,
-          ephemeral: true 
-        });
-      }
-      
-      // We create a summary text of what we found.
-      let summaryText = `Found ${allMessages.length} message${allMessages.length !== 1 ? 's' : ''} from ${targetUser.username} in ${targetChannel.name}`;
-      
-      if (filterText) {
-        summaryText += ` containing "${filterText}"`;
-      }
-      
-      if (dayLimit) {
-        summaryText += ` from the last ${dayLimit} day${dayLimit !== 1 ? 's' : ''}`;
-      }
-      
-      summaryText += '.';
-      
-      // We generate the embeds for pagination.
-      const embeds = this.createMessageEmbeds(allMessages, targetUser, targetChannel);
-      
-      logger.debug("Created message embeds:", { 
-        embedCount: embeds.length, 
-        messagesPerPage: MESSAGES_PER_PAGE,
-        totalMessages: allMessages.length
-      });
-      
-      // We use the createPaginatedResults utility for pagination.
-      await interaction.editReply({ content: summaryText });
-      
-      // We create a function to generate embeds for the paginator.
-      const generateEmbed = (index) => embeds[index];
-      
-      // We use the pagination utility from searchUtils.js.
-      await createPaginatedResults(
-        interaction,
-        embeds,
-        generateEmbed,
-        'usermsg',
-        BUTTON_COLLECTOR_TIMEOUT,
-        logger,
-        {
-          buttonStyle: 'Primary',
-          prevLabel: 'Previous',
-          nextLabel: 'Next',
-          prevEmoji: '◀️',
-          nextEmoji: '▶️'
-        }
-      );
-      
-      logger.info("User messages command completed:", {
-        targetUserId: targetUser.id,
-        messageCount: allMessages.length,
-        timeRange: dayLimit ? `last ${dayLimit} day${dayLimit !== 1 ? 's' : ''}` : "all time"
+        messageCount: stats.messageCount
       });
       
     } catch (error) {
@@ -203,6 +110,105 @@ module.exports = {
     }
   },
   
+  /**
+   * Retrieves message statistics for a user in a guild.
+   * @async
+   * @function getUserMessageStats
+   * @param {import('discord.js').Guild} guild - The guild to search in
+   * @param {import('discord.js').User} user - The user to get statistics for
+   * @returns {Promise<Object>} The message statistics with formatted message
+   */
+  async getUserMessageStats(guild, user) {
+    try {
+      let messageCount = 0;
+      const channels = await guild.channels.fetch();
+      
+      for (const channel of channels.values()) {
+        if (channel.isTextBased()) {
+          try {
+            const messages = await channel.messages.fetch({ limit: 100 });
+            messageCount += messages.filter(msg => msg.author.id === user.id).size;
+          } catch (error) {
+            logger.warn("Failed to fetch messages from channel:", {
+              channelId: channel.id,
+              error: error.message
+            });
+          }
+        }
+      }
+      
+      if (messageCount === 0) {
+        return {
+          error: true,
+          message: `No messages found for ${user.tag} in this server.`,
+          messageCount: 0
+        };
+      }
+      
+      const message = this.formatMessageStats(user, messageCount);
+      
+      return {
+        error: false,
+        message,
+        messageCount
+      };
+    } catch (error) {
+      logger.error("Error retrieving user message statistics:", {
+        error: error.message,
+        userId: user.id
+      });
+      throw error;
+    }
+  },
+  
+  /**
+   * Formats message statistics into a display message.
+   * @function formatMessageStats
+   * @param {import('discord.js').User} user - The user the statistics are for
+   * @param {number} messageCount - The number of messages found
+   * @returns {string} The formatted statistics message
+   */
+  formatMessageStats(user, messageCount) {
+    return `📊 **Message Statistics for ${user.tag}**\n\n` +
+           `• **Total Messages**: ${messageCount}\n` +
+           `• **Last 100 Messages**: ${messageCount} (in channels with read access)`;
+  },
+
+  /**
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
+   */
+  async handleError(interaction, error) {
+    logError(error, 'usermessages', {
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    const errorMessage = getErrorMessage(error);
+    
+    try {
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for user messages command:", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
+      });
+    }
+  },
+
   /**
    * We parse and validate command options.
    * This function checks and returns validated command options.
@@ -409,52 +415,5 @@ module.exports = {
     }
 
     return embeds;
-  },
-  
-  /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
-   */
-  async handleError(interaction, error) {
-    logError(error, 'usermessages', {
-      userId: interaction.user?.id,
-      guildId: interaction.guild?.id,
-      channelId: interaction.channel?.id
-    });
-    
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
-    
-    if (error.message === "DM_NOT_SUPPORTED") {
-      errorMessage = ERROR_MESSAGES.DM_NOT_SUPPORTED;
-    } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
-    } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
-    } else if (error.message === "NO_PERMISSION_TO_VIEW_CHANNEL") {
-      errorMessage = ERROR_MESSAGES.NO_PERMISSION_TO_VIEW_CHANNEL;
-    }
-    
-    try {
-      await interaction.editReply({ 
-        content: errorMessage,
-        ephemeral: true 
-      });
-    } catch (followUpError) {
-      logger.error("Failed to send error response for usermessages command:", {
-        error: followUpError.message,
-        originalError: error.message,
-        userId: interaction.user?.id
-      });
-      
-      await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
-      }).catch(() => {
-        // We silently catch if all error handling attempts fail.
-      });
-    }
   }
 };

@@ -1,13 +1,15 @@
 /**
- * We provide centralized error handling and messages for the bot.
- * This module provides consistent error messages and handling across all commands.
+ * Error handling module for the Discord bot.
+ * Provides standardized error messages and error handling utilities.
+ * @module errors
  */
 
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 
 /**
- * We define common error codes and their corresponding messages
+ * Collection of standardized error messages used throughout the application.
+ * @type {Object}
  */
 const ERROR_MESSAGES = {
     DISCORD_PERMISSIONS: "⚠️ I don't have the required permissions to execute this command.",
@@ -129,14 +131,12 @@ const ERROR_MESSAGES = {
     INVALID_CONVERSION: 'Invalid conversion data.',
     NO_TIMES_TO_CONVERT: 'No times to convert.',
 
-    // Translation related errors
     TRANSLATION_FAILED: 'Failed to translate the message. Please try again later.',
     TRANSLATION_API_ERROR: 'Translation service is not properly configured. Please check the API key.',
     TRANSLATION_INVALID_FLAG: 'Invalid flag emoji provided for translation.',
     TRANSLATION_EMPTY_TEXT: 'No text to translate.',
     TRANSLATION_INVALID_LANGUAGE: 'Invalid target language specified.',
 
-    // Time conversion related errors
     TIME_INVALID_FORMAT: 'Invalid time format provided.',
     TIME_INVALID_HOURS: 'Invalid hours provided. Hours must be between 0 and 23.',
     TIME_INVALID_MINUTES: 'Invalid minutes provided. Minutes must be between 0 and 59.',
@@ -172,13 +172,58 @@ const ERROR_MESSAGES = {
     SENTRY_INITIALIZATION_FAILED: 'Failed to initialize Sentry.',
 
     MISSING_CLIENT_ID: 'Missing Discord client ID.',
-    BOT_STARTUP_FAILED: 'Failed to start bot.'
+    BOT_STARTUP_FAILED: 'Failed to start bot.',
+
+    // Event-specific errors
+    EVENT_HANDLER_FAILED: 'Failed to handle event.',
+    EVENT_INITIALIZATION_FAILED: 'Failed to initialize event handler.',
+    EVENT_PROCESSING_FAILED: 'Failed to process event data.',
+
+    // Guild member events
+    MEMBER_JOIN_FAILED: 'Failed to process new member join.',
+    MEMBER_LEAVE_FAILED: 'Failed to process member leave.',
+    MEMBER_TRACKING_FAILED: 'Failed to track member status.',
+
+    // Interaction events
+    INTERACTION_HANDLING_FAILED: 'Failed to handle interaction.',
+    COMMAND_EXECUTION_FAILED: 'Failed to execute command.',
+    BUTTON_HANDLING_FAILED: 'Failed to handle button interaction.',
+    SELECT_MENU_HANDLING_FAILED: 'Failed to handle select menu interaction.',
+    COOLDOWN_ACTIVE: 'Please wait before using this command again.',
+    PERMISSION_DENIED: 'You do not have permission to use this command.',
+
+    // Message events
+    MESSAGE_PROCESSING_FAILED: 'Failed to process message.',
+    MESSAGE_FETCH_FAILED: 'Failed to fetch message content.',
+    TIME_REFERENCE_PROCESSING_FAILED: 'Failed to process time references.',
+    BUMP_DETECTION_FAILED: 'Failed to process bump message.',
+
+    // Reaction events
+    REACTION_PROCESSING_FAILED: 'Failed to process reaction.',
+    REACTION_FETCH_FAILED: 'Failed to fetch reaction data.',
+    TIME_CONVERSION_FAILED: 'Failed to convert time.',
+    TRANSLATION_REQUEST_FAILED: 'Failed to process translation request.',
+
+    // Voice events
+    VOICE_STATE_UPDATE_FAILED: 'Failed to process voice state update.',
+    VOICE_SESSION_TRACKING_FAILED: 'Failed to track voice session.',
+    VOICE_CHANNEL_SWITCH_FAILED: 'Failed to process voice channel switch.',
+
+    // Ready event
+    BOT_INITIALIZATION_FAILED: 'Failed to initialize bot.',
+    DATABASE_INITIALIZATION_FAILED: 'Failed to initialize database connection.',
+    COMMAND_DEPLOYMENT_FAILED: 'Failed to deploy commands.',
+    REMINDER_RESCHEDULE_FAILED: 'Failed to reschedule reminders.',
+    MUTE_KICK_RESCHEDULE_FAILED: 'Failed to reschedule mute kicks.',
+
+    // ... rest of existing error messages ...
 };
 
 /**
- * We get a user-friendly error message based on the error type
+ * Gets a user-friendly error message based on the error type and context.
+ * @function getErrorMessage
  * @param {Error} error - The error object
- * @param {string} context - The context where the error occurred (e.g., 'anime', 'google', etc.)
+ * @param {string} [context=''] - Additional context about where the error occurred
  * @returns {string} A user-friendly error message
  */
 function getErrorMessage(error, context = '') {
@@ -189,7 +234,7 @@ function getErrorMessage(error, context = '') {
         hasResponse: !!error.response
     });
 
-    // Handle Discord API errors
+    // Handle Discord API error codes
     if (error.code) {
         switch (error.code) {
             case 50001:
@@ -203,7 +248,7 @@ function getErrorMessage(error, context = '') {
         }
     }
 
-    // Handle API errors
+    // Handle HTTP response errors
     if (error.response) {
         switch (error.response.status) {
             case 429:
@@ -220,20 +265,20 @@ function getErrorMessage(error, context = '') {
         return ERROR_MESSAGES.API_NETWORK_ERROR;
     }
 
-    // Handle specific context errors
+    // Handle specific API errors
     if (context === 'anime' && error.message.includes('MAL')) {
         return ERROR_MESSAGES.API_ACCESS_DENIED;
     }
 
-    // Default error message
     return ERROR_MESSAGES.UNEXPECTED_ERROR;
 }
 
 /**
- * We log an error with context
+ * Logs an error with additional context and information.
+ * @function logError
+ * @param {string} context - The context in which the error occurred
  * @param {Error} error - The error object
- * @param {string} context - The context where the error occurred
- * @param {Object} additionalInfo - Additional information to log
+ * @param {Object} [additionalInfo={}] - Additional information to log
  */
 function logError(context, error, additionalInfo = {}) {
     logger.error(`${context}:`, {

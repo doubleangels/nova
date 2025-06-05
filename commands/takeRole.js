@@ -1,3 +1,9 @@
+/**
+ * Take role command module for removing roles from users.
+ * Handles role removal, permission validation, and audit logging.
+ * @module commands/takeRole
+ */
+
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -34,10 +40,11 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
   /**
-   * We execute the /takerole command.
-   * This function processes the role removal request and provides feedback.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the take role command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If role removal fails
    */
   async execute(interaction) {
     // We defer the reply since role operations might take a moment to complete.
@@ -81,11 +88,11 @@ module.exports = {
   },
 
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'takerole', {
@@ -128,13 +135,13 @@ module.exports = {
   },
 
   /**
-   * We validate that the role can be removed from the user.
-   * This function checks permissions, role hierarchy, and role assignment.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Role} role - The role to be removed.
-   * @param {User} targetUser - The user to remove the role from.
-   * @returns {Promise<Object>} Validation result with success status and message.
+   * Validates that the role can be removed from the user.
+   * @async
+   * @function validateRoleRemoval
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {import('discord.js').Role} role - The role to be removed
+   * @param {import('discord.js').User} targetUser - The user to remove the role from
+   * @returns {Promise<Object>} Validation result with success status and message
    */
   async validateRoleRemoval(interaction, role, targetUser) {
     // We check if the bot has permission to manage roles in the server.
@@ -222,13 +229,13 @@ module.exports = {
   },
   
   /**
-   * We remove a role from a guild member and send a response.
-   * This function removes the role and notifies the moderator.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {GuildMember} targetMember - The member to remove the role from.
-   * @param {Role} role - The role to be removed.
-   * @param {string|null} reason - The reason for removing the role.
+   * Removes a role from a guild member and sends a response.
+   * @async
+   * @function removeRoleFromMember
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {import('discord.js').GuildMember} targetMember - The member to remove the role from
+   * @param {import('discord.js').Role} role - The role to be removed
+   * @param {string|null} reason - The reason for removing the role
    */
   async removeRoleFromMember(interaction, targetMember, role, reason) {
     // We format the audit log reason to include the executor and optional custom reason.
@@ -258,12 +265,12 @@ module.exports = {
   },
   
   /**
-   * We fetch a guild member with error handling.
-   * This function retrieves a member from the guild or returns null if not found.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {string} userId - The ID of the user to fetch.
-   * @returns {Promise<GuildMember|null>} The guild member or null if not found.
+   * Fetches a guild member with error handling.
+   * @async
+   * @function fetchGuildMember
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {string} userId - The ID of the user to fetch
+   * @returns {Promise<import('discord.js').GuildMember|null>} The guild member or null if not found
    */
   async fetchGuildMember(interaction, userId) {
     try {

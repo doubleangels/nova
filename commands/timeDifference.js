@@ -1,3 +1,9 @@
+/**
+ * Time difference command module for calculating time differences between locations.
+ * Handles Google API interactions, time zone calculations, and result formatting.
+ * @module commands/timeDifference
+ */
+
 const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -35,10 +41,11 @@ module.exports = {
     ),
     
   /**
-   * We execute the /timedifference command.
-   * This function processes the time difference calculation and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the time difference command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the time difference calculation fails
    */
   async execute(interaction) {
     try {
@@ -88,10 +95,9 @@ module.exports = {
   },
   
   /**
-   * We validate that the required configuration is available.
-   * This function checks for the presence of necessary API keys.
-   *
-   * @returns {boolean} True if configuration is valid, false otherwise.
+   * Validates that the required configuration is available.
+   * @function validateConfiguration
+   * @returns {boolean} True if configuration is valid, false otherwise
    */
   validateConfiguration() {
     if (!config.googleApiKey) {
@@ -104,12 +110,12 @@ module.exports = {
   },
   
   /**
-   * We calculate the time difference between two places using their UTC offsets.
-   * This function retrieves UTC offsets and formats the result.
-   *
-   * @param {string} place1 - The first place name.
-   * @param {string} place2 - The second place name.
-   * @returns {Promise<Object>} The time difference result with formatted message.
+   * Calculates the time difference between two places using their UTC offsets.
+   * @async
+   * @function calculateTimeDifference
+   * @param {string} place1 - The first place name
+   * @param {string} place2 - The second place name
+   * @returns {Promise<Object>} The time difference result with formatted message
    */
   async calculateTimeDifference(place1, place2) {
     try {
@@ -194,11 +200,10 @@ module.exports = {
   },
   
   /**
-   * We format a time zone for display with UTC offset and time zone name.
-   * This function creates a formatted string for a time zone.
-   *
-   * @param {Object} offsetResult - The offset result from getUtcOffset.
-   * @returns {string} The formatted time zone string.
+   * Formats a time zone for display with UTC offset and time zone name.
+   * @function formatTimeZone
+   * @param {Object} offsetResult - The offset result from getUtcOffset
+   * @returns {string} The formatted time zone string
    */
   formatTimeZone(offsetResult) {
     const sign = offsetResult.offset >= 0 ? '+' : '-';
@@ -211,11 +216,10 @@ module.exports = {
   },
   
   /**
-   * We format a time difference for display with appropriate pluralization.
-   * This function creates a formatted string for a time difference.
-   *
-   * @param {number} timeDiff - The time difference in hours.
-   * @returns {string} The formatted time difference string.
+   * Formats a time difference for display with appropriate pluralization.
+   * @function formatTimeDifference
+   * @param {number} timeDiff - The time difference in hours
+   * @returns {string} The formatted time difference string
    */
   formatTimeDifference(timeDiff) {
     const hours = Math.floor(timeDiff);
@@ -229,11 +233,11 @@ module.exports = {
   },
 
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'timedifference', {

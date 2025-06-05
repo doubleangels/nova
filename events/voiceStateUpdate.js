@@ -1,39 +1,48 @@
+/**
+ * Event handler for voice state updates in Discord.
+ * Handles voice channel events, mute status changes, and voice activity tracking.
+ * @module events/voiceStateUpdate
+ */
+
 const path = require('path');
 const logger = require('../logger')('voiceStateUpdate.js');
 const { Pool } = require('pg');
 const config = require('../config');
 const { randomUUID } = require('crypto');
 const { addVoiceSessionToStats, addVoiceSessionToChannelStats } = require('../utils/database');
-const { logError } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 const Sentry = require('../sentry');
 
-// We set up a connection pool for direct SQL queries to the database.
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
 /**
- * We handle voice state changes in the server.
- * This function manages voice channel sessions and statistics.
- *
- * We perform several tasks for each voice state change:
- * 1. We track when users join voice channels.
- * 2. We record when users leave voice channels.
- * 3. We handle channel switching events.
- * 4. We maintain voice session statistics.
- *
- * @param {VoiceState} oldState - The previous voice state.
- * @param {VoiceState} newState - The new voice state.
+ * Event handler for voice state update events.
+ * @type {Object}
  */
 module.exports = {
   name: 'voiceStateUpdate',
+  /**
+   * Executes when a voice state is updated.
+   * @async
+   * @function execute
+   * @param {VoiceState} oldState - The voice state before the update
+   * @param {VoiceState} newState - The voice state after the update
+   * @throws {Error} If voice state processing fails
+   */
   async execute(oldState, newState) {
     try {
-      // We ignore voice state changes from bot accounts.
-      if (oldState.member.user.bot) return;
+      // Ignore bot voice state changes
+      if (oldState.member.user.bot || newState.member.user.bot) {
+        logger.debug('Bot voice state change, ignoring');
+        return;
+      }
 
-      // We handle users joining a voice channel.
+      // Handle voice state changes
+      logger.info(`Processing voice state update for user ${newState.member.user.tag}`);
+      
       if (!oldState.channelId && newState.channelId) {
         await pool.query(
           `INSERT INTO main.voice_recovery (session_id, user_id, guild_id, channel_id, started_at)
@@ -43,7 +52,6 @@ module.exports = {
         logger.info("Started voice session:", { userId: newState.member.id, guildId: newState.guild.id, channelId: newState.channelId });
       }
 
-      // We handle users leaving a voice channel.
       if (oldState.channelId && !newState.channelId) {
         await pool.query(
           `UPDATE main.voice_recovery
@@ -56,7 +64,6 @@ module.exports = {
            )`,
           [oldState.member.id, oldState.guild.id]
         );
-        // We update voice statistics and clean up the session.
         const { rows } = await pool.query(
           `SELECT session_id, duration_seconds, channel_id FROM main.voice_recovery
            WHERE user_id = $1 AND guild_id = $2 AND is_active = FALSE
@@ -69,7 +76,6 @@ module.exports = {
             oldState.member.user.tag,
             rows[0].duration_seconds
           );
-          // We add the session to channel-specific statistics.
           let channelName = '';
           try {
             const channelObj = oldState.guild.channels.cache.get(String(rows[0].channel_id));
@@ -90,9 +96,7 @@ module.exports = {
         logger.info("Ended voice session:", { userId: oldState.member.id, guildId: oldState.guild.id, channelId: oldState.channelId });
       }
 
-      // We handle users switching between voice channels.
       if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
-        // We end the previous voice session.
         await pool.query(
           `UPDATE main.voice_recovery
            SET ended_at = NOW(), duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at)), is_active = FALSE
@@ -104,7 +108,6 @@ module.exports = {
            )`,
           [oldState.member.id, oldState.guild.id]
         );
-        // We update statistics and clean up the old session.
         const { rows } = await pool.query(
           `SELECT session_id, duration_seconds, channel_id FROM main.voice_recovery
            WHERE user_id = $1 AND guild_id = $2 AND is_active = FALSE
@@ -117,7 +120,6 @@ module.exports = {
             oldState.member.user.tag,
             rows[0].duration_seconds
           );
-          // We add the session to channel-specific statistics.
           let channelName = '';
           try {
             const channelObj = oldState.guild.channels.cache.get(String(rows[0].channel_id));
@@ -135,7 +137,6 @@ module.exports = {
             [rows[0].session_id]
           );
         }
-        // We start a new voice session for the new channel.
         await pool.query(
           `INSERT INTO main.voice_recovery (session_id, user_id, guild_id, channel_id, started_at)
            VALUES ($1, $2, $3, $4, NOW())`,
@@ -144,22 +145,28 @@ module.exports = {
         logger.info("Switched voice session:", { userId: newState.member.id, guildId: newState.guild.id, channelId: newState.channelId });
       }
 
-      // We can add additional tracking for mute/deafen/streaming states if needed.
+      logger.info(`Successfully processed voice state update for ${newState.member.user.tag}`);
 
     } catch (error) {
-      logger.error(`Error processing voice state update for ${oldState.member.user.tag}:`, {
+      Sentry.captureException(error, {
+        extra: {
+          event: 'voiceStateUpdate',
+          userId: newState.member.user.id,
+          guildId: newState.guild.id,
+          channelId: newState.channelId
+        }
+      });
+      logger.error(`Error processing voice state update:`, {
         error: error.message,
         stack: error.stack
       });
       
-      // We log the error with the appropriate error message
       logError(error, 'voiceStateUpdate', {
-        userId: oldState.member?.id,
-        userTag: oldState.member?.user?.tag,
-        guildId: oldState.guild?.id,
-        oldChannelId: oldState.channelId,
-        newChannelId: newState.channelId
+        userId: newState.member.user.id,
+        guildId: newState.guild.id,
+        channelId: newState.channelId
       });
+      throw new Error(ERROR_MESSAGES.VOICE_STATE_UPDATE_FAILED);
     }
   }
 }; 

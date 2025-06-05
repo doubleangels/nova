@@ -1,3 +1,9 @@
+/**
+ * Anime command module for searching and displaying anime information from MyAnimeList.
+ * Handles API interactions, data formatting, and error handling for anime searches.
+ * @module commands/anime
+ */
+
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -6,24 +12,11 @@ const dayjs = require('dayjs');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the MyAnimeList API integration.
 const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
 const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
 const MAL_EMBED_COLOR = 0x2E51A2;
 const SEARCH_LIMIT = 1;
 
-/**
- * We handle the anime command.
- * This function searches for anime on MyAnimeList and displays detailed information.
- *
- * We perform several tasks:
- * 1. We search for the anime on MyAnimeList.
- * 2. We fetch detailed information about the anime.
- * 3. We create an embed with the anime details.
- * 4. We send the embed to the user.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
@@ -34,9 +27,15 @@ module.exports = {
         .setRequired(true)
     ),
   
+  /**
+   * Executes the anime search command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If API request fails or configuration is missing
+   */
   async execute(interaction) {
     try {
-      // We verify that the API key is properly configured before proceeding.
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
@@ -46,7 +45,6 @@ module.exports = {
         return;
       }
 
-      // We defer the reply to allow additional processing time for the API request.
       await interaction.deferReply();
       
       logger.info("Anime search requested:", { 
@@ -54,15 +52,12 @@ module.exports = {
         userTag: interaction.user.tag 
       });
 
-      // We retrieve and format the anime title from the user's input.
       const titleQuery = interaction.options.getString('title');
       logger.debug("Processing search query:", { titleQuery });
       const formattedTitle = titleQuery.trim();
 
-      // We search for the anime and get its details from the API.
       const animeData = await this.searchAndGetAnimeDetails(formattedTitle);
       
-      // We create and send the embed with the anime information.
       if (animeData) {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
@@ -83,11 +78,12 @@ module.exports = {
   },
 
   /**
-   * We search for an anime and get its details from the MyAnimeList API.
-   * This function performs both the search and detailed information retrieval.
-   *
-   * @param {string} title - The anime title to search for.
-   * @returns {Object|null} The anime data or null if not found.
+   * Searches for anime and retrieves detailed information.
+   * @async
+   * @function searchAndGetAnimeDetails
+   * @param {string} title - The anime title to search for
+   * @returns {Promise<Object|null>} Anime details or null if not found
+   * @throws {Error} If API request fails
    */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
@@ -104,10 +100,8 @@ module.exports = {
     const animeNode = searchResponse.data.data[0].node;
     const animeId = animeNode.id;
     
-    // We construct the URL for fetching detailed information about the anime.
     const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
     
-    // We request detailed anime information from the API.
     logger.debug("Fetching anime details:", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
     
@@ -132,11 +126,10 @@ module.exports = {
   },
 
   /**
-   * We create an embed for displaying anime details in a visually appealing format.
-   * This function formats all the anime information into a Discord embed.
-   *
-   * @param {Object} animeData - The anime data to display.
-   * @returns {EmbedBuilder} The created embed with formatted anime information.
+   * Creates an embed with anime information.
+   * @function createAnimeEmbed
+   * @param {Object} animeData - The anime data to display
+   * @returns {EmbedBuilder} The formatted embed
    */
   createAnimeEmbed(animeData) {
     const malLink = `${MAL_WEBSITE_URL}/${animeData.id}`;
@@ -166,11 +159,11 @@ module.exports = {
   },
 
   /**
-   * We handle errors that occur during the anime command execution.
-   * This function provides appropriate error messages and logging.
-   *
-   * @param {Interaction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'anime', {
@@ -208,7 +201,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

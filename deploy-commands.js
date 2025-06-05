@@ -1,3 +1,8 @@
+/**
+ * Module for deploying Discord slash commands.
+ * @module deploy-commands
+ */
+
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -6,14 +11,12 @@ const config = require('./config');
 const { logError, ERROR_MESSAGES } = require('./errors');
 
 /**
- * We deploy all slash commands to Discord API.
- * 
- * We collect all command modules from the commands directory,
- * convert them to the format required by Discord, and register them globally
- * for the application. This ensures our bot's commands are available to users.
- * 
- * @returns {Promise<void>} A promise that resolves when commands are successfully registered.
- * @throws {Error} If command registration fails.
+ * Deploys all slash commands to Discord.
+ * Reads command files from the commands directory and registers them with Discord's API.
+ * @async
+ * @function deployCommands
+ * @throws {Error} If command deployment fails
+ * @returns {Promise<void>}
  */
 async function deployCommands() {
   try {
@@ -21,6 +24,7 @@ async function deployCommands() {
     const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
     
+    // Load all command files
     for (const file of commandFiles) {
       const command = require(`./commands/${file}`);
       commands.push(command.data.toJSON());
@@ -36,6 +40,7 @@ async function deployCommands() {
     
     logger.info(`Deploying commands for application ID: ${clientId}`);
     
+    // Register commands with Discord
     await rest.put(
       Routes.applicationCommands(clientId), 
       { body: commands }
@@ -48,15 +53,14 @@ async function deployCommands() {
   }
 }
 
-// We export the function for importing in other files.
 module.exports = deployCommands;
 
-// If this script is run directly, we execute the deployment.
+// If this file is run directly (not required as a module)
 if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully.'))
     .catch(error => {
       logError('Failed to deploy commands', error);
-      process.exit(1); // We exit with error code if deployment fails.
+      process.exit(1);
     });
 }

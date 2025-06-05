@@ -1,3 +1,9 @@
+/**
+ * Main entry point for the Discord bot.
+ * Initializes the bot, loads commands and events, and handles startup/shutdown.
+ * @module index
+ */
+
 const { Client, Collection, GatewayIntentBits, Partials } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -8,46 +14,41 @@ const { initializeDatabase } = require('./utils/database');
 const deployCommands = require('./deploy-commands');
 const { logError, ERROR_MESSAGES } = require('./errors');
 
-// We define these configuration constants for consistent behavior throughout the application.
+// Constants
 const COMMAND_EXTENSION = '.js';
 const EVENT_EXTENSION = '.js';
 const SENTRY_FLUSH_TIMEOUT = 2000;
 
 /**
- * We initialize and configure a Discord bot using discord.js.
- * We load commands and event handlers to manage bot interactions, 
- * including slash commands and context menu commands. This serves as the main
- * entry point for the bot application.
+ * Discord client instance with configured intents and partials.
+ * @type {Client}
  */
-
-// We create a new Discord client instance with necessary gateway intents.
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,           // We need this to access basic guild (server) data.
-    GatewayIntentBits.GuildMessages,    // We need this to read messages in guilds.
-    GatewayIntentBits.MessageContent,   // We need this to read the content of messages.
-    GatewayIntentBits.GuildMembers,     // We need this to access guild member information.
-    GatewayIntentBits.GuildPresences,   // We need this to track member presence (online/offline).
-    GatewayIntentBits.GuildMessageReactions, // We need this to receive reaction events.
-    GatewayIntentBits.GuildVoiceStates, // We need this to track voice channel states.
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildVoiceStates,
   ],
   partials: [
-    Partials.Message,    // We include this to handle reactions on uncached messages.
-    Partials.Channel,    // We include this to handle messages in uncached channels.
-    Partials.Reaction    // We include this to handle uncached reactions.
+    Partials.Message,
+    Partials.Channel,
+    Partials.Reaction
   ]
 });
 
-// We create a collection to store and easily access bot commands.
+// Initialize collections for commands and interactions
 client.commands = new Collection();
 client.buttonHandlers = new Collection();
 client.selectHandlers = new Collection();
 
-// We load and register command files from the commands directory.
+// Load command files
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(COMMAND_EXTENSION));
 
-// We get the list of disabled commands if available from the configuration.
 const disabledCommands = config.settings?.disabledCommands || [];
 const hasDisabledCommands = Array.isArray(disabledCommands) && disabledCommands.length > 0;
 
@@ -58,11 +59,10 @@ if (hasDisabledCommands) {
 let loadedCount = 0;
 let skippedCount = 0;
 
-// We process each command file to register it with the bot.
+// Load each command file
 for (const file of commandFiles) {
   const commandName = file.replace(COMMAND_EXTENSION, ''); 
   
-  // We skip this command if it's in the disabled list.
   if (hasDisabledCommands && disabledCommands.includes(commandName)) {
     logger.debug(`Skipping disabled command: ${commandName}.`);
     skippedCount++;
@@ -83,14 +83,12 @@ for (const file of commandFiles) {
   }
 }
 
-// We log a summary of loaded commands for monitoring purposes.
 logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} skipped.`);
 
-// We load and register event files from the events directory.
+// Load event files
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(EVENT_EXTENSION));
 
-// We process each event file to register its handlers with the client.
 for (const file of eventFiles) {
   try {
     const filePath = path.join(eventsPath, file);
@@ -130,7 +128,7 @@ for (const file of eventFiles) {
   }
 }
 
-// We set up an event triggered when the bot is ready to operate.
+// Handle bot ready event
 client.once('ready', async () => {
   try {
     await initializeDatabase();
@@ -144,7 +142,12 @@ client.once('ready', async () => {
   }
 });
 
-// We log the bot in using the token from the config file.
+/**
+ * Starts the bot and performs necessary initialization.
+ * @async
+ * @function startBot
+ * @throws {Error} If bot startup fails
+ */
 async function startBot() {
   try {
     if (config.settings.deployCommandsOnStart) {
@@ -166,10 +169,10 @@ async function startBot() {
   }
 }
 
-// We start the bot
+// Start the bot
 startBot();
 
-// We add global unhandled error handlers to prevent the bot from crashing silently.
+// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   logError('Uncaught Exception', error);
   Sentry.captureException(error, {
@@ -178,6 +181,7 @@ process.on('uncaughtException', (error) => {
   setTimeout(() => process.exit(1), SENTRY_FLUSH_TIMEOUT);
 });
 
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   logError('Unhandled Promise Rejection', reason);
   Sentry.captureException(reason, {
@@ -186,19 +190,17 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 /**
- * We handle graceful shutdown when receiving termination signals.
- * We use this to ensure clean disconnection and resource cleanup.
- * 
- * @param {string} signal - The signal that triggered the shutdown.
+ * Handles graceful shutdown of the bot.
+ * @function handleShutdown
+ * @param {string} signal - The shutdown signal received
  */
 function handleShutdown(signal) {
   logger.info(`Shutdown signal (${signal}) received. We're cleaning up and exiting...`);
-  // We flush Sentry events before exiting to ensure all error reports are sent.
   Sentry.close(SENTRY_FLUSH_TIMEOUT).then(() => {
     process.exit(0);
   });
 }
 
-// We gracefully handle termination signals for clean bot shutdown.
+// Register shutdown handlers
 process.on('SIGINT', () => handleShutdown('SIGINT'));
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));

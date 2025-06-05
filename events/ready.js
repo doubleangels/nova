@@ -1,3 +1,9 @@
+/**
+ * Event handler for when the bot becomes ready.
+ * Handles bot initialization, status updates, and startup tasks.
+ * @module events/ready
+ */
+
 const { ActivityType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -7,28 +13,16 @@ const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const { initializeDatabase } = require('../utils/database');
 const Sentry = require('../sentry');
-const { logError } = require('../utils/errorUtils');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
-// We import the deploy-commands module to register slash commands with Discord.
 const deployCommands = require('../deploy-commands');
 
-// We define the bot's activity and status for consistent presence.
 const BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
   type: ActivityType.Watching
 };
 const BOT_STATUS = "online";
 
-/**
- * We perform a setup task with proper error handling and logging.
- * This function standardizes our setup process and error handling.
- * 
- * @param {string} taskName - The name of the task for logging purposes.
- * @param {Function} task - The async function to execute.
- * @param {string} startMessage - The message to log before starting.
- * @param {string} successMessage - The message to log on success.
- * @returns {Promise<boolean>} Whether the task completed successfully.
- */
 async function performSetupTask(taskName, task, startMessage, successMessage) {
   try {
     logger.debug(startMessage);
@@ -36,7 +30,6 @@ async function performSetupTask(taskName, task, startMessage, successMessage) {
     logger.info(successMessage);
     return true;
   } catch (error) {
-    // We capture errors in Sentry for monitoring and troubleshooting.
     Sentry.captureException(error, {
       extra: {
         taskName,
@@ -53,51 +46,56 @@ async function performSetupTask(taskName, task, startMessage, successMessage) {
 }
 
 /**
- * We handle the ready event when the bot starts up.
- * This function initializes the bot's state and reschedules any pending operations.
- *
- * We perform several initialization tasks:
- * 1. We set the bot's activity status to indicate it's ready for use.
- * 2. We initialize the database connection for data persistence.
- * 3. We reschedule mute kicks for tracked members to maintain moderation.
- * 4. We reschedule any pending reminders to ensure timely notifications.
- *
- * @param {Client} client - The Discord client instance.
+ * Event handler for bot ready events.
+ * @type {Object}
  */
 module.exports = {
   name: 'ready',
+  /**
+   * Executes when the bot becomes ready.
+   * @async
+   * @function execute
+   * @param {Client} client - The Discord client instance
+   * @throws {Error} If bot initialization fails
+   */
   async execute(client) {
     try {
-      // We set the bot's activity status to indicate it's ready for use.
       client.user.setActivity(BOT_ACTIVITY.name, { type: BOT_ACTIVITY.type });
       logger.info(`Logged in as ${client.user.tag}.`);
 
-      // We initialize the database connection for data persistence.
       await initializeDatabase();
       logger.info('Database connection initialized successfully.');
 
-      // We reschedule mute kicks for any tracked members to maintain moderation.
       await rescheduleAllMuteKicks(client);
       logger.info('Mute kicks rescheduled successfully.');
 
-      // We reschedule any pending reminders to ensure timely notifications.
       await rescheduleReminder(client);
       logger.info('Reminders rescheduled successfully.');
 
-      // We log successful initialization of all systems.
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {
-      // We log any errors that occur during initialization.
       logger.error('Error during bot initialization:', { 
         error: error.message,
         stack: error.stack
       });
       
-      // We log the error with the appropriate error message
       logError(error, 'ready', {
         clientId: client.user?.id,
         clientTag: client.user?.tag
       });
+      throw new Error(ERROR_MESSAGES.BOT_INITIALIZATION_FAILED);
     }
   }
 };
+
+/**
+ * Initializes required services for the bot.
+ * @async
+ * @function initializeServices
+ * @param {Client} client - The Discord client instance
+ * @returns {Promise<void>}
+ */
+async function initializeServices(client) {
+  // Add your service initialization logic here
+  // For example: database connections, cache warming, etc.
+}

@@ -1,3 +1,9 @@
+/**
+ * Mute mode command module for managing auto-kicking of inactive users.
+ * Handles configuration, time limits, and status updates.
+ * @module commands/muteMode
+ */
+
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -58,10 +64,11 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
   /**
-   * We execute the /mutemode command.
-   * This function processes the mute mode configuration request.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the mute mode command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the command execution fails
    */
   async execute(interaction) {
     await interaction.deferReply();
@@ -86,10 +93,11 @@ module.exports = {
   },
   
   /**
-   * We handle the 'status' subcommand to show current mute mode settings.
-   * This function retrieves and displays the current configuration.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Handles the 'status' subcommand to show current mute mode settings.
+   * @async
+   * @function handleStatusSubcommand
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If retrieving settings fails
    */
   async handleStatusSubcommand(interaction) {
     try {
@@ -111,10 +119,11 @@ module.exports = {
   },
   
   /**
-   * We handle the 'set' subcommand to update mute mode settings.
-   * This function processes and applies configuration changes.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Handles the 'set' subcommand to update mute mode settings.
+   * @async
+   * @function handleSetSubcommand
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If updating settings fails
    */
   async handleSetSubcommand(interaction) {
     try {
@@ -170,10 +179,11 @@ module.exports = {
   },
   
   /**
-   * We get the current mute mode settings from the database.
-   * This function retrieves the current configuration state.
-   *
-   * @returns {Promise<Object>} The current settings.
+   * Gets the current mute mode settings from the database.
+   * @async
+   * @function getCurrentSettings
+   * @returns {Promise<Object>} The current settings
+   * @throws {Error} If database read fails
    */
   async getCurrentSettings() {
     try {
@@ -198,12 +208,12 @@ module.exports = {
   },
   
   /**
-   * We update the mute mode settings in the database.
-   * This function persists configuration changes.
-   *
-   * @param {boolean} isEnabled - Whether mute mode is enabled.
-   * @param {number} timeLimit - The time limit in hours.
-   * @returns {Promise<void>}
+   * Updates the mute mode settings in the database.
+   * @async
+   * @function updateSettings
+   * @param {boolean} isEnabled - Whether mute mode is enabled
+   * @param {number} timeLimit - The time limit in hours
+   * @throws {Error} If database write fails
    */
   async updateSettings(isEnabled, timeLimit) {
     try {
@@ -223,11 +233,10 @@ module.exports = {
   },
   
   /**
-   * We format a status message based on the current settings.
-   * This function creates a user-friendly display of the configuration.
-   *
-   * @param {Object} settings - The current mute mode settings.
-   * @returns {string} The formatted status message.
+   * Formats a status message based on the current settings.
+   * @function formatStatusMessage
+   * @param {Object} settings - The current mute mode settings
+   * @returns {string} The formatted status message
    */
   formatStatusMessage(settings) {
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
@@ -245,14 +254,13 @@ module.exports = {
   },
   
   /**
-   * We format an update message based on the old and new settings.
-   * This function creates a user-friendly display of configuration changes.
-   *
-   * @param {boolean} oldEnabled - The previous enabled state.
-   * @param {boolean} newEnabled - The new enabled state.
-   * @param {number} oldTimeLimit - The previous time limit.
-   * @param {number} newTimeLimit - The new time limit.
-   * @returns {string} The formatted update message.
+   * Formats an update message based on the old and new settings.
+   * @function formatUpdateMessage
+   * @param {boolean} oldEnabled - The previous enabled state
+   * @param {boolean} newEnabled - The new enabled state
+   * @param {number} oldTimeLimit - The previous time limit
+   * @param {number} newTimeLimit - The new time limit
+   * @returns {string} The formatted update message
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
     let message = `🔇 **Mute Mode Updated**\n\n`;
@@ -277,11 +285,11 @@ module.exports = {
   },
   
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'mutemode', {

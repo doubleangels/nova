@@ -1,7 +1,14 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+/**
+ * Change color command module for modifying role colors.
+ * Handles color validation, role updates, and permission checks.
+ * @module commands/changeColor
+ */
+
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { validateAndNormalizeColor } = require('../utils/colorUtils');
 
 /**
  * We handle the changecolor command.
@@ -18,68 +25,64 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
-        .setDescription('Change the color of a specified role to the provided hex color.')
+        .setDescription('Change the color of a role')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('What role do you want to change the color of?')
+                .setDescription('The role to change the color of')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('What color do you want to change the role to? (e.g., #RRGGBB, RRGGBB)')
+                .setDescription('The new color (hex code or name)')
                 .setRequired(true))
-        .setDefaultMemberPermissions(PermissionsBitField.Flags.ManageRoles),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
     /**
-     * We execute the /changecolor command.
-     * This function processes the role color change request.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * Executes the change color command.
+     * @async
+     * @function execute
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @throws {Error} If role update fails or color is invalid
      */
     async execute(interaction) {
-        await interaction.deferReply();
         try {
-            logger.info("Change color command initiated:", { 
-                userId: interaction.user.id, 
-                guildId: interaction.guild.id 
+            await interaction.deferReply();
+            
+            const role = interaction.options.getRole('role');
+            const colorInput = interaction.options.getString('color');
+            
+            logger.info("Change color command initiated:", {
+                userId: interaction.user.id,
+                guildId: interaction.guild.id,
+                roleId: role.id,
+                colorInput
             });
 
-            // We get the role and color from the command options.
-            const role = interaction.options.getRole('role');
-            const color = interaction.options.getString('color');
-            
-            // We validate the role and color.
-            if (!this.isValidRole(role)) {
-                await interaction.editReply({
-                    content: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS,
-                    ephemeral: true
-                });
-                return;
+            // Validate color
+            const color = validateAndNormalizeColor(colorInput);
+            if (!color) {
+                throw new Error("INVALID_COLOR");
             }
 
-            if (!this.isValidHexColor(color)) {
-                await interaction.editReply({
-                    content: ERROR_MESSAGES.INVALID_COLOR,
-                    ephemeral: true
-                });
-                return;
+            // Check if bot has permission to manage the role
+            if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
+                throw new Error("BOT_PERMISSION_DENIED");
             }
-            
-            // We store the old color before changing it for the response message.
-            const oldColor = role.hexColor;
-            
-            // We update the role's color.
-            await role.setColor(this.normalizeColor(color));
+
+            // Check if role is manageable
+            if (!role.manageable) {
+                throw new Error("ROLE_NOT_MANAGEABLE");
+            }
+
+            // Update role color
+            await role.setColor(color);
             
             await interaction.editReply({
-                content: `✅ Successfully changed the color of ${role} from \`${oldColor}\` to \`${this.normalizeColor(color)}\`.`
+                content: `Successfully changed the color of ${role} to ${colorInput}`
             });
-
-            logger.info("Role color changed successfully:", { 
-                roleId: role.id, 
-                oldColor: oldColor,
-                newColor: color,
-                userId: interaction.user.id,
-                guildId: interaction.guild.id
+            
+            logger.info("Role color updated successfully:", {
+                roleId: role.id,
+                newColor: color
             });
         } catch (error) {
             await this.handleError(interaction, error);
@@ -87,62 +90,27 @@ module.exports = {
     },
 
     /**
-     * We validate if the role can be edited by the bot.
-     * This function checks if the role is manageable and not managed.
-     *
-     * @param {Role} role - The role to validate.
-     * @returns {boolean} True if the role is valid, false otherwise.
-     */
-    isValidRole(role) {
-        return role.editable && !role.managed;
-    },
-
-    /**
-     * We validate if the provided string is a valid hex color code.
-     * This function checks if the color matches the hex color format.
-     *
-     * @param {string} color - The color code to validate.
-     * @returns {boolean} True if the color is valid, false otherwise.
-     */
-    isValidHexColor(color) {
-        // We remove the # prefix if present and check if it's a valid 6-digit hex color.
-        const cleanColor = color.startsWith('#') ? color.slice(1) : color;
-        return /^[A-Fa-f0-9]{6}$/.test(cleanColor);
-    },
-
-    /**
-     * We normalize a hex color code to include the # prefix.
-     * This function ensures consistent color format.
-     *
-     * @param {string} color - The color code to normalize.
-     * @returns {string} The normalized color code with # prefix.
-     */
-    normalizeColor(color) {
-        return color.startsWith('#') ? color : `#${color}`;
-    },
-
-    /**
-     * We handle errors that occur during command execution.
-     * This function logs the error and attempts to notify the user.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {Error} error - The error that occurred.
+     * Handles errors that occur during command execution.
+     * @async
+     * @function handleError
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
         logError(error, 'changecolor', {
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
-            channelId: interaction.channel?.id
+            roleId: interaction.options?.getRole('role')?.id
         });
         
         let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
         
-        if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS;
-        } else if (error.message === "INVALID_COLOR") {
-            errorMessage = ERROR_MESSAGES.INVALID_COLOR;
-        } else if (error.message === "MANAGED_ROLE") {
-            errorMessage = ERROR_MESSAGES.MANAGED_ROLE;
+        if (error.message === "INVALID_COLOR") {
+            errorMessage = ERROR_MESSAGES.INVALID_COLOR_FORMAT;
+        } else if (error.message === "BOT_PERMISSION_DENIED") {
+            errorMessage = ERROR_MESSAGES.BOT_MISSING_PERMISSIONS;
+        } else if (error.message === "ROLE_NOT_MANAGEABLE") {
+            errorMessage = ERROR_MESSAGES.ROLE_NOT_MANAGEABLE;
         }
         
         try {
@@ -151,7 +119,7 @@ module.exports = {
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for changecolor command:", {
+            logger.error("Failed to send error response for change color command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id
@@ -161,7 +129,6 @@ module.exports = {
                 content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
-                // We silently catch if all error handling attempts fail.
             });
         }
     }

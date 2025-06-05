@@ -1,5 +1,10 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord.js');
+/**
+ * Change nickname command module for modifying user nicknames.
+ * Handles permission checks, nickname validation, and user updates.
+ * @module commands/changeNickname
+ */
+
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -19,93 +24,96 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changenickname')
-        .setDescription('Change a user\'s nickname in the server.')
+        .setDescription('Change a user\'s nickname')
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('Which user\'s nickname should be changed?')
+                .setDescription('The user to change the nickname of')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('nickname')
-                .setDescription('What should the new nickname be?')
-                .setRequired(true))
+                .setDescription('The new nickname (leave empty to reset)')
+                .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames),
     
     /**
-     * We execute the /changenickname command.
-     * This function processes the nickname change request.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * Executes the change nickname command.
+     * @async
+     * @function execute
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @throws {Error} If nickname update fails or user is not manageable
      */
     async execute(interaction) {
-        // We defer the reply since nickname changes might take a moment to complete.
-        await interaction.deferReply({ ephemeral: true });
-        logger.info("/changenickname command initiated:", { 
-            userId: interaction.user.id, 
-            guildId: interaction.guild.id 
-        });
-        
         try {
-            // We extract the command options provided by the user.
+            await interaction.deferReply();
+            
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
+            const member = await interaction.guild.members.fetch(targetUser.id);
             
-            logger.debug("Processing command options:", { 
+            logger.info("Change nickname command initiated:", {
+                userId: interaction.user.id,
+                guildId: interaction.guild.id,
                 targetUserId: targetUser.id,
-                targetUserTag: targetUser.tag,
-                newNickname: newNickname
+                newNickname
             });
-            
-            // We validate permissions and conditions before attempting nickname change.
-            const validationResult = await this.validateNicknameChange(interaction, targetUser, newNickname);
-            if (!validationResult.success) {
-                return await interaction.editReply({
-                    content: validationResult.message,
-                    ephemeral: true
-                });
+
+            // Check if bot has permission to manage nicknames
+            if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageNicknames)) {
+                throw new Error("BOT_PERMISSION_DENIED");
             }
+
+            // Check if target user is manageable
+            if (!member.manageable) {
+                throw new Error("USER_NOT_MANAGEABLE");
+            }
+
+            // Validate nickname length if provided
+            if (newNickname && (newNickname.length < 1 || newNickname.length > 32)) {
+                throw new Error("INVALID_NICKNAME_LENGTH");
+            }
+
+            // Update nickname
+            await member.setNickname(newNickname || null);
             
-            // We change the nickname after validation passes.
-            const targetMember = validationResult.targetMember;
-            await targetMember.setNickname(newNickname);
+            const responseMessage = newNickname 
+                ? `Successfully changed ${targetUser}'s nickname to "${newNickname}"`
+                : `Successfully reset ${targetUser}'s nickname`;
             
             await interaction.editReply({
-                content: `✅ Successfully updated ${targetUser}'s nickname.`,
-                ephemeral: true
+                content: responseMessage
             });
             
+            logger.info("Nickname updated successfully:", {
+                targetUserId: targetUser.id,
+                newNickname: newNickname || 'reset'
+            });
         } catch (error) {
             await this.handleError(interaction, error);
         }
     },
     
     /**
-     * We handle errors that occur during command execution.
-     * This function logs the error and attempts to notify the user.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {Error} error - The error that occurred.
+     * Handles errors that occur during command execution.
+     * @async
+     * @function handleError
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
         logError(error, 'changenickname', {
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
-            channelId: interaction.channel?.id
+            targetUserId: interaction.options?.getUser('user')?.id
         });
         
         let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
         
-        if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_INSUFFICIENT_PERMISSIONS;
-        } else if (error.message === "NICKNAME_TOO_LONG") {
-            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_TOO_LONG;
-        } else if (error.message === "USER_NOT_FOUND") {
-            errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
-        } else if (error.message === "ROLE_HIERARCHY") {
-            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_ROLE_HIERARCHY;
-        } else if (error.message === "SERVER_OWNER") {
-            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_OWNER;
-        } else if (error.message === "BOT_NICKNAME") {
-            errorMessage = ERROR_MESSAGES.CHANGENICKNAME_BOT;
+        if (error.message === "BOT_PERMISSION_DENIED") {
+            errorMessage = ERROR_MESSAGES.BOT_MISSING_PERMISSIONS;
+        } else if (error.message === "USER_NOT_MANAGEABLE") {
+            errorMessage = ERROR_MESSAGES.USER_NOT_MANAGEABLE;
+        } else if (error.message === "INVALID_NICKNAME_LENGTH") {
+            errorMessage = ERROR_MESSAGES.INVALID_NICKNAME_LENGTH;
         }
         
         try {
@@ -114,7 +122,7 @@ module.exports = {
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for changenickname command:", {
+            logger.error("Failed to send error response for change nickname command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id
@@ -124,7 +132,6 @@ module.exports = {
                 content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
-                // We silently catch if all error handling attempts fail.
             });
         }
     },

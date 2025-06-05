@@ -1,4 +1,10 @@
-const { SlashCommandBuilder } = require('discord.js');
+/**
+ * Coin flip command module for simulating coin tosses.
+ * Handles random number generation and result display.
+ * @module commands/coinFlip
+ */
+
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -27,40 +33,39 @@ module.exports = {
      */
     data: new SlashCommandBuilder()
         .setName('coinflip')
-        .setDescription('Flip a coin and return heads or tails.'),
+        .setDescription('Flip a coin and get heads or tails'),
 
     /**
      * We execute the /coinflip command.
      * This function processes the coin flip request and returns the result.
      *
-     * @param {import('discord.js').CommandInteraction} interaction - The interaction object from Discord.
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @throws {Error} If result generation fails
      */
     async execute(interaction) {
-        await interaction.deferReply();
         try {
-            logger.info("Coinflip command initiated:", {
+            await interaction.deferReply();
+            
+            logger.info("Coin flip command initiated:", {
                 userId: interaction.user.id,
-                guildId: interaction.guild?.id,
-                channelId: interaction.channel?.id
+                guildId: interaction.guild?.id
             });
 
-            // We generate a random number and determine whether the result is Heads or Tails.
-            const randomValue = Math.random();
-            const result = randomValue < HEADS_PROBABILITY ? COIN_FACE_HEADS : COIN_FACE_TAILS;
+            const result = this.flipCoin();
             
-            logger.debug("Coin flip result determined:", {
-                result: result,
-                randomValue: randomValue
-            });
-
-            // We reply to the user with the result as a public message.
-            await interaction.editReply({ 
-                content: `${COIN_EMOJI} The coin landed on **${result}**!` 
-            });
+            const embed = new EmbedBuilder()
+                .setColor('#FFD700')
+                .setTitle('Coin Flip')
+                .setDescription(`The coin landed on: **${result}**`)
+                .setThumbnail(result === 'Heads' ? 'https://i.imgur.com/8T9XlFX.png' : 'https://i.imgur.com/4u6o1dy.png')
+                .setFooter({ text: `Requested by ${interaction.user.tag}` })
+                .setTimestamp();
             
-            logger.info("Coinflip command completed successfully:", {
+            await interaction.editReply({ embeds: [embed] });
+            
+            logger.info("Coin flip completed:", {
                 userId: interaction.user.id,
-                result: result
+                result
             });
         } catch (error) {
             await this.handleError(interaction, error);
@@ -68,35 +73,41 @@ module.exports = {
     },
 
     /**
+     * Generates a random coin flip result.
+     * @function flipCoin
+     * @returns {string} Either 'Heads' or 'Tails'
+     */
+    flipCoin() {
+        return Math.random() < 0.5 ? 'Heads' : 'Tails';
+    },
+
+    /**
      * We handle errors that occur during command execution.
      * This function logs the error and attempts to notify the user.
      *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {Error} error - The error that occurred.
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
         logError(error, 'coinflip', {
             userId: interaction.user?.id,
-            guildId: interaction.guild?.id,
-            channelId: interaction.channel?.id
+            guildId: interaction.guild?.id
         });
-        
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
         
         try {
             await interaction.editReply({ 
-                content: errorMessage,
+                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
                 ephemeral: true 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for coinflip command:", {
+            logger.error("Failed to send error response for coin flip command:", {
                 error: followUpError.message,
                 originalError: error.message,
                 userId: interaction.user?.id
             });
             
             await interaction.reply({ 
-                content: errorMessage,
+                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
                 ephemeral: true 
             }).catch(() => {
                 // We silently catch if all error handling attempts fail.

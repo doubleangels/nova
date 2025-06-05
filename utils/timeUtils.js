@@ -7,24 +7,14 @@ const moment = require('moment-timezone');
 const Sentry = require('../sentry');
 const { logError, ERROR_MESSAGES } = require('../errors');
 
-// We define these configuration constants for consistent time formatting and parsing.
-const TIME_FORMAT = 'h:mm A'; // 12-hour format with AM/PM
+const TIME_FORMAT = 'h:mm A';
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 
-// We extend dayjs with UTC and timezone support for time conversions.
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// We get all valid timezone names from moment for timezone validation.
 const VALID_TIMEZONES = new Set(moment.tz.names());
 
-/**
- * We validate if the provided string is a valid timezone identifier.
- * This function ensures that timezone operations will work correctly.
- * 
- * @param {string} tz - The timezone identifier to validate.
- * @returns {boolean} Whether the timezone is valid.
- */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
     throw new Error(ERROR_MESSAGES.INVALID_TIMEZONE);
@@ -39,13 +29,6 @@ function isValidTimezone(tz) {
   }
 }
 
-/**
- * We extract time references from a text string using dayjs.
- * This function parses natural language time expressions into structured data.
- * 
- * @param {string} content - The text content to parse for time references.
- * @returns {Array<Object>} An array of objects containing the parsed date and original text.
- */
 function extractTimeReferences(content) {
   if (!content) {
     throw new Error(ERROR_MESSAGES.EMPTY_TIME_REFERENCE);
@@ -56,27 +39,21 @@ function extractTimeReferences(content) {
     if (!matches) return [];
 
     const results = matches.map(text => {
-      // Try to parse the time using dayjs
       let parsedTime;
       
-      // Handle noon/midnight
       if (text.toLowerCase() === 'noon') {
         parsedTime = dayjs().hour(12).minute(0);
       } else if (text.toLowerCase() === 'midnight') {
         parsedTime = dayjs().hour(0).minute(0);
       } else {
-        // Handle regular time formats
         const timeStr = text.replace(/\s+/g, '');
-        // First try parsing with AM/PM formats
         parsedTime = dayjs(timeStr, ['h:mma', 'h:mm a', 'ha', 'h a']);
         
-        // If that fails, try parsing as 24-hour format and convert to 12-hour
         if (!parsedTime.isValid()) {
           const [hours, minutes] = timeStr.split(':').map(Number);
           if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-            // Convert 24-hour to 12-hour format
             const period = hours >= 12 ? 'PM' : 'AM';
-            const hour12 = hours % 12 || 12; // Convert 0 to 12 for 12 AM
+            const hour12 = hours % 12 || 12;
             parsedTime = dayjs().hour(hours).minute(minutes);
           }
         }
@@ -119,15 +96,6 @@ function extractTimeReferences(content) {
   }
 }
 
-/**
- * We convert a time reference between two specific timezones.
- * This function handles the conversion of times between different timezone contexts.
- * 
- * @param {Object} timeRef - The time reference object with text and date properties.
- * @param {string} fromTimezone - The source timezone identifier.
- * @param {string} toTimezone - The target timezone identifier.
- * @returns {Object} An object containing the original text, parsed times, and timezone information.
- */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
     throw new Error(ERROR_MESSAGES.INVALID_TIME_REFERENCE);
@@ -150,7 +118,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
 
     const isTimeOnly = true;
     
-    // We handle time-only references by creating a time in the source timezone.
     let sourceTime;
     if (isTimeOnly) {
       const hours = timeRef.date.getHours();
@@ -209,14 +176,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   }
 }
 
-/**
- * We generate Discord dynamic timestamps for a given date in a specific timezone.
- * This function creates formatted timestamp strings for Discord messages.
- * 
- * @param {dayjs.Dayjs} date - The date object.
- * @param {string} timezone - The timezone to use.
- * @returns {string} Discord timestamp format string.
- */
 function generateDiscordTimestamp(date, timezone) {
   if (!date || !timezone) {
     throw new Error(ERROR_MESSAGES.INVALID_TIMESTAMP_PARAMS);
@@ -225,13 +184,6 @@ function generateDiscordTimestamp(date, timezone) {
   return `<t:${timestamp}:t>`;
 }
 
-/**
- * We format time conversion results into a default string representation.
- * This function provides a consistent format for displaying converted times.
- * 
- * @param {Object} conversion - A time conversion result object.
- * @returns {string} Formatted string representation.
- */
 function defaultFormatter(conversion) {
   if (!conversion) {
     throw new Error(ERROR_MESSAGES.INVALID_CONVERSION);
@@ -250,13 +202,6 @@ function defaultFormatter(conversion) {
   return `your converted time is ${targetTimestamp} ${toTimezone}.`;
 }
 
-/**
- * We format an array of converted time objects into a human-readable string.
- * This function creates a formatted output of multiple time conversions.
- * 
- * @param {Array<Object>} convertedTimes - Array of time conversion objects.
- * @returns {string} A formatted string showing the time conversions.
- */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
     throw new Error(ERROR_MESSAGES.NO_TIMES_TO_CONVERT);
@@ -277,10 +222,6 @@ function formatConvertedTimes(convertedTimes) {
   return formattedTimes.join('\n');
 }
 
-/**
- * We export the time utility functions for use throughout the application.
- * This module provides consistent time handling and conversion capabilities.
- */
 module.exports = {
   extractTimeReferences,
   convertTimeZones,

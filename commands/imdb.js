@@ -1,3 +1,9 @@
+/**
+ * IMDb command module for searching and displaying movie and TV show information.
+ * Handles API interactions with OMDb and result formatting.
+ * @module commands/imdb
+ */
+
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -52,10 +58,11 @@ module.exports = {
     ),
     
   /**
-   * We execute the /imdb command.
-   * This function processes the movie/TV show search request.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the IMDb search command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the API request fails
    */
   async execute(interaction) {
     try {
@@ -103,10 +110,9 @@ module.exports = {
   },
   
   /**
-   * We validate that the required API configuration is available.
-   * This function checks for the presence of necessary API keys.
-   *
-   * @returns {boolean} True if configuration is valid, false otherwise.
+   * Validates that the required API configuration is available.
+   * @function validateConfiguration
+   * @returns {boolean} True if configuration is valid, false otherwise
    */
   validateConfiguration() {
     if (!config.omdbApiKey) {
@@ -117,11 +123,10 @@ module.exports = {
   },
   
   /**
-   * We get and validate search parameters from the interaction.
-   * This function processes and validates user input for the search.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Object} An object with search parameters or error information.
+   * Gets and validates search parameters from the interaction.
+   * @function getSearchParameters
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @returns {Object} Object with search parameters or error information
    */
   getSearchParameters(interaction) {
     // We retrieve the user's inputs from the command options.
@@ -170,11 +175,12 @@ module.exports = {
   },
   
   /**
-   * We fetch movie data from the OMDb API.
-   * This function retrieves and processes the media information.
-   *
-   * @param {Object} searchParams - The search parameters.
-   * @returns {Object} The movie data or error information.
+   * Fetches movie data from the OMDb API.
+   * @async
+   * @function fetchMovieData
+   * @param {Object} searchParams - The search parameters
+   * @returns {Promise<Object>} The movie data or error information
+   * @throws {Error} If the API request fails
    */
   async fetchMovieData(searchParams) {
     // We construct the OMDb API request URL with all necessary query parameters.
@@ -237,11 +243,10 @@ module.exports = {
   },
   
   /**
-   * We create an embed with movie information for a visually appealing display.
-   * This function formats the media data into a Discord embed.
-   *
-   * @param {Object} data - The movie data from the OMDb API.
-   * @returns {EmbedBuilder} The created embed with formatted movie information.
+   * Creates an embed with movie information.
+   * @function createMovieEmbed
+   * @param {Object} data - The movie data from the OMDb API
+   * @returns {import('discord.js').EmbedBuilder} The created embed
    */
   createMovieEmbed(data) {
     // We extract all relevant data from the API response.
@@ -281,11 +286,11 @@ module.exports = {
   },
 
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'imdb', {

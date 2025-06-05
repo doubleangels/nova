@@ -1,3 +1,9 @@
+/**
+ * Timezone command module for retrieving and displaying timezone information.
+ * Handles Google API interactions, timezone lookups, and result formatting.
+ * @module commands/timezone
+ */
+
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger.js')(path.basename(__filename));

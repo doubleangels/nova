@@ -1,3 +1,9 @@
+/**
+ * Spotify command module for searching and displaying music information.
+ * Handles API interactions with Spotify and result formatting.
+ * @module commands/spotify
+ */
+
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -87,10 +93,11 @@ module.exports = {
     ),
 
   /**
-   * We execute the /spotify command.
-   * This function processes the Spotify search request and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the Spotify search command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the command execution fails
    */
   async execute(interaction) {
     try {
@@ -174,10 +181,9 @@ module.exports = {
   },
 
   /**
-   * We validate that the required API configuration is available.
-   * This function checks for the presence of necessary API keys.
-   *
-   * @returns {boolean} True if configuration is valid, false otherwise.
+   * Validates that the required API configuration is available.
+   * @function validateConfiguration
+   * @returns {boolean} True if configuration is valid, false otherwise
    */
   validateConfiguration() {
     if (!config.spotifyClientId || !config.spotifyClientSecret) {
@@ -191,10 +197,10 @@ module.exports = {
   },
 
   /**
-   * We get a Spotify access token using client credentials.
-   * This function retrieves an access token for API requests.
-   *
-   * @returns {Promise<string|null>} The access token or null if failed.
+   * Gets a Spotify access token using client credentials.
+   * @async
+   * @function getSpotifyAccessToken
+   * @returns {Promise<string|null>} The access token or null if failed
    */
   async getSpotifyAccessToken() {
     try {
@@ -224,12 +230,12 @@ module.exports = {
   },
 
   /**
-   * We search for a song on Spotify.
-   * This function retrieves song data from the Spotify API.
-   *
-   * @param {string} query - The search query.
-   * @param {string} accessToken - The Spotify access token.
-   * @returns {Promise<Object|null>} The song data or null if not found.
+   * Searches for a song on Spotify.
+   * @async
+   * @function searchSong
+   * @param {string} query - The search query
+   * @param {string} accessToken - The Spotify access token
+   * @returns {Promise<Object|null>} The song data or null if not found
    */
   async searchSong(query, accessToken) {
     try {
@@ -279,12 +285,12 @@ module.exports = {
   },
 
   /**
-   * We search for an album on Spotify.
-   * This function retrieves album data from the Spotify API.
-   *
-   * @param {string} query - The search query.
-   * @param {string} accessToken - The Spotify access token.
-   * @returns {Promise<Object|null>} The album data or null if not found.
+   * Searches for an album on Spotify.
+   * @async
+   * @function searchAlbum
+   * @param {string} query - The search query
+   * @param {string} accessToken - The Spotify access token
+   * @returns {Promise<Object|null>} The album data or null if not found
    */
   async searchAlbum(query, accessToken) {
     try {
@@ -330,12 +336,12 @@ module.exports = {
   },
 
   /**
-   * We search for an artist on Spotify.
-   * This function retrieves artist data from the Spotify API.
-   *
-   * @param {string} query - The search query.
-   * @param {string} accessToken - The Spotify access token.
-   * @returns {Promise<Object|null>} The artist data or null if not found.
+   * Searches for an artist on Spotify.
+   * @async
+   * @function searchArtist
+   * @param {string} query - The search query
+   * @param {string} accessToken - The Spotify access token
+   * @returns {Promise<Object|null>} The artist data or null if not found
    */
   async searchArtist(query, accessToken) {
     try {
@@ -381,12 +387,12 @@ module.exports = {
   },
 
   /**
-   * We search for a playlist on Spotify.
-   * This function retrieves playlist data from the Spotify API.
-   *
-   * @param {string} query - The search query.
-   * @param {string} accessToken - The Spotify access token.
-   * @returns {Promise<Object|null>} The playlist data or null if not found.
+   * Searches for a playlist on Spotify.
+   * @async
+   * @function searchPlaylist
+   * @param {string} query - The search query
+   * @param {string} accessToken - The Spotify access token
+   * @returns {Promise<Object|null>} The playlist data or null if not found
    */
   async searchPlaylist(query, accessToken) {
     try {
@@ -438,12 +444,12 @@ module.exports = {
   },
 
   /**
-   * We search for a podcast on Spotify.
-   * This function retrieves podcast data from the Spotify API.
-   *
-   * @param {string} query - The search query.
-   * @param {string} accessToken - The Spotify access token.
-   * @returns {Promise<Object|null>} The podcast data or null if not found.
+   * Searches for a podcast on Spotify.
+   * @async
+   * @function searchPodcast
+   * @param {string} query - The search query
+   * @param {string} accessToken - The Spotify access token
+   * @returns {Promise<Object|null>} The podcast data or null if not found
    */
   async searchPodcast(query, accessToken) {
     try {
@@ -495,13 +501,12 @@ module.exports = {
   },
 
   /**
-   * We create an embed for the search result.
-   * This function formats the result data into a Discord embed.
-   *
-   * @param {Array} results - The array of search results.
-   * @param {string} type - The type of result (song, album, artist, playlist, podcast).
-   * @param {number} index - The index of the result to display.
-   * @returns {EmbedBuilder} The formatted embed.
+   * Creates an embed for the search result.
+   * @function createEmbed
+   * @param {Array} results - The array of search results
+   * @param {string} type - The type of result (song, album, artist, playlist, podcast)
+   * @param {number} index - The index of the result to display
+   * @returns {import('discord.js').EmbedBuilder} The formatted embed
    */
   createEmbed(results, type, index = 0) {
     const item = results[index];
@@ -597,11 +602,10 @@ module.exports = {
   },
 
   /**
-   * We format milliseconds into a readable duration string.
-   * This function converts milliseconds to a mm:ss format.
-   *
-   * @param {number} ms - Duration in milliseconds.
-   * @returns {string} Formatted duration string.
+   * Formats milliseconds into a readable duration string.
+   * @function formatDuration
+   * @param {number} ms - Duration in milliseconds
+   * @returns {string} Formatted duration string
    */
   formatDuration(ms) {
     const minutes = Math.floor(ms / 60000);
@@ -610,22 +614,21 @@ module.exports = {
   },
 
   /**
-   * We format a number with commas for readability.
-   * This function adds commas to large numbers for clarity.
-   *
-   * @param {number} num - The number to format.
-   * @returns {string} Formatted number string.
+   * Formats a number with commas for readability.
+   * @function formatNumber
+   * @param {number} num - The number to format
+   * @returns {string} Formatted number string
    */
   formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   },
 
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'spotify', {

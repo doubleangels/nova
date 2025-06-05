@@ -1,3 +1,9 @@
+/**
+ * Event handler for when reactions are added to messages.
+ * Handles reaction-based interactions and role assignments.
+ * @module events/messageReactionAdd
+ */
+
 const path = require('path');
 const logger = require('../logger')('messageReactionAdd.js');
 const { getUserTimezone } = require('../utils/database');
@@ -12,95 +18,90 @@ const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
 
-// We define configuration constants for consistent time conversion behavior.
 const CLOCK_EMOJI = '🕒';
-const TIME_CONVERSION_TIMEOUT = 30000; // We set a 30-second timeout for temporary messages.
+const TIME_CONVERSION_TIMEOUT = 30000;
 
-// We extend dayjs with timezone capabilities for accurate time conversions.
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 /**
- * We handle reactions being added to messages.
- * This function manages reaction-based interactions and time conversions.
- *
- * We perform several tasks for each reaction:
- * 1. We process role assignments based on reaction emojis.
- * 2. We handle time conversion requests via clock reactions.
- * 3. We track reaction statistics for monitoring.
- *
- * @param {MessageReaction} reaction - The reaction that was added.
- * @param {User} user - The user who added the reaction.
+ * Event handler for message reaction events.
+ * @type {Object}
  */
 module.exports = {
   name: Events.MessageReactionAdd,
+  /**
+   * Executes when a reaction is added to a message.
+   * @async
+   * @function execute
+   * @param {MessageReaction} reaction - The reaction that was added
+   * @param {User} user - The user that added the reaction
+   * @throws {Error} If reaction handling fails
+   */
   async execute(reaction, user) {
     try {
-      // We ignore reactions from bots to prevent infinite loops.
-      if (user.bot) return;
+      // Ignore reactions from bots
+      if (user.bot) {
+        logger.debug('Bot reaction received, ignoring');
+        return;
+      }
 
-      // We handle partial reactions by fetching their complete data.
+      // Handle partial reactions
       if (reaction.partial) {
         try {
           await reaction.fetch();
         } catch (error) {
-          logger.error('Error fetching partial reaction:', {
-            error: error.message,
-            stack: error.stack
-          });
+          logger.error('Error fetching reaction:', error);
           return;
         }
       }
 
-      // We handle clock reactions for time conversion requests.
+      // Process reaction
+      logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}`);
+
       if (reaction.emoji.name === CLOCK_EMOJI) {
         await handleClockReaction(reaction, user);
         return;
       }
 
-      // We process role assignments based on reaction emojis.
       if (reaction.message.guild) {
         const member = reaction.message.guild.members.cache.get(user.id);
         if (member) {
-          // We handle role assignments here.
-          // Example: if (reaction.emoji.name === '✅') { await member.roles.add(roleId); }
         }
       }
 
-      // Check if the reaction is a flag emoji
       const flagEmoji = reaction.emoji.name;
       if (isValidTranslationFlag(flagEmoji)) {
         await handleTranslationRequest(reaction, user);
         return;
       }
 
-      logger.debug(`Processed reaction ${reaction.emoji.name} from ${user.tag}.`);
+      logger.info(`Successfully processed reaction from ${user.tag}`);
     } catch (error) {
-      logger.error(`Error processing reaction from ${user.tag}:`, {
+      Sentry.captureException(error, {
+        extra: {
+          event: 'messageReactionAdd',
+          emoji: reaction.emoji.name,
+          userId: user.id,
+          messageId: reaction.message.id
+        }
+      });
+      logger.error(`Error processing reaction:`, {
         error: error.message,
         stack: error.stack
       });
       
-      // We log the error with the appropriate error message
       logError(error, 'messageReactionAdd', {
+        emoji: reaction.emoji.name,
         userId: user.id,
-        userTag: user.tag,
-        messageId: reaction.message?.id,
-        channelId: reaction.message?.channel?.id,
-        guildId: reaction.message?.guild?.id
+        messageId: reaction.message.id
       });
+      throw new Error(ERROR_MESSAGES.REACTION_HANDLING_FAILED);
     }
   }
 };
 
-/**
- * We fetch partial reaction and message data to ensure complete information.
- * This function handles data fetching for partial Discord objects.
- * 
- * @param {MessageReaction} reaction - The reaction object to fetch data for.
- */
 async function fetchPartialData(reaction) {
-  // We handle partial reactions by fetching their complete data.
   if (reaction.partial) {
     try {
       await reaction.fetch();
@@ -114,11 +115,10 @@ async function fetchPartialData(reaction) {
         }
       });
       logger.error("Failed to fetch partial reaction:", { error });
-      throw error; // We re-throw to stop processing since we need complete data.
+      throw error;
     }
   }
   
-  // We handle partial messages by fetching their complete data.
   if (reaction.message.partial) {
     try {
       await reaction.message.fetch();
@@ -131,24 +131,15 @@ async function fetchPartialData(reaction) {
         }
       });
       logger.error("Failed to fetch partial message:", { error });
-      throw error; // We re-throw to stop processing since we need complete data.
+      throw error;
     }
   }
 }
 
-/**
- * We handle clock emoji reactions for time conversion requests.
- * This function processes timezone conversions for users.
- * 
- * @param {MessageReaction} reaction - The reaction object.
- * @param {User} user - The user who reacted.
- */
 async function handleClockReaction(reaction, user) {
   try {
-    // We get the reactor's timezone from the database for conversion.
     const userTimezone = await getUserTimezone(user.id);
     
-    // We handle cases where the reactor hasn't set their timezone.
     if (!userTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
@@ -157,11 +148,9 @@ async function handleClockReaction(reaction, user) {
       return;
     }
     
-    // We get the message author's timezone for source time conversion.
     const messageAuthorId = reaction.message.author.id;
     const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
     
-    // We handle cases where the message author hasn't set their timezone.
     if (!messageAuthorTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
@@ -170,7 +159,6 @@ async function handleClockReaction(reaction, user) {
       return;
     }
     
-    // We extract and process time references from the message.
     const timeReferences = await getTimeReferences(reaction.message);
     
     if (timeReferences && timeReferences.length > 0) {
@@ -200,22 +188,12 @@ async function handleClockReaction(reaction, user) {
   }
 }
 
-/**
- * We get time references from a message, using cache when available.
- * This function optimizes performance by caching extracted time references.
- * 
- * @param {Message} message - The Discord message to process.
- * @returns {Array} Array of time references found in the message.
- */
 async function getTimeReferences(message) {
-  // We check the cache first for existing time references.
   let timeReferences = global.timeReferenceCache?.get(message.id);
   
-  // We extract time references if not found in cache.
   if (!timeReferences && message.content) {
     timeReferences = extractTimeReferences(message.content);
     
-    // We cache the extracted references for future use.
     if (timeReferences.length > 0) {
       if (!global.timeReferenceCache) {
         global.timeReferenceCache = new Map();
@@ -232,16 +210,6 @@ async function getTimeReferences(message) {
   return timeReferences;
 }
 
-/**
- * We process time conversion between two timezones.
- * This function handles the conversion and formatting of time references.
- * 
- * @param {TextChannel} channel - The channel to send the conversion result to.
- * @param {string} userId - The ID of the user requesting the conversion.
- * @param {Array} timeReferences - Array of time references to convert.
- * @param {string} fromTimezone - The source timezone.
- * @param {string} toTimezone - The target timezone.
- */
 async function processTimeConversion(channel, userId, timeReferences, fromTimezone, toTimezone) {
   try {
     logger.info("Processing time conversion:", {
@@ -250,16 +218,13 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
       references: timeReferences.map(ref => ref.text)
     });
     
-    // We convert each time reference to the target timezone.
     const convertedTimes = timeReferences.map(ref => {
       return convertTimeZones(ref, fromTimezone, toTimezone);
     });
     
-    // We format the converted times into a readable message.
     const formattedTimes = formatConvertedTimes(convertedTimes);
 
-    // We get the user's highest role color
-    let embedColor = 0x0099ff; // Default Discord blue
+    let embedColor = 0x0099ff;
     const member = channel.guild?.members.cache.get(userId);
     if (member) {
       const highestRole = member.roles.highest;
@@ -268,7 +233,6 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
       }
     }
 
-    // We create an embed with the time conversion
     const embed = {
       color: embedColor,
       title: `${CLOCK_EMOJI} Time Conversion`,
@@ -293,15 +257,6 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
   }
 }
 
-/**
- * We send temporary messages that auto-delete after a timeout.
- * This function helps keep channels clean while providing information.
- * 
- * @param {TextChannel} channel - The channel to send the message to.
- * @param {string} content - The content of the message.
- * @param {number} timeout - Time in milliseconds before deletion.
- * @returns {Promise<Message|null>} The sent message or null if failed.
- */
 async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_TIMEOUT) {
   try {
     const reply = await channel.send(content);
@@ -338,23 +293,14 @@ async function sendTemporaryMessage(channel, content, timeout = TIME_CONVERSION_
   }
 }
 
-/**
- * We handle translation requests based on flag emojis.
- * This function processes translations for messages.
- * 
- * @param {MessageReaction} reaction - The reaction object.
- * @param {User} user - The user who reacted.
- */
 async function handleTranslationRequest(reaction, user) {
     try {
-        // Get the target language
         const flagEmoji = reaction.emoji.name;
         const languageInfo = getLanguageInfo(flagEmoji);
         if (!languageInfo) {
             throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
         }
 
-        // Get the original message content
         const message = reaction.message;
         if (!message) {
             throw new Error(ERROR_MESSAGES.DISCORD_MESSAGE_NOT_FOUND);
@@ -364,7 +310,6 @@ async function handleTranslationRequest(reaction, user) {
             throw new Error(ERROR_MESSAGES.TRANSLATION_EMPTY_TEXT);
         }
 
-        // Translate the message
         const response = await axios.post(
             `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
             {
@@ -376,7 +321,6 @@ async function handleTranslationRequest(reaction, user) {
 
         const translatedText = response.data.data.translations[0].translatedText;
 
-        // Get the user's highest role color
         let embedColor = 0x0099ff; // Default Discord blue
         if (message.guild) {
             const member = message.guild.members.cache.get(user.id);
@@ -388,7 +332,6 @@ async function handleTranslationRequest(reaction, user) {
             }
         }
 
-        // Create an embed with the translation
         const embed = {
             color: embedColor,
             title: `Translation to ${languageInfo.name} ${flagEmoji}`,
@@ -399,10 +342,8 @@ async function handleTranslationRequest(reaction, user) {
             timestamp: new Date()
         };
 
-        // Send the translation as a reply
         await message.reply({ embeds: [embed] });
     } catch (error) {
-        // Extract relevant error information without circular references
         const errorInfo = {
             message: error.message,
             code: error.code,
@@ -418,7 +359,6 @@ async function handleTranslationRequest(reaction, user) {
 
         logger.error('Error in translation request:', errorInfo);
         
-        // Send a user-friendly error message
         try {
             const errorMessage = error.response?.status === 403 
                 ? ERROR_MESSAGES.TRANSLATION_API_ERROR

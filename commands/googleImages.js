@@ -1,3 +1,9 @@
+/**
+ * Google Images command module for searching and displaying images.
+ * Handles API interactions with Google Custom Search and image result formatting.
+ * @module commands/googleImages
+ */
+
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -14,6 +20,9 @@ const MIN_RESULTS = 1;
 const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout for pagination controls
 const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
 const SAFE_SEARCH = "medium"; // Can be "off", "medium", or "high" for content filtering
+
+const GOOGLE_API_KEY = config.googleApiKey;
+const GOOGLE_CSE_ID = config.googleCseId;
 
 /**
  * We convert a string to title case for better presentation.
@@ -46,35 +55,31 @@ module.exports = {
     ),
 
   /**
-   * We handle the googleimages command.
-   * This function allows users to search for images using Google's Custom Search API.
-   *
-   * We perform several tasks:
-   * 1. We validate Google API configuration.
-   * 2. We process image search requests.
-   * 3. We format and display search results.
-   * 4. We handle pagination and user interaction.
-   *
-   * @param {Interaction} interaction - The Discord interaction object.
+   * Executes the Google Images search command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the API request fails
    */
   async execute(interaction) {
+    await interaction.deferReply();
+    logger.info("/googleimages command initiated:", { 
+      userId: interaction.user.id, 
+      guildId: interaction.guildId 
+    });
+    
     try {
-      // We validate that the API configuration is properly set up before proceeding.
-      if (!this.validateConfiguration()) {
-        return await interaction.reply({
+      if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID) {
+        logger.error("Missing Google API configuration:", {
+          hasApiKey: !!GOOGLE_API_KEY,
+          hasCseId: !!GOOGLE_CSE_ID
+        });
+        return await interaction.editReply({
           content: ERROR_MESSAGES.CONFIG_MISSING,
           ephemeral: true
         });
       }
-
-      // We defer the reply to allow time for the API request and processing.
-      await interaction.deferReply();
-      logger.info(`/googleimages command initiated:`, { 
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-
-      // We get and validate the search parameters provided by the user.
+      
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
@@ -97,7 +102,6 @@ module.exports = {
         count: searchParams.count 
       });
 
-      // We fetch image search results from the Google API.
       const searchResults = await this.fetchImageResults(searchParams.query, searchParams.count);
       
       if (searchResults.error) {
@@ -137,20 +141,28 @@ module.exports = {
   },
   
   /**
-   * We validate that the required API configuration is available.
-   * This function checks for the presence of necessary API keys and IDs.
-   *
-   * @returns {boolean} True if configuration is valid, false otherwise.
+   * Searches for images using Google Custom Search API.
+   * @async
+   * @function searchImages
+   * @param {string} query - The search query
+   * @returns {Promise<Array<Object>>} Array of image search results
+   * @throws {Error} If the API request fails
    */
-  validateConfiguration() {
-    if (!config.googleApiKey || !config.imageSearchEngineId) {
-      logger.error("Google API configuration is missing:", {
-        hasApiKey: !!config.googleApiKey,
-        hasSearchEngineId: !!config.imageSearchEngineId
-      });
-      return false;
+  async searchImages(query) {
+    const url = new URL('https://www.googleapis.com/customsearch/v1');
+    url.searchParams.append('key', GOOGLE_API_KEY);
+    url.searchParams.append('cx', GOOGLE_CSE_ID);
+    url.searchParams.append('q', query);
+    url.searchParams.append('searchType', 'image');
+    url.searchParams.append('num', MAX_RESULTS);
+    
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Google API request failed: ${response.statusText}`);
     }
-    return true;
+    
+    const data = await response.json();
+    return data.items || [];
   },
   
   /**
@@ -164,8 +176,8 @@ module.exports = {
   async fetchImageResults(query, resultsCount) {
     // We construct the Google Custom Search API URL with all necessary parameters.
     const params = new URLSearchParams({
-      key: config.googleApiKey,
-      cx: config.imageSearchEngineId,
+      key: GOOGLE_API_KEY,
+      cx: GOOGLE_CSE_ID,
       q: query,
       searchType: "image",
       num: resultsCount.toString(),
@@ -228,11 +240,11 @@ module.exports = {
   },
 
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'googleimages', {

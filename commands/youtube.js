@@ -1,3 +1,9 @@
+/**
+ * YouTube command module for searching and displaying YouTube content.
+ * Handles API interactions, result formatting, and pagination.
+ * @module commands/youtube
+ */
+
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -53,10 +59,11 @@ module.exports = {
         )),
 
   /**
-   * We execute the /youtube command.
-   * This function processes the YouTube search request and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the YouTube command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If search or content retrieval fails
    */
   async execute(interaction) {
     try {
@@ -117,11 +124,11 @@ module.exports = {
   },
 
   /**
-   * We get detailed information about a YouTube video.
-   * This function retrieves video details from the YouTube API.
-   *
-   * @param {string} videoId - The ID of the video to get details for.
-   * @returns {Promise<Object>} The video details.
+   * Gets detailed information about a YouTube video.
+   * @async
+   * @function getVideoDetails
+   * @param {string} videoId - The ID of the video to get details for
+   * @returns {Promise<Object>} The video details
    */
   async getVideoDetails(videoId) {
     try {
@@ -148,11 +155,10 @@ module.exports = {
   },
 
   /**
-   * We format a YouTube duration string into a human-readable format.
-   * This function converts ISO 8601 duration to a readable string.
-   *
-   * @param {string} duration - The duration in ISO 8601 format.
-   * @returns {string} The formatted duration.
+   * Formats a YouTube duration string into a human-readable format.
+   * @function formatDuration
+   * @param {string} duration - The duration in ISO 8601 format
+   * @returns {string} The formatted duration
    */
   formatDuration(duration) {
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
@@ -167,12 +173,11 @@ module.exports = {
   },
 
   /**
-   * We truncate text to a maximum length and add ellipsis if needed.
-   * This function ensures text fits within embed limits.
-   *
-   * @param {string} text - The text to truncate.
-   * @param {number} maxLength - The maximum length allowed.
-   * @returns {string} The truncated text.
+   * Truncates text to a maximum length and adds ellipsis if needed.
+   * @function truncateText
+   * @param {string} text - The text to truncate
+   * @param {number} maxLength - The maximum length allowed
+   * @returns {string} The truncated text
    */
   truncateText(text, maxLength) {
     if (!text) return 'No description available.';
@@ -180,11 +185,11 @@ module.exports = {
   },
 
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {CommandInteraction} interaction - The interaction that triggered the command.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'youtube', {
@@ -229,9 +234,9 @@ module.exports = {
 
   /**
    * Retrieves cached search results if they exist and haven't expired.
-   * 
-   * @param {string} key - The cache key.
-   * @returns {Array|null} The cached results or null if not found or expired.
+   * @function getCachedResults
+   * @param {string} key - The cache key
+   * @returns {Array|null} The cached results or null if not found or expired
    */
   getCachedResults(key) {
     if (cache.has(key)) {
@@ -247,9 +252,9 @@ module.exports = {
   
   /**
    * Caches search results for future use.
-   * 
-   * @param {string} key - The cache key.
-   * @param {Array} data - The data to cache.
+   * @function cacheResults
+   * @param {string} key - The cache key
+   * @param {Array} data - The data to cache
    */
   cacheResults(key, data) {
     cache.set(key, {
@@ -260,12 +265,13 @@ module.exports = {
   
   /**
    * Searches YouTube for content based on the provided parameters.
-   * 
-   * @param {string} query - The search query.
-   * @param {string} contentType - The type of content to search for (video, channel, playlist).
-   * @param {string} sortMethod - The method to sort results by.
-   * @param {string} duration - The duration filter for videos.
-   * @returns {Promise<Array>} The search results.
+   * @async
+   * @function searchYouTube
+   * @param {string} query - The search query
+   * @param {string} contentType - The type of content to search for
+   * @param {string} sortMethod - The method to sort results by
+   * @param {string} duration - The duration filter for videos
+   * @returns {Promise<Array>} The search results
    */
   async searchYouTube(query, contentType, sortMethod, duration) {
     try {
@@ -323,9 +329,10 @@ module.exports = {
   
   /**
    * Enriches video results with additional details.
-   * 
-   * @param {Array} videos - The video search results.
-   * @returns {Promise<Array>} The enriched video results.
+   * @async
+   * @function enrichVideoResults
+   * @param {Array} videos - The video search results
+   * @returns {Promise<Array>} The enriched video results
    */
   async enrichVideoResults(videos) {
     if (!videos || videos.length === 0) return [];
@@ -375,9 +382,10 @@ module.exports = {
   
   /**
    * Enriches channel results with additional details.
-   * 
-   * @param {Array} channels - The channel search results.
-   * @returns {Promise<Array>} The enriched channel results.
+   * @async
+   * @function enrichChannelResults
+   * @param {Array} channels - The channel search results
+   * @returns {Promise<Array>} The enriched channel results
    */
   async enrichChannelResults(channels) {
     if (!channels || channels.length === 0) return [];
@@ -426,9 +434,10 @@ module.exports = {
   
   /**
    * Enriches playlist results with additional details.
-   * 
-   * @param {Array} playlists - The playlist search results.
-   * @returns {Promise<Array>} The enriched playlist results.
+   * @async
+   * @function enrichPlaylistResults
+   * @param {Array} playlists - The playlist search results
+   * @returns {Promise<Array>} The enriched playlist results
    */
   async enrichPlaylistResults(playlists) {
     if (!playlists || playlists.length === 0) return [];
@@ -477,12 +486,12 @@ module.exports = {
   
   /**
    * Creates an embed for a search result.
-   * 
-   * @param {Object} item - The search result item.
-   * @param {string} contentType - The type of content.
-   * @param {number} index - The index of the current item.
-   * @param {number} totalItems - The total number of items.
-   * @returns {EmbedBuilder} The generated embed.
+   * @function createContentEmbed
+   * @param {Object} item - The search result item
+   * @param {string} contentType - The type of content
+   * @param {number} index - The index of the current item
+   * @param {number} totalItems - The total number of items
+   * @returns {EmbedBuilder} The generated embed
    */
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
@@ -505,12 +514,12 @@ module.exports = {
   
   /**
    * Creates an embed for a video search result.
-   * 
-   * @param {Object} video - The video search result.
-   * @param {EmbedBuilder} embed - The embed builder.
-   * @param {number} index - The index of the current item.
-   * @param {number} totalItems - The total number of items.
-   * @returns {EmbedBuilder} The generated embed.
+   * @function createVideoEmbed
+   * @param {Object} video - The video search result
+   * @param {EmbedBuilder} embed - The embed builder
+   * @param {number} index - The index of the current item
+   * @param {number} totalItems - The total number of items
+   * @returns {EmbedBuilder} The generated embed
    */
   createVideoEmbed(video, embed, index, totalItems) {
     const snippet = video.snippet;
@@ -549,12 +558,12 @@ module.exports = {
   
   /**
    * Creates an embed for a channel search result.
-   * 
-   * @param {Object} channel - The channel search result.
-   * @param {EmbedBuilder} embed - The embed builder.
-   * @param {number} index - The index of the current item.
-   * @param {number} totalItems - The total number of items.
-   * @returns {EmbedBuilder} The generated embed.
+   * @function createChannelEmbed
+   * @param {Object} channel - The channel search result
+   * @param {EmbedBuilder} embed - The embed builder
+   * @param {number} index - The index of the current item
+   * @param {number} totalItems - The total number of items
+   * @returns {EmbedBuilder} The generated embed
    */
   createChannelEmbed(channel, embed, index, totalItems) {
     const snippet = channel.snippet;
@@ -585,12 +594,12 @@ module.exports = {
   
   /**
    * Creates an embed for a playlist search result.
-   * 
-   * @param {Object} playlist - The playlist search result.
-   * @param {EmbedBuilder} embed - The embed builder.
-   * @param {number} index - The index of the current item.
-   * @param {number} totalItems - The total number of items.
-   * @returns {EmbedBuilder} The generated embed.
+   * @function createPlaylistEmbed
+   * @param {Object} playlist - The playlist search result
+   * @param {EmbedBuilder} embed - The embed builder
+   * @param {number} index - The index of the current item
+   * @param {number} totalItems - The total number of items
+   * @returns {EmbedBuilder} The generated embed
    */
   createPlaylistEmbed(playlist, embed, index, totalItems) {
     const snippet = playlist.snippet;
@@ -620,6 +629,11 @@ module.exports = {
       });
   },
 
+  /**
+   * Validates that the YouTube API configuration is properly set up.
+   * @function validateConfiguration
+   * @returns {boolean} Whether the configuration is valid
+   */
   validateConfiguration() {
     return config.googleApiKey;
   }

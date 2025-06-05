@@ -1,7 +1,13 @@
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+/**
+ * Troll mode command module for managing server-wide troll mode settings.
+ * Handles configuration updates, status checks, and permission validation.
+ * @module commands/trollMode
+ */
+
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { setValue, getValue } = require('../utils/database');
+const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 // We define configuration constants for the troll mode feature.
@@ -11,281 +17,149 @@ const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
 const MIN_ACCOUNT_AGE = 1;
 const MAX_ACCOUNT_AGE = 365; // We set a maximum of 1 year to prevent unreasonable values.
 
-/**
- * We handle the trollmode command.
- * This function allows administrators to manage auto-kicking of accounts based on age.
- *
- * We perform several tasks:
- * 1. We configure troll mode settings (enable/disable).
- * 2. We set minimum account age requirements.
- * 3. We display current troll mode status.
- * 4. We handle database operations for settings.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('trollmode')
-    .setDescription('Manage auto-kicking of accounts younger than a specified age.')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('set')
-        .setDescription('Configure troll mode settings.')
-        .addStringOption(option =>
-          option
-            .setName('enabled')
-            .setDescription('Do you want to enable or disable troll mode?')
-            .setRequired(true)
-            .addChoices(
-              { name: 'Enabled', value: 'enabled' },
-              { name: 'Disabled', value: 'disabled' }
-            )
-        )
-        .addIntegerOption(option =>
-          option
-            .setName('age')
-            .setDescription(`Minimum account age in days (Default: ${DEFAULT_TROLL_MODE_AGE_DAYS})`)
-            .setRequired(false)
-            .setMinValue(MIN_ACCOUNT_AGE)
-            .setMaxValue(MAX_ACCOUNT_AGE)
-        )
-    )
+    .setDescription('Manage server-wide troll mode settings.')
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current troll mode settings.')
+        .setDescription('Check the current troll mode status.')
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('set')
+        .setDescription('Set troll mode settings.')
+        .addBooleanOption(option =>
+          option
+            .setName('enabled')
+            .setDescription('Whether troll mode should be enabled')
+            .setRequired(true)
+        )
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
   /**
-   * We execute the /trollmode command.
-   * This function manages account-age-based kicking and routes to subcommands.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the command is complete.
+   * Executes the troll mode command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If the command execution fails
    */
   async execute(interaction) {
     try {
-      // We defer the reply to allow time for database operations to complete.
-      await interaction.deferReply();
-      
       const subcommand = interaction.options.getSubcommand();
-      logger.info("Trollmode command received:", {
-        userId: interaction.user.id,
-        userTag: interaction.user.tag,
-        guildId: interaction.guildId,
-        subcommand
-      });
       
-      if (subcommand === 'set') {
-        await this.handleSetTrollMode(interaction);
-      } else if (subcommand === 'status') {
-        await this.handleTrollModeStatus(interaction);
+      logger.info(`/trollmode ${subcommand} command initiated:`, {
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
+
+      switch (subcommand) {
+        case 'status':
+          await this.handleStatusSubcommand(interaction);
+          break;
+        case 'set':
+          await this.handleSetSubcommand(interaction);
+          break;
       }
+      
     } catch (error) {
       await this.handleError(interaction, error);
     }
   },
   
   /**
-   * We handle the 'set' subcommand to configure troll mode settings.
-   * This function sets the troll mode configuration in the database.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the settings are updated.
+   * Handles the status subcommand to check current troll mode settings.
+   * @async
+   * @function handleStatusSubcommand
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    */
-  async handleSetTrollMode(interaction) {
-    // We retrieve the command options provided by the user.
-    const enabledInput = interaction.options.getString('enabled');
-    const age = interaction.options.getInteger('age') ?? DEFAULT_TROLL_MODE_AGE_DAYS;
-    const isEnabled = enabledInput.toLowerCase() === 'enabled';
+  async handleStatusSubcommand(interaction) {
+    const settings = this.getCurrentSettings();
+    const message = this.formatStatusMessage(settings);
     
-    logger.debug("Parsed trollmode command parameters:", {
-      isEnabled,
-      age,
+    await interaction.reply({ content: message, ephemeral: true });
+    
+    logger.info("Troll mode status check completed.", {
       userId: interaction.user.id,
-      guildId: interaction.guildId
-    });
-      
-    // We validate the age parameter is within acceptable bounds.
-    if (age < MIN_ACCOUNT_AGE || age > MAX_ACCOUNT_AGE) {
-      logger.warn("Invalid age parameter for trollmode:", {
-        age,
-        userId: interaction.user.id,
-        min: MIN_ACCOUNT_AGE,
-        max: MAX_ACCOUNT_AGE
-      });
-      await interaction.editReply({
-        content: ERROR_MESSAGES.TROLLMODE_INVALID_AGE,
-        ephemeral: true
-      });
-      return;
-    }
-
-    // We get current settings for comparison to show what changed.
-    const currentSettings = await this.getCurrentSettings();
-    
-    // We save the troll mode settings in the database.
-    try {
-      await Promise.all([
-        setValue(TROLL_MODE_ENABLED_KEY, isEnabled),
-        setValue(TROLL_MODE_ACCOUNT_AGE_KEY, age)
-      ]);
-      
-      logger.debug("Trollmode settings saved to database:", {
-        isEnabled,
-        age,
-        enabledKey: TROLL_MODE_ENABLED_KEY,
-        ageKey: TROLL_MODE_ACCOUNT_AGE_KEY
-      });
-    } catch (dbError) {
-      throw new Error("DATABASE_WRITE_ERROR");
-    }
-
-    // We prepare a user-friendly response message highlighting the changes.
-    const responseMessage = this.formatUpdateMessage(
-      currentSettings.isEnabled, isEnabled,
-      currentSettings.age, age
-    );
-
-    // We reply to the interaction with the update confirmation.
-    await interaction.editReply(responseMessage);
-    
-    logger.info("Trollmode settings updated successfully:", {
-      userId: interaction.user.id,
-      userTag: interaction.user.tag,
       guildId: interaction.guildId,
-      previousEnabled: currentSettings.isEnabled,
-      newEnabled: isEnabled,
-      previousAge: currentSettings.age,
-      newAge: age
+      enabled: settings.enabled
     });
   },
   
   /**
-   * We handle the 'status' subcommand to check current troll mode settings.
-   * This function retrieves and displays the current configuration.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the status is displayed.
+   * Handles the set subcommand to update troll mode settings.
+   * @async
+   * @function handleSetSubcommand
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    */
-  async handleTrollModeStatus(interaction) {
-    try {
-      // We retrieve the current settings from the database.
-      const settings = await this.getCurrentSettings();
-      
-      // We format a user-friendly status message with the current settings.
-      const statusMessage = this.formatStatusMessage(settings);
-      
-      await interaction.editReply(statusMessage);
-      
-      logger.info("Trollmode status check completed successfully:", {
-        userId: interaction.user.id,
-        userTag: interaction.user.tag,
-        guildId: interaction.guildId,
-        isEnabled: settings.isEnabled,
-        age: settings.age
-      });
-    } catch (dbError) {
-      logger.error("Database operation failed while retrieving trollmode settings:", { 
-        error: dbError.message, 
-        stack: dbError.stack,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      
-      throw new Error("DATABASE_READ_ERROR");
-    }
+  async handleSetSubcommand(interaction) {
+    const enabled = interaction.options.getBoolean('enabled');
+    
+    await this.updateSettings({ enabled });
+    const message = this.formatUpdateMessage(enabled);
+    
+    await interaction.reply({ content: message, ephemeral: true });
+    
+    logger.info("Troll mode settings updated.", {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      enabled
+    });
   },
   
   /**
-   * We get the current troll mode settings from the database.
-   * This function retrieves the current configuration state.
-   *
-   * @returns {Promise<Object>} The current settings.
+   * Retrieves the current troll mode settings.
+   * @function getCurrentSettings
+   * @returns {Object} The current troll mode settings
    */
-  async getCurrentSettings() {
-    try {
-      // We retrieve both settings in parallel for efficiency.
-      const [isEnabled, age] = await Promise.all([
-        getValue(TROLL_MODE_ENABLED_KEY),
-        getValue(TROLL_MODE_ACCOUNT_AGE_KEY)
-      ]);
-      
-      return {
-        isEnabled: isEnabled === true, // We ensure this is a boolean value.
-        age: age ? Number(age) : DEFAULT_TROLL_MODE_AGE_DAYS
-      };
-    } catch (error) {
-      logger.error("Failed to retrieve current troll mode settings:", {
-        error: error.message,
-        stack: error.stack
-      });
-
-      throw new Error("DATABASE_READ_ERROR");
-    }
+  getCurrentSettings() {
+    return {
+      enabled: config.trollMode?.enabled ?? false
+    };
   },
   
   /**
-   * We format an update message based on the old and new settings.
-   * This function creates a user-friendly display of configuration changes.
-   *
-   * @param {boolean} oldEnabled - The previous enabled state.
-   * @param {boolean} newEnabled - The new enabled state.
-   * @param {number} oldAge - The previous age setting.
-   * @param {number} newAge - The new age setting.
-   * @returns {string} The formatted update message.
+   * Updates the troll mode settings.
+   * @function updateSettings
+   * @param {Object} settings - The new settings to apply
    */
-  formatUpdateMessage(oldEnabled, newEnabled, oldAge, newAge) {
-    let message = `👹 **Troll Mode Updated**\n\n`;
-    
-    // We display the current status with an appropriate emoji.
-    const statusEmoji = newEnabled ? "✅" : "❌";
-    const statusText = newEnabled ? "Enabled" : "Disabled";
-    message += `• Status: ${statusEmoji} **${statusText}**\n`;
-    
-    // We show the age change if it was modified.
-    if (oldAge !== newAge) {
-      message += `• Minimum Account Age: **${oldAge}** → **${newAge}** days\n`;
-    } else {
-      message += `• Minimum Account Age: **${newAge}** days\n`;
+  updateSettings(settings) {
+    if (!config.trollMode) {
+      config.trollMode = {};
     }
-    
-    if (newEnabled) {
-      message += `\nAccounts younger than **${newAge}** days will be automatically kicked.`;
-    }
-    
-    return message;
+    Object.assign(config.trollMode, settings);
   },
   
   /**
-   * We format a status message based on the current settings.
-   * This function creates a user-friendly display of the configuration.
-   *
-   * @param {Object} settings - The current troll mode settings.
-   * @returns {string} The formatted status message.
+   * Formats a status message for the current troll mode settings.
+   * @function formatStatusMessage
+   * @param {Object} settings - The current troll mode settings
+   * @returns {string} The formatted status message
    */
   formatStatusMessage(settings) {
-    const statusEmoji = settings.isEnabled ? "✅" : "❌";
-    const statusText = settings.isEnabled ? "Enabled" : "Disabled";
-    
-    let message = `👹 **Troll Mode Status**\n\n`;
-    message += `• Status: ${statusEmoji} **${statusText}**\n`;
-    message += `• Minimum Account Age: **${settings.age}** days`;
-    
-    if (settings.isEnabled) {
-      message += `\n\nAccounts younger than **${settings.age}** days will be automatically kicked.`;
-    }
-    
-    return message;
+    return `🎭 **Troll Mode Status**\n\n` +
+           `• **Status**: ${settings.enabled ? 'Enabled' : 'Disabled'}`;
   },
   
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Formats an update message for troll mode settings changes.
+   * @function formatUpdateMessage
+   * @param {boolean} enabled - Whether troll mode is enabled
+   * @returns {string} The formatted update message
+   */
+  formatUpdateMessage(enabled) {
+    return `🎭 **Troll Mode ${enabled ? 'Enabled' : 'Disabled'}**\n\n` +
+           `Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`;
+  },
+
+  /**
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'trollmode', {
@@ -293,33 +167,18 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
-    
-    if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
-    } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
-    } else if (error.message === "INVALID_AGE") {
-      errorMessage = ERROR_MESSAGES.TROLLMODE_INVALID_AGE;
-    }
+    const errorMessage = getErrorMessage(error);
     
     try {
-      await interaction.editReply({ 
+      await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for trollmode command:", {
+      logger.error("Failed to send error response for troll mode command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
-      });
-      
-      await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
-      }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

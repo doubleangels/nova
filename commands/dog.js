@@ -1,3 +1,9 @@
+/**
+ * Dog command module for fetching and displaying random dog images.
+ * Handles API interactions with The Dog API and image display formatting.
+ * @module commands/dog
+ */
+
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -26,10 +32,11 @@ module.exports = {
     .setDescription('Fetch and display a random dog image.'),
   
   /**
-   * We execute the /dog command.
-   * This function processes the dog image request and returns the result.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The interaction object from Discord.
+   * Executes the dog command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If API request fails
    */
   async execute(interaction) {
     try {
@@ -65,49 +72,61 @@ module.exports = {
   },
   
   /**
-   * We fetch a random dog image from the Dog CEO API.
-   * This function retrieves and processes the image data.
-   *
-   * @returns {Promise<Buffer>} A buffer containing the image data.
-   * @throws {Error} If the image cannot be fetched.
+   * Fetches a dog image from the API.
+   * @async
+   * @function fetchDogImage
+   * @returns {Promise<Buffer>} The dog image buffer
+   * @throws {Error} If API request fails or returns invalid response
    */
   async fetchDogImage() {
     logger.debug("Fetching random dog image data:", { url: DOG_API_URL });
     
-    // We get the image URL from the Dog CEO API.
-    const response = await axios.get(DOG_API_URL);
-    
-    if (response.status !== 200) {
-      logger.warn("Dog CEO API error:", { status: response.status });
-      throw new Error("API_ERROR");
+    try {
+      const response = await axios.get(DOG_API_URL);
+      
+      if (response.status !== 200) {
+        logger.warn("Dog CEO API error:", { status: response.status });
+        throw new Error("API_ERROR");
+      }
+      
+      const imageUrl = response.data.message;
+      
+      if (!imageUrl) {
+        logger.warn("No dog image URL found in API response:", { responseData: response.data });
+        throw new Error("NO_IMAGE_URL");
+      }
+      
+      logger.debug("Dog image URL received:", { imageUrl });
+      
+      const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+      
+      if (imageResponse.status !== 200) {
+        logger.warn("Error fetching dog image file:", { status: imageResponse.status });
+        throw new Error("IMAGE_FETCH_ERROR");
+      }
+      
+      return Buffer.from(imageResponse.data);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          logger.warn("API error response:", { 
+            status: error.response.status,
+            statusText: error.response.statusText
+          });
+          throw new Error("API_ERROR");
+        } else if (error.request) {
+          logger.warn("Network error - no response received.");
+          throw new Error("NETWORK_ERROR");
+        }
+      }
+      throw error;
     }
-    
-    const imageUrl = response.data.message;
-    
-    if (!imageUrl) {
-      logger.warn("No dog image URL found in API response:", { responseData: response.data });
-      throw new Error("NO_IMAGE_URL");
-    }
-    
-    logger.debug("Dog image URL received:", { imageUrl });
-    
-    // We fetch the actual image data from the URL provided.
-    const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    
-    if (imageResponse.status !== 200) {
-      logger.warn("Error fetching dog image file:", { status: imageResponse.status });
-      throw new Error("IMAGE_FETCH_ERROR");
-    }
-    
-    // We return the image as a buffer for Discord to display.
-    return Buffer.from(imageResponse.data);
   },
   
   /**
-   * We create an embed for the dog image with a nice presentation.
-   * This function formats the embed with appropriate styling and information.
-   *
-   * @returns {EmbedBuilder} The created embed with formatting for the dog image.
+   * Creates an embed for displaying dog images.
+   * @function createDogEmbed
+   * @returns {EmbedBuilder} The formatted embed
    */
   createDogEmbed() {
     return new EmbedBuilder()
@@ -119,11 +138,11 @@ module.exports = {
   },
   
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'dog', {
@@ -139,7 +158,7 @@ module.exports = {
       errorMessage = ERROR_MESSAGES.DOG_NO_IMAGE;
     } else if (error.message === "IMAGE_FETCH_ERROR") {
       errorMessage = ERROR_MESSAGES.DOG_IMAGE_FETCH_ERROR;
-    } else if (axios.isAxiosError(error) && !error.response) {
+    } else if (error.message === "NETWORK_ERROR") {
       errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
     }
     

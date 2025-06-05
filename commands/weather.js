@@ -1,3 +1,9 @@
+/**
+ * Weather command module for retrieving and displaying weather information.
+ * Handles API interactions with PirateWeather, location geocoding, and result formatting.
+ * @module commands/weather
+ */
+
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -59,18 +65,6 @@ const WEATHER_ICONS = {
   'default': '🌤️'
 };
 
-/**
- * We handle the weather command.
- * This function allows users to get detailed weather information for any location.
- *
- * We perform several tasks:
- * 1. We validate weather API configuration.
- * 2. We process location search requests.
- * 3. We fetch and format weather data.
- * 4. We display current conditions and forecasts.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('weather')
@@ -101,11 +95,11 @@ module.exports = {
     ),
     
   /**
-   * We execute the /weather command.
-   * This function processes the weather request and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the command is complete.
+   * Executes the weather command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If weather data retrieval fails
    */
   async execute(interaction) {
     try {
@@ -210,13 +204,13 @@ module.exports = {
   },
 
   /**
-   * We fetch weather data from the PirateWeather API.
-   * This function retrieves weather data for the specified location.
-   *
-   * @param {number} lat - Latitude of the location.
-   * @param {number} lon - Longitude of the location.
-   * @param {string} units - Units to use ('si' for metric, 'us' for imperial).
-   * @returns {Object|null} Weather data object or null if the request failed.
+   * Fetches weather data from the PirateWeather API.
+   * @async
+   * @function fetchWeatherData
+   * @param {number} lat - Latitude of the location
+   * @param {number} lon - Longitude of the location
+   * @param {string} units - Units to use ('si' for metric, 'us' for imperial)
+   * @returns {Promise<Object|null>} Weather data object or null if request fails
    */
   async fetchWeatherData(lat, lon, units) {
     try {
@@ -255,16 +249,15 @@ module.exports = {
   },
 
   /**
-   * We create an embed with weather information.
-   * This function formats weather data into a Discord embed.
-   *
-   * @param {string} place - Formatted place name.
-   * @param {number} lat - Latitude of the location.
-   * @param {number} lon - Longitude of the location.
-   * @param {Object} data - Weather data from the API.
-   * @param {string} unitsOption - Units preference ('metric' or 'imperial').
-   * @param {number} forecastDays - Number of forecast days to show.
-   * @returns {EmbedBuilder} Discord embed with weather information.
+   * Creates an embed with weather information.
+   * @function createWeatherEmbed
+   * @param {string} place - Formatted place name
+   * @param {number} lat - Latitude of the location
+   * @param {number} lon - Longitude of the location
+   * @param {Object} data - Weather data from the API
+   * @param {string} unitsOption - Units preference ('metric' or 'imperial')
+   * @param {number} forecastDays - Number of forecast days to show
+   * @returns {EmbedBuilder} Discord embed with weather information
    */
   createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
     // We extract current weather details from the response.
@@ -396,13 +389,12 @@ module.exports = {
   },
 
   /**
-   * We create a formatted forecast text for the given daily weather data.
-   * This function formats daily forecast data for display.
-   *
-   * @param {Array} daily - Array of daily forecast data.
-   * @param {string} unitsOption - Units preference ('metric' or 'imperial').
-   * @param {number} daysToShow - Number of forecast days to show.
-   * @returns {string} Formatted forecast text.
+   * Creates a formatted forecast text for the given daily weather data.
+   * @function createForecastText
+   * @param {Array} daily - Array of daily forecast data
+   * @param {string} unitsOption - Units preference ('metric' or 'imperial')
+   * @param {number} daysToShow - Number of forecast days to show
+   * @returns {string} Formatted forecast text
    */
   createForecastText(daily, unitsOption, daysToShow) {
     let forecastText = "";
@@ -446,11 +438,10 @@ module.exports = {
   },
   
   /**
-   * We get a cardinal direction from a wind bearing in degrees.
-   * This function converts a wind bearing to a cardinal direction.
-   *
-   * @param {number} bearing - Wind bearing in degrees.
-   * @returns {string} Cardinal direction.
+   * Gets a cardinal direction from a wind bearing in degrees.
+   * @function getWindDirection
+   * @param {number} bearing - Wind bearing in degrees
+   * @returns {string} Cardinal direction
    */
   getWindDirection(bearing) {
     if (bearing === undefined || bearing === null) return '';
@@ -461,11 +452,11 @@ module.exports = {
   },
   
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'weather', {

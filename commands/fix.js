@@ -1,3 +1,9 @@
+/**
+ * Fix command module for managing Disboard bump reminder data.
+ * Handles database operations, reminder scheduling, and status updates.
+ * @module commands/fix
+ */
+
 const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -39,10 +45,11 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
   /**
-   * We execute the /fix command.
-   * This function processes the fix request and updates the reminder data.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+   * Executes the fix command.
+   * @async
+   * @function execute
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @throws {Error} If database operations fail
    */
   async execute(interaction) {
     try {
@@ -100,10 +107,10 @@ module.exports = {
   },
   
   /**
-   * We check if there's an existing reminder in the database.
-   * This function queries the database for active reminders.
-   *
-   * @returns {Promise<boolean>} True if a reminder exists, false otherwise.
+   * Checks for existing reminders in the database.
+   * @async
+   * @function checkExistingReminder
+   * @returns {Promise<boolean>} True if a reminder exists, false otherwise
    */
   async checkExistingReminder() {
     try {
@@ -118,12 +125,12 @@ module.exports = {
   },
   
   /**
-   * We save the reminder data to the database for future processing.
-   * This function inserts the reminder information into the database.
-   *
-   * @param {string} reminderId - The unique ID for the reminder.
-   * @param {string} scheduledTime - The ISO string of the scheduled time.
-   * @returns {Promise<void>}
+   * Saves reminder data to the database.
+   * @async
+   * @function saveReminderToDatabase
+   * @param {string} reminderId - The unique ID for the reminder
+   * @param {string} scheduledTime - The ISO string of the scheduled time
+   * @throws {Error} If database write fails
    */
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
@@ -139,11 +146,11 @@ module.exports = {
   },
   
   /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
+   * Handles errors that occur during command execution.
+   * @async
+   * @function handleError
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
     logError(error, 'fix', {
