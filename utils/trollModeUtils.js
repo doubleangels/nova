@@ -42,7 +42,7 @@ async function checkAccountAge(member) {
       error: error.message,
       stack: error.stack
     });
-    return true; // Fail safe - don't kick if we can't verify age
+    return true;
   }
 }
 

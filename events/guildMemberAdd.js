@@ -33,11 +33,10 @@ module.exports = {
     try {
       logger.info(`New member joined: ${member.user.tag} (ID: ${member.id})`);
 
-      // Check troll mode first
       const meetsAgeRequirement = await checkAccountAge(member);
       if (!meetsAgeRequirement) {
         await performKick(member);
-        return; // Don't proceed with other checks if kicked
+        return;
       }
 
       await trackNewMember(

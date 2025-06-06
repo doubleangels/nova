@@ -15,11 +15,9 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 const REDDIT_EMBED_COLOR = 0xFF4500;
 const TARGET_SUBREDDIT = 'findaserver';
 
-// Predefined server advertisement content
 const SERVER_TITLE = '[21+] 🎉 Welcome to Da Frens — a chill spot for real talk 🗣️, weird vibes 😜, spicy banter 🔥, and sweaty games 🎮. No drama 🚫, just laughs 😂. Like the internet 🌐, but with fewer clowns 🤡 — and way funnier ones 😎. (Adults only 🍻. Don\'t take life too seriously 🫠.)';
 const SERVER_INVITE = 'https://discord.gg/dafrens';
 
-// Initialize snoowrap client
 const reddit = new snoowrap({
   userAgent: 'Discord Bot Server Promoter',
   clientId: config.redditClientId,
@@ -95,16 +93,13 @@ module.exports = {
     try {
       const subreddit = await reddit.getSubreddit(postData.subreddit);
       
-      // Try to get the subreddit's flairs using a direct API call
       const flairs = await reddit.oauthRequest({
         uri: `/r/${postData.subreddit}/api/link_flair`,
         method: 'GET'
       });
 
-      // Log available flairs for debugging
       logger.info('Available flairs:', flairs);
 
-      // Use the specific flair ID
       const serverFlair = flairs.find(flair => 
         flair.id === 'b8ffcc5a-275b-11ec-8803-eade4b4709d8'
       );
@@ -119,7 +114,6 @@ module.exports = {
 
       logger.info("Using flair:", serverFlair);
 
-      // Submit using direct API endpoint
       const submission = await reddit.oauthRequest({
         uri: '/api/submit',
         method: 'POST',
@@ -166,7 +160,6 @@ module.exports = {
       .setTitle('✅ Server Advertisement Posted')
       .setDescription('Your server advertisement has been posted to r/findaserver.');
 
-    // Add fields only if they have valid values
     if (response && response.id) {
       embed.addFields({ 
         name: 'Post ID', 
