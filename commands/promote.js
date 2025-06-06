@@ -101,37 +101,49 @@ module.exports = {
         method: 'GET'
       });
 
-      // Find the "Gaming Server" flair
+      // Log available flairs for debugging
+      logger.info('Available flairs:', flairs);
+
+      // Use the specific flair ID
       const serverFlair = flairs.find(flair => 
-        flair.text.toLowerCase() === 'gaming server'
+        flair.id === 'b8ffcc5a-275b-11ec-8803-eade4b4709d8'
       );
 
       if (!serverFlair) {
-        logger.error('Could not find Gaming Server flair');
+        logger.error('Could not find specified flair. Available flairs:', flairs);
         return {
           error: true,
-          message: 'Could not find Gaming Server flair. Please try again later.'
+          message: 'Could not find the required flair. Please try again later or contact support.'
         };
       }
 
       logger.info("Using flair:", serverFlair);
 
-      // Submit as a link post instead of a text post
-      const submission = await subreddit.submitLink({
-        title: postData.title,
-        url: postData.content,
-        flair_id: serverFlair.id
+      // Submit using direct API endpoint
+      const submission = await reddit.oauthRequest({
+        uri: '/api/submit',
+        method: 'POST',
+        form: {
+          kind: 'link',
+          sr: postData.subreddit,
+          title: postData.title,
+          url: postData.content,
+          api_type: 'json',
+          flair_id: serverFlair.id,
+          flair_text: serverFlair.text
+        }
       });
 
-      // Await the necessary properties
-      const [id, permalink] = await Promise.all([
-        submission.id,
-        submission.permalink
-      ]);
+      if (!submission || !submission.json || !submission.json.data) {
+        throw new Error('Failed to submit post to Reddit');
+      }
+
+      const postId = submission.json.data.id;
+      const permalink = submission.json.data.permalink;
 
       return {
-        id,
-        permalink
+        id: postId,
+        permalink: permalink
       };
 
     } catch (error) {
