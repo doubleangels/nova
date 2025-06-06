@@ -4,7 +4,7 @@
  * @module commands/takeRole
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -35,7 +35,7 @@ module.exports = {
         .setRequired(true))
     .addStringOption(option =>
       option.setName('reason')
-        .setDescription('Reason for removing this role (will appear in audit log)')
+        .setDescription('For what reason would you like to remove this role?')
         .setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
@@ -236,15 +236,22 @@ module.exports = {
       roleName: role.name
     });
     
-    let successMessage = `✅ Successfully removed the ${role} role from ${targetMember.user}!`;
-    
+    const embed = new EmbedBuilder()
+      .setColor(role.color)
+      .setTitle('Role Removed')
+      .setDescription(`✅ Successfully removed the ${role.name} role from <@${targetMember.id}>!`)
+      .addFields(
+        { name: 'Role', value: role.name, inline: true },
+        { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
+      )
+      .setFooter({ text: `Updated by ${interaction.user.tag}` })
+      .setTimestamp();
+
     if (reason) {
-      successMessage += `\n📝 **Reason:** ${reason}`;
+      embed.addFields({ name: 'Reason', value: reason });
     }
     
-    await interaction.editReply({
-      content: successMessage
-    });
+    await interaction.editReply({ embeds: [embed] });
   },
   
   /**

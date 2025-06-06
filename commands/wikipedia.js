@@ -42,7 +42,7 @@ module.exports = {
     .setDescription('Fetch and display Wikipedia article summaries.')
     .addStringOption(option =>
       option.setName('query')
-        .setDescription('The topic to search for')
+        .setDescription('What do you want to search for?')
         .setRequired(true)),
 
   /**

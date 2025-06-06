@@ -4,7 +4,7 @@
  * @module commands/reminder
  */
 
-const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -31,29 +31,29 @@ const DB_KEY_ROLE = 'reminder_role';
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
-    .setDescription('Configure and manage Disboard bump reminders')
+    .setDescription('Configure and manage Disboard bump reminders.')
     .addSubcommand(subcommand =>
       subcommand
         .setName('setup')
-        .setDescription('Set up the reminder channel and role')
+        .setDescription('Set up the reminder channel and role.')
         .addChannelOption(option =>
           option
             .setName('channel')
-            .setDescription('The channel where reminders will be sent')
+            .setDescription('What channel do you want to send reminders to?')
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )
         .addRoleOption(option =>
           option
             .setName('role')
-            .setDescription('The role to ping for reminders')
+            .setDescription('What role do you want to ping for reminders?')
             .setRequired(true)
         )
     )
     .addSubcommand(subcommand =>
       subcommand
         .setName('status')
-        .setDescription('Check the current reminder configuration and status')
+        .setDescription('Check the current reminder configuration and status.')
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
@@ -125,11 +125,18 @@ module.exports = {
       roleId: roleOption.id
     });
 
-    const response = `✅ **Reminder setup complete!**\n\n` +
-                    `📢 **Channel:** <#${channelOption.id}>\n` +
-                    `🎭 **Role:** <@&${roleOption.id}>\n\n` +
-                    `Disboard bump reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`;
-    await interaction.editReply(response);
+    const embed = new EmbedBuilder()
+      .setColor('#cd41ff')
+      .setTitle('✅ Reminder Setup Complete')
+      .addFields(
+        { name: '📢 Channel', value: `<#${channelOption.id}>` },
+        { name: '🎭 Role', value: `<@&${roleOption.id}>` }
+      )
+      .setDescription(`Disboard bump reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`)
+      .setFooter({ text: `Updated by ${interaction.user.tag}` })
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
   },
   
   /**
@@ -173,19 +180,24 @@ module.exports = {
       }
       
       const timeStr = this.calculateRemainingTime(reminderData);
-      
       const configComplete = channelId && roleId;
       
-      let summary = `📌 **Disboard Reminder Status:**\n\n`;
-      summary += `📢 **Channel:** ${channelStr}\n`;
-      summary += `🎭 **Role:** ${roleStr}\n`;
-      summary += `⏳ **Next Reminder:** ${timeStr}`;
-      
+      const embed = new EmbedBuilder()
+        .setColor('#cd41ff')
+        .setTitle('📌 Disboard Reminder Status')
+        .addFields(
+          { name: '📢 Channel', value: channelStr },
+          { name: '🎭 Role', value: roleStr },
+          { name: '⏳ Next Reminder', value: timeStr }
+        )
+        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setTimestamp();
+
       if (!configComplete) {
-        summary += `\n\n⚠️ **Warning:** Reminder configuration is incomplete.`;
+        embed.setDescription('⚠️ **Warning:** Reminder configuration is incomplete.');
       }
 
-      await interaction.editReply(summary);
+      await interaction.editReply({ embeds: [embed] });
       logger.info("Reminder status check completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,

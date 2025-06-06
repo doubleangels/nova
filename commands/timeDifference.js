@@ -4,7 +4,7 @@
  * @module commands/timeDifference
  */
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -66,7 +66,7 @@ module.exports = {
         guildId: interaction.guildId
       });
 
-      const timeDiffResult = await this.calculateTimeDifference(place1, place2);
+      const timeDiffResult = await this.calculateTimeDifference(place1, place2, interaction);
       
       if (timeDiffResult.error) {
         return await interaction.editReply({
@@ -111,9 +111,10 @@ module.exports = {
    * @function calculateTimeDifference
    * @param {string} place1 - The first place name
    * @param {string} place2 - The second place name
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @returns {Promise<Object>} The time difference result with formatted message
    */
-  async calculateTimeDifference(place1, place2) {
+  async calculateTimeDifference(place1, place2, interaction) {
     try {
       const [offset1Result, offset2Result] = await Promise.all([
         getUtcOffset(place1),
@@ -155,21 +156,25 @@ module.exports = {
       
       const formattedTimeDiff = this.formatTimeDifference(timeDiff);
       
-      let message = `⏳ **Time Difference Information:**\n\n`;
-      
-      message += `• **${formattedPlace1}**: ${this.formatTimeZone(offset1Result)}\n`;
-      message += `• **${formattedPlace2}**: ${this.formatTimeZone(offset2Result)}\n\n`;
-      
+      const embed = new EmbedBuilder()
+        .setColor('#cd41ff')
+        .setTitle('⏳ Time Difference Information')
+        .addFields(
+          { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },
+          { name: formattedPlace2, value: this.formatTimeZone(offset2Result) }
+        )
+        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setTimestamp();
+
       if (rawTimeDiff === 0) {
-        message += `**${formattedPlace1}** and **${formattedPlace2}** are in the same time zone.`;
+        embed.setDescription(`**${formattedPlace1}** and **${formattedPlace2}** are in the same time zone.`);
       } else {
-        message += `The time difference is **${formattedTimeDiff}**.`;
-        message += `\n**${aheadPlace}** is ahead.`;
+        embed.setDescription(`The time difference is **${formattedTimeDiff}**.\n**${aheadPlace}** is ahead.`);
       }
       
       return {
         error: false,
-        message,
+        message: { embeds: [embed] },
         formattedPlace1,
         formattedPlace2,
         timeDiff,

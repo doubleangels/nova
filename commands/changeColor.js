@@ -4,7 +4,7 @@
  * @module commands/changeColor
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -25,14 +25,14 @@ const { validateAndNormalizeColor } = require('../utils/colorUtils');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
-        .setDescription('Change the color of a role')
+        .setDescription('Change the color of a role.')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('The role to change the color of')
+                .setDescription('What role do you want to change the color of?')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('color')
-                .setDescription('The new color (hex code or name)')
+                .setDescription('What color do you want to change to?')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
@@ -49,16 +49,18 @@ module.exports = {
             
             const role = interaction.options.getRole('role');
             const colorInput = interaction.options.getString('color');
+            const oldColor = role.hexColor;
             
             logger.info("Change color command initiated:", {
                 userId: interaction.user.id,
                 guildId: interaction.guild.id,
                 roleId: role.id,
-                colorInput
+                colorInput,
+                oldColor
             });
 
-            const color = validateAndNormalizeColor(colorInput);
-            if (!color) {
+            const colorValidation = validateAndNormalizeColor(colorInput);
+            if (!colorValidation.success) {
                 throw new Error("INVALID_COLOR");
             }
 
@@ -66,19 +68,21 @@ module.exports = {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 
-            if (!role.manageable) {
-                throw new Error("ROLE_NOT_MANAGEABLE");
-            }
-
-            await role.setColor(color);
+            await role.setColor(colorValidation.normalizedColor);
             
-            await interaction.editReply({
-                content: `Successfully changed the color of ${role} to ${colorInput}`
-            });
+            const embed = new EmbedBuilder()
+                .setColor(colorValidation.normalizedColor)
+                .setTitle('Role Color Updated')
+                .setDescription(`Successfully changed the color of ${role} from \`${oldColor}\` to \`${colorValidation.normalizedColor}\`!`)
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
             
             logger.info("Role color updated successfully:", {
                 roleId: role.id,
-                newColor: color
+                oldColor,
+                newColor: colorValidation.normalizedColor
             });
         } catch (error) {
             await this.handleError(interaction, error);
@@ -104,9 +108,9 @@ module.exports = {
         if (error.message === "INVALID_COLOR") {
             errorMessage = ERROR_MESSAGES.INVALID_COLOR_FORMAT;
         } else if (error.message === "BOT_PERMISSION_DENIED") {
-            errorMessage = ERROR_MESSAGES.BOT_MISSING_PERMISSIONS;
+            errorMessage = ERROR_MESSAGES.DISCORD_BOT_MISSING_PERMISSIONS;
         } else if (error.message === "ROLE_NOT_MANAGEABLE") {
-            errorMessage = ERROR_MESSAGES.ROLE_NOT_MANAGEABLE;
+            errorMessage = ERROR_MESSAGES.DISCORD_ROLE_NOT_MANAGEABLE;
         }
         
         try {

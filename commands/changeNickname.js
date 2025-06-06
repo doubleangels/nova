@@ -4,7 +4,7 @@
  * @module commands/changeNickname
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -24,14 +24,14 @@ const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changenickname')
-        .setDescription('Change a user\'s nickname')
+        .setDescription('Change a user\'s nickname.')
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('The user to change the nickname of')
+                .setDescription('What user do you want to change the nickname of?')
                 .setRequired(true))
         .addStringOption(option =>
             option.setName('nickname')
-                .setDescription('The new nickname (leave empty to reset)')
+                .setDescription('What nickname do you want to set?')
                 .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames),
     
@@ -71,13 +71,19 @@ module.exports = {
 
             await member.setNickname(newNickname || null);
             
-            const responseMessage = newNickname 
-                ? `Successfully changed ${targetUser}'s nickname to "${newNickname}"`
-                : `Successfully reset ${targetUser}'s nickname`;
+            const userHighestRole = member.roles.highest;
+            const embedColor = userHighestRole.color === 0 ? '#cd41ff' : userHighestRole.color;
             
-            await interaction.editReply({
-                content: responseMessage
-            });
+            const embed = new EmbedBuilder()
+                .setColor(embedColor)
+                .setTitle('Nickname Updated')
+                .setDescription(newNickname 
+                    ? `Successfully changed ${targetUser}'s nickname to "${newNickname}!"`
+                    : `Successfully reset ${targetUser}'s nickname!`)
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
             
             logger.info("Nickname updated successfully:", {
                 targetUserId: targetUser.id,

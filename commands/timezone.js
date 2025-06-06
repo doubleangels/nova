@@ -4,7 +4,7 @@
  * @module commands/timezone
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger.js')(path.basename(__filename));
 const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
@@ -169,21 +169,24 @@ module.exports = {
           place
       });
       
-      let responseMessage;
-      
-      if (isAdminAction) {
-          responseMessage = `✅ You have set ${targetUser}'s timezone to: \`${timezoneId}\` based on location: ${formattedAddress}`;
-          if (currentTimezone) {
-              responseMessage += `\n(Previous timezone was: \`${currentTimezone}\`)`;
-          }
-      } else {
-          responseMessage = `✅ Your timezone has been successfully set to: \`${timezoneId}\` based on location: ${formattedAddress}`;
-          if (currentTimezone) {
-              responseMessage += `\n(Your previous timezone was: \`${currentTimezone}\`)`;
-          }
+      const embed = new EmbedBuilder()
+        .setColor('#cd41ff')
+        .setTitle('✅ Timezone Updated')
+        .setDescription(isAdminAction 
+          ? `You have set ${targetUser}'s timezone to: \`${timezoneId}\` based on location: ${formattedAddress}`
+          : `Your timezone has been successfully set to: \`${timezoneId}\` based on location: ${formattedAddress}`
+        )
+        .setFooter({ text: `Updated by ${interaction.user.tag}` })
+        .setTimestamp();
+
+      if (currentTimezone) {
+        embed.addFields({ 
+          name: 'Previous Timezone', 
+          value: `\`${currentTimezone}\`` 
+        });
       }
       
-      await interaction.editReply({ content: responseMessage });
+      await interaction.editReply({ embeds: [embed] });
   },
   
   /**
@@ -212,41 +215,48 @@ module.exports = {
           currentTimezone
       });
       
-      let responseMessage;
+      const embed = new EmbedBuilder()
+        .setColor('#cd41ff')
+        .setTitle('📌 Timezone Status')
+        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setTimestamp();
+
       if (isCheckingOther) {
-          responseMessage = currentTimezone 
-              ? `📌 ${targetUser}'s timezone is set to: \`${currentTimezone}\``
-              : `📌 ${targetUser} doesn't have a timezone set.`;
+        embed.setDescription(currentTimezone 
+          ? `${targetUser}'s timezone is set to: \`${currentTimezone}\``
+          : `${targetUser} doesn't have a timezone set.`
+        );
       } else {
-          responseMessage = currentTimezone 
-              ? `📌 Your timezone is currently set to: \`${currentTimezone}\``
-              : `📌 You don't have a timezone set. Use \`/timezone set\` to set your timezone.`;
+        embed.setDescription(currentTimezone 
+          ? `Your timezone is currently set to: \`${currentTimezone}\``
+          : `You don't have a timezone set. Use \`/timezone set\` to set your timezone.`
+        );
       }
       
       if (currentTimezone) {
-          try {
-              const now = new Date();
-              const options = { 
-                  timeZone: currentTimezone, 
-                  hour12: false,
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-              };
-              const localTime = now.toLocaleString('en-US', options);
-              responseMessage += `\n\nCurrent local time: **${localTime}**`;
-          } catch (error) {
-              logger.error("Error formatting local time.", {
-                  error: error.message,
-                  timezone: currentTimezone
-              });
-          }
+        try {
+          const now = new Date();
+          const options = { 
+            timeZone: currentTimezone, 
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          };
+          const localTime = now.toLocaleString('en-US', options);
+          embed.addFields({ name: 'Current Local Time', value: localTime });
+        } catch (error) {
+          logger.error("Error formatting local time.", {
+            error: error.message,
+            timezone: currentTimezone
+          });
+        }
       }
 
-      await interaction.editReply({ content: responseMessage });
+      await interaction.editReply({ embeds: [embed] });
   },
   
   /**

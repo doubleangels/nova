@@ -4,11 +4,12 @@
  * @module commands/trollMode
  */
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { getValue, setValue } = require('../utils/database');
 
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
 const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
@@ -32,8 +33,16 @@ module.exports = {
         .addBooleanOption(option =>
           option
             .setName('enabled')
-            .setDescription('Whether troll mode should be enabled')
+            .setDescription('Should troll mode be enabled?')
             .setRequired(true)
+        )
+        .addIntegerOption(option =>
+          option
+            .setName('age')
+            .setDescription(`What is the minimum account age allowed to join the server? (${MIN_ACCOUNT_AGE}-${MAX_ACCOUNT_AGE})`)
+            .setMinValue(MIN_ACCOUNT_AGE)
+            .setMaxValue(MAX_ACCOUNT_AGE)
+            .setRequired(false)
         )
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
@@ -75,10 +84,10 @@ module.exports = {
    * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    */
   async handleStatusSubcommand(interaction) {
-    const settings = this.getCurrentSettings();
-    const message = this.formatStatusMessage(settings);
+    const settings = await this.getCurrentSettings();
+    const embed = this.formatStatusMessage(settings, interaction);
     
-    await interaction.reply({ content: message });
+    await interaction.reply({ embeds: [embed] });
     
     logger.info("Troll mode status check completed.", {
       userId: interaction.user.id,
@@ -95,16 +104,23 @@ module.exports = {
    */
   async handleSetSubcommand(interaction) {
     const enabled = interaction.options.getBoolean('enabled');
+    const accountAge = interaction.options.getInteger('age');
     
-    await this.updateSettings({ enabled });
-    const message = this.formatUpdateMessage(enabled);
+    const settings = { enabled };
+    if (accountAge !== null) {
+      settings.accountAge = accountAge;
+    }
     
-    await interaction.reply({ content: message });
+    await this.updateSettings(settings);
+    const embed = this.formatUpdateMessage(enabled, accountAge, interaction);
+    
+    await interaction.reply({ embeds: [embed] });
     
     logger.info("Troll mode settings updated.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
-      enabled
+      enabled,
+      accountAge
     });
   },
   
@@ -113,10 +129,24 @@ module.exports = {
    * @function getCurrentSettings
    * @returns {Object} The current troll mode settings
    */
-  getCurrentSettings() {
-    return {
-      enabled: config.trollMode?.enabled ?? false
-    };
+  async getCurrentSettings() {
+    try {
+      const [enabled, accountAge] = await Promise.all([
+        getValue(TROLL_MODE_ENABLED_KEY),
+        getValue(TROLL_MODE_ACCOUNT_AGE_KEY)
+      ]);
+      
+      return {
+        enabled: enabled === true,
+        accountAge: accountAge ? Number(accountAge) : DEFAULT_TROLL_MODE_AGE_DAYS
+      };
+    } catch (error) {
+      logger.error("Failed to retrieve troll mode settings:", {
+        error: error.message,
+        stack: error.stack
+      });
+      throw new Error("DATABASE_READ_ERROR");
+    }
   },
   
   /**
@@ -124,33 +154,74 @@ module.exports = {
    * @function updateSettings
    * @param {Object} settings - The new settings to apply
    */
-  updateSettings(settings) {
-    if (!config.trollMode) {
-      config.trollMode = {};
+  async updateSettings(settings) {
+    try {
+      const updates = [];
+      
+      if (settings.enabled !== undefined) {
+        updates.push(setValue(TROLL_MODE_ENABLED_KEY, settings.enabled));
+      }
+      
+      if (settings.accountAge !== undefined) {
+        updates.push(setValue(TROLL_MODE_ACCOUNT_AGE_KEY, settings.accountAge));
+      }
+      
+      await Promise.all(updates);
+    } catch (error) {
+      logger.error("Failed to update troll mode settings:", {
+        error: error.message,
+        stack: error.stack,
+        settings
+      });
+      throw new Error("DATABASE_WRITE_ERROR");
     }
-    Object.assign(config.trollMode, settings);
   },
   
   /**
    * Formats a status message for the current troll mode settings.
    * @function formatStatusMessage
    * @param {Object} settings - The current troll mode settings
-   * @returns {string} The formatted status message
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @returns {EmbedBuilder} The formatted status message
    */
-  formatStatusMessage(settings) {
-    return `🎭 **Troll Mode Status**\n\n` +
-           `• **Status**: ${settings.enabled ? 'Enabled' : 'Disabled'}`;
+  formatStatusMessage(settings, interaction) {
+    const embed = new EmbedBuilder()
+      .setColor(settings.enabled ? '#00FF00' : '#FF0000')
+      .setTitle('🎭 Troll Mode Status')
+      .addFields(
+        { name: 'Status', value: settings.enabled ? '✅ Enabled' : '❌ Disabled' },
+        { name: 'Minimum Account Age', value: `${settings.accountAge} days` }
+      )
+      .setFooter({ text: `Requested by ${interaction.user.tag}` })
+      .setTimestamp();
+
+    return embed;
   },
   
   /**
    * Formats an update message for troll mode settings changes.
    * @function formatUpdateMessage
    * @param {boolean} enabled - Whether troll mode is enabled
-   * @returns {string} The formatted update message
+   * @param {number} accountAge - The current account age
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+   * @returns {EmbedBuilder} The formatted update message
    */
-  formatUpdateMessage(enabled) {
-    return `🎭 **Troll Mode ${enabled ? 'Enabled' : 'Disabled'}**\n\n` +
-           `Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`;
+  formatUpdateMessage(enabled, accountAge, interaction) {
+    const embed = new EmbedBuilder()
+      .setColor(enabled ? '#00FF00' : '#FF0000')
+      .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
+      .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`)
+      .setFooter({ text: `Updated by ${interaction.user.tag}` })
+      .setTimestamp();
+
+    if (accountAge !== null) {
+      embed.addFields({ 
+        name: 'Minimum Account Age', 
+        value: `${accountAge} days` 
+      });
+    }
+
+    return embed;
   },
 
   /**

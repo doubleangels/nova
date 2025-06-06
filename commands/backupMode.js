@@ -4,7 +4,7 @@
  * @module commands/backupMode
  */
 
-const { SlashCommandBuilder, PermissionsBitField, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -224,14 +224,14 @@ module.exports = {
         logger.debug("Backup mode enabled status updated:", { enabled: newIsEnabled });
       }
       
-      const responseMessage = this.formatUpdateMessage(
+      const embed = this.formatUpdateMessage(
         currentSettings.isEnabled, newIsEnabled,
         currentSettings.channelId, newChannelId,
         currentSettings.roleId, newRoleId,
         interaction
       );
       
-      await interaction.editReply(responseMessage);
+      await interaction.editReply({ embeds: [embed] });
       logger.info("Backup mode configuration updated successfully:", { 
         userId: interaction.user.id,
         guildId: interaction.guild.id,
@@ -262,9 +262,9 @@ module.exports = {
     
     try {
       const settings = await this.getCurrentSettings();
-      const statusMessage = this.formatStatusMessage(settings, interaction);
+      const embed = this.formatStatusMessage(settings, interaction);
       
-      await interaction.editReply(statusMessage);
+      await interaction.editReply({ embeds: [embed] });
       logger.info("Backup mode status check completed successfully:", { 
         userId: interaction.user.id,
         guildId: interaction.guild.id
@@ -292,25 +292,30 @@ module.exports = {
    * @returns {string} Formatted update message
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
-    let message = `🔄 **Backup Mode Updated**\n\n`;
-    
+    const embed = new EmbedBuilder()
+      .setColor(newEnabled ? '#00FF00' : '#FF0000')
+      .setTitle('🔄 Backup Mode Updated')
+      .setTimestamp();
+
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
-    message += `• Status: ${statusEmoji} **${statusText}**\n`;
+    embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
     if (newChannelId) {
-      message += `• Welcome Channel: <#${newChannelId}>\n`;
+      embed.addFields({ name: 'Welcome Channel', value: `<#${newChannelId}>` });
     }
     
     if (newRoleId) {
-      message += `• New Member Role: <@&${newRoleId}>\n`;
+      embed.addFields({ name: 'New Member Role', value: `<@&${newRoleId}>` });
     }
     
     if (newEnabled) {
-      message += `\nNew members will be welcomed in <#${newChannelId || 'unset'}> and assigned the <@&${newRoleId || 'unset'}> role.`;
+      embed.setDescription(`New members will be welcomed in <#${newChannelId || 'unset'}> and assigned the <@&${newRoleId || 'unset'}> role.`);
     }
+
+    embed.setFooter({ text: `Updated by ${interaction.user.tag}` });
     
-    return message;
+    return embed;
   },
 
   /**
@@ -321,26 +326,31 @@ module.exports = {
    * @returns {string} Formatted status message
    */
   formatStatusMessage(settings, interaction) {
+    const embed = new EmbedBuilder()
+      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
+      .setTitle('🔄 Backup Mode Status')
+      .setTimestamp();
+
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
+    embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
     let channelStr = "Not set";
     if (settings.channelId) {
       channelStr = `<#${settings.channelId}>`;
     }
+    embed.addFields({ name: 'Welcome Channel', value: channelStr });
     
     const roleStr = settings.roleId ? `<@&${settings.roleId}>` : "Not set";
-    
-    let message = `🔄 **Backup Mode Status**\n\n`;
-    message += `• Status: ${statusEmoji} **${statusText}**\n`;
-    message += `• Welcome Channel: ${channelStr}\n`;
-    message += `• New Member Role: ${roleStr}`;
+    embed.addFields({ name: 'New Member Role', value: roleStr });
     
     if (settings.isEnabled) {
-      message += `\n\nNew members will be welcomed in ${channelStr} and assigned the ${roleStr} role.`;
+      embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.`);
     }
+
+    embed.setFooter({ text: `Requested by ${interaction.user.tag}` });
     
-    return message;
+    return embed;
   },
 
   /**

@@ -4,7 +4,7 @@
  * @module commands/fix
  */
 
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -75,14 +75,18 @@ module.exports = {
       
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
-      let responseMessage = "✅ Disboard bump reminder successfully fixed!\n";
-      responseMessage += `⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`;
+      const embed = new EmbedBuilder()
+          .setColor('#cd41ff')
+          .setTitle('Disboard Bump Reminder Fixed')
+          .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
+          .setFooter({ text: `Updated by ${interaction.user.tag}` })
+          .setTimestamp();
       
       if (existingReminder) {
-        responseMessage += "\n⚠️ Note: An existing reminder was overwritten.";
+          embed.addFields({ name: 'Note', value: '⚠️ An existing reminder was overwritten.' });
       }
       
-      await interaction.editReply(responseMessage);
+      await interaction.editReply({ embeds: [embed] });
       
       logger.info("Fix command completed successfully:", {
         userId: interaction.user.id,

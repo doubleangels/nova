@@ -4,7 +4,7 @@
  * @module commands/muteMode
  */
 
-const { SlashCommandBuilder, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
@@ -102,8 +102,8 @@ module.exports = {
     try {
       const currentSettings = await this.getCurrentSettings();
       
-      const statusMessage = this.formatStatusMessage(currentSettings);
-      await interaction.editReply(statusMessage);
+      const embed = this.formatStatusMessage(currentSettings);
+      await interaction.editReply({ embeds: [embed] });
       
       logger.info("Mutemode status retrieved successfully:", {
         userId: interaction.user.id,
@@ -151,12 +151,12 @@ module.exports = {
 
       await this.updateSettings(isEnabled, timeLimit);
 
-      const responseMessage = this.formatUpdateMessage(
+      const embed = this.formatUpdateMessage(
         currentSettings.isEnabled, isEnabled,
         currentSettings.timeLimit, timeLimit
       );
 
-      await interaction.editReply(responseMessage);
+      await interaction.editReply({ embeds: [embed] });
       
       logger.info("Mutemode configuration updated successfully:", {
         userId: interaction.user.id,
@@ -225,21 +225,27 @@ module.exports = {
    * Formats a status message based on the current settings.
    * @function formatStatusMessage
    * @param {Object} settings - The current mute mode settings
-   * @returns {string} The formatted status message
+   * @returns {EmbedBuilder} The formatted status message
    */
   formatStatusMessage(settings) {
+    const embed = new EmbedBuilder()
+      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
+      .setTitle('🔇 Mute Mode Status')
+      .setTimestamp();
+
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     
-    let message = `🔇 **Mute Mode Status**\n\n`;
-    message += `• Status: ${statusEmoji} **${statusText}**\n`;
-    message += `• Time Limit: **${settings.timeLimit}** hours`;
+    embed.addFields(
+      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Time Limit', value: `**${settings.timeLimit}** hours` }
+    );
     
     if (settings.isEnabled) {
-      message += `\n\nNew users must send a message within **${settings.timeLimit}** hours or they will be kicked.`;
+      embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.`);
     }
-    
-    return message;
+
+    return embed;
   },
   
   /**
@@ -249,26 +255,38 @@ module.exports = {
    * @param {boolean} newEnabled - The new enabled state
    * @param {number} oldTimeLimit - The previous time limit
    * @param {number} newTimeLimit - The new time limit
-   * @returns {string} The formatted update message
+   * @returns {EmbedBuilder} The formatted update message
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
-    let message = `🔇 **Mute Mode Updated**\n\n`;
-    
+    const embed = new EmbedBuilder()
+      .setColor(newEnabled ? '#00FF00' : '#FF0000')
+      .setTitle('🔇 Mute Mode Updated')
+      .setTimestamp();
+
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
-    message += `• Status: ${statusEmoji} **${statusText}**\n`;
+    
+    embed.addFields(
+      { name: 'Status', value: `${statusEmoji} **${statusText}**` }
+    );
     
     if (oldTimeLimit !== newTimeLimit) {
-      message += `• Time Limit: **${oldTimeLimit}** → **${newTimeLimit}** hours\n`;
+      embed.addFields({ 
+        name: 'Time Limit', 
+        value: `**${oldTimeLimit}** → **${newTimeLimit}** hours` 
+      });
     } else {
-      message += `• Time Limit: **${newTimeLimit}** hours\n`;
+      embed.addFields({ 
+        name: 'Time Limit', 
+        value: `**${newTimeLimit}** hours` 
+      });
     }
     
     if (newEnabled) {
-      message += `\nNew users must send a message within **${newTimeLimit}** hours or they will be kicked.`;
+      embed.setDescription(`New users must send a message within **${newTimeLimit}** hours or they will be kicked.`);
     }
-    
-    return message;
+
+    return embed;
   },
   
   /**

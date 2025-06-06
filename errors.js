@@ -26,6 +26,7 @@ const ERROR_MESSAGES = {
     DISCORD_ALREADY_HAS_ROLE: "⚠️ User already has this role.",
     DISCORD_ROLE_NOT_ASSIGNED: "⚠️ User does not have this role.",
     DISCORD_ROLE_NOT_MANAGEABLE: "⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.",
+    DISCORD_BOT_MISSING_PERMISSIONS: "⚠️ I don't have the required permissions to manage roles in this server.",
     DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
 
     API_ERROR: "⚠️ An error occurred while communicating with the external service.",

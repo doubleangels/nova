@@ -22,7 +22,7 @@ module.exports = {
         .setDescription('Fetch and display definitions from Urban Dictionary.')
         .addStringOption(option =>
             option.setName('term')
-                .setDescription('The term to look up')
+                .setDescription('What do you want to search for?')
                 .setRequired(true)),
 
     /**

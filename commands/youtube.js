@@ -45,11 +45,11 @@ module.exports = {
     .setDescription('Search for a video on YouTube.')
     .addStringOption(option =>
       option.setName('query')
-        .setDescription('What would you like to search for?')
+        .setDescription('What do you want to search for?')
         .setRequired(true))
     .addStringOption(option =>
       option.setName('type')
-        .setDescription('The type of content to search for')
+        .setDescription('What type of content do you want to search for?')
         .addChoices(
           { name: 'Video', value: 'video' },
           { name: 'Channel', value: 'channel' },

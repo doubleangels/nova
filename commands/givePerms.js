@@ -5,7 +5,7 @@
  */
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord.js');
+const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -134,9 +134,18 @@ module.exports = {
                 });
             }
             
-            await interaction.editReply({
-                content: `✅ Successfully gave <@${targetUser.id}> permissions in the server!`
-            });
+            const embed = new EmbedBuilder()
+                .setColor(colorDecimal)
+                .setTitle('Permissions Granted')
+                .setDescription(`✅ Successfully gave <@${targetUser.id}> permissions in the server!`)
+                .addFields(
+                    { name: 'New Role', value: roleName.trim(), inline: true },
+                    { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }
+                )
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
                         
         } catch (error) {
             await this.handleError(interaction, error);

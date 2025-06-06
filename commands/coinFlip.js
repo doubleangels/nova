@@ -56,7 +56,6 @@ module.exports = {
                 .setColor('#FFD700')
                 .setTitle('Coin Flip')
                 .setDescription(`The coin landed on: **${result}**`)
-                .setThumbnail(result === 'Heads' ? 'https://i.imgur.com/8T9XlFX.png' : 'https://i.imgur.com/4u6o1dy.png')
                 .setFooter({ text: `Requested by ${interaction.user.tag}` })
                 .setTimestamp();
             

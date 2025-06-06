@@ -58,7 +58,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('days')
-        .setDescription('How many days back do you want to search? (1-365, Default: 1)')
+        .setDescription('How many days back do you want to search? (1-365, Default: None)')
         .setRequired(false)
         .setMinValue(1)
         .setMaxValue(365)),

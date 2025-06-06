@@ -5,7 +5,7 @@
  */
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits } = require('discord.js');
+const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
@@ -100,9 +100,18 @@ module.exports = {
                 roleId: role.id
             });
             
-            await interaction.editReply({
-                content: `✅ Successfully gave the ${role.name} role to <@${targetUser.id}>!`
-            });
+            const embed = new EmbedBuilder()
+                .setColor(role.color)
+                .setTitle('Role Assigned')
+                .setDescription(`✅ Successfully gave the ${role.name} role to <@${targetUser.id}>!`)
+                .addFields(
+                    { name: 'Role', value: role.name, inline: true },
+                    { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
+                )
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setTimestamp();
+            
+            await interaction.editReply({ embeds: [embed] });
                         
         } catch (error) {
             await this.handleError(interaction, error);
