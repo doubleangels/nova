@@ -96,6 +96,4 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function initializeServices(client) {
-  // Add your service initialization logic here
-  // For example: database connections, cache warming, etc.
 }

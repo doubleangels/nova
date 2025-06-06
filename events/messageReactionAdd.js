@@ -40,13 +40,11 @@ module.exports = {
    */
   async execute(reaction, user) {
     try {
-      // Ignore reactions from bots
       if (user.bot) {
         logger.debug('Bot reaction received, ignoring');
         return;
       }
 
-      // Handle partial reactions
       if (reaction.partial) {
         try {
           await reaction.fetch();
@@ -56,7 +54,6 @@ module.exports = {
         }
       }
 
-      // Process reaction
       logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}`);
 
       if (reaction.emoji.name === CLOCK_EMOJI) {
@@ -349,7 +346,7 @@ async function handleTranslationRequest(reaction, user) {
             userId: user.id
         });
 
-        let embedColor = 0x0099ff; // Default Discord blue
+        let embedColor = 0x0099ff;
         if (message.guild) {
             const member = message.guild.members.cache.get(user.id);
             if (member) {

@@ -34,13 +34,11 @@ module.exports = {
    */
   async execute(oldState, newState) {
     try {
-      // Ignore bot voice state changes
       if (oldState.member.user.bot || newState.member.user.bot) {
         logger.debug('Bot voice state change, ignoring');
         return;
       }
 
-      // Handle voice state changes
       logger.info(`Processing voice state update for user ${newState.member.user.tag}`);
       
       if (!oldState.channelId && newState.channelId) {
