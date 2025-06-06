@@ -10,6 +10,7 @@ const logger = require('../logger')('guildMemberAdd.js');
 const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
+const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const Sentry = require('../sentry');
 const { logError, ERROR_MESSAGES } = require('../errors');
 
@@ -31,6 +32,13 @@ module.exports = {
   async execute(member) {
     try {
       logger.info(`New member joined: ${member.user.tag} (ID: ${member.id})`);
+
+      // Check troll mode first
+      const meetsAgeRequirement = await checkAccountAge(member);
+      if (!meetsAgeRequirement) {
+        await performKick(member);
+        return; // Don't proceed with other checks if kicked
+      }
 
       await trackNewMember(
         member.id,
