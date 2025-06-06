@@ -12,13 +12,12 @@ const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
-// We define these configuration constants for Spotify integration.
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
-const SPOTIFY_EMBED_COLOR = 0x1DB954; // We use Spotify's brand color.
-const REQUEST_TIMEOUT = 10000; // We set a 10 second timeout for API requests.
-const SPOTIFY_SEARCH_MAX_RESULTS = 10; // We limit to a maximum of 10 results per search.
-const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150; // We truncate long descriptions to keep embeds clean.
-const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
+const SPOTIFY_EMBED_COLOR = 0x1DB954;
+const REQUEST_TIMEOUT = 10000;
+const SPOTIFY_SEARCH_MAX_RESULTS = 10;
+const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150;
+const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000;
 
 /**
  * We handle the /spotify command.
@@ -101,7 +100,6 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // Validate Spotify API configuration
       if (!this.validateConfiguration()) {
         return await interaction.reply({
           content: ERROR_MESSAGES.CONFIG_MISSING,
@@ -109,7 +107,6 @@ module.exports = {
         });
       }
 
-      // Defer the reply to allow time for API requests
       await interaction.deferReply();
       logger.info(`/spotify command initiated:`, {
         userId: interaction.user.id,
@@ -119,7 +116,6 @@ module.exports = {
 
       const subcommand = interaction.options.getSubcommand();
 
-      // Get access token for Spotify API
       const accessToken = await this.getSpotifyAccessToken();
       if (!accessToken) {
         return await interaction.editReply({
@@ -128,7 +124,6 @@ module.exports = {
         });
       }
 
-      // Process the search based on subcommand
       let results;
       switch (subcommand) {
         case 'song':
@@ -155,10 +150,8 @@ module.exports = {
         });
       }
 
-      // Create a function to generate embeds for pagination
       const generateEmbed = (index) => this.createEmbed(results, subcommand, index);
 
-      // Use the pagination utility to display results
       await createPaginatedResults(
         interaction,
         results,
@@ -668,7 +661,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

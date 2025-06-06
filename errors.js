@@ -174,17 +174,14 @@ const ERROR_MESSAGES = {
     MISSING_CLIENT_ID: 'Missing Discord client ID.',
     BOT_STARTUP_FAILED: 'Failed to start bot.',
 
-    // Event-specific errors
     EVENT_HANDLER_FAILED: 'Failed to handle event.',
     EVENT_INITIALIZATION_FAILED: 'Failed to initialize event handler.',
     EVENT_PROCESSING_FAILED: 'Failed to process event data.',
 
-    // Guild member events
     MEMBER_JOIN_FAILED: 'Failed to process new member join.',
     MEMBER_LEAVE_FAILED: 'Failed to process member leave.',
     MEMBER_TRACKING_FAILED: 'Failed to track member status.',
 
-    // Interaction events
     INTERACTION_HANDLING_FAILED: 'Failed to handle interaction.',
     COMMAND_EXECUTION_FAILED: 'Failed to execute command.',
     BUTTON_HANDLING_FAILED: 'Failed to handle button interaction.',
@@ -192,31 +189,25 @@ const ERROR_MESSAGES = {
     COOLDOWN_ACTIVE: 'Please wait before using this command again.',
     PERMISSION_DENIED: 'You do not have permission to use this command.',
 
-    // Message events
     MESSAGE_PROCESSING_FAILED: 'Failed to process message.',
     MESSAGE_FETCH_FAILED: 'Failed to fetch message content.',
     TIME_REFERENCE_PROCESSING_FAILED: 'Failed to process time references.',
     BUMP_DETECTION_FAILED: 'Failed to process bump message.',
 
-    // Reaction events
     REACTION_PROCESSING_FAILED: 'Failed to process reaction.',
     REACTION_FETCH_FAILED: 'Failed to fetch reaction data.',
     TIME_CONVERSION_FAILED: 'Failed to convert time.',
     TRANSLATION_REQUEST_FAILED: 'Failed to process translation request.',
 
-    // Voice events
     VOICE_STATE_UPDATE_FAILED: 'Failed to process voice state update.',
     VOICE_SESSION_TRACKING_FAILED: 'Failed to track voice session.',
     VOICE_CHANNEL_SWITCH_FAILED: 'Failed to process voice channel switch.',
 
-    // Ready event
     BOT_INITIALIZATION_FAILED: 'Failed to initialize bot.',
     DATABASE_INITIALIZATION_FAILED: 'Failed to initialize database connection.',
     COMMAND_DEPLOYMENT_FAILED: 'Failed to deploy commands.',
     REMINDER_RESCHEDULE_FAILED: 'Failed to reschedule reminders.',
     MUTE_KICK_RESCHEDULE_FAILED: 'Failed to reschedule mute kicks.',
-
-    // ... rest of existing error messages ...
 };
 
 /**
@@ -234,7 +225,6 @@ function getErrorMessage(error, context = '') {
         hasResponse: !!error.response
     });
 
-    // Handle Discord API error codes
     if (error.code) {
         switch (error.code) {
             case 50001:
@@ -248,7 +238,6 @@ function getErrorMessage(error, context = '') {
         }
     }
 
-    // Handle HTTP response errors
     if (error.response) {
         switch (error.response.status) {
             case 429:
@@ -260,12 +249,10 @@ function getErrorMessage(error, context = '') {
         }
     }
 
-    // Handle network errors
     if (error.request) {
         return ERROR_MESSAGES.API_NETWORK_ERROR;
     }
 
-    // Handle specific API errors
     if (context === 'anime' && error.message.includes('MAL')) {
         return ERROR_MESSAGES.API_ACCESS_DENIED;
     }

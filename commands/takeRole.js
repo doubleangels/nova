@@ -47,7 +47,6 @@ module.exports = {
    * @throws {Error} If role removal fails
    */
   async execute(interaction) {
-    // We defer the reply since role operations might take a moment to complete.
     await interaction.deferReply();
     
     logger.info("/takerole command initiated:", {
@@ -56,7 +55,6 @@ module.exports = {
     });
     
     try {
-      // We extract all command options provided by the user.
       const role = interaction.options.getRole('role');
       const targetUser = interaction.options.getUser('user');
       const reason = interaction.options.getString('reason');
@@ -66,10 +64,8 @@ module.exports = {
         roleId: role.id
       });
       
-      // We validate permissions and role assignment before proceeding.
       const validationResult = await this.validateRoleRemoval(interaction, role, targetUser);
       
-      // We ensure we have a valid validation result
       if (!validationResult || !validationResult.valid) {
         const errorMessage = validationResult?.message || ERROR_MESSAGES.UNEXPECTED_ERROR;
         await interaction.editReply({
@@ -79,7 +75,6 @@ module.exports = {
         return;
       }
       
-      // We remove the role from the user after validation passes.
       const { targetMember } = validationResult;
       await this.removeRoleFromMember(interaction, targetMember, role, reason);
     } catch (error) {
@@ -129,7 +124,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   },
@@ -144,7 +138,6 @@ module.exports = {
    * @returns {Promise<Object>} Validation result with success status and message
    */
   async validateRoleRemoval(interaction, role, targetUser) {
-    // We check if the bot has permission to manage roles in the server.
     if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
       logger.warn("Bot lacks ManageRoles permission:", {
         guildId: interaction.guildId,
@@ -156,7 +149,6 @@ module.exports = {
       };
     }
 
-    // We check if the role is managed (bot or integration role).
     if (role.managed) {
       logger.warn("Attempted to remove a managed role:", {
         roleId: role.id,
@@ -168,7 +160,6 @@ module.exports = {
       };
     }
     
-    // We fetch the target member from the guild to access their roles.
     const targetMember = await this.fetchGuildMember(interaction, targetUser.id);
     
     if (!targetMember) {
@@ -178,7 +169,6 @@ module.exports = {
       };
     }
 
-    // We check if the user actually has the role that needs to be removed.
     if (!targetMember.roles.cache.has(role.id)) {
       logger.debug("User does not have the role:", {
         userId: targetUser.id,
@@ -191,7 +181,6 @@ module.exports = {
       };
     }
     
-    // We check if the bot's highest role is higher than the role to be removed.
     const botMember = interaction.guild.members.me;
     if (botMember.roles.highest.position <= role.position) {
       logger.warn("Bot's highest role is not high enough to remove the specified role:", {
@@ -205,8 +194,6 @@ module.exports = {
       };
     }
     
-    // We check role hierarchy for the user issuing the command to enforce Discord's role hierarchy rules.
-    // Server owners can manage any role regardless of hierarchy.
     if (interaction.guild.ownerId !== interaction.user.id) {
       const executorMember = await this.fetchGuildMember(interaction, interaction.user.id);
       if (executorMember && executorMember.roles.highest.position <= role.position) {
@@ -238,11 +225,9 @@ module.exports = {
    * @param {string|null} reason - The reason for removing the role
    */
   async removeRoleFromMember(interaction, targetMember, role, reason) {
-    // We format the audit log reason to include the executor and optional custom reason.
     const customReason = reason ? `: "${reason}"` : '';
     const auditReason = `Role removed by ${interaction.user.tag} using takerole command${customReason}`;
     
-    // We remove the role from the user with the formatted audit reason.
     await targetMember.roles.remove(role, auditReason);
     
     logger.info("Role successfully removed:", {
@@ -251,10 +236,8 @@ module.exports = {
       roleName: role.name
     });
     
-    // We format a success message to inform the moderator.
     let successMessage = `✅ Successfully removed the ${role} role from ${targetMember.user}!`;
     
-    // We add the reason to the success message if one was provided.
     if (reason) {
       successMessage += `\n📝 **Reason:** ${reason}`;
     }

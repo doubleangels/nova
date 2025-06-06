@@ -23,7 +23,7 @@ const SECONDS_PER_HOUR = 3600;
 const CACHE_TTL = 3600;
 const locationCache = new NodeCache({ stdTTL: CACHE_TTL });
 
-const RATE_LIMIT_WINDOW = 60000; // 1 minute in milliseconds
+const RATE_LIMIT_WINDOW = 60000;
 const MAX_REQUESTS_PER_WINDOW = 50;
 const requestCounts = new Map();
 

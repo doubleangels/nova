@@ -24,7 +24,6 @@ async function deployCommands() {
     const commandsPath = path.join(__dirname, 'commands');
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
     
-    // Load all command files
     for (const file of commandFiles) {
       const command = require(`./commands/${file}`);
       commands.push(command.data.toJSON());
@@ -40,7 +39,6 @@ async function deployCommands() {
     
     logger.info(`Deploying commands for application ID: ${clientId}`);
     
-    // Register commands with Discord
     await rest.put(
       Routes.applicationCommands(clientId), 
       { body: commands }
@@ -55,7 +53,6 @@ async function deployCommands() {
 
 module.exports = deployCommands;
 
-// If this file is run directly (not required as a module)
 if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully.'))

@@ -8,22 +8,20 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const he = require('he'); // This is used for HTML entity decoding.
+const he = require('he');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the Wikipedia integration.
-const WIKIPEDIA_API_TIMEOUT = 5000; // We set a 5-second timeout for API requests.
-const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF; // We use white color for Wikipedia embeds.
+const WIKIPEDIA_API_TIMEOUT = 5000; 
+const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF; 
 const WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
 const WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
 const WIKIPEDIA_HTML_TAG_REGEX = /<[^>]*>/g;
-const WIKIPEDIA_MAX_RESULTS = 5; // We limit to a maximum of 5 results to prevent overload.
-const WIKIPEDIA_CACHE_TTL = 1000 * 60 * 60; // We cache results for 1 hour to reduce API calls.
+const WIKIPEDIA_MAX_RESULTS = 5;
+const WIKIPEDIA_CACHE_TTL = 1000 * 60 * 60;
 const WIKIPEDIA_API_BASE_URL = 'https://en.wikipedia.org/w/api.php';
 const WIKIPEDIA_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
 const WIKIPEDIA_FOOTER_TEXT = 'Powered by Wikipedia API';
 
-// We use a simple in-memory cache to store search results.
 const cache = new Map();
 
 /**
@@ -56,10 +54,8 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // We defer the reply since the API calls might take a moment.
       await interaction.deferReply();
       
-      // We get the search query from the interaction options.
       const query = interaction.options.getString('query');
       
       logger.info("Wikipedia command initiated:", {
@@ -68,7 +64,6 @@ module.exports = {
         query
       });
 
-      // We search for the article on Wikipedia.
       const searchResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
         params: {
           action: 'query',
@@ -82,7 +77,6 @@ module.exports = {
       const searchResults = searchResponse.data.query.search;
       
       if (!searchResults || searchResults.length === 0) {
-        // We inform the user if no article was found.
         await interaction.editReply({
           content: ERROR_MESSAGES.NO_RESULTS_FOUND,
           ephemeral: true
@@ -90,7 +84,6 @@ module.exports = {
         return;
       }
 
-      // We get the first search result and fetch its summary.
       const article = searchResults[0];
       const summaryResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
         params: {
@@ -109,12 +102,10 @@ module.exports = {
       const pageId = Object.keys(pages)[0];
       let summary = pages[pageId].extract;
 
-      // Ensure summary isn't too long for Discord
       if (summary.length > 1024) {
         summary = summary.substring(0, 1021) + '...';
       }
 
-      // We create an embed with the article details.
       const embed = new EmbedBuilder()
         .setColor('#FFFFFF')
         .setTitle(article.title)
@@ -122,7 +113,6 @@ module.exports = {
         .setURL(`https://en.wikipedia.org/wiki/${encodeURIComponent(article.title)}`)
         .setFooter({ text: 'Powered by Wikipedia' });
       
-      // We send the embed to the user.
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Wikipedia command completed successfully:", {
@@ -144,7 +134,6 @@ module.exports = {
    */
   async fetchWikipediaResults(query) {
     try {
-      // We build the Wikipedia API URL with query parameters.
       const params = new URLSearchParams({
         action: 'query',
         format: 'json',
@@ -163,7 +152,6 @@ module.exports = {
         requestUrl
       });
       
-      // We make the API request using axios with a timeout for safety.
       const response = await axios.get(requestUrl, { timeout: WIKIPEDIA_API_TIMEOUT });
       
       logger.debug("Wikipedia API response received:", { 
@@ -171,10 +159,8 @@ module.exports = {
       });
       
       if (response.status === 200 && response.data.query && response.data.query.search) {
-        // We get the search results from the API response.
         const results = response.data.query.search;
         
-        // We enhance results with additional information for display.
         return results.map(result => ({
           ...result,
           url: WIKIPEDIA_ARTICLE_URL.replace('%s', result.pageid),
@@ -201,15 +187,12 @@ module.exports = {
   formatSnippet(snippet) {
     if (!snippet) return "No snippet available.";
     
-    // We replace search match spans with bold markdown for better readability.
     let formatted = snippet
       .replace(WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX, '**')
       .replace(WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX, '**');
     
-    // We remove other HTML tags to clean up the text.
     formatted = formatted.replace(WIKIPEDIA_HTML_TAG_REGEX, '');
     
-    // We decode HTML entities to display proper characters.
     formatted = he.decode(formatted);
     
     return formatted;
@@ -227,10 +210,8 @@ module.exports = {
   async sendSearchResults(interaction, query, results, index) {
     const result = results[index];
     
-    // We create the embed with the current search result.
     const embed = this.createResultEmbed(result, query, index, results.length);
     
-    // We create pagination buttons if there are multiple results.
     const components = [];
     if (results.length > 1) {
       const row = new ActionRowBuilder().addComponents(
@@ -248,7 +229,6 @@ module.exports = {
       components.push(row);
     }
     
-    // We send or edit the reply with the embed and buttons.
     const message = await interaction.editReply({ 
       embeds: [embed],
       components: components
@@ -262,7 +242,6 @@ module.exports = {
       totalResults: results.length
     });
     
-    // We set up button collector for pagination if there are multiple results.
     if (results.length > 1) {
       this.setupPaginationCollector(message, interaction, query, results, index);
     }
@@ -286,7 +265,6 @@ module.exports = {
       new Date(result.timestamp).toLocaleDateString() : 
       "Unknown";
     
-    // We create the embed with all the relevant information.
     const embed = new EmbedBuilder()
       .setTitle(`📖 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}`)
@@ -321,7 +299,6 @@ module.exports = {
    * @param {number} currentIndex - Current result index
    */
   setupPaginationCollector(message, interaction, query, results, currentIndex) {
-    // We create a collector to handle button interactions.
     const filter = i => 
       i.user.id === interaction.user.id && 
       (i.customId.startsWith(`wiki_prev_`) || 
@@ -329,11 +306,10 @@ module.exports = {
     
     const collector = message.createMessageComponentCollector({ 
       filter, 
-      time: 300000 // We set a 5-minute timeout for the collector.
+      time: 300000
     });
     
     collector.on('collect', async i => {
-      // We calculate the new index based on which button was clicked.
       let newIndex = currentIndex;
       
       if (i.customId.startsWith(`wiki_next_`)) {
@@ -342,16 +318,13 @@ module.exports = {
         newIndex = Math.max(0, currentIndex - 1);
       }
       
-      // We update the message with the new result.
       await i.deferUpdate();
       await this.sendSearchResults(interaction, query, results, newIndex);
       
-      // We stop the old collector to prevent overlapping collectors.
       collector.stop();
     });
     
     collector.on('end', collected => {
-      // If the collector ends due to timeout, we remove the buttons.
       if (collected.size === 0) {
         const embed = this.createResultEmbed(
           results[currentIndex], 
@@ -385,7 +358,6 @@ module.exports = {
       return cached.results;
     }
     
-    // We remove expired entries to keep the cache clean.
     if (cached) {
       cache.delete(cacheKey);
     }
@@ -455,7 +427,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

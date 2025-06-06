@@ -13,14 +13,12 @@ const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the weather command.
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
 const WEATHER_EMBED_COLOR = 0xFF6E42;
 const WEATHER_EMBED_TITLE_FORMAT = 'Weather in %s';
 const WEATHER_EMBED_FOOTER = 'Powered by PirateWeather';
 const WEATHER_DATE_FORMAT = 'MM/DD/YYYY';
 
-// These are the field names for the weather embed.
 const WEATHER_FIELD_LOCATION = '🌍 Location';
 const WEATHER_FIELD_TEMPERATURE = '🌡 Temperature';
 const WEATHER_FIELD_FEELS_LIKE = '🤔 Feels Like';
@@ -35,7 +33,6 @@ const WEATHER_FIELD_PRECIP = '🌧 Precipitation';
 const WEATHER_FIELD_PRECIP_PROB = '🌧 Precip. Probability';
 const WEATHER_FIELD_FORECAST = '📅 %d-Day Forecast';
 
-// These are the units used for different measurement systems.
 const WEATHER_UNIT_TEMP_C = '°C';
 const WEATHER_UNIT_TEMP_F = '°F';
 const WEATHER_UNIT_PERCENTAGE = '%';
@@ -48,7 +45,6 @@ const WEATHER_UNIT_PRESSURE_INHG = 'inHg';
 const WEATHER_UNIT_PRECIP_MM = 'mm/hr';
 const WEATHER_UNIT_PRECIP_IN = 'in/hr';
 
-// We use these weather condition icons for different weather states.
 const WEATHER_ICONS = {
   'clear-day': '☀️',
   'clear-night': '🌙',
@@ -103,7 +99,6 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // We defer the reply to allow time for processing and API calls.
       await interaction.deferReply();
       
       logger.debug("Weather command received:", { 
@@ -111,7 +106,6 @@ module.exports = {
         userTag: interaction.user.tag 
       });
 
-      // We check if the API key is configured before proceeding.
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
@@ -121,7 +115,6 @@ module.exports = {
         return;
       }
 
-      // We get the command options provided by the user.
       const place = interaction.options.getString('place');
       const unitsOption = interaction.options.getString('units') || 'metric';
       const forecastDays = interaction.options.getInteger('forecast_days') || 3;
@@ -135,7 +128,6 @@ module.exports = {
         userId: interaction.user.id 
       });
       
-      // We get geocoding data for the provided place.
       const geocodeResult = await getGeocodingData(place);
       
       if (geocodeResult.error) {
@@ -161,7 +153,6 @@ module.exports = {
         lon 
       });
       
-      // We fetch weather data from the PirateWeather API.
       const weatherData = await this.fetchWeatherData(lat, lon, units);
       
       if (!weatherData) {
@@ -178,7 +169,6 @@ module.exports = {
         return;
       }
       
-      // We create an embed with the weather data.
       const embed = this.createWeatherEmbed(
         formattedAddress, 
         lat, 
@@ -188,7 +178,6 @@ module.exports = {
         forecastDays
       );
       
-      // We send the embed as the reply.
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Weather information sent successfully:", { 
@@ -214,18 +203,15 @@ module.exports = {
    */
   async fetchWeatherData(lat, lon, units) {
     try {
-      // We build the PirateWeather API URL using the coordinates.
       const url = `${WEATHER_API_BASE_URL}${config.pirateWeatherApiKey}/${lat},${lon}`;
-      // We set additional parameters for the API request.
       const params = new URLSearchParams({ 
         units: units,
-        extend: 'hourly' // We get hourly data for more detailed forecasts.
+        extend: 'hourly'
       });
       const requestUrl = `${url}?${params.toString()}`;
       
       logger.debug("Making PirateWeather API request:", { requestUrl });
       
-      // We fetch weather data from PirateWeather using axios with a timeout.
       const response = await axios.get(requestUrl, { timeout: 5000 });
       
       if (response.status === 200) {
@@ -260,16 +246,12 @@ module.exports = {
    * @returns {EmbedBuilder} Discord embed with weather information
    */
   createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
-    // We extract current weather details from the response.
     const currently = data.currently || {};
-    // We get daily forecast data.
     const daily = data.daily?.data || [];
     
-    // We get the appropriate weather icon for the current conditions.
     const icon = currently.icon || 'default';
     const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
     
-    // We extract weather information with defaults for missing data.
     const weatherInfo = {
       summary: currently.summary || "Unknown",
       icon: icon,
@@ -286,7 +268,6 @@ module.exports = {
       precipProbability: (currently.precipProbability ?? 0) * 100
     };
 
-    // We format units based on user preference.
     const isMetric = unitsOption === 'metric';
     
     const tempUnit = isMetric ? WEATHER_UNIT_TEMP_C : WEATHER_UNIT_TEMP_F;
@@ -295,22 +276,17 @@ module.exports = {
     const pressureUnit = isMetric ? WEATHER_UNIT_PRESSURE_HPA : WEATHER_UNIT_PRESSURE_INHG;
     const precipUnit = isMetric ? WEATHER_UNIT_PRECIP_MM : WEATHER_UNIT_PRECIP_IN;
     
-    // We convert pressure if using imperial units.
     if (!isMetric && typeof weatherInfo.pressure === 'number') {
       weatherInfo.pressure = (weatherInfo.pressure * 0.02953).toFixed(2);
     }
     
-    // We get the wind direction from the bearing.
     const windDirection = this.getWindDirection(weatherInfo.windBearing);
     
-    // We build a forecast text for the specified number of days.
     const forecastText = this.createForecastText(daily, unitsOption, forecastDays);
     
-    // We get the current timestamp for the footer.
     const timestamp = new Date();
     const formattedTime = timestamp.toLocaleString();
     
-    // We create an embed to display the weather data.
     const embed = new EmbedBuilder()
       .setTitle(`${weatherIcon} ${WEATHER_EMBED_TITLE_FORMAT.replace('%s', place)}`)
       .setDescription(`**${weatherInfo.summary}**`)
@@ -401,7 +377,6 @@ module.exports = {
     const isMetric = unitsOption === 'metric';
     const tempUnit = isMetric ? WEATHER_UNIT_TEMP_C : WEATHER_UNIT_TEMP_F;
     
-    // We limit to available days or requested days, whichever is smaller.
     const days = Math.min(daysToShow, daily.length);
     
     for (let i = 0; i < days; i++) {
@@ -412,7 +387,6 @@ module.exports = {
       
       const daySummary = day.summary || "No data";
       
-      // We get the appropriate weather icon for this day's forecast.
       const icon = day.icon || 'default';
       const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
       
@@ -492,7 +466,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

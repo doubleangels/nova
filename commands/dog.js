@@ -10,7 +10,6 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the dog command.
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
 const EMBED_COLOR = 0xD3D3D3;
 const IMAGE_FILENAME = "dog.jpg";
@@ -40,7 +39,6 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // We defer the reply since the API call might take a moment.
       await interaction.deferReply();
       
       logger.info("Dog command initiated:", {
@@ -48,18 +46,15 @@ module.exports = {
         guildId: interaction.guild?.id
       });
       
-      // We fetch a random dog image from the API.
       const response = await axios.get('https://api.thedogapi.com/v1/images/search');
       const dogData = response.data[0];
       
-      // We create an embed to display the dog image.
       const embed = new EmbedBuilder()
         .setColor('#A0522D')
         .setTitle('🐕 Random Dog')
         .setImage(dogData.url)
         .setFooter({ text: 'Powered by The Dog API' });
       
-      // We send the embed to the user.
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Dog command completed successfully:", {
@@ -178,7 +173,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

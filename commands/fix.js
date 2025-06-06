@@ -14,15 +14,13 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We set up a pool for direct SQL queries.
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
-// We define configuration constants for the Disboard bump reminder.
 const SERVICE_TYPE = 'bump';
-const DELAY_SECONDS = 7200;  // 2 hours in seconds
+const DELAY_SECONDS = 7200;
 
 /**
  * We handle the fix command.
@@ -53,38 +51,30 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // We log the command initiation with the user's ID for better tracking in our system.
       logger.info("Fix command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild.id
       });
       
-      // We defer the reply to allow processing time for database operations.
       await interaction.deferReply();
 
-      // We get the reminder channel ID.
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
         await interaction.editReply(ERROR_MESSAGES.REMINDER_CONFIG_INCOMPLETE);
         return;
       }
 
-      // We check if there's already an active reminder in the database.
       const existingReminder = await this.checkExistingReminder();
       
-      // We generate unique reminder data with a random UUID and scheduled time.
       const reminderId = randomUUID();
       const scheduledTime = dayjs().add(DELAY_SECONDS, 'second');
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
-      // We get the channel and send a message.
       const channel = await interaction.client.channels.fetch(reminderChannelId);
       const sentMsg = await channel.send(`⏰ Next bump reminder scheduled for: <t:${unixTimestamp}:R>`);
       
-      // We save the reminder data to the database for future processing.
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
-      // We prepare the response message with details about the scheduled reminder.
       let responseMessage = "✅ Disboard bump reminder successfully fixed!\n";
       responseMessage += `⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`;
       
@@ -92,7 +82,6 @@ module.exports = {
         responseMessage += "\n⚠️ Note: An existing reminder was overwritten.";
       }
       
-      // We inform the user that the fix logic was successfully applied.
       await interaction.editReply(responseMessage);
       
       logger.info("Fix command completed successfully:", {
@@ -182,7 +171,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

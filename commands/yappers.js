@@ -72,7 +72,6 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      // We check if the command is being used in a DM, where it's not supported.
       if (!interaction.guild) {
         logger.warn("Command used in DMs where it's not supported:", {
           userId: interaction.user.id,
@@ -85,11 +84,9 @@ module.exports = {
         });
       }
 
-      // We defer the reply since database queries might take some time.
       await interaction.deferReply();
       logger.debug("Deferred reply for yappers command.");
 
-      // We fetch top message senders from the database.
       logger.debug("Fetching top message senders:", { limit: TOP_USERS_LIMIT });
       const topUsers = await db.getTopMessageSenders(TOP_USERS_LIMIT);
       logger.debug("Retrieved top message senders:", { 
@@ -97,7 +94,6 @@ module.exports = {
         users: topUsers.map(u => ({ username: u.username, count: u.message_count }))
       });
 
-      // We fetch top voice users from the database.
       logger.debug("Fetching top voice users:", { limit: TOP_VOICE_LIMIT });
       const topVoiceUsers = await db.getTopVoiceUsers(TOP_VOICE_LIMIT);
       logger.debug("Retrieved top voice users:", {
@@ -105,7 +101,6 @@ module.exports = {
         users: topVoiceUsers.map(u => ({ username: u.username, seconds: u.seconds_spent }))
       });
 
-      // We fetch top channels from the database.
       logger.debug("Fetching top message channels:", { limit: TOP_CHANNELS_LIMIT });
       const topChannels = await db.query(
         `SELECT channel_id, channel_name, message_count 
@@ -119,7 +114,6 @@ module.exports = {
         channels: topChannels.rows.map(c => ({ name: c.channel_name, count: c.message_count }))
       });
 
-      // We fetch top voice channels from the database.
       logger.debug("Fetching top voice channels:", { limit: TOP_VOICE_LIMIT });
       const topVoiceChannels = await db.query(
         `SELECT channel_id, channel_name, 
@@ -134,7 +128,6 @@ module.exports = {
         channels: topVoiceChannels.rows.map(c => ({ name: c.channel_name, minutes: c.total_minutes }))
       });
 
-      // We create the embed with all our gathered statistics.
       logger.debug("Creating statistics embed.");
       const embed = new EmbedBuilder()
         .setColor(YAPPERS_EMBED_COLOR)

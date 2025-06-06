@@ -9,7 +9,6 @@ const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const { logError, ERROR_MESSAGES } = require('./errors');
 
-// Initialize Sentry with configuration
 try {
   Sentry.init({
     dsn: "https://11b0fbce04a61c3cf602b4c2ab444c83@o244019.ingest.us.sentry.io/4508695162060800",

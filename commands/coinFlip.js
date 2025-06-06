@@ -9,7 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the coin flip command.
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
 const HEADS_PROBABILITY = 0.5;
@@ -110,7 +109,6 @@ module.exports = {
                 content: ERROR_MESSAGES.UNEXPECTED_ERROR,
                 ephemeral: true 
             }).catch(() => {
-                // We silently catch if all error handling attempts fail.
             });
         }
     }

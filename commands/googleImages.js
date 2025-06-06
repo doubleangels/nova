@@ -12,17 +12,16 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the Google Images search.
 const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
 const DEFAULT_RESULTS_COUNT = 5;
 const MAX_RESULTS = 10;
 const MIN_RESULTS = 1;
-const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout for pagination controls
-const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
-const SAFE_SEARCH = "medium"; // Can be "off", "medium", or "high" for content filtering
+const COLLECTOR_TIMEOUT = 120000;
+const EMBED_COLOR = 0x4285F4;
+const SAFE_SEARCH = "medium";
 
 const GOOGLE_API_KEY = config.googleApiKey;
-const GOOGLE_CSE_ID = config.googleCseId;
+const GOOGLE_CSE_ID = config.imageSearchEngineId;
 
 /**
  * We convert a string to title case for better presentation.
@@ -94,7 +93,6 @@ module.exports = {
         });
       }
       
-      // We format the query to title case for better presentation.
       searchParams.query = titleCase(searchParams.query);
       
       logger.debug("Formatted search parameters:", { 
@@ -119,7 +117,6 @@ module.exports = {
         });
       }
       
-      // We create paginated results with Google-themed buttons for navigation.
       await createPaginatedResults(
         interaction,
         searchResults.items,
@@ -128,7 +125,7 @@ module.exports = {
         COLLECTOR_TIMEOUT,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary, // Google blue for consistent branding
+          buttonStyle: ButtonStyle.Primary,
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',
@@ -174,7 +171,6 @@ module.exports = {
    * @returns {Object} The search results or error information.
    */
   async fetchImageResults(query, resultsCount) {
-    // We construct the Google Custom Search API URL with all necessary parameters.
     const params = new URLSearchParams({
       key: GOOGLE_API_KEY,
       cx: GOOGLE_CSE_ID,
@@ -190,7 +186,6 @@ module.exports = {
       resultsRequested: resultsCount
     });
 
-    // We make the API request using axios and handle the response.
     try {
       const response = await axios.get(requestUrl);
       logger.debug("Google Image API response received:", { 
@@ -226,9 +221,7 @@ module.exports = {
   generateImageEmbed(items, index) {
     const item = items[index];
     const title = item.title || "No Title";
-    // We ensure we have a valid image link for the embed.
     const imageLink = item.link || "";
-    // We use contextLink if available, otherwise fallback to the image link.
     const pageLink = item.image?.contextLink || imageLink;
     
     return new EmbedBuilder()
@@ -270,7 +263,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: [4096]
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for googleimages command:", {
@@ -281,9 +274,8 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: [4096]
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

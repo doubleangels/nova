@@ -1,6 +1,6 @@
 /**
- * Anime command module for searching and displaying anime information from MyAnimeList.
- * Handles API interactions, data formatting, and error handling for anime searches.
+ * Anime command module for MyAnimeList integration.
+ * Handles anime searches, data retrieval, and result formatting.
  * @module commands/anime
  */
 
@@ -200,8 +200,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

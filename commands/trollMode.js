@@ -10,12 +10,11 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the troll mode feature.
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
 const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
 const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
 const MIN_ACCOUNT_AGE = 1;
-const MAX_ACCOUNT_AGE = 365; // We set a maximum of 1 year to prevent unreasonable values.
+const MAX_ACCOUNT_AGE = 365;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -79,7 +78,7 @@ module.exports = {
     const settings = this.getCurrentSettings();
     const message = this.formatStatusMessage(settings);
     
-    await interaction.reply({ content: message, ephemeral: true });
+    await interaction.reply({ content: message });
     
     logger.info("Troll mode status check completed.", {
       userId: interaction.user.id,
@@ -100,7 +99,7 @@ module.exports = {
     await this.updateSettings({ enabled });
     const message = this.formatUpdateMessage(enabled);
     
-    await interaction.reply({ content: message, ephemeral: true });
+    await interaction.reply({ content: message });
     
     logger.info("Troll mode settings updated.", {
       userId: interaction.user.id,
@@ -171,8 +170,7 @@ module.exports = {
     
     try {
       await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
+        content: errorMessage
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for troll mode command:", {

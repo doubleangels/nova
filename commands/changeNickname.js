@@ -57,22 +57,18 @@ module.exports = {
                 newNickname
             });
 
-            // Check if bot has permission to manage nicknames
             if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageNicknames)) {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 
-            // Check if target user is manageable
             if (!member.manageable) {
                 throw new Error("USER_NOT_MANAGEABLE");
             }
 
-            // Validate nickname length if provided
             if (newNickname && (newNickname.length < 1 || newNickname.length > 32)) {
                 throw new Error("INVALID_NICKNAME_LENGTH");
             }
 
-            // Update nickname
             await member.setNickname(newNickname || null);
             
             const responseMessage = newNickname 
@@ -146,7 +142,6 @@ module.exports = {
      * @returns {Object} An object with success status, message, and targetMember if successful.
      */
     async validateNicknameChange(interaction, targetUser, newNickname) {
-        // We check if the bot has permission to manage nicknames in the server.
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
             logger.warn("Bot lacks ManageNicknames permission:", { 
@@ -158,7 +153,6 @@ module.exports = {
             };
         }
 
-        // We check if the nickname length exceeds Discord's limit of 32 characters.
         if (newNickname.length > 32) {
             logger.warn("Nickname exceeds maximum length:", {
                 length: newNickname.length
@@ -169,7 +163,6 @@ module.exports = {
             };
         }
 
-        // We check if the target user is the server owner.
         if (targetUser.id === interaction.guild.ownerId) {
             logger.warn("Attempted to change server owner's nickname:", {
                 targetUserId: targetUser.id
@@ -180,7 +173,6 @@ module.exports = {
             };
         }
 
-        // We check if the target user is the bot itself.
         if (targetUser.id === interaction.client.user.id) {
             logger.warn("Attempted to change bot's nickname:", {
                 targetUserId: targetUser.id
@@ -191,8 +183,6 @@ module.exports = {
             };
         }
 
-        // We check role hierarchy for the user issuing the command.
-        // Server owners can manage any nickname regardless of hierarchy.
         if (interaction.guild.ownerId !== interaction.user.id) {
             const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
             const targetMember = await interaction.guild.members.fetch(targetUser.id);
@@ -209,7 +199,6 @@ module.exports = {
             }
         }
 
-        // We fetch the target member from the guild to ensure they exist.
         let targetMember;
         try {
             targetMember = await interaction.guild.members.fetch(targetUser.id);

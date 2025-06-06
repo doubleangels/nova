@@ -15,13 +15,11 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// Setup a pool for direct SQL queries
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
-// We use these configuration constants for the reminder system.
 const REMINDER_TYPE = 'bump';
 const DB_KEY_CHANNEL = 'reminder_channel';
 const DB_KEY_ROLE = 'reminder_role';
@@ -97,16 +95,13 @@ module.exports = {
    * @throws {Error} If setup fails
    */
   async handleReminderSetup(interaction) {
-    // We retrieve the selected channel and role from the command options.
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
     
-    // We validate that the channel is a text channel.
     if (channelOption.type !== ChannelType.GuildText) {
       throw new Error("INVALID_CHANNEL_TYPE");
     }
     
-    // We save the selected channel and role IDs in the database.
     try {
       await Promise.all([
         setValue(DB_KEY_CHANNEL, channelOption.id),
@@ -130,7 +125,6 @@ module.exports = {
       roleId: roleOption.id
     });
 
-    // We respond with a summary of the new configuration for confirmation.
     const response = `✅ **Reminder setup complete!**\n\n` +
                     `📢 **Channel:** <#${channelOption.id}>\n` +
                     `🎭 **Role:** <@&${roleOption.id}>\n\n` +
@@ -152,13 +146,11 @@ module.exports = {
     });
 
     try {
-      // We retrieve the current configuration and reminder data from the database.
       const [channelId, roleId] = await Promise.all([
         getValue(DB_KEY_CHANNEL),
         getValue(DB_KEY_ROLE)
       ]);
       
-      // Get the latest reminder data
       const reminderData = await this.getLatestReminderData(channelId);
       
       logger.debug("Retrieved reminder configuration:", { 
@@ -168,33 +160,27 @@ module.exports = {
         guildId: interaction.guildId
       });
       
-      // We resolve the channel name from the channel ID for display.
       let channelStr = '⚠️ Not set!';
       if (channelId) {
         const channelObj = interaction.guild.channels.cache.get(channelId);
         channelStr = channelObj ? `<#${channelId}>` : '⚠️ Invalid channel!';
       }
   
-      // We format the role for display in the status message.
       let roleStr = '⚠️ Not set!';
       if (roleId) {
         const roleObj = interaction.guild.roles.cache.get(roleId);
         roleStr = roleObj ? `<@&${roleId}>` : '⚠️ Invalid role!';
       }
       
-      // We calculate the remaining time until the next reminder is due.
       const timeStr = this.calculateRemainingTime(reminderData);
       
-      // We check if the configuration is complete with both channel and role set.
       const configComplete = channelId && roleId;
       
-      // We build a comprehensive summary message with all relevant information.
       let summary = `📌 **Disboard Reminder Status:**\n\n`;
       summary += `📢 **Channel:** ${channelStr}\n`;
       summary += `🎭 **Role:** ${roleStr}\n`;
       summary += `⏳ **Next Reminder:** ${timeStr}`;
       
-      // We add a warning if the configuration is incomplete to alert the admin.
       if (!configComplete) {
         summary += `\n\n⚠️ **Warning:** Reminder configuration is incomplete.`;
       }
@@ -304,7 +290,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // Silent catch if everything fails.
       });
     }
   }

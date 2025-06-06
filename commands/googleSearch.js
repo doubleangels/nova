@@ -12,18 +12,17 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the Google search command.
 const API_URL = 'https://www.googleapis.com/customsearch/v1';
 const DEFAULT_RESULTS = 5;
 const MIN_RESULTS = 1;
 const MAX_RESULTS = 10;
-const COLLECTOR_TIMEOUT = 120000; // 2 minute timeout for pagination controls
-const EMBED_COLOR = 0x4285F4; // Google blue color for consistent branding
-const REQUEST_TIMEOUT = 10000; // 10 second API request timeout to prevent hanging
-const SAFE_SEARCH = 'off'; // Options: 'off', 'medium', 'high' for content filtering
+const COLLECTOR_TIMEOUT = 120000;
+const EMBED_COLOR = 0x4285F4;
+const REQUEST_TIMEOUT = 10000;
+const SAFE_SEARCH = 'off';
 
 const GOOGLE_API_KEY = config.googleApiKey;
-const GOOGLE_CSE_ID = config.googleCseId;
+const GOOGLE_CSE_ID = config.searchEngineId;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -81,7 +80,6 @@ module.exports = {
         return await interaction.editReply({
           content: ERROR_MESSAGES.INVALID_QUERY,
           ephemeral: true
-        });
       }
 
       logger.debug("Formatted search parameters:", { 
@@ -106,7 +104,6 @@ module.exports = {
         });
       }
       
-      // We create paginated results with Google-themed buttons for navigation.
       await createPaginatedResults(
         interaction,
         searchResults.items,
@@ -115,7 +112,7 @@ module.exports = {
         COLLECTOR_TIMEOUT,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary, // Google blue for consistent branding
+          buttonStyle: ButtonStyle.Primary,
           prevLabel: 'Previous',
           nextLabel: 'Next',
           prevEmoji: '◀️',
@@ -154,7 +151,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: getErrorMessage(error),
-        ephemeral: true 
+        ephemeral: true
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for google command:", {
@@ -165,9 +162,8 @@ module.exports = {
       
       await interaction.reply({ 
         content: getErrorMessage(error),
-        ephemeral: true 
+        ephemeral: true
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   },
@@ -181,7 +177,6 @@ module.exports = {
    * @returns {Object} The search results or error information.
    */
   async fetchSearchResults(query, resultsCount) {
-    // We build the Google Custom Search API request with all necessary parameters.
     const params = new URLSearchParams({
       key: GOOGLE_API_KEY,
       cx: GOOGLE_CSE_ID,
@@ -196,7 +191,6 @@ module.exports = {
       resultsRequested: resultsCount
     });
 
-    // We fetch data from the API using axios with a timeout to prevent hanging.
     try {
       const response = await axios.get(requestUrl, { timeout: REQUEST_TIMEOUT });
       logger.debug("Google API response received:", { 

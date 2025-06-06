@@ -57,23 +57,19 @@ module.exports = {
                 colorInput
             });
 
-            // Validate color
             const color = validateAndNormalizeColor(colorInput);
             if (!color) {
                 throw new Error("INVALID_COLOR");
             }
 
-            // Check if bot has permission to manage the role
             if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 
-            // Check if role is manageable
             if (!role.manageable) {
                 throw new Error("ROLE_NOT_MANAGEABLE");
             }
 
-            // Update role color
             await role.setColor(color);
             
             await interaction.editReply({

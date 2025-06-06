@@ -14,7 +14,6 @@ const { initializeDatabase } = require('./utils/database');
 const deployCommands = require('./deploy-commands');
 const { logError, ERROR_MESSAGES } = require('./errors');
 
-// Constants
 const COMMAND_EXTENSION = '.js';
 const EVENT_EXTENSION = '.js';
 const SENTRY_FLUSH_TIMEOUT = 2000;
@@ -40,12 +39,10 @@ const client = new Client({
   ]
 });
 
-// Initialize collections for commands and interactions
 client.commands = new Collection();
 client.buttonHandlers = new Collection();
 client.selectHandlers = new Collection();
 
-// Load command files
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(COMMAND_EXTENSION));
 
@@ -59,7 +56,6 @@ if (hasDisabledCommands) {
 let loadedCount = 0;
 let skippedCount = 0;
 
-// Load each command file
 for (const file of commandFiles) {
   const commandName = file.replace(COMMAND_EXTENSION, ''); 
   
@@ -85,7 +81,6 @@ for (const file of commandFiles) {
 
 logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} skipped.`);
 
-// Load event files
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(EVENT_EXTENSION));
 
@@ -128,7 +123,6 @@ for (const file of eventFiles) {
   }
 }
 
-// Handle bot ready event
 client.once('ready', async () => {
   try {
     await initializeDatabase();
@@ -169,10 +163,8 @@ async function startBot() {
   }
 }
 
-// Start the bot
 startBot();
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   logError('Uncaught Exception', error);
   Sentry.captureException(error, {
@@ -181,7 +173,6 @@ process.on('uncaughtException', (error) => {
   setTimeout(() => process.exit(1), SENTRY_FLUSH_TIMEOUT);
 });
 
-// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   logError('Unhandled Promise Rejection', reason);
   Sentry.captureException(reason, {
@@ -201,6 +192,5 @@ function handleShutdown(signal) {
   });
 }
 
-// Register shutdown handlers
 process.on('SIGINT', () => handleShutdown('SIGINT'));
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));

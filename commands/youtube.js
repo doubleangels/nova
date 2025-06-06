@@ -13,21 +13,19 @@ const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// These are the configuration constants for the YouTube integration.
 const YOUTUBE_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YOUTUBE_API_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
 const YOUTUBE_API_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
 const YOUTUBE_API_PLAYLISTS_URL = 'https://www.googleapis.com/youtube/v3/playlists';
-const YOUTUBE_API_TIMEOUT_MS = 5000; // We set a 5-second timeout for API requests.
-const YOUTUBE_SEARCH_MAX_RESULTS = 10; // We limit to a maximum of 10 results per search.
-const YOUTUBE_EMBED_COLOR = 0xFF0000; // We use YouTube's signature red color for embeds.
-const YOUTUBE_DESCRIPTION_MAX_LENGTH = 1024; // We truncate long descriptions to keep embeds clean.
-const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000; // We set a 2-minute timeout for the pagination.
+const YOUTUBE_API_TIMEOUT_MS = 5000;
+const YOUTUBE_SEARCH_MAX_RESULTS = 10;
+const YOUTUBE_EMBED_COLOR = 0xFF0000;
+const YOUTUBE_DESCRIPTION_MAX_LENGTH = 1024;
+const YOUTUBE_COLLECTOR_TIMEOUT_MS = 120000;
 const YOUTUBE_REQUEST_TIMEOUT = 10000;
 
-// We use a simple in-memory cache to reduce API calls.
 const cache = new Map();
-const CACHE_TTL = 1000 * 60 * 10; // We cache results for 10 minutes to stay within API limits.
+const CACHE_TTL = 1000 * 60 * 10;
 
 /**
  * We handle the youtube command.
@@ -67,7 +65,6 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      // We validate that the API configuration is properly set up before proceeding.
       if (!this.validateConfiguration()) {
         return await interaction.reply({
           content: ERROR_MESSAGES.CONFIG_MISSING,
@@ -75,20 +72,17 @@ module.exports = {
         });
       }
 
-      // We defer the reply to allow time for the API request and processing.
       await interaction.deferReply();
       logger.info("/youtube command initiated:", { 
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
 
-      // We get and validate the search parameters provided by the user.
       const query = interaction.options.getString('query');
       const contentType = interaction.options.getString('type') || 'video';
       const sortMethod = interaction.options.getString('sort') || 'relevance';
       const duration = interaction.options.getString('duration') || 'any';
 
-      // We fetch search results from the YouTube API.
       const searchResults = await this.searchYouTube(query, contentType, sortMethod, duration);
       
       if (!searchResults || searchResults.length === 0) {
@@ -99,10 +93,8 @@ module.exports = {
         });
       }
 
-      // Create a function to generate embeds for pagination
       const generateEmbed = (index) => this.createContentEmbed(searchResults[index], contentType, index, searchResults.length);
 
-      // Use the pagination utility to display results
       await createPaginatedResults(
         interaction,
         searchResults,
@@ -227,7 +219,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   },
@@ -244,7 +235,6 @@ module.exports = {
       if (Date.now() - timestamp < CACHE_TTL) {
         return data;
       }
-      // We remove expired cache entries to keep memory usage in check.
       cache.delete(key);
     }
     return null;
@@ -275,7 +265,6 @@ module.exports = {
    */
   async searchYouTube(query, contentType, sortMethod, duration) {
     try {
-      // We build search parameters for the YouTube API request.
       const params = {
         part: 'snippet',
         q: query,
@@ -286,12 +275,10 @@ module.exports = {
         safeSearch: 'moderate'
       };
       
-      // We add duration filter for videos if specified.
       if (contentType === 'video' && duration !== 'any') {
         params.videoDuration = duration;
       }
       
-      // We make the API request with a timeout for safety.
       const response = await axios.get(YOUTUBE_API_SEARCH_URL, {
         params,
         timeout: YOUTUBE_API_TIMEOUT_MS
@@ -302,17 +289,13 @@ module.exports = {
         return [];
       }
       
-      // We process and enrich the results based on content type.
       let results = response.data.items;
       
       if (contentType === 'video') {
-        // We get additional video details like view count, likes, etc.
         results = await this.enrichVideoResults(results);
       } else if (contentType === 'channel') {
-        // We get additional channel details like subscriber count.
         results = await this.enrichChannelResults(results);
       } else if (contentType === 'playlist') {
-        // We get additional playlist details like item count.
         results = await this.enrichPlaylistResults(results);
       }
       
@@ -338,10 +321,8 @@ module.exports = {
     if (!videos || videos.length === 0) return [];
     
     try {
-      // We extract video IDs for the detailed information request.
       const videoIds = videos.map(video => video.id.videoId).join(',');
       
-      // We get detailed video information including statistics.
       const response = await axios.get(YOUTUBE_API_VIDEOS_URL, {
         params: {
           part: 'snippet,statistics,contentDetails',
@@ -355,10 +336,8 @@ module.exports = {
         return videos;
       }
       
-      // We combine search results with detailed information.
       const detailedVideos = response.data.items;
       
-      // We map detailed info back to the original search results.
       return videos.map(searchResult => {
         const detailedInfo = detailedVideos.find(
           video => video.id === searchResult.id.videoId
@@ -391,10 +370,8 @@ module.exports = {
     if (!channels || channels.length === 0) return [];
     
     try {
-      // We extract channel IDs for the detailed information request.
       const channelIds = channels.map(channel => channel.id.channelId).join(',');
       
-      // We get detailed channel information including statistics.
       const response = await axios.get(YOUTUBE_API_CHANNELS_URL, {
         params: {
           part: 'snippet,statistics',
@@ -408,10 +385,8 @@ module.exports = {
         return channels;
       }
       
-      // We combine search results with detailed information.
       const detailedChannels = response.data.items;
       
-      // We map detailed info back to the original search results.
       return channels.map(searchResult => {
         const detailedInfo = detailedChannels.find(
           channel => channel.id === searchResult.id.channelId
@@ -443,10 +418,8 @@ module.exports = {
     if (!playlists || playlists.length === 0) return [];
     
     try {
-      // We extract playlist IDs for the detailed information request.
       const playlistIds = playlists.map(playlist => playlist.id.playlistId).join(',');
       
-      // We get detailed playlist information including content details.
       const response = await axios.get(YOUTUBE_API_PLAYLISTS_URL, {
         params: {
           part: 'snippet,contentDetails',
@@ -460,10 +433,8 @@ module.exports = {
         return playlists;
       }
       
-      // We combine search results with detailed information.
       const detailedPlaylists = response.data.items;
       
-      // We map detailed info back to the original search results.
       return playlists.map(searchResult => {
         const detailedInfo = detailedPlaylists.find(
           playlist => playlist.id === searchResult.id.playlistId
@@ -495,7 +466,7 @@ module.exports = {
    */
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
-      .setColor(0xFF0000)  // Explicitly set YouTube red color
+      .setColor(0xFF0000)
       .setFooter({ 
         text: `Result ${index + 1} of ${totalItems} • Powered by YouTube`
       });
@@ -528,20 +499,17 @@ module.exports = {
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // We format view count and likes if available.
     const viewCount = statistics.viewCount ? 
       `👁️ ${parseInt(statistics.viewCount).toLocaleString()} views` : '';
     const likeCount = statistics.likeCount ? 
       `👍 ${parseInt(statistics.likeCount).toLocaleString()} likes` : '';
     const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
     
-    // We format the description, truncating if necessary.
     let description = snippet.description || 'No description available';
     if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
       description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
     }
     
-    // We format the upload date.
     const uploadDate = snippet.publishedAt ? 
       `📅 ${new Date(snippet.publishedAt).toLocaleDateString()}` : '';
     
@@ -572,14 +540,12 @@ module.exports = {
     const channelUrl = `https://www.youtube.com/channel/${channelId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // We format subscriber count if available.
     const subscriberCount = statistics.subscriberCount ? 
       `👥 ${parseInt(statistics.subscriberCount).toLocaleString()} subscribers` : '';
     const videoCount = statistics.videoCount ? 
       `🎬 ${parseInt(statistics.videoCount).toLocaleString()} videos` : '';
     const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
     
-    // We format the description, truncating if necessary.
     let description = snippet.description || 'No description available';
     if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
       description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';
@@ -608,11 +574,9 @@ module.exports = {
     const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
     
-    // We format item count if available.
     const itemCount = contentDetails.itemCount ? 
       `🎬 ${contentDetails.itemCount} videos` : '';
     
-    // We format the description, truncating if necessary.
     let description = snippet.description || 'No description available';
     if (description.length > YOUTUBE_DESCRIPTION_MAX_LENGTH) {
       description = description.substring(0, YOUTUBE_DESCRIPTION_MAX_LENGTH) + '...';

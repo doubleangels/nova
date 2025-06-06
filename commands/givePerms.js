@@ -12,12 +12,10 @@ const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
-// We define configuration constants for the givePerms command.
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
 const FREN_ROLE_ID = config.givePermsFrenRoleId;
-const MAX_ROLE_NAME_LENGTH = 100; // We enforce a maximum role name length of 100 characters.
+const MAX_ROLE_NAME_LENGTH = 100;
 
-// We validate that the required configuration values are present.
 if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
     logger.error("Missing required configuration for /giveperms command:", {
         positionAboveRoleId: POSITION_ABOVE_ROLE_ID,
@@ -64,7 +62,6 @@ module.exports = {
      * @throws {Error} If role creation or assignment fails
      */
     async execute(interaction) {
-        // We check if the required configuration values are available before proceeding.
         if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
             logger.error("Command execution failed due to missing configuration:", {
                 commandName: 'giveperms',
@@ -76,7 +73,6 @@ module.exports = {
             });
         }
         
-        // We defer the reply since role creation and assignment might take a moment.
         await interaction.deferReply();
         logger.info("/giveperms command initiated:", { 
             userId: interaction.user.id, 
@@ -84,12 +80,10 @@ module.exports = {
         });
         
         try {
-            // We extract the command options provided by the user.
             const roleName = interaction.options.getString('role');
             const colorHex = interaction.options.getString('color');
             const targetUser = interaction.options.getUser('user');
             
-            // We validate all inputs before proceeding with role creation.
             const validationResult = this.validateInputs(interaction, roleName, colorHex, targetUser);
             if (!validationResult.success) {
                 return await interaction.editReply({
@@ -105,7 +99,6 @@ module.exports = {
                 targetUserTag: targetUser.tag 
             });
             
-            // We fetch the target member from the guild to ensure they exist.
             const targetMember = await interaction.guild.members.fetch(targetUser.id);
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
@@ -115,7 +108,6 @@ module.exports = {
                 });
             }
             
-            // We validate and normalize the color format using the utility function.
             const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided:", { colorHex });
@@ -126,10 +118,8 @@ module.exports = {
             }
 
             const normalizedColorHex = colorValidationResult.normalizedColor;
-            // We convert the hex color to decimal for Discord's color system using the utility function.
             const colorDecimal = hexToDecimal(normalizedColorHex);
             
-            // We create and assign the roles to the target member.
             const rolesResult = await this.createAndAssignRoles(
                 interaction, 
                 roleName.trim(), 
@@ -163,7 +153,6 @@ module.exports = {
      * @returns {Object} Validation result with success status and message
      */
     validateInputs(interaction, roleName, colorHex, targetUser) {
-        // We validate that the role name is not empty and within Discord's length limits.
         if (!roleName || roleName.trim().length === 0) {
             logger.warn("Invalid role name provided.", { roleName });
             return {
@@ -198,7 +187,6 @@ module.exports = {
      * @throws {Error} If role creation or assignment fails
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        // We get the reference role for positioning the new role in the hierarchy.
         const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
         if (!positionRole) {
             logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
@@ -208,7 +196,6 @@ module.exports = {
             };
         }
         
-        // We get the additional role that will be assigned to the user.
         const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
         if (!additionalRole) {
             logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
@@ -218,7 +205,6 @@ module.exports = {
             };
         }
         
-        // We check if the bot has sufficient permissions to create a role at the desired position.
         const botMember = await interaction.guild.members.fetchMe();
         if (botMember.roles.highest.position <= positionRole.position) {
             logger.warn("Bot's highest role is not high enough to create a role above the reference role.", {
@@ -231,7 +217,6 @@ module.exports = {
             };
         }
         
-        // We create the new role with the specified name, color, and position.
         const auditReason = `Role created by ${interaction.user.tag} (ID: ${interaction.user.id}) using giveperms command`;
         const newRole = await interaction.guild.roles.create({
             name: roleName,
@@ -247,7 +232,6 @@ module.exports = {
             createdBy: interaction.user.tag
         });
         
-        // We assign both the new role and the fren role to the target user.
         await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
         
         logger.info("Permissions successfully granted to user:", { 
@@ -304,7 +288,6 @@ module.exports = {
                 content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
-                // We silently catch if all error handling attempts fail.
             });
         }
     }

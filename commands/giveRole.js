@@ -1,6 +1,6 @@
 /**
- * Give role command module for managing role assignments.
- * Handles role validation, permission checks, and role assignment.
+ * Give role command module for role management.
+ * Handles role assignment and permission validation.
  * @module commands/giveRole
  */
 
@@ -176,8 +176,7 @@ module.exports = {
             await interaction.reply({ 
                 content: errorMessage,
                 ephemeral: true 
-            }).catch(() => {
-            });
+            }).catch(() => {});
         }
     }
 };
