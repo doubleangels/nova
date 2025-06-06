@@ -80,6 +80,7 @@ module.exports = {
         return await interaction.editReply({
           content: ERROR_MESSAGES.INVALID_QUERY,
           ephemeral: true
+        });
       }
 
       logger.debug("Formatted search parameters:", { 
