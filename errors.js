@@ -25,6 +25,7 @@ const ERROR_MESSAGES = {
     DISCORD_USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
     DISCORD_ALREADY_HAS_ROLE: "⚠️ User already has this role.",
     DISCORD_ROLE_NOT_ASSIGNED: "⚠️ User does not have this role.",
+    DISCORD_ROLE_NOT_MANAGEABLE: "⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.",
     DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
 
     API_ERROR: "⚠️ An error occurred while communicating with the external service.",
@@ -210,6 +211,10 @@ function getErrorMessage(error, context = '') {
             case 10011:
                 return ERROR_MESSAGES.DISCORD_ROLE_NOT_FOUND;
         }
+    }
+
+    if (error.message === "ROLE_NOT_MANAGEABLE") {
+        return ERROR_MESSAGES.DISCORD_ROLE_NOT_MANAGEABLE;
     }
 
     if (error.response) {
