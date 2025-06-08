@@ -127,6 +127,13 @@ module.exports = {
    */
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
+      // Clean up existing reminders first
+      await pool.query(
+        `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
+        [SERVICE_TYPE]
+      );
+      logger.debug("Cleaned up existing reminders of type:", SERVICE_TYPE);
+
       await pool.query(
         `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
         [reminderId, scheduledTime, SERVICE_TYPE]
