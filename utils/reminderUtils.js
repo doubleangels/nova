@@ -32,7 +32,7 @@ const REMINDER_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!
 async function getLatestReminderData() {
   try {
     const result = await pool.query(
-      `SELECT reminder_id, remind_at FROM main.reminder_recovery 
+      `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
        WHERE remind_at > NOW() 
        ORDER BY remind_at ASC 
        LIMIT 1`
@@ -50,9 +50,10 @@ async function getLatestReminderData() {
  * @function handleReminder
  * @param {Message} message - The message that triggered the reminder
  * @param {number} delay - The delay in milliseconds before the reminder
+ * @param {string} bumpId - The ID of the bump that triggered this reminder
  * @throws {Error} If reminder creation fails
  */
-async function handleReminder(message, delay) {
+async function handleReminder(message, delay, bumpId) {
   try {
     const reminderRole = await getValue('reminder_role');
     if (!reminderRole) {
@@ -94,8 +95,8 @@ async function handleReminder(message, delay) {
     logger.debug("Cleaned up existing reminders.");
 
     await pool.query(
-      `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
-      [reminderId, scheduledTime.toISOString()]
+      `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
+      [reminderId, scheduledTime.toISOString(), 'bump']
     );
 
     setTimeout(async () => {

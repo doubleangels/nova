@@ -227,7 +227,7 @@ module.exports = {
     
     try {
       const result = await pool.query(
-        `SELECT reminder_id, remind_at FROM main.reminder_recovery 
+        `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
          WHERE remind_at > NOW()
          ORDER BY remind_at ASC 
          LIMIT 1`

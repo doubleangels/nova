@@ -128,10 +128,14 @@ module.exports = {
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
       await pool.query(
-        `INSERT INTO main.reminder_recovery (reminder_id, remind_at) VALUES ($1, $2)`,
-        [reminderId, scheduledTime]
+        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
+        [reminderId, scheduledTime, SERVICE_TYPE]
       );
-      logger.debug("Reminder data saved to database:", { reminderId: reminderId, scheduledTime: scheduledTime });
+      logger.debug("Reminder data saved to database:", { 
+        reminderId: reminderId, 
+        scheduledTime: scheduledTime,
+        type: SERVICE_TYPE 
+      });
     } catch (error) {
       logger.error("Database error while saving reminder:", { error: error.message, reminderId: reminderId });
       throw new Error("DATABASE_ERROR");

@@ -101,7 +101,7 @@ module.exports = {
       logger.info('Available flairs:', flairs);
 
       const serverFlair = flairs.find(flair => 
-        flair.id === 'b8ffcc5a-275b-11ec-8803-eade4b4709d8'
+        flair.id === '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
       );
 
       if (!serverFlair) {
