@@ -158,12 +158,16 @@ module.exports = {
         getValue(DB_KEY_ROLE)
       ]);
       
-      const reminderData = await this.getLatestReminderData(channelId);
+      const [bumpReminder, promoteReminder] = await Promise.all([
+        this.getLatestReminderData(channelId, 'bump'),
+        this.getLatestReminderData(channelId, 'promote')
+      ]);
       
       logger.debug("Retrieved reminder configuration:", { 
         channelId, 
         roleId,
-        hasReminderData: !!reminderData,
+        hasBumpReminder: !!bumpReminder,
+        hasPromoteReminder: !!promoteReminder,
         guildId: interaction.guildId
       });
       
@@ -179,16 +183,18 @@ module.exports = {
         roleStr = roleObj ? `<@&${roleId}>` : '⚠️ Invalid role!';
       }
       
-      const timeStr = this.calculateRemainingTime(reminderData);
+      const bumpTimeStr = this.calculateRemainingTime(bumpReminder);
+      const promoteTimeStr = this.calculateRemainingTime(promoteReminder);
       const configComplete = channelId && roleId;
       
       const embed = new EmbedBuilder()
         .setColor('#cd41ff')
-        .setTitle('📌 Disboard Reminder Status')
+        .setTitle('📌 Server Reminders Status')
         .addFields(
           { name: '📢 Channel', value: channelStr },
           { name: '🎭 Role', value: roleStr },
-          { name: '⏳ Next Reminder', value: timeStr }
+          { name: '⏰ Next Bump', value: bumpTimeStr },
+          { name: '🎯 Next Promotion', value: promoteTimeStr }
         )
         .setFooter({ text: `Requested by ${interaction.user.tag}` })
         .setTimestamp();
@@ -216,25 +222,27 @@ module.exports = {
   },
 
   /**
-   * Gets the latest reminder data for a channel.
+   * Gets the latest reminder data for a channel and type.
    * @async
    * @function getLatestReminderData
    * @param {string} channelId - The channel ID to get reminder data for
+   * @param {string} type - The type of reminder to get ('bump' or 'promote')
    * @returns {Promise<Object|null>} The reminder data if found, otherwise null
    */
-  async getLatestReminderData(channelId) {
+  async getLatestReminderData(channelId, type) {
     if (!channelId) return null;
     
     try {
       const result = await pool.query(
         `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
-         WHERE remind_at > NOW()
+         WHERE remind_at > NOW() AND type = $1
          ORDER BY remind_at ASC 
-         LIMIT 1`
+         LIMIT 1`,
+        [type]
       );
       return result.rows.length > 0 ? result.rows[0] : null;
     } catch (err) {
-      logger.error("Error getting latest reminder data:", { error: err });
+      logger.error("Error getting latest reminder data:", { error: err, type });
       return null;
     }
   },

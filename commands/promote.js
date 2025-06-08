@@ -11,9 +11,18 @@ const logger = require('../logger')(path.basename(__filename));
 const snoowrap = require('snoowrap');
 const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { Pool } = require('pg');
+const dayjs = require('dayjs');
+
+const pool = new Pool({
+  connectionString: config.neonConnectionString,
+  ssl: { rejectUnauthorized: true }
+});
 
 const REDDIT_EMBED_COLOR = 0xFF4500;
 const TARGET_SUBREDDIT = 'DiscordAdvertising';
+const COOLDOWN_HOURS = 24;
+const REMINDER_TYPE = 'promote';
 
 const SERVER_TITLE = '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥';
 const SERVER_INVITE = 'https://discord.gg/dafrens';
@@ -53,6 +62,19 @@ module.exports = {
         guildId: interaction.guildId
       });
 
+      // Check for cooldown
+      const lastPromotion = await this.getLastPromotion();
+      if (lastPromotion) {
+        const timeSinceLastPromotion = dayjs().diff(dayjs(lastPromotion), 'hour');
+        if (timeSinceLastPromotion < COOLDOWN_HOURS) {
+          const hoursRemaining = COOLDOWN_HOURS - timeSinceLastPromotion;
+          return await interaction.editReply({
+            content: `⏰ Please wait ${hoursRemaining.toFixed(1)} hours before promoting again.`,
+            ephemeral: true
+          });
+        }
+      }
+
       const postData = {
         subreddit: TARGET_SUBREDDIT,
         title: SERVER_TITLE,
@@ -67,6 +89,9 @@ module.exports = {
           ephemeral: true
         });
       }
+
+      // Record the promotion time
+      await this.recordPromotion();
 
       const embed = this.createSuccessEmbed(redditResponse);
       await interaction.editReply({ embeds: [embed] });
@@ -202,6 +227,52 @@ module.exports = {
         content: errorMessage,
         ephemeral: true
       });
+    }
+  },
+
+  /**
+   * Gets the timestamp of the last promotion.
+   * @async
+   * @function getLastPromotion
+   * @returns {Promise<string|null>} The ISO timestamp of the last promotion or null if none found
+   */
+  async getLastPromotion() {
+    try {
+      const result = await pool.query(
+        `SELECT remind_at FROM main.reminder_recovery 
+         WHERE type = $1
+         ORDER BY remind_at DESC 
+         LIMIT 1`,
+        [REMINDER_TYPE]
+      );
+      return result.rows.length > 0 ? result.rows[0].remind_at : null;
+    } catch (error) {
+      logger.error('Error getting last promotion time:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Records the current promotion time.
+   * @async
+   * @function recordPromotion
+   */
+  async recordPromotion() {
+    try {
+      const reminderId = require('crypto').randomUUID();
+      const nextPromotionTime = dayjs().add(COOLDOWN_HOURS, 'hour').toISOString();
+      
+      await pool.query(
+        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) 
+         VALUES ($1, $2, $3)`,
+        [reminderId, nextPromotionTime, REMINDER_TYPE]
+      );
+      logger.debug('Recorded next promotion time:', { 
+        reminderId,
+        nextPromotionTime 
+      });
+    } catch (error) {
+      logger.error('Error recording promotion time:', error);
     }
   }
 }; 
