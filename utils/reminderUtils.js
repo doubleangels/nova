@@ -28,16 +28,18 @@ const PROMOTION_REMINDER_MESSAGE = " Time to promote the server! Use `/promote` 
  * Retrieves the latest reminder data from the database.
  * @async
  * @function getLatestReminderData
+ * @param {string} type - The type of reminder to retrieve ('bump' or 'promote')
  * @returns {Promise<Object|null>} The latest reminder data or null if none found
  * @throws {Error} If database query fails
  */
-async function getLatestReminderData() {
+async function getLatestReminderData(type) {
   try {
     const result = await pool.query(
       `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
-       WHERE remind_at > NOW() 
+       WHERE remind_at > NOW() AND type = $1
        ORDER BY remind_at ASC 
-       LIMIT 1`
+       LIMIT 1`,
+      [type]
     );
     return result.rows.length > 0 ? result.rows[0] : null;
   } catch (err) {
