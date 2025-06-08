@@ -13,9 +13,9 @@ const config = require('../config');
 const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
 
 const REDDIT_EMBED_COLOR = 0xFF4500;
-const TARGET_SUBREDDIT = 'findaserver';
+const TARGET_SUBREDDIT = 'DiscordAdvertising';
 
-const SERVER_TITLE = '[21+] 🎉 Welcome to Da Frens — a chill spot for real talk 🗣️, weird vibes 😜, spicy banter 🔥, and sweaty games 🎮. No drama 🚫, just laughs 😂. Like the internet 🌐, but with fewer clowns 🤡 — and way funnier ones 😎. (Adults only 🍻. Don\'t take life too seriously 🫠.)';
+const SERVER_TITLE = '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥';
 const SERVER_INVITE = 'https://discord.gg/dafrens';
 
 const reddit = new snoowrap({
