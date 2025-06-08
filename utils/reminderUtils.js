@@ -101,6 +101,14 @@ async function handleReminder(message, delay, type = 'bump') {
       [reminderId, scheduledTime.toISOString(), type]
     );
 
+    // Send confirmation message
+    const confirmationMessage = type === 'promote'
+      ? PROMOTION_CONFIRMATION_MESSAGE.replace('%s', unixTimestamp)
+      : CONFIRMATION_MESSAGE.replace('%s', unixTimestamp);
+    
+    await message.reply(`${CONFIRMATION_EMOJI} ${confirmationMessage}`);
+    logger.debug("Sent confirmation message:", { type, unixTimestamp });
+
     setTimeout(async () => {
       try {
         const reminderMessage = type === 'promote' 
