@@ -8,12 +8,20 @@ const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder } = 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
-const { logError, ERROR_MESSAGES } = require('../errors');
 
 const CONFIG_KEYS = {
   CHANNEL: "backup_mode_channel",
   ROLE: "backup_mode_role",
   ENABLED: "backup_mode_enabled"
+};
+
+const ERROR_MESSAGES = {
+  DATABASE_READ_ERROR: "⚠️ Failed to retrieve backup mode settings. Please try again later.",
+  DATABASE_WRITE_ERROR: "⚠️ Failed to save backup mode settings. Please try again later.",
+  INVALID_CHANNEL_TYPE: "⚠️ The channel must be a text channel for welcome messages.",
+  INVALID_ROLE: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
+  NO_SETTINGS_PROVIDED: "⚠️ Please provide at least one setting to update (channel, role, or enabled status).",
+  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
 };
 
 module.exports = {
@@ -75,7 +83,42 @@ module.exports = {
         await this.handleStatusSubcommand(interaction);
       }
     } catch (error) {
-      await this.handleError(interaction, error);
+      logger.error("Error in backup mode command:", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user?.id,
+        guildId: interaction.guild?.id
+      });
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "DATABASE_READ_ERROR") {
+        errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+      } else if (error.message === "DATABASE_WRITE_ERROR") {
+        errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+      } else if (error.message === "INVALID_CHANNEL_TYPE") {
+        errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
+      } else if (error.message === "INVALID_ROLE") {
+        errorMessage = ERROR_MESSAGES.INVALID_ROLE;
+      }
+      
+      try {
+        await interaction.editReply({ 
+          content: errorMessage,
+          ephemeral: true 
+        });
+      } catch (followUpError) {
+        logger.error("Failed to send error response for backup mode command:", {
+          error: followUpError.message,
+          originalError: error.message,
+          userId: interaction.user?.id
+        });
+        
+        await interaction.reply({ 
+          content: errorMessage,
+          ephemeral: true 
+        }).catch(() => {});
+      }
     }
   },
 
@@ -101,7 +144,7 @@ module.exports = {
       await this.updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings);
     } else {
       await interaction.editReply({
-        content: "⚠️ Please provide at least one setting to update (channel, role, or enabled status)."
+        content: ERROR_MESSAGES.NO_SETTINGS_PROVIDED
       });
     }
   },
@@ -351,50 +394,5 @@ module.exports = {
     embed.setFooter({ text: `Requested by ${interaction.user.tag}` });
     
     return embed;
-  },
-
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
-  async handleError(interaction, error) {
-    logError(error, 'backupmode', {
-      userId: interaction.user?.id,
-      guildId: interaction.guild?.id
-    });
-    
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
-    
-    if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
-    } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
-    } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = ERROR_MESSAGES.BACKUPMODE_INVALID_CHANNEL;
-    } else if (error.message === "INVALID_ROLE") {
-      errorMessage = ERROR_MESSAGES.BACKUPMODE_INVALID_ROLE;
-    }
-    
-    try {
-      await interaction.editReply({ 
-        content: errorMessage,
-        ephemeral: true 
-      });
-    } catch (followUpError) {
-      logger.error("Failed to send error response for backup mode command:", {
-        error: followUpError.message,
-        originalError: error.message,
-        userId: interaction.user?.id
-      });
-      
-      await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
-      }).catch(() => {
-      });
-    }
   }
 };

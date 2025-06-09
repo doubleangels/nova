@@ -53,10 +53,6 @@ const ERROR_MESSAGES = {
     CONFIG_INVALID: "⚠️ Invalid configuration detected. Please contact an administrator.",
     CONFIG_INCOMPLETE: "⚠️ Configuration is incomplete. Please contact an administrator.",
 
-    BACKUP_MODE_NO_SETTINGS: "⚠️ Please provide at least one setting to update (channel, role, or enabled status).",
-    BACKUP_MODE_INVALID_CHANNEL: "⚠️ The channel must be a text channel for welcome messages.",
-    BACKUP_MODE_INVALID_ROLE: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
-
     CAT_API_ERROR: "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.",
     CAT_NETWORK_ERROR: "⚠️ Couldn't connect to the cat image service. Please check your internet connection.",
     CAT_INVALID_IMAGE: "⚠️ The cat service didn't send a proper image. Please try again.",
