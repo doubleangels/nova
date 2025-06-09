@@ -9,7 +9,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
@@ -18,6 +18,25 @@ const REQUEST_TIMEOUT = 10000;
 const SPOTIFY_SEARCH_MAX_RESULTS = 10;
 const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150;
 const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000;
+
+/**
+ * Error messages specific to the Spotify command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching Spotify.",
+    API_ERROR: "⚠️ Failed to search Spotify. Please try again later.",
+    API_RATE_LIMIT: "⚠️ Spotify API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ Spotify API access denied. Please check API configuration.",
+    NO_RESULTS: "⚠️ No results found for your search.",
+    INVALID_TRACK: "⚠️ Invalid track specified.",
+    AUTH_ERROR: "⚠️ Failed to authenticate with Spotify.",
+    INVALID_QUERY: "⚠️ Please provide a valid search query.",
+    SEARCH_FAILED: "⚠️ Failed to perform search.",
+    TOKEN_ERROR: "⚠️ Failed to get Spotify access token."
+};
 
 /**
  * We handle the /spotify command.
@@ -145,7 +164,7 @@ module.exports = {
 
       if (!results || results.length === 0) {
         return await interaction.editReply({
-          content: ERROR_MESSAGES.SPOTIFY_NO_RESULTS,
+          content: ERROR_MESSAGES.NO_RESULTS,
           ephemeral: true
         });
       }
@@ -632,17 +651,17 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.SPOTIFY_API_ERROR;
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (error.message === "API_RATE_LIMIT") {
       errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
       errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.SPOTIFY_NO_RESULTS;
+      errorMessage = ERROR_MESSAGES.NO_RESULTS;
     } else if (error.message === "INVALID_TRACK") {
-      errorMessage = ERROR_MESSAGES.SPOTIFY_INVALID_TRACK;
+      errorMessage = ERROR_MESSAGES.INVALID_TRACK;
     } else if (error.message === "AUTH_ERROR") {
-      errorMessage = ERROR_MESSAGES.SPOTIFY_AUTH_ERROR;
+      errorMessage = ERROR_MESSAGES.AUTH_ERROR;
     }
     
     try {

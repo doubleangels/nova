@@ -10,7 +10,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const snoowrap = require('snoowrap');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 const { Pool } = require('pg');
 const dayjs = require('dayjs');
 
@@ -26,6 +26,23 @@ const REMINDER_TYPE = 'promote';
 
 const SERVER_TITLE = '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥';
 const SERVER_INVITE = 'https://discord.gg/dafrens';
+
+/**
+ * Error messages specific to the Promote command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while promoting the server.",
+    API_ERROR: "⚠️ Failed to post to Reddit. Please try again later.",
+    API_RATE_LIMIT: "⚠️ Reddit API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ Reddit API access denied. Please check API configuration.",
+    FLAIR_NOT_FOUND: "⚠️ Could not find the required flair. Please try again later or contact support.",
+    POST_FAILED: "⚠️ Failed to submit post to Reddit.",
+    COOLDOWN_ACTIVE: "⚠️ Please wait before promoting again.",
+    DATABASE_ERROR: "⚠️ Failed to record promotion time. Please try again later."
+};
 
 const reddit = new snoowrap({
   userAgent: 'Discord Bot Server Promoter',
@@ -215,7 +232,23 @@ module.exports = {
   async handleError(interaction, error) {
     logger.error('Error in promote command:', error);
     
-    const errorMessage = getErrorMessage(error) || ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+    } else if (error.message === "API_ACCESS_DENIED") {
+      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+    } else if (error.message === "FLAIR_NOT_FOUND") {
+      errorMessage = ERROR_MESSAGES.FLAIR_NOT_FOUND;
+    } else if (error.message === "POST_FAILED") {
+      errorMessage = ERROR_MESSAGES.POST_FAILED;
+    } else if (error.message === "DATABASE_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
+    }
     
     if (interaction.replied || interaction.deferred) {
       await interaction.editReply({

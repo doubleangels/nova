@@ -13,7 +13,7 @@ dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,
@@ -23,6 +23,22 @@ const pool = new Pool({
 const REMINDER_TYPE = 'bump';
 const DB_KEY_CHANNEL = 'reminder_channel';
 const DB_KEY_ROLE = 'reminder_role';
+
+/**
+ * Error messages specific to the Reminder command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing reminders.",
+    DATABASE_READ_ERROR: "⚠️ Failed to retrieve reminder settings. Please try again later.",
+    DATABASE_WRITE_ERROR: "⚠️ Failed to update reminder settings. Please try again later.",
+    INVALID_CHANNEL_TYPE: "⚠️ Please select a text channel for reminders.",
+    CONFIG_INCOMPLETE: "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.",
+    CHANNEL_NOT_FOUND: "⚠️ The reminder channel could not be found.",
+    ROLE_NOT_FOUND: "⚠️ The reminder role could not be found.",
+    SETUP_FAILED: "⚠️ Failed to set up reminder configuration.",
+    STATUS_CHECK_FAILED: "⚠️ Failed to check reminder status."
+};
 
 /**
  * Module for the /reminder command.
@@ -289,9 +305,9 @@ module.exports = {
     } else if (error.message === "DATABASE_WRITE_ERROR") {
       errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
     } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = ERROR_MESSAGES.REMINDER_INVALID_CHANNEL;
+      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
     } else if (error.message === "CONFIG_INCOMPLETE") {
-      errorMessage = ERROR_MESSAGES.REMINDER_CONFIG_INCOMPLETE;
+      errorMessage = ERROR_MESSAGES.CONFIG_INCOMPLETE;
     }
     
     try {

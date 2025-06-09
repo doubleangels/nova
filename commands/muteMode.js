@@ -8,13 +8,27 @@ const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const DEFAULT_TIME_LIMIT = 2;
 const MIN_TIME_LIMIT = 1;
 const MAX_TIME_LIMIT = 72;
 const DB_KEY_ENABLED = "mute_mode_enabled";
 const DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
+
+/**
+ * Error messages specific to the Mute Mode command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing mute mode.",
+    DATABASE_READ_ERROR: "⚠️ Failed to retrieve mute mode settings. Please try again later.",
+    DATABASE_WRITE_ERROR: "⚠️ Failed to update mute mode settings. Please try again later.",
+    INVALID_TIME_LIMIT: "⚠️ Invalid time limit specified. Using default value.",
+    UPDATE_FAILED: "⚠️ Failed to update mute mode.",
+    QUERY_FAILED: "⚠️ Failed to query mute mode.",
+    TOGGLE_FAILED: "⚠️ Failed to toggle mute mode."
+};
 
 /**
  * We handle the mutemode command.
@@ -309,7 +323,7 @@ module.exports = {
     } else if (error.message === "DATABASE_WRITE_ERROR") {
       errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
     } else if (error.message === "INVALID_TIME_LIMIT") {
-      errorMessage = ERROR_MESSAGES.MUTEMODE_INVALID_TIME;
+      errorMessage = ERROR_MESSAGES.INVALID_TIME_LIMIT;
     }
     
     try {
