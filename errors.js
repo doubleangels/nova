@@ -53,12 +53,6 @@ const ERROR_MESSAGES = {
     CONFIG_INVALID: "⚠️ Invalid configuration detected. Please contact an administrator.",
     CONFIG_INCOMPLETE: "⚠️ Configuration is incomplete. Please contact an administrator.",
 
-    CHANGENICKNAME_INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to manage nicknames in this server.",
-    CHANGENICKNAME_TOO_LONG: "⚠️ Nickname must be 32 characters or less.",
-    CHANGENICKNAME_OWNER: "⚠️ Cannot change the server owner's nickname.",
-    CHANGENICKNAME_BOT: "⚠️ Cannot change the bot's nickname.",
-    CHANGENICKNAME_ROLE_HIERARCHY: "⚠️ You cannot change the nickname of users with a higher or equal role.",
-
     DOG_API_ERROR: "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.",
     DOG_NO_IMAGE: "⚠️ Couldn't find a dog picture. Try again later.",
     DOG_IMAGE_FETCH_ERROR: "⚠️ Couldn't download the dog picture. Try again later.",
@@ -230,7 +224,7 @@ function getErrorMessage(error, context = '') {
  * @param {Error} error - The error object
  * @param {Object} [additionalInfo={}] - Additional information to log
  */
-function logError(context, error, additionalInfo = {}) {
+function logError(error, context, additionalInfo = {}) {
     logger.error(`${context}:`, {
         error: error.message,
         stack: error.stack,

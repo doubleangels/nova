@@ -7,7 +7,24 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the change nickname command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    BOT_MISSING_PERMISSIONS: "⚠️ I don't have permission to manage nicknames in this server.",
+    USER_NOT_MANAGEABLE: "⚠️ I cannot modify this user's nickname.",
+    INVALID_NICKNAME_LENGTH: "⚠️ Nickname must be between 1 and 32 characters.",
+    CHANGENICKNAME_INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to manage nicknames in this server.",
+    CHANGENICKNAME_TOO_LONG: "⚠️ Nickname must be 32 characters or less.",
+    CHANGENICKNAME_OWNER: "⚠️ Cannot change the server owner's nickname.",
+    CHANGENICKNAME_BOT: "⚠️ Cannot change the bot's nickname.",
+    CHANGENICKNAME_ROLE_HIERARCHY: "⚠️ You cannot change the nickname of users with a higher or equal role.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while changing the nickname."
+};
 
 /**
  * We handle the changenickname command.
