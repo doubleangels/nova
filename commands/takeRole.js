@@ -9,20 +9,17 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the Take Role command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while removing the role.",
-    INSUFFICIENT_PERMISSIONS: "⚠️ You don't have permission to remove this role.",
-    MANAGED_ROLE: "⚠️ Cannot remove a managed role.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
-    ROLE_NOT_ASSIGNED: "⚠️ The user does not have this role.",
-    DISCORD_ROLE_NOT_ASSIGNED: "⚠️ The user does not have this role.",
-    BOT_PERMISSIONS: "⚠️ I don't have permission to manage roles.",
-    ROLE_HIERARCHY: "⚠️ Cannot remove a role that is higher than your highest role."
-};
+const ROLE_EMBED_COLOR = '#FF0000';
+const ROLE_EMBED_TITLE = 'Role Removed';
+const ROLE_EMBED_FOOTER_PREFIX = 'Updated by';
+
+const ROLE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while removing the role.";
+const ROLE_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ You don't have permission to remove this role.";
+const ROLE_ERROR_MANAGED_ROLE = "⚠️ Cannot remove a managed role.";
+const ROLE_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
+const ROLE_ERROR_NOT_ASSIGNED = "⚠️ The user does not have this role.";
+const ROLE_ERROR_BOT_PERMISSIONS = "⚠️ I don't have permission to manage roles.";
+const ROLE_ERROR_HIERARCHY = "⚠️ Cannot remove a role that is higher than your highest role.";
 
 /**
  * We handle the takerole command.
@@ -82,7 +79,7 @@ module.exports = {
       const validationResult = await this.validateRoleRemoval(interaction, role, targetUser);
       
       if (!validationResult || !validationResult.valid) {
-        const errorMessage = validationResult?.message || ERROR_MESSAGES.UNEXPECTED_ERROR;
+        const errorMessage = validationResult?.message || ROLE_ERROR_UNEXPECTED;
         await interaction.editReply({
           content: errorMessage,
           ephemeral: true
@@ -111,16 +108,16 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = ROLE_ERROR_UNEXPECTED;
     
     if (error.message === "INSUFFICIENT_PERMISSIONS") {
-      errorMessage = ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS;
+      errorMessage = ROLE_ERROR_INSUFFICIENT_PERMISSIONS;
     } else if (error.message === "MANAGED_ROLE") {
-      errorMessage = ERROR_MESSAGES.MANAGED_ROLE;
+      errorMessage = ROLE_ERROR_MANAGED_ROLE;
     } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+      errorMessage = ROLE_ERROR_USER_NOT_FOUND;
     } else if (error.message === "ROLE_NOT_ASSIGNED") {
-      errorMessage = ERROR_MESSAGES.ROLE_NOT_ASSIGNED;
+      errorMessage = ROLE_ERROR_NOT_ASSIGNED;
     }
     
     try {
@@ -160,7 +157,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
+        message: ROLE_ERROR_INSUFFICIENT_PERMISSIONS
       };
     }
 
@@ -171,7 +168,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: ERROR_MESSAGES.MANAGED_ROLE
+        message: ROLE_ERROR_MANAGED_ROLE
       };
     }
     
@@ -180,7 +177,7 @@ module.exports = {
     if (!targetMember) {
       return {
         valid: false,
-        message: ERROR_MESSAGES.USER_NOT_FOUND
+        message: ROLE_ERROR_USER_NOT_FOUND
       };
     }
 
@@ -192,7 +189,7 @@ module.exports = {
 
       return {
         valid: false,
-        message: ERROR_MESSAGES.DISCORD_ROLE_NOT_ASSIGNED
+        message: ROLE_ERROR_NOT_ASSIGNED
       };
     }
     
@@ -205,7 +202,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: ERROR_MESSAGES.ROLE_HIERARCHY
+        message: ROLE_ERROR_HIERARCHY
       };
     }
     
@@ -219,7 +216,7 @@ module.exports = {
         
         return {
           valid: false,
-          message: ERROR_MESSAGES.ROLE_HIERARCHY
+          message: ROLE_ERROR_HIERARCHY
         };
       }
     }

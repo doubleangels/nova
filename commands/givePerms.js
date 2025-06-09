@@ -12,28 +12,25 @@ const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the give permissions command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while granting permissions.",
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to create or assign roles.",
-    INVALID_ROLE_NAME: "⚠️ Please provide a valid role name.",
-    INVALID_COLOR: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
-    ROLE_NOT_FOUND: "⚠️ Required role not found. Please contact an administrator."
-};
+const PERMS_FREN_ROLE_ID = config.givePermsFrenRoleId;
+const PERMS_POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
+const PERMS_MAX_ROLE_NAME_LENGTH = 100;
 
-const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
-const FREN_ROLE_ID = config.givePermsFrenRoleId;
-const MAX_ROLE_NAME_LENGTH = 100;
+const PERMS_EMBED_TITLE = 'Permissions Granted';
+const PERMS_EMBED_FOOTER_PREFIX = "Updated by";
 
-if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
+const PERMS_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const PERMS_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ I don't have permission to create or assign roles.";
+const PERMS_ERROR_INVALID_ROLE_NAME = "⚠️ Please provide a valid role name.";
+const PERMS_ERROR_INVALID_COLOR = "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.";
+const PERMS_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
+const PERMS_ERROR_ROLE_NOT_FOUND = "⚠️ Required role not found. Please contact an administrator.";
+const PERMS_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while granting permissions.";
+
+if (!PERMS_POSITION_ABOVE_ROLE_ID || !PERMS_FREN_ROLE_ID) {
     logger.error("Missing required configuration for /giveperms command:", {
-        positionAboveRoleId: POSITION_ABOVE_ROLE_ID,
-        frenRoleId: FREN_ROLE_ID
+        positionAboveRoleId: PERMS_POSITION_ABOVE_ROLE_ID,
+        frenRoleId: PERMS_FREN_ROLE_ID
     });
 }
 
@@ -76,13 +73,13 @@ module.exports = {
      * @throws {Error} If role creation or assignment fails
      */
     async execute(interaction) {
-        if (!POSITION_ABOVE_ROLE_ID || !FREN_ROLE_ID) {
+        if (!PERMS_POSITION_ABOVE_ROLE_ID || !PERMS_FREN_ROLE_ID) {
             logger.error("Command execution failed due to missing configuration:", {
                 commandName: 'giveperms',
                 guildId: interaction.guildId
             });
             return await interaction.reply({
-                content: ERROR_MESSAGES.CONFIG_MISSING,
+                content: PERMS_ERROR_CONFIG_MISSING,
                 ephemeral: true
             });
         }
@@ -117,7 +114,7 @@ module.exports = {
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
-                    content: ERROR_MESSAGES.USER_NOT_FOUND,
+                    content: PERMS_ERROR_USER_NOT_FOUND,
                     ephemeral: true
                 });
             }
@@ -126,7 +123,7 @@ module.exports = {
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided:", { colorHex });
                 return await interaction.editReply({
-                    content: ERROR_MESSAGES.INVALID_COLOR,
+                    content: PERMS_ERROR_INVALID_COLOR,
                     ephemeral: true
                 });
             }
@@ -150,13 +147,13 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(colorDecimal)
-                .setTitle('Permissions Granted')
+                .setTitle(PERMS_EMBED_TITLE)
                 .setDescription(`✅ Successfully gave <@${targetUser.id}> permissions in the server!`)
                 .addFields(
                     { name: 'New Role', value: roleName.trim(), inline: true },
                     { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }
                 )
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setFooter({ text: `${PERMS_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -180,18 +177,18 @@ module.exports = {
             logger.warn("Invalid role name provided.", { roleName });
             return {
                 success: false,
-                message: ERROR_MESSAGES.INVALID_ROLE_NAME
+                message: PERMS_ERROR_INVALID_ROLE_NAME
             };
         }
 
-        if (roleName.length > MAX_ROLE_NAME_LENGTH) {
+        if (roleName.length > PERMS_MAX_ROLE_NAME_LENGTH) {
             logger.warn("Role name exceeds maximum length.", { 
                 roleName, 
-                maxLength: MAX_ROLE_NAME_LENGTH 
+                maxLength: PERMS_MAX_ROLE_NAME_LENGTH 
             });
             return {
                 success: false,
-                message: `Role name must be ${MAX_ROLE_NAME_LENGTH} characters or less.`
+                message: `Role name must be ${PERMS_MAX_ROLE_NAME_LENGTH} characters or less.`
             };
         }
         
@@ -210,21 +207,21 @@ module.exports = {
      * @throws {Error} If role creation or assignment fails
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        const positionRole = interaction.guild.roles.cache.get(POSITION_ABOVE_ROLE_ID);
+        const positionRole = interaction.guild.roles.cache.get(PERMS_POSITION_ABOVE_ROLE_ID);
         if (!positionRole) {
-            logger.error("Reference role not found.", { roleId: POSITION_ABOVE_ROLE_ID });
+            logger.error("Reference role not found.", { roleId: PERMS_POSITION_ABOVE_ROLE_ID });
             return {
                 success: false,
-                message: ERROR_MESSAGES.ROLE_NOT_FOUND
+                message: PERMS_ERROR_ROLE_NOT_FOUND
             };
         }
         
-        const additionalRole = interaction.guild.roles.cache.get(FREN_ROLE_ID);
+        const additionalRole = interaction.guild.roles.cache.get(PERMS_FREN_ROLE_ID);
         if (!additionalRole) {
-            logger.error("Additional role not found.", { roleId: FREN_ROLE_ID });
+            logger.error("Additional role not found.", { roleId: PERMS_FREN_ROLE_ID });
             return {
                 success: false,
-                message: ERROR_MESSAGES.ROLE_NOT_FOUND
+                message: PERMS_ERROR_ROLE_NOT_FOUND
             };
         }
         
@@ -236,7 +233,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
+                message: PERMS_ERROR_INSUFFICIENT_PERMISSIONS
             };
         }
         
@@ -281,18 +278,18 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        let errorMessage = PERMS_ERROR_UNEXPECTED;
         
         if (error.message === "CONFIG_MISSING") {
-            errorMessage = ERROR_MESSAGES.CONFIG_MISSING;
+            errorMessage = PERMS_ERROR_CONFIG_MISSING;
         } else if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS;
+            errorMessage = PERMS_ERROR_INSUFFICIENT_PERMISSIONS;
         } else if (error.message === "INVALID_ROLE_NAME") {
-            errorMessage = ERROR_MESSAGES.INVALID_ROLE_NAME;
+            errorMessage = PERMS_ERROR_INVALID_ROLE_NAME;
         } else if (error.message === "INVALID_COLOR") {
-            errorMessage = ERROR_MESSAGES.INVALID_COLOR;
+            errorMessage = PERMS_ERROR_INVALID_COLOR;
         } else if (error.message === "USER_NOT_FOUND") {
-            errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+            errorMessage = PERMS_ERROR_USER_NOT_FOUND;
         }
         
         try {

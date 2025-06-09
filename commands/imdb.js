@@ -11,30 +11,24 @@ const axios = require('axios');
 const config = require('../config');
 const { logError } = require('../errors');
 
-const OMDB_API_URL = 'https://www.omdbapi.com/';
+const IMDB_API_URL = 'https://www.omdbapi.com/';
 const IMDB_BASE_URL = 'https://www.imdb.com/title/';
-const EMBED_COLOR = 0xFFD700;
-const REQUEST_TIMEOUT = 10000;
+const IMDB_REQUEST_TIMEOUT = 10000;
 
-/**
- * Error messages specific to the IMDb command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    INVALID_INPUT: "⚠️ Please provide a valid title.",
-    INVALID_YEAR_FORMAT: "⚠️ Year must be in the format YYYY (e.g., 2021).",
-    NO_RESULTS_FOUND: "⚠️ No results found for your search.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching.",
-    API_ERROR: "⚠️ Failed to fetch movie information. Please try again later.",
-    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    IMDB_API_ERROR: "⚠️ Failed to fetch movie information from OMDb. Please try again later.",
-    IMDB_NO_RESULTS: "⚠️ No results found for your search.",
-    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again later.",
-    API_ACCESS_DENIED: "⚠️ API access denied. Please check API configuration.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Rate limit exceeded. Please try again later."
-};
+const IMDB_EMBED_COLOR = 0xFFD700;
+const IMDB_EMBED_FOOTER = "Powered by OMDb API";
+
+const IMDB_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const IMDB_ERROR_INVALID_INPUT = "⚠️ Please provide a valid title.";
+const IMDB_ERROR_INVALID_YEAR = "⚠️ Year must be in the format YYYY (e.g., 2021).";
+const IMDB_ERROR_NO_RESULTS = "⚠️ No results found for your search.";
+const IMDB_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching.";
+const IMDB_ERROR_API = "⚠️ Failed to fetch movie information. Please try again later.";
+const IMDB_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
+const IMDB_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const IMDB_ERROR_API_ACCESS = "⚠️ API access denied. Please check API configuration.";
+const IMDB_ERROR_TIMEOUT = "⚠️ The request timed out. Please try again later.";
+const IMDB_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Rate limit exceeded. Please try again later.";
 
 /**
  * We handle the imdb command.
@@ -87,7 +81,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: IMDB_ERROR_CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -155,7 +149,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: ERROR_MESSAGES.INVALID_INPUT
+        message: IMDB_ERROR_INVALID_INPUT
       };
     }
 
@@ -166,7 +160,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: ERROR_MESSAGES.INVALID_YEAR_FORMAT
+        message: IMDB_ERROR_INVALID_YEAR
       };
     }
     
@@ -207,11 +201,11 @@ module.exports = {
       params.append('y', searchParams.year);
     }
     
-    const requestUrl = `${OMDB_API_URL}?${params.toString()}`;
+    const requestUrl = `${IMDB_API_URL}?${params.toString()}`;
     
     try {
       const response = await axios.get(requestUrl, { 
-        timeout: REQUEST_TIMEOUT 
+        timeout: IMDB_REQUEST_TIMEOUT 
       });
       
       logger.debug("OMDb API response received:", {
@@ -235,7 +229,7 @@ module.exports = {
         });
         return {
           error: true,
-          message: ERROR_MESSAGES.NO_RESULTS_FOUND
+          message: IMDB_ERROR_NO_RESULTS
         };
       }
     } catch (apiError) {
@@ -271,7 +265,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle(`🎬 ${movieTitle} (${year})`)
       .setDescription(`📜 **Plot:** ${plot}`)
-      .setColor(EMBED_COLOR)
+      .setColor(IMDB_EMBED_COLOR)
       .addFields(
         { name: "🎭 Genre", value: `🎞 ${genre}`, inline: true },
         { name: "⭐ IMDb Rating", value: `🌟 ${imdbRating}`, inline: true },
@@ -280,7 +274,7 @@ module.exports = {
         { name: "🎭 Actors", value: actors, inline: false },
         { name: "🔗 IMDb Link", value: `[Click Here](${imdbLink})`, inline: false }
       )
-      .setFooter({ text: "Powered by OMDb API" });
+      .setFooter({ text: IMDB_EMBED_FOOTER });
     
     if (poster) {
       embed.setThumbnail(poster);
@@ -302,26 +296,26 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = IMDB_ERROR_UNEXPECTED;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.IMDB_API_ERROR;
+      errorMessage = IMDB_ERROR_API;
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      errorMessage = IMDB_ERROR_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = IMDB_ERROR_NETWORK;
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.IMDB_NO_RESULTS;
+      errorMessage = IMDB_ERROR_NO_RESULTS;
     } else if (error.message === "INVALID_TITLE") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = IMDB_ERROR_API;
     } else if (error.code === 'ECONNABORTED') {
-      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+      errorMessage = IMDB_ERROR_TIMEOUT;
     } else if (error.response?.status === 403) {
-      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+      errorMessage = IMDB_ERROR_API_ACCESS;
     } else if (error.response?.status === 429) {
-      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+      errorMessage = IMDB_ERROR_RATE_LIMIT_EXCEEDED;
     } else if (error.response?.status >= 500) {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = IMDB_ERROR_API;
     }
     
     try {

@@ -12,33 +12,33 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const API_URL = 'https://www.googleapis.com/customsearch/v1';
-const DEFAULT_RESULTS = 5;
-const MIN_RESULTS = 1;
-const MAX_RESULTS = 10;
-const COLLECTOR_TIMEOUT = 120000;
-const EMBED_COLOR = 0x4285F4;
-const REQUEST_TIMEOUT = 10000;
-const SAFE_SEARCH = 'off';
+const SEARCH_API_URL = 'https://www.googleapis.com/customsearch/v1';
+const SEARCH_API_KEY = config.googleApiKey;
+const SEARCH_CSE_ID = config.searchEngineId;
+const SEARCH_SAFE_SEARCH = 'off';
 
-const GOOGLE_API_KEY = config.googleApiKey;
-const GOOGLE_CSE_ID = config.searchEngineId;
+const SEARCH_DEFAULT_RESULTS = 5;
+const SEARCH_MAX_RESULTS = 10;
+const SEARCH_MIN_RESULTS = 1;
+const SEARCH_COLLECTOR_TIMEOUT = 120000;
+const SEARCH_REQUEST_TIMEOUT = 10000;
 
-/**
- * Error messages specific to the Google Search command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    INVALID_QUERY: "⚠️ Please provide a valid search query.",
-    NO_RESULTS_FOUND: "⚠️ No results found for your search query.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching.",
-    API_ERROR: "⚠️ Failed to fetch search results. Please try again later.",
-    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    GOOGLE_API_ERROR: "⚠️ Failed to fetch search results from Google. Please try again later.",
-    GOOGLE_NO_RESULTS: "⚠️ No results found for your search query."
-};
+const SEARCH_EMBED_COLOR = 0x4285F4;
+const SEARCH_EMBED_FOOTER = "Powered by Google Search";
+const SEARCH_EMBED_PREV_LABEL = "Previous";
+const SEARCH_EMBED_NEXT_LABEL = "Next";
+const SEARCH_EMBED_PREV_EMOJI = "◀️";
+const SEARCH_EMBED_NEXT_EMOJI = "▶️";
+
+const SEARCH_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const SEARCH_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search query.";
+const SEARCH_ERROR_NO_RESULTS = "⚠️ No results found for your search query.";
+const SEARCH_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching.";
+const SEARCH_ERROR_API = "⚠️ Failed to fetch search results. Please try again later.";
+const SEARCH_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
+const SEARCH_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const SEARCH_ERROR_GOOGLE_API = "⚠️ Failed to fetch search results from Google. Please try again later.";
+const SEARCH_ERROR_GOOGLE_NO_RESULTS = "⚠️ No results found for your search query.";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -53,7 +53,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription(`How many results do you want? (${MIN_RESULTS}-${MAX_RESULTS}, Default: ${DEFAULT_RESULTS})`)
+        .setDescription(`How many results do you want? (${SEARCH_MIN_RESULTS}-${SEARCH_MAX_RESULTS}, Default: ${SEARCH_DEFAULT_RESULTS})`)
         .setRequired(false)
     ),
 
@@ -72,13 +72,13 @@ module.exports = {
     });
     
     try {
-      if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID) {
+      if (!SEARCH_API_KEY || !SEARCH_CSE_ID) {
         logger.error("Missing Google API configuration:", {
-          hasApiKey: !!GOOGLE_API_KEY,
-          hasCseId: !!GOOGLE_CSE_ID
+          hasApiKey: !!SEARCH_API_KEY,
+          hasCseId: !!SEARCH_CSE_ID
         });
         return await interaction.editReply({
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: SEARCH_ERROR_CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -88,13 +88,13 @@ module.exports = {
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
-        query, resultsCount, DEFAULT_RESULTS, MIN_RESULTS, MAX_RESULTS
+        query, resultsCount, SEARCH_DEFAULT_RESULTS, SEARCH_MIN_RESULTS, SEARCH_MAX_RESULTS
       );
 
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters:", { reason: searchParams.error });
         return await interaction.editReply({
-          content: ERROR_MESSAGES.INVALID_QUERY,
+          content: SEARCH_ERROR_INVALID_QUERY,
           ephemeral: true
         });
       }
@@ -116,7 +116,7 @@ module.exports = {
       if (searchResults.items.length === 0) {
         logger.warn("No search results found for query:", { query: searchParams.query });
         return await interaction.editReply({ 
-          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
+          content: SEARCH_ERROR_NO_RESULTS,
           ephemeral: true
         });
       }
@@ -126,14 +126,14 @@ module.exports = {
         searchResults.items,
         index => this.generateResultEmbed(searchResults.items, index),
         'search',
-        COLLECTOR_TIMEOUT,
+        SEARCH_COLLECTOR_TIMEOUT,
         logger,
         {
           buttonStyle: ButtonStyle.Primary,
-          prevLabel: 'Previous',
-          nextLabel: 'Next',
-          prevEmoji: '◀️',
-          nextEmoji: '▶️'
+          prevLabel: SEARCH_EMBED_PREV_LABEL,
+          nextLabel: SEARCH_EMBED_NEXT_LABEL,
+          prevEmoji: SEARCH_EMBED_PREV_EMOJI,
+          nextEmoji: SEARCH_EMBED_NEXT_EMOJI
         }
       );
     } catch (error) {
@@ -155,14 +155,14 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = SEARCH_ERROR_UNEXPECTED;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.GOOGLE_API_ERROR;
+      errorMessage = SEARCH_ERROR_API;
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      errorMessage = SEARCH_ERROR_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = SEARCH_ERROR_NETWORK;
     }
     
     try {
@@ -195,21 +195,21 @@ module.exports = {
    */
   async fetchSearchResults(query, resultsCount) {
     const params = new URLSearchParams({
-      key: GOOGLE_API_KEY,
-      cx: GOOGLE_CSE_ID,
+      key: SEARCH_API_KEY,
+      cx: SEARCH_CSE_ID,
       q: query,
       num: resultsCount.toString(),
       start: "1",
-      safe: SAFE_SEARCH
+      safe: SEARCH_SAFE_SEARCH
     });
-    const requestUrl = `${API_URL}?${params.toString()}`;
+    const requestUrl = `${SEARCH_API_URL}?${params.toString()}`;
     logger.debug("Preparing Google API request:", { 
       searchQuery: query,
       resultsRequested: resultsCount
     });
 
     try {
-      const response = await axios.get(requestUrl, { timeout: REQUEST_TIMEOUT });
+      const response = await axios.get(requestUrl, { timeout: SEARCH_REQUEST_TIMEOUT });
       logger.debug("Google API response received:", { 
         status: response.status,
         itemsReturned: response.data?.items?.length || 0
@@ -249,7 +249,7 @@ module.exports = {
     return new EmbedBuilder()
       .setTitle(`🔍 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}\n🔗 [Read More](${link})`)
-      .setColor(EMBED_COLOR)
-      .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Search` });
+      .setColor(SEARCH_EMBED_COLOR)
+      .setFooter({ text: `Result ${index + 1} of ${items.length} • ${SEARCH_EMBED_FOOTER}` });
   }
 };

@@ -14,24 +14,24 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the fix command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fixing the reminder.",
-    DATABASE_ERROR: "⚠️ Failed to save reminder data to the database. Please try again later.",
-    CHANNEL_NOT_FOUND: "⚠️ The reminder channel could not be found.",
-    CONFIG_INCOMPLETE: "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first."
-};
+const FIX_DB_TABLE = 'main.reminder_recovery';
+const FIX_DB_TYPE = 'bump';
+
+const FIX_EMBED_COLOR = '#cd41ff';
+const FIX_EMBED_FOOTER_PREFIX = "Updated by";
+const FIX_EMBED_TITLE = 'Disboard Bump Reminder Fixed';
+
+const FIX_ERROR_CHANNEL_NOT_FOUND = "⚠️ The reminder channel could not be found.";
+const FIX_ERROR_CONFIG_INCOMPLETE = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
+const FIX_ERROR_DATABASE = "⚠️ Failed to save reminder data to the database. Please try again later.";
+const FIX_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fixing the reminder.";
+
+const FIX_DELAY_SECONDS = 7200;
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
-
-const SERVICE_TYPE = 'bump';
-const DELAY_SECONDS = 7200;
 
 /**
  * We handle the fix command.
@@ -71,14 +71,14 @@ module.exports = {
 
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
-        await interaction.editReply(ERROR_MESSAGES.CONFIG_INCOMPLETE);
+        await interaction.editReply(FIX_ERROR_CONFIG_INCOMPLETE);
         return;
       }
 
       const existingReminder = await this.checkExistingReminder();
       
       const reminderId = randomUUID();
-      const scheduledTime = dayjs().add(DELAY_SECONDS, 'second');
+      const scheduledTime = dayjs().add(FIX_DELAY_SECONDS, 'second');
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
       const channel = await interaction.client.channels.fetch(reminderChannelId);
@@ -87,10 +87,10 @@ module.exports = {
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
       const embed = new EmbedBuilder()
-          .setColor('#cd41ff')
-          .setTitle('Disboard Bump Reminder Fixed')
+          .setColor(FIX_EMBED_COLOR)
+          .setTitle(FIX_EMBED_TITLE)
           .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
-          .setFooter({ text: `Updated by ${interaction.user.tag}` })
+          .setFooter({ text: `${FIX_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
           .setTimestamp();
       
       if (existingReminder) {
@@ -141,18 +141,18 @@ module.exports = {
       // Clean up existing reminders first
       await pool.query(
         `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
-        [SERVICE_TYPE]
+        [FIX_DB_TYPE]
       );
-      logger.debug("Cleaned up existing reminders of type:", SERVICE_TYPE);
+      logger.debug("Cleaned up existing reminders of type:", FIX_DB_TYPE);
 
       await pool.query(
         `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
-        [reminderId, scheduledTime, SERVICE_TYPE]
+        [reminderId, scheduledTime, FIX_DB_TYPE]
       );
       logger.debug("Reminder data saved to database:", { 
         reminderId: reminderId, 
         scheduledTime: scheduledTime,
-        type: SERVICE_TYPE 
+        type: FIX_DB_TYPE 
       });
     } catch (error) {
       logger.error("Database error while saving reminder:", { error: error.message, reminderId: reminderId });
@@ -173,12 +173,12 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = FIX_ERROR_UNEXPECTED;
     
     if (error.message === "DATABASE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
+      errorMessage = FIX_ERROR_DATABASE;
     } else if (error.message === "CHANNEL_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.CHANNEL_NOT_FOUND;
+      errorMessage = FIX_ERROR_CHANNEL_NOT_FOUND;
     }
     
     try {

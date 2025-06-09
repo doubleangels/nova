@@ -11,35 +11,31 @@ const axios = require('axios');
 const he = require('he');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the Wikipedia command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching Wikipedia.",
-    API_ERROR: "⚠️ Failed to retrieve article from Wikipedia. Please try again later.",
-    API_RATE_LIMIT: "⚠️ Wikipedia API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    API_ACCESS_DENIED: "⚠️ Wikipedia API access denied. Please check API configuration.",
-    NO_RESULTS_FOUND: "⚠️ No articles found matching your search.",
-    INVALID_QUERY: "⚠️ Please provide a valid search term.",
-    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
-    ARTICLE_NOT_FOUND: "⚠️ The requested article could not be found.",
-    INVALID_ARTICLE: "⚠️ Invalid article specified.",
-    SEARCH_FAILED: "⚠️ Failed to search Wikipedia articles."
-};
+const WIKI_API_BASE_URL = 'https://en.wikipedia.org/w/api.php';
+const WIKI_API_TIMEOUT = 5000;
+const WIKI_CACHE_TTL = 1000 * 60 * 60;
 
-const WIKIPEDIA_API_TIMEOUT = 5000; 
-const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF; 
-const WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
-const WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
-const WIKIPEDIA_HTML_TAG_REGEX = /<[^>]*>/g;
-const WIKIPEDIA_MAX_RESULTS = 5;
-const WIKIPEDIA_CACHE_TTL = 1000 * 60 * 60;
-const WIKIPEDIA_API_BASE_URL = 'https://en.wikipedia.org/w/api.php';
-const WIKIPEDIA_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
-const WIKIPEDIA_FOOTER_TEXT = 'Powered by Wikipedia API';
+const WIKI_MAX_RESULTS = 5;
+const WIKI_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
+const WIKI_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
+const WIKI_HTML_TAG_REGEX = /<[^>]*>/g;
+
+const WIKI_EMBED_COLOR = 0xFFFFFF;
+const WIKI_FOOTER_TEXT = 'Powered by Wikipedia API';
+const WIKI_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
+
+const WIKI_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Wikipedia.";
+const WIKI_ERROR_API = "⚠️ Failed to retrieve article from Wikipedia. Please try again later.";
+const WIKI_ERROR_RATE_LIMIT = "⚠️ Wikipedia API rate limit reached. Please try again in a few moments.";
+const WIKI_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const WIKI_ERROR_ACCESS_DENIED = "⚠️ Wikipedia API access denied. Please check API configuration.";
+const WIKI_ERROR_NO_RESULTS = "⚠️ No articles found matching your search.";
+const WIKI_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search term.";
+const WIKI_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
+const WIKI_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
+const WIKI_ERROR_ARTICLE_NOT_FOUND = "⚠️ The requested article could not be found.";
+const WIKI_ERROR_INVALID_ARTICLE = "⚠️ Invalid article specified.";
+const WIKI_ERROR_SEARCH_FAILED = "⚠️ Failed to search Wikipedia articles.";
 
 const cache = new Map();
 
@@ -97,7 +93,7 @@ module.exports = {
       
       if (!searchResults || searchResults.length === 0) {
         await interaction.editReply({
-          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
+          content: WIKI_ERROR_NO_RESULTS,
           ephemeral: true
         });
         return;
@@ -158,20 +154,20 @@ module.exports = {
         format: 'json',
         list: 'search',
         srsearch: query,
-        srlimit: WIKIPEDIA_MAX_RESULTS,
+        srlimit: WIKI_MAX_RESULTS,
         utf8: '1',
         prop: 'info|extracts',
         inprop: 'url',
         explaintext: '1'
       });
       
-      const requestUrl = `${WIKIPEDIA_API_BASE_URL}?${params.toString()}`;
+      const requestUrl = `${WIKI_API_BASE_URL}?${params.toString()}`;
       
       logger.debug("Making Wikipedia API request:", { 
         requestUrl
       });
       
-      const response = await axios.get(requestUrl, { timeout: WIKIPEDIA_API_TIMEOUT });
+      const response = await axios.get(requestUrl, { timeout: WIKI_API_TIMEOUT });
       
       logger.debug("Wikipedia API response received:", { 
         status: response.status
@@ -182,7 +178,7 @@ module.exports = {
         
         return results.map(result => ({
           ...result,
-          url: WIKIPEDIA_ARTICLE_URL.replace('%s', result.pageid),
+          url: WIKI_ARTICLE_URL.replace('%s', result.pageid),
           formattedSnippet: this.formatSnippet(result.snippet)
         }));
       }
@@ -207,10 +203,10 @@ module.exports = {
     if (!snippet) return "No snippet available.";
     
     let formatted = snippet
-      .replace(WIKIPEDIA_SEARCH_MATCH_OPEN_REGEX, '**')
-      .replace(WIKIPEDIA_SEARCH_MATCH_CLOSE_REGEX, '**');
+      .replace(WIKI_SEARCH_MATCH_OPEN_REGEX, '**')
+      .replace(WIKI_SEARCH_MATCH_CLOSE_REGEX, '**');
     
-    formatted = formatted.replace(WIKIPEDIA_HTML_TAG_REGEX, '');
+    formatted = formatted.replace(WIKI_HTML_TAG_REGEX, '');
     
     formatted = he.decode(formatted);
     

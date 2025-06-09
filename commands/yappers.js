@@ -10,32 +10,23 @@ const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 const db = require('../utils/database');
 
-/**
- * Error messages specific to the Yappers command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching statistics.",
-    DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
-    DATABASE_READ_ERROR: "⚠️ Failed to retrieve statistics from the database. Please try again later.",
-    DATABASE_WRITE_ERROR: "⚠️ Failed to update statistics in the database. Please try again later.",
-    PERMISSION_DENIED: "⚠️ You don't have permission to view server statistics.",
-    INVALID_GUILD: "⚠️ This command can only be used in a server.",
-    NO_STATISTICS: "⚠️ No statistics available for this server.",
-    INVALID_CHANNEL: "⚠️ Invalid channel specified.",
-    CHANNEL_NOT_FOUND: "⚠️ The specified channel could not be found.",
-    INVALID_USER: "⚠️ Invalid user specified.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found."
-};
+const YAPPERS_TOP_USERS_LIMIT = 10;
+const YAPPERS_TOP_CHANNELS_LIMIT = 5;
+const YAPPERS_TOP_VOICE_LIMIT = 5;
 
-/**
- * These are the configuration constants for the yappers command.
- * We use these to control the limits and appearance of the statistics.
- */
 const YAPPERS_EMBED_COLOR = 0xcd41ff;
-const TOP_USERS_LIMIT = 10;
-const TOP_CHANNELS_LIMIT = 5;
-const TOP_VOICE_LIMIT = 5;
+
+const YAPPERS_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching statistics.";
+const YAPPERS_ERROR_DM_NOT_SUPPORTED = "⚠️ This command cannot be used in direct messages.";
+const YAPPERS_ERROR_DATABASE_READ = "⚠️ Failed to retrieve statistics from the database. Please try again later.";
+const YAPPERS_ERROR_DATABASE_WRITE = "⚠️ Failed to update statistics in the database. Please try again later.";
+const YAPPERS_ERROR_PERMISSION = "⚠️ You don't have permission to view server statistics.";
+const YAPPERS_ERROR_INVALID_GUILD = "⚠️ This command can only be used in a server.";
+const YAPPERS_ERROR_NO_STATS = "⚠️ No statistics available for this server.";
+const YAPPERS_ERROR_INVALID_CHANNEL = "⚠️ Invalid channel specified.";
+const YAPPERS_ERROR_CHANNEL_NOT_FOUND = "⚠️ The specified channel could not be found.";
+const YAPPERS_ERROR_INVALID_USER = "⚠️ Invalid user specified.";
+const YAPPERS_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found.";
 
 /**
  * Formats time in minutes to a human-readable string.
@@ -97,7 +88,7 @@ module.exports = {
         });
         
         return await interaction.reply({
-          content: ERROR_MESSAGES.DM_NOT_SUPPORTED,
+          content: YAPPERS_ERROR_DM_NOT_SUPPORTED,
           ephemeral: true
         });
       }
@@ -105,41 +96,41 @@ module.exports = {
       await interaction.deferReply();
       logger.debug("Deferred reply for yappers command.");
 
-      logger.debug("Fetching top message senders:", { limit: TOP_USERS_LIMIT });
-      const topUsers = await db.getTopMessageSenders(TOP_USERS_LIMIT);
+      logger.debug("Fetching top message senders:", { limit: YAPPERS_TOP_USERS_LIMIT });
+      const topUsers = await db.getTopMessageSenders(YAPPERS_TOP_USERS_LIMIT);
       logger.debug("Retrieved top message senders:", { 
         count: topUsers.length,
         users: topUsers.map(u => ({ username: u.username, count: u.message_count }))
       });
 
-      logger.debug("Fetching top voice users:", { limit: TOP_VOICE_LIMIT });
-      const topVoiceUsers = await db.getTopVoiceUsers(TOP_VOICE_LIMIT);
+      logger.debug("Fetching top voice users:", { limit: YAPPERS_TOP_VOICE_LIMIT });
+      const topVoiceUsers = await db.getTopVoiceUsers(YAPPERS_TOP_VOICE_LIMIT);
       logger.debug("Retrieved top voice users:", {
         count: topVoiceUsers.length,
         users: topVoiceUsers.map(u => ({ username: u.username, seconds: u.seconds_spent }))
       });
 
-      logger.debug("Fetching top message channels:", { limit: TOP_CHANNELS_LIMIT });
+      logger.debug("Fetching top message channels:", { limit: YAPPERS_TOP_CHANNELS_LIMIT });
       const topChannels = await db.query(
         `SELECT channel_id, channel_name, message_count 
          FROM main.message_channel_counts 
          ORDER BY message_count DESC 
          LIMIT $1`,
-        [TOP_CHANNELS_LIMIT]
+        [YAPPERS_TOP_CHANNELS_LIMIT]
       );
       logger.debug("Retrieved top message channels:", {
         count: topChannels.rows.length,
         channels: topChannels.rows.map(c => ({ name: c.channel_name, count: c.message_count }))
       });
 
-      logger.debug("Fetching top voice channels:", { limit: TOP_VOICE_LIMIT });
+      logger.debug("Fetching top voice channels:", { limit: YAPPERS_TOP_VOICE_LIMIT });
       const topVoiceChannels = await db.query(
         `SELECT channel_id, channel_name, 
          total_seconds / 60 as total_minutes
          FROM main.voice_channel_time 
          ORDER BY total_seconds DESC 
          LIMIT $1`,
-        [TOP_VOICE_LIMIT]
+        [YAPPERS_TOP_VOICE_LIMIT]
       );
       logger.debug("Retrieved top voice channels:", {
         count: topVoiceChannels.rows.length,
@@ -216,26 +207,26 @@ module.exports = {
       userTag: interaction.user.tag
     });
 
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = YAPPERS_ERROR_UNEXPECTED;
     
     if (error.message === "DM_NOT_SUPPORTED") {
-      errorMessage = ERROR_MESSAGES.DM_NOT_SUPPORTED;
+      errorMessage = YAPPERS_ERROR_DM_NOT_SUPPORTED;
     } else if (error.message === "DATABASE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+      errorMessage = YAPPERS_ERROR_DATABASE_READ;
     } else if (error.message === "PERMISSION_DENIED") {
-      errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      errorMessage = YAPPERS_ERROR_PERMISSION;
     } else if (error.message === "INVALID_GUILD") {
-      errorMessage = ERROR_MESSAGES.INVALID_GUILD;
+      errorMessage = YAPPERS_ERROR_INVALID_GUILD;
     } else if (error.message === "NO_STATISTICS") {
-      errorMessage = ERROR_MESSAGES.NO_STATISTICS;
+      errorMessage = YAPPERS_ERROR_NO_STATS;
     } else if (error.message === "INVALID_CHANNEL") {
-      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL;
+      errorMessage = YAPPERS_ERROR_INVALID_CHANNEL;
     } else if (error.message === "CHANNEL_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.CHANNEL_NOT_FOUND;
+      errorMessage = YAPPERS_ERROR_CHANNEL_NOT_FOUND;
     } else if (error.message === "INVALID_USER") {
-      errorMessage = ERROR_MESSAGES.INVALID_USER;
+      errorMessage = YAPPERS_ERROR_INVALID_USER;
     } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+      errorMessage = YAPPERS_ERROR_USER_NOT_FOUND;
     }
     
     await interaction.editReply({

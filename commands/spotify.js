@@ -13,30 +13,31 @@ const { logError } = require('../errors');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
-const SPOTIFY_EMBED_COLOR = 0x1DB954;
-const REQUEST_TIMEOUT = 10000;
+const SPOTIFY_REQUEST_TIMEOUT = 10000;
+
 const SPOTIFY_SEARCH_MAX_RESULTS = 10;
 const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150;
 const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000;
 
-/**
- * Error messages specific to the Spotify command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching Spotify.",
-    API_ERROR: "⚠️ Failed to search Spotify. Please try again later.",
-    API_RATE_LIMIT: "⚠️ Spotify API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    API_ACCESS_DENIED: "⚠️ Spotify API access denied. Please check API configuration.",
-    NO_RESULTS: "⚠️ No results found for your search.",
-    INVALID_TRACK: "⚠️ Invalid track specified.",
-    AUTH_ERROR: "⚠️ Failed to authenticate with Spotify.",
-    INVALID_QUERY: "⚠️ Please provide a valid search query.",
-    SEARCH_FAILED: "⚠️ Failed to perform search.",
-    TOKEN_ERROR: "⚠️ Failed to get Spotify access token."
-};
+const SPOTIFY_EMBED_COLOR = 0x1DB954;
+const SPOTIFY_EMBED_FOOTER = "Powered by Spotify";
+const SPOTIFY_EMBED_PREV_LABEL = "Previous";
+const SPOTIFY_EMBED_NEXT_LABEL = "Next";
+const SPOTIFY_EMBED_PREV_EMOJI = "◀️";
+const SPOTIFY_EMBED_NEXT_EMOJI = "▶️";
+
+const SPOTIFY_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const SPOTIFY_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Spotify.";
+const SPOTIFY_ERROR_API = "⚠️ Failed to search Spotify. Please try again later.";
+const SPOTIFY_ERROR_RATE_LIMIT = "⚠️ Spotify API rate limit reached. Please try again in a few moments.";
+const SPOTIFY_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const SPOTIFY_ERROR_ACCESS_DENIED = "⚠️ Spotify API access denied. Please check API configuration.";
+const SPOTIFY_ERROR_NO_RESULTS = "⚠️ No results found for your search.";
+const SPOTIFY_ERROR_INVALID_TRACK = "⚠️ Invalid track specified.";
+const SPOTIFY_ERROR_AUTH = "⚠️ Failed to authenticate with Spotify.";
+const SPOTIFY_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search query.";
+const SPOTIFY_ERROR_SEARCH_FAILED = "⚠️ Failed to perform search.";
+const SPOTIFY_ERROR_TOKEN = "⚠️ Failed to get Spotify access token.";
 
 /**
  * We handle the /spotify command.
@@ -121,7 +122,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: SPOTIFY_ERROR_CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -138,7 +139,7 @@ module.exports = {
       const accessToken = await this.getSpotifyAccessToken();
       if (!accessToken) {
         return await interaction.editReply({
-          content: ERROR_MESSAGES.API_ACCESS_DENIED,
+          content: SPOTIFY_ERROR_ACCESS_DENIED,
           ephemeral: true
         });
       }
@@ -164,7 +165,7 @@ module.exports = {
 
       if (!results || results.length === 0) {
         return await interaction.editReply({
-          content: ERROR_MESSAGES.NO_RESULTS,
+          content: SPOTIFY_ERROR_NO_RESULTS,
           ephemeral: true
         });
       }
@@ -180,10 +181,10 @@ module.exports = {
         logger,
         {
           buttonStyle: ButtonStyle.Secondary,
-          prevLabel: 'Previous',
-          nextLabel: 'Next',
-          prevEmoji: '◀️',
-          nextEmoji: '▶️'
+          prevLabel: SPOTIFY_EMBED_PREV_LABEL,
+          nextLabel: SPOTIFY_EMBED_NEXT_LABEL,
+          prevEmoji: SPOTIFY_EMBED_PREV_EMOJI,
+          nextEmoji: SPOTIFY_EMBED_NEXT_EMOJI
         }
       );
 
@@ -228,7 +229,7 @@ module.exports = {
             ).toString('base64')}`,
             'Content-Type': 'application/x-www-form-urlencoded'
           },
-          timeout: REQUEST_TIMEOUT
+          timeout: SPOTIFY_REQUEST_TIMEOUT
         }
       );
 
@@ -260,7 +261,7 @@ module.exports = {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: REQUEST_TIMEOUT
+        timeout: SPOTIFY_REQUEST_TIMEOUT
       });
 
       if (!response.data.tracks.items.length) {
@@ -315,7 +316,7 @@ module.exports = {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: REQUEST_TIMEOUT
+        timeout: SPOTIFY_REQUEST_TIMEOUT
       });
 
       if (!response.data.albums.items.length) {
@@ -366,7 +367,7 @@ module.exports = {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: REQUEST_TIMEOUT
+        timeout: SPOTIFY_REQUEST_TIMEOUT
       });
 
       if (!response.data.artists.items.length) {
@@ -417,7 +418,7 @@ module.exports = {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: REQUEST_TIMEOUT
+        timeout: SPOTIFY_REQUEST_TIMEOUT
       });
 
       if (!response.data.playlists.items.length) {
@@ -474,7 +475,7 @@ module.exports = {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: REQUEST_TIMEOUT
+        timeout: SPOTIFY_REQUEST_TIMEOUT
       });
 
       if (!response.data.shows.items.length) {
@@ -533,7 +534,7 @@ module.exports = {
       .setURL(item.url)
       .setThumbnail(item.imageUrl)
       .setFooter({ 
-        text: `Result ${index + 1} of ${results.length} • Powered by Spotify`
+        text: `${SPOTIFY_EMBED_PREV_LABEL} ${index + 1} of ${results.length} • ${SPOTIFY_EMBED_FOOTER}`
       });
 
     switch (type) {
@@ -648,20 +649,20 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = SPOTIFY_ERROR_UNEXPECTED;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = SPOTIFY_ERROR_API;
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      errorMessage = SPOTIFY_ERROR_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = SPOTIFY_ERROR_NETWORK;
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.NO_RESULTS;
+      errorMessage = SPOTIFY_ERROR_NO_RESULTS;
     } else if (error.message === "INVALID_TRACK") {
-      errorMessage = ERROR_MESSAGES.INVALID_TRACK;
+      errorMessage = SPOTIFY_ERROR_INVALID_TRACK;
     } else if (error.message === "AUTH_ERROR") {
-      errorMessage = ERROR_MESSAGES.AUTH_ERROR;
+      errorMessage = SPOTIFY_ERROR_AUTH;
     }
     
     try {

@@ -11,31 +11,31 @@ const config = require('../config');
 const { logError } = require('../errors');
 const { getValue, setValue } = require('../utils/database');
 
-const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
-const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
-const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
-const MIN_ACCOUNT_AGE = 1;
-const MAX_ACCOUNT_AGE = 365;
+const TROLL_DB_KEY_ENABLED = 'troll_mode_enabled';
+const TROLL_DB_KEY_ACCOUNT_AGE = 'troll_mode_account_age';
 
-/**
- * Error messages specific to the Troll Mode command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing troll mode settings.",
-    DATABASE_READ_ERROR: "⚠️ Failed to retrieve troll mode settings. Please try again later.",
-    DATABASE_WRITE_ERROR: "⚠️ Failed to update troll mode settings. Please try again later.",
-    PERMISSION_DENIED: "⚠️ You don't have permission to manage troll mode settings.",
-    INVALID_SETTINGS: "⚠️ Invalid troll mode settings provided.",
-    SETTINGS_UPDATE_FAILED: "⚠️ Failed to update troll mode settings.",
-    SETTINGS_READ_FAILED: "⚠️ Failed to read troll mode settings.",
-    INVALID_USER: "⚠️ Invalid user specified.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found.",
-    INVALID_CHANNEL: "⚠️ Invalid channel specified.",
-    CHANNEL_NOT_FOUND: "⚠️ The specified channel could not be found.",
-    INVALID_ROLE: "⚠️ Invalid role specified.",
-    ROLE_NOT_FOUND: "⚠️ The specified role could not be found."
-};
+const TROLL_DEFAULT_AGE_DAYS = 30;
+const TROLL_MIN_ACCOUNT_AGE = 1;
+const TROLL_MAX_ACCOUNT_AGE = 365;
+
+const TROLL_EMBED_COLOR_ENABLED = '#00FF00';
+const TROLL_EMBED_COLOR_DISABLED = '#FF0000';
+const TROLL_EMBED_TITLE_STATUS = '🎭 Troll Mode Status';
+const TROLL_EMBED_TITLE_UPDATE = '🎭 Troll Mode %s';
+
+const TROLL_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing troll mode settings.";
+const TROLL_ERROR_DATABASE_READ = "⚠️ Failed to retrieve troll mode settings. Please try again later.";
+const TROLL_ERROR_DATABASE_WRITE = "⚠️ Failed to update troll mode settings. Please try again later.";
+const TROLL_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to manage troll mode settings.";
+const TROLL_ERROR_INVALID_SETTINGS = "⚠️ Invalid troll mode settings provided.";
+const TROLL_ERROR_SETTINGS_UPDATE = "⚠️ Failed to update troll mode settings.";
+const TROLL_ERROR_SETTINGS_READ = "⚠️ Failed to read troll mode settings.";
+const TROLL_ERROR_INVALID_USER = "⚠️ Invalid user specified.";
+const TROLL_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found.";
+const TROLL_ERROR_INVALID_CHANNEL = "⚠️ Invalid channel specified.";
+const TROLL_ERROR_CHANNEL_NOT_FOUND = "⚠️ The specified channel could not be found.";
+const TROLL_ERROR_INVALID_ROLE = "⚠️ Invalid role specified.";
+const TROLL_ERROR_ROLE_NOT_FOUND = "⚠️ The specified role could not be found.";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -59,9 +59,9 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('age')
-            .setDescription(`What is the minimum account age allowed to join the server? (${MIN_ACCOUNT_AGE}-${MAX_ACCOUNT_AGE})`)
-            .setMinValue(MIN_ACCOUNT_AGE)
-            .setMaxValue(MAX_ACCOUNT_AGE)
+            .setDescription(`What is the minimum account age allowed to join the server? (${TROLL_MIN_ACCOUNT_AGE}-${TROLL_MAX_ACCOUNT_AGE})`)
+            .setMinValue(TROLL_MIN_ACCOUNT_AGE)
+            .setMaxValue(TROLL_MAX_ACCOUNT_AGE)
             .setRequired(false)
         )
     )
@@ -152,13 +152,13 @@ module.exports = {
   async getCurrentSettings() {
     try {
       const [enabled, accountAge] = await Promise.all([
-        getValue(TROLL_MODE_ENABLED_KEY),
-        getValue(TROLL_MODE_ACCOUNT_AGE_KEY)
+        getValue(TROLL_DB_KEY_ENABLED),
+        getValue(TROLL_DB_KEY_ACCOUNT_AGE)
       ]);
       
       return {
         enabled: enabled === true,
-        accountAge: accountAge ? Number(accountAge) : DEFAULT_TROLL_MODE_AGE_DAYS
+        accountAge: accountAge ? Number(accountAge) : TROLL_DEFAULT_AGE_DAYS
       };
     } catch (error) {
       logger.error("Failed to retrieve troll mode settings:", {
@@ -179,11 +179,11 @@ module.exports = {
       const updates = [];
       
       if (settings.enabled !== undefined) {
-        updates.push(setValue(TROLL_MODE_ENABLED_KEY, settings.enabled));
+        updates.push(setValue(TROLL_DB_KEY_ENABLED, settings.enabled));
       }
       
       if (settings.accountAge !== undefined) {
-        updates.push(setValue(TROLL_MODE_ACCOUNT_AGE_KEY, settings.accountAge));
+        updates.push(setValue(TROLL_DB_KEY_ACCOUNT_AGE, settings.accountAge));
       }
       
       await Promise.all(updates);
@@ -206,8 +206,8 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.enabled ? '#00FF00' : '#FF0000')
-      .setTitle('🎭 Troll Mode Status')
+      .setColor(settings.enabled ? TROLL_EMBED_COLOR_ENABLED : TROLL_EMBED_COLOR_DISABLED)
+      .setTitle(TROLL_EMBED_TITLE_STATUS)
       .addFields(
         { name: 'Status', value: settings.enabled ? '✅ Enabled' : '❌ Disabled' },
         { name: 'Minimum Account Age', value: `${settings.accountAge} days` }
@@ -228,8 +228,8 @@ module.exports = {
    */
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(enabled ? '#00FF00' : '#FF0000')
-      .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
+      .setColor(enabled ? TROLL_EMBED_COLOR_ENABLED : TROLL_EMBED_COLOR_DISABLED)
+      .setTitle(TROLL_EMBED_TITLE_UPDATE.replace('%s', enabled ? 'Enabled' : 'Disabled'))
       .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`)
       .setFooter({ text: `Updated by ${interaction.user.tag}` })
       .setTimestamp();
@@ -257,16 +257,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = TROLL_ERROR_UNEXPECTED;
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+      errorMessage = TROLL_ERROR_DATABASE_READ;
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+      errorMessage = TROLL_ERROR_DATABASE_WRITE;
     } else if (error.message === "PERMISSION_DENIED") {
-      errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      errorMessage = TROLL_ERROR_PERMISSION_DENIED;
     } else if (error.message === "INVALID_SETTINGS") {
-      errorMessage = ERROR_MESSAGES.INVALID_SETTINGS;
+      errorMessage = TROLL_ERROR_INVALID_SETTINGS;
     }
     
     try {

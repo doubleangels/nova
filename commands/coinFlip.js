@@ -9,19 +9,17 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the coin flip command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while flipping the coin.",
-    RESULT_GENERATION_FAILED: "⚠️ Failed to generate coin flip result.",
-    RESPONSE_FAILED: "⚠️ Failed to send coin flip result."
-};
+const COIN_EMBED_COLOR = '#FFD700';
+const COIN_EMBED_FOOTER_PREFIX = "Requested by";
+const COIN_EMBED_TITLE = 'Coin Flip';
+
+const COIN_ERROR_RESPONSE_FAILED = "⚠️ Failed to send coin flip result.";
+const COIN_ERROR_RESULT_FAILED = "⚠️ Failed to generate coin flip result.";
+const COIN_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while flipping the coin.";
 
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
-const HEADS_PROBABILITY = 0.5;
+const COIN_HEADS_PROBABILITY = 0.5;
 const COIN_EMOJI = '🪙';
 
 /**
@@ -63,10 +61,10 @@ module.exports = {
             const result = this.flipCoin();
             
             const embed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle('Coin Flip')
+                .setColor(COIN_EMBED_COLOR)
+                .setTitle(COIN_EMBED_TITLE)
                 .setDescription(`The coin landed on: **${result}**`)
-                .setFooter({ text: `Requested by ${interaction.user.tag}` })
+                .setFooter({ text: `${COIN_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -102,12 +100,12 @@ module.exports = {
             guildId: interaction.guild?.id
         });
         
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        let errorMessage = COIN_ERROR_UNEXPECTED;
         
-        if (error.message === "RESULT_GENERATION_FAILED") {
-            errorMessage = ERROR_MESSAGES.RESULT_GENERATION_FAILED;
-        } else if (error.message === "RESPONSE_FAILED") {
-            errorMessage = ERROR_MESSAGES.RESPONSE_FAILED;
+        if (error.message === COIN_ERROR_RESULT_FAILED) {
+            errorMessage = COIN_ERROR_RESULT_FAILED;
+        } else if (error.message === COIN_ERROR_RESPONSE_FAILED) {
+            errorMessage = COIN_ERROR_RESPONSE_FAILED;
         }
         
         try {

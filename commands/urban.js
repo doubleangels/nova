@@ -10,27 +10,24 @@ const axios = require('axios');
 const logger = require('../logger')('urban.js');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the Urban Dictionary command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching Urban Dictionary.",
-    API_ERROR: "⚠️ Failed to retrieve definition from Urban Dictionary. Please try again later.",
-    API_RATE_LIMIT: "⚠️ Urban Dictionary API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    API_ACCESS_DENIED: "⚠️ Urban Dictionary API access denied. Please check API configuration.",
-    NO_RESULTS_FOUND: "⚠️ No definitions found for that term.",
-    INVALID_QUERY: "⚠️ Please provide a valid search term.",
-    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later."
-};
-
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
-const URBAN_EMBED_COLOR = 0x202C34;
+const URBAN_REQUEST_TIMEOUT = 10000;
+
 const URBAN_DESCRIPTION_MAX_LENGTH = 1024;
 const URBAN_EXAMPLE_MAX_LENGTH = 1024;
-const URBAN_REQUEST_TIMEOUT = 10000;
+
+const URBAN_EMBED_COLOR = 0x202C34;
+const URBAN_EMBED_FOOTER = 'Powered by Urban Dictionary';
+
+const URBAN_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Urban Dictionary.";
+const URBAN_ERROR_API = "⚠️ Failed to retrieve definition from Urban Dictionary. Please try again later.";
+const URBAN_ERROR_RATE_LIMIT = "⚠️ Urban Dictionary API rate limit reached. Please try again in a few moments.";
+const URBAN_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const URBAN_ERROR_ACCESS_DENIED = "⚠️ Urban Dictionary API access denied. Please check API configuration.";
+const URBAN_ERROR_NO_RESULTS = "⚠️ No definitions found for that term.";
+const URBAN_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search term.";
+const URBAN_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
+const URBAN_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -65,7 +62,7 @@ module.exports = {
 
             if (!definitions || definitions.length === 0) {
                 await interaction.editReply({
-                    content: ERROR_MESSAGES.NO_RESULTS_FOUND,
+                    content: URBAN_ERROR_NO_RESULTS,
                     ephemeral: true
                 });
                 return;
@@ -82,7 +79,7 @@ module.exports = {
                     { name: '👍', value: definition.thumbs_up.toString(), inline: true },
                     { name: '👎', value: definition.thumbs_down.toString(), inline: true }
                 )
-                .setFooter({ text: 'Powered by Urban Dictionary' });
+                .setFooter({ text: URBAN_EMBED_FOOTER });
             
             await interaction.editReply({ embeds: [embed] });
             
@@ -123,20 +120,20 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        let errorMessage = URBAN_ERROR_UNEXPECTED;
         
         if (error.message === "NO_DEFINITION") {
-            errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
+            errorMessage = URBAN_ERROR_NO_RESULTS;
         } else if (error.message === "INVALID_QUERY") {
-            errorMessage = ERROR_MESSAGES.INVALID_QUERY;
+            errorMessage = URBAN_ERROR_INVALID_QUERY;
         } else if (error.code === 'ECONNABORTED') {
-            errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+            errorMessage = URBAN_ERROR_REQUEST_TIMEOUT;
         } else if (error.response?.status === 403) {
-            errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+            errorMessage = URBAN_ERROR_ACCESS_DENIED;
         } else if (error.response?.status === 429) {
-            errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+            errorMessage = URBAN_ERROR_RATE_LIMIT_EXCEEDED;
         } else if (error.response?.status >= 500) {
-            errorMessage = ERROR_MESSAGES.API_ERROR;
+            errorMessage = URBAN_ERROR_API;
         }
         
         try {

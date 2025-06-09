@@ -9,22 +9,21 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the change nickname command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    BOT_MISSING_PERMISSIONS: "⚠️ I don't have permission to manage nicknames in this server.",
-    USER_NOT_MANAGEABLE: "⚠️ I cannot modify this user's nickname.",
-    INVALID_NICKNAME_LENGTH: "⚠️ Nickname must be between 1 and 32 characters.",
-    CHANGENICKNAME_INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to manage nicknames in this server.",
-    CHANGENICKNAME_TOO_LONG: "⚠️ Nickname must be 32 characters or less.",
-    CHANGENICKNAME_OWNER: "⚠️ Cannot change the server owner's nickname.",
-    CHANGENICKNAME_BOT: "⚠️ Cannot change the bot's nickname.",
-    CHANGENICKNAME_ROLE_HIERARCHY: "⚠️ You cannot change the nickname of users with a higher or equal role.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while changing the nickname."
-};
+const NICKNAME_EMBED_COLOR_DEFAULT = '#cd41ff';
+const NICKNAME_EMBED_FOOTER_PREFIX = "Updated by";
+const NICKNAME_EMBED_TITLE = 'Nickname Updated';
+
+const NICKNAME_ERROR_BOT_PERMISSION = "⚠️ I don't have permission to manage nicknames in this server.";
+const NICKNAME_ERROR_BOT_NICKNAME = "⚠️ Cannot change the bot's nickname.";
+const NICKNAME_ERROR_INVALID_LENGTH = "⚠️ Nickname must be between 1 and 32 characters.";
+const NICKNAME_ERROR_OWNER = "⚠️ Cannot change the server owner's nickname.";
+const NICKNAME_ERROR_ROLE_HIERARCHY = "⚠️ You cannot change the nickname of users with a higher or equal role.";
+const NICKNAME_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
+const NICKNAME_ERROR_USER_NOT_MANAGEABLE = "⚠️ I cannot modify this user's nickname.";
+const NICKNAME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while changing the nickname.";
+
+const NICKNAME_MAX_LENGTH = 32;
+const NICKNAME_MIN_LENGTH = 1;
 
 /**
  * We handle the changenickname command.
@@ -125,14 +124,14 @@ module.exports = {
             targetUserId: interaction.options?.getUser('user')?.id
         });
         
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        let errorMessage = NICKNAME_ERROR_UNEXPECTED;
         
         if (error.message === "BOT_PERMISSION_DENIED") {
-            errorMessage = ERROR_MESSAGES.BOT_MISSING_PERMISSIONS;
+            errorMessage = NICKNAME_ERROR_BOT_PERMISSION;
         } else if (error.message === "USER_NOT_MANAGEABLE") {
-            errorMessage = ERROR_MESSAGES.USER_NOT_MANAGEABLE;
+            errorMessage = NICKNAME_ERROR_USER_NOT_MANAGEABLE;
         } else if (error.message === "INVALID_NICKNAME_LENGTH") {
-            errorMessage = ERROR_MESSAGES.INVALID_NICKNAME_LENGTH;
+            errorMessage = NICKNAME_ERROR_INVALID_LENGTH;
         }
         
         try {
@@ -172,7 +171,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.CHANGENICKNAME_INSUFFICIENT_PERMISSIONS
+                message: NICKNAME_ERROR_BOT_PERMISSION
             };
         }
 
@@ -182,7 +181,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.CHANGENICKNAME_TOO_LONG
+                message: NICKNAME_ERROR_INVALID_LENGTH
             };
         }
 
@@ -192,7 +191,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.CHANGENICKNAME_OWNER
+                message: NICKNAME_ERROR_OWNER
             };
         }
 
@@ -202,7 +201,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.CHANGENICKNAME_BOT
+                message: NICKNAME_ERROR_BOT_NICKNAME
             };
         }
 
@@ -217,7 +216,7 @@ module.exports = {
                 });
                 return {
                     success: false,
-                    message: ERROR_MESSAGES.CHANGENICKNAME_ROLE_HIERARCHY
+                    message: NICKNAME_ERROR_ROLE_HIERARCHY
                 };
             }
         }
@@ -231,7 +230,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: ERROR_MESSAGES.USER_NOT_FOUND
+                message: NICKNAME_ERROR_USER_NOT_FOUND
             };
         }
 

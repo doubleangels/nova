@@ -21,24 +21,22 @@ const pool = new Pool({
 });
 
 const REMINDER_TYPE = 'bump';
-const DB_KEY_CHANNEL = 'reminder_channel';
-const DB_KEY_ROLE = 'reminder_role';
+const REMINDER_DB_KEY_CHANNEL = 'reminder_channel';
+const REMINDER_DB_KEY_ROLE = 'reminder_role';
 
-/**
- * Error messages specific to the Reminder command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing reminders.",
-    DATABASE_READ_ERROR: "⚠️ Failed to retrieve reminder settings. Please try again later.",
-    DATABASE_WRITE_ERROR: "⚠️ Failed to update reminder settings. Please try again later.",
-    INVALID_CHANNEL_TYPE: "⚠️ Please select a text channel for reminders.",
-    CONFIG_INCOMPLETE: "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.",
-    CHANNEL_NOT_FOUND: "⚠️ The reminder channel could not be found.",
-    ROLE_NOT_FOUND: "⚠️ The reminder role could not be found.",
-    SETUP_FAILED: "⚠️ Failed to set up reminder configuration.",
-    STATUS_CHECK_FAILED: "⚠️ Failed to check reminder status."
-};
+const REMINDER_EMBED_COLOR = '#cd41ff';
+const REMINDER_EMBED_TITLE = '📌 Server Reminders Status';
+const REMINDER_EMBED_TITLE_SETUP = '✅ Reminder Setup Complete';
+
+const REMINDER_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing reminders.";
+const REMINDER_ERROR_DATABASE_READ = "⚠️ Failed to retrieve reminder settings. Please try again later.";
+const REMINDER_ERROR_DATABASE_WRITE = "⚠️ Failed to update reminder settings. Please try again later.";
+const REMINDER_ERROR_INVALID_CHANNEL = "⚠️ Please select a text channel for reminders.";
+const REMINDER_ERROR_CONFIG_INCOMPLETE = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
+const REMINDER_ERROR_CHANNEL_NOT_FOUND = "⚠️ The reminder channel could not be found.";
+const REMINDER_ERROR_ROLE_NOT_FOUND = "⚠️ The reminder role could not be found.";
+const REMINDER_ERROR_SETUP_FAILED = "⚠️ Failed to set up reminder configuration.";
+const REMINDER_ERROR_STATUS_CHECK_FAILED = "⚠️ Failed to check reminder status.";
 
 /**
  * Module for the /reminder command.
@@ -120,8 +118,8 @@ module.exports = {
     
     try {
       await Promise.all([
-        setValue(DB_KEY_CHANNEL, channelOption.id),
-        setValue(DB_KEY_ROLE, roleOption.id)
+        setValue(REMINDER_DB_KEY_CHANNEL, channelOption.id),
+        setValue(REMINDER_DB_KEY_ROLE, roleOption.id)
       ]);
     } catch (dbError) {
       logger.error("Database operation failed during reminder setup:", { 
@@ -142,8 +140,8 @@ module.exports = {
     });
 
     const embed = new EmbedBuilder()
-      .setColor('#cd41ff')
-      .setTitle('✅ Reminder Setup Complete')
+      .setColor(REMINDER_EMBED_COLOR)
+      .setTitle(REMINDER_EMBED_TITLE_SETUP)
       .addFields(
         { name: '📢 Channel', value: `<#${channelOption.id}>` },
         { name: '🎭 Role', value: `<@&${roleOption.id}>` }
@@ -170,8 +168,8 @@ module.exports = {
 
     try {
       const [channelId, roleId] = await Promise.all([
-        getValue(DB_KEY_CHANNEL),
-        getValue(DB_KEY_ROLE)
+        getValue(REMINDER_DB_KEY_CHANNEL),
+        getValue(REMINDER_DB_KEY_ROLE)
       ]);
       
       const [bumpReminder, promoteReminder] = await Promise.all([
@@ -204,8 +202,8 @@ module.exports = {
       const configComplete = channelId && roleId;
       
       const embed = new EmbedBuilder()
-        .setColor('#cd41ff')
-        .setTitle('📌 Server Reminders Status')
+        .setColor(REMINDER_EMBED_COLOR)
+        .setTitle(REMINDER_EMBED_TITLE)
         .addFields(
           { name: '📢 Channel', value: channelStr },
           { name: '🎭 Role', value: roleStr },
@@ -298,16 +296,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = REMINDER_ERROR_UNEXPECTED;
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+      errorMessage = REMINDER_ERROR_DATABASE_READ;
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+      errorMessage = REMINDER_ERROR_DATABASE_WRITE;
     } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
+      errorMessage = REMINDER_ERROR_INVALID_CHANNEL;
     } else if (error.message === "CONFIG_INCOMPLETE") {
-      errorMessage = ERROR_MESSAGES.CONFIG_INCOMPLETE;
+      errorMessage = REMINDER_ERROR_CONFIG_INCOMPLETE;
     }
     
     try {

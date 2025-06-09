@@ -13,32 +13,14 @@ const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the Weather command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching weather information.",
-    CONFIG_MISSING: "⚠️ Weather API configuration is missing. Please contact an administrator.",
-    API_ERROR: "⚠️ Failed to retrieve weather data. Please try again later.",
-    API_RATE_LIMIT: "⚠️ Weather API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    API_ACCESS_DENIED: "⚠️ Weather API access denied. Please check API configuration.",
-    INVALID_LOCATION: "⚠️ Invalid location specified.",
-    LOCATION_NOT_FOUND: "⚠️ Could not find the specified location.",
-    WEATHER_API_ERROR: "⚠️ Failed to retrieve weather data from the API.",
-    WEATHER_INVALID_LOCATION: "⚠️ Could not find weather data for the specified location.",
-    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
-    INVALID_UNITS: "⚠️ Invalid units specified.",
-    INVALID_FORECAST_DAYS: "⚠️ Invalid number of forecast days specified."
-};
-
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
+const WEATHER_REQUEST_TIMEOUT = 5000;
+
+const WEATHER_DATE_FORMAT = 'MM/DD/YYYY';
+
 const WEATHER_EMBED_COLOR = 0xFF6E42;
 const WEATHER_EMBED_TITLE_FORMAT = 'Weather in %s';
 const WEATHER_EMBED_FOOTER = 'Powered by PirateWeather';
-const WEATHER_DATE_FORMAT = 'MM/DD/YYYY';
 
 const WEATHER_FIELD_LOCATION = '🌍 Location';
 const WEATHER_FIELD_TEMPERATURE = '🌡 Temperature';
@@ -66,6 +48,7 @@ const WEATHER_UNIT_PRESSURE_INHG = 'inHg';
 const WEATHER_UNIT_PRECIP_MM = 'mm/hr';
 const WEATHER_UNIT_PRECIP_IN = 'in/hr';
 
+// Weather Icons
 const WEATHER_ICONS = {
   'clear-day': '☀️',
   'clear-night': '🌙',
@@ -81,6 +64,22 @@ const WEATHER_ICONS = {
   'tornado': '🌪️',
   'default': '🌤️'
 };
+
+// Error Messages
+const WEATHER_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching weather information.";
+const WEATHER_ERROR_CONFIG_MISSING = "⚠️ Weather API configuration is missing. Please contact an administrator.";
+const WEATHER_ERROR_API = "⚠️ Failed to retrieve weather data. Please try again later.";
+const WEATHER_ERROR_RATE_LIMIT = "⚠️ Weather API rate limit reached. Please try again in a few moments.";
+const WEATHER_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const WEATHER_ERROR_ACCESS_DENIED = "⚠️ Weather API access denied. Please check API configuration.";
+const WEATHER_ERROR_INVALID_LOCATION = "⚠️ Invalid location specified.";
+const WEATHER_ERROR_LOCATION_NOT_FOUND = "⚠️ Could not find the specified location.";
+const WEATHER_ERROR_API_ERROR = "⚠️ Failed to retrieve weather data from the API.";
+const WEATHER_ERROR_INVALID_LOCATION_DATA = "⚠️ Could not find weather data for the specified location.";
+const WEATHER_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
+const WEATHER_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
+const WEATHER_ERROR_INVALID_UNITS = "⚠️ Invalid units specified.";
+const WEATHER_ERROR_INVALID_FORECAST_DAYS = "⚠️ Invalid number of forecast days specified.";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -130,7 +129,7 @@ module.exports = {
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: WEATHER_ERROR_CONFIG_MISSING,
           ephemeral: true
         });
         return;
@@ -159,7 +158,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: ERROR_MESSAGES.WEATHER_INVALID_LOCATION,
+          content: WEATHER_ERROR_INVALID_LOCATION_DATA,
           ephemeral: true
         });
         return;
@@ -184,7 +183,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: ERROR_MESSAGES.WEATHER_API_ERROR,
+          content: WEATHER_ERROR_API_ERROR,
           ephemeral: true
         });
         return;
@@ -233,7 +232,7 @@ module.exports = {
       
       logger.debug("Making PirateWeather API request:", { requestUrl });
       
-      const response = await axios.get(requestUrl, { timeout: 5000 });
+      const response = await axios.get(requestUrl, { timeout: WEATHER_REQUEST_TIMEOUT });
       
       if (response.status === 200) {
         logger.debug("Weather API data received successfully.");
@@ -459,28 +458,28 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = WEATHER_ERROR_UNEXPECTED;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.WEATHER_API_ERROR;
+      errorMessage = WEATHER_ERROR_API;
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      errorMessage = WEATHER_ERROR_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = WEATHER_ERROR_NETWORK;
     } else if (error.message === "INVALID_LOCATION") {
-      errorMessage = ERROR_MESSAGES.WEATHER_INVALID_LOCATION;
+      errorMessage = WEATHER_ERROR_INVALID_LOCATION;
     } else if (error.code === 'ECONNABORTED') {
-      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+      errorMessage = WEATHER_ERROR_REQUEST_TIMEOUT;
     } else if (error.response?.status === 403) {
-      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+      errorMessage = WEATHER_ERROR_ACCESS_DENIED;
     } else if (error.response?.status === 429) {
-      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+      errorMessage = WEATHER_ERROR_RATE_LIMIT_EXCEEDED;
     } else if (error.response?.status >= 500) {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = WEATHER_ERROR_API;
     } else if (error.message === "INVALID_UNITS") {
-      errorMessage = ERROR_MESSAGES.INVALID_UNITS;
+      errorMessage = WEATHER_ERROR_INVALID_UNITS;
     } else if (error.message === "INVALID_FORECAST_DAYS") {
-      errorMessage = ERROR_MESSAGES.INVALID_FORECAST_DAYS;
+      errorMessage = WEATHER_ERROR_INVALID_FORECAST_DAYS;
     }
     
     try {

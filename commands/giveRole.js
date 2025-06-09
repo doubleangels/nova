@@ -10,18 +10,15 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the give role command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while assigning the role.",
-    INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to assign this role.",
-    ROLE_NOT_FOUND: "⚠️ The specified role could not be found.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
-    INVALID_ROLE: "⚠️ Please provide a valid role.",
-    INVALID_USER: "⚠️ Please provide a valid user."
-};
+const ROLE_EMBED_TITLE = 'Role Assigned';
+const ROLE_EMBED_FOOTER_PREFIX = "Updated by";
+
+const ROLE_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ I don't have permission to assign this role.";
+const ROLE_ERROR_ROLE_NOT_FOUND = "⚠️ The specified role could not be found.";
+const ROLE_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
+const ROLE_ERROR_INVALID_ROLE = "⚠️ Please provide a valid role.";
+const ROLE_ERROR_INVALID_USER = "⚠️ Please provide a valid user.";
+const ROLE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while assigning the role.";
 
 /**
  * We handle the giverole command.
@@ -98,7 +95,7 @@ module.exports = {
                     targetRolePosition: role.position
                 });
                 return await interaction.editReply({
-                    content: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS,
+                    content: ROLE_ERROR_INSUFFICIENT_PERMISSIONS,
                     ephemeral: true
                 });
             }
@@ -115,13 +112,13 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(role.color)
-                .setTitle('Role Assigned')
+                .setTitle(ROLE_EMBED_TITLE)
                 .setDescription(`✅ Successfully gave the ${role.name} role to <@${targetUser.id}>!`)
                 .addFields(
                     { name: 'Role', value: role.name, inline: true },
                     { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
                 )
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setFooter({ text: `${ROLE_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -144,7 +141,7 @@ module.exports = {
             logger.warn("Invalid role provided.");
             return {
                 success: false,
-                message: ERROR_MESSAGES.INVALID_ROLE
+                message: ROLE_ERROR_INVALID_ROLE
             };
         }
 
@@ -152,7 +149,7 @@ module.exports = {
             logger.warn("Invalid user provided.");
             return {
                 success: false,
-                message: ERROR_MESSAGES.INVALID_USER
+                message: ROLE_ERROR_INVALID_USER
             };
         }
         
@@ -173,14 +170,14 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        let errorMessage = ROLE_ERROR_UNEXPECTED;
         
         if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS;
+            errorMessage = ROLE_ERROR_INSUFFICIENT_PERMISSIONS;
         } else if (error.message === "ROLE_NOT_FOUND") {
-            errorMessage = ERROR_MESSAGES.ROLE_NOT_FOUND;
+            errorMessage = ROLE_ERROR_ROLE_NOT_FOUND;
         } else if (error.message === "USER_NOT_FOUND") {
-            errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
+            errorMessage = ROLE_ERROR_USER_NOT_FOUND;
         }
         
         try {

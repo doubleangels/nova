@@ -11,23 +11,23 @@ const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the Time Difference command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while calculating time difference.",
-    API_ERROR: "⚠️ Failed to retrieve timezone information. Please try again later.",
-    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    API_ACCESS_DENIED: "⚠️ API access denied. Please check API configuration.",
-    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
-    INVALID_LOCATION: "⚠️ Invalid location specified.",
-    LOCATION_NOT_FOUND: "⚠️ Could not find the specified location.",
-    TIMEZONE_NOT_FOUND: "⚠️ Could not determine timezone for the specified location."
-};
+const TIME_API_TIMEOUT = 10000;
+
+const TIME_EMBED_COLOR = '#cd41ff';
+const TIME_EMBED_TITLE = '⏳ Time Difference Information';
+const TIME_EMBED_FOOTER_PREFIX = 'Requested by';
+
+const TIME_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const TIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while calculating time difference.";
+const TIME_ERROR_API = "⚠️ Failed to retrieve timezone information. Please try again later.";
+const TIME_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
+const TIME_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const TIME_ERROR_ACCESS_DENIED = "⚠️ API access denied. Please check API configuration.";
+const TIME_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
+const TIME_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
+const TIME_ERROR_INVALID_LOCATION = "⚠️ Invalid location specified.";
+const TIME_ERROR_LOCATION_NOT_FOUND = "⚠️ Could not find the specified location.";
+const TIME_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Could not determine timezone for the specified location.";
 
 /**
  * We handle the timedifference command.
@@ -69,7 +69,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({ 
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: TIME_ERROR_CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -175,13 +175,13 @@ module.exports = {
       const formattedTimeDiff = this.formatTimeDifference(timeDiff);
       
       const embed = new EmbedBuilder()
-        .setColor('#cd41ff')
-        .setTitle('⏳ Time Difference Information')
+        .setColor(TIME_EMBED_COLOR)
+        .setTitle(TIME_EMBED_TITLE)
         .addFields(
           { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },
           { name: formattedPlace2, value: this.formatTimeZone(offset2Result) }
         )
-        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setFooter({ text: `${TIME_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
         .setTimestamp();
 
       if (rawTimeDiff === 0) {
@@ -255,18 +255,18 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = TIME_ERROR_UNEXPECTED;
     
-    if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+    if (error.message === TIME_ERROR_API) {
+      errorMessage = TIME_ERROR_API;
     } else if (error.code === 'ECONNABORTED') {
-      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+      errorMessage = TIME_ERROR_REQUEST_TIMEOUT;
     } else if (error.response?.status === 403) {
-      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+      errorMessage = TIME_ERROR_ACCESS_DENIED;
     } else if (error.response?.status === 429) {
-      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+      errorMessage = TIME_ERROR_RATE_LIMIT_EXCEEDED;
     } else if (error.response?.status >= 500) {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = TIME_ERROR_API;
     }
     
     try {

@@ -9,20 +9,25 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
-const CONFIG_KEYS = {
-  CHANNEL: "backup_mode_channel",
-  ROLE: "backup_mode_role",
-  ENABLED: "backup_mode_enabled"
-};
+const BACKUP_CONFIG_CHANNEL = "backup_mode_channel";
+const BACKUP_CONFIG_ENABLED = "backup_mode_enabled";
+const BACKUP_CONFIG_ROLE = "backup_mode_role";
 
-const ERROR_MESSAGES = {
-  DATABASE_READ_ERROR: "⚠️ Failed to retrieve backup mode settings. Please try again later.",
-  DATABASE_WRITE_ERROR: "⚠️ Failed to save backup mode settings. Please try again later.",
-  INVALID_CHANNEL_TYPE: "⚠️ The channel must be a text channel for welcome messages.",
-  INVALID_ROLE: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
-  NO_SETTINGS_PROVIDED: "⚠️ Please provide at least one setting to update (channel, role, or enabled status).",
-  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
-};
+const BACKUP_EMBED_COLOR_DISABLED = '#FF0000';
+const BACKUP_EMBED_COLOR_ENABLED = '#00FF00';
+const BACKUP_EMBED_FOOTER_PREFIX = "Requested by";
+const BACKUP_EMBED_TITLE_STATUS = '🔄 Backup Mode Status';
+const BACKUP_EMBED_TITLE_UPDATE = '🔄 Backup Mode Updated';
+
+const BACKUP_ERROR_DATABASE_READ = "⚠️ Failed to retrieve backup mode settings. Please try again later.";
+const BACKUP_ERROR_DATABASE_WRITE = "⚠️ Failed to save backup mode settings. Please try again later.";
+const BACKUP_ERROR_INVALID_CHANNEL = "⚠️ The channel must be a text channel for welcome messages.";
+const BACKUP_ERROR_INVALID_ROLE = "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.";
+const BACKUP_ERROR_NO_SETTINGS = "⚠️ Please provide at least one setting to update (channel, role, or enabled status).";
+const BACKUP_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
+
+const BACKUP_STATUS_DISABLED = "❌";
+const BACKUP_STATUS_ENABLED = "✅";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -90,16 +95,16 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = BACKUP_ERROR_UNEXPECTED;
       
       if (error.message === "DATABASE_READ_ERROR") {
-        errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+        errorMessage = BACKUP_ERROR_DATABASE_READ;
       } else if (error.message === "DATABASE_WRITE_ERROR") {
-        errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+        errorMessage = BACKUP_ERROR_DATABASE_WRITE;
       } else if (error.message === "INVALID_CHANNEL_TYPE") {
-        errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
+        errorMessage = BACKUP_ERROR_INVALID_CHANNEL;
       } else if (error.message === "INVALID_ROLE") {
-        errorMessage = ERROR_MESSAGES.INVALID_ROLE;
+        errorMessage = BACKUP_ERROR_INVALID_ROLE;
       }
       
       try {
@@ -144,7 +149,7 @@ module.exports = {
       await this.updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings);
     } else {
       await interaction.editReply({
-        content: ERROR_MESSAGES.NO_SETTINGS_PROVIDED
+        content: BACKUP_ERROR_NO_SETTINGS
       });
     }
   },
@@ -169,9 +174,9 @@ module.exports = {
   async getCurrentSettings() {
     try {
       const [channelId, roleId, isEnabled] = await Promise.all([
-        getValue(CONFIG_KEYS.CHANNEL),
-        getValue(CONFIG_KEYS.ROLE),
-        getValue(CONFIG_KEYS.ENABLED)
+        getValue(BACKUP_CONFIG_CHANNEL),
+        getValue(BACKUP_CONFIG_ROLE),
+        getValue(BACKUP_CONFIG_ENABLED)
       ]);
       
       return {
@@ -205,7 +210,7 @@ module.exports = {
         type: channelOption.type 
       });
       await interaction.editReply({
-        content: ERROR_MESSAGES.INVALID_CHANNEL_TYPE,
+        content: BACKUP_ERROR_INVALID_CHANNEL,
         ephemeral: true
       });
       return true;
@@ -217,7 +222,7 @@ module.exports = {
         managed: roleOption.managed 
       });
       await interaction.editReply({
-        content: ERROR_MESSAGES.INVALID_ROLE,
+        content: BACKUP_ERROR_INVALID_ROLE,
         ephemeral: true
       });
       return true;
@@ -245,7 +250,7 @@ module.exports = {
       
       if (channelOption) {
         newChannelId = channelOption.id;
-        await setValue(CONFIG_KEYS.CHANNEL, channelOption.id);
+        await setValue(BACKUP_CONFIG_CHANNEL, channelOption.id);
         logger.debug("Backup mode channel updated:", { 
           channelId: channelOption.id, 
           channelName: channelOption.name 
@@ -254,7 +259,7 @@ module.exports = {
       
       if (roleOption) {
         newRoleId = roleOption.id;
-        await setValue(CONFIG_KEYS.ROLE, roleOption.id);
+        await setValue(BACKUP_CONFIG_ROLE, roleOption.id);
         logger.debug("Backup mode role updated:", { 
           roleId: roleOption.id, 
           roleName: roleOption.name 
@@ -263,7 +268,7 @@ module.exports = {
       
       if (enabledOption !== null) {
         newIsEnabled = enabledOption.toLowerCase() === "enabled";
-        await setValue(CONFIG_KEYS.ENABLED, newIsEnabled);
+        await setValue(BACKUP_CONFIG_ENABLED, newIsEnabled);
         logger.debug("Backup mode enabled status updated:", { enabled: newIsEnabled });
       }
       
@@ -336,11 +341,11 @@ module.exports = {
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(newEnabled ? '#00FF00' : '#FF0000')
-      .setTitle('🔄 Backup Mode Updated')
+      .setColor(newEnabled ? BACKUP_EMBED_COLOR_ENABLED : BACKUP_EMBED_COLOR_DISABLED)
+      .setTitle(BACKUP_EMBED_TITLE_UPDATE)
       .setTimestamp();
 
-    const statusEmoji = newEnabled ? "✅" : "❌";
+    const statusEmoji = newEnabled ? BACKUP_STATUS_ENABLED : BACKUP_STATUS_DISABLED;
     const statusText = newEnabled ? "Enabled" : "Disabled";
     embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
@@ -370,11 +375,11 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
-      .setTitle('🔄 Backup Mode Status')
+      .setColor(settings.isEnabled ? BACKUP_EMBED_COLOR_ENABLED : BACKUP_EMBED_COLOR_DISABLED)
+      .setTitle(BACKUP_EMBED_TITLE_STATUS)
       .setTimestamp();
 
-    const statusEmoji = settings.isEnabled ? "✅" : "❌";
+    const statusEmoji = settings.isEnabled ? BACKUP_STATUS_ENABLED : BACKUP_STATUS_DISABLED;
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
@@ -391,7 +396,7 @@ module.exports = {
       embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.`);
     }
 
-    embed.setFooter({ text: `Requested by ${interaction.user.tag}` });
+    embed.setFooter({ text: `${BACKUP_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` });
     
     return embed;
   }

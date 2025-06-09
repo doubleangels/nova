@@ -10,25 +10,25 @@ const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 const { logError } = require('../errors');
 
-const DEFAULT_TIME_LIMIT = 2;
-const MIN_TIME_LIMIT = 1;
-const MAX_TIME_LIMIT = 72;
-const DB_KEY_ENABLED = "mute_mode_enabled";
-const DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
+const MUTE_DB_KEY_ENABLED = "mute_mode_enabled";
+const MUTE_DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
 
-/**
- * Error messages specific to the Mute Mode command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing mute mode.",
-    DATABASE_READ_ERROR: "⚠️ Failed to retrieve mute mode settings. Please try again later.",
-    DATABASE_WRITE_ERROR: "⚠️ Failed to update mute mode settings. Please try again later.",
-    INVALID_TIME_LIMIT: "⚠️ Invalid time limit specified. Using default value.",
-    UPDATE_FAILED: "⚠️ Failed to update mute mode.",
-    QUERY_FAILED: "⚠️ Failed to query mute mode.",
-    TOGGLE_FAILED: "⚠️ Failed to toggle mute mode."
-};
+const MUTE_DEFAULT_TIME_LIMIT = 2;
+const MUTE_MIN_TIME_LIMIT = 1;
+const MUTE_MAX_TIME_LIMIT = 72;
+
+const MUTE_EMBED_COLOR_ENABLED = '#00FF00';
+const MUTE_EMBED_COLOR_DISABLED = '#FF0000';
+const MUTE_EMBED_TITLE_STATUS = '🔇 Mute Mode Status';
+const MUTE_EMBED_TITLE_UPDATE = '🔇 Mute Mode Updated';
+
+const MUTE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing mute mode.";
+const MUTE_ERROR_DATABASE_READ = "⚠️ Failed to retrieve mute mode settings. Please try again later.";
+const MUTE_ERROR_DATABASE_WRITE = "⚠️ Failed to update mute mode settings. Please try again later.";
+const MUTE_ERROR_INVALID_TIME = "⚠️ Invalid time limit specified. Using default value.";
+const MUTE_ERROR_UPDATE_FAILED = "⚠️ Failed to update mute mode.";
+const MUTE_ERROR_QUERY_FAILED = "⚠️ Failed to query mute mode.";
+const MUTE_ERROR_TOGGLE_FAILED = "⚠️ Failed to toggle mute mode.";
 
 /**
  * We handle the mutemode command.
@@ -63,10 +63,10 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('time')
-            .setDescription(`Time limit in hours before a silent user is kicked (${MIN_TIME_LIMIT}-${MAX_TIME_LIMIT})`)
+            .setDescription(`Time limit in hours before a silent user is kicked (${MUTE_MIN_TIME_LIMIT}-${MUTE_MAX_TIME_LIMIT})`)
             .setRequired(false)
-            .setMinValue(MIN_TIME_LIMIT)
-            .setMaxValue(MAX_TIME_LIMIT)
+            .setMinValue(MUTE_MIN_TIME_LIMIT)
+            .setMaxValue(MUTE_MAX_TIME_LIMIT)
         )
     )
     .addSubcommand(subcommand =>
@@ -145,14 +145,14 @@ module.exports = {
       
       let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
       
-      if (timeLimit < MIN_TIME_LIMIT || timeLimit > MAX_TIME_LIMIT) {
+      if (timeLimit < MUTE_MIN_TIME_LIMIT || timeLimit > MUTE_MAX_TIME_LIMIT) {
         logger.warn("Invalid time limit specified:", {
           userId: interaction.user.id,
           guildId: interaction.guildId,
           providedValue: timeLimit
         });
         
-        timeLimit = DEFAULT_TIME_LIMIT;
+        timeLimit = MUTE_DEFAULT_TIME_LIMIT;
       }
       
       logger.debug("Processing mutemode update:", {
@@ -193,13 +193,13 @@ module.exports = {
   async getCurrentSettings() {
     try {
       const [isEnabled, timeLimit] = await Promise.all([
-        getValue(DB_KEY_ENABLED),
-        getValue(DB_KEY_TIME_LIMIT)
+        getValue(MUTE_DB_KEY_ENABLED),
+        getValue(MUTE_DB_KEY_TIME_LIMIT)
       ]);
       
       return {
         isEnabled: isEnabled === true,
-        timeLimit: timeLimit ? Number(timeLimit) : DEFAULT_TIME_LIMIT
+        timeLimit: timeLimit ? Number(timeLimit) : MUTE_DEFAULT_TIME_LIMIT
       };
     } catch (error) {
       logger.error("Failed to retrieve current mute mode settings:", {
@@ -222,8 +222,8 @@ module.exports = {
   async updateSettings(isEnabled, timeLimit) {
     try {
       await Promise.all([
-        setValue(DB_KEY_ENABLED, isEnabled),
-        setValue(DB_KEY_TIME_LIMIT, timeLimit)
+        setValue(MUTE_DB_KEY_ENABLED, isEnabled),
+        setValue(MUTE_DB_KEY_TIME_LIMIT, timeLimit)
       ]);
     } catch (error) {
       logger.error("Database operation failed during mute mode update:", { 
@@ -243,8 +243,8 @@ module.exports = {
    */
   formatStatusMessage(settings) {
     const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
-      .setTitle('🔇 Mute Mode Status')
+      .setColor(settings.isEnabled ? MUTE_EMBED_COLOR_ENABLED : MUTE_EMBED_COLOR_DISABLED)
+      .setTitle(MUTE_EMBED_TITLE_STATUS)
       .setTimestamp();
 
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
@@ -273,8 +273,8 @@ module.exports = {
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
     const embed = new EmbedBuilder()
-      .setColor(newEnabled ? '#00FF00' : '#FF0000')
-      .setTitle('🔇 Mute Mode Updated')
+      .setColor(newEnabled ? MUTE_EMBED_COLOR_ENABLED : MUTE_EMBED_COLOR_DISABLED)
+      .setTitle(MUTE_EMBED_TITLE_UPDATE)
       .setTimestamp();
 
     const statusEmoji = newEnabled ? "✅" : "❌";
@@ -316,14 +316,14 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = MUTE_ERROR_UNEXPECTED;
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+      errorMessage = MUTE_ERROR_DATABASE_READ;
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+      errorMessage = MUTE_ERROR_DATABASE_WRITE;
     } else if (error.message === "INVALID_TIME_LIMIT") {
-      errorMessage = ERROR_MESSAGES.INVALID_TIME_LIMIT;
+      errorMessage = MUTE_ERROR_INVALID_TIME;
     }
     
     try {

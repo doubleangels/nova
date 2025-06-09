@@ -12,32 +12,33 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
-const DEFAULT_RESULTS_COUNT = 5;
-const MAX_RESULTS = 10;
-const MIN_RESULTS = 1;
-const COLLECTOR_TIMEOUT = 120000;
-const EMBED_COLOR = 0x4285F4;
-const SAFE_SEARCH = "medium";
+const IMAGES_API_URL = "https://www.googleapis.com/customsearch/v1";
+const IMAGES_API_KEY = config.googleApiKey;
+const IMAGES_CSE_ID = config.imageSearchEngineId;
+const IMAGES_SAFE_SEARCH = "medium";
 
-const GOOGLE_API_KEY = config.googleApiKey;
-const GOOGLE_CSE_ID = config.imageSearchEngineId;
+const IMAGES_DEFAULT_RESULTS = 5;
+const IMAGES_MAX_RESULTS = 10;
+const IMAGES_MIN_RESULTS = 1;
+const IMAGES_COLLECTOR_TIMEOUT = 120000;
+const IMAGES_REQUEST_TIMEOUT = 10000;
 
-/**
- * Error messages specific to the Google Images command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    INVALID_QUERY: "⚠️ Please provide a valid search query.",
-    NO_RESULTS_FOUND: "⚠️ No images found for your search query.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching for images.",
-    API_ERROR: "⚠️ Failed to fetch search results. Please try again later.",
-    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    GOOGLE_API_ERROR: "⚠️ Failed to fetch search results from Google. Please try again later.",
-    GOOGLE_NO_RESULTS: "⚠️ No images found for your search query."
-};
+const IMAGES_EMBED_COLOR = 0x4285F4;
+const IMAGES_EMBED_FOOTER = "Powered by Google Image Search";
+const IMAGES_EMBED_PREV_LABEL = "Previous";
+const IMAGES_EMBED_NEXT_LABEL = "Next";
+const IMAGES_EMBED_PREV_EMOJI = "◀️";
+const IMAGES_EMBED_NEXT_EMOJI = "▶️";
+
+const IMAGES_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const IMAGES_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search query.";
+const IMAGES_ERROR_NO_RESULTS = "⚠️ No images found for your search query.";
+const IMAGES_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching for images.";
+const IMAGES_ERROR_API = "⚠️ Failed to fetch search results. Please try again later.";
+const IMAGES_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
+const IMAGES_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const IMAGES_ERROR_GOOGLE_API = "⚠️ Failed to fetch search results from Google. Please try again later.";
+const IMAGES_ERROR_GOOGLE_NO_RESULTS = "⚠️ No images found for your search query.";
 
 /**
  * We convert a string to title case for better presentation.
@@ -65,7 +66,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription(`How many results do you want? (${MIN_RESULTS}-${MAX_RESULTS}, Default: ${DEFAULT_RESULTS_COUNT})`)
+        .setDescription(`How many results do you want? (${IMAGES_MIN_RESULTS}-${IMAGES_MAX_RESULTS}, Default: ${IMAGES_DEFAULT_RESULTS})`)
         .setRequired(false)
     ),
 
@@ -84,13 +85,13 @@ module.exports = {
     });
     
     try {
-      if (!GOOGLE_API_KEY || !GOOGLE_CSE_ID) {
+      if (!IMAGES_API_KEY || !IMAGES_CSE_ID) {
         logger.error("Missing Google API configuration:", {
-          hasApiKey: !!GOOGLE_API_KEY,
-          hasCseId: !!GOOGLE_CSE_ID
+          hasApiKey: !!IMAGES_API_KEY,
+          hasCseId: !!IMAGES_CSE_ID
         });
         return await interaction.editReply({
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: IMAGES_ERROR_CONFIG_MISSING,
           ephemeral: true
         });
       }
@@ -98,13 +99,13 @@ module.exports = {
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
-        query, resultsCount, DEFAULT_RESULTS_COUNT, MIN_RESULTS, MAX_RESULTS
+        query, resultsCount, IMAGES_DEFAULT_RESULTS, IMAGES_MIN_RESULTS, IMAGES_MAX_RESULTS
       );
           
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters:", { reason: searchParams.error });
         return await interaction.editReply({
-          content: ERROR_MESSAGES.INVALID_QUERY,
+          content: IMAGES_ERROR_INVALID_QUERY,
           ephemeral: true
         });
       }
@@ -128,7 +129,7 @@ module.exports = {
       if (searchResults.items.length === 0) {
         logger.warn("No image results found for query:", { query: searchParams.query });
         return await interaction.editReply({
-          content: ERROR_MESSAGES.NO_RESULTS_FOUND,
+          content: IMAGES_ERROR_NO_RESULTS,
           ephemeral: true
         });
       }
@@ -138,14 +139,14 @@ module.exports = {
         searchResults.items,
         index => this.generateImageEmbed(searchResults.items, index),
         'img',
-        COLLECTOR_TIMEOUT,
+        IMAGES_COLLECTOR_TIMEOUT,
         logger,
         {
           buttonStyle: ButtonStyle.Primary,
-          prevLabel: 'Previous',
-          nextLabel: 'Next',
-          prevEmoji: '◀️',
-          nextEmoji: '▶️'
+          prevLabel: IMAGES_EMBED_PREV_LABEL,
+          nextLabel: IMAGES_EMBED_NEXT_LABEL,
+          prevEmoji: IMAGES_EMBED_PREV_EMOJI,
+          nextEmoji: IMAGES_EMBED_NEXT_EMOJI
         }
       );
     } catch (error) {

@@ -4,36 +4,32 @@ const logger = require('../logger')(path.basename(__filename));
 const { createPaginatedResults } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const MESSAGES_EMBED_COLOR = 0xcd41ff;
 const MESSAGES_PER_PAGE = 10;
-const MAX_CONTENT_LENGTH = 200;
-const CONTENT_ELLIPSIS = '...';
-const BUTTON_COLLECTOR_TIMEOUT = 300000;
-const ATTACHMENT_INDICATOR = '📎';
-const EMBED_INDICATOR = '🖼️';
-const MESSAGE_INDICATOR = '📜';
-const TIME_INDICATOR = '⏰';
-const NO_CONTENT_TEXT = '[No text content]';
-const MESSAGE_FETCH_BATCH_SIZE = 100;
+const MESSAGES_MAX_CONTENT_LENGTH = 200;
+const MESSAGES_CONTENT_ELLIPSIS = '...';
+const MESSAGES_FETCH_BATCH_SIZE = 100;
+const MESSAGES_COLLECTOR_TIMEOUT = 300000;
 
-/**
- * Error messages specific to the User Messages command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching user messages.",
-    DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
-    USER_NOT_FOUND: "⚠️ The specified user could not be found.",
-    INVALID_CHANNEL_TYPE: "⚠️ Please select a text or announcement channel.",
-    NO_PERMISSION_TO_VIEW_CHANNEL: "⚠️ You don't have permission to view messages in this channel.",
-    MESSAGE_FETCH_FAILED: "⚠️ Failed to fetch messages. Please try again later.",
-    INVALID_MESSAGE_LIMIT: "⚠️ Invalid message limit specified.",
-    INVALID_DAY_LIMIT: "⚠️ Invalid day limit specified.",
-    CHANNEL_NOT_FOUND: "⚠️ The specified channel could not be found.",
-    NO_MESSAGES_FOUND: "⚠️ No messages found matching your criteria.",
-    INVALID_FILTER: "⚠️ Invalid filter specified.",
-    PERMISSION_DENIED: "⚠️ You don't have permission to use this command."
-};
+const MESSAGES_EMBED_COLOR = 0xcd41ff;
+
+const MESSAGES_ATTACHMENT_INDICATOR = '📎';
+const MESSAGES_EMBED_INDICATOR = '🖼️';
+const MESSAGES_MESSAGE_INDICATOR = '📜';
+const MESSAGES_TIME_INDICATOR = '⏰';
+const MESSAGES_NO_CONTENT_TEXT = '[No text content]';
+
+const MESSAGES_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching user messages.";
+const MESSAGES_ERROR_DM_NOT_SUPPORTED = "⚠️ This command cannot be used in direct messages.";
+const MESSAGES_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found.";
+const MESSAGES_ERROR_INVALID_CHANNEL = "⚠️ Please select a text or announcement channel.";
+const MESSAGES_ERROR_NO_PERMISSION = "⚠️ You don't have permission to view messages in this channel.";
+const MESSAGES_ERROR_FETCH_FAILED = "⚠️ Failed to fetch messages. Please try again later.";
+const MESSAGES_ERROR_INVALID_LIMIT = "⚠️ Invalid message limit specified.";
+const MESSAGES_ERROR_INVALID_DAYS = "⚠️ Invalid day limit specified.";
+const MESSAGES_ERROR_CHANNEL_NOT_FOUND = "⚠️ The specified channel could not be found.";
+const MESSAGES_ERROR_NO_MESSAGES = "⚠️ No messages found matching your criteria.";
+const MESSAGES_ERROR_INVALID_FILTER = "⚠️ Invalid filter specified.";
+const MESSAGES_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to use this command.";
 
 /**
  * We handle the usermessages command.
@@ -103,7 +99,7 @@ module.exports = {
         });
         
         return await interaction.reply({
-          content: ERROR_MESSAGES.DM_NOT_SUPPORTED,
+          content: MESSAGES_ERROR_DM_NOT_SUPPORTED,
           ephemeral: true
         });
       }
@@ -189,7 +185,7 @@ module.exports = {
         embeds,
         generateEmbed,
         'usermsg',
-        BUTTON_COLLECTOR_TIMEOUT,
+        MESSAGES_COLLECTOR_TIMEOUT,
         logger,
         {
           buttonStyle: 'Primary',
@@ -238,7 +234,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: ERROR_MESSAGES.USER_NOT_FOUND
+        errorMessage: MESSAGES_ERROR_USER_NOT_FOUND
       };
     }
     
@@ -251,7 +247,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: ERROR_MESSAGES.INVALID_CHANNEL_TYPE
+        errorMessage: MESSAGES_ERROR_INVALID_CHANNEL
       };
     }
     
@@ -266,7 +262,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: ERROR_MESSAGES.NO_PERMISSION_TO_VIEW_CHANNEL
+        errorMessage: MESSAGES_ERROR_NO_PERMISSION
       };
     }
     
@@ -303,7 +299,7 @@ module.exports = {
 
     while (allMessages.length < limit) {
       const messages = await channel.messages.fetch({ 
-        limit: MESSAGE_FETCH_BATCH_SIZE, 
+        limit: MESSAGES_FETCH_BATCH_SIZE, 
         before: lastMessageId 
       });
 
@@ -320,7 +316,7 @@ module.exports = {
       });
       
       allMessages.push(...userMessages.map(msg => ({
-        content: msg.content || NO_CONTENT_TEXT,
+        content: msg.content || MESSAGES_NO_CONTENT_TEXT,
         attachments: msg.attachments.size > 0,
         embeds: msg.embeds.length > 0,
         timestamp: msg.createdTimestamp,
@@ -373,13 +369,13 @@ module.exports = {
         const timestamp = Math.floor(msg.timestamp / 1000);
         let content = msg.content;
         
-        if (content.length > MAX_CONTENT_LENGTH) {
-          content = content.substring(0, MAX_CONTENT_LENGTH) + CONTENT_ELLIPSIS;
+        if (content.length > MESSAGES_MAX_CONTENT_LENGTH) {
+          content = content.substring(0, MESSAGES_MAX_CONTENT_LENGTH) + MESSAGES_CONTENT_ELLIPSIS;
         }
         
         let extras = [];
-        if (msg.attachments) extras.push(ATTACHMENT_INDICATOR);
-        if (msg.embeds) extras.push(EMBED_INDICATOR);
+        if (msg.attachments) extras.push(MESSAGES_ATTACHMENT_INDICATOR);
+        if (msg.embeds) extras.push(MESSAGES_EMBED_INDICATOR);
         if (msg.hasCodeBlock) extras.push('`');
         if (msg.reactionCount > 0) extras.push(`💬 ${msg.reactionCount}`);
         
@@ -387,7 +383,7 @@ module.exports = {
         
         embed.addFields({
           name: `${messageNumber}. ${extraText}`,
-          value: `${MESSAGE_INDICATOR} **Message:** ${content}\n${TIME_INDICATOR} **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
+          value: `${MESSAGES_MESSAGE_INDICATOR} **Message:** ${content}\n${MESSAGES_TIME_INDICATOR} **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
           inline: false
         });
       });
@@ -412,30 +408,30 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = MESSAGES_ERROR_UNEXPECTED;
     
-    if (error.message === "DM_NOT_SUPPORTED") {
-      errorMessage = ERROR_MESSAGES.DM_NOT_SUPPORTED;
-    } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
-    } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
-    } else if (error.message === "NO_PERMISSION_TO_VIEW_CHANNEL") {
-      errorMessage = ERROR_MESSAGES.NO_PERMISSION_TO_VIEW_CHANNEL;
-    } else if (error.message === "MESSAGE_FETCH_FAILED") {
-      errorMessage = ERROR_MESSAGES.MESSAGE_FETCH_FAILED;
-    } else if (error.message === "INVALID_MESSAGE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.INVALID_MESSAGE_LIMIT;
-    } else if (error.message === "INVALID_DAY_LIMIT") {
-      errorMessage = ERROR_MESSAGES.INVALID_DAY_LIMIT;
-    } else if (error.message === "CHANNEL_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.CHANNEL_NOT_FOUND;
-    } else if (error.message === "NO_MESSAGES_FOUND") {
-      errorMessage = ERROR_MESSAGES.NO_MESSAGES_FOUND;
-    } else if (error.message === "INVALID_FILTER") {
-      errorMessage = ERROR_MESSAGES.INVALID_FILTER;
-    } else if (error.message === "PERMISSION_DENIED") {
-      errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+    if (error.message === MESSAGES_ERROR_DM_NOT_SUPPORTED) {
+      errorMessage = MESSAGES_ERROR_DM_NOT_SUPPORTED;
+    } else if (error.message === MESSAGES_ERROR_USER_NOT_FOUND) {
+      errorMessage = MESSAGES_ERROR_USER_NOT_FOUND;
+    } else if (error.message === MESSAGES_ERROR_INVALID_CHANNEL) {
+      errorMessage = MESSAGES_ERROR_INVALID_CHANNEL;
+    } else if (error.message === MESSAGES_ERROR_NO_PERMISSION) {
+      errorMessage = MESSAGES_ERROR_NO_PERMISSION;
+    } else if (error.message === MESSAGES_ERROR_FETCH_FAILED) {
+      errorMessage = MESSAGES_ERROR_FETCH_FAILED;
+    } else if (error.message === MESSAGES_ERROR_INVALID_LIMIT) {
+      errorMessage = MESSAGES_ERROR_INVALID_LIMIT;
+    } else if (error.message === MESSAGES_ERROR_INVALID_DAYS) {
+      errorMessage = MESSAGES_ERROR_INVALID_DAYS;
+    } else if (error.message === MESSAGES_ERROR_CHANNEL_NOT_FOUND) {
+      errorMessage = MESSAGES_ERROR_CHANNEL_NOT_FOUND;
+    } else if (error.message === MESSAGES_ERROR_NO_MESSAGES) {
+      errorMessage = MESSAGES_ERROR_NO_MESSAGES;
+    } else if (error.message === MESSAGES_ERROR_INVALID_FILTER) {
+      errorMessage = MESSAGES_ERROR_INVALID_FILTER;
+    } else if (error.message === MESSAGES_ERROR_PERMISSION_DENIED) {
+      errorMessage = MESSAGES_ERROR_PERMISSION_DENIED;
     }
     
     try {

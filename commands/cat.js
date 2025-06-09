@@ -9,16 +9,20 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
+const CAT_API_BASE_URL = 'https://api.thecatapi.com/v1';
+const CAT_API_ENDPOINT = '/images/search';
 const CAT_API_URL = 'https://cataas.com/cat/cute';
-const CAT_EMBED_COLOR = 0xD3D3D3;
-const DEFAULT_FILENAME = 'cat.jpg';
 
-const ERROR_MESSAGES = {
-  API_ERROR: "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.",
-  INVALID_RESPONSE: "⚠️ The cat service didn't send a proper image. Please try again.",
-  NETWORK_ERROR: "⚠️ Couldn't connect to the cat image service. Please check your internet connection.",
-  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
-};
+const CAT_EMBED_COLOR = 0xFFB6C1;
+const CAT_EMBED_FOOTER = 'Powered by The Cat API';
+const CAT_EMBED_TITLE = '🐱 Random Cat';
+
+const CAT_DEFAULT_FILENAME = 'cat.jpg';
+
+const CAT_ERROR_API = "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.";
+const CAT_ERROR_INVALID_RESPONSE = "⚠️ The cat service didn't send a proper image. Please try again.";
+const CAT_ERROR_NETWORK = "⚠️ Couldn't connect to the cat image service. Please check your internet connection.";
+const CAT_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -41,14 +45,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      const response = await axios.get('https://api.thecatapi.com/v1/images/search');
+      const response = await axios.get(CAT_API_BASE_URL + CAT_API_ENDPOINT);
       const catData = response.data[0];
       
       const embed = new EmbedBuilder()
-        .setColor('#FFB6C1')
-        .setTitle('🐱 Random Cat')
+        .setColor(CAT_EMBED_COLOR)
+        .setTitle(CAT_EMBED_TITLE)
         .setImage(catData.url)
-        .setFooter({ text: 'Powered by The Cat API' });
+        .setFooter({ text: CAT_EMBED_FOOTER });
       
       await interaction.editReply({ embeds: [embed] });
       
@@ -64,14 +68,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = CAT_ERROR_UNEXPECTED;
       
       if (error.message === "API_ERROR") {
-        errorMessage = ERROR_MESSAGES.API_ERROR;
+        errorMessage = CAT_ERROR_API;
       } else if (error.message === "INVALID_RESPONSE") {
-        errorMessage = ERROR_MESSAGES.INVALID_RESPONSE;
+        errorMessage = CAT_ERROR_INVALID_RESPONSE;
       } else if (error.message === "NETWORK_ERROR") {
-        errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+        errorMessage = CAT_ERROR_NETWORK;
       }
       
       try {

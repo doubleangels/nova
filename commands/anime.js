@@ -11,19 +11,18 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
-const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
-const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
-const MAL_EMBED_COLOR = 0x2E51A2;
-const SEARCH_LIMIT = 1;
+const ANIME_API_BASE_URL = 'https://api.myanimelist.net/v2';
+const ANIME_EMBED_COLOR = 0x2E51A2;
+const ANIME_EMBED_FOOTER = "Powered by MyAnimeList API";
+const ANIME_SEARCH_LIMIT = 1;
+const ANIME_WEBSITE_URL = 'https://myanimelist.net/anime';
 
-const ERROR_MESSAGES = {
-  CONFIG_MISSING: "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.",
-  API_ERROR: "⚠️ Failed to communicate with MyAnimeList API. Please try again later.",
-  API_RATE_LIMIT: "⚠️ MyAnimeList API rate limit reached. Please try again in a few moments.",
-  API_NETWORK_ERROR: "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.",
-  NO_RESULTS_FOUND: "⚠️ No anime found matching your search. Please try a different title.",
-  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
-};
+const ANIME_ERROR_API = "⚠️ Failed to communicate with MyAnimeList API. Please try again later.";
+const ANIME_ERROR_CONFIG = "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.";
+const ANIME_ERROR_NETWORK = "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.";
+const ANIME_ERROR_NO_RESULTS = "⚠️ No anime found matching your search. Please try a different title.";
+const ANIME_ERROR_RATE_LIMIT = "⚠️ MyAnimeList API rate limit reached. Please try again in a few moments.";
+const ANIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -47,7 +46,7 @@ module.exports = {
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: ANIME_ERROR_CONFIG,
           ephemeral: true
         });
         return;
@@ -77,7 +76,7 @@ module.exports = {
       } else {
         logger.info("No anime results found for query:", { query: formattedTitle });
         await interaction.editReply({
-          content: ERROR_MESSAGES.NO_RESULTS_FOUND
+          content: ANIME_ERROR_NO_RESULTS
         });
       }
     } catch (error) {
@@ -88,14 +87,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = ANIME_ERROR_UNEXPECTED;
       
       if (error.message === "API_ERROR") {
-        errorMessage = ERROR_MESSAGES.API_ERROR;
+        errorMessage = ANIME_ERROR_API;
       } else if (error.message === "API_RATE_LIMIT") {
-        errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+        errorMessage = ANIME_ERROR_RATE_LIMIT;
       } else if (error.message === "API_NETWORK_ERROR") {
-        errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+        errorMessage = ANIME_ERROR_NETWORK;
       }
       
       try {
@@ -128,7 +127,7 @@ module.exports = {
    */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-    const searchUrl = `${MAL_API_BASE_URL}/anime?q=${encodeURIComponent(title)}&limit=${SEARCH_LIMIT}`;
+    const searchUrl = `${ANIME_API_BASE_URL}/anime?q=${encodeURIComponent(title)}&limit=${ANIME_SEARCH_LIMIT}`;
     
     logger.debug("Making MAL search request:", { searchUrl });
     const searchResponse = await axios.get(searchUrl, { headers });
@@ -141,7 +140,7 @@ module.exports = {
     const animeNode = searchResponse.data.data[0].node;
     const animeId = animeNode.id;
     
-    const detailsUrl = `${MAL_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
+    const detailsUrl = `${ANIME_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
     
     logger.debug("Fetching anime details:", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
@@ -173,7 +172,7 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed
    */
   createAnimeEmbed(animeData) {
-    const malLink = `${MAL_WEBSITE_URL}/${animeData.id}`;
+    const malLink = `${ANIME_WEBSITE_URL}/${animeData.id}`;
     const genres = animeData.genres.length > 0 
       ? animeData.genres.map(g => g.name).join(", ") 
       : "Unknown";
@@ -184,13 +183,13 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle(`📺 **${animeData.title} (${releaseDate})**`)
       .setDescription(`📜 **Synopsis:** ${animeData.synopsis}`)
-      .setColor(MAL_EMBED_COLOR)
+      .setColor(ANIME_EMBED_COLOR)
       .addFields(
         { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
         { name: "⭐ MAL Rating", value: `🌟 ${animeData.rating}`, inline: true },
         { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
       )
-      .setFooter({ text: "Powered by MyAnimeList API" });
+      .setFooter({ text: ANIME_EMBED_FOOTER });
     
     if (animeData.imageUrl) {
       embed.setThumbnail(animeData.imageUrl);

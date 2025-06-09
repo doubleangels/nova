@@ -12,26 +12,30 @@ const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the Timezone command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing timezone settings.",
-    API_ERROR: "⚠️ Failed to retrieve timezone information. Please try again later.",
-    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
-    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
-    API_ACCESS_DENIED: "⚠️ API access denied. Please check API configuration.",
-    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
-    INVALID_TIMEZONE: "⚠️ Invalid timezone specified.",
-    INVALID_LOCATION: "⚠️ Invalid location specified.",
-    LOCATION_NOT_FOUND: "⚠️ Could not find the specified location.",
-    TIMEZONE_NOT_FOUND: "⚠️ Could not determine timezone for the specified location.",
-    PERMISSION_DENIED: "⚠️ You don't have permission to manage timezones for other users.",
-    DATABASE_ERROR: "⚠️ Failed to save timezone settings. Please try again later."
-};
+const TIMEZONE_API_TIMEOUT = 10000;
+
+const TIMEZONE_DB_KEY_CHANNEL = 'timezone_channel';
+const TIMEZONE_DB_KEY_ROLE = 'timezone_role';
+
+const TIMEZONE_EMBED_COLOR = '#cd41ff';
+const TIMEZONE_EMBED_TITLE_STATUS = '📌 Timezone Status';
+const TIMEZONE_EMBED_TITLE_SETUP = '✅ Timezone Setup Complete';
+const TIMEZONE_EMBED_FOOTER_PREFIX = 'Updated by';
+
+const TIMEZONE_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
+const TIMEZONE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing timezone settings.";
+const TIMEZONE_ERROR_API = "⚠️ Failed to retrieve timezone information. Please try again later.";
+const TIMEZONE_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
+const TIMEZONE_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
+const TIMEZONE_ERROR_ACCESS_DENIED = "⚠️ API access denied. Please check API configuration.";
+const TIMEZONE_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
+const TIMEZONE_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
+const TIMEZONE_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone specified.";
+const TIMEZONE_ERROR_INVALID_LOCATION = "⚠️ Invalid location specified.";
+const TIMEZONE_ERROR_LOCATION_NOT_FOUND = "⚠️ Could not find the specified location.";
+const TIMEZONE_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Could not determine timezone for the specified location.";
+const TIMEZONE_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to manage timezones for other users.";
+const TIMEZONE_ERROR_DATABASE = "⚠️ Failed to save timezone settings. Please try again later.";
 
 /**
  * We handle the timezone command.
@@ -116,7 +120,7 @@ module.exports = {
           });
           
           await interaction.reply({
-              content: ERROR_MESSAGES.CONFIG_MISSING,
+              content: TIMEZONE_ERROR_CONFIG_MISSING,
               ephemeral: true
           });
           return;
@@ -172,7 +176,7 @@ module.exports = {
           });
           
           await interaction.editReply({
-              content: ERROR_MESSAGES.INVALID_TIMEZONE,
+              content: TIMEZONE_ERROR_INVALID_TIMEZONE,
               ephemeral: true
           });
           return;
@@ -191,13 +195,13 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-        .setColor('#cd41ff')
-        .setTitle('✅ Timezone Updated')
+        .setColor(TIMEZONE_EMBED_COLOR)
+        .setTitle(TIMEZONE_EMBED_TITLE_SETUP)
         .setDescription(isAdminAction 
           ? `You have set ${targetUser}'s timezone to: \`${timezoneId}\` based on location: ${formattedAddress}`
           : `Your timezone has been successfully set to: \`${timezoneId}\` based on location: ${formattedAddress}`
         )
-        .setFooter({ text: `Updated by ${interaction.user.tag}` })
+        .setFooter({ text: TIMEZONE_EMBED_FOOTER_PREFIX + ' ' + interaction.user.tag })
         .setTimestamp();
 
       if (currentTimezone) {
@@ -237,9 +241,9 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-        .setColor('#cd41ff')
-        .setTitle('📌 Timezone Status')
-        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setColor(TIMEZONE_EMBED_COLOR)
+        .setTitle(TIMEZONE_EMBED_TITLE_STATUS)
+        .setFooter({ text: 'Requested by ' + interaction.user.tag })
         .setTimestamp();
 
       if (isCheckingOther) {
@@ -305,7 +309,7 @@ module.exports = {
               
               return {
                   valid: false,
-                  message: '⚠️ You do not have permission to manage timezones for other users.'
+                  message: TIMEZONE_ERROR_PERMISSION_DENIED
               };
           }
       }
@@ -334,18 +338,18 @@ module.exports = {
           guildId: interaction.guild?.id
       });
       
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = TIMEZONE_ERROR_UNEXPECTED;
       
-      if (error.message === "API_ERROR") {
-          errorMessage = ERROR_MESSAGES.API_ERROR;
+      if (error.message === TIMEZONE_ERROR_API) {
+          errorMessage = TIMEZONE_ERROR_API;
       } else if (error.code === 'ECONNABORTED') {
-          errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+          errorMessage = TIMEZONE_ERROR_REQUEST_TIMEOUT;
       } else if (error.response?.status === 403) {
-          errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+          errorMessage = TIMEZONE_ERROR_ACCESS_DENIED;
       } else if (error.response?.status === 429) {
-          errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+          errorMessage = TIMEZONE_ERROR_RATE_LIMIT_EXCEEDED;
       } else if (error.response?.status >= 500) {
-          errorMessage = ERROR_MESSAGES.API_ERROR;
+          errorMessage = TIMEZONE_ERROR_API;
       }
       
       try {

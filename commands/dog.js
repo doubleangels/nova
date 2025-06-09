@@ -10,21 +10,21 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the dog command.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching the dog image.",
-    API_ERROR: "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.",
-    NO_IMAGE: "⚠️ Couldn't find a dog picture. Try again later.",
-    IMAGE_FETCH_ERROR: "⚠️ Couldn't download the dog picture. Try again later.",
-    NETWORK_ERROR: "⚠️ Network error: Could not connect to the service. Please check your internet connection."
-};
-
+const DOG_API_BASE_URL = 'https://api.thedogapi.com/v1';
+const DOG_API_ENDPOINT = '/images/search';
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
-const EMBED_COLOR = 0xD3D3D3;
-const IMAGE_FILENAME = "dog.jpg";
+
+const DOG_EMBED_COLOR = 0xA0522D;
+const DOG_EMBED_FOOTER = 'Powered by The Dog API';
+const DOG_EMBED_TITLE = '🐕 Random Dog';
+
+const DOG_DEFAULT_FILENAME = "dog.jpg";
+
+const DOG_ERROR_API = "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.";
+const DOG_ERROR_IMAGE_FETCH = "⚠️ Couldn't download the dog picture. Try again later.";
+const DOG_ERROR_NETWORK = "⚠️ Network error: Could not connect to the service. Please check your internet connection.";
+const DOG_ERROR_NO_IMAGE = "⚠️ Couldn't find a dog picture. Try again later.";
+const DOG_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching the dog image.";
 
 /**
  * We handle the dog command.
@@ -139,9 +139,9 @@ module.exports = {
     return new EmbedBuilder()
       .setTitle("Random Dog Picture")
       .setDescription("🐶 Here's a doggo for you!")
-      .setColor(EMBED_COLOR)
-      .setImage(`attachment://${IMAGE_FILENAME}`)
-      .setFooter({ text: "Powered by Dog CEO API" });
+      .setColor(DOG_EMBED_COLOR)
+      .setImage(`attachment://${DOG_DEFAULT_FILENAME}`)
+      .setFooter({ text: DOG_EMBED_FOOTER });
   },
   
   /**
@@ -157,16 +157,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = DOG_ERROR_UNEXPECTED;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = DOG_ERROR_API;
     } else if (error.message === "NO_IMAGE_URL") {
-      errorMessage = ERROR_MESSAGES.NO_IMAGE;
+      errorMessage = DOG_ERROR_NO_IMAGE;
     } else if (error.message === "IMAGE_FETCH_ERROR") {
-      errorMessage = ERROR_MESSAGES.IMAGE_FETCH_ERROR;
+      errorMessage = DOG_ERROR_IMAGE_FETCH;
     } else if (error.message === "NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+      errorMessage = DOG_ERROR_NETWORK;
     }
     
     try {
