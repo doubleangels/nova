@@ -10,7 +10,27 @@ const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to reminder utilities.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing reminder.",
+    REMINDER_CREATION_FAILED: "⚠️ Failed to create reminder.",
+    REMINDER_RESCEDULE_FAILED: "⚠️ Failed to reschedule reminder.",
+    REMINDER_NOT_FOUND: "⚠️ Reminder not found.",
+    REMINDER_DELETION_FAILED: "⚠️ Failed to delete reminder.",
+    REMINDER_SEND_FAILED: "⚠️ Failed to send reminder message.",
+    CHANNEL_NOT_FOUND: "⚠️ Reminder channel not found.",
+    ROLE_NOT_FOUND: "⚠️ Reminder role not found.",
+    INVALID_REMINDER_TYPE: "⚠️ Invalid reminder type provided.",
+    INVALID_DELAY: "⚠️ Invalid reminder delay provided.",
+    INVALID_TIMESTAMP: "⚠️ Invalid timestamp provided.",
+    DATABASE_ERROR: "⚠️ Database error occurred.",
+    CONFIG_MISSING: "⚠️ Required configuration missing."
+};
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,

@@ -12,7 +12,30 @@ const { DateTime } = require('luxon');
 const dayjs = require('dayjs');
 const moment = require('moment-timezone');
 const NodeCache = require('node-cache');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to location utilities.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing location.",
+    INVALID_COORDINATES: "⚠️ Invalid coordinates provided.",
+    INVALID_PLACE: "⚠️ Invalid place name provided.",
+    INVALID_TIMEZONE: "⚠️ Invalid timezone provided.",
+    API_ERROR: "⚠️ Google Maps API error occurred.",
+    API_TIMEOUT: "⚠️ Google Maps API request timed out.",
+    API_RATE_LIMIT: "⚠️ Google Maps API rate limit exceeded.",
+    API_ACCESS_DENIED: "⚠️ Access to Google Maps API denied.",
+    LOCATION_NOT_FOUND: "⚠️ Location not found.",
+    TIMEZONE_NOT_FOUND: "⚠️ Timezone not found for location.",
+    CACHE_ERROR: "⚠️ Error accessing location cache.",
+    INVALID_TIMESTAMP: "⚠️ Invalid timestamp provided.",
+    INVALID_OFFSET: "⚠️ Invalid timezone offset.",
+    INVALID_ADDRESS: "⚠️ Invalid address format.",
+    INVALID_LATITUDE: "⚠️ Invalid latitude value.",
+    INVALID_LONGITUDE: "⚠️ Invalid longitude value."
+};
 
 const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
 const TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';

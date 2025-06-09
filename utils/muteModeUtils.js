@@ -8,7 +8,28 @@ const logger = require('../logger')('muteModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to mute mode utilities.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing mute mode.",
+    MUTE_KICK_SCHEDULE_FAILED: "⚠️ Failed to schedule mute kick.",
+    MUTE_KICK_EXECUTION_FAILED: "⚠️ Failed to execute mute kick.",
+    MUTE_KICK_RESCEDULE_FAILED: "⚠️ Failed to reschedule mute kicks.",
+    MEMBER_NOT_FOUND: "⚠️ Member not found.",
+    GUILD_NOT_FOUND: "⚠️ Guild not found.",
+    DM_FAILED: "⚠️ Failed to send DM to member.",
+    KICK_FAILED: "⚠️ Failed to kick member.",
+    TRACKING_REMOVAL_FAILED: "⚠️ Failed to remove member from tracking.",
+    INVALID_MEMBER_ID: "⚠️ Invalid member ID provided.",
+    INVALID_GUILD_ID: "⚠️ Invalid guild ID provided.",
+    INVALID_JOIN_TIME: "⚠️ Invalid join time provided.",
+    INVALID_MUTE_TIME: "⚠️ Invalid mute time provided.",
+    CLIENT_NOT_FOUND: "⚠️ Discord client not found."
+};
 
 const DEFAULT_MUTE_KICK_TIME_HOURS = 4;
 const KICK_REASON_TIMEOUT = "User did not send a message in time.";
