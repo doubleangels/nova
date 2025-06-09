@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { createPaginatedResults } = require('../utils/searchUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const MESSAGES_EMBED_COLOR = 0xcd41ff;
 const MESSAGES_PER_PAGE = 10;
@@ -15,6 +15,25 @@ const MESSAGE_INDICATOR = '📜';
 const TIME_INDICATOR = '⏰';
 const NO_CONTENT_TEXT = '[No text content]';
 const MESSAGE_FETCH_BATCH_SIZE = 100;
+
+/**
+ * Error messages specific to the User Messages command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching user messages.",
+    DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found.",
+    INVALID_CHANNEL_TYPE: "⚠️ Please select a text or announcement channel.",
+    NO_PERMISSION_TO_VIEW_CHANNEL: "⚠️ You don't have permission to view messages in this channel.",
+    MESSAGE_FETCH_FAILED: "⚠️ Failed to fetch messages. Please try again later.",
+    INVALID_MESSAGE_LIMIT: "⚠️ Invalid message limit specified.",
+    INVALID_DAY_LIMIT: "⚠️ Invalid day limit specified.",
+    CHANNEL_NOT_FOUND: "⚠️ The specified channel could not be found.",
+    NO_MESSAGES_FOUND: "⚠️ No messages found matching your criteria.",
+    INVALID_FILTER: "⚠️ Invalid filter specified.",
+    PERMISSION_DENIED: "⚠️ You don't have permission to use this command."
+};
 
 /**
  * We handle the usermessages command.
@@ -403,6 +422,20 @@ module.exports = {
       errorMessage = ERROR_MESSAGES.INVALID_CHANNEL_TYPE;
     } else if (error.message === "NO_PERMISSION_TO_VIEW_CHANNEL") {
       errorMessage = ERROR_MESSAGES.NO_PERMISSION_TO_VIEW_CHANNEL;
+    } else if (error.message === "MESSAGE_FETCH_FAILED") {
+      errorMessage = ERROR_MESSAGES.MESSAGE_FETCH_FAILED;
+    } else if (error.message === "INVALID_MESSAGE_LIMIT") {
+      errorMessage = ERROR_MESSAGES.INVALID_MESSAGE_LIMIT;
+    } else if (error.message === "INVALID_DAY_LIMIT") {
+      errorMessage = ERROR_MESSAGES.INVALID_DAY_LIMIT;
+    } else if (error.message === "CHANNEL_NOT_FOUND") {
+      errorMessage = ERROR_MESSAGES.CHANNEL_NOT_FOUND;
+    } else if (error.message === "NO_MESSAGES_FOUND") {
+      errorMessage = ERROR_MESSAGES.NO_MESSAGES_FOUND;
+    } else if (error.message === "INVALID_FILTER") {
+      errorMessage = ERROR_MESSAGES.INVALID_FILTER;
+    } else if (error.message === "PERMISSION_DENIED") {
+      errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
     }
     
     try {

@@ -8,7 +8,23 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the Urban Dictionary command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching Urban Dictionary.",
+    API_ERROR: "⚠️ Failed to retrieve definition from Urban Dictionary. Please try again later.",
+    API_RATE_LIMIT: "⚠️ Urban Dictionary API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ Urban Dictionary API access denied. Please check API configuration.",
+    NO_RESULTS_FOUND: "⚠️ No definitions found for that term.",
+    INVALID_QUERY: "⚠️ Please provide a valid search term.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later."
+};
 
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
 const URBAN_EMBED_COLOR = 0x202C34;
@@ -110,9 +126,17 @@ module.exports = {
         let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
         
         if (error.message === "NO_DEFINITION") {
-            errorMessage = ERROR_MESSAGES.URBAN_NO_DEFINITION;
+            errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
         } else if (error.message === "INVALID_QUERY") {
-            errorMessage = ERROR_MESSAGES.URBAN_INVALID_QUERY;
+            errorMessage = ERROR_MESSAGES.INVALID_QUERY;
+        } else if (error.code === 'ECONNABORTED') {
+            errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+        } else if (error.response?.status === 403) {
+            errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+        } else if (error.response?.status === 429) {
+            errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+        } else if (error.response?.status >= 500) {
+            errorMessage = ERROR_MESSAGES.API_ERROR;
         }
         
         try {

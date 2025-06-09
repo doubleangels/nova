@@ -11,7 +11,28 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the Weather command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching weather information.",
+    CONFIG_MISSING: "⚠️ Weather API configuration is missing. Please contact an administrator.",
+    API_ERROR: "⚠️ Failed to retrieve weather data. Please try again later.",
+    API_RATE_LIMIT: "⚠️ Weather API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ Weather API access denied. Please check API configuration.",
+    INVALID_LOCATION: "⚠️ Invalid location specified.",
+    LOCATION_NOT_FOUND: "⚠️ Could not find the specified location.",
+    WEATHER_API_ERROR: "⚠️ Failed to retrieve weather data from the API.",
+    WEATHER_INVALID_LOCATION: "⚠️ Could not find weather data for the specified location.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
+    INVALID_UNITS: "⚠️ Invalid units specified.",
+    INVALID_FORECAST_DAYS: "⚠️ Invalid number of forecast days specified."
+};
 
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
 const WEATHER_EMBED_COLOR = 0xFF6E42;
@@ -448,6 +469,18 @@ module.exports = {
       errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
     } else if (error.message === "INVALID_LOCATION") {
       errorMessage = ERROR_MESSAGES.WEATHER_INVALID_LOCATION;
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+    } else if (error.response?.status === 403) {
+      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+    } else if (error.response?.status === 429) {
+      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+    } else if (error.response?.status >= 500) {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.message === "INVALID_UNITS") {
+      errorMessage = ERROR_MESSAGES.INVALID_UNITS;
+    } else if (error.message === "INVALID_FORECAST_DAYS") {
+      errorMessage = ERROR_MESSAGES.INVALID_FORECAST_DAYS;
     }
     
     try {
