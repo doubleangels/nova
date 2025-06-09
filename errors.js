@@ -53,10 +53,6 @@ const ERROR_MESSAGES = {
     CONFIG_INVALID: "⚠️ Invalid configuration detected. Please contact an administrator.",
     CONFIG_INCOMPLETE: "⚠️ Configuration is incomplete. Please contact an administrator.",
 
-    DOG_API_ERROR: "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.",
-    DOG_NO_IMAGE: "⚠️ Couldn't find a dog picture. Try again later.",
-    DOG_IMAGE_FETCH_ERROR: "⚠️ Couldn't download the dog picture. Try again later.",
-
     GOOGLE_INVALID_QUERY: "⚠️ Please provide a valid search query.",
     GOOGLE_NO_RESULTS: "⚠️ No search results found. Try refining your query!",
     GOOGLE_API_ERROR: "⚠️ Failed to fetch search results. Please try again later.",

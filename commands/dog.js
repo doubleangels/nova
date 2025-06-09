@@ -8,7 +8,19 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the dog command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching the dog image.",
+    API_ERROR: "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.",
+    NO_IMAGE: "⚠️ Couldn't find a dog picture. Try again later.",
+    IMAGE_FETCH_ERROR: "⚠️ Couldn't download the dog picture. Try again later.",
+    NETWORK_ERROR: "⚠️ Network error: Could not connect to the service. Please check your internet connection."
+};
 
 const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
 const EMBED_COLOR = 0xD3D3D3;
@@ -148,13 +160,13 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.DOG_API_ERROR;
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (error.message === "NO_IMAGE_URL") {
-      errorMessage = ERROR_MESSAGES.DOG_NO_IMAGE;
+      errorMessage = ERROR_MESSAGES.NO_IMAGE;
     } else if (error.message === "IMAGE_FETCH_ERROR") {
-      errorMessage = ERROR_MESSAGES.DOG_IMAGE_FETCH_ERROR;
+      errorMessage = ERROR_MESSAGES.IMAGE_FETCH_ERROR;
     } else if (error.message === "NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
     }
     
     try {
