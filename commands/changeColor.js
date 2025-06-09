@@ -7,8 +7,14 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError, ERROR_MESSAGES } = require('../errors');
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
+
+const ERROR_MESSAGES = {
+  INVALID_COLOR_FORMAT: "⚠️ Invalid color format. Please provide a valid hex color code (e.g., #FF0000).",
+  BOT_PERMISSION_DENIED: "⚠️ I don't have permission to manage roles in this server.",
+  ROLE_NOT_MANAGEABLE: "⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.",
+  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
+};
 
 /**
  * We handle the changecolor command.
@@ -85,51 +91,41 @@ module.exports = {
                 newColor: colorValidation.normalizedColor
             });
         } catch (error) {
-            await this.handleError(interaction, error);
-        }
-    },
+            logger.error("Error in change color command:", {
+                error: error.message,
+                stack: error.stack,
+                userId: interaction.user?.id,
+                guildId: interaction.guild?.id,
+                roleId: interaction.options?.getRole('role')?.id
+            });
 
-    /**
-     * Handles errors that occur during command execution.
-     * @async
-     * @function handleError
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {Error} error - The error that occurred
-     */
-    async handleError(interaction, error) {
-        logError(error, 'changecolor', {
-            userId: interaction.user?.id,
-            guildId: interaction.guild?.id,
-            roleId: interaction.options?.getRole('role')?.id
-        });
-        
-        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
-        
-        if (error.message === "INVALID_COLOR") {
-            errorMessage = ERROR_MESSAGES.INVALID_COLOR_FORMAT;
-        } else if (error.message === "BOT_PERMISSION_DENIED") {
-            errorMessage = ERROR_MESSAGES.DISCORD_BOT_MISSING_PERMISSIONS;
-        } else if (error.message === "ROLE_NOT_MANAGEABLE") {
-            errorMessage = ERROR_MESSAGES.DISCORD_ROLE_NOT_MANAGEABLE;
-        }
-        
-        try {
-            await interaction.editReply({ 
-                content: errorMessage,
-                ephemeral: true 
-            });
-        } catch (followUpError) {
-            logger.error("Failed to send error response for change color command:", {
-                error: followUpError.message,
-                originalError: error.message,
-                userId: interaction.user?.id
-            });
+            let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
             
-            await interaction.reply({ 
-                content: errorMessage,
-                ephemeral: true 
-            }).catch(() => {
-            });
+            if (error.message === "INVALID_COLOR") {
+                errorMessage = ERROR_MESSAGES.INVALID_COLOR_FORMAT;
+            } else if (error.message === "BOT_PERMISSION_DENIED") {
+                errorMessage = ERROR_MESSAGES.BOT_PERMISSION_DENIED;
+            } else if (error.message === "ROLE_NOT_MANAGEABLE") {
+                errorMessage = ERROR_MESSAGES.ROLE_NOT_MANAGEABLE;
+            }
+            
+            try {
+                await interaction.editReply({ 
+                    content: errorMessage,
+                    ephemeral: true 
+                });
+            } catch (followUpError) {
+                logger.error("Failed to send error response for change color command:", {
+                    error: followUpError.message,
+                    originalError: error.message,
+                    userId: interaction.user?.id
+                });
+                
+                await interaction.reply({ 
+                    content: errorMessage,
+                    ephemeral: true 
+                }).catch(() => {});
+            }
         }
     }
 };

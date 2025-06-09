@@ -141,11 +141,6 @@ const ERROR_MESSAGES = {
     SEARCH_QUERY_TOO_LONG: "⚠️ Search query too long.",
     SEARCH_FILTER_FAILED: "⚠️ Failed to filter search results.",
 
-    INVALID_COLOR_FORMAT: "⚠️ Invalid color format.",
-    EMPTY_COLOR: "⚠️ Empty color provided.",
-    COLOR_OUT_OF_RANGE: "⚠️ Color value out of range.",
-    INVALID_RGB_VALUES: "⚠️ Invalid RGB values.",
-
     INVALID_LOGGER_LABEL: "⚠️ Invalid logger label provided.",
     LOGGER_CREATION_FAILED: "⚠️ Failed to create logger instance.",
 
