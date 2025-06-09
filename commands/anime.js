@@ -15,6 +15,7 @@ const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
 const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
 const MAL_EMBED_COLOR = 0x2E51A2;
 const SEARCH_LIMIT = 1;
+
 const ERROR_MESSAGES = {
   CONFIG_MISSING: "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.",
   API_ERROR: "⚠️ Failed to communicate with MyAnimeList API. Please try again later.",
@@ -23,7 +24,6 @@ const ERROR_MESSAGES = {
   NO_RESULTS_FOUND: "⚠️ No anime found matching your search. Please try a different title.",
   UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
 };
-const HTTP_STATUS_OK = 200;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -133,7 +133,7 @@ module.exports = {
     logger.debug("Making MAL search request:", { searchUrl });
     const searchResponse = await axios.get(searchUrl, { headers });
     
-    if (searchResponse.status !== HTTP_STATUS_OK || !searchResponse.data.data || !searchResponse.data.data.length) {
+    if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
       logger.warn("No anime results found:", { title });
       return null;
     }
@@ -146,7 +146,7 @@ module.exports = {
     logger.debug("Fetching anime details:", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
     
-    if (detailsResponse.status !== HTTP_STATUS_OK) {
+    if (detailsResponse.status !== 200) {
       logger.error("Failed to retrieve anime details:", { 
         status: detailsResponse.status,
         animeId

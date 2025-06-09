@@ -10,17 +10,9 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
 const CAT_API_URL = 'https://cataas.com/cat/cute';
-const THE_CAT_API_URL = 'https://api.thecatapi.com/v1/images/search';
-const HTTP_STATUS_OK = 200;
-const EMBED_CONFIG = {
-  COLOR: '#FFB6C1',
-  TITLE: '🐱 Random Cat',
-  FOOTER: 'Powered by The Cat API'
-};
-const FILE_CONFIG = {
-  DEFAULT_FILENAME: 'cat.jpg',
-  CONTENT_TYPE: 'image/*'
-};
+const CAT_EMBED_COLOR = 0xD3D3D3;
+const DEFAULT_FILENAME = 'cat.jpg';
+
 const ERROR_MESSAGES = {
   API_ERROR: "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.",
   INVALID_RESPONSE: "⚠️ The cat service didn't send a proper image. Please try again.",
@@ -49,14 +41,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      const response = await axios.get(THE_CAT_API_URL);
+      const response = await axios.get('https://api.thecatapi.com/v1/images/search');
       const catData = response.data[0];
       
       const embed = new EmbedBuilder()
-        .setColor(EMBED_CONFIG.COLOR)
-        .setTitle(EMBED_CONFIG.TITLE)
+        .setColor('#FFB6C1')
+        .setTitle('🐱 Random Cat')
         .setImage(catData.url)
-        .setFooter({ text: EMBED_CONFIG.FOOTER });
+        .setFooter({ text: 'Powered by The Cat API' });
       
       await interaction.editReply({ embeds: [embed] });
       
@@ -114,16 +106,16 @@ module.exports = {
     try {
       const response = await axios.get(CAT_API_URL, { 
         responseType: 'arraybuffer', 
-        headers: { 'Accept': FILE_CONFIG.CONTENT_TYPE }
+        headers: { 'Accept': 'image/*' }
       });
 
-      if (response.status !== HTTP_STATUS_OK) {
+      if (response.status !== 200) {
         logger.warn("API returned non-200 status:", { status: response.status });
         throw new Error("API_ERROR");
       }
 
       const contentType = response.headers['content-type'];
-      if (!contentType || !contentType.startsWith(FILE_CONFIG.CONTENT_TYPE)) {
+      if (!contentType || !contentType.startsWith('image/')) {
         logger.warn("API did not return an image:", { contentType });
         throw new Error("INVALID_RESPONSE");
       }
