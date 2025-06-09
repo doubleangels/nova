@@ -8,7 +8,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 const { getValue, setValue } = require('../utils/database');
 
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';
@@ -16,6 +16,26 @@ const TROLL_MODE_ACCOUNT_AGE_KEY = 'troll_mode_account_age';
 const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
 const MIN_ACCOUNT_AGE = 1;
 const MAX_ACCOUNT_AGE = 365;
+
+/**
+ * Error messages specific to the Troll Mode command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing troll mode settings.",
+    DATABASE_READ_ERROR: "⚠️ Failed to retrieve troll mode settings. Please try again later.",
+    DATABASE_WRITE_ERROR: "⚠️ Failed to update troll mode settings. Please try again later.",
+    PERMISSION_DENIED: "⚠️ You don't have permission to manage troll mode settings.",
+    INVALID_SETTINGS: "⚠️ Invalid troll mode settings provided.",
+    SETTINGS_UPDATE_FAILED: "⚠️ Failed to update troll mode settings.",
+    SETTINGS_READ_FAILED: "⚠️ Failed to read troll mode settings.",
+    INVALID_USER: "⚠️ Invalid user specified.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found.",
+    INVALID_CHANNEL: "⚠️ Invalid channel specified.",
+    CHANNEL_NOT_FOUND: "⚠️ The specified channel could not be found.",
+    INVALID_ROLE: "⚠️ Invalid role specified.",
+    ROLE_NOT_FOUND: "⚠️ The specified role could not be found."
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -237,17 +257,34 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    const errorMessage = getErrorMessage(error);
+    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    
+    if (error.message === "DATABASE_READ_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+    } else if (error.message === "DATABASE_WRITE_ERROR") {
+      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+    } else if (error.message === "PERMISSION_DENIED") {
+      errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+    } else if (error.message === "INVALID_SETTINGS") {
+      errorMessage = ERROR_MESSAGES.INVALID_SETTINGS;
+    }
     
     try {
-      await interaction.reply({ 
-        content: errorMessage
+      await interaction.editReply({ 
+        content: errorMessage,
+        ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for troll mode command:", {
+      logger.error("Failed to send error response for trollmode command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id
+      });
+      
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {
       });
     }
   }

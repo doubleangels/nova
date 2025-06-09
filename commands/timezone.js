@@ -10,7 +10,28 @@ const logger = require('../logger.js')(path.basename(__filename));
 const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the Timezone command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while managing timezone settings.",
+    API_ERROR: "⚠️ Failed to retrieve timezone information. Please try again later.",
+    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ API access denied. Please check API configuration.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
+    INVALID_TIMEZONE: "⚠️ Invalid timezone specified.",
+    INVALID_LOCATION: "⚠️ Invalid location specified.",
+    LOCATION_NOT_FOUND: "⚠️ Could not find the specified location.",
+    TIMEZONE_NOT_FOUND: "⚠️ Could not determine timezone for the specified location.",
+    PERMISSION_DENIED: "⚠️ You don't have permission to manage timezones for other users.",
+    DATABASE_ERROR: "⚠️ Failed to save timezone settings. Please try again later."
+};
 
 /**
  * We handle the timezone command.

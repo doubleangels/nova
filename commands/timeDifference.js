@@ -9,7 +9,25 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the Time Difference command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while calculating time difference.",
+    API_ERROR: "⚠️ Failed to retrieve timezone information. Please try again later.",
+    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ API access denied. Please check API configuration.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
+    INVALID_LOCATION: "⚠️ Invalid location specified.",
+    LOCATION_NOT_FOUND: "⚠️ Could not find the specified location.",
+    TIMEZONE_NOT_FOUND: "⚠️ Could not determine timezone for the specified location."
+};
 
 /**
  * We handle the timedifference command.

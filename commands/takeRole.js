@@ -7,7 +7,22 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the Take Role command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while removing the role.",
+    INSUFFICIENT_PERMISSIONS: "⚠️ You don't have permission to remove this role.",
+    MANAGED_ROLE: "⚠️ Cannot remove a managed role.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
+    ROLE_NOT_ASSIGNED: "⚠️ The user does not have this role.",
+    DISCORD_ROLE_NOT_ASSIGNED: "⚠️ The user does not have this role.",
+    BOT_PERMISSIONS: "⚠️ I don't have permission to manage roles.",
+    ROLE_HIERARCHY: "⚠️ Cannot remove a role that is higher than your highest role."
+};
 
 /**
  * We handle the takerole command.
@@ -190,7 +205,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
+        message: ERROR_MESSAGES.ROLE_HIERARCHY
       };
     }
     
@@ -204,7 +219,7 @@ module.exports = {
         
         return {
           valid: false,
-          message: ERROR_MESSAGES.INSUFFICIENT_PERMISSIONS
+          message: ERROR_MESSAGES.ROLE_HIERARCHY
         };
       }
     }
