@@ -7,7 +7,17 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the coin flip command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while flipping the coin.",
+    RESULT_GENERATION_FAILED: "⚠️ Failed to generate coin flip result.",
+    RESPONSE_FAILED: "⚠️ Failed to send coin flip result."
+};
 
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
@@ -92,9 +102,17 @@ module.exports = {
             guildId: interaction.guild?.id
         });
         
+        let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+        
+        if (error.message === "RESULT_GENERATION_FAILED") {
+            errorMessage = ERROR_MESSAGES.RESULT_GENERATION_FAILED;
+        } else if (error.message === "RESPONSE_FAILED") {
+            errorMessage = ERROR_MESSAGES.RESPONSE_FAILED;
+        }
+        
         try {
             await interaction.editReply({ 
-                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
+                content: errorMessage,
                 ephemeral: true 
             });
         } catch (followUpError) {
@@ -105,7 +123,7 @@ module.exports = {
             });
             
             await interaction.reply({ 
-                content: ERROR_MESSAGES.UNEXPECTED_ERROR,
+                content: errorMessage,
                 ephemeral: true 
             }).catch(() => {
             });
