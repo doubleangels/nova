@@ -233,10 +233,6 @@ function getErrorMessage(error, context = '') {
         return ERROR_MESSAGES.API_NETWORK_ERROR;
     }
 
-    if (context === 'anime' && error.message.includes('MAL')) {
-        return ERROR_MESSAGES.API_ACCESS_DENIED;
-    }
-
     return ERROR_MESSAGES.UNEXPECTED_ERROR;
 }
 

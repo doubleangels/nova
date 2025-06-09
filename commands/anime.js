@@ -10,12 +10,20 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
 
 const MAL_API_BASE_URL = 'https://api.myanimelist.net/v2';
 const MAL_WEBSITE_URL = 'https://myanimelist.net/anime';
 const MAL_EMBED_COLOR = 0x2E51A2;
 const SEARCH_LIMIT = 1;
+
+const ERROR_MESSAGES = {
+  CONFIG_MISSING: "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.",
+  API_ERROR: "⚠️ Failed to communicate with MyAnimeList API. Please try again later.",
+  API_RATE_LIMIT: "⚠️ MyAnimeList API rate limit reached. Please try again in a few moments.",
+  API_NETWORK_ERROR: "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.",
+  NO_RESULTS_FOUND: "⚠️ No anime found matching your search. Please try a different title.",
+  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -73,7 +81,40 @@ module.exports = {
         });
       }
     } catch (error) {
-      await this.handleError(interaction, error);
+      logger.error("Error in anime command:", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user?.id,
+        guildId: interaction.guild?.id
+      });
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "API_ERROR") {
+        errorMessage = ERROR_MESSAGES.API_ERROR;
+      } else if (error.message === "API_RATE_LIMIT") {
+        errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      } else if (error.message === "API_NETWORK_ERROR") {
+        errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      }
+      
+      try {
+        await interaction.editReply({ 
+          content: errorMessage,
+          ephemeral: true 
+        });
+      } catch (followUpError) {
+        logger.error("Failed to send error response for anime command:", {
+          error: followUpError.message,
+          originalError: error.message,
+          userId: interaction.user?.id
+        });
+        
+        await interaction.reply({ 
+          content: errorMessage,
+          ephemeral: true 
+        }).catch(() => {});
+      }
     }
   },
 
@@ -156,51 +197,5 @@ module.exports = {
     }
     
     return embed;
-  },
-
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
-  async handleError(interaction, error) {
-    logError(error, 'anime', {
-      userId: interaction.user?.id,
-      guildId: interaction.guild?.id
-    });
-    
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
-    
-    if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.ANIME_API_ERROR;
-    } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
-    } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
-    } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.ANIME_NO_RESULTS;
-    } else if (error.message === "INVALID_TITLE") {
-      errorMessage = ERROR_MESSAGES.ANIME_INVALID_TITLE;
-    }
-    
-    try {
-      await interaction.editReply({ 
-        content: errorMessage,
-        ephemeral: true 
-      });
-    } catch (followUpError) {
-      logger.error("Failed to send error response for anime command:", {
-        error: followUpError.message,
-        originalError: error.message,
-        userId: interaction.user?.id
-      });
-      
-      await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
-      }).catch(() => {});
-    }
   }
 };
