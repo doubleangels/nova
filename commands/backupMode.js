@@ -14,7 +14,6 @@ const CONFIG_KEYS = {
   ROLE: "backup_mode_role",
   ENABLED: "backup_mode_enabled"
 };
-
 const ERROR_MESSAGES = {
   DATABASE_READ_ERROR: "⚠️ Failed to retrieve backup mode settings. Please try again later.",
   DATABASE_WRITE_ERROR: "⚠️ Failed to save backup mode settings. Please try again later.",
@@ -22,6 +21,18 @@ const ERROR_MESSAGES = {
   INVALID_ROLE: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
   NO_SETTINGS_PROVIDED: "⚠️ Please provide at least one setting to update (channel, role, or enabled status).",
   UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
+};
+const EMBED_COLORS = {
+  ENABLED: '#00FF00',
+  DISABLED: '#FF0000'
+};
+const STATUS_EMOJIS = {
+  ENABLED: "✅",
+  DISABLED: "❌"
+};
+const STATUS_TEXT = {
+  ENABLED: "Enabled",
+  DISABLED: "Disabled"
 };
 
 module.exports = {
@@ -336,12 +347,12 @@ module.exports = {
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(newEnabled ? '#00FF00' : '#FF0000')
+      .setColor(newEnabled ? EMBED_COLORS.ENABLED : EMBED_COLORS.DISABLED)
       .setTitle('🔄 Backup Mode Updated')
       .setTimestamp();
 
-    const statusEmoji = newEnabled ? "✅" : "❌";
-    const statusText = newEnabled ? "Enabled" : "Disabled";
+    const statusEmoji = STATUS_EMOJIS[newEnabled ? 'ENABLED' : 'DISABLED'];
+    const statusText = STATUS_TEXT[newEnabled ? 'ENABLED' : 'DISABLED'];
     embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
     if (newChannelId) {
@@ -370,12 +381,12 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
+      .setColor(settings.isEnabled ? EMBED_COLORS.ENABLED : EMBED_COLORS.DISABLED)
       .setTitle('🔄 Backup Mode Status')
       .setTimestamp();
 
-    const statusEmoji = settings.isEnabled ? "✅" : "❌";
-    const statusText = settings.isEnabled ? "Enabled" : "Disabled";
+    const statusEmoji = STATUS_EMOJIS[settings.isEnabled ? 'ENABLED' : 'DISABLED'];
+    const statusText = STATUS_TEXT[settings.isEnabled ? 'ENABLED' : 'DISABLED'];
     embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
     let channelStr = "Not set";
