@@ -54,7 +54,7 @@ module.exports = {
 
       await interaction.deferReply();
       
-      logger.info("Anime search requested:", { 
+      logger.info("/anime command initiated:", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag 
       });

@@ -87,7 +87,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {      
-      logger.info("Mutemode command initiated:", {
+      logger.info("/mutemode command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()

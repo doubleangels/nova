@@ -73,7 +73,7 @@ module.exports = {
       
       const query = interaction.options.getString('query');
       
-      logger.info("Wikipedia command initiated:", {
+      logger.info("/wikipedia command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id,
         query

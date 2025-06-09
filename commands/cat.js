@@ -40,7 +40,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       
-      logger.info("Cat command initiated:", {
+      logger.info("/cat command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });

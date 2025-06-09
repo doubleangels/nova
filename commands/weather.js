@@ -121,7 +121,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       
-      logger.debug("Weather command received:", { 
+      logger.debug("/weather command initiated:", { 
         userId: interaction.user.id,
         userTag: interaction.user.tag 
       });

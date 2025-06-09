@@ -82,7 +82,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {      
-      logger.info("Reminder command initiated:", {
+      logger.info("/reminder command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()

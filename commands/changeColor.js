@@ -58,7 +58,7 @@ module.exports = {
             const colorInput = interaction.options.getString('color');
             const oldColor = role.hexColor;
             
-            logger.info("Change color command initiated:", {
+            logger.info("/changecolor command initiated:", {
                 userId: interaction.user.id,
                 guildId: interaction.guild.id,
                 roleId: role.id,

@@ -79,7 +79,7 @@ module.exports = {
       const place1 = interaction.options.getString('place1');
       const place2 = interaction.options.getString('place2');
       
-      logger.info("/timediff command initiated:", {
+      logger.info("/timedifference command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });

@@ -78,7 +78,7 @@ module.exports = {
     try {
       const subcommand = interaction.options.getSubcommand();
       
-      logger.info(`/trollmode ${subcommand} command initiated:`, {
+      logger.info(`/trollmode command initiated:`, {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });

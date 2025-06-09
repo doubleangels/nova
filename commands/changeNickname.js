@@ -66,7 +66,7 @@ module.exports = {
             const newNickname = interaction.options.getString('nickname');
             const member = await interaction.guild.members.fetch(targetUser.id);
             
-            logger.info("Change nickname command initiated:", {
+            logger.info("/changenickname command initiated:", {
                 userId: interaction.user.id,
                 guildId: interaction.guild.id,
                 targetUserId: targetUser.id,

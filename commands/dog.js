@@ -53,7 +53,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       
-      logger.info("Dog command initiated:", {
+      logger.info("/dog command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });

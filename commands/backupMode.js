@@ -74,7 +74,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     try {
-      logger.info("Backup mode command initiated:", { 
+      logger.info("/backupmode command initiated:", { 
         userId: interaction.user.id, 
         guildId: interaction.guild.id,
         subcommand: interaction.options.getSubcommand()

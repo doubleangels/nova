@@ -53,7 +53,7 @@ module.exports = {
         try {
             await interaction.deferReply();
             
-            logger.info("Coin flip command initiated:", {
+            logger.info("/coinflip command initiated:", {
                 userId: interaction.user.id,
                 guildId: interaction.guild?.id
             });

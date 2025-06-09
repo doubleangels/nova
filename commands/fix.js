@@ -62,7 +62,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.info("Fix command initiated:", {
+      logger.info("/fix command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild.id
       });

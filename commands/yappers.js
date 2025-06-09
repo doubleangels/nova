@@ -74,7 +74,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      logger.debug("Yappers command received:", {
+      logger.debug("/yappers command initiated:", {
         userId: interaction.user.id,
         userTag: interaction.user.tag,
         guildName: interaction.guild?.name,
