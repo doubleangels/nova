@@ -11,7 +11,29 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
 const Sentry = require('../sentry');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to time utilities.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing time.",
+    INVALID_TIMEZONE: "⚠️ Invalid timezone provided.",
+    EMPTY_TIME_REFERENCE: "⚠️ No time reference provided.",
+    TIME_PARSE_FAILED: "⚠️ Failed to parse time reference.",
+    TIME_CONVERSION_FAILED: "⚠️ Failed to convert time between timezones.",
+    INVALID_TIME_REFERENCE: "⚠️ Invalid time reference provided.",
+    INVALID_TIMESTAMP_PARAMS: "⚠️ Invalid timestamp parameters provided.",
+    INVALID_CONVERSION: "⚠️ Invalid time conversion provided.",
+    NO_TIMES_TO_CONVERT: "⚠️ No times provided for conversion.",
+    INVALID_DATE: "⚠️ Invalid date provided.",
+    INVALID_TIME_FORMAT: "⚠️ Invalid time format provided.",
+    TIMEZONE_NOT_FOUND: "⚠️ Timezone not found.",
+    INVALID_OFFSET: "⚠️ Invalid timezone offset provided.",
+    TIMEZONE_CONVERSION_FAILED: "⚠️ Failed to convert between timezones.",
+    INVALID_TIME_RANGE: "⚠️ Invalid time range provided."
+};
 
 const TIME_FORMAT = 'h:mm A';
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
