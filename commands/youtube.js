@@ -11,7 +11,29 @@ const axios = require('axios');
 const config = require('../config');
 const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the YouTube command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching YouTube.",
+    CONFIG_MISSING: "⚠️ YouTube API configuration is missing. Please contact an administrator.",
+    API_ERROR: "⚠️ Failed to retrieve content from YouTube. Please try again later.",
+    API_RATE_LIMIT: "⚠️ YouTube API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ YouTube API access denied. Please check API configuration.",
+    NO_RESULTS_FOUND: "⚠️ No results found for your search.",
+    INVALID_QUERY: "⚠️ Please provide a valid search term.",
+    INVALID_VIDEO: "⚠️ Invalid video specified.",
+    INVALID_CHANNEL: "⚠️ Invalid channel specified.",
+    INVALID_PLAYLIST: "⚠️ Invalid playlist specified.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
+    INVALID_CONTENT_TYPE: "⚠️ Invalid content type specified.",
+    SEARCH_FAILED: "⚠️ Failed to search YouTube content."
+};
 
 const YOUTUBE_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YOUTUBE_API_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
@@ -192,15 +214,27 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.YOUTUBE_API_ERROR;
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (error.message === "API_RATE_LIMIT") {
       errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
       errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.YOUTUBE_NO_RESULTS;
+      errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
     } else if (error.message === "INVALID_VIDEO") {
-      errorMessage = ERROR_MESSAGES.YOUTUBE_INVALID_VIDEO;
+      errorMessage = ERROR_MESSAGES.INVALID_VIDEO;
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+    } else if (error.response?.status === 403) {
+      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+    } else if (error.response?.status === 429) {
+      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+    } else if (error.response?.status >= 500) {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
+    } else if (error.message === "INVALID_CONTENT_TYPE") {
+      errorMessage = ERROR_MESSAGES.INVALID_CONTENT_TYPE;
+    } else if (error.message === "SEARCH_FAILED") {
+      errorMessage = ERROR_MESSAGES.SEARCH_FAILED;
     }
     
     try {

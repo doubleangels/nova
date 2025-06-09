@@ -9,7 +9,26 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const he = require('he');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the Wikipedia command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching Wikipedia.",
+    API_ERROR: "⚠️ Failed to retrieve article from Wikipedia. Please try again later.",
+    API_RATE_LIMIT: "⚠️ Wikipedia API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    API_ACCESS_DENIED: "⚠️ Wikipedia API access denied. Please check API configuration.",
+    NO_RESULTS_FOUND: "⚠️ No articles found matching your search.",
+    INVALID_QUERY: "⚠️ Please provide a valid search term.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Too many requests. Please try again later.",
+    ARTICLE_NOT_FOUND: "⚠️ The requested article could not be found.",
+    INVALID_ARTICLE: "⚠️ Invalid article specified.",
+    SEARCH_FAILED: "⚠️ Failed to search Wikipedia articles."
+};
 
 const WIKIPEDIA_API_TIMEOUT = 5000; 
 const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF; 
@@ -400,15 +419,23 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.WIKIPEDIA_API_ERROR;
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     } else if (error.message === "API_RATE_LIMIT") {
       errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
     } else if (error.message === "API_NETWORK_ERROR") {
       errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.WIKIPEDIA_NO_RESULTS;
+      errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
     } else if (error.message === "INVALID_QUERY") {
-      errorMessage = ERROR_MESSAGES.WIKIPEDIA_INVALID_QUERY;
+      errorMessage = ERROR_MESSAGES.INVALID_QUERY;
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+    } else if (error.response?.status === 403) {
+      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+    } else if (error.response?.status === 429) {
+      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+    } else if (error.response?.status >= 500) {
+      errorMessage = ERROR_MESSAGES.API_ERROR;
     }
     
     try {

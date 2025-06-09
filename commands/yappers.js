@@ -7,8 +7,26 @@
 const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 const db = require('../utils/database');
+
+/**
+ * Error messages specific to the Yappers command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fetching statistics.",
+    DM_NOT_SUPPORTED: "⚠️ This command cannot be used in direct messages.",
+    DATABASE_READ_ERROR: "⚠️ Failed to retrieve statistics from the database. Please try again later.",
+    DATABASE_WRITE_ERROR: "⚠️ Failed to update statistics in the database. Please try again later.",
+    PERMISSION_DENIED: "⚠️ You don't have permission to view server statistics.",
+    INVALID_GUILD: "⚠️ This command can only be used in a server.",
+    NO_STATISTICS: "⚠️ No statistics available for this server.",
+    INVALID_CHANNEL: "⚠️ Invalid channel specified.",
+    CHANNEL_NOT_FOUND: "⚠️ The specified channel could not be found.",
+    INVALID_USER: "⚠️ Invalid user specified.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found."
+};
 
 /**
  * These are the configuration constants for the yappers command.
@@ -204,6 +222,20 @@ module.exports = {
       errorMessage = ERROR_MESSAGES.DM_NOT_SUPPORTED;
     } else if (error.message === "DATABASE_ERROR") {
       errorMessage = ERROR_MESSAGES.DATABASE_READ_ERROR;
+    } else if (error.message === "PERMISSION_DENIED") {
+      errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+    } else if (error.message === "INVALID_GUILD") {
+      errorMessage = ERROR_MESSAGES.INVALID_GUILD;
+    } else if (error.message === "NO_STATISTICS") {
+      errorMessage = ERROR_MESSAGES.NO_STATISTICS;
+    } else if (error.message === "INVALID_CHANNEL") {
+      errorMessage = ERROR_MESSAGES.INVALID_CHANNEL;
+    } else if (error.message === "CHANNEL_NOT_FOUND") {
+      errorMessage = ERROR_MESSAGES.CHANNEL_NOT_FOUND;
+    } else if (error.message === "INVALID_USER") {
+      errorMessage = ERROR_MESSAGES.INVALID_USER;
+    } else if (error.message === "USER_NOT_FOUND") {
+      errorMessage = ERROR_MESSAGES.USER_NOT_FOUND;
     }
     
     await interaction.editReply({
