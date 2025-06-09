@@ -154,7 +154,7 @@ async function getGeocodingData(place) {
     }
 
     const cacheKey = `geocode:${place.toLowerCase().trim()}`;
-    const cachedResult = locationCache.get(cacheKey);
+    const cachedResult = LOC_CACHE.get(cacheKey);
     if (cachedResult) {
       logger.debug("Returning cached geocoding data.", { place });
       return cachedResult;
@@ -162,7 +162,7 @@ async function getGeocodingData(place) {
 
     if (isRateLimited()) {
       logger.warn("Rate limit exceeded for geocoding API.", { place });
-      return { error: true, type: ErrorTypes.RATE_LIMIT };
+      return { error: true, type: LOC_ERROR_TYPES.RATE_LIMIT };
     }
 
     const geocodeParams = new URLSearchParams({
@@ -170,7 +170,7 @@ async function getGeocodingData(place) {
       key: config.googleApiKey
     });
     
-    const geocodeRequestUrl = `${GEOCODING_URL}?${geocodeParams.toString()}`;
+    const geocodeRequestUrl = `${LOC_API_GEOCODING_URL}?${geocodeParams.toString()}`;
     
     logger.debug("Fetching geocoding data.", {
       place,
@@ -179,7 +179,7 @@ async function getGeocodingData(place) {
     
     recordRequest();
     
-    const response = await axios.get(geocodeRequestUrl, { timeout: API_TIMEOUT_MS });
+    const response = await axios.get(geocodeRequestUrl, { timeout: LOC_API_TIMEOUT_MS });
     
     if (response.status !== 200) {
       logger.warn("Google Geocoding API returned non-200 status.", { 
@@ -187,14 +187,14 @@ async function getGeocodingData(place) {
         place
       });
       
-      return { error: true, type: ErrorTypes.API_ERROR };
+      return { error: true, type: LOC_ERROR_TYPES.API_ERROR };
     }
     
     const geoData = response.data;
     
     if (!geoData.results || geoData.results.length === 0) {
       logger.warn("No geocoding results found.", { place });
-      return { error: true, type: ErrorTypes.NOT_FOUND };
+      return { error: true, type: LOC_ERROR_TYPES.NOT_FOUND };
     }
     
     const formattedAddress = geoData.results[0].formatted_address;
@@ -202,7 +202,7 @@ async function getGeocodingData(place) {
     
     if (!isValidCoordinates(location.lat, location.lng)) {
       logger.warn("Invalid coordinates received from API.", { location });
-      return { error: true, type: ErrorTypes.INVALID_INPUT };
+      return { error: true, type: LOC_ERROR_TYPES.INVALID_INPUT };
     }
     
     const result = {
@@ -211,7 +211,7 @@ async function getGeocodingData(place) {
       formattedAddress: formattedAddress
     };
     
-    locationCache.set(cacheKey, result);
+    LOC_CACHE.set(cacheKey, result);
     
     logger.debug("Successfully retrieved coordinates.", {
       place,
@@ -228,7 +228,7 @@ async function getGeocodingData(place) {
         place,
         error: error.message
       });
-      return { error: true, type: ErrorTypes.TIMEOUT };
+      return { error: true, type: LOC_ERROR_TYPES.TIMEOUT };
     }
     
     logger.error("Error fetching geocoding data.", {
@@ -237,7 +237,7 @@ async function getGeocodingData(place) {
       stack: error.stack
     });
     
-    return { error: true, type: ErrorTypes.GENERAL };
+    return { error: true, type: LOC_ERROR_TYPES.GENERAL };
   }
 }
 
@@ -254,7 +254,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
   try {
     if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
       logger.warn("Invalid location provided for timezone lookup.", { location });
-      return { error: true, type: ErrorTypes.INVALID_INPUT };
+      return { error: true, type: LOC_ERROR_TYPES.INVALID_INPUT };
     }
     
     const timezoneParams = new URLSearchParams({
@@ -263,7 +263,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
       key: config.googleApiKey
     });
     
-    const timezoneRequestUrl = `${TIMEZONE_URL}?${timezoneParams.toString()}`;
+    const timezoneRequestUrl = `${LOC_API_TIMEZONE_URL}?${timezoneParams.toString()}`;
     
     logger.debug("Fetching timezone data.", {
       lat: location.lat,
@@ -271,7 +271,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
       requestUrl: safeUrl(timezoneRequestUrl)
     });
     
-    const response = await axios.get(timezoneRequestUrl, { timeout: API_TIMEOUT_MS });
+    const response = await axios.get(timezoneRequestUrl, { timeout: LOC_API_TIMEOUT_MS });
     
     if (response.status !== 200) {
       logger.warn("Google Timezone API returned non-200 status.", { 
@@ -280,19 +280,19 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
         lng: location.lng 
       });
       
-      return { error: true, type: ErrorTypes.API_ERROR };
+      return { error: true, type: LOC_ERROR_TYPES.API_ERROR };
     }
     
     const tzData = response.data;
     
-    if (tzData.status !== API_STATUS_SUCCESS) {
+    if (tzData.status !== LOC_API_STATUS_SUCCESS) {
       logger.warn("Error retrieving timezone info.", {
         status: tzData.status,
         lat: location.lat,
         lng: location.lng
       });
       
-      return { error: true, type: ErrorTypes.GENERAL };
+      return { error: true, type: LOC_ERROR_TYPES.GENERAL };
     }
     
     logger.debug("Successfully retrieved timezone data.", {
@@ -317,7 +317,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
         lng: location?.lng,
         error: error.message
       });
-      return { error: true, type: ErrorTypes.TIMEOUT };
+      return { error: true, type: LOC_ERROR_TYPES.TIMEOUT };
     }
     
     logger.error("Error fetching timezone data.", {
@@ -327,7 +327,7 @@ async function getTimezoneData(location, timestamp = Math.floor(Date.now() / 100
       stack: error.stack
     });
     
-    return { error: true, type: ErrorTypes.GENERAL };
+    return { error: true, type: LOC_ERROR_TYPES.GENERAL };
   }
 }
 
@@ -376,7 +376,7 @@ async function getUtcOffset(place) {
     if (geocodeResult.error) {
       return {
         error: true,
-        errorType: geocodeResult.type === ErrorTypes.TIMEOUT ? ErrorTypes.TIMEOUT : ErrorTypes.GENERAL
+        errorType: geocodeResult.type === LOC_ERROR_TYPES.TIMEOUT ? LOC_ERROR_TYPES.TIMEOUT : LOC_ERROR_TYPES.GENERAL
       };
     }
     
@@ -388,12 +388,12 @@ async function getUtcOffset(place) {
     if (tzResult.error) {
       return {
         error: true,
-        errorType: tzResult.type === ErrorTypes.TIMEOUT ? ErrorTypes.TIMEOUT : ErrorTypes.GENERAL
+        errorType: tzResult.type === LOC_ERROR_TYPES.TIMEOUT ? LOC_ERROR_TYPES.TIMEOUT : LOC_ERROR_TYPES.GENERAL
       };
     }
     
-    const rawOffset = tzResult.rawOffset / SECONDS_PER_HOUR;
-    const dstOffset = tzResult.dstOffset / SECONDS_PER_HOUR;
+    const rawOffset = tzResult.rawOffset / LOC_SECONDS_PER_HOUR;
+    const dstOffset = tzResult.dstOffset / LOC_SECONDS_PER_HOUR;
     
     const timezoneName = tzResult.timezoneId;
     
@@ -414,7 +414,7 @@ async function getUtcOffset(place) {
     
     return {
       error: true,
-      errorType: ErrorTypes.GENERAL
+      errorType: LOC_ERROR_TYPES.GENERAL
     };
   }
 }
@@ -440,18 +440,18 @@ function formatPlaceName(placeName) {
  */
 function formatErrorMessage(place, errorType) {
   switch (errorType) {
-    case ErrorTypes.NOT_FOUND:
-    case ErrorTypes.GENERAL:
+    case LOC_ERROR_TYPES.NOT_FOUND:
+    case LOC_ERROR_TYPES.GENERAL:
       return `⚠️ Could not find location "${place}". Please provide a valid city name.`;
-    case ErrorTypes.INVALID_INPUT:
+    case LOC_ERROR_TYPES.INVALID_INPUT:
       return `⚠️ Invalid location format for "${place}". Please provide valid latitude and longitude.`;
-    case ErrorTypes.API_ERROR:
+    case LOC_ERROR_TYPES.API_ERROR:
       return '⚠️ Google Maps API error. Please try again later.';
-    case ErrorTypes.TIMEOUT:
+    case LOC_ERROR_TYPES.TIMEOUT:
       return '⚠️ Request timed out. Please try again later.';
-    case ErrorTypes.RATE_LIMIT:
+    case LOC_ERROR_TYPES.RATE_LIMIT:
       return '⚠️ Too many requests. Please try again later.';
-    case ErrorTypes.CACHE_ERROR:
+    case LOC_ERROR_TYPES.CACHE_ERROR:
       return '⚠️ Cache error. Please try again later.';
     default:
       return '⚠️ An unexpected error occurred. Please try again later.';
@@ -493,10 +493,10 @@ async function getCoordinates(place) {
 }
 
 module.exports = {
-  GEOCODING_URL,
-  TIMEZONE_URL,
-  API_STATUS_SUCCESS,
-  ErrorTypes,
+  LOC_API_GEOCODING_URL,
+  LOC_API_TIMEZONE_URL,
+  LOC_API_STATUS_SUCCESS,
+  LOC_ERROR_TYPES,
   safeUrl,
   isValidTimezone,
   isValidCoordinates,
