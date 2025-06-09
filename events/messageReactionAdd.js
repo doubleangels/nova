@@ -56,7 +56,7 @@ module.exports = {
   async execute(reaction, user) {
     try {
       if (user.bot) {
-        logger.debug('Bot reaction received, ignoring');
+        logger.debug('Bot reaction received, ignoring.');
         return;
       }
 
@@ -69,7 +69,7 @@ module.exports = {
         }
       }
 
-      logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}`);
+      logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}.`);
 
       if (reaction.emoji.name === REACTION_CLOCK_EMOJI) {
         await handleClockReaction(reaction, user);
@@ -88,7 +88,7 @@ module.exports = {
         return;
       }
 
-      logger.info(`Successfully processed reaction from ${user.tag}`);
+      logger.info(`Successfully processed reaction from ${user.tag}.`);
     } catch (error) {
       Sentry.captureException(error, {
         extra: {
