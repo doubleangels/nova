@@ -53,10 +53,6 @@ const ERROR_MESSAGES = {
     CONFIG_INVALID: "⚠️ Invalid configuration detected. Please contact an administrator.",
     CONFIG_INCOMPLETE: "⚠️ Configuration is incomplete. Please contact an administrator.",
 
-    CAT_API_ERROR: "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.",
-    CAT_NETWORK_ERROR: "⚠️ Couldn't connect to the cat image service. Please check your internet connection.",
-    CAT_INVALID_IMAGE: "⚠️ The cat service didn't send a proper image. Please try again.",
-
     CHANGENICKNAME_INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to manage nicknames in this server.",
     CHANGENICKNAME_TOO_LONG: "⚠️ Nickname must be 32 characters or less.",
     CHANGENICKNAME_OWNER: "⚠️ Cannot change the server owner's nickname.",

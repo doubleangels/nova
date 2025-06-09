@@ -8,11 +8,17 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const { logError, ERROR_MESSAGES } = require('../errors');
 
 const CAT_API_URL = 'https://cataas.com/cat/cute';
 const CAT_EMBED_COLOR = 0xD3D3D3;
 const DEFAULT_FILENAME = 'cat.jpg';
+
+const ERROR_MESSAGES = {
+  API_ERROR: "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.",
+  INVALID_RESPONSE: "⚠️ The cat service didn't send a proper image. Please try again.",
+  NETWORK_ERROR: "⚠️ Couldn't connect to the cat image service. Please check your internet connection.",
+  UNEXPECTED_ERROR: "⚠️ An unexpected error occurred. Please try again later."
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -51,7 +57,40 @@ module.exports = {
         imageUrl: catData.url
       });
     } catch (error) {
-      await this.handleError(interaction, error);
+      logger.error("Error in cat command:", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user?.id,
+        guildId: interaction.guild?.id
+      });
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "API_ERROR") {
+        errorMessage = ERROR_MESSAGES.API_ERROR;
+      } else if (error.message === "INVALID_RESPONSE") {
+        errorMessage = ERROR_MESSAGES.INVALID_RESPONSE;
+      } else if (error.message === "NETWORK_ERROR") {
+        errorMessage = ERROR_MESSAGES.NETWORK_ERROR;
+      }
+      
+      try {
+        await interaction.editReply({ 
+          content: errorMessage,
+          ephemeral: true 
+        });
+      } catch (followUpError) {
+        logger.error("Failed to send error response for cat command:", {
+          error: followUpError.message,
+          originalError: error.message,
+          userId: interaction.user?.id
+        });
+        
+        await interaction.reply({ 
+          content: errorMessage,
+          ephemeral: true 
+        }).catch(() => {});
+      }
     }
   },
 
@@ -96,49 +135,6 @@ module.exports = {
         }
       }
       throw error;
-    }
-  },
-
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
-  async handleError(interaction, error) {
-    logError(error, 'cat', {
-      userId: interaction.user?.id,
-      guildId: interaction.guild?.id
-    });
-    
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
-    
-    if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.CAT_API_ERROR;
-    } else if (error.message === "INVALID_RESPONSE") {
-      errorMessage = ERROR_MESSAGES.CAT_INVALID_IMAGE;
-    } else if (error.message === "NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.CAT_NETWORK_ERROR;
-    }
-    
-    try {
-      await interaction.editReply({ 
-        content: errorMessage,
-        ephemeral: true 
-      });
-    } catch (followUpError) {
-      logger.error("Failed to send error response for cat command:", {
-        error: followUpError.message,
-        originalError: error.message,
-        userId: interaction.user?.id
-      });
-      
-      await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
-      }).catch(() => {
-      });
     }
   }
 };
