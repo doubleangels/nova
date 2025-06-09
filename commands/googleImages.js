@@ -164,11 +164,11 @@ module.exports = {
    */
   async searchImages(query) {
     const url = new URL('https://www.googleapis.com/customsearch/v1');
-    url.searchParams.append('key', GOOGLE_API_KEY);
-    url.searchParams.append('cx', GOOGLE_CSE_ID);
+    url.searchParams.append('key', IMAGES_API_KEY);
+    url.searchParams.append('cx', IMAGES_CSE_ID);
     url.searchParams.append('q', query);
     url.searchParams.append('searchType', 'image');
-    url.searchParams.append('num', MAX_RESULTS);
+    url.searchParams.append('num', IMAGES_MAX_RESULTS);
     
     const response = await fetch(url.toString());
     if (!response.ok) {
@@ -189,22 +189,22 @@ module.exports = {
    */
   async fetchImageResults(query, resultsCount) {
     const params = new URLSearchParams({
-      key: GOOGLE_API_KEY,
-      cx: GOOGLE_CSE_ID,
+      key: IMAGES_API_KEY,
+      cx: IMAGES_CSE_ID,
       q: query,
       searchType: "image",
       num: resultsCount.toString(),
       start: "1",
-      safe: SAFE_SEARCH
+      safe: IMAGES_SAFE_SEARCH
     });
-    const requestUrl = `${SEARCH_API_URL}?${params.toString()}`;
+    const requestUrl = `${IMAGES_API_URL}?${params.toString()}`;
     logger.debug("Preparing Google Image API request:", { 
       searchQuery: query,
       resultsRequested: resultsCount
     });
 
     try {
-      const response = await axios.get(requestUrl);
+      const response = await axios.get(requestUrl, { timeout: IMAGES_REQUEST_TIMEOUT });
       logger.debug("Google Image API response received:", { 
         status: response.status,
         itemsReturned: response.data?.items?.length || 0
@@ -244,9 +244,9 @@ module.exports = {
     return new EmbedBuilder()
       .setTitle(`🖼️ ${title}`)
       .setDescription(`🔗 **[View Original Source](${pageLink})**`)
-      .setColor(EMBED_COLOR)
+      .setColor(IMAGES_EMBED_COLOR)
       .setImage(imageLink)
-      .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
+      .setFooter({ text: `Result ${index + 1} of ${items.length} • ${IMAGES_EMBED_FOOTER}` });
   },
 
   /**
@@ -263,24 +263,20 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = IMAGES_ERROR_UNEXPECTED;
     
-    if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.GOOGLE_API_ERROR;
-    } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
-    } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
-    } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.GOOGLE_NO_RESULTS;
-    } else if (error.message === "INVALID_QUERY") {
-      errorMessage = ERROR_MESSAGES.INVALID_QUERY;
+    if (error.message.includes('API')) {
+      errorMessage = IMAGES_ERROR_API;
+    } else if (error.message.includes('network')) {
+      errorMessage = IMAGES_ERROR_NETWORK;
+    } else if (error.message.includes('rate limit')) {
+      errorMessage = IMAGES_ERROR_RATE_LIMIT;
     }
     
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        flags: [4096]
+        ephemeral: true 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for googleimages command:", {
@@ -291,9 +287,8 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        flags: [4096]
-      }).catch(() => {
-      });
+        ephemeral: true 
+      }).catch(() => {});
     }
   }
 };
