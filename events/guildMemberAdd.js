@@ -12,7 +12,23 @@ const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const Sentry = require('../sentry');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the guild member add event.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing the new member.",
+    MEMBER_JOIN_FAILED: "⚠️ Failed to process new member join.",
+    TRACKING_FAILED: "⚠️ Failed to track new member data.",
+    MUTE_KICK_FAILED: "⚠️ Failed to schedule mute kick for new member.",
+    DATABASE_ERROR: "⚠️ Database error occurred while processing new member.",
+    PERMISSION_DENIED: "⚠️ Insufficient permissions to process new member.",
+    INVALID_MEMBER: "⚠️ Invalid member data received.",
+    ACCOUNT_AGE_CHECK_FAILED: "⚠️ Failed to verify account age.",
+    KICK_FAILED: "⚠️ Failed to kick member due to age requirement."
+};
 
 const WELCOME_EMBED_COLOR = 0xCD41FF;
 
@@ -81,7 +97,26 @@ module.exports = {
         memberTag: member.user.tag,
         guildId: member.guild.id
       });
-      throw new Error(ERROR_MESSAGES.MEMBER_JOIN_FAILED);
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "TRACKING_FAILED") {
+        errorMessage = ERROR_MESSAGES.TRACKING_FAILED;
+      } else if (error.message === "MUTE_KICK_FAILED") {
+        errorMessage = ERROR_MESSAGES.MUTE_KICK_FAILED;
+      } else if (error.message === "DATABASE_ERROR") {
+        errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
+      } else if (error.message === "PERMISSION_DENIED") {
+        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      } else if (error.message === "INVALID_MEMBER") {
+        errorMessage = ERROR_MESSAGES.INVALID_MEMBER;
+      } else if (error.message === "ACCOUNT_AGE_CHECK_FAILED") {
+        errorMessage = ERROR_MESSAGES.ACCOUNT_AGE_CHECK_FAILED;
+      } else if (error.message === "KICK_FAILED") {
+        errorMessage = ERROR_MESSAGES.KICK_FAILED;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 };

@@ -9,7 +9,24 @@ const logger = require('../logger')(path.basename(__filename));
 const Sentry = require('../sentry');
 const { MessageFlags } = require('discord.js');
 const { Collection } = require('discord.js');
-const { ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the interaction create event.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing your request.",
+    COMMAND_NOT_FOUND: "⚠️ The requested command could not be found.",
+    COMMAND_EXECUTION_FAILED: "⚠️ Failed to execute the command.",
+    BUTTON_HANDLING_FAILED: "⚠️ Failed to process the button interaction.",
+    SELECT_MENU_FAILED: "⚠️ Failed to process the select menu interaction.",
+    COOLDOWN_ACTIVE: "⚠️ Please wait before using this command again.",
+    PERMISSION_DENIED: "⚠️ You don't have permission to use this command.",
+    INVALID_INTERACTION: "⚠️ Invalid interaction received.",
+    REPLY_FAILED: "⚠️ Failed to send response to interaction.",
+    FOLLOW_UP_FAILED: "⚠️ Failed to send follow-up response."
+};
 
 const DEFAULT_COOLDOWN = 3000;
 const COOLDOWN_CACHE = new Map();
@@ -99,7 +116,7 @@ module.exports = {
             stack: error.stack
           });
           
-          const errorMessage = 'There was an error executing this command.';
+          const errorMessage = ERROR_MESSAGES.COMMAND_EXECUTION_FAILED;
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: errorMessage, ephemeral: true });
           } else {
@@ -120,7 +137,7 @@ module.exports = {
               error: error.message,
               stack: error.stack
             });
-            await interaction.reply({ content: 'There was an error processing this button.', ephemeral: true });
+            await interaction.reply({ content: ERROR_MESSAGES.BUTTON_HANDLING_FAILED, ephemeral: true });
           }
         }
       }
@@ -137,7 +154,7 @@ module.exports = {
               error: error.message,
               stack: error.stack
             });
-            await interaction.reply({ content: 'There was an error processing this selection.', ephemeral: true });
+            await interaction.reply({ content: ERROR_MESSAGES.SELECT_MENU_FAILED, ephemeral: true });
           }
         }
       }
@@ -180,7 +197,7 @@ async function handleCommand(interaction, commandType) {
     });
 
     const errorMessage = {
-      content: 'We encountered an error while executing this command.',
+      content: ERROR_MESSAGES.COMMAND_EXECUTION_FAILED,
       ephemeral: true
     };
 
@@ -202,7 +219,7 @@ async function isOnCooldown(interaction, command) {
     if (now < expirationTime) {
       const remainingTime = Math.ceil((expirationTime - now) / 1000);
       await interaction.reply({
-        content: `We're still processing your previous request. Please wait ${remainingTime} seconds.`,
+        content: ERROR_MESSAGES.COOLDOWN_ACTIVE.replace('{time}', remainingTime),
         ephemeral: true
       });
       return true;
@@ -238,7 +255,7 @@ async function hasRequiredPermissions(interaction, command) {
   
   if (!hasPermission) {
     await interaction.reply({
-      content: 'We cannot execute this command because you lack the required permissions.',
+      content: ERROR_MESSAGES.PERMISSION_DENIED,
       ephemeral: true
     });
   }
