@@ -8,7 +8,7 @@ const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discor
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const CAT_API_URL = 'https://cataas.com/cat/cute';
 const CAT_EMBED_COLOR = 0xD3D3D3;

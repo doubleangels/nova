@@ -10,7 +10,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const snoowrap = require('snoowrap');
 const config = require('../config');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 const { Pool } = require('pg');
 const dayjs = require('dayjs');
 

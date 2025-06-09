@@ -8,7 +8,7 @@ const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const DEFAULT_TIME_LIMIT = 2;
 const MIN_TIME_LIMIT = 1;

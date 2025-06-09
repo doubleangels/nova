@@ -9,7 +9,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const he = require('he');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const WIKIPEDIA_API_TIMEOUT = 5000; 
 const WIKIPEDIA_EMBED_COLOR = 0xFFFFFF; 

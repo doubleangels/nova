@@ -9,7 +9,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const OMDB_API_URL = 'https://www.omdbapi.com/';
 const IMDB_BASE_URL = 'https://www.imdb.com/title/';

@@ -13,7 +13,7 @@ dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,

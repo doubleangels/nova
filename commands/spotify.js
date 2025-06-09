@@ -9,7 +9,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
 const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';

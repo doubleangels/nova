@@ -8,7 +8,7 @@ const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder } = 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const CONFIG_KEYS = {
   CHANNEL: "backup_mode_channel",

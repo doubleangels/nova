@@ -11,7 +11,7 @@ const axios = require('axios');
 const config = require('../config');
 const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const YOUTUBE_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YOUTUBE_API_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';

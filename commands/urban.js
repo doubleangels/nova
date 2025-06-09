@@ -8,7 +8,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
 const URBAN_EMBED_COLOR = 0x202C34;

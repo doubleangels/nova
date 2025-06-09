@@ -8,7 +8,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 const { getValue, setValue } = require('../utils/database');
 
 const TROLL_MODE_ENABLED_KEY = 'troll_mode_enabled';

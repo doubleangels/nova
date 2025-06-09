@@ -11,7 +11,7 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError, ERROR_MESSAGES } = require('../errors');
 
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
 const WEATHER_EMBED_COLOR = 0xFF6E42;
