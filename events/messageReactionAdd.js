@@ -13,10 +13,30 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const Sentry = require('../sentry');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
+
+/**
+ * Error messages specific to the message reaction add event.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing the reaction.",
+    REACTION_HANDLING_FAILED: "⚠️ Failed to process the reaction.",
+    FETCH_FAILED: "⚠️ Failed to fetch reaction data.",
+    TIME_CONVERSION_INVALID_TIMEZONE: "⚠️ Invalid timezone for time conversion.",
+    TIME_MISSING_REFERENCE: "⚠️ No time references found in the message.",
+    TRANSLATION_INVALID_FLAG: "⚠️ Invalid translation flag provided.",
+    TRANSLATION_EMPTY_TEXT: "⚠️ No text to translate found in the message.",
+    TRANSLATION_API_ERROR: "⚠️ Translation API error occurred.",
+    TRANSLATION_FAILED: "⚠️ Failed to translate the message.",
+    DISCORD_MESSAGE_NOT_FOUND: "⚠️ Message not found for translation.",
+    PERMISSION_DENIED: "⚠️ Insufficient permissions to process reaction.",
+    INVALID_REACTION: "⚠️ Invalid reaction data received.",
+    TEMPORARY_MESSAGE_FAILED: "⚠️ Failed to send temporary message."
+};
 
 const CLOCK_EMOJI = '🕒';
 const TIME_CONVERSION_TIMEOUT = 30000;
@@ -50,7 +70,7 @@ module.exports = {
           await reaction.fetch();
         } catch (error) {
           logger.error('Error fetching reaction:', error);
-          return;
+          throw new Error(ERROR_MESSAGES.FETCH_FAILED);
         }
       }
 
@@ -93,7 +113,34 @@ module.exports = {
         userId: user.id,
         messageId: reaction.message.id
       });
-      throw new Error(ERROR_MESSAGES.REACTION_HANDLING_FAILED);
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "FETCH_FAILED") {
+        errorMessage = ERROR_MESSAGES.FETCH_FAILED;
+      } else if (error.message === "TIME_CONVERSION_INVALID_TIMEZONE") {
+        errorMessage = ERROR_MESSAGES.TIME_CONVERSION_INVALID_TIMEZONE;
+      } else if (error.message === "TIME_MISSING_REFERENCE") {
+        errorMessage = ERROR_MESSAGES.TIME_MISSING_REFERENCE;
+      } else if (error.message === "TRANSLATION_INVALID_FLAG") {
+        errorMessage = ERROR_MESSAGES.TRANSLATION_INVALID_FLAG;
+      } else if (error.message === "TRANSLATION_EMPTY_TEXT") {
+        errorMessage = ERROR_MESSAGES.TRANSLATION_EMPTY_TEXT;
+      } else if (error.message === "TRANSLATION_API_ERROR") {
+        errorMessage = ERROR_MESSAGES.TRANSLATION_API_ERROR;
+      } else if (error.message === "TRANSLATION_FAILED") {
+        errorMessage = ERROR_MESSAGES.TRANSLATION_FAILED;
+      } else if (error.message === "DISCORD_MESSAGE_NOT_FOUND") {
+        errorMessage = ERROR_MESSAGES.DISCORD_MESSAGE_NOT_FOUND;
+      } else if (error.message === "PERMISSION_DENIED") {
+        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      } else if (error.message === "INVALID_REACTION") {
+        errorMessage = ERROR_MESSAGES.INVALID_REACTION;
+      } else if (error.message === "TEMPORARY_MESSAGE_FAILED") {
+        errorMessage = ERROR_MESSAGES.TEMPORARY_MESSAGE_FAILED;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 };

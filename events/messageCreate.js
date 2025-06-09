@@ -10,7 +10,24 @@ const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementC
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the message create event.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing the message.",
+    MESSAGE_PROCESSING_FAILED: "⚠️ Failed to process the message.",
+    FETCH_FAILED: "⚠️ Failed to fetch message content.",
+    TRACKING_FAILED: "⚠️ Failed to track message data.",
+    TIME_REFERENCE_FAILED: "⚠️ Failed to process time references.",
+    BUMP_PROCESSING_FAILED: "⚠️ Failed to process bump message.",
+    DATABASE_ERROR: "⚠️ Database error occurred while processing message.",
+    PERMISSION_DENIED: "⚠️ Insufficient permissions to process message.",
+    INVALID_MESSAGE: "⚠️ Invalid message data received.",
+    REMINDER_FAILED: "⚠️ Failed to set reminder for bump message."
+};
 
 /**
  * Event handler for message creation events.
@@ -32,7 +49,7 @@ module.exports = {
           await message.fetch();
         } catch (fetchError) {
           logger.error("Failed to fetch partial message:", { error: fetchError });
-          return;
+          throw new Error(ERROR_MESSAGES.FETCH_FAILED);
         }
       }
 
@@ -95,7 +112,28 @@ module.exports = {
         channelId: message.channel?.id,
         guildId: message.guild?.id
       });
-      throw new Error(ERROR_MESSAGES.MESSAGE_PROCESSING_FAILED);
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "FETCH_FAILED") {
+        errorMessage = ERROR_MESSAGES.FETCH_FAILED;
+      } else if (error.message === "TRACKING_FAILED") {
+        errorMessage = ERROR_MESSAGES.TRACKING_FAILED;
+      } else if (error.message === "TIME_REFERENCE_FAILED") {
+        errorMessage = ERROR_MESSAGES.TIME_REFERENCE_FAILED;
+      } else if (error.message === "BUMP_PROCESSING_FAILED") {
+        errorMessage = ERROR_MESSAGES.BUMP_PROCESSING_FAILED;
+      } else if (error.message === "DATABASE_ERROR") {
+        errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
+      } else if (error.message === "PERMISSION_DENIED") {
+        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      } else if (error.message === "INVALID_MESSAGE") {
+        errorMessage = ERROR_MESSAGES.INVALID_MESSAGE;
+      } else if (error.message === "REMINDER_FAILED") {
+        errorMessage = ERROR_MESSAGES.REMINDER_FAILED;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 };

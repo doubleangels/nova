@@ -13,7 +13,7 @@ const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const { initializeDatabase } = require('../utils/database');
 const Sentry = require('../sentry');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const deployCommands = require('../deploy-commands');
 
@@ -22,6 +22,22 @@ const BOT_ACTIVITY = {
   type: ActivityType.Watching
 };
 const BOT_STATUS = "online";
+
+/**
+ * Error messages specific to the ready event.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred during bot initialization.",
+    BOT_INITIALIZATION_FAILED: "⚠️ Failed to initialize the bot.",
+    DATABASE_INITIALIZATION_FAILED: "⚠️ Failed to initialize database connection.",
+    MUTE_KICK_RESCHEDULE_FAILED: "⚠️ Failed to reschedule mute kicks.",
+    REMINDER_RESCHEDULE_FAILED: "⚠️ Failed to reschedule reminders.",
+    ACTIVITY_SET_FAILED: "⚠️ Failed to set bot activity.",
+    STATUS_SET_FAILED: "⚠️ Failed to set bot status.",
+    VOICE_JOIN_TIMES_LOAD_FAILED: "⚠️ Failed to load voice join times.",
+    PERMISSION_DENIED: "⚠️ Insufficient permissions for bot initialization."
+};
 
 async function performSetupTask(taskName, task, startMessage, successMessage) {
   try {
@@ -83,7 +99,26 @@ module.exports = {
         clientId: client.user?.id,
         clientTag: client.user?.tag
       });
-      throw new Error(ERROR_MESSAGES.BOT_INITIALIZATION_FAILED);
+
+      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      
+      if (error.message === "DATABASE_INITIALIZATION_FAILED") {
+        errorMessage = ERROR_MESSAGES.DATABASE_INITIALIZATION_FAILED;
+      } else if (error.message === "MUTE_KICK_RESCHEDULE_FAILED") {
+        errorMessage = ERROR_MESSAGES.MUTE_KICK_RESCHEDULE_FAILED;
+      } else if (error.message === "REMINDER_RESCHEDULE_FAILED") {
+        errorMessage = ERROR_MESSAGES.REMINDER_RESCHEDULE_FAILED;
+      } else if (error.message === "ACTIVITY_SET_FAILED") {
+        errorMessage = ERROR_MESSAGES.ACTIVITY_SET_FAILED;
+      } else if (error.message === "STATUS_SET_FAILED") {
+        errorMessage = ERROR_MESSAGES.STATUS_SET_FAILED;
+      } else if (error.message === "VOICE_JOIN_TIMES_LOAD_FAILED") {
+        errorMessage = ERROR_MESSAGES.VOICE_JOIN_TIMES_LOAD_FAILED;
+      } else if (error.message === "PERMISSION_DENIED") {
+        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 };
