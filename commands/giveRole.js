@@ -8,7 +8,20 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the give role command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while assigning the role.",
+    INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to assign this role.",
+    ROLE_NOT_FOUND: "⚠️ The specified role could not be found.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
+    INVALID_ROLE: "⚠️ Please provide a valid role.",
+    INVALID_USER: "⚠️ Please provide a valid user."
+};
 
 /**
  * We handle the giverole command.
@@ -131,7 +144,7 @@ module.exports = {
             logger.warn("Invalid role provided.");
             return {
                 success: false,
-                message: "Please provide a valid role."
+                message: ERROR_MESSAGES.INVALID_ROLE
             };
         }
 
@@ -139,7 +152,7 @@ module.exports = {
             logger.warn("Invalid user provided.");
             return {
                 success: false,
-                message: "Please provide a valid user."
+                message: ERROR_MESSAGES.INVALID_USER
             };
         }
         

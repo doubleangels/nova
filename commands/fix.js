@@ -12,7 +12,18 @@ const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the fix command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while fixing the reminder.",
+    DATABASE_ERROR: "⚠️ Failed to save reminder data to the database. Please try again later.",
+    CHANNEL_NOT_FOUND: "⚠️ The reminder channel could not be found.",
+    CONFIG_INCOMPLETE: "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first."
+};
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,
@@ -60,7 +71,7 @@ module.exports = {
 
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
-        await interaction.editReply(ERROR_MESSAGES.REMINDER_CONFIG_INCOMPLETE);
+        await interaction.editReply(ERROR_MESSAGES.CONFIG_INCOMPLETE);
         return;
       }
 
@@ -165,9 +176,9 @@ module.exports = {
     let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
     
     if (error.message === "DATABASE_ERROR") {
-      errorMessage = ERROR_MESSAGES.DATABASE_WRITE_ERROR;
+      errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
     } else if (error.message === "CHANNEL_NOT_FOUND") {
-      errorMessage = ERROR_MESSAGES.REMINDER_INVALID_CHANNEL;
+      errorMessage = ERROR_MESSAGES.CHANNEL_NOT_FOUND;
     }
     
     try {

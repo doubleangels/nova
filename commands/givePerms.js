@@ -10,7 +10,21 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to the give permissions command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while granting permissions.",
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    INSUFFICIENT_PERMISSIONS: "⚠️ I don't have permission to create or assign roles.",
+    INVALID_ROLE_NAME: "⚠️ Please provide a valid role name.",
+    INVALID_COLOR: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
+    USER_NOT_FOUND: "⚠️ The specified user could not be found in this server.",
+    ROLE_NOT_FOUND: "⚠️ Required role not found. Please contact an administrator."
+};
 
 const POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
 const FREN_ROLE_ID = config.givePermsFrenRoleId;
@@ -103,7 +117,7 @@ module.exports = {
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
-                    content: "The specified user could not be found in this server.",
+                    content: ERROR_MESSAGES.USER_NOT_FOUND,
                     ephemeral: true
                 });
             }
@@ -112,7 +126,7 @@ module.exports = {
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided:", { colorHex });
                 return await interaction.editReply({
-                    content: "Invalid color format. Please use the format #RRGGBB or RRGGBB.",
+                    content: ERROR_MESSAGES.INVALID_COLOR,
                     ephemeral: true
                 });
             }
@@ -166,7 +180,7 @@ module.exports = {
             logger.warn("Invalid role name provided.", { roleName });
             return {
                 success: false,
-                message: "Please provide a valid role name."
+                message: ERROR_MESSAGES.INVALID_ROLE_NAME
             };
         }
 

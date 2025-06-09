@@ -68,11 +68,6 @@ const ERROR_MESSAGES = {
     MUTE_MODE_QUERY_FAILED: "⚠️ Failed to query mute mode.",
     MUTE_MODE_TOGGLE_FAILED: "⚠️ Failed to toggle mute mode.",
 
-    REMINDER_INVALID_CHANNEL: "⚠️ Please select a text channel for reminders.",
-    REMINDER_CONFIG_INCOMPLETE: "⚠️ Reminder configuration is incomplete.",
-    REMINDER_CREATION_FAILED: "⚠️ Failed to create reminder.",
-    REMINDER_RESCEDULE_FAILED: "⚠️ Failed to reschedule reminder.",
-
     SPOTIFY_INVALID_QUERY: "⚠️ Please provide a valid search query.",
     SPOTIFY_NO_RESULTS: "⚠️ No results found for your search.",
 
