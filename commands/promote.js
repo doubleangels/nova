@@ -271,7 +271,8 @@ module.exports = {
     try {
       const result = await pool.query(
         `SELECT remind_at FROM main.reminder_recovery 
-         WHERE type = $1
+         WHERE type = $1 
+         AND remind_at > NOW() - INTERVAL '24 hours'
          ORDER BY remind_at DESC 
          LIMIT 1`,
         [PROMOTE_REMINDER_TYPE]
