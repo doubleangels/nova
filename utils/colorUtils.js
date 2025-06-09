@@ -4,7 +4,21 @@
  * @module utils/colorUtils
  */
 
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to color utilities.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing color.",
+    INVALID_COLOR_FORMAT: "⚠️ Invalid color format provided.",
+    EMPTY_COLOR: "⚠️ Empty color value provided.",
+    COLOR_OUT_OF_RANGE: "⚠️ Color value is out of valid range.",
+    INVALID_RGB_VALUES: "⚠️ Invalid RGB values provided.",
+    COLOR_CONVERSION_FAILED: "⚠️ Failed to convert color format.",
+    COLOR_VALIDATION_FAILED: "⚠️ Color validation failed."
+};
 
 const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;

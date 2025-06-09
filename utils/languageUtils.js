@@ -6,7 +6,21 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
+
+/**
+ * Error messages specific to language utilities.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing language.",
+    TRANSLATION_INVALID_FLAG: "⚠️ Invalid flag emoji provided for translation.",
+    TRANSLATION_LANGUAGE_NOT_FOUND: "⚠️ Language not found for the provided flag.",
+    TRANSLATION_INVALID_CODE: "⚠️ Invalid language code provided.",
+    TRANSLATION_INVALID_NAME: "⚠️ Invalid language name provided.",
+    TRANSLATION_FLAG_NOT_FOUND: "⚠️ Flag emoji not found for the provided language.",
+    TRANSLATION_VALIDATION_FAILED: "⚠️ Language validation failed."
+};
 
 const FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
