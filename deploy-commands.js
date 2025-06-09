@@ -8,7 +8,25 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
-const { logError, ERROR_MESSAGES } = require('./errors');
+const { logError } = require('./errors');
+
+/**
+ * Error messages specific to command deployment.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while deploying commands.",
+    MISSING_CLIENT_ID: "⚠️ Discord client ID is missing.",
+    COMMAND_DEPLOYMENT_FAILED: "⚠️ Failed to deploy commands.",
+    COMMAND_LOAD_FAILED: "⚠️ Failed to load command file.",
+    INVALID_COMMAND: "⚠️ Invalid command structure.",
+    API_ERROR: "⚠️ Discord API error occurred.",
+    TOKEN_INVALID: "⚠️ Invalid bot token provided.",
+    PERMISSION_DENIED: "⚠️ Insufficient permissions to deploy commands.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Discord API rate limit exceeded.",
+    COMMAND_VALIDATION_FAILED: "⚠️ Command validation failed.",
+    COMMAND_REGISTRATION_FAILED: "⚠️ Failed to register command with Discord."
+};
 
 /**
  * Deploys all slash commands to Discord.

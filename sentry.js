@@ -7,7 +7,25 @@
 const Sentry = require("@sentry/node");
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
-const { logError, ERROR_MESSAGES } = require('./errors');
+const { logError } = require('./errors');
+
+/**
+ * Error messages specific to Sentry operations.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred in Sentry.",
+    SENTRY_INITIALIZATION_FAILED: "⚠️ Failed to initialize Sentry.",
+    INVALID_DSN: "⚠️ Invalid Sentry DSN provided.",
+    CONFIGURATION_FAILED: "⚠️ Failed to configure Sentry.",
+    EVENT_CAPTURE_FAILED: "⚠️ Failed to capture event in Sentry.",
+    SCOPE_SET_FAILED: "⚠️ Failed to set Sentry scope.",
+    CONTEXT_SET_FAILED: "⚠️ Failed to set Sentry context.",
+    USER_SET_FAILED: "⚠️ Failed to set Sentry user.",
+    TAGS_SET_FAILED: "⚠️ Failed to set Sentry tags.",
+    EXCEPTION_CAPTURE_FAILED: "⚠️ Failed to capture exception in Sentry.",
+    CONFIG_MISSING: "⚠️ Required Sentry configuration missing."
+};
 
 try {
   Sentry.init({

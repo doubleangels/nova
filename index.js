@@ -12,7 +12,27 @@ const config = require('./config');
 const Sentry = require('./sentry');
 const { initializeDatabase } = require('./utils/database');
 const deployCommands = require('./deploy-commands');
-const { logError, ERROR_MESSAGES } = require('./errors');
+const { logError } = require('./errors');
+
+/**
+ * Error messages specific to bot initialization and operation.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while running the bot.",
+    BOT_STARTUP_FAILED: "⚠️ Failed to start the bot.",
+    DATABASE_INITIALIZATION_FAILED: "⚠️ Failed to initialize database.",
+    COMMAND_LOADING_FAILED: "⚠️ Failed to load commands.",
+    EVENT_LOADING_FAILED: "⚠️ Failed to load events.",
+    INVALID_EVENT_FILE: "⚠️ Invalid event file structure.",
+    INVALID_COMMAND_FILE: "⚠️ Invalid command file structure.",
+    TOKEN_INVALID: "⚠️ Invalid bot token provided.",
+    CLIENT_INITIALIZATION_FAILED: "⚠️ Failed to initialize Discord client.",
+    COMMAND_DEPLOYMENT_FAILED: "⚠️ Failed to deploy commands.",
+    PERMISSION_DENIED: "⚠️ Insufficient permissions to perform operation.",
+    CONFIG_MISSING: "⚠️ Required configuration missing.",
+    SHUTDOWN_FAILED: "⚠️ Failed to shutdown bot gracefully."
+};
 
 const COMMAND_EXTENSION = '.js';
 const EVENT_EXTENSION = '.js';
