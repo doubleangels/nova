@@ -5,34 +5,28 @@
  */
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 const logger = require('../logger')('searchUtils.js');
 
-const MAX_SEARCH_RESULTS = 10;
+const SEARCH_MAX_RESULTS = 10;
 const SEARCH_TIMEOUT_MS = 5000;
-const MIN_SEARCH_LENGTH = 2;
+const SEARCH_MIN_LENGTH = 2;
 
-/**
- * Error messages specific to search utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES_LOCAL = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while performing search.",
-    SEARCH_FAILED: "⚠️ Search operation failed.",
-    INVALID_QUERY: "⚠️ Invalid search query provided.",
-    INVALID_CHANNEL: "⚠️ Invalid channel provided.",
-    INVALID_GUILD: "⚠️ Invalid guild provided.",
-    INVALID_USER: "⚠️ Invalid user provided.",
-    INVALID_MESSAGE: "⚠️ Invalid message provided.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions to perform search.",
-    RATE_LIMIT_EXCEEDED: "⚠️ Search rate limit exceeded.",
-    TIMEOUT: "⚠️ Search operation timed out.",
-    NO_RESULTS: "⚠️ No search results found.",
-    INVALID_SEARCH_TYPE: "⚠️ Invalid search type provided.",
-    INVALID_SEARCH_PARAMS: "⚠️ Invalid search parameters provided.",
-    SEARCH_CANCELLED: "⚠️ Search operation was cancelled.",
-    SEARCH_IN_PROGRESS: "⚠️ Search operation already in progress."
-};
+const SEARCH_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while performing search.";
+const SEARCH_ERROR_FAILED = "⚠️ Search operation failed.";
+const SEARCH_ERROR_INVALID_QUERY = "⚠️ Invalid search query provided.";
+const SEARCH_ERROR_INVALID_CHANNEL = "⚠️ Invalid channel provided.";
+const SEARCH_ERROR_INVALID_GUILD = "⚠️ Invalid guild provided.";
+const SEARCH_ERROR_INVALID_USER = "⚠️ Invalid user provided.";
+const SEARCH_ERROR_INVALID_MESSAGE = "⚠️ Invalid message provided.";
+const SEARCH_ERROR_PERMISSION = "⚠️ Insufficient permissions to perform search.";
+const SEARCH_ERROR_RATE_LIMIT = "⚠️ Search rate limit exceeded.";
+const SEARCH_ERROR_TIMEOUT = "⚠️ Search operation timed out.";
+const SEARCH_ERROR_NO_RESULTS = "⚠️ No search results found.";
+const SEARCH_ERROR_INVALID_TYPE = "⚠️ Invalid search type provided.";
+const SEARCH_ERROR_INVALID_PARAMS = "⚠️ Invalid search parameters provided.";
+const SEARCH_ERROR_CANCELLED = "⚠️ Search operation was cancelled.";
+const SEARCH_ERROR_IN_PROGRESS = "⚠️ Search operation already in progress.";
 
 /**
  * Creates a paginated interface for search results.
@@ -218,8 +212,8 @@ function formatApiError(apiError) {
  */
 async function performSearch(query, options = {}) {
   try {
-    if (!query || query.length < MIN_SEARCH_LENGTH) {
-      throw new Error(`Search query must be at least ${MIN_SEARCH_LENGTH} characters long.`);
+    if (!query || query.length < SEARCH_MIN_LENGTH) {
+      throw new Error(`Search query must be at least ${SEARCH_MIN_LENGTH} characters long.`);
     }
 
     const searchOptions = {
@@ -248,10 +242,10 @@ async function performSearch(query, options = {}) {
     ]);
 
     const combinedResults = results.flat().sort((a, b) => b.relevance - a.relevance);
-    return combinedResults.slice(0, MAX_SEARCH_RESULTS);
+    return combinedResults.slice(0, SEARCH_MAX_RESULTS);
   } catch (error) {
     logError('Search operation failed', error);
-    throw new Error(ERROR_MESSAGES_LOCAL.SEARCH_FAILED);
+    throw new Error(SEARCH_ERROR_FAILED);
   }
 }
 

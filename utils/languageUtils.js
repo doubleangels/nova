@@ -8,21 +8,15 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to language utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing language.",
-    TRANSLATION_INVALID_FLAG: "⚠️ Invalid flag emoji provided for translation.",
-    TRANSLATION_LANGUAGE_NOT_FOUND: "⚠️ Language not found for the provided flag.",
-    TRANSLATION_INVALID_CODE: "⚠️ Invalid language code provided.",
-    TRANSLATION_INVALID_NAME: "⚠️ Invalid language name provided.",
-    TRANSLATION_FLAG_NOT_FOUND: "⚠️ Flag emoji not found for the provided language.",
-    TRANSLATION_VALIDATION_FAILED: "⚠️ Language validation failed."
-};
+const LANG_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing language.";
+const LANG_ERROR_INVALID_FLAG = "⚠️ Invalid flag emoji provided for translation.";
+const LANG_ERROR_LANGUAGE_NOT_FOUND = "⚠️ Language not found for the provided flag.";
+const LANG_ERROR_INVALID_CODE = "⚠️ Invalid language code provided.";
+const LANG_ERROR_INVALID_NAME = "⚠️ Invalid language name provided.";
+const LANG_ERROR_FLAG_NOT_FOUND = "⚠️ Flag emoji not found for the provided language.";
+const LANG_ERROR_VALIDATION = "⚠️ Language validation failed.";
 
-const FLAG_TO_LANGUAGE = {
+const LANG_FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
     '🇦🇱': { code: 'sq', name: 'Albanian' }, // Albania
     '🇩🇿': { code: 'ar', name: 'Arabic' }, // Algeria
@@ -233,10 +227,10 @@ function getLanguageInfo(flagEmoji) {
     
     if (!flagEmoji || typeof flagEmoji !== 'string') {
         logger.warn("Invalid flag emoji provided:", { flagEmoji });
-        throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
+        throw new Error(LANG_ERROR_INVALID_FLAG);
     }
     
-    const languageInfo = FLAG_TO_LANGUAGE[flagEmoji] || null;
+    const languageInfo = LANG_FLAG_TO_LANGUAGE[flagEmoji] || null;
     logger.debug("Language info retrieved:", { 
         flagEmoji,
         languageInfo: languageInfo ? {
@@ -260,10 +254,10 @@ function isValidTranslationFlag(emoji) {
     
     if (!emoji || typeof emoji !== 'string') {
         logger.warn("Invalid emoji provided for validation:", { emoji });
-        throw new Error(ERROR_MESSAGES.TRANSLATION_INVALID_FLAG);
+        throw new Error(LANG_ERROR_INVALID_FLAG);
     }
     
-    const isValid = emoji in FLAG_TO_LANGUAGE;
+    const isValid = emoji in LANG_FLAG_TO_LANGUAGE;
     logger.debug("Translation flag validation result:", { 
         emoji,
         isValid
@@ -273,7 +267,7 @@ function isValidTranslationFlag(emoji) {
 }
 
 module.exports = {
-    FLAG_TO_LANGUAGE,
+    LANG_FLAG_TO_LANGUAGE,
     getLanguageInfo,
     isValidTranslationFlag
 }; 

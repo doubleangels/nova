@@ -12,22 +12,16 @@ const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the message create event.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing the message.",
-    MESSAGE_PROCESSING_FAILED: "⚠️ Failed to process the message.",
-    FETCH_FAILED: "⚠️ Failed to fetch message content.",
-    TRACKING_FAILED: "⚠️ Failed to track message data.",
-    TIME_REFERENCE_FAILED: "⚠️ Failed to process time references.",
-    BUMP_PROCESSING_FAILED: "⚠️ Failed to process bump message.",
-    DATABASE_ERROR: "⚠️ Database error occurred while processing message.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions to process message.",
-    INVALID_MESSAGE: "⚠️ Invalid message data received.",
-    REMINDER_FAILED: "⚠️ Failed to set reminder for bump message."
-};
+const MESSAGE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the message.";
+const MESSAGE_ERROR_PROCESSING = "⚠️ Failed to process the message.";
+const MESSAGE_ERROR_FETCH = "⚠️ Failed to fetch message content.";
+const MESSAGE_ERROR_TRACKING = "⚠️ Failed to track message data.";
+const MESSAGE_ERROR_TIME_REFERENCE = "⚠️ Failed to process time references.";
+const MESSAGE_ERROR_BUMP = "⚠️ Failed to process bump message.";
+const MESSAGE_ERROR_DATABASE = "⚠️ Database error occurred while processing message.";
+const MESSAGE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process message.";
+const MESSAGE_ERROR_INVALID = "⚠️ Invalid message data received.";
+const MESSAGE_ERROR_REMINDER = "⚠️ Failed to set reminder for bump message.";
 
 /**
  * Event handler for message creation events.
@@ -49,7 +43,7 @@ module.exports = {
           await message.fetch();
         } catch (fetchError) {
           logger.error("Failed to fetch partial message:", { error: fetchError });
-          throw new Error(ERROR_MESSAGES.FETCH_FAILED);
+          throw new Error(MESSAGE_ERROR_FETCH);
         }
       }
 
@@ -113,24 +107,24 @@ module.exports = {
         guildId: message.guild?.id
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = MESSAGE_ERROR_UNEXPECTED;
       
-      if (error.message === "FETCH_FAILED") {
-        errorMessage = ERROR_MESSAGES.FETCH_FAILED;
-      } else if (error.message === "TRACKING_FAILED") {
-        errorMessage = ERROR_MESSAGES.TRACKING_FAILED;
-      } else if (error.message === "TIME_REFERENCE_FAILED") {
-        errorMessage = ERROR_MESSAGES.TIME_REFERENCE_FAILED;
-      } else if (error.message === "BUMP_PROCESSING_FAILED") {
-        errorMessage = ERROR_MESSAGES.BUMP_PROCESSING_FAILED;
-      } else if (error.message === "DATABASE_ERROR") {
-        errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
-      } else if (error.message === "PERMISSION_DENIED") {
-        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
-      } else if (error.message === "INVALID_MESSAGE") {
-        errorMessage = ERROR_MESSAGES.INVALID_MESSAGE;
-      } else if (error.message === "REMINDER_FAILED") {
-        errorMessage = ERROR_MESSAGES.REMINDER_FAILED;
+      if (error.message === MESSAGE_ERROR_FETCH) {
+        errorMessage = MESSAGE_ERROR_FETCH;
+      } else if (error.message === MESSAGE_ERROR_TRACKING) {
+        errorMessage = MESSAGE_ERROR_TRACKING;
+      } else if (error.message === MESSAGE_ERROR_TIME_REFERENCE) {
+        errorMessage = MESSAGE_ERROR_TIME_REFERENCE;
+      } else if (error.message === MESSAGE_ERROR_BUMP) {
+        errorMessage = MESSAGE_ERROR_BUMP;
+      } else if (error.message === MESSAGE_ERROR_DATABASE) {
+        errorMessage = MESSAGE_ERROR_DATABASE;
+      } else if (error.message === MESSAGE_ERROR_PERMISSION) {
+        errorMessage = MESSAGE_ERROR_PERMISSION;
+      } else if (error.message === MESSAGE_ERROR_INVALID) {
+        errorMessage = MESSAGE_ERROR_INVALID;
+      } else if (error.message === MESSAGE_ERROR_REMINDER) {
+        errorMessage = MESSAGE_ERROR_REMINDER;
       }
       
       throw new Error(errorMessage);

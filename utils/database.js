@@ -12,39 +12,45 @@ const config = require('../config');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to database operations.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while accessing the database.",
-    CONNECTION_FAILED: "⚠️ Failed to connect to the database.",
-    QUERY_TIMEOUT: "⚠️ Database query timed out.",
-    DEADLOCK_DETECTED: "⚠️ Database deadlock detected.",
-    INVALID_QUERY: "⚠️ Invalid database query.",
-    PERMISSION_DENIED: "⚠️ Insufficient database permissions.",
-    CONFIG_NOT_FOUND: "⚠️ Configuration not found in database.",
-    MEMBER_NOT_FOUND: "⚠️ Member not found in database.",
-    TIMEZONE_NOT_FOUND: "⚠️ Timezone not found in database.",
-    VOICE_STATS_NOT_FOUND: "⚠️ Voice statistics not found.",
-    MESSAGE_STATS_NOT_FOUND: "⚠️ Message statistics not found.",
-    CHANNEL_STATS_NOT_FOUND: "⚠️ Channel statistics not found.",
-    DATABASE_INITIALIZATION_FAILED: "⚠️ Failed to initialize database.",
-    DATABASE_TEST_FAILED: "⚠️ Database connection test failed.",
-    DATABASE_CLEANUP_FAILED: "⚠️ Failed to clean up database test data."
-};
+const DB_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while accessing the database.";
+const DB_ERROR_CONNECTION = "⚠️ Failed to connect to the database.";
+const DB_ERROR_TIMEOUT = "⚠️ Database query timed out.";
+const DB_ERROR_DEADLOCK = "⚠️ Database deadlock detected.";
+const DB_ERROR_INVALID_QUERY = "⚠️ Invalid database query.";
+const DB_ERROR_PERMISSION = "⚠️ Insufficient database permissions.";
+const DB_ERROR_CONFIG_NOT_FOUND = "⚠️ Configuration not found in database.";
+const DB_ERROR_MEMBER_NOT_FOUND = "⚠️ Member not found in database.";
+const DB_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Timezone not found in database.";
+const DB_ERROR_VOICE_STATS_NOT_FOUND = "⚠️ Voice statistics not found.";
+const DB_ERROR_MESSAGE_STATS_NOT_FOUND = "⚠️ Message statistics not found.";
+const DB_ERROR_CHANNEL_STATS_NOT_FOUND = "⚠️ Channel statistics not found.";
+const DB_ERROR_INITIALIZATION = "⚠️ Failed to initialize database.";
+const DB_ERROR_TEST = "⚠️ Database connection test failed.";
+const DB_ERROR_CLEANUP = "⚠️ Failed to clean up database test data.";
 
-const SCHEMA = 'main';
-const DEFAULT_QUERY_TIMEOUT = 30000;
-const CONNECTION_OPTIONS = {
+const DB_SCHEMA = 'main';
+const DB_DEFAULT_QUERY_TIMEOUT = 30000;
+const DB_CONNECTION_OPTIONS = {
   connectionString: config.neonConnectionString,
   ssl: {
     rejectUnauthorized: true 
   },
-  query_timeout: DEFAULT_QUERY_TIMEOUT
+  query_timeout: DB_DEFAULT_QUERY_TIMEOUT
 };
 
-const pool = new Pool(CONNECTION_OPTIONS);
+// Database Tables
+const DB_TABLES = {
+  CONFIG: `${DB_SCHEMA}.config`,
+  REMINDERS: `${DB_SCHEMA}.reminder_data`,
+  TRACKED_MEMBERS: `${DB_SCHEMA}.tracked_members`,
+  TIMEZONES: `${DB_SCHEMA}.timezones`,
+  MESSAGE_COUNTS: `${DB_SCHEMA}.message_counts`,
+  VOICE_TIME: `${DB_SCHEMA}.voice_time`,
+  VOICE_CHANNEL_TIME: `${DB_SCHEMA}.voice_channel_time`,
+  MESSAGE_CHANNEL_COUNTS: `${DB_SCHEMA}.message_channel_counts`
+};
+
+const pool = new Pool(DB_CONNECTION_OPTIONS);
 
 pool.on('error', (err, client) => {
   logger.error('Unexpected error on idle client', { error: err });
@@ -55,17 +61,6 @@ pool.on('error', (err, client) => {
     }
   });
 });
-
-const TABLES = {
-  CONFIG: `${SCHEMA}.config`,
-  REMINDERS: `${SCHEMA}.reminder_data`,
-  TRACKED_MEMBERS: `${SCHEMA}.tracked_members`,
-  TIMEZONES: `${SCHEMA}.timezones`,
-  MESSAGE_COUNTS: `${SCHEMA}.message_counts`,
-  VOICE_TIME: `${SCHEMA}.voice_time`,
-  VOICE_CHANNEL_TIME: `${SCHEMA}.voice_channel_time`,
-  MESSAGE_CHANNEL_COUNTS: `${SCHEMA}.message_channel_counts`
-};
 
 /**
  * Initializes the database connection and performs a test query.
@@ -88,13 +83,13 @@ async function initializeDatabase() {
       const testValue = 'test_value';
       
       await client.query(
-        `INSERT INTO ${TABLES.CONFIG} (id, value) VALUES ($1, $2)
+        `INSERT INTO ${DB_TABLES.CONFIG} (id, value) VALUES ($1, $2)
          ON CONFLICT (id) DO UPDATE SET value = $2`,
         [testKey, JSON.stringify(testValue)]
       );
       
       const result = await client.query(
-        `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
+        `SELECT value FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
         [testKey]
       );
       
@@ -105,7 +100,7 @@ async function initializeDatabase() {
       }
 
       await client.query(
-        `DELETE FROM ${TABLES.CONFIG} WHERE id = $1`,
+        `DELETE FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
         [testKey]
       );
       logger.debug("Cleaned up database test data.");
@@ -149,7 +144,7 @@ async function getValue(key) {
   try {
     logger.debug(`Getting config value for key "${key}".`);
     const result = await client.query(
-      `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
+      `SELECT value FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
       [key]
     );
     const parsed = result.rows.length > 0 && result.rows[0].value 
@@ -179,7 +174,7 @@ async function setValue(key, value) {
     const serialized = JSON.stringify(value);
     
     await client.query(
-      `INSERT INTO ${TABLES.CONFIG} (id, value) VALUES ($1, $2)
+      `INSERT INTO ${DB_TABLES.CONFIG} (id, value) VALUES ($1, $2)
        ON CONFLICT (id) DO UPDATE SET value = $2`,
       [key, serialized]
     );
@@ -202,7 +197,7 @@ async function deleteValue(key) {
   const client = await pool.connect();
   try {
     logger.debug(`Deleting config for key "${key}".`);
-    await client.query(`DELETE FROM ${TABLES.CONFIG} WHERE id = $1`, [key]);
+    await client.query(`DELETE FROM ${DB_TABLES.CONFIG} WHERE id = $1`, [key]);
     logger.debug(`Deleted config for key "${key}".`);
   } catch (err) {
     logger.error(`Error deleting key "${key}":`, { error: err });
@@ -221,7 +216,7 @@ async function getAllConfigs() {
   const client = await pool.connect();
   try {
     logger.debug("Retrieving all config records.");
-    const result = await client.query(`SELECT * FROM ${TABLES.CONFIG}`);
+    const result = await client.query(`SELECT * FROM ${DB_TABLES.CONFIG}`);
     logger.debug(`Retrieved ${result.rows.length} config records.`);
     return result.rows;
   } catch (err) {
@@ -247,7 +242,7 @@ async function trackNewMember(memberId, username, joinTime) {
     logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
     
     await client.query(
-      `INSERT INTO ${TABLES.MESSAGE_COUNTS} (member_id, username, message_count, last_updated) 
+      `INSERT INTO ${DB_TABLES.MESSAGE_COUNTS} (member_id, username, message_count, last_updated) 
        VALUES ($1, $2, 0, CURRENT_TIMESTAMP) 
        ON CONFLICT (member_id) 
        DO UPDATE SET username = $2`,
@@ -255,7 +250,7 @@ async function trackNewMember(memberId, username, joinTime) {
     );
 
     await client.query(
-      `INSERT INTO ${TABLES.CONFIG} (id, value) 
+      `INSERT INTO ${DB_TABLES.CONFIG} (id, value) 
        VALUES ($1, $2) 
        ON CONFLICT (id) 
        DO UPDATE SET value = $2`,
@@ -283,12 +278,12 @@ async function getTrackedMember(memberId) {
     logger.debug(`Retrieving tracking data for member ID "${memberId}".`);
     
     const joinTimeResult = await client.query(
-      `SELECT value FROM ${TABLES.CONFIG} WHERE id = $1`,
+      `SELECT value FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
       [`mute_join_${memberId}`]
     );
 
     const messageResult = await client.query(
-      `SELECT * FROM ${TABLES.MESSAGE_COUNTS} WHERE member_id = $1`,
+      `SELECT * FROM ${DB_TABLES.MESSAGE_COUNTS} WHERE member_id = $1`,
       [memberId]
     );
     
@@ -326,7 +321,7 @@ async function removeTrackedMember(memberId) {
     logger.debug(`Removing tracking data for member ID "${memberId}".`);
     
     const result = await client.query(
-      `DELETE FROM ${TABLES.CONFIG} WHERE id = $1 RETURNING *`,
+      `DELETE FROM ${DB_TABLES.CONFIG} WHERE id = $1 RETURNING *`,
       [`mute_join_${memberId}`]
     );
     
@@ -357,11 +352,11 @@ async function getAllTrackedMembers() {
     logger.debug("Retrieving all tracked members.");
     
     const joinTimesResult = await client.query(
-      `SELECT id, value FROM ${TABLES.CONFIG} WHERE id LIKE 'mute_join_%'`
+      `SELECT id, value FROM ${DB_TABLES.CONFIG} WHERE id LIKE 'mute_join_%'`
     );
 
     const messageResult = await client.query(
-      `SELECT member_id, username, message_count FROM ${TABLES.MESSAGE_COUNTS}`
+      `SELECT member_id, username, message_count FROM ${DB_TABLES.MESSAGE_COUNTS}`
     );
 
     const trackedMembers = joinTimesResult.rows.map(row => {
@@ -406,7 +401,7 @@ async function setUserTimezone(memberId, timezone) {
     logger.debug(`Setting timezone for member ID "${memberId}" to "${timezone}".`);
 
     const query = `
-      INSERT INTO ${TABLES.TIMEZONES} (member_id, timezone)
+      INSERT INTO ${DB_TABLES.TIMEZONES} (member_id, timezone)
       VALUES ($1::bigint, $2)
       ON CONFLICT (member_id)
       DO UPDATE SET timezone = $2;
@@ -439,7 +434,7 @@ async function getUserTimezone(memberId) {
     logger.debug(`Getting timezone for member ID "${memberId}".`);
 
     const result = await client.query(
-      `SELECT timezone FROM ${TABLES.TIMEZONES} WHERE member_id = $1::bigint`,
+      `SELECT timezone FROM ${DB_TABLES.TIMEZONES} WHERE member_id = $1::bigint`,
       [memberId]
     );
 
@@ -472,11 +467,11 @@ async function incrementMessageCount(memberId, username) {
     logger.debug(`Incrementing message count for member "${username}" (ID: ${memberId}).`);
     
     await client.query(`
-      INSERT INTO ${TABLES.MESSAGE_COUNTS} (member_id, username, message_count)
+      INSERT INTO ${DB_TABLES.MESSAGE_COUNTS} (member_id, username, message_count)
       VALUES ($1, $2, 1)
       ON CONFLICT (member_id) 
       DO UPDATE SET 
-        message_count = ${TABLES.MESSAGE_COUNTS}.message_count + 1,
+        message_count = ${DB_TABLES.MESSAGE_COUNTS}.message_count + 1,
         username = $2,
         last_updated = CURRENT_TIMESTAMP;
     `, [memberId, username]);
@@ -503,7 +498,7 @@ async function getTopMessageSenders(limit = 10) {
     
     const result = await client.query(`
       SELECT member_id, username, message_count
-      FROM ${TABLES.MESSAGE_COUNTS}
+      FROM ${DB_TABLES.MESSAGE_COUNTS}
       ORDER BY message_count DESC
       LIMIT $1;
     `, [limit]);
@@ -530,11 +525,11 @@ async function updateVoiceTime(memberId, username, minutesSpent) {
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO ${TABLES.VOICE_TIME} (member_id, username, minutes_spent, last_updated)
+      `INSERT INTO ${DB_TABLES.VOICE_TIME} (member_id, username, minutes_spent, last_updated)
        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
        ON CONFLICT (member_id) DO UPDATE SET
          username = $2,
-         minutes_spent = ${TABLES.VOICE_TIME}.minutes_spent + $3,
+         minutes_spent = ${DB_TABLES.VOICE_TIME}.minutes_spent + $3,
          last_updated = CURRENT_TIMESTAMP`,
       [memberId, username, minutesSpent]
     );
@@ -555,7 +550,7 @@ async function getTopVoiceUsers(limit = 10) {
   try {
     const result = await client.query(
       `SELECT member_id, username, seconds_spent, last_updated
-       FROM ${TABLES.VOICE_TIME}
+       FROM ${DB_TABLES.VOICE_TIME}
        ORDER BY seconds_spent DESC
        LIMIT $1`,
       [limit]
@@ -578,7 +573,7 @@ async function getUserVoiceTime(memberId) {
   try {
     const result = await client.query(
       `SELECT member_id, username, seconds_spent, last_updated
-       FROM ${TABLES.VOICE_TIME}
+       FROM ${DB_TABLES.VOICE_TIME}
        WHERE member_id = $1`,
       [memberId]
     );
@@ -595,13 +590,13 @@ async function getUserVoiceTime(memberId) {
  * @param {string} text - The SQL query text
  * @param {Array} [params=[]] - Query parameters
  * @param {Object} [options={}] - Query options
- * @param {number} [options.timeout=DEFAULT_QUERY_TIMEOUT] - Query timeout in milliseconds
+ * @param {number} [options.timeout=DB_DEFAULT_QUERY_TIMEOUT] - Query timeout in milliseconds
  * @returns {Promise<Object>} Query result
  * @throws {Error} If query times out or encounters an error
  */
 async function query(text, params = [], options = {}) {
   const client = await pool.connect();
-  const timeout = options.timeout || DEFAULT_QUERY_TIMEOUT;
+  const timeout = options.timeout || DB_DEFAULT_QUERY_TIMEOUT;
   
   try {
     await client.query(`SET statement_timeout = ${timeout}`);

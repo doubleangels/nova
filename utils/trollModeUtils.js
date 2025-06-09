@@ -10,27 +10,21 @@ const { getValue } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to troll mode utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing troll mode.",
-    ACCOUNT_AGE_CHECK_FAILED: "⚠️ Failed to check account age.",
-    KICK_OPERATION_FAILED: "⚠️ Failed to kick member.",
-    DM_FAILED: "⚠️ Failed to send DM to member.",
-    INVALID_MEMBER: "⚠️ Invalid member provided.",
-    INVALID_ACCOUNT_AGE: "⚠️ Invalid account age provided.",
-    INVALID_REQUIRED_AGE: "⚠️ Invalid required age provided.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions to perform operation.",
-    MEMBER_NOT_FOUND: "⚠️ Member not found.",
-    GUILD_NOT_FOUND: "⚠️ Guild not found.",
-    DATABASE_ERROR: "⚠️ Database error occurred.",
-    CONFIG_MISSING: "⚠️ Required configuration missing."
-};
+const TROLL_DEFAULT_AGE_DAYS = 30;
+const TROLL_KICK_REASON = "Account age does not meet server requirements.";
 
-const DEFAULT_TROLL_MODE_AGE_DAYS = 30;
-const KICK_REASON_ACCOUNT_AGE = "Account age does not meet server requirements.";
+const TROLL_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing troll mode.";
+const TROLL_ERROR_ACCOUNT_CHECK = "⚠️ Failed to check account age.";
+const TROLL_ERROR_KICK = "⚠️ Failed to kick member.";
+const TROLL_ERROR_DM = "⚠️ Failed to send DM to member.";
+const TROLL_ERROR_INVALID_MEMBER = "⚠️ Invalid member provided.";
+const TROLL_ERROR_INVALID_AGE = "⚠️ Invalid account age provided.";
+const TROLL_ERROR_INVALID_REQUIRED_AGE = "⚠️ Invalid required age provided.";
+const TROLL_ERROR_PERMISSION = "⚠️ Insufficient permissions to perform operation.";
+const TROLL_ERROR_MEMBER_NOT_FOUND = "⚠️ Member not found.";
+const TROLL_ERROR_GUILD_NOT_FOUND = "⚠️ Guild not found.";
+const TROLL_ERROR_DATABASE = "⚠️ Database error occurred.";
+const TROLL_ERROR_CONFIG = "⚠️ Required configuration missing.";
 
 /**
  * Checks if a member's account meets the minimum age requirement.
@@ -46,7 +40,7 @@ async function checkAccountAge(member) {
       return true;
     }
 
-    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || DEFAULT_TROLL_MODE_AGE_DAYS;
+    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || TROLL_DEFAULT_AGE_DAYS;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     logger.debug(`Checking account age for ${member.user.tag}:`, {
@@ -74,7 +68,7 @@ async function checkAccountAge(member) {
  */
 async function performKick(member) {
   try {
-    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || DEFAULT_TROLL_MODE_AGE_DAYS;
+    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || TROLL_DEFAULT_AGE_DAYS;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     try {
@@ -92,7 +86,7 @@ async function performKick(member) {
       logger.warn(`Failed to send DM to member ${member.user.tag} before kick:`, { error: dmError.message });
     }
 
-    await member.kick(KICK_REASON_ACCOUNT_AGE);
+    await member.kick(TROLL_KICK_REASON);
     logger.info(`Member ${member.user.tag} kicked due to insufficient account age.`, {
       accountAge,
       requiredAge

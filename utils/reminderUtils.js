@@ -12,37 +12,31 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to reminder utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing reminder.",
-    REMINDER_CREATION_FAILED: "⚠️ Failed to create reminder.",
-    REMINDER_RESCEDULE_FAILED: "⚠️ Failed to reschedule reminder.",
-    REMINDER_NOT_FOUND: "⚠️ Reminder not found.",
-    REMINDER_DELETION_FAILED: "⚠️ Failed to delete reminder.",
-    REMINDER_SEND_FAILED: "⚠️ Failed to send reminder message.",
-    CHANNEL_NOT_FOUND: "⚠️ Reminder channel not found.",
-    ROLE_NOT_FOUND: "⚠️ Reminder role not found.",
-    INVALID_REMINDER_TYPE: "⚠️ Invalid reminder type provided.",
-    INVALID_DELAY: "⚠️ Invalid reminder delay provided.",
-    INVALID_TIMESTAMP: "⚠️ Invalid timestamp provided.",
-    DATABASE_ERROR: "⚠️ Database error occurred.",
-    CONFIG_MISSING: "⚠️ Required configuration missing."
-};
+const REMINDER_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing reminder.";
+const REMINDER_ERROR_CREATION = "⚠️ Failed to create reminder.";
+const REMINDER_ERROR_RESCEDULE = "⚠️ Failed to reschedule reminder.";
+const REMINDER_ERROR_NOT_FOUND = "⚠️ Reminder not found.";
+const REMINDER_ERROR_DELETION = "⚠️ Failed to delete reminder.";
+const REMINDER_ERROR_SEND = "⚠️ Failed to send reminder message.";
+const REMINDER_ERROR_CHANNEL_NOT_FOUND = "⚠️ Reminder channel not found.";
+const REMINDER_ERROR_ROLE_NOT_FOUND = "⚠️ Reminder role not found.";
+const REMINDER_ERROR_INVALID_TYPE = "⚠️ Invalid reminder type provided.";
+const REMINDER_ERROR_INVALID_DELAY = "⚠️ Invalid reminder delay provided.";
+const REMINDER_ERROR_INVALID_TIMESTAMP = "⚠️ Invalid timestamp provided.";
+const REMINDER_ERROR_DATABASE = "⚠️ Database error occurred.";
+const REMINDER_ERROR_CONFIG_MISSING = "⚠️ Required configuration missing.";
 
-const pool = new Pool({
+const REMINDER_POOL = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
-const CONFIRMATION_EMOJI = '❤️';
-const REMINDER_EMOJI = '🔔';
-const CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
-const REMINDER_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
-const PROMOTION_CONFIRMATION_MESSAGE = "🎯 Server promoted successfully! I'll remind you to promote again <t:%s:R>.";
-const PROMOTION_REMINDER_MESSAGE = " Time to promote the server! Use `/promote` to post on Reddit!";
+const REMINDER_CONFIRMATION_EMOJI = '❤️';
+const REMINDER_NOTIFICATION_EMOJI = '🔔';
+const REMINDER_CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
+const REMINDER_NOTIFICATION_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
+const REMINDER_PROMOTION_CONFIRMATION = "🎯 Server promoted successfully! I'll remind you to promote again <t:%s:R>.";
+const REMINDER_PROMOTION_NOTIFICATION = " Time to promote the server! Use `/promote` to post on Reddit!";
 
 /**
  * Retrieves the latest reminder data from the database.
@@ -54,7 +48,7 @@ const PROMOTION_REMINDER_MESSAGE = " Time to promote the server! Use `/promote` 
  */
 async function getLatestReminderData(type) {
   try {
-    const result = await pool.query(
+    const result = await REMINDER_POOL.query(
       `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
        WHERE remind_at > NOW() AND type = $1
        ORDER BY remind_at ASC 
@@ -110,30 +104,30 @@ async function handleReminder(message, delay, type = 'bump') {
       return;
     }
 
-    await pool.query(
+    await REMINDER_POOL.query(
       `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
       [type]
     );
     logger.debug("Cleaned up existing reminders of type:", type);
 
-    await pool.query(
+    await REMINDER_POOL.query(
       `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
       [reminderId, scheduledTime.toISOString(), type]
     );
 
     // Send confirmation message
     const confirmationMessage = type === 'promote'
-      ? PROMOTION_CONFIRMATION_MESSAGE.replace('%s', unixTimestamp)
-      : CONFIRMATION_MESSAGE.replace('%s', unixTimestamp);
+      ? REMINDER_PROMOTION_CONFIRMATION.replace('%s', unixTimestamp)
+      : REMINDER_CONFIRMATION_MESSAGE.replace('%s', unixTimestamp);
     
-    await message.reply(`${CONFIRMATION_EMOJI} ${confirmationMessage}`);
+    await message.reply(`${REMINDER_CONFIRMATION_EMOJI} ${confirmationMessage}`);
     logger.debug("Sent confirmation message:", { type, unixTimestamp });
 
     setTimeout(async () => {
       try {
         const reminderMessage = type === 'promote' 
-          ? `${REMINDER_EMOJI} <@&${reminderRole}> ${PROMOTION_REMINDER_MESSAGE}`
-          : `${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`;
+          ? `${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_PROMOTION_NOTIFICATION}`
+          : `${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_NOTIFICATION_MESSAGE}`;
 
         await channel.send(reminderMessage);
         logger.debug("Sent scheduled reminder ping:", {
@@ -142,7 +136,7 @@ async function handleReminder(message, delay, type = 'bump') {
           type
         });
 
-        await pool.query(
+        await REMINDER_POOL.query(
           `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
           [reminderId]
         );
@@ -158,7 +152,7 @@ async function handleReminder(message, delay, type = 'bump') {
 
   } catch (error) {
     logError('Failed to handle reminder', error);
-    throw new Error(ERROR_MESSAGES.REMINDER_CREATION_FAILED);
+    throw new Error(REMINDER_ERROR_CREATION);
   }
 }
 
@@ -218,10 +212,10 @@ async function rescheduleReminder(client) {
       if (delay > 0) {
         setTimeout(async () => {
           try {
-            await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${REMINDER_MESSAGE}`);
+            await channel.send(`${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_NOTIFICATION_MESSAGE}`);
             logger.debug("Sent rescheduled bump reminder:", { reminder_id: bumpReminder.reminder_id });
 
-            await pool.query(
+            await REMINDER_POOL.query(
               `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
               [bumpReminder.reminder_id]
             );
@@ -250,10 +244,10 @@ async function rescheduleReminder(client) {
       if (delay > 0) {
         setTimeout(async () => {
           try {
-            await channel.send(`${REMINDER_EMOJI} <@&${reminderRole}> ${PROMOTION_REMINDER_MESSAGE}`);
+            await channel.send(`${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_PROMOTION_NOTIFICATION}`);
             logger.debug("Sent rescheduled promotion reminder:", { reminder_id: promoteReminder.reminder_id });
 
-            await pool.query(
+            await REMINDER_POOL.query(
               `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
               [promoteReminder.reminder_id]
             );
@@ -274,7 +268,7 @@ async function rescheduleReminder(client) {
     }
   } catch (error) {
     logError('Failed to reschedule reminder', error);
-    throw new Error(ERROR_MESSAGES.REMINDER_RESCEDULE_FAILED);
+    throw new Error(REMINDER_ERROR_RESCEDULE);
   }
 }
 

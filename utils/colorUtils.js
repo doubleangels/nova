@@ -6,25 +6,19 @@
 
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to color utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing color.",
-    INVALID_COLOR_FORMAT: "⚠️ Invalid color format provided.",
-    EMPTY_COLOR: "⚠️ Empty color value provided.",
-    COLOR_OUT_OF_RANGE: "⚠️ Color value is out of valid range.",
-    INVALID_RGB_VALUES: "⚠️ Invalid RGB values provided.",
-    COLOR_CONVERSION_FAILED: "⚠️ Failed to convert color format.",
-    COLOR_VALIDATION_FAILED: "⚠️ Color validation failed."
-};
+const COLOR_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing color.";
+const COLOR_ERROR_INVALID_FORMAT = "⚠️ Invalid color format provided.";
+const COLOR_ERROR_EMPTY = "⚠️ Empty color value provided.";
+const COLOR_ERROR_OUT_OF_RANGE = "⚠️ Color value is out of valid range.";
+const COLOR_ERROR_INVALID_RGB = "⚠️ Invalid RGB values provided.";
+const COLOR_ERROR_CONVERSION = "⚠️ Failed to convert color format.";
+const COLOR_ERROR_VALIDATION = "⚠️ Color validation failed.";
 
 const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_SHORT = /^#[0-9A-Fa-f]{3}$/;
 
-const DISCORD_MAX_COLOR = 0xFFFFFF;
+const COLOR_MAX_DISCORD = 0xFFFFFF;
 
 /**
  * Validates and normalizes a hex color string.
@@ -36,10 +30,10 @@ const DISCORD_MAX_COLOR = 0xFFFFFF;
  */
 function validateAndNormalizeColor(colorHex, logger = null) {
     if (typeof colorHex !== 'string') {
-        throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
+        throw new Error(COLOR_ERROR_INVALID_FORMAT);
     }
     if (!colorHex.trim()) {
-        throw new Error(ERROR_MESSAGES.EMPTY_COLOR);
+        throw new Error(COLOR_ERROR_EMPTY);
     }
 
     let normalizedColorHex = colorHex.trim();
@@ -83,14 +77,14 @@ function validateAndNormalizeColor(colorHex, logger = null) {
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
-        throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
+        throw new Error(COLOR_ERROR_INVALID_FORMAT);
     }
 
     const hex = validation.normalizedColor.slice(1);
     const decimal = parseInt(hex, 16);
 
-    if (decimal > DISCORD_MAX_COLOR) {
-        throw new Error(ERROR_MESSAGES.COLOR_OUT_OF_RANGE);
+    if (decimal > COLOR_MAX_DISCORD) {
+        throw new Error(COLOR_ERROR_OUT_OF_RANGE);
     }
 
     return decimal;
@@ -106,7 +100,7 @@ function hexToDecimal(hexColor) {
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
-        throw new Error(ERROR_MESSAGES.INVALID_COLOR_FORMAT);
+        throw new Error(COLOR_ERROR_INVALID_FORMAT);
     }
 
     const hex = validation.normalizedColor.slice(1);
@@ -130,7 +124,7 @@ function rgbToHex(r, g, b) {
     if (!Number.isInteger(r) || r < 0 || r > 255 ||
         !Number.isInteger(g) || g < 0 || g > 255 ||
         !Number.isInteger(b) || b < 0 || b > 255) {
-        throw new Error(ERROR_MESSAGES.INVALID_RGB_VALUES);
+        throw new Error(COLOR_ERROR_INVALID_RGB);
     }
 
     return '#' + 

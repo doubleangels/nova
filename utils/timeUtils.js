@@ -13,35 +13,30 @@ const moment = require('moment-timezone');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to time utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing time.",
-    INVALID_TIMEZONE: "⚠️ Invalid timezone provided.",
-    EMPTY_TIME_REFERENCE: "⚠️ No time reference provided.",
-    TIME_PARSE_FAILED: "⚠️ Failed to parse time reference.",
-    TIME_CONVERSION_FAILED: "⚠️ Failed to convert time between timezones.",
-    INVALID_TIME_REFERENCE: "⚠️ Invalid time reference provided.",
-    INVALID_TIMESTAMP_PARAMS: "⚠️ Invalid timestamp parameters provided.",
-    INVALID_CONVERSION: "⚠️ Invalid time conversion provided.",
-    NO_TIMES_TO_CONVERT: "⚠️ No times provided for conversion.",
-    INVALID_DATE: "⚠️ Invalid date provided.",
-    INVALID_TIME_FORMAT: "⚠️ Invalid time format provided.",
-    TIMEZONE_NOT_FOUND: "⚠️ Timezone not found.",
-    INVALID_OFFSET: "⚠️ Invalid timezone offset provided.",
-    TIMEZONE_CONVERSION_FAILED: "⚠️ Failed to convert between timezones.",
-    INVALID_TIME_RANGE: "⚠️ Invalid time range provided."
-};
-
 const TIME_FORMAT = 'h:mm A';
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 
+// Error Messages
+const TIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing time.";
+const TIME_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone provided.";
+const TIME_ERROR_EMPTY_REFERENCE = "⚠️ No time reference provided.";
+const TIME_ERROR_PARSE_FAILED = "⚠️ Failed to parse time reference.";
+const TIME_ERROR_CONVERSION_FAILED = "⚠️ Failed to convert time between timezones.";
+const TIME_ERROR_INVALID_REFERENCE = "⚠️ Invalid time reference provided.";
+const TIME_ERROR_INVALID_TIMESTAMP = "⚠️ Invalid timestamp parameters provided.";
+const TIME_ERROR_INVALID_CONVERSION = "⚠️ Invalid time conversion provided.";
+const TIME_ERROR_NO_TIMES = "⚠️ No times provided for conversion.";
+const TIME_ERROR_INVALID_DATE = "⚠️ Invalid date provided.";
+const TIME_ERROR_INVALID_FORMAT = "⚠️ Invalid time format provided.";
+const TIME_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Timezone not found.";
+const TIME_ERROR_INVALID_OFFSET = "⚠️ Invalid timezone offset provided.";
+const TIME_ERROR_TIMEZONE_CONVERSION = "⚠️ Failed to convert between timezones.";
+const TIME_ERROR_INVALID_RANGE = "⚠️ Invalid time range provided.";
+
+const TIME_VALID_TIMEZONES = new Set(moment.tz.names());
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const VALID_TIMEZONES = new Set(moment.tz.names());
 
 /**
  * Validates if a timezone string is valid.
@@ -52,7 +47,7 @@ const VALID_TIMEZONES = new Set(moment.tz.names());
  */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
-    throw new Error(ERROR_MESSAGES.INVALID_TIMEZONE);
+    throw new Error(TIME_ERROR_INVALID_TIMEZONE);
   }
   
   try {
@@ -73,7 +68,7 @@ function isValidTimezone(tz) {
  */
 function extractTimeReferences(content) {
   if (!content) {
-    throw new Error(ERROR_MESSAGES.EMPTY_TIME_REFERENCE);
+    throw new Error(TIME_ERROR_EMPTY_REFERENCE);
   }
   
   try {
@@ -134,7 +129,7 @@ function extractTimeReferences(content) {
     return results;
   } catch (error) {
     logError('Error parsing time references', error);
-    throw new Error(ERROR_MESSAGES.TIME_PARSE_FAILED);
+    throw new Error(TIME_ERROR_PARSE_FAILED);
   }
 }
 
@@ -149,11 +144,11 @@ function extractTimeReferences(content) {
  */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
-    throw new Error(ERROR_MESSAGES.INVALID_TIME_REFERENCE);
+    throw new Error(TIME_ERROR_INVALID_REFERENCE);
   }
 
   if (!isValidTimezone(fromTimezone) || !isValidTimezone(toTimezone)) {
-    throw new Error(ERROR_MESSAGES.INVALID_TIMEZONE);
+    throw new Error(TIME_ERROR_INVALID_TIMEZONE);
   }
 
   try {
@@ -223,7 +218,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     };
   } catch (error) {
     logError('Error converting time zones', error);
-    throw new Error(ERROR_MESSAGES.TIME_CONVERSION_FAILED);
+    throw new Error(TIME_ERROR_CONVERSION_FAILED);
   }
 }
 
@@ -237,7 +232,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
  */
 function generateDiscordTimestamp(date, timezone) {
   if (!date || !timezone) {
-    throw new Error(ERROR_MESSAGES.INVALID_TIMESTAMP_PARAMS);
+    throw new Error(TIME_ERROR_INVALID_TIMESTAMP);
   }
   const timestamp = date.tz(timezone).unix();
   return `<t:${timestamp}:t>`;
@@ -252,7 +247,7 @@ function generateDiscordTimestamp(date, timezone) {
  */
 function defaultFormatter(conversion) {
   if (!conversion) {
-    throw new Error(ERROR_MESSAGES.INVALID_CONVERSION);
+    throw new Error(TIME_ERROR_INVALID_CONVERSION);
   }
   const { 
     originalTime, 
@@ -277,7 +272,7 @@ function defaultFormatter(conversion) {
  */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
-    throw new Error(ERROR_MESSAGES.NO_TIMES_TO_CONVERT);
+    throw new Error(TIME_ERROR_NO_TIMES);
   }
 
   const formattedTimes = convertedTimes.map(conversion => {

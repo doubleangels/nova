@@ -11,27 +11,22 @@ const { MessageFlags } = require('discord.js');
 const { Collection } = require('discord.js');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the interaction create event.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing your request.",
-    COMMAND_NOT_FOUND: "⚠️ The requested command could not be found.",
-    COMMAND_EXECUTION_FAILED: "⚠️ Failed to execute the command.",
-    BUTTON_HANDLING_FAILED: "⚠️ Failed to process the button interaction.",
-    SELECT_MENU_FAILED: "⚠️ Failed to process the select menu interaction.",
-    COOLDOWN_ACTIVE: "⚠️ Please wait before using this command again.",
-    PERMISSION_DENIED: "⚠️ You don't have permission to use this command.",
-    INVALID_INTERACTION: "⚠️ Invalid interaction received.",
-    REPLY_FAILED: "⚠️ Failed to send response to interaction.",
-    FOLLOW_UP_FAILED: "⚠️ Failed to send follow-up response."
-};
+const INTERACTION_DEFAULT_COOLDOWN = 3000;
+const INTERACTION_CACHE_DURATION = 60000;
 
-const DEFAULT_COOLDOWN = 3000;
+const INTERACTION_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing your request.";
+const INTERACTION_ERROR_COMMAND_NOT_FOUND = "⚠️ The requested command could not be found.";
+const INTERACTION_ERROR_EXECUTION = "⚠️ Failed to execute the command.";
+const INTERACTION_ERROR_BUTTON = "⚠️ Failed to process the button interaction.";
+const INTERACTION_ERROR_SELECT_MENU = "⚠️ Failed to process the select menu interaction.";
+const INTERACTION_ERROR_COOLDOWN = "⚠️ Please wait before using this command again.";
+const INTERACTION_ERROR_PERMISSION = "⚠️ You don't have permission to use this command.";
+const INTERACTION_ERROR_INVALID = "⚠️ Invalid interaction received.";
+const INTERACTION_ERROR_REPLY = "⚠️ Failed to send response to interaction.";
+const INTERACTION_ERROR_FOLLOW_UP = "⚠️ Failed to send follow-up response.";
+
 const COOLDOWN_CACHE = new Map();
 const PERMISSION_CACHE = new Map();
-const CACHE_DURATION = 60000;
 
 async function handleCommandExecution(interaction, commandType, executeCommand) {
   try {
@@ -63,7 +58,7 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
     
     try {
       const errorMessage = { 
-        content: ERROR_MESSAGES.UNEXPECTED_ERROR, 
+        content: INTERACTION_ERROR_UNEXPECTED, 
         flags: MessageFlags.Ephemeral 
       };
       
@@ -116,7 +111,7 @@ module.exports = {
             stack: error.stack
           });
           
-          const errorMessage = ERROR_MESSAGES.COMMAND_EXECUTION_FAILED;
+          const errorMessage = INTERACTION_ERROR_EXECUTION;
           if (interaction.replied || interaction.deferred) {
             await interaction.followUp({ content: errorMessage, ephemeral: true });
           } else {
@@ -137,7 +132,7 @@ module.exports = {
               error: error.message,
               stack: error.stack
             });
-            await interaction.reply({ content: ERROR_MESSAGES.BUTTON_HANDLING_FAILED, ephemeral: true });
+            await interaction.reply({ content: INTERACTION_ERROR_BUTTON, ephemeral: true });
           }
         }
       }
@@ -154,7 +149,7 @@ module.exports = {
               error: error.message,
               stack: error.stack
             });
-            await interaction.reply({ content: ERROR_MESSAGES.SELECT_MENU_FAILED, ephemeral: true });
+            await interaction.reply({ content: INTERACTION_ERROR_SELECT_MENU, ephemeral: true });
           }
         }
       }
@@ -197,7 +192,7 @@ async function handleCommand(interaction, commandType) {
     });
 
     const errorMessage = {
-      content: ERROR_MESSAGES.COMMAND_EXECUTION_FAILED,
+      content: INTERACTION_ERROR_EXECUTION,
       ephemeral: true
     };
 
@@ -210,7 +205,7 @@ async function handleCommand(interaction, commandType) {
 }
 
 async function isOnCooldown(interaction, command) {
-  const cooldownAmount = command.cooldown || DEFAULT_COOLDOWN;
+  const cooldownAmount = command.cooldown || INTERACTION_DEFAULT_COOLDOWN;
   const key = `${interaction.user.id}-${interaction.commandName}`;
   const now = Date.now();
   
@@ -219,7 +214,7 @@ async function isOnCooldown(interaction, command) {
     if (now < expirationTime) {
       const remainingTime = Math.ceil((expirationTime - now) / 1000);
       await interaction.reply({
-        content: ERROR_MESSAGES.COOLDOWN_ACTIVE.replace('{time}', remainingTime),
+        content: INTERACTION_ERROR_COOLDOWN.replace('{time}', remainingTime),
         ephemeral: true
       });
       return true;
@@ -250,12 +245,12 @@ async function hasRequiredPermissions(interaction, command) {
   
   PERMISSION_CACHE.set(key, {
     hasPermission,
-    expiresAt: now + CACHE_DURATION
+    expiresAt: now + INTERACTION_CACHE_DURATION
   });
   
   if (!hasPermission) {
     await interaction.reply({
-      content: ERROR_MESSAGES.PERMISSION_DENIED,
+      content: INTERACTION_ERROR_PERMISSION,
       ephemeral: true
     });
   }
@@ -275,7 +270,7 @@ async function checkPermissions(interaction, command) {
   const key = `${interaction.user.id}-${command.data.name}`;
   const cached = PERMISSION_CACHE.get(key);
   
-  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+  if (cached && Date.now() - cached.timestamp < INTERACTION_CACHE_DURATION) {
     return cached.hasPermission;
   }
 

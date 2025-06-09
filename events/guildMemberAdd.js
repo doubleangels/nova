@@ -14,23 +14,17 @@ const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the guild member add event.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing the new member.",
-    MEMBER_JOIN_FAILED: "⚠️ Failed to process new member join.",
-    TRACKING_FAILED: "⚠️ Failed to track new member data.",
-    MUTE_KICK_FAILED: "⚠️ Failed to schedule mute kick for new member.",
-    DATABASE_ERROR: "⚠️ Database error occurred while processing new member.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions to process new member.",
-    INVALID_MEMBER: "⚠️ Invalid member data received.",
-    ACCOUNT_AGE_CHECK_FAILED: "⚠️ Failed to verify account age.",
-    KICK_FAILED: "⚠️ Failed to kick member due to age requirement."
-};
+const MEMBER_ADD_EMBED_COLOR = 0xCD41FF;
 
-const WELCOME_EMBED_COLOR = 0xCD41FF;
+const MEMBER_ADD_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the new member.";
+const MEMBER_ADD_ERROR_JOIN_FAILED = "⚠️ Failed to process new member join.";
+const MEMBER_ADD_ERROR_TRACKING = "⚠️ Failed to track new member data.";
+const MEMBER_ADD_ERROR_MUTE_KICK = "⚠️ Failed to schedule mute kick for new member.";
+const MEMBER_ADD_ERROR_DATABASE = "⚠️ Database error occurred while processing new member.";
+const MEMBER_ADD_ERROR_PERMISSION = "⚠️ Insufficient permissions to process new member.";
+const MEMBER_ADD_ERROR_INVALID = "⚠️ Invalid member data received.";
+const MEMBER_ADD_ERROR_AGE_CHECK = "⚠️ Failed to verify account age.";
+const MEMBER_ADD_ERROR_KICK = "⚠️ Failed to kick member due to age requirement.";
 
 /**
  * Event handler for guild member join events.
@@ -98,22 +92,22 @@ module.exports = {
         guildId: member.guild.id
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = MEMBER_ADD_ERROR_UNEXPECTED;
       
-      if (error.message === "TRACKING_FAILED") {
-        errorMessage = ERROR_MESSAGES.TRACKING_FAILED;
-      } else if (error.message === "MUTE_KICK_FAILED") {
-        errorMessage = ERROR_MESSAGES.MUTE_KICK_FAILED;
-      } else if (error.message === "DATABASE_ERROR") {
-        errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
-      } else if (error.message === "PERMISSION_DENIED") {
-        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
-      } else if (error.message === "INVALID_MEMBER") {
-        errorMessage = ERROR_MESSAGES.INVALID_MEMBER;
-      } else if (error.message === "ACCOUNT_AGE_CHECK_FAILED") {
-        errorMessage = ERROR_MESSAGES.ACCOUNT_AGE_CHECK_FAILED;
-      } else if (error.message === "KICK_FAILED") {
-        errorMessage = ERROR_MESSAGES.KICK_FAILED;
+      if (error.message === MEMBER_ADD_ERROR_TRACKING) {
+        errorMessage = MEMBER_ADD_ERROR_TRACKING;
+      } else if (error.message === MEMBER_ADD_ERROR_MUTE_KICK) {
+        errorMessage = MEMBER_ADD_ERROR_MUTE_KICK;
+      } else if (error.message === MEMBER_ADD_ERROR_DATABASE) {
+        errorMessage = MEMBER_ADD_ERROR_DATABASE;
+      } else if (error.message === MEMBER_ADD_ERROR_PERMISSION) {
+        errorMessage = MEMBER_ADD_ERROR_PERMISSION;
+      } else if (error.message === MEMBER_ADD_ERROR_INVALID) {
+        errorMessage = MEMBER_ADD_ERROR_INVALID;
+      } else if (error.message === MEMBER_ADD_ERROR_AGE_CHECK) {
+        errorMessage = MEMBER_ADD_ERROR_AGE_CHECK;
+      } else if (error.message === MEMBER_ADD_ERROR_KICK) {
+        errorMessage = MEMBER_ADD_ERROR_KICK;
       }
       
       throw new Error(errorMessage);

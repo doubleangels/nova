@@ -10,19 +10,13 @@ const { removeTrackedMember } = require('../utils/database');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to the guild member remove event.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing member departure.",
-    MEMBER_LEAVE_FAILED: "⚠️ Failed to process member departure.",
-    TRACKING_REMOVAL_FAILED: "⚠️ Failed to remove member tracking data.",
-    DATABASE_ERROR: "⚠️ Database error occurred while processing member departure.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions to process member departure.",
-    INVALID_MEMBER: "⚠️ Invalid member data received.",
-    BOT_MEMBER: "⚠️ Cannot process bot member departure."
-};
+const MEMBER_REMOVE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing member departure.";
+const MEMBER_REMOVE_ERROR_LEAVE_FAILED = "⚠️ Failed to process member departure.";
+const MEMBER_REMOVE_ERROR_TRACKING = "⚠️ Failed to remove member tracking data.";
+const MEMBER_REMOVE_ERROR_DATABASE = "⚠️ Database error occurred while processing member departure.";
+const MEMBER_REMOVE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process member departure.";
+const MEMBER_REMOVE_ERROR_INVALID = "⚠️ Invalid member data received.";
+const MEMBER_REMOVE_ERROR_BOT = "⚠️ Cannot process bot member departure.";
 
 /**
  * Event handler for guild member leave events.
@@ -70,18 +64,18 @@ module.exports = {
         guildId: member.guild.id
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = MEMBER_REMOVE_ERROR_UNEXPECTED;
       
-      if (error.message === "TRACKING_REMOVAL_FAILED") {
-        errorMessage = ERROR_MESSAGES.TRACKING_REMOVAL_FAILED;
-      } else if (error.message === "DATABASE_ERROR") {
-        errorMessage = ERROR_MESSAGES.DATABASE_ERROR;
-      } else if (error.message === "PERMISSION_DENIED") {
-        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
-      } else if (error.message === "INVALID_MEMBER") {
-        errorMessage = ERROR_MESSAGES.INVALID_MEMBER;
-      } else if (error.message === "BOT_MEMBER") {
-        errorMessage = ERROR_MESSAGES.BOT_MEMBER;
+      if (error.message === MEMBER_REMOVE_ERROR_TRACKING) {
+        errorMessage = MEMBER_REMOVE_ERROR_TRACKING;
+      } else if (error.message === MEMBER_REMOVE_ERROR_DATABASE) {
+        errorMessage = MEMBER_REMOVE_ERROR_DATABASE;
+      } else if (error.message === MEMBER_REMOVE_ERROR_PERMISSION) {
+        errorMessage = MEMBER_REMOVE_ERROR_PERMISSION;
+      } else if (error.message === MEMBER_REMOVE_ERROR_INVALID) {
+        errorMessage = MEMBER_REMOVE_ERROR_INVALID;
+      } else if (error.message === MEMBER_REMOVE_ERROR_BOT) {
+        errorMessage = MEMBER_REMOVE_ERROR_BOT;
       }
       
       throw new Error(errorMessage);

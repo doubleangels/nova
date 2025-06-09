@@ -17,27 +17,21 @@ const { logError } = require('../errors');
 
 const deployCommands = require('../deploy-commands');
 
-const BOT_ACTIVITY = {
+const READY_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
   type: ActivityType.Watching
 };
-const BOT_STATUS = "online";
+const READY_BOT_STATUS = "online";
 
-/**
- * Error messages specific to the ready event.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred during bot initialization.",
-    BOT_INITIALIZATION_FAILED: "⚠️ Failed to initialize the bot.",
-    DATABASE_INITIALIZATION_FAILED: "⚠️ Failed to initialize database connection.",
-    MUTE_KICK_RESCHEDULE_FAILED: "⚠️ Failed to reschedule mute kicks.",
-    REMINDER_RESCHEDULE_FAILED: "⚠️ Failed to reschedule reminders.",
-    ACTIVITY_SET_FAILED: "⚠️ Failed to set bot activity.",
-    STATUS_SET_FAILED: "⚠️ Failed to set bot status.",
-    VOICE_JOIN_TIMES_LOAD_FAILED: "⚠️ Failed to load voice join times.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions for bot initialization."
-};
+const READY_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred during bot initialization.";
+const READY_ERROR_INITIALIZATION = "⚠️ Failed to initialize the bot.";
+const READY_ERROR_DATABASE = "⚠️ Failed to initialize database connection.";
+const READY_ERROR_MUTE_KICK = "⚠️ Failed to reschedule mute kicks.";
+const READY_ERROR_REMINDER = "⚠️ Failed to reschedule reminders.";
+const READY_ERROR_ACTIVITY = "⚠️ Failed to set bot activity.";
+const READY_ERROR_STATUS = "⚠️ Failed to set bot status.";
+const READY_ERROR_VOICE_JOIN = "⚠️ Failed to load voice join times.";
+const READY_ERROR_PERMISSION = "⚠️ Insufficient permissions for bot initialization.";
 
 async function performSetupTask(taskName, task, startMessage, successMessage) {
   try {
@@ -76,7 +70,7 @@ module.exports = {
    */
   async execute(client) {
     try {
-      client.user.setActivity(BOT_ACTIVITY.name, { type: BOT_ACTIVITY.type });
+      client.user.setActivity(READY_BOT_ACTIVITY.name, { type: READY_BOT_ACTIVITY.type });
       logger.info(`Logged in as ${client.user.tag}.`);
 
       await initializeDatabase();
@@ -100,22 +94,22 @@ module.exports = {
         clientTag: client.user?.tag
       });
 
-      let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+      let errorMessage = READY_ERROR_UNEXPECTED;
       
-      if (error.message === "DATABASE_INITIALIZATION_FAILED") {
-        errorMessage = ERROR_MESSAGES.DATABASE_INITIALIZATION_FAILED;
-      } else if (error.message === "MUTE_KICK_RESCHEDULE_FAILED") {
-        errorMessage = ERROR_MESSAGES.MUTE_KICK_RESCHEDULE_FAILED;
-      } else if (error.message === "REMINDER_RESCHEDULE_FAILED") {
-        errorMessage = ERROR_MESSAGES.REMINDER_RESCHEDULE_FAILED;
-      } else if (error.message === "ACTIVITY_SET_FAILED") {
-        errorMessage = ERROR_MESSAGES.ACTIVITY_SET_FAILED;
-      } else if (error.message === "STATUS_SET_FAILED") {
-        errorMessage = ERROR_MESSAGES.STATUS_SET_FAILED;
-      } else if (error.message === "VOICE_JOIN_TIMES_LOAD_FAILED") {
-        errorMessage = ERROR_MESSAGES.VOICE_JOIN_TIMES_LOAD_FAILED;
-      } else if (error.message === "PERMISSION_DENIED") {
-        errorMessage = ERROR_MESSAGES.PERMISSION_DENIED;
+      if (error.message === READY_ERROR_DATABASE) {
+        errorMessage = READY_ERROR_DATABASE;
+      } else if (error.message === READY_ERROR_MUTE_KICK) {
+        errorMessage = READY_ERROR_MUTE_KICK;
+      } else if (error.message === READY_ERROR_REMINDER) {
+        errorMessage = READY_ERROR_REMINDER;
+      } else if (error.message === READY_ERROR_ACTIVITY) {
+        errorMessage = READY_ERROR_ACTIVITY;
+      } else if (error.message === READY_ERROR_STATUS) {
+        errorMessage = READY_ERROR_STATUS;
+      } else if (error.message === READY_ERROR_VOICE_JOIN) {
+        errorMessage = READY_ERROR_VOICE_JOIN;
+      } else if (error.message === READY_ERROR_PERMISSION) {
+        errorMessage = READY_ERROR_PERMISSION;
       }
       
       throw new Error(errorMessage);

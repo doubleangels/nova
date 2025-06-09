@@ -10,30 +10,24 @@ const { getValue, getAllTrackedMembers, removeTrackedMember, getTrackedMember } 
 const { EmbedBuilder } = require('discord.js');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to mute mode utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing mute mode.",
-    MUTE_KICK_SCHEDULE_FAILED: "⚠️ Failed to schedule mute kick.",
-    MUTE_KICK_EXECUTION_FAILED: "⚠️ Failed to execute mute kick.",
-    MUTE_KICK_RESCEDULE_FAILED: "⚠️ Failed to reschedule mute kicks.",
-    MEMBER_NOT_FOUND: "⚠️ Member not found.",
-    GUILD_NOT_FOUND: "⚠️ Guild not found.",
-    DM_FAILED: "⚠️ Failed to send DM to member.",
-    KICK_FAILED: "⚠️ Failed to kick member.",
-    TRACKING_REMOVAL_FAILED: "⚠️ Failed to remove member from tracking.",
-    INVALID_MEMBER_ID: "⚠️ Invalid member ID provided.",
-    INVALID_GUILD_ID: "⚠️ Invalid guild ID provided.",
-    INVALID_JOIN_TIME: "⚠️ Invalid join time provided.",
-    INVALID_MUTE_TIME: "⚠️ Invalid mute time provided.",
-    CLIENT_NOT_FOUND: "⚠️ Discord client not found."
-};
+const MUTE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing mute mode.";
+const MUTE_ERROR_KICK_SCHEDULE = "⚠️ Failed to schedule mute kick.";
+const MUTE_ERROR_KICK_EXECUTION = "⚠️ Failed to execute mute kick.";
+const MUTE_ERROR_KICK_RESCEDULE = "⚠️ Failed to reschedule mute kicks.";
+const MUTE_ERROR_MEMBER_NOT_FOUND = "⚠️ Member not found.";
+const MUTE_ERROR_GUILD_NOT_FOUND = "⚠️ Guild not found.";
+const MUTE_ERROR_DM_FAILED = "⚠️ Failed to send DM to member.";
+const MUTE_ERROR_KICK_FAILED = "⚠️ Failed to kick member.";
+const MUTE_ERROR_TRACKING_REMOVAL = "⚠️ Failed to remove member from tracking.";
+const MUTE_ERROR_INVALID_MEMBER_ID = "⚠️ Invalid member ID provided.";
+const MUTE_ERROR_INVALID_GUILD_ID = "⚠️ Invalid guild ID provided.";
+const MUTE_ERROR_INVALID_JOIN_TIME = "⚠️ Invalid join time provided.";
+const MUTE_ERROR_INVALID_MUTE_TIME = "⚠️ Invalid mute time provided.";
+const MUTE_ERROR_CLIENT_NOT_FOUND = "⚠️ Discord client not found.";
 
-const DEFAULT_MUTE_KICK_TIME_HOURS = 4;
-const KICK_REASON_TIMEOUT = "User did not send a message in time.";
-const IMMEDIATE_TIMEOUT_MS = 0;
+const MUTE_DEFAULT_KICK_TIME_HOURS = 4;
+const MUTE_KICK_REASON = "User did not send a message in time.";
+const MUTE_IMMEDIATE_TIMEOUT_MS = 0;
 
 /**
  * Schedules a mute kick for a member if they don't send a message within the time limit.
@@ -80,7 +74,7 @@ async function scheduleMuteKick(memberId, username, joinTime, muteKickTime, guil
       return;
     }
     
-    setTimeout(() => delayedKick(remainingTime), IMMEDIATE_TIMEOUT_MS);
+    setTimeout(() => delayedKick(remainingTime), MUTE_IMMEDIATE_TIMEOUT_MS);
     logger.debug(`Delayed kick for member '${username}' (ID: ${memberId}) scheduled successfully.`);
   } catch (e) {
     logger.error(`Error scheduling mute kick for member '${username}' (ID: ${memberId}): ${e.message}`, { error: e });
@@ -151,7 +145,7 @@ async function performKick(guild, memberId, username, kickType) {
       logger.warn(`Failed to send DM to member '${username}' (ID: ${memberId}) before kick:`, { error: dmError.message });
     }
     
-    await member.kick(KICK_REASON_TIMEOUT);
+    await member.kick(MUTE_KICK_REASON);
     await removeTrackedMember(memberId);
     logger.info(`Member '${username}' (ID: ${memberId}) kicked ${kickType === "immediate" ? "immediately" : "after scheduled delay"} due to mute timeout.`);
   } catch (e) {
@@ -178,7 +172,7 @@ async function rescheduleAllMuteKicks(client) {
       return;
     }
     
-    const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours"), 10) || DEFAULT_MUTE_KICK_TIME_HOURS;
+    const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours"), 10) || MUTE_DEFAULT_KICK_TIME_HOURS;
     const trackedMembers = await getAllTrackedMembers();
     
     if (!trackedMembers || trackedMembers.length === 0) {

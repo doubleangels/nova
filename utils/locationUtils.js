@@ -14,48 +14,44 @@ const moment = require('moment-timezone');
 const NodeCache = require('node-cache');
 const { logError } = require('../errors');
 
-/**
- * Error messages specific to location utilities.
- * @type {Object}
- */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while processing location.",
-    INVALID_COORDINATES: "⚠️ Invalid coordinates provided.",
-    INVALID_PLACE: "⚠️ Invalid place name provided.",
-    INVALID_TIMEZONE: "⚠️ Invalid timezone provided.",
-    API_ERROR: "⚠️ Google Maps API error occurred.",
-    API_TIMEOUT: "⚠️ Google Maps API request timed out.",
-    API_RATE_LIMIT: "⚠️ Google Maps API rate limit exceeded.",
-    API_ACCESS_DENIED: "⚠️ Access to Google Maps API denied.",
-    LOCATION_NOT_FOUND: "⚠️ Location not found.",
-    TIMEZONE_NOT_FOUND: "⚠️ Timezone not found for location.",
-    CACHE_ERROR: "⚠️ Error accessing location cache.",
-    INVALID_TIMESTAMP: "⚠️ Invalid timestamp provided.",
-    INVALID_OFFSET: "⚠️ Invalid timezone offset.",
-    INVALID_ADDRESS: "⚠️ Invalid address format.",
-    INVALID_LATITUDE: "⚠️ Invalid latitude value.",
-    INVALID_LONGITUDE: "⚠️ Invalid longitude value."
-};
+const LOC_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing location.";
+const LOC_ERROR_INVALID_COORDINATES = "⚠️ Invalid coordinates provided.";
+const LOC_ERROR_INVALID_PLACE = "⚠️ Invalid place name provided.";
+const LOC_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone provided.";
+const LOC_ERROR_API = "⚠️ Google Maps API error occurred.";
+const LOC_ERROR_API_TIMEOUT = "⚠️ Google Maps API request timed out.";
+const LOC_ERROR_API_RATE_LIMIT = "⚠️ Google Maps API rate limit exceeded.";
+const LOC_ERROR_API_ACCESS = "⚠️ Access to Google Maps API denied.";
+const LOC_ERROR_NOT_FOUND = "⚠️ Location not found.";
+const LOC_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Timezone not found for location.";
+const LOC_ERROR_CACHE = "⚠️ Error accessing location cache.";
+const LOC_ERROR_INVALID_TIMESTAMP = "⚠️ Invalid timestamp provided.";
+const LOC_ERROR_INVALID_OFFSET = "⚠️ Invalid timezone offset.";
+const LOC_ERROR_INVALID_ADDRESS = "⚠️ Invalid address format.";
+const LOC_ERROR_INVALID_LATITUDE = "⚠️ Invalid latitude value.";
+const LOC_ERROR_INVALID_LONGITUDE = "⚠️ Invalid longitude value.";
 
-const GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
-const TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
-const API_STATUS_SUCCESS = 'OK';
-const API_TIMEOUT_MS = 5000;
-const SECONDS_PER_HOUR = 3600;
+const LOC_API_GEOCODING_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
+const LOC_API_TIMEZONE_URL = 'https://maps.googleapis.com/maps/api/timezone/json';
+const LOC_API_STATUS_SUCCESS = 'OK';
+const LOC_API_TIMEOUT_MS = 5000;
 
-const CACHE_TTL = 3600;
-const locationCache = new NodeCache({ stdTTL: CACHE_TTL });
+const LOC_CACHE_TTL = 3600;
+const LOC_CACHE = new NodeCache({ stdTTL: LOC_CACHE_TTL });
 
-const RATE_LIMIT_WINDOW = 60000;
-const MAX_REQUESTS_PER_WINDOW = 50;
-const requestCounts = new Map();
+const LOC_RATE_LIMIT_WINDOW = 60000;
+const LOC_RATE_LIMIT_MAX_REQUESTS = 50;
+const LOC_RATE_LIMIT_COUNTS = new Map();
 
-const MIN_LATITUDE = -90;
-const MAX_LATITUDE = 90;
-const MIN_LONGITUDE = -180;
-const MAX_LONGITUDE = 180;
+const LOC_MIN_LATITUDE = -90;
+const LOC_MAX_LATITUDE = 90;
+const LOC_MIN_LONGITUDE = -180;
+const LOC_MAX_LONGITUDE = 180;
 
-const ErrorTypes = {
+const LOC_SECONDS_PER_HOUR = 3600;
+
+// Error Types
+const LOC_ERROR_TYPES = {
   INVALID_INPUT: 'invalid_input',
   NOT_FOUND: 'not_found',
   API_ERROR: 'api_error',
@@ -76,10 +72,10 @@ function isValidCoordinates(lat, lng) {
   return (
     typeof lat === 'number' &&
     typeof lng === 'number' &&
-    lat >= MIN_LATITUDE &&
-    lat <= MAX_LATITUDE &&
-    lng >= MIN_LONGITUDE &&
-    lng <= MAX_LONGITUDE
+    lat >= LOC_MIN_LATITUDE &&
+    lat <= LOC_MAX_LATITUDE &&
+    lng >= LOC_MIN_LONGITUDE &&
+    lng <= LOC_MAX_LONGITUDE
   );
 }
 
@@ -90,22 +86,22 @@ function isValidCoordinates(lat, lng) {
  */
 function isRateLimited() {
   const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW;
+  const windowStart = now - LOC_RATE_LIMIT_WINDOW;
   
-  for (const [timestamp] of requestCounts) {
+  for (const [timestamp] of LOC_RATE_LIMIT_COUNTS) {
     if (timestamp < windowStart) {
-      requestCounts.delete(timestamp);
+      LOC_RATE_LIMIT_COUNTS.delete(timestamp);
     }
   }
   
   let currentWindowCount = 0;
-  for (const [timestamp, count] of requestCounts) {
+  for (const [timestamp, count] of LOC_RATE_LIMIT_COUNTS) {
     if (timestamp >= windowStart) {
       currentWindowCount += count;
     }
   }
   
-  return currentWindowCount >= MAX_REQUESTS_PER_WINDOW;
+  return currentWindowCount >= LOC_RATE_LIMIT_MAX_REQUESTS;
 }
 
 /**
@@ -114,7 +110,7 @@ function isRateLimited() {
  */
 function recordRequest() {
   const now = Date.now();
-  requestCounts.set(now, (requestCounts.get(now) || 0) + 1);
+  LOC_RATE_LIMIT_COUNTS.set(now, (LOC_RATE_LIMIT_COUNTS.get(now) || 0) + 1);
 }
 
 /**
@@ -154,7 +150,7 @@ async function getGeocodingData(place) {
   try {
     if (!place || typeof place !== 'string' || place.trim() === '') {
       logger.warn("Invalid place name provided.", { place });
-      return { error: true, type: ErrorTypes.INVALID_INPUT };
+      return { error: true, type: LOC_ERROR_TYPES.INVALID_INPUT };
     }
 
     const cacheKey = `geocode:${place.toLowerCase().trim()}`;
