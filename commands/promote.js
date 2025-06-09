@@ -76,11 +76,15 @@ module.exports = {
       // Check for cooldown
       const lastPromotion = await this.getLastPromotion();
       if (lastPromotion) {
-        const timeSinceLastPromotion = dayjs().diff(dayjs(lastPromotion), 'hour');
-        if (timeSinceLastPromotion < PROMOTE_COOLDOWN_HOURS) {
-          const hoursRemaining = PROMOTE_COOLDOWN_HOURS - timeSinceLastPromotion;
+        const now = dayjs();
+        const lastPromoTime = dayjs(lastPromotion);
+        const hoursRemaining = PROMOTE_COOLDOWN_HOURS - now.diff(lastPromoTime, 'hour', true);
+        
+        if (hoursRemaining > 0) {
+          const hours = Math.floor(hoursRemaining);
+          const minutes = Math.round((hoursRemaining - hours) * 60);
           return await interaction.editReply({
-            content: `⏰ Please wait ${hoursRemaining.toFixed(1)} hours before promoting again.`,
+            content: `⏰ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
             ephemeral: true
           });
         }
