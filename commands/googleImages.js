@@ -10,7 +10,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const SEARCH_API_URL = "https://www.googleapis.com/customsearch/v1";
 const DEFAULT_RESULTS_COUNT = 5;
@@ -22,6 +22,22 @@ const SAFE_SEARCH = "medium";
 
 const GOOGLE_API_KEY = config.googleApiKey;
 const GOOGLE_CSE_ID = config.imageSearchEngineId;
+
+/**
+ * Error messages specific to the Google Images command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    INVALID_QUERY: "⚠️ Please provide a valid search query.",
+    NO_RESULTS_FOUND: "⚠️ No images found for your search query.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching for images.",
+    API_ERROR: "⚠️ Failed to fetch search results. Please try again later.",
+    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    GOOGLE_API_ERROR: "⚠️ Failed to fetch search results from Google. Please try again later.",
+    GOOGLE_NO_RESULTS: "⚠️ No images found for your search query."
+};
 
 /**
  * We convert a string to title case for better presentation.
@@ -257,7 +273,7 @@ module.exports = {
     } else if (error.message === "NO_RESULTS") {
       errorMessage = ERROR_MESSAGES.GOOGLE_NO_RESULTS;
     } else if (error.message === "INVALID_QUERY") {
-      errorMessage = ERROR_MESSAGES.GOOGLE_INVALID_QUERY;
+      errorMessage = ERROR_MESSAGES.INVALID_QUERY;
     }
     
     try {

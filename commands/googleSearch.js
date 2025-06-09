@@ -10,7 +10,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const API_URL = 'https://www.googleapis.com/customsearch/v1';
 const DEFAULT_RESULTS = 5;
@@ -23,6 +23,22 @@ const SAFE_SEARCH = 'off';
 
 const GOOGLE_API_KEY = config.googleApiKey;
 const GOOGLE_CSE_ID = config.searchEngineId;
+
+/**
+ * Error messages specific to the Google Search command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    INVALID_QUERY: "⚠️ Please provide a valid search query.",
+    NO_RESULTS_FOUND: "⚠️ No results found for your search query.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching.",
+    API_ERROR: "⚠️ Failed to fetch search results. Please try again later.",
+    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    GOOGLE_API_ERROR: "⚠️ Failed to fetch search results from Google. Please try again later.",
+    GOOGLE_NO_RESULTS: "⚠️ No results found for your search query."
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -151,7 +167,7 @@ module.exports = {
     
     try {
       await interaction.editReply({ 
-        content: getErrorMessage(error),
+        content: errorMessage,
         ephemeral: true
       });
     } catch (followUpError) {
@@ -162,7 +178,7 @@ module.exports = {
       });
       
       await interaction.reply({ 
-        content: getErrorMessage(error),
+        content: errorMessage,
         ephemeral: true
       }).catch(() => {
       });

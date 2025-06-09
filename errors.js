@@ -53,13 +53,6 @@ const ERROR_MESSAGES = {
     CONFIG_INVALID: "⚠️ Invalid configuration detected. Please contact an administrator.",
     CONFIG_INCOMPLETE: "⚠️ Configuration is incomplete. Please contact an administrator.",
 
-    GOOGLE_INVALID_QUERY: "⚠️ Please provide a valid search query.",
-    GOOGLE_NO_RESULTS: "⚠️ No search results found. Try refining your query!",
-    GOOGLE_API_ERROR: "⚠️ Failed to fetch search results. Please try again later.",
-
-    IMDB_INVALID_TITLE: "⚠️ Please provide a valid movie or show title.",
-    IMDB_INVALID_YEAR: "⚠️ Year must be in the format YYYY (e.g., 2021).",
-
     MOCK_NO_CONTENT: "⚠️ There is no text to mock!",
     MOCK_BOT_MESSAGE: "⚠️ I cannot mock my own messages!",
 

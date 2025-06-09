@@ -9,12 +9,32 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const { logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 const OMDB_API_URL = 'https://www.omdbapi.com/';
 const IMDB_BASE_URL = 'https://www.imdb.com/title/';
 const EMBED_COLOR = 0xFFD700;
 const REQUEST_TIMEOUT = 10000;
+
+/**
+ * Error messages specific to the IMDb command.
+ * @type {Object}
+ */
+const ERROR_MESSAGES = {
+    CONFIG_MISSING: "⚠️ This command is not properly configured. Please contact an administrator.",
+    INVALID_INPUT: "⚠️ Please provide a valid title.",
+    INVALID_YEAR_FORMAT: "⚠️ Year must be in the format YYYY (e.g., 2021).",
+    NO_RESULTS_FOUND: "⚠️ No results found for your search.",
+    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while searching.",
+    API_ERROR: "⚠️ Failed to fetch movie information. Please try again later.",
+    API_RATE_LIMIT: "⚠️ API rate limit reached. Please try again in a few moments.",
+    API_NETWORK_ERROR: "⚠️ Network error occurred. Please check your internet connection.",
+    IMDB_API_ERROR: "⚠️ Failed to fetch movie information from OMDb. Please try again later.",
+    IMDB_NO_RESULTS: "⚠️ No results found for your search.",
+    REQUEST_TIMEOUT: "⚠️ The request timed out. Please try again later.",
+    API_ACCESS_DENIED: "⚠️ API access denied. Please check API configuration.",
+    RATE_LIMIT_EXCEEDED: "⚠️ Rate limit exceeded. Please try again later."
+};
 
 /**
  * We handle the imdb command.
