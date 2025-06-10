@@ -67,7 +67,6 @@ module.exports = {
         });
       }
 
-      // Check if bot has permission to manage messages
       const permissions = channel.permissionsFor(interaction.client.user);
       if (!permissions.has(PermissionFlagsBits.ManageMessages)) {
         return await interaction.reply({
@@ -77,7 +76,6 @@ module.exports = {
       }
 
       if (subcommand === 'set') {
-        // Check if channel is already configured
         const currentChannel = await getValue(NOTEXT_DB_KEY);
         if (currentChannel === channel.id) {
           return await interaction.reply({
@@ -86,7 +84,6 @@ module.exports = {
           });
         }
 
-        // Save channel configuration
         try {
           await setValue(NOTEXT_DB_KEY, channel.id);
         } catch (error) {
@@ -112,7 +109,6 @@ module.exports = {
         });
 
       } else if (subcommand === 'remove') {
-        // Check if channel is configured
         const currentChannel = await getValue(NOTEXT_DB_KEY);
         if (currentChannel !== channel.id) {
           return await interaction.reply({
@@ -121,7 +117,6 @@ module.exports = {
           });
         }
 
-        // Remove channel configuration
         try {
           await setValue(NOTEXT_DB_KEY, null);
         } catch (error) {
