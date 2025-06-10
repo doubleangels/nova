@@ -28,6 +28,7 @@ Before deploying Nova, ensure you have the following:
   - Spotify (Client ID and Client Secret)
   - NewsAPI (for /news command)
   - Twitch (Client ID and Client Secret)
+  - Reddit (Client ID, Client Secret)
 
 ## Docker Compose Setup
 
