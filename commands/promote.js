@@ -111,7 +111,6 @@ module.exports = {
         });
       }
 
-      // Record the next allowed promotion time
       await this.recordPromotion();
 
       const embed = this.createSuccessEmbed(redditResponse);
@@ -280,7 +279,6 @@ module.exports = {
    */
   async getLastPromotion() {
     try {
-      // Clean up old records first
       await pool.query(
         `DELETE FROM main.reminder_recovery 
          WHERE type = $1 
@@ -318,7 +316,6 @@ module.exports = {
    */
   async recordPromotion() {
     try {
-      // Delete any existing records first
       await pool.query(
         `DELETE FROM main.reminder_recovery 
          WHERE type = $1`,
