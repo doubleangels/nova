@@ -98,11 +98,16 @@ module.exports = {
       const noTextChannelId = await getValue(NOTEXT_DB_KEY);
       if (message.channelId !== noTextChannelId) return;
 
-      // Check if message contains only GIFs or stickers
+      // Check if message contains only GIFs, images, or stickers
       const hasGif = message.attachments.some(attachment => 
         attachment.url.toLowerCase().endsWith('.gif') || 
         attachment.contentType?.toLowerCase() === 'image/gif'
       ) || message.content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
+      
+      const hasImage = message.attachments.some(attachment => 
+        attachment.contentType?.toLowerCase().startsWith('image/')
+      );
+      
       const hasSticker = message.stickers.size > 0;
 
       // Check for emotes and tags
@@ -110,7 +115,7 @@ module.exports = {
       const hasTag = message.content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g); // Matches user mentions, role mentions, and channel mentions
 
       // If message doesn't contain any allowed content, delete it
-      if (!hasGif && !hasSticker && !hasEmote && !hasTag) {
+      if (!hasGif && !hasImage && !hasSticker && !hasEmote && !hasTag) {
         try {
           await message.delete();
           logger.debug("Deleted message with no allowed content in no-text channel:", {
@@ -118,6 +123,7 @@ module.exports = {
             userId: message.author.id,
             messageId: message.id,
             hasGif,
+            hasImage,
             hasSticker,
             hasEmote,
             hasTag,
