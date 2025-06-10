@@ -109,55 +109,20 @@ module.exports = {
       const hasEmote = message.content.match(/<a?:\w+:\d+>/g); // Matches both animated and static emotes
       const hasTag = message.content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g); // Matches user mentions, role mentions, and channel mentions
 
-      // If message has text that's not just emotes/tags/GIF URL, delete it
-      if (message.content) {
-        // Remove all allowed content to check if any other text remains
-        let remainingText = message.content
-          .replace(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i, '') // Remove GIF URLs
-          .replace(/<a?:\w+:\d+>/g, '') // Remove emotes
-          .replace(/<@!?\d+>|<@&\d+>|<#\d+>/g, '') // Remove tags
-          .trim();
-
-        if (remainingText) {
-          try {
-            await message.delete();
-            logger.debug("Deleted message with non-allowed text in no-text channel:", {
-              channelId: message.channelId,
-              userId: message.author.id,
-              messageId: message.id,
-              hasGif,
-              hasSticker,
-              hasEmote,
-              hasTag,
-              contentType: message.attachments.map(a => a.contentType),
-              content: message.content,
-              remainingText
-            });
-          } catch (error) {
-            logger.error("Failed to delete message in no-text channel:", { 
-              error: error.message,
-              channelId: message.channelId,
-              userId: message.author.id,
-              messageId: message.id
-            });
-            return await message.channel.send({
-              content: MESSAGE_ERROR_PROCESSING,
-              ephemeral: true
-            });
-          }
-        }
-      } else if (!hasGif && !hasSticker) {
-        // If no content and no GIF/sticker, delete it
+      // If message doesn't contain any allowed content, delete it
+      if (!hasGif && !hasSticker && !hasEmote && !hasTag) {
         try {
           await message.delete();
-          logger.debug("Deleted message with no content in no-text channel:", {
+          logger.debug("Deleted message with no allowed content in no-text channel:", {
             channelId: message.channelId,
             userId: message.author.id,
             messageId: message.id,
             hasGif,
             hasSticker,
             hasEmote,
-            hasTag
+            hasTag,
+            contentType: message.attachments.map(a => a.contentType),
+            content: message.content
           });
         } catch (error) {
           logger.error("Failed to delete message in no-text channel:", { 
