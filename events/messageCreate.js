@@ -5,12 +5,13 @@
  */
 
 const path = require('path');
-const logger = require('../logger')('messageCreate.js');
-const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementChannelMessageCount } = require('../utils/database');
+const logger = require('../logger')(path.basename(__filename));
+const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementChannelMessageCount, getValue } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const Sentry = require('../sentry');
 const { logError } = require('../errors');
+const { Events } = require('discord.js');
 
 const MESSAGE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the message.";
 const MESSAGE_ERROR_PROCESSING = "⚠️ Failed to process the message.";
@@ -23,12 +24,14 @@ const MESSAGE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process mes
 const MESSAGE_ERROR_INVALID = "⚠️ Invalid message data received.";
 const MESSAGE_ERROR_REMINDER = "⚠️ Failed to set reminder for bump message.";
 
+const NOTEXT_DB_KEY = 'notext_channel';
+
 /**
  * Event handler for message creation events.
  * @type {Object}
  */
 module.exports = {
-  name: 'messageCreate',
+  name: Events.MessageCreate,
   /**
    * Executes when a new message is created.
    * @async
@@ -90,6 +93,86 @@ module.exports = {
         await incrementChannelMessageCount(message.channel.id, message.channel.name);
       }
       logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}.`);
+
+      // Check if this is a no-text channel
+      const noTextChannelId = await getValue(NOTEXT_DB_KEY);
+      if (message.channelId !== noTextChannelId) return;
+
+      // Check if message contains only GIFs or stickers
+      const hasGif = message.attachments.some(attachment => 
+        attachment.url.toLowerCase().endsWith('.gif') || 
+        attachment.contentType?.toLowerCase() === 'image/gif'
+      ) || message.content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
+      const hasSticker = message.stickers.size > 0;
+
+      // Check for emotes and tags
+      const hasEmote = message.content.match(/<a?:\w+:\d+>/g); // Matches both animated and static emotes
+      const hasTag = message.content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g); // Matches user mentions, role mentions, and channel mentions
+
+      // If message has text that's not just emotes/tags/GIF URL, delete it
+      if (message.content) {
+        // Remove all allowed content to check if any other text remains
+        let remainingText = message.content
+          .replace(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i, '') // Remove GIF URLs
+          .replace(/<a?:\w+:\d+>/g, '') // Remove emotes
+          .replace(/<@!?\d+>|<@&\d+>|<#\d+>/g, '') // Remove tags
+          .trim();
+
+        if (remainingText) {
+          try {
+            await message.delete();
+            logger.debug("Deleted message with non-allowed text in no-text channel:", {
+              channelId: message.channelId,
+              userId: message.author.id,
+              messageId: message.id,
+              hasGif,
+              hasSticker,
+              hasEmote,
+              hasTag,
+              contentType: message.attachments.map(a => a.contentType),
+              content: message.content,
+              remainingText
+            });
+          } catch (error) {
+            logger.error("Failed to delete message in no-text channel:", { 
+              error: error.message,
+              channelId: message.channelId,
+              userId: message.author.id,
+              messageId: message.id
+            });
+            return await message.channel.send({
+              content: MESSAGE_ERROR_PROCESSING,
+              ephemeral: true
+            });
+          }
+        }
+      } else if (!hasGif && !hasSticker) {
+        // If no content and no GIF/sticker, delete it
+        try {
+          await message.delete();
+          logger.debug("Deleted message with no content in no-text channel:", {
+            channelId: message.channelId,
+            userId: message.author.id,
+            messageId: message.id,
+            hasGif,
+            hasSticker,
+            hasEmote,
+            hasTag
+          });
+        } catch (error) {
+          logger.error("Failed to delete message in no-text channel:", { 
+            error: error.message,
+            channelId: message.channelId,
+            userId: message.author.id,
+            messageId: message.id
+          });
+          return await message.channel.send({
+            content: MESSAGE_ERROR_PROCESSING,
+            ephemeral: true
+          });
+        }
+      }
+
     } catch (error) {
       Sentry.captureException(error, {
         extra: {
