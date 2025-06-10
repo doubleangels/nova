@@ -55,6 +55,10 @@ services:
       - TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
       - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
       - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
+      - REDDIT_CLIENT_ID=your_reddit_client_id_here
+      - REDDIT_CLIENT_SECRET=your_reddit_client_secret_here
+      - REDDIT_USERNAME=your_reddit_username_here
+      - REDDIT_PASSWORD=your_reddit_password_here
       - LOG_LEVEL=your_desired_log_level_here
 
 networks:
@@ -83,4 +87,8 @@ Here is a table of all available environment variables:
 | `SPOTIFY_CLIENT_SECRET`             | Client Secret for Spotify API                             |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ✅    |    -    | -                                                                                |
+| `REDDIT_CLIENT_ID`                  | Client ID for Reddit API                                  |    ✅    |    -    | -                                                                                |
+| `REDDIT_CLIENT_SECRET`              | Client Secret for Reddit API                              |    ✅    |    -    | -                                                                                |
+| `REDDIT_USERNAME`                   | Reddit username for API authentication                    |    ✅    |    -    | -                                                                                |
+| `REDDIT_PASSWORD`                   | Reddit password for API authentication                    |    ✅    |    -    | -                                                                                |
 | `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    | `info`  | `error`, `warn`, `info`, `debug`                                                 |
