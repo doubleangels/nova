@@ -12,24 +12,6 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const IMAGES_API_URL = "https://www.googleapis.com/customsearch/v1";
-const IMAGES_API_KEY = config.googleApiKey;
-const IMAGES_CSE_ID = config.imageSearchEngineId;
-const IMAGES_SAFE_SEARCH = "medium";
-
-const IMAGES_DEFAULT_RESULTS = 5;
-const IMAGES_MAX_RESULTS = 10;
-const IMAGES_MIN_RESULTS = 1;
-const IMAGES_COLLECTOR_TIMEOUT = 120000;
-const IMAGES_REQUEST_TIMEOUT = 10000;
-
-const IMAGES_EMBED_COLOR = 0x4285F4;
-const IMAGES_EMBED_FOOTER = "Powered by Google Image Search";
-const IMAGES_EMBED_PREV_LABEL = "Previous";
-const IMAGES_EMBED_NEXT_LABEL = "Next";
-const IMAGES_EMBED_PREV_EMOJI = "◀️";
-const IMAGES_EMBED_NEXT_EMOJI = "▶️";
-
 /**
  * We convert a string to title case for better presentation.
  * This function capitalizes the first letter of each word.
@@ -56,7 +38,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription(`How many results do you want? (${IMAGES_MIN_RESULTS}-${IMAGES_MAX_RESULTS}, Default: ${IMAGES_DEFAULT_RESULTS})`)
+        .setDescription('How many results do you want? (1-10, Default: 5)')
         .setRequired(false)
     ),
 
@@ -75,10 +57,10 @@ module.exports = {
     });
     
     try {
-      if (!IMAGES_API_KEY || !IMAGES_CSE_ID) {
+      if (!config.googleApiKey || !config.imageSearchEngineId) {
         logger.error("Missing Google API configuration:", {
-          hasApiKey: !!IMAGES_API_KEY,
-          hasCseId: !!IMAGES_CSE_ID
+          hasApiKey: !!config.googleApiKey,
+          hasCseId: !!config.imageSearchEngineId
         });
         return await interaction.editReply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
@@ -89,7 +71,7 @@ module.exports = {
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
-        query, resultsCount, IMAGES_DEFAULT_RESULTS, IMAGES_MIN_RESULTS, IMAGES_MAX_RESULTS
+        query, resultsCount, 5, 1, 10
       );
           
       if (!searchParams.valid) {
@@ -129,14 +111,14 @@ module.exports = {
         searchResults.items,
         index => this.generateImageEmbed(searchResults.items, index),
         'img',
-        IMAGES_COLLECTOR_TIMEOUT,
+        120000,
         logger,
         {
           buttonStyle: ButtonStyle.Primary,
-          prevLabel: IMAGES_EMBED_PREV_LABEL,
-          nextLabel: IMAGES_EMBED_NEXT_LABEL,
-          prevEmoji: IMAGES_EMBED_PREV_EMOJI,
-          nextEmoji: IMAGES_EMBED_NEXT_EMOJI
+          prevLabel: "Previous",
+          nextLabel: "Next",
+          prevEmoji: "◀️",
+          nextEmoji: "▶️"
         }
       );
     } catch (error) {
@@ -154,11 +136,11 @@ module.exports = {
    */
   async searchImages(query) {
     const url = new URL('https://www.googleapis.com/customsearch/v1');
-    url.searchParams.append('key', IMAGES_API_KEY);
-    url.searchParams.append('cx', IMAGES_CSE_ID);
+    url.searchParams.append('key', config.googleApiKey);
+    url.searchParams.append('cx', config.imageSearchEngineId);
     url.searchParams.append('q', query);
     url.searchParams.append('searchType', 'image');
-    url.searchParams.append('num', IMAGES_MAX_RESULTS);
+    url.searchParams.append('num', '10');
     
     const response = await fetch(url.toString());
     if (!response.ok) {
@@ -179,22 +161,22 @@ module.exports = {
    */
   async fetchImageResults(query, resultsCount) {
     const params = new URLSearchParams({
-      key: IMAGES_API_KEY,
-      cx: IMAGES_CSE_ID,
+      key: config.googleApiKey,
+      cx: config.imageSearchEngineId,
       q: query,
       searchType: "image",
       num: resultsCount.toString(),
       start: "1",
-      safe: IMAGES_SAFE_SEARCH
+      safe: "medium"
     });
-    const requestUrl = `${IMAGES_API_URL}?${params.toString()}`;
+    const requestUrl = `https://www.googleapis.com/customsearch/v1?${params.toString()}`;
     logger.debug("Preparing Google Image API request:", { 
       searchQuery: query,
       resultsRequested: resultsCount
     });
 
     try {
-      const response = await axios.get(requestUrl, { timeout: IMAGES_REQUEST_TIMEOUT });
+      const response = await axios.get(requestUrl, { timeout: 10000 });
       logger.debug("Google Image API response received:", { 
         status: response.status,
         itemsReturned: response.data?.items?.length || 0
@@ -234,9 +216,9 @@ module.exports = {
     return new EmbedBuilder()
       .setTitle(`🖼️ ${title}`)
       .setDescription(`🔗 **[View Original Source](${pageLink})**`)
-      .setColor(IMAGES_EMBED_COLOR)
+      .setColor(0x4285F4)
       .setImage(imageLink)
-      .setFooter({ text: `Result ${index + 1} of ${items.length} • ${IMAGES_EMBED_FOOTER}` });
+      .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
   },
 
   /**

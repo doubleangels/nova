@@ -14,15 +14,6 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { logError } = require('../errors');
 
-const FIX_DB_TABLE = 'main.reminder_recovery';
-const FIX_DB_TYPE = 'bump';
-
-const FIX_EMBED_COLOR = '#cd41ff';
-const FIX_EMBED_FOOTER_PREFIX = "Updated by";
-const FIX_EMBED_TITLE = 'Disboard Bump Reminder Fixed';
-
-const FIX_DELAY_SECONDS = 7200;
-
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
@@ -73,7 +64,7 @@ module.exports = {
       const existingReminder = await this.checkExistingReminder();
       
       const reminderId = randomUUID();
-      const scheduledTime = dayjs().add(FIX_DELAY_SECONDS, 'second');
+      const scheduledTime = dayjs().add(7200, 'second');
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
       const channel = await interaction.client.channels.fetch(reminderChannelId);
@@ -82,10 +73,10 @@ module.exports = {
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
       const embed = new EmbedBuilder()
-          .setColor(FIX_EMBED_COLOR)
-          .setTitle(FIX_EMBED_TITLE)
+          .setColor(0xcd41ff)
+          .setTitle('Disboard Bump Reminder Fixed')
           .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
-          .setFooter({ text: `${FIX_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+          .setFooter({ text: `Updated by ${interaction.user.tag}` })
           .setTimestamp();
       
       if (existingReminder) {
@@ -114,7 +105,7 @@ module.exports = {
   async checkExistingReminder() {
     try {
       const result = await pool.query(
-        `SELECT COUNT(*) FROM ${FIX_DB_TABLE} WHERE remind_at > NOW()`
+        `SELECT COUNT(*) FROM main.reminder_recovery WHERE remind_at > NOW()`
       );
       return parseInt(result.rows[0].count) > 0;
     } catch (error) {
@@ -135,19 +126,19 @@ module.exports = {
     try {
       // Clean up existing reminders first
       await pool.query(
-        `DELETE FROM ${FIX_DB_TABLE} WHERE remind_at > NOW() AND type = $1`,
-        [FIX_DB_TYPE]
+        `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
+        ['bump']
       );
-      logger.debug("Cleaned up existing reminders of type:", FIX_DB_TYPE);
+      logger.debug("Cleaned up existing reminders of type:", 'bump');
 
       await pool.query(
-        `INSERT INTO ${FIX_DB_TABLE} (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
-        [reminderId, scheduledTime, FIX_DB_TYPE]
+        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
+        [reminderId, scheduledTime, 'bump']
       );
       logger.debug("Reminder data saved to database:", { 
         reminderId: reminderId, 
         scheduledTime: scheduledTime,
-        type: FIX_DB_TYPE 
+        type: 'bump'
       });
     } catch (error) {
       logger.error("Database error while saving reminder:", { error: error.message, reminderId: reminderId });

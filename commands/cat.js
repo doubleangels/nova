@@ -9,16 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-const CAT_API_BASE_URL = 'https://api.thecatapi.com/v1';
-const CAT_API_ENDPOINT = '/images/search';
-const CAT_API_URL = 'https://cataas.com/cat/cute';
-
-const CAT_EMBED_COLOR = 0xFFB6C1;
-const CAT_EMBED_FOOTER = 'Powered by The Cat API';
-const CAT_EMBED_TITLE = '🐱 Random Cat';
-
-const CAT_DEFAULT_FILENAME = 'cat.jpg';
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cat')
@@ -40,14 +30,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      const response = await axios.get(CAT_API_BASE_URL + CAT_API_ENDPOINT);
+      const response = await axios.get('https://api.thecatapi.com/v1/images/search');
       const catData = response.data[0];
       
       const embed = new EmbedBuilder()
-        .setColor(CAT_EMBED_COLOR)
-        .setTitle(CAT_EMBED_TITLE)
+        .setColor(0xFFB6C1)
+        .setTitle('🐱 Random Cat')
         .setImage(catData.url)
-        .setFooter({ text: CAT_EMBED_FOOTER });
+        .setFooter({ text: 'Powered by The Cat API' });
       
       await interaction.editReply({ embeds: [embed] });
       
@@ -103,7 +93,7 @@ module.exports = {
   async fetchCatImage() {
     logger.debug("Fetching cat image from API.");
     try {
-      const response = await axios.get(CAT_API_URL, { 
+      const response = await axios.get('https://cataas.com/cat/cute', { 
         responseType: 'arraybuffer', 
         headers: { 'Accept': 'image/*' }
       });

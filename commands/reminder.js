@@ -20,14 +20,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
-const REMINDER_TYPE = 'bump';
-const REMINDER_DB_KEY_CHANNEL = 'reminder_channel';
-const REMINDER_DB_KEY_ROLE = 'reminder_role';
-
-const REMINDER_EMBED_COLOR = '#cd41ff';
-const REMINDER_EMBED_TITLE = '📌 Server Reminders Status';
-const REMINDER_EMBED_TITLE_SETUP = '✅ Reminder Setup Complete';
-
 /**
  * Module for the /reminder command.
  * We allow administrators to setup and check bump reminder settings for server management.
@@ -108,8 +100,8 @@ module.exports = {
     
     try {
       await Promise.all([
-        setValue(REMINDER_DB_KEY_CHANNEL, channelOption.id),
-        setValue(REMINDER_DB_KEY_ROLE, roleOption.id)
+        setValue('reminder_channel', channelOption.id),
+        setValue('reminder_role', roleOption.id)
       ]);
     } catch (dbError) {
       logger.error("Database operation failed during reminder setup:", { 
@@ -130,8 +122,8 @@ module.exports = {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(REMINDER_EMBED_COLOR)
-      .setTitle(REMINDER_EMBED_TITLE_SETUP)
+      .setColor('#cd41ff')
+      .setTitle('✅ Reminder Setup Complete')
       .addFields(
         { name: '📢 Channel', value: `<#${channelOption.id}>` },
         { name: '🎭 Role', value: `<@&${roleOption.id}>` }
@@ -158,12 +150,12 @@ module.exports = {
 
     try {
       const [channelId, roleId] = await Promise.all([
-        getValue(REMINDER_DB_KEY_CHANNEL),
-        getValue(REMINDER_DB_KEY_ROLE)
+        getValue('reminder_channel'),
+        getValue('reminder_role')
       ]);
       
       const [bumpReminder, promoteReminder] = await Promise.all([
-        this.getLatestReminderData(channelId, REMINDER_TYPE),
+        this.getLatestReminderData(channelId, 'bump'),
         this.getLatestReminderData(channelId, 'promote')
       ]);
       
@@ -192,15 +184,15 @@ module.exports = {
       const configComplete = channelId && roleId;
       
       const embed = new EmbedBuilder()
-        .setColor(REMINDER_EMBED_COLOR)
-        .setTitle(REMINDER_EMBED_TITLE)
+        .setColor('#cd41ff')
+        .setTitle('📌 Server Reminders Status')
         .addFields(
           { name: '📢 Channel', value: channelStr },
           { name: '🎭 Role', value: roleStr },
           { name: '⏰ Next Bump', value: bumpTimeStr },
           { name: '🎯 Next Promotion', value: promoteTimeStr }
         )
-        .setFooter({ text: `Requested by ${interaction.user.tag}` })
+        .setFooter({ text: `Updated by ${interaction.user.tag}` })
         .setTimestamp();
 
       if (!configComplete) {

@@ -11,18 +11,9 @@ const axios = require('axios');
 const he = require('he');
 const { logError } = require('../errors');
 
-const WIKI_API_BASE_URL = 'https://en.wikipedia.org/w/api.php';
-const WIKI_API_TIMEOUT = 5000;
-const WIKI_CACHE_TTL = 1000 * 60 * 60;
-
-const WIKI_MAX_RESULTS = 5;
 const WIKI_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
 const WIKI_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
 const WIKI_HTML_TAG_REGEX = /<[^>]*>/g;
-
-const WIKI_EMBED_COLOR = 0xFFFFFF;
-const WIKI_FOOTER_TEXT = 'Powered by Wikipedia API';
-const WIKI_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
 
 const cache = new Map();
 
@@ -80,7 +71,7 @@ module.exports = {
       
       if (!searchResults || searchResults.length === 0) {
         await interaction.editReply({
-          content: WIKI_ERROR_NO_RESULTS,
+          content: "⚠️ No results found for your search query.",
           ephemeral: true
         });
         return;
@@ -109,7 +100,7 @@ module.exports = {
       }
 
       const embed = new EmbedBuilder()
-        .setColor(WIKI_EMBED_COLOR)
+        .setColor(0xFFFFFF)
         .setTitle(article.title)
         .setDescription(summary)
         .setURL(`https://en.wikipedia.org/wiki/${encodeURIComponent(article.title)}`)
@@ -141,20 +132,20 @@ module.exports = {
         format: 'json',
         list: 'search',
         srsearch: query,
-        srlimit: WIKI_MAX_RESULTS,
+        srlimit: 5,
         utf8: '1',
         prop: 'info|extracts',
         inprop: 'url',
         explaintext: '1'
       });
       
-      const requestUrl = `${WIKI_API_BASE_URL}?${params.toString()}`;
+      const requestUrl = `https://en.wikipedia.org/w/api.php?${params.toString()}`;
       
       logger.debug("Making Wikipedia API request:", { 
         requestUrl
       });
       
-      const response = await axios.get(requestUrl, { timeout: WIKI_API_TIMEOUT });
+      const response = await axios.get(requestUrl, { timeout: 5000 });
       
       logger.debug("Wikipedia API response received:", { 
         status: response.status
@@ -165,7 +156,7 @@ module.exports = {
         
         return results.map(result => ({
           ...result,
-          url: WIKI_ARTICLE_URL.replace('%s', result.pageid),
+          url: `https://en.wikipedia.org/?curid=${result.pageid}`,
           formattedSnippet: this.formatSnippet(result.snippet)
         }));
       }
@@ -271,7 +262,7 @@ module.exports = {
       .setTitle(`📖 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}`)
       .setURL(url)
-      .setColor(WIKI_EMBED_COLOR)
+      .setColor(0xFFFFFF)
       .addFields(
         { 
           name: '🔗 Wikipedia Link', 
@@ -285,7 +276,7 @@ module.exports = {
         }
       )
       .setFooter({ 
-        text: `${WIKI_FOOTER_TEXT} • Result ${index + 1} of ${total} for "${query}"`
+        text: `Powered by Wikipedia API • Result ${index + 1} of ${total} for "${query}"`
       });
     
     return embed;
@@ -376,13 +367,13 @@ module.exports = {
   cacheResults(cacheKey, results) {
     cache.set(cacheKey, {
       results,
-      expiry: Date.now() + WIKI_CACHE_TTL
+      expiry: Date.now() + (1000 * 60 * 60)
     });
     
     logger.debug("Cached Wikipedia results:", { 
       cacheKey,
       resultCount: results.length,
-      expiryMinutes: WIKI_CACHE_TTL / 60000
+      expiryMinutes: 60
     });
   },
   

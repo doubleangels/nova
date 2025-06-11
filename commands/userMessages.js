@@ -4,32 +4,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { createPaginatedResults } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const MESSAGES_PER_PAGE = 10;
-const MESSAGES_MAX_CONTENT_LENGTH = 200;
-const MESSAGES_CONTENT_ELLIPSIS = '...';
-const MESSAGES_FETCH_BATCH_SIZE = 100;
-const MESSAGES_COLLECTOR_TIMEOUT = 300000;
-
-const MESSAGES_EMBED_COLOR = 0xcd41ff;
-
-const MESSAGES_ATTACHMENT_INDICATOR = '📎';
-const MESSAGES_EMBED_INDICATOR = '🖼️';
-const MESSAGES_MESSAGE_INDICATOR = '📜';
-const MESSAGES_TIME_INDICATOR = '⏰';
-const MESSAGES_NO_CONTENT_TEXT = '[No text content]';
-
-/**
- * We handle the usermessages command.
- * This function allows users to search and display messages from a specific user in a channel.
- *
- * We perform several tasks:
- * 1. We validate command parameters and permissions.
- * 2. We search for messages in the specified channel.
- * 3. We filter messages based on user and optional criteria.
- * 4. We format and display the results.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')
@@ -65,13 +39,6 @@ module.exports = {
         .setMinValue(1)
         .setMaxValue(365)),
 
-  /**
-   * We execute the /usermessages command.
-   * This function processes the user message search and displays results.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the command is complete.
-   */
   async execute(interaction) {
     try {
       logger.info("/usermessages command initiated:", {
@@ -159,7 +126,7 @@ module.exports = {
       
       logger.debug("Created message embeds:", { 
         embedCount: embeds.length, 
-        messagesPerPage: MESSAGES_PER_PAGE,
+        messagesPerPage: 10,
         totalMessages: allMessages.length
       });
       
@@ -172,7 +139,7 @@ module.exports = {
         embeds,
         generateEmbed,
         'usermsg',
-        MESSAGES_COLLECTOR_TIMEOUT,
+        300000,
         logger,
         {
           buttonStyle: 'Primary',
@@ -194,13 +161,6 @@ module.exports = {
     }
   },
   
-  /**
-   * We parse and validate command options.
-   * This function checks and returns validated command options.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<Object>} Validated command options.
-   */
   async parseOptions(interaction) {
     const targetUser = interaction.options.getUser('user');
     const targetChannel = interaction.options.getChannel('channel');
@@ -263,17 +223,6 @@ module.exports = {
     };
   },
 
-  /**
-   * We fetch messages from a specific user in a channel.
-   * This function retrieves and filters messages for the user.
-   *
-   * @param {TextChannel} channel - The channel to search in.
-   * @param {string} userId - The ID of the user to fetch messages for.
-   * @param {number} limit - Maximum number of messages to fetch.
-   * @param {string|null} filterText - Optional text to filter messages by.
-   * @param {number|null} dayLimit - Optional day limit to filter messages by.
-   * @returns {Promise<Array>} Array of filtered user messages.
-   */
   async fetchUserMessages(channel, userId, limit, filterText = null, dayLimit = null) {
     const allMessages = [];
     let lastMessageId = null;
@@ -286,7 +235,7 @@ module.exports = {
 
     while (allMessages.length < limit) {
       const messages = await channel.messages.fetch({ 
-        limit: MESSAGES_FETCH_BATCH_SIZE, 
+        limit: 100, 
         before: lastMessageId 
       });
 
@@ -303,7 +252,7 @@ module.exports = {
       });
       
       allMessages.push(...userMessages.map(msg => ({
-        content: msg.content || MESSAGES_NO_CONTENT_TEXT,
+        content: msg.content || '[No text content]',
         attachments: msg.attachments.size > 0,
         embeds: msg.embeds.length > 0,
         timestamp: msg.createdTimestamp,
@@ -325,22 +274,13 @@ module.exports = {
     return allMessages.slice(0, limit);
   },
 
-  /**
-   * We create embed pages for the messages.
-   * This function formats messages into paginated embeds.
-   *
-   * @param {Array} messages - Array of message data to display.
-   * @param {User} targetUser - The user whose messages are being displayed.
-   * @param {Channel} targetChannel - The channel where messages were found.
-   * @returns {Array<EmbedBuilder>} Array of embed pages.
-   */
   createMessageEmbeds(messages, targetUser, targetChannel) {
     const embeds = [];
-    const messagesPerEmbed = MESSAGES_PER_PAGE;
+    const messagesPerEmbed = 10;
 
     for (let i = 0; i < messages.length; i += messagesPerEmbed) {
       const embed = new EmbedBuilder()
-        .setColor(MESSAGES_EMBED_COLOR)
+        .setColor(0xcd41ff)
         .setAuthor({
           name: `Messages from ${targetUser.username} in #${targetChannel.name}`,
           iconURL: targetUser.displayAvatarURL()
@@ -356,13 +296,13 @@ module.exports = {
         const timestamp = Math.floor(msg.timestamp / 1000);
         let content = msg.content;
         
-        if (content.length > MESSAGES_MAX_CONTENT_LENGTH) {
-          content = content.substring(0, MESSAGES_MAX_CONTENT_LENGTH) + MESSAGES_CONTENT_ELLIPSIS;
+        if (content.length > 200) {
+          content = content.substring(0, 200) + '...';
         }
         
         let extras = [];
-        if (msg.attachments) extras.push(MESSAGES_ATTACHMENT_INDICATOR);
-        if (msg.embeds) extras.push(MESSAGES_EMBED_INDICATOR);
+        if (msg.attachments) extras.push('📎');
+        if (msg.embeds) extras.push('🖼️');
         if (msg.hasCodeBlock) extras.push('`');
         if (msg.reactionCount > 0) extras.push(`💬 ${msg.reactionCount}`);
         
@@ -370,7 +310,7 @@ module.exports = {
         
         embed.addFields({
           name: `${messageNumber}. ${extraText}`,
-          value: `${MESSAGES_MESSAGE_INDICATOR} **Message:** ${content}\n${MESSAGES_TIME_INDICATOR} **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
+          value: `📜 **Message:** ${content}\n⏰ **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
           inline: false
         });
       });
@@ -381,13 +321,6 @@ module.exports = {
     return embeds;
   },
   
-  /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
-   */
   async handleError(interaction, error) {
     logError(error, 'usermessages', {
       userId: interaction.user?.id,

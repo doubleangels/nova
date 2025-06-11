@@ -19,14 +19,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
-const PROMOTE_TARGET_SUBREDDIT = 'DiscordAdvertising';
-const PROMOTE_COOLDOWN_HOURS = 24;
-const PROMOTE_REMINDER_TYPE = 'promote';
-const PROMOTE_SERVER_TITLE = '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥';
-const PROMOTE_SERVER_INVITE = 'https://discord.gg/dafrens';
-
-const PROMOTE_EMBED_COLOR = 0xFF4500;
-
 const reddit = new snoowrap({
   userAgent: 'Discord Bot Server Promoter',
   clientId: config.redditClientId,
@@ -86,9 +78,9 @@ module.exports = {
       }
 
       const postData = {
-        subreddit: PROMOTE_TARGET_SUBREDDIT,
-        title: PROMOTE_SERVER_TITLE,
-        content: PROMOTE_SERVER_INVITE
+        subreddit: 'DiscordAdvertising',
+        title: '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥',
+        content: 'https://discord.gg/dafrens'
       };
 
       const redditResponse = await this.postToReddit(postData);
@@ -195,8 +187,8 @@ module.exports = {
    */
   createSuccessEmbed(response) {
     const embed = new EmbedBuilder()
-      .setColor(PROMOTE_EMBED_COLOR)
-      .setTitle('✅ Server Advertisement Posted')
+      .setColor(0xFF4500)
+      .setTitle('Server Promotion')
       .setDescription('Your server advertisement has been posted to r/findaserver.');
 
     if (response && response.id) {
@@ -218,7 +210,9 @@ module.exports = {
       });
     }
 
-    return embed.setTimestamp();
+    return embed
+      .setFooter({ text: `Updated by ${interaction.user.tag}` })
+      .setTimestamp();
   },
 
   /**
@@ -272,7 +266,7 @@ module.exports = {
         `DELETE FROM main.reminder_recovery 
          WHERE type = $1 
          AND remind_at <= NOW()`,
-        [PROMOTE_REMINDER_TYPE]
+        ['promote']
       );
 
       const result = await pool.query(
@@ -281,7 +275,7 @@ module.exports = {
          WHERE type = $1 
          ORDER BY remind_at DESC 
          LIMIT 1`,
-        [PROMOTE_REMINDER_TYPE]
+        ['promote']
       );
 
       if (result.rows.length > 0) {
@@ -308,11 +302,11 @@ module.exports = {
       await pool.query(
         `DELETE FROM main.reminder_recovery 
          WHERE type = $1`,
-        [PROMOTE_REMINDER_TYPE]
+        ['promote']
       );
 
       const reminderId = require('crypto').randomUUID();
-      const nextPromotionTime = dayjs().add(PROMOTE_COOLDOWN_HOURS, 'hour').toISOString();
+      const nextPromotionTime = dayjs().add(24, 'hour').toISOString();
       
       logger.debug("Recording next promotion time:", {
         reminderId,
@@ -323,7 +317,7 @@ module.exports = {
       await pool.query(
         `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) 
          VALUES ($1, $2::timestamp AT TIME ZONE 'UTC', $3)`,
-        [reminderId, nextPromotionTime, PROMOTE_REMINDER_TYPE]
+        [reminderId, nextPromotionTime, 'promote']
       );
     } catch (error) {
       logger.error("Error recording next promotion time:", { error: error.message });

@@ -10,22 +10,6 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const { logError } = require('../errors');
 
-// API Configuration
-const DOG_API_URL = "https://dog.ceo/api/breeds/image/random";
-
-// Embed Configuration
-const DOG_EMBED_COLOR = 0xA0522D;
-const DOG_EMBED_FOOTER = 'Powered by Dog CEO API';
-const DOG_EMBED_TITLE = '🐕 Random Dog';
-const DOG_DEFAULT_FILENAME = "dog.jpg";
-
-// Error Messages
-const DOG_ERROR_API = "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.";
-const DOG_ERROR_IMAGE_FETCH = "⚠️ Couldn't download the dog picture. Try again later.";
-const DOG_ERROR_NETWORK = "⚠️ Network error: Could not connect to the service. Please check your internet connection.";
-const DOG_ERROR_NO_IMAGE = "⚠️ Couldn't find a dog picture. Try again later.";
-const DOG_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching the dog image.";
-
 /**
  * We handle the dog command.
  * This function fetches and displays a random dog image.
@@ -58,7 +42,7 @@ module.exports = {
         guildId: interaction.guild?.id
       });
       
-      const response = await axios.get(DOG_API_URL);
+      const response = await axios.get("https://dog.ceo/api/breeds/image/random");
       const dogData = response.data;
       
       if (!dogData.message) {
@@ -66,10 +50,10 @@ module.exports = {
       }
       
       const embed = new EmbedBuilder()
-        .setColor(DOG_EMBED_COLOR)
-        .setTitle(DOG_EMBED_TITLE)
+        .setColor(0xA0522D)
+        .setTitle('🐕 Random Dog')
         .setImage(dogData.message)
-        .setFooter({ text: DOG_EMBED_FOOTER });
+        .setFooter({ text: 'Powered by Dog CEO API' });
       
       await interaction.editReply({ embeds: [embed] });
       

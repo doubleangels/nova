@@ -9,9 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
 
-const COLOR_EMBED_FOOTER_PREFIX = "Updated by";
-const COLOR_EMBED_TITLE = 'Role Color Updated';
-
 /**
  * We handle the changecolor command.
  * This function changes the color of a specified role to the provided hex color.
@@ -74,9 +71,9 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(colorValidation.normalizedColor)
-                .setTitle(COLOR_EMBED_TITLE)
+                .setTitle('Role Color Updated')
                 .setDescription(`Successfully changed the color of ${role} from \`${oldColor}\` to \`${colorValidation.normalizedColor}\`!`)
-                .setFooter({ text: `${COLOR_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -117,8 +114,14 @@ module.exports = {
                     userId: interaction.user?.id
                 });
                 
+                const errorEmbed = new EmbedBuilder()
+                    .setColor(0xcd41ff)
+                    .setTitle('Error')
+                    .setDescription(errorMessage)
+                    .setTimestamp();
+                
                 await interaction.reply({ 
-                    content: errorMessage,
+                    embeds: [errorEmbed],
                     ephemeral: true 
                 }).catch(() => {});
             }

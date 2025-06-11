@@ -12,24 +12,6 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const SEARCH_API_URL = 'https://www.googleapis.com/customsearch/v1';
-const SEARCH_API_KEY = config.googleApiKey;
-const SEARCH_CSE_ID = config.searchEngineId;
-const SEARCH_SAFE_SEARCH = 'off';
-
-const SEARCH_DEFAULT_RESULTS = 5;
-const SEARCH_MAX_RESULTS = 10;
-const SEARCH_MIN_RESULTS = 1;
-const SEARCH_COLLECTOR_TIMEOUT = 120000;
-const SEARCH_REQUEST_TIMEOUT = 10000;
-
-const SEARCH_EMBED_COLOR = 0x4285F4;
-const SEARCH_EMBED_FOOTER = "Powered by Google Search";
-const SEARCH_EMBED_PREV_LABEL = "Previous";
-const SEARCH_EMBED_NEXT_LABEL = "Next";
-const SEARCH_EMBED_PREV_EMOJI = "◀️";
-const SEARCH_EMBED_NEXT_EMOJI = "▶️";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('google')
@@ -43,7 +25,7 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription(`How many results do you want? (${SEARCH_MIN_RESULTS}-${SEARCH_MAX_RESULTS}, Default: ${SEARCH_DEFAULT_RESULTS})`)
+        .setDescription('How many results do you want? (1-10, Default: 5)')
         .setRequired(false)
     ),
 
@@ -62,10 +44,10 @@ module.exports = {
     });
     
     try {
-      if (!SEARCH_API_KEY || !SEARCH_CSE_ID) {
+      if (!config.googleApiKey || !config.searchEngineId) {
         logger.error("Missing Google API configuration:", {
-          hasApiKey: !!SEARCH_API_KEY,
-          hasCseId: !!SEARCH_CSE_ID
+          hasApiKey: !!config.googleApiKey,
+          hasCseId: !!config.searchEngineId
         });
         return await interaction.editReply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
@@ -78,7 +60,7 @@ module.exports = {
       const query = interaction.options.getString('query');
       const resultsCount = interaction.options.getInteger('results');
       const searchParams = normalizeSearchParams(
-        query, resultsCount, SEARCH_DEFAULT_RESULTS, SEARCH_MIN_RESULTS, SEARCH_MAX_RESULTS
+        query, resultsCount, 5, 1, 10
       );
 
       if (!searchParams.valid) {
@@ -116,14 +98,14 @@ module.exports = {
         searchResults.items,
         index => this.generateResultEmbed(searchResults.items, index),
         'search',
-        SEARCH_COLLECTOR_TIMEOUT,
+        120000,
         logger,
         {
           buttonStyle: ButtonStyle.Primary,
-          prevLabel: SEARCH_EMBED_PREV_LABEL,
-          nextLabel: SEARCH_EMBED_NEXT_LABEL,
-          prevEmoji: SEARCH_EMBED_PREV_EMOJI,
-          nextEmoji: SEARCH_EMBED_NEXT_EMOJI
+          prevLabel: "Previous",
+          nextLabel: "Next",
+          prevEmoji: "◀️",
+          nextEmoji: "▶️"
         }
       );
     } catch (error) {
@@ -185,21 +167,21 @@ module.exports = {
    */
   async fetchSearchResults(query, resultsCount) {
     const params = new URLSearchParams({
-      key: SEARCH_API_KEY,
-      cx: SEARCH_CSE_ID,
+      key: config.googleApiKey,
+      cx: config.searchEngineId,
       q: query,
       num: resultsCount.toString(),
       start: "1",
-      safe: SEARCH_SAFE_SEARCH
+      safe: "off"
     });
-    const requestUrl = `${SEARCH_API_URL}?${params.toString()}`;
+    const requestUrl = `https://www.googleapis.com/customsearch/v1?${params.toString()}`;
     logger.debug("Preparing Google API request:", { 
       searchQuery: query,
       resultsRequested: resultsCount
     });
 
     try {
-      const response = await axios.get(requestUrl, { timeout: SEARCH_REQUEST_TIMEOUT });
+      const response = await axios.get(requestUrl, { timeout: 10000 });
       logger.debug("Google API response received:", { 
         status: response.status,
         itemsReturned: response.data?.items?.length || 0
@@ -239,7 +221,7 @@ module.exports = {
     return new EmbedBuilder()
       .setTitle(`🔍 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}\n🔗 [Read More](${link})`)
-      .setColor(SEARCH_EMBED_COLOR)
-      .setFooter({ text: `Result ${index + 1} of ${items.length} • ${SEARCH_EMBED_FOOTER}` });
+      .setColor(0x4285F4)
+      .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Search` });
   }
 };

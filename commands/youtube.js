@@ -13,33 +13,6 @@ const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
 const { logError } = require('../errors');
 
-const YT_API_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
-const YT_API_VIDEOS_URL = 'https://www.googleapis.com/youtube/v3/videos';
-const YT_API_CHANNELS_URL = 'https://www.googleapis.com/youtube/v3/channels';
-const YT_API_PLAYLISTS_URL = 'https://www.googleapis.com/youtube/v3/playlists';
-const YT_API_TIMEOUT = 5000;
-const YT_REQUEST_TIMEOUT = 10000;
-
-const YT_SEARCH_MAX_RESULTS = 10;
-const YT_DESCRIPTION_MAX_LENGTH = 1024;
-const YT_COLLECTOR_TIMEOUT = 120000;
-const YT_CACHE_TTL = 1000 * 60 * 10;
-
-const YT_EMBED_COLOR = 0xFF0000;
-
-const YT_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching YouTube.";
-const YT_ERROR_CONFIG_MISSING = "⚠️ YouTube API configuration is missing. Please contact an administrator.";
-const YT_ERROR_API = "⚠️ Failed to retrieve content from YouTube. Please try again later.";
-const YT_ERROR_RATE_LIMIT = "⚠️ YouTube API rate limit reached. Please try again in a few moments.";
-const YT_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const YT_ERROR_ACCESS_DENIED = "⚠️ YouTube API access denied. Please check API configuration.";
-const YT_ERROR_NO_RESULTS = "⚠️ No results found for your search.";
-const YT_ERROR_INVALID_VIDEO = "⚠️ Invalid video specified.";
-const YT_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
-const YT_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
-const YT_ERROR_INVALID_CONTENT_TYPE = "⚠️ Invalid content type specified.";
-const YT_ERROR_SEARCH_FAILED = "⚠️ Failed to search YouTube content.";
-
 const cache = new Map();
 
 /**
@@ -82,7 +55,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: YT_ERROR_CONFIG_MISSING,
+          content: "⚠️ YouTube API configuration is missing. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -103,7 +76,7 @@ module.exports = {
       if (!searchResults || searchResults.length === 0) {
         logger.warn("No search results found for query:", { query });
         return await interaction.editReply({ 
-          content: YT_ERROR_NO_RESULTS,
+          content: "⚠️ No results found for your search.",
           ephemeral: true
         });
       }
@@ -115,7 +88,7 @@ module.exports = {
         searchResults,
         generateEmbed,
         'youtube',
-        YT_COLLECTOR_TIMEOUT,
+        120000,
         logger,
         {
           buttonStyle: ButtonStyle.Secondary,
@@ -139,13 +112,13 @@ module.exports = {
    */
   async getVideoDetails(videoId) {
     try {
-      const response = await axios.get(`${YT_API_VIDEOS_URL}`, {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
         params: {
           part: 'contentDetails,statistics',
           id: videoId,
           key: config.googleApiKey
         },
-        timeout: YT_REQUEST_TIMEOUT
+        timeout: 10000
       });
 
       return {
@@ -255,7 +228,7 @@ module.exports = {
   getCachedResults(key) {
     if (cache.has(key)) {
       const { timestamp, data } = cache.get(key);
-      if (Date.now() - timestamp < YT_CACHE_TTL) {
+      if (Date.now() - timestamp < (1000 * 60 * 10)) {
         return data;
       }
       cache.delete(key);
@@ -292,7 +265,7 @@ module.exports = {
         part: 'snippet',
         q: query,
         type: contentType,
-        maxResults: YT_SEARCH_MAX_RESULTS * 2, // We get more results than needed for filtering.
+        maxResults: 20,
         key: config.googleApiKey,
         order: sortMethod,
         safeSearch: 'moderate'
@@ -302,9 +275,9 @@ module.exports = {
         params.videoDuration = duration;
       }
       
-      const response = await axios.get(YT_API_SEARCH_URL, {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
         params,
-        timeout: YT_API_TIMEOUT
+        timeout: 5000
       });
       
       if (!response.data || !response.data.items || response.data.items.length === 0) {
@@ -346,13 +319,13 @@ module.exports = {
     try {
       const videoIds = videos.map(video => video.id.videoId).join(',');
       
-      const response = await axios.get(YT_API_VIDEOS_URL, {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
         params: {
           part: 'snippet,statistics,contentDetails',
           id: videoIds,
           key: config.googleApiKey
         },
-        timeout: YT_API_TIMEOUT
+        timeout: 5000
       });
       
       if (!response.data || !response.data.items) {
@@ -395,13 +368,13 @@ module.exports = {
     try {
       const channelIds = channels.map(channel => channel.id.channelId).join(',');
       
-      const response = await axios.get(YT_API_CHANNELS_URL, {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
         params: {
           part: 'snippet,statistics',
           id: channelIds,
           key: config.googleApiKey
         },
-        timeout: YT_API_TIMEOUT
+        timeout: 5000
       });
       
       if (!response.data || !response.data.items) {
@@ -443,13 +416,13 @@ module.exports = {
     try {
       const playlistIds = playlists.map(playlist => playlist.id.playlistId).join(',');
       
-      const response = await axios.get(YT_API_PLAYLISTS_URL, {
+      const response = await axios.get('https://www.googleapis.com/youtube/v3/playlists', {
         params: {
           part: 'snippet,contentDetails',
           id: playlistIds,
           key: config.googleApiKey
         },
-        timeout: YT_API_TIMEOUT
+        timeout: 5000
       });
       
       if (!response.data || !response.data.items) {
@@ -489,7 +462,7 @@ module.exports = {
    */
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
-      .setColor(YT_EMBED_COLOR)
+      .setColor(0xFF0000)
       .setFooter({ 
         text: `Result ${index + 1} of ${totalItems} • Powered by YouTube`
       });
@@ -529,8 +502,8 @@ module.exports = {
     const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
     
     let description = snippet.description || 'No description available';
-    if (description.length > YT_DESCRIPTION_MAX_LENGTH) {
-      description = description.substring(0, YT_DESCRIPTION_MAX_LENGTH) + '...';
+    if (description.length > 1024) {
+      description = description.substring(0, 1021) + '...';
     }
     
     const uploadDate = snippet.publishedAt ? 
@@ -570,8 +543,8 @@ module.exports = {
     const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
     
     let description = snippet.description || 'No description available';
-    if (description.length > YT_DESCRIPTION_MAX_LENGTH) {
-      description = description.substring(0, YT_DESCRIPTION_MAX_LENGTH) + '...';
+    if (description.length > 1024) {
+      description = description.substring(0, 1021) + '...';
     }
     
     return embed
@@ -601,8 +574,8 @@ module.exports = {
       `🎬 ${contentDetails.itemCount} videos` : '';
     
     let description = snippet.description || 'No description available';
-    if (description.length > YT_DESCRIPTION_MAX_LENGTH) {
-      description = description.substring(0, YT_DESCRIPTION_MAX_LENGTH) + '...';
+    if (description.length > 1024) {
+      description = description.substring(0, 1021) + '...';
     }
     
     return embed

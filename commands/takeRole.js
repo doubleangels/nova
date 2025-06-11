@@ -9,25 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const ROLE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while removing the role.";
-const ROLE_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ You don't have permission to remove this role.";
-const ROLE_ERROR_MANAGED_ROLE = "⚠️ Cannot remove a managed role.";
-const ROLE_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
-const ROLE_ERROR_NOT_ASSIGNED = "⚠️ The user does not have this role.";
-const ROLE_ERROR_HIERARCHY = "⚠️ Cannot remove a role that is higher than your highest role.";
-
-/**
- * We handle the takerole command.
- * This function allows moderators to remove a specified role from a user.
- *
- * We perform several tasks:
- * 1. We validate permissions and role hierarchy.
- * 2. We check if the user has the role.
- * 3. We remove the role from the user.
- * 4. We log the action and provide feedback.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('takerole')
@@ -74,7 +55,7 @@ module.exports = {
       const validationResult = await this.validateRoleRemoval(interaction, role, targetUser);
       
       if (!validationResult || !validationResult.valid) {
-        const errorMessage = validationResult?.message || ROLE_ERROR_UNEXPECTED;
+        const errorMessage = validationResult?.message || "⚠️ An unexpected error occurred while removing the role.";
         await interaction.editReply({
           content: errorMessage,
           ephemeral: true

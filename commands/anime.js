@@ -120,7 +120,7 @@ module.exports = {
    */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-    const searchUrl = `${ANIME_API_BASE_URL}/anime?q=${encodeURIComponent(title)}&limit=${ANIME_SEARCH_LIMIT}`;
+    const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1`;
     
     logger.debug("Making MAL search request:", { searchUrl });
     const searchResponse = await axios.get(searchUrl, { headers });
@@ -133,7 +133,7 @@ module.exports = {
     const animeNode = searchResponse.data.data[0].node;
     const animeId = animeNode.id;
     
-    const detailsUrl = `${ANIME_API_BASE_URL}/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
+    const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
     
     logger.debug("Fetching anime details:", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
@@ -165,7 +165,7 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed
    */
   createAnimeEmbed(animeData) {
-    const malLink = `${ANIME_WEBSITE_URL}/${animeData.id}`;
+    const malLink = `https://myanimelist.net/anime/${animeData.id}`;
     const genres = animeData.genres.length > 0 
       ? animeData.genres.map(g => g.name).join(", ") 
       : "Unknown";

@@ -11,22 +11,6 @@ const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-const TIME_EMBED_COLOR = '#cd41ff';
-const TIME_EMBED_TITLE = '⏳ Time Difference Information';
-const TIME_EMBED_FOOTER_PREFIX = 'Requested by';
-
-/**
- * We handle the timedifference command.
- * This function allows users to calculate the time difference between two locations.
- *
- * We perform several tasks:
- * 1. We validate Google API configuration.
- * 2. We process location search requests.
- * 3. We calculate time differences between locations.
- * 4. We format and display time zone information.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('timedifference')
@@ -161,13 +145,13 @@ module.exports = {
       const formattedTimeDiff = this.formatTimeDifference(timeDiff);
       
       const embed = new EmbedBuilder()
-        .setColor(TIME_EMBED_COLOR)
-        .setTitle(TIME_EMBED_TITLE)
+        .setColor('#cd41ff')
+        .setTitle('⏳ Time Difference Information')
         .addFields(
           { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },
           { name: formattedPlace2, value: this.formatTimeZone(offset2Result) }
         )
-        .setFooter({ text: `${TIME_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+        .setFooter({ text: `Requested by ${interaction.user.tag}` })
         .setTimestamp();
 
       if (rawTimeDiff === 0) {

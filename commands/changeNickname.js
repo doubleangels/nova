@@ -9,13 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const NICKNAME_EMBED_COLOR_DEFAULT = '#cd41ff';
-const NICKNAME_EMBED_FOOTER_PREFIX = "Updated by";
-const NICKNAME_EMBED_TITLE = 'Nickname Updated';
-
-const NICKNAME_MAX_LENGTH = 32;
-const NICKNAME_MIN_LENGTH = 1;
-
 /**
  * We handle the changenickname command.
  * This function changes a user's nickname in the server.
@@ -72,22 +65,22 @@ module.exports = {
                 throw new Error("USER_NOT_MANAGEABLE");
             }
 
-            if (newNickname && (newNickname.length < NICKNAME_MIN_LENGTH || newNickname.length > NICKNAME_MAX_LENGTH)) {
+            if (newNickname && (newNickname.length < 1 || newNickname.length > 32)) {
                 throw new Error("INVALID_NICKNAME_LENGTH");
             }
 
             await member.setNickname(newNickname || null);
             
             const userHighestRole = member.roles.highest;
-            const embedColor = userHighestRole.color === 0 ? NICKNAME_EMBED_COLOR_DEFAULT : userHighestRole.color;
+            const embedColor = userHighestRole.color === 0 ? 0xcd41ff : userHighestRole.color;
             
             const embed = new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle(NICKNAME_EMBED_TITLE)
+                .setTitle('Nickname Updated')
                 .setDescription(newNickname 
                     ? `Successfully changed ${targetUser}'s nickname to "${newNickname}!"`
                     : `Successfully reset ${targetUser}'s nickname!`)
-                .setFooter({ text: `${NICKNAME_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -166,7 +159,7 @@ module.exports = {
             };
         }
 
-        if (newNickname.length > NICKNAME_MAX_LENGTH) {
+        if (newNickname.length > 32) {
             logger.warn("Nickname exceeds maximum length:", {
                 length: newNickname.length
             });

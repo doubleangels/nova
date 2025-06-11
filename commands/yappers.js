@@ -10,12 +10,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 const db = require('../utils/database');
 
-const YAPPERS_TOP_USERS_LIMIT = 10;
-const YAPPERS_TOP_CHANNELS_LIMIT = 5;
-const YAPPERS_TOP_VOICE_LIMIT = 5;
-
-const YAPPERS_EMBED_COLOR = 0xcd41ff;
-
 /**
  * Formats time in minutes to a human-readable string.
  * @function formatTime
@@ -84,41 +78,41 @@ module.exports = {
       await interaction.deferReply();
       logger.debug("Deferred reply for yappers command.");
 
-      logger.debug("Fetching top message senders:", { limit: YAPPERS_TOP_USERS_LIMIT });
-      const topUsers = await db.getTopMessageSenders(YAPPERS_TOP_USERS_LIMIT);
+      logger.debug("Fetching top message senders:", { limit: 10 });
+      const topUsers = await db.getTopMessageSenders(10);
       logger.debug("Retrieved top message senders:", { 
         count: topUsers.length,
         users: topUsers.map(u => ({ username: u.username, count: u.message_count }))
       });
 
-      logger.debug("Fetching top voice users:", { limit: YAPPERS_TOP_VOICE_LIMIT });
-      const topVoiceUsers = await db.getTopVoiceUsers(YAPPERS_TOP_VOICE_LIMIT);
+      logger.debug("Fetching top voice users:", { limit: 5 });
+      const topVoiceUsers = await db.getTopVoiceUsers(5);
       logger.debug("Retrieved top voice users:", {
         count: topVoiceUsers.length,
         users: topVoiceUsers.map(u => ({ username: u.username, seconds: u.seconds_spent }))
       });
 
-      logger.debug("Fetching top message channels:", { limit: YAPPERS_TOP_CHANNELS_LIMIT });
+      logger.debug("Fetching top message channels:", { limit: 5 });
       const topChannels = await db.query(
         `SELECT channel_id, channel_name, message_count 
          FROM main.message_channel_counts 
          ORDER BY message_count DESC 
          LIMIT $1`,
-        [YAPPERS_TOP_CHANNELS_LIMIT]
+        [5]
       );
       logger.debug("Retrieved top message channels:", {
         count: topChannels.rows.length,
         channels: topChannels.rows.map(c => ({ name: c.channel_name, count: c.message_count }))
       });
 
-      logger.debug("Fetching top voice channels:", { limit: YAPPERS_TOP_VOICE_LIMIT });
+      logger.debug("Fetching top voice channels:", { limit: 5 });
       const topVoiceChannels = await db.query(
         `SELECT channel_id, channel_name, 
          total_seconds / 60 as total_minutes
          FROM main.voice_channel_time 
          ORDER BY total_seconds DESC 
          LIMIT $1`,
-        [YAPPERS_TOP_VOICE_LIMIT]
+        [5]
       );
       logger.debug("Retrieved top voice channels:", {
         count: topVoiceChannels.rows.length,
@@ -127,7 +121,7 @@ module.exports = {
 
       logger.debug("Creating statistics embed.");
       const embed = new EmbedBuilder()
-        .setColor(YAPPERS_EMBED_COLOR)
+        .setColor(0xcd41ff)
         .setTitle('🏆 Top Yappers Statistics')
         .setDescription(`Statistics for ${interaction.guild.name}`)
         .addFields(

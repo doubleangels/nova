@@ -8,10 +8,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
-const NOTEXT_DB_KEY = 'notext_channel';
-const NOTEXT_EMBED_COLOR = '#cd41ff';
-const NOTEXT_EMBED_TITLE = '🎭 No Text Channel Configuration';
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('notext')
@@ -69,7 +65,7 @@ module.exports = {
       }
 
       if (subcommand === 'set') {
-        const currentChannel = await getValue(NOTEXT_DB_KEY);
+        const currentChannel = await getValue('notext_channel');
         if (currentChannel === channel.id) {
           return await interaction.reply({
             content: "⚠️ This channel is already configured as a no-text channel.",
@@ -78,7 +74,7 @@ module.exports = {
         }
 
         try {
-          await setValue(NOTEXT_DB_KEY, channel.id);
+          await setValue('notext_channel', channel.id);
         } catch (error) {
           logger.error("Failed to save no-text channel configuration:", { error: error.message });
           return await interaction.reply({
@@ -88,10 +84,13 @@ module.exports = {
         }
 
         const embed = {
-          color: parseInt(NOTEXT_EMBED_COLOR.replace('#', ''), 16),
-          title: NOTEXT_EMBED_TITLE,
+          color: 0xcd41ff,
+          title: '🎭 No Text Channel Configuration',
           description: `✅ Channel ${channel} has been configured to only allow GIFs and stickers.`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: `Updated by ${interaction.user.tag}`
+          }
         };
 
         await interaction.reply({ embeds: [embed] });
@@ -102,7 +101,7 @@ module.exports = {
         });
 
       } else if (subcommand === 'remove') {
-        const currentChannel = await getValue(NOTEXT_DB_KEY);
+        const currentChannel = await getValue('notext_channel');
         if (currentChannel !== channel.id) {
           return await interaction.reply({
             content: "⚠️ This channel is not configured as a no-text channel.",
@@ -111,7 +110,7 @@ module.exports = {
         }
 
         try {
-          await setValue(NOTEXT_DB_KEY, null);
+          await setValue('notext_channel', null);
         } catch (error) {
           logger.error("Failed to remove no-text channel configuration:", { error: error.message });
           return await interaction.reply({
@@ -121,10 +120,13 @@ module.exports = {
         }
 
         const embed = {
-          color: parseInt(NOTEXT_EMBED_COLOR.replace('#', ''), 16),
-          title: NOTEXT_EMBED_TITLE,
+          color: 0xcd41ff,
+          title: '🎭 No Text Channel Configuration',
           description: `✅ Channel ${channel} is no longer restricted to GIFs and stickers.`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          footer: {
+            text: `Updated by ${interaction.user.tag}`
+          }
         };
 
         await interaction.reply({ embeds: [embed] });

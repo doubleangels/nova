@@ -1,5 +1,5 @@
 /**
- * Give role command module for role management.
+ * Give role command module for managing user roles.
  * Handles role assignment and permission validation.
  * @module commands/giveRole
  */
@@ -10,18 +10,14 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const ROLE_EMBED_TITLE = 'Role Assigned';
-const ROLE_EMBED_FOOTER_PREFIX = "Updated by";
-
 /**
  * We handle the giverole command.
- * This function assigns a specified role to a specified user in the server.
+ * This function assigns a specified role to a user.
  *
  * We perform several tasks:
- * 1. We validate permissions and role hierarchy.
- * 2. We check if the user already has the role.
- * 3. We assign the role to the user.
- * 4. We handle errors and provide user feedback.
+ * 1. We validate command inputs and permissions.
+ * 2. We assign the specified role to the target user.
+ * 3. We handle errors and provide user feedback.
  *
  * @param {Interaction} interaction - The Discord interaction object.
  */
@@ -31,21 +27,14 @@ module.exports = {
         .setDescription('Give a role to a user.')
         .addRoleOption(option =>
             option.setName('role')
-                .setDescription('The role to give')
+                .setDescription('The role to give to the user.')
                 .setRequired(true))
         .addUserOption(option =>
             option.setName('user')
-                .setDescription('The user to give the role to')
+                .setDescription('The user to give the role to.')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
-    /**
-     * Executes the give role command.
-     * @async
-     * @function execute
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @throws {Error} If role assignment fails
-     */
     async execute(interaction) {
         await interaction.deferReply();
         logger.info("/giverole command initiated:", { 
@@ -66,7 +55,7 @@ module.exports = {
             }
             
             logger.debug("Processing command options:", { 
-                roleId: role.id,
+                roleId: role.id, 
                 roleName: role.name,
                 targetUserId: targetUser.id,
                 targetUserTag: targetUser.tag 
@@ -76,42 +65,28 @@ module.exports = {
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
-                    content: "The specified user could not be found in this server.",
+                    content: "⚠️ The specified user could not be found in this server.",
                     ephemeral: true
                 });
             }
             
-            const botMember = await interaction.guild.members.fetchMe();
-            if (botMember.roles.highest.position <= role.position) {
-                logger.warn("Bot's highest role is not high enough to assign the role.", {
-                    botHighestRolePosition: botMember.roles.highest.position,
-                    targetRolePosition: role.position
-                });
+            const roleAssignmentResult = await this.assignRole(interaction, role, targetMember);
+            if (!roleAssignmentResult.success) {
                 return await interaction.editReply({
-                    content: "⚠️ I don't have permission to assign this role.",
+                    content: roleAssignmentResult.message,
                     ephemeral: true
                 });
             }
-            
-            const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command`;
-            await targetMember.roles.add(role, auditReason);
-            
-            logger.info("Role successfully assigned to user:", { 
-                userId: targetMember.id, 
-                userTag: targetMember.user.tag,
-                roleName: role.name,
-                roleId: role.id
-            });
             
             const embed = new EmbedBuilder()
                 .setColor(role.color)
-                .setTitle(ROLE_EMBED_TITLE)
-                .setDescription(`✅ Successfully gave the ${role.name} role to <@${targetUser.id}>!`)
+                .setTitle('Role Assigned')
+                .setDescription(`✅ Successfully gave <@${targetUser.id}> the ${role.name} role!`)
                 .addFields(
                     { name: 'Role', value: role.name, inline: true },
-                    { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
+                    { name: 'Role ID', value: role.id, inline: true }
                 )
-                .setFooter({ text: `${ROLE_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -121,14 +96,6 @@ module.exports = {
         }
     },
     
-    /**
-     * Validates command input parameters.
-     * @function validateInputs
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {import('discord.js').Role} role - The role to assign
-     * @param {import('discord.js').User} targetUser - The user to receive the role
-     * @returns {Object} Validation result with success status and message
-     */
     validateInputs(interaction, role, targetUser) {
         if (!role) {
             logger.warn("Invalid role provided.");
@@ -137,7 +104,7 @@ module.exports = {
                 message: "⚠️ Please provide a valid role."
             };
         }
-
+        
         if (!targetUser) {
             logger.warn("Invalid user provided.");
             return {
@@ -149,13 +116,32 @@ module.exports = {
         return { success: true };
     },
     
-    /**
-     * Handles errors that occur during command execution.
-     * @async
-     * @function handleError
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {Error} error - The error that occurred
-     */
+    async assignRole(interaction, role, targetMember) {
+        const botMember = await interaction.guild.members.fetchMe();
+        if (botMember.roles.highest.position <= role.position) {
+            logger.warn("Bot's highest role is not high enough to assign the specified role.", {
+                botHighestRolePosition: botMember.roles.highest.position,
+                rolePosition: role.position
+            });
+            return {
+                success: false,
+                message: "⚠️ I don't have permission to assign this role."
+            };
+        }
+        
+        const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command`;
+        await targetMember.roles.add(role.id, auditReason);
+        
+        logger.info("Role successfully assigned to user:", { 
+            userId: targetMember.id, 
+            userTag: targetMember.user.tag,
+            role: role.name,
+            roleId: role.id
+        });
+        
+        return { success: true };
+    },
+    
     async handleError(interaction, error) {
         logError(error, 'giverole', {
             userId: interaction.user?.id,
@@ -167,8 +153,10 @@ module.exports = {
         
         if (error.message === "INSUFFICIENT_PERMISSIONS") {
             errorMessage = "⚠️ I don't have permission to assign this role.";
-        } else if (error.message === "ROLE_NOT_FOUND") {
-            errorMessage = "⚠️ The specified role could not be found.";
+        } else if (error.message === "INVALID_ROLE") {
+            errorMessage = "⚠️ Please provide a valid role.";
+        } else if (error.message === "INVALID_USER") {
+            errorMessage = "⚠️ Please provide a valid user.";
         } else if (error.message === "USER_NOT_FOUND") {
             errorMessage = "⚠️ The specified user could not be found in this server.";
         }
@@ -188,7 +176,8 @@ module.exports = {
             await interaction.reply({ 
                 content: errorMessage,
                 ephemeral: true 
-            }).catch(() => {});
+            }).catch(() => {
+            });
         }
     }
 };

@@ -12,25 +12,10 @@ const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 const { logError } = require('../errors');
 
-const PERMS_FREN_ROLE_ID = config.givePermsFrenRoleId;
-const PERMS_POSITION_ABOVE_ROLE_ID = config.givePermsPositionAboveRoleId;
-const PERMS_MAX_ROLE_NAME_LENGTH = 100;
-
-const PERMS_EMBED_TITLE = 'Permissions Granted';
-const PERMS_EMBED_FOOTER_PREFIX = "Updated by";
-
-const PERMS_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const PERMS_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ I don't have permission to create or assign roles.";
-const PERMS_ERROR_INVALID_ROLE_NAME = "⚠️ Please provide a valid role name.";
-const PERMS_ERROR_INVALID_COLOR = "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.";
-const PERMS_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
-const PERMS_ERROR_ROLE_NOT_FOUND = "⚠️ Required role not found. Please contact an administrator.";
-const PERMS_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while granting permissions.";
-
-if (!PERMS_POSITION_ABOVE_ROLE_ID || !PERMS_FREN_ROLE_ID) {
+if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
     logger.error("Missing required configuration for /giveperms command:", {
-        positionAboveRoleId: PERMS_POSITION_ABOVE_ROLE_ID,
-        frenRoleId: PERMS_FREN_ROLE_ID
+        positionAboveRoleId: config.givePermsPositionAboveRoleId,
+        frenRoleId: config.givePermsFrenRoleId
     });
 }
 
@@ -73,7 +58,7 @@ module.exports = {
      * @throws {Error} If role creation or assignment fails
      */
     async execute(interaction) {
-        if (!PERMS_POSITION_ABOVE_ROLE_ID || !PERMS_FREN_ROLE_ID) {
+        if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
             logger.error("Command execution failed due to missing configuration:", {
                 commandName: 'giveperms',
                 guildId: interaction.guildId
@@ -147,13 +132,13 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(colorDecimal)
-                .setTitle(PERMS_EMBED_TITLE)
+                .setTitle('Permissions Granted')
                 .setDescription(`✅ Successfully gave <@${targetUser.id}> permissions in the server!`)
                 .addFields(
                     { name: 'New Role', value: roleName.trim(), inline: true },
                     { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }
                 )
-                .setFooter({ text: `${PERMS_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+                .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -181,14 +166,14 @@ module.exports = {
             };
         }
 
-        if (roleName.length > PERMS_MAX_ROLE_NAME_LENGTH) {
+        if (roleName.length > 100) {
             logger.warn("Role name exceeds maximum length.", { 
                 roleName, 
-                maxLength: PERMS_MAX_ROLE_NAME_LENGTH 
+                maxLength: 100 
             });
             return {
                 success: false,
-                message: `Role name must be ${PERMS_MAX_ROLE_NAME_LENGTH} characters or less.`
+                message: `Role name must be 100 characters or less.`
             };
         }
         
@@ -207,18 +192,18 @@ module.exports = {
      * @throws {Error} If role creation or assignment fails
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        const positionRole = interaction.guild.roles.cache.get(PERMS_POSITION_ABOVE_ROLE_ID);
+        const positionRole = interaction.guild.roles.cache.get(config.givePermsPositionAboveRoleId);
         if (!positionRole) {
-            logger.error("Reference role not found.", { roleId: PERMS_POSITION_ABOVE_ROLE_ID });
+            logger.error("Reference role not found.", { roleId: config.givePermsPositionAboveRoleId });
             return {
                 success: false,
                 message: "⚠️ Required role not found. Please contact an administrator."
             };
         }
         
-        const additionalRole = interaction.guild.roles.cache.get(PERMS_FREN_ROLE_ID);
+        const additionalRole = interaction.guild.roles.cache.get(config.givePermsFrenRoleId);
         if (!additionalRole) {
-            logger.error("Additional role not found.", { roleId: PERMS_FREN_ROLE_ID });
+            logger.error("Additional role not found.", { roleId: config.givePermsFrenRoleId });
             return {
                 success: false,
                 message: "⚠️ Required role not found. Please contact an administrator."

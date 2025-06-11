@@ -9,15 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const COIN_EMBED_COLOR = '#FFD700';
-const COIN_EMBED_FOOTER_PREFIX = "Requested by";
-const COIN_EMBED_TITLE = 'Coin Flip';
-
-const COIN_FACE_HEADS = 'Heads';
-const COIN_FACE_TAILS = 'Tails';
-const COIN_HEADS_PROBABILITY = 0.5;
-const COIN_EMOJI = '🪙';
-
 /**
  * We handle the coin flip command.
  * This function simulates flipping a coin and provides the result.
@@ -57,10 +48,10 @@ module.exports = {
             const result = this.flipCoin();
             
             const embed = new EmbedBuilder()
-                .setColor(COIN_EMBED_COLOR)
-                .setTitle(COIN_EMBED_TITLE)
-                .setDescription(`${COIN_EMOJI} The coin landed on: **${result}**`)
-                .setFooter({ text: `${COIN_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
+                .setColor(0xFFD700)
+                .setTitle('Coin Flip')
+                .setDescription(`🪙 The coin landed on: **${result}**`)
+                .setFooter({ text: `Requested by ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -80,7 +71,7 @@ module.exports = {
      * @returns {string} Either 'Heads' or 'Tails'
      */
     flipCoin() {
-        return Math.random() < COIN_HEADS_PROBABILITY ? COIN_FACE_HEADS : COIN_FACE_TAILS;
+        return Math.random() < 0.5 ? 'Heads' : 'Tails';
     },
 
     /**

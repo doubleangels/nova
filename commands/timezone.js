@@ -12,24 +12,6 @@ const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-const TIMEZONE_EMBED_COLOR = '#cd41ff';
-const TIMEZONE_EMBED_TITLE_STATUS = '📌 Timezone Status';
-const TIMEZONE_EMBED_TITLE_SETUP = '✅ Timezone Setup Complete';
-const TIMEZONE_EMBED_FOOTER_PREFIX = 'Updated by';
-
-/**
- * We handle the timezone command.
- * This function manages timezone settings for users in the server.
- *
- * We perform several tasks:
- * 1. We set timezone based on location input.
- * 2. We validate timezone data.
- * 3. We store timezone preferences.
- * 4. We display current timezone settings.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
-
 module.exports = {
   data: new SlashCommandBuilder()
       .setName('timezone')
@@ -175,13 +157,13 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-        .setColor(TIMEZONE_EMBED_COLOR)
-        .setTitle(TIMEZONE_EMBED_TITLE_SETUP)
+        .setColor('#cd41ff')
+        .setTitle('✅ Timezone Setup Complete')
         .setDescription(isAdminAction 
           ? `You have set ${targetUser}'s timezone to: \`${timezoneId}\` based on location: ${formattedAddress}`
           : `Your timezone has been successfully set to: \`${timezoneId}\` based on location: ${formattedAddress}`
         )
-        .setFooter({ text: TIMEZONE_EMBED_FOOTER_PREFIX + ' ' + interaction.user.tag })
+        .setFooter({ text: 'Updated by ' + interaction.user.tag })
         .setTimestamp();
 
       if (currentTimezone) {
@@ -221,8 +203,8 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-        .setColor(TIMEZONE_EMBED_COLOR)
-        .setTitle(TIMEZONE_EMBED_TITLE_STATUS)
+        .setColor('#cd41ff')
+        .setTitle('📌 Timezone Status')
         .setFooter({ text: 'Requested by ' + interaction.user.tag })
         .setTimestamp();
 

@@ -10,20 +10,6 @@ const axios = require('axios');
 const logger = require('../logger')('urban.js');
 const { logError } = require('../errors');
 
-const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
-const URBAN_REQUEST_TIMEOUT = 10000;
-
-const URBAN_EMBED_COLOR = 0x202C34;
-const URBAN_EMBED_FOOTER = 'Powered by Urban Dictionary';
-
-const URBAN_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Urban Dictionary.";
-const URBAN_ERROR_API = "⚠️ Failed to retrieve definition from Urban Dictionary. Please try again later.";
-const URBAN_ERROR_ACCESS_DENIED = "⚠️ Urban Dictionary API access denied. Please check API configuration.";
-const URBAN_ERROR_NO_RESULTS = "⚠️ No definitions found for that term.";
-const URBAN_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search term.";
-const URBAN_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
-const URBAN_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('urban')
@@ -52,14 +38,14 @@ module.exports = {
                 guildId: interaction.guildId
             });
 
-            const response = await axios.get(`${URBAN_API_URL}?term=${encodeURIComponent(term)}`, {
-                timeout: URBAN_REQUEST_TIMEOUT
+            const response = await axios.get(`https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`, {
+                timeout: 10000
             });
             const definitions = response.data.list;
 
             if (!definitions || definitions.length === 0) {
                 await interaction.editReply({
-                    content: URBAN_ERROR_NO_RESULTS,
+                    content: "⚠️ No definitions found for that term.",
                     ephemeral: true
                 });
                 return;
@@ -67,7 +53,7 @@ module.exports = {
 
             const definition = definitions[0];
             const embed = new EmbedBuilder()
-                .setColor(URBAN_EMBED_COLOR)
+                .setColor(0x202C34)
                 .setTitle(`Urban Dictionary: ${definition.word}`)
                 .setDescription(definition.definition)
                 .addFields(
@@ -76,7 +62,7 @@ module.exports = {
                     { name: '👍', value: definition.thumbs_up.toString(), inline: true },
                     { name: '👎', value: definition.thumbs_down.toString(), inline: true }
                 )
-                .setFooter({ text: URBAN_EMBED_FOOTER });
+                .setFooter({ text: 'Powered by Urban Dictionary' });
             
             await interaction.editReply({ embeds: [embed] });
             

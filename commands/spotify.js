@@ -163,14 +163,14 @@ module.exports = {
         results,
         generateEmbed,
         'spotify',
-        SPOTIFY_COLLECTOR_TIMEOUT_MS,
+        120000,
         logger,
         {
           buttonStyle: ButtonStyle.Secondary,
-          prevLabel: SPOTIFY_EMBED_PREV_LABEL,
-          nextLabel: SPOTIFY_EMBED_NEXT_LABEL,
-          prevEmoji: SPOTIFY_EMBED_PREV_EMOJI,
-          nextEmoji: SPOTIFY_EMBED_NEXT_EMOJI
+          prevLabel: "Previous",
+          nextLabel: "Next",
+          prevEmoji: "◀️",
+          nextEmoji: "▶️"
         }
       );
 
@@ -215,7 +215,7 @@ module.exports = {
             ).toString('base64')}`,
             'Content-Type': 'application/x-www-form-urlencoded'
           },
-          timeout: SPOTIFY_REQUEST_TIMEOUT
+          timeout: 10000
         }
       );
 
@@ -238,16 +238,16 @@ module.exports = {
    */
   async searchSong(query, accessToken) {
     try {
-      const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
+      const response = await axios.get('https://api.spotify.com/v1/search', {
         params: {
           q: query,
           type: 'track',
-          limit: SPOTIFY_SEARCH_MAX_RESULTS
+          limit: 10
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: SPOTIFY_REQUEST_TIMEOUT
+        timeout: 10000
       });
 
       if (!response.data.tracks.items.length) {
@@ -293,16 +293,16 @@ module.exports = {
    */
   async searchAlbum(query, accessToken) {
     try {
-      const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
+      const response = await axios.get('https://api.spotify.com/v1/search', {
         params: {
           q: query,
           type: 'album',
-          limit: SPOTIFY_SEARCH_MAX_RESULTS
+          limit: 10
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: SPOTIFY_REQUEST_TIMEOUT
+        timeout: 10000
       });
 
       if (!response.data.albums.items.length) {
@@ -344,16 +344,16 @@ module.exports = {
    */
   async searchArtist(query, accessToken) {
     try {
-      const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
+      const response = await axios.get('https://api.spotify.com/v1/search', {
         params: {
           q: query,
           type: 'artist',
-          limit: SPOTIFY_SEARCH_MAX_RESULTS
+          limit: 10
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: SPOTIFY_REQUEST_TIMEOUT
+        timeout: 10000
       });
 
       if (!response.data.artists.items.length) {
@@ -395,16 +395,16 @@ module.exports = {
    */
   async searchPlaylist(query, accessToken) {
     try {
-      const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
+      const response = await axios.get('https://api.spotify.com/v1/search', {
         params: {
           q: query,
           type: 'playlist',
-          limit: SPOTIFY_SEARCH_MAX_RESULTS
+          limit: 10
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: SPOTIFY_REQUEST_TIMEOUT
+        timeout: 10000
       });
 
       if (!response.data.playlists.items.length) {
@@ -452,16 +452,16 @@ module.exports = {
    */
   async searchPodcast(query, accessToken) {
     try {
-      const response = await axios.get(`${SPOTIFY_API_BASE_URL}/search`, {
+      const response = await axios.get('https://api.spotify.com/v1/search', {
         params: {
           q: query,
           type: 'show',
-          limit: SPOTIFY_SEARCH_MAX_RESULTS
+          limit: 10
         },
         headers: {
           'Authorization': `Bearer ${accessToken}`
         },
-        timeout: SPOTIFY_REQUEST_TIMEOUT
+        timeout: 10000
       });
 
       if (!response.data.shows.items.length) {
@@ -515,12 +515,12 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setColor(SPOTIFY_EMBED_COLOR)
+      .setColor(0x1DB954)
       .setTitle(item.name)
       .setURL(item.url)
       .setThumbnail(item.imageUrl)
       .setFooter({ 
-        text: `${SPOTIFY_EMBED_PREV_LABEL} ${index + 1} of ${results.length} • ${SPOTIFY_EMBED_FOOTER}`
+        text: `Previous ${index + 1} of ${results.length} • Powered by Spotify`
       });
 
     switch (type) {

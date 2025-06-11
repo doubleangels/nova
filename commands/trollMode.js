@@ -11,18 +11,6 @@ const config = require('../config');
 const { logError } = require('../errors');
 const { getValue, setValue } = require('../utils/database');
 
-const TROLL_DB_KEY_ENABLED = 'troll_mode_enabled';
-const TROLL_DB_KEY_ACCOUNT_AGE = 'troll_mode_account_age';
-
-const TROLL_DEFAULT_AGE_DAYS = 30;
-const TROLL_MIN_ACCOUNT_AGE = 1;
-const TROLL_MAX_ACCOUNT_AGE = 365;
-
-const TROLL_EMBED_COLOR_ENABLED = '#00FF00';
-const TROLL_EMBED_COLOR_DISABLED = '#FF0000';
-const TROLL_EMBED_TITLE_STATUS = '🎭 Troll Mode Status';
-const TROLL_EMBED_TITLE_UPDATE = '🎭 Troll Mode %s';
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('trollmode')
@@ -45,9 +33,9 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('age')
-            .setDescription(`What is the minimum account age allowed to join the server? (${TROLL_MIN_ACCOUNT_AGE}-${TROLL_MAX_ACCOUNT_AGE})`)
-            .setMinValue(TROLL_MIN_ACCOUNT_AGE)
-            .setMaxValue(TROLL_MAX_ACCOUNT_AGE)
+            .setDescription('What is the minimum account age allowed to join the server? (1-365)')
+            .setMinValue(1)
+            .setMaxValue(365)
             .setRequired(false)
         )
     )
@@ -138,13 +126,13 @@ module.exports = {
   async getCurrentSettings() {
     try {
       const [enabled, accountAge] = await Promise.all([
-        getValue(TROLL_DB_KEY_ENABLED),
-        getValue(TROLL_DB_KEY_ACCOUNT_AGE)
+        getValue('troll_mode_enabled'),
+        getValue('troll_mode_account_age')
       ]);
       
       return {
         enabled: enabled === true,
-        accountAge: accountAge ? Number(accountAge) : TROLL_DEFAULT_AGE_DAYS
+        accountAge: accountAge ? Number(accountAge) : 30
       };
     } catch (error) {
       logger.error("Failed to retrieve troll mode settings:", {
@@ -165,11 +153,11 @@ module.exports = {
       const updates = [];
       
       if (settings.enabled !== undefined) {
-        updates.push(setValue(TROLL_DB_KEY_ENABLED, settings.enabled));
+        updates.push(setValue('troll_mode_enabled', settings.enabled));
       }
       
       if (settings.accountAge !== undefined) {
-        updates.push(setValue(TROLL_DB_KEY_ACCOUNT_AGE, settings.accountAge));
+        updates.push(setValue('troll_mode_account_age', settings.accountAge));
       }
       
       await Promise.all(updates);
@@ -192,8 +180,8 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.enabled ? TROLL_EMBED_COLOR_ENABLED : TROLL_EMBED_COLOR_DISABLED)
-      .setTitle(TROLL_EMBED_TITLE_STATUS)
+      .setColor(settings.enabled ? '#00FF00' : '#FF0000')
+      .setTitle('🎭 Troll Mode Status')
       .addFields(
         { name: 'Status', value: settings.enabled ? '✅ Enabled' : '❌ Disabled' },
         { name: 'Minimum Account Age', value: `${settings.accountAge} days` }
@@ -214,8 +202,8 @@ module.exports = {
    */
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(enabled ? TROLL_EMBED_COLOR_ENABLED : TROLL_EMBED_COLOR_DISABLED)
-      .setTitle(TROLL_EMBED_TITLE_UPDATE.replace('%s', enabled ? 'Enabled' : 'Disabled'))
+      .setColor(enabled ? '#00FF00' : '#FF0000')
+      .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
       .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`)
       .setFooter({ text: `Updated by ${interaction.user.tag}` })
       .setTimestamp();

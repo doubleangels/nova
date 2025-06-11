@@ -11,13 +11,6 @@ const axios = require('axios');
 const config = require('../config');
 const { logError } = require('../errors');
 
-const IMDB_API_URL = 'https://www.omdbapi.com/';
-const IMDB_BASE_URL = 'https://www.imdb.com/title/';
-const IMDB_REQUEST_TIMEOUT = 10000;
-
-const IMDB_EMBED_COLOR = 0xFFD700;
-const IMDB_EMBED_FOOTER = "Powered by OMDb API";
-
 /**
  * We handle the imdb command.
  * This function allows users to search for movies and TV shows using the OMDb API.
@@ -189,11 +182,11 @@ module.exports = {
       params.append('y', searchParams.year);
     }
     
-    const requestUrl = `${IMDB_API_URL}?${params.toString()}`;
+    const requestUrl = `https://www.omdbapi.com/?${params.toString()}`;
     
     try {
       const response = await axios.get(requestUrl, { 
-        timeout: IMDB_REQUEST_TIMEOUT 
+        timeout: 10000 
       });
       
       logger.debug("OMDb API response received:", {
@@ -245,7 +238,7 @@ module.exports = {
     const plot = data.Plot || "No plot available.";
     const poster = (data.Poster && data.Poster !== "N/A") ? data.Poster : null;
     const imdbId = data.imdbID || null;
-    const imdbLink = imdbId ? `${IMDB_BASE_URL}${imdbId}` : "N/A";
+    const imdbLink = imdbId ? `https://www.imdb.com/title/${imdbId}` : "N/A";
     const runtime = data.Runtime || "Unknown";
     const director = data.Director || "Unknown";
     const actors = data.Actors || "Unknown";
@@ -253,7 +246,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle(`🎬 ${movieTitle} (${year})`)
       .setDescription(`📜 **Plot:** ${plot}`)
-      .setColor(IMDB_EMBED_COLOR)
+      .setColor(0xFFD700)
       .addFields(
         { name: "🎭 Genre", value: `🎞 ${genre}`, inline: true },
         { name: "⭐ IMDb Rating", value: `🌟 ${imdbRating}`, inline: true },
@@ -262,7 +255,7 @@ module.exports = {
         { name: "🎭 Actors", value: actors, inline: false },
         { name: "🔗 IMDb Link", value: `[Click Here](${imdbLink})`, inline: false }
       )
-      .setFooter({ text: IMDB_EMBED_FOOTER });
+      .setFooter({ text: "Powered by OMDb API" });
     
     if (poster) {
       embed.setThumbnail(poster);
@@ -318,11 +311,16 @@ module.exports = {
         userId: interaction.user?.id
       });
       
+      const errorEmbed = new EmbedBuilder()
+        .setColor(0xFFD700)
+        .setTitle('IMDb Search')
+        .setDescription(errorMessage)
+        .setTimestamp();
+      
       await interaction.reply({ 
-        content: errorMessage,
+        embeds: [errorEmbed],
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

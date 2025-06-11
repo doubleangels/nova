@@ -9,19 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
-const BACKUP_CONFIG_CHANNEL = "backup_mode_channel";
-const BACKUP_CONFIG_ENABLED = "backup_mode_enabled";
-const BACKUP_CONFIG_ROLE = "backup_mode_role";
-
-const BACKUP_EMBED_COLOR_DISABLED = '#FF0000';
-const BACKUP_EMBED_COLOR_ENABLED = '#00FF00';
-const BACKUP_EMBED_FOOTER_PREFIX = "Requested by";
-const BACKUP_EMBED_TITLE_STATUS = '🔄 Backup Mode Status';
-const BACKUP_EMBED_TITLE_UPDATE = '🔄 Backup Mode Updated';
-
-const BACKUP_STATUS_DISABLED = "❌";
-const BACKUP_STATUS_ENABLED = "✅";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('backupmode')
@@ -167,9 +154,9 @@ module.exports = {
   async getCurrentSettings() {
     try {
       const [channelId, roleId, isEnabled] = await Promise.all([
-        getValue(BACKUP_CONFIG_CHANNEL),
-        getValue(BACKUP_CONFIG_ROLE),
-        getValue(BACKUP_CONFIG_ENABLED)
+        getValue("backup_mode_channel"),
+        getValue("backup_mode_role"),
+        getValue("backup_mode_enabled")
       ]);
       
       return {
@@ -243,7 +230,7 @@ module.exports = {
       
       if (channelOption) {
         newChannelId = channelOption.id;
-        await setValue(BACKUP_CONFIG_CHANNEL, channelOption.id);
+        await setValue("backup_mode_channel", channelOption.id);
         logger.debug("Backup mode channel updated:", { 
           channelId: channelOption.id, 
           channelName: channelOption.name 
@@ -252,7 +239,7 @@ module.exports = {
       
       if (roleOption) {
         newRoleId = roleOption.id;
-        await setValue(BACKUP_CONFIG_ROLE, roleOption.id);
+        await setValue("backup_mode_role", roleOption.id);
         logger.debug("Backup mode role updated:", { 
           roleId: roleOption.id, 
           roleName: roleOption.name 
@@ -261,7 +248,7 @@ module.exports = {
       
       if (enabledOption !== null) {
         newIsEnabled = enabledOption.toLowerCase() === "enabled";
-        await setValue(BACKUP_CONFIG_ENABLED, newIsEnabled);
+        await setValue("backup_mode_enabled", newIsEnabled);
         logger.debug("Backup mode enabled status updated:", { enabled: newIsEnabled });
       }
       
@@ -334,11 +321,11 @@ module.exports = {
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(newEnabled ? BACKUP_EMBED_COLOR_ENABLED : BACKUP_EMBED_COLOR_DISABLED)
-      .setTitle(BACKUP_EMBED_TITLE_UPDATE)
+      .setColor(newEnabled ? '#00FF00' : '#FF0000')
+      .setTitle('🔄 Backup Mode Updated')
       .setTimestamp();
 
-    const statusEmoji = newEnabled ? BACKUP_STATUS_ENABLED : BACKUP_STATUS_DISABLED;
+    const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
     embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
@@ -368,11 +355,11 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? BACKUP_EMBED_COLOR_ENABLED : BACKUP_EMBED_COLOR_DISABLED)
-      .setTitle(BACKUP_EMBED_TITLE_STATUS)
+      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
+      .setTitle('🔄 Backup Mode Status')
       .setTimestamp();
 
-    const statusEmoji = settings.isEnabled ? BACKUP_STATUS_ENABLED : BACKUP_STATUS_DISABLED;
+    const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     embed.addFields({ name: 'Status', value: `${statusEmoji} **${statusText}**` });
     
@@ -389,7 +376,7 @@ module.exports = {
       embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.`);
     }
 
-    embed.setFooter({ text: `${BACKUP_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` });
+    embed.setFooter({ text: `Requested by ${interaction.user.tag}` });
     
     return embed;
   }

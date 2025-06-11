@@ -10,18 +10,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 const { logError } = require('../errors');
 
-const MUTE_DB_KEY_ENABLED = "mute_mode_enabled";
-const MUTE_DB_KEY_TIME_LIMIT = "mute_mode_kick_time_hours";
-
-const MUTE_DEFAULT_TIME_LIMIT = 2;
-const MUTE_MIN_TIME_LIMIT = 1;
-const MUTE_MAX_TIME_LIMIT = 72;
-
-const MUTE_EMBED_COLOR_ENABLED = '#00FF00';
-const MUTE_EMBED_COLOR_DISABLED = '#FF0000';
-const MUTE_EMBED_TITLE_STATUS = '🔇 Mute Mode Status';
-const MUTE_EMBED_TITLE_UPDATE = '🔇 Mute Mode Updated';
-
 /**
  * We handle the mutemode command.
  * This function allows administrators to manage auto-kicking of inactive users.
@@ -55,10 +43,10 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('time')
-            .setDescription(`Time limit in hours before a silent user is kicked (${MUTE_MIN_TIME_LIMIT}-${MUTE_MAX_TIME_LIMIT})`)
+            .setDescription('Time limit in hours before a silent user is kicked (1-72)')
             .setRequired(false)
-            .setMinValue(MUTE_MIN_TIME_LIMIT)
-            .setMaxValue(MUTE_MAX_TIME_LIMIT)
+            .setMinValue(1)
+            .setMaxValue(72)
         )
     )
     .addSubcommand(subcommand =>
@@ -137,14 +125,14 @@ module.exports = {
       
       let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
       
-      if (timeLimit < MUTE_MIN_TIME_LIMIT || timeLimit > MUTE_MAX_TIME_LIMIT) {
+      if (timeLimit < 1 || timeLimit > 72) {
         logger.warn("Invalid time limit specified:", {
           userId: interaction.user.id,
           guildId: interaction.guildId,
           providedValue: timeLimit
         });
         
-        timeLimit = MUTE_DEFAULT_TIME_LIMIT;
+        timeLimit = 2;
       }
       
       logger.debug("Processing mutemode update:", {
@@ -185,13 +173,13 @@ module.exports = {
   async getCurrentSettings() {
     try {
       const [isEnabled, timeLimit] = await Promise.all([
-        getValue(MUTE_DB_KEY_ENABLED),
-        getValue(MUTE_DB_KEY_TIME_LIMIT)
+        getValue("mute_mode_enabled"),
+        getValue("mute_mode_kick_time_hours")
       ]);
       
       return {
         isEnabled: isEnabled === true,
-        timeLimit: timeLimit ? Number(timeLimit) : MUTE_DEFAULT_TIME_LIMIT
+        timeLimit: timeLimit ? Number(timeLimit) : 2
       };
     } catch (error) {
       logger.error("Failed to retrieve current mute mode settings:", {
@@ -214,8 +202,8 @@ module.exports = {
   async updateSettings(isEnabled, timeLimit) {
     try {
       await Promise.all([
-        setValue(MUTE_DB_KEY_ENABLED, isEnabled),
-        setValue(MUTE_DB_KEY_TIME_LIMIT, timeLimit)
+        setValue("mute_mode_enabled", isEnabled),
+        setValue("mute_mode_kick_time_hours", timeLimit)
       ]);
     } catch (error) {
       logger.error("Database operation failed during mute mode update:", { 
@@ -235,8 +223,8 @@ module.exports = {
    */
   formatStatusMessage(settings) {
     const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? MUTE_EMBED_COLOR_ENABLED : MUTE_EMBED_COLOR_DISABLED)
-      .setTitle(MUTE_EMBED_TITLE_STATUS)
+      .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
+      .setTitle('🔇 Mute Mode Status')
       .setTimestamp();
 
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
@@ -245,7 +233,8 @@ module.exports = {
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Time Limit', value: `**${settings.timeLimit}** hours` }
-    );
+    )
+    .setFooter({ text: `Updated by ${interaction.user.tag}` });
     
     if (settings.isEnabled) {
       embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.`);
@@ -265,8 +254,8 @@ module.exports = {
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
     const embed = new EmbedBuilder()
-      .setColor(newEnabled ? MUTE_EMBED_COLOR_ENABLED : MUTE_EMBED_COLOR_DISABLED)
-      .setTitle(MUTE_EMBED_TITLE_UPDATE)
+      .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
+      .setTitle('🔇 Mute Mode Updated')
       .setTimestamp();
 
     const statusEmoji = newEnabled ? "✅" : "❌";
@@ -274,7 +263,8 @@ module.exports = {
     
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` }
-    );
+    )
+    .setFooter({ text: `Updated by ${interaction.user.tag}` });
     
     if (oldTimeLimit !== newTimeLimit) {
       embed.addFields({ 
