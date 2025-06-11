@@ -37,8 +37,6 @@ const SEARCH_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searc
 const SEARCH_ERROR_API = "⚠️ Failed to fetch search results. Please try again later.";
 const SEARCH_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
 const SEARCH_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const SEARCH_ERROR_GOOGLE_API = "⚠️ Failed to fetch search results from Google. Please try again later.";
-const SEARCH_ERROR_GOOGLE_NO_RESULTS = "⚠️ No results found for your search query.";
 
 module.exports = {
   data: new SlashCommandBuilder()

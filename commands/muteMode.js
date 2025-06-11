@@ -26,9 +26,6 @@ const MUTE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managin
 const MUTE_ERROR_DATABASE_READ = "⚠️ Failed to retrieve mute mode settings. Please try again later.";
 const MUTE_ERROR_DATABASE_WRITE = "⚠️ Failed to update mute mode settings. Please try again later.";
 const MUTE_ERROR_INVALID_TIME = "⚠️ Invalid time limit specified. Using default value.";
-const MUTE_ERROR_UPDATE_FAILED = "⚠️ Failed to update mute mode.";
-const MUTE_ERROR_QUERY_FAILED = "⚠️ Failed to query mute mode.";
-const MUTE_ERROR_TOGGLE_FAILED = "⚠️ Failed to toggle mute mode.";
 
 /**
  * We handle the mutemode command.

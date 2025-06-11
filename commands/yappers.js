@@ -19,7 +19,6 @@ const YAPPERS_EMBED_COLOR = 0xcd41ff;
 const YAPPERS_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching statistics.";
 const YAPPERS_ERROR_DM_NOT_SUPPORTED = "⚠️ This command cannot be used in direct messages.";
 const YAPPERS_ERROR_DATABASE_READ = "⚠️ Failed to retrieve statistics from the database. Please try again later.";
-const YAPPERS_ERROR_DATABASE_WRITE = "⚠️ Failed to update statistics in the database. Please try again later.";
 const YAPPERS_ERROR_PERMISSION = "⚠️ You don't have permission to view server statistics.";
 const YAPPERS_ERROR_INVALID_GUILD = "⚠️ This command can only be used in a server.";
 const YAPPERS_ERROR_NO_STATS = "⚠️ No statistics available for this server.";

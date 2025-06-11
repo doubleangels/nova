@@ -63,7 +63,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(COIN_EMBED_COLOR)
                 .setTitle(COIN_EMBED_TITLE)
-                .setDescription(`The coin landed on: **${result}**`)
+                .setDescription(`${COIN_EMOJI} The coin landed on: **${result}**`)
                 .setFooter({ text: `${COIN_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
                 .setTimestamp();
             
@@ -84,7 +84,7 @@ module.exports = {
      * @returns {string} Either 'Heads' or 'Tails'
      */
     flipCoin() {
-        return Math.random() < 0.5 ? 'Heads' : 'Tails';
+        return Math.random() < COIN_HEADS_PROBABILITY ? COIN_FACE_HEADS : COIN_FACE_TAILS;
     },
 
     /**

@@ -79,9 +79,9 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(colorValidation.normalizedColor)
-                .setTitle('Role Color Updated')
+                .setTitle(COLOR_EMBED_TITLE)
                 .setDescription(`Successfully changed the color of ${role} from \`${oldColor}\` to \`${colorValidation.normalizedColor}\`!`)
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setFooter({ text: `${COLOR_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });

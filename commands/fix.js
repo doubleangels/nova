@@ -119,7 +119,7 @@ module.exports = {
   async checkExistingReminder() {
     try {
       const result = await pool.query(
-        `SELECT COUNT(*) FROM main.reminder_recovery WHERE remind_at > NOW()`
+        `SELECT COUNT(*) FROM ${FIX_DB_TABLE} WHERE remind_at > NOW()`
       );
       return parseInt(result.rows[0].count) > 0;
     } catch (error) {
@@ -140,13 +140,13 @@ module.exports = {
     try {
       // Clean up existing reminders first
       await pool.query(
-        `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
+        `DELETE FROM ${FIX_DB_TABLE} WHERE remind_at > NOW() AND type = $1`,
         [FIX_DB_TYPE]
       );
       logger.debug("Cleaned up existing reminders of type:", FIX_DB_TYPE);
 
       await pool.query(
-        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
+        `INSERT INTO ${FIX_DB_TABLE} (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
         [reminderId, scheduledTime, FIX_DB_TYPE]
       );
       logger.debug("Reminder data saved to database:", { 

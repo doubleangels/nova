@@ -37,8 +37,6 @@ const IMAGES_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searc
 const IMAGES_ERROR_API = "⚠️ Failed to fetch search results. Please try again later.";
 const IMAGES_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
 const IMAGES_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const IMAGES_ERROR_GOOGLE_API = "⚠️ Failed to fetch search results from Google. Please try again later.";
-const IMAGES_ERROR_GOOGLE_NO_RESULTS = "⚠️ No images found for your search query.";
 
 /**
  * We convert a string to title case for better presentation.

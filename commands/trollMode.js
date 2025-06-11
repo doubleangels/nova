@@ -28,14 +28,6 @@ const TROLL_ERROR_DATABASE_READ = "⚠️ Failed to retrieve troll mode settings
 const TROLL_ERROR_DATABASE_WRITE = "⚠️ Failed to update troll mode settings. Please try again later.";
 const TROLL_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to manage troll mode settings.";
 const TROLL_ERROR_INVALID_SETTINGS = "⚠️ Invalid troll mode settings provided.";
-const TROLL_ERROR_SETTINGS_UPDATE = "⚠️ Failed to update troll mode settings.";
-const TROLL_ERROR_SETTINGS_READ = "⚠️ Failed to read troll mode settings.";
-const TROLL_ERROR_INVALID_USER = "⚠️ Invalid user specified.";
-const TROLL_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found.";
-const TROLL_ERROR_INVALID_CHANNEL = "⚠️ Invalid channel specified.";
-const TROLL_ERROR_CHANNEL_NOT_FOUND = "⚠️ The specified channel could not be found.";
-const TROLL_ERROR_INVALID_ROLE = "⚠️ Invalid role specified.";
-const TROLL_ERROR_ROLE_NOT_FOUND = "⚠️ The specified role could not be found.";
 
 module.exports = {
   data: new SlashCommandBuilder()

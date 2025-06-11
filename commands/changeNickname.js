@@ -81,22 +81,22 @@ module.exports = {
                 throw new Error("USER_NOT_MANAGEABLE");
             }
 
-            if (newNickname && (newNickname.length < 1 || newNickname.length > 32)) {
+            if (newNickname && (newNickname.length < NICKNAME_MIN_LENGTH || newNickname.length > NICKNAME_MAX_LENGTH)) {
                 throw new Error("INVALID_NICKNAME_LENGTH");
             }
 
             await member.setNickname(newNickname || null);
             
             const userHighestRole = member.roles.highest;
-            const embedColor = userHighestRole.color === 0 ? '#cd41ff' : userHighestRole.color;
+            const embedColor = userHighestRole.color === 0 ? NICKNAME_EMBED_COLOR_DEFAULT : userHighestRole.color;
             
             const embed = new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle('Nickname Updated')
+                .setTitle(NICKNAME_EMBED_TITLE)
                 .setDescription(newNickname 
                     ? `Successfully changed ${targetUser}'s nickname to "${newNickname}!"`
                     : `Successfully reset ${targetUser}'s nickname!`)
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
+                .setFooter({ text: `${NICKNAME_EMBED_FOOTER_PREFIX} ${interaction.user.tag}` })
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
@@ -175,7 +175,7 @@ module.exports = {
             };
         }
 
-        if (newNickname.length > 32) {
+        if (newNickname.length > NICKNAME_MAX_LENGTH) {
             logger.warn("Nickname exceeds maximum length:", {
                 length: newNickname.length
             });

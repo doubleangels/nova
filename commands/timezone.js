@@ -12,11 +12,6 @@ const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-const TIMEZONE_API_TIMEOUT = 10000;
-
-const TIMEZONE_DB_KEY_CHANNEL = 'timezone_channel';
-const TIMEZONE_DB_KEY_ROLE = 'timezone_role';
-
 const TIMEZONE_EMBED_COLOR = '#cd41ff';
 const TIMEZONE_EMBED_TITLE_STATUS = '📌 Timezone Status';
 const TIMEZONE_EMBED_TITLE_SETUP = '✅ Timezone Setup Complete';
@@ -25,17 +20,11 @@ const TIMEZONE_EMBED_FOOTER_PREFIX = 'Updated by';
 const TIMEZONE_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
 const TIMEZONE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing timezone settings.";
 const TIMEZONE_ERROR_API = "⚠️ Failed to retrieve timezone information. Please try again later.";
-const TIMEZONE_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
-const TIMEZONE_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
 const TIMEZONE_ERROR_ACCESS_DENIED = "⚠️ API access denied. Please check API configuration.";
 const TIMEZONE_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
 const TIMEZONE_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
 const TIMEZONE_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone specified.";
-const TIMEZONE_ERROR_INVALID_LOCATION = "⚠️ Invalid location specified.";
-const TIMEZONE_ERROR_LOCATION_NOT_FOUND = "⚠️ Could not find the specified location.";
-const TIMEZONE_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Could not determine timezone for the specified location.";
 const TIMEZONE_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to manage timezones for other users.";
-const TIMEZONE_ERROR_DATABASE = "⚠️ Failed to save timezone settings. Please try again later.";
 
 /**
  * We handle the timezone command.

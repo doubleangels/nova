@@ -11,8 +11,6 @@ const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
 const { logError } = require('../errors');
 
-const TIME_API_TIMEOUT = 10000;
-
 const TIME_EMBED_COLOR = '#cd41ff';
 const TIME_EMBED_TITLE = '⏳ Time Difference Information';
 const TIME_EMBED_FOOTER_PREFIX = 'Requested by';
@@ -20,14 +18,9 @@ const TIME_EMBED_FOOTER_PREFIX = 'Requested by';
 const TIME_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
 const TIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while calculating time difference.";
 const TIME_ERROR_API = "⚠️ Failed to retrieve timezone information. Please try again later.";
-const TIME_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
-const TIME_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
 const TIME_ERROR_ACCESS_DENIED = "⚠️ API access denied. Please check API configuration.";
 const TIME_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
 const TIME_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
-const TIME_ERROR_INVALID_LOCATION = "⚠️ Invalid location specified.";
-const TIME_ERROR_LOCATION_NOT_FOUND = "⚠️ Could not find the specified location.";
-const TIME_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Could not determine timezone for the specified location.";
 
 /**
  * We handle the timedifference command.

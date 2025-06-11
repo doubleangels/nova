@@ -35,7 +35,7 @@ const PROMOTE_ERROR_NETWORK = "⚠️ Network error occurred. Please check your 
 const PROMOTE_ERROR_API_ACCESS = "⚠️ Reddit API access denied. Please check API configuration.";
 const PROMOTE_ERROR_FLAIR = "⚠️ Could not find the required flair. Please try again later or contact support.";
 const PROMOTE_ERROR_POST = "⚠️ Failed to submit post to Reddit.";
-const PROMOTE_ERROR_COOLDOWN = "⚠️ Please wait before promoting again.";
+const PROMOTE_ERROR_COOLDOWN = "⏰ Please wait %h hours and %m minutes before promoting again.";
 const PROMOTE_ERROR_DATABASE = "⚠️ Failed to record promotion time. Please try again later.";
 
 const reddit = new snoowrap({
@@ -90,7 +90,9 @@ module.exports = {
           const hours = Math.floor(totalMinutes / 60);
           const minutes = totalMinutes % 60;
           return await interaction.editReply({
-            content: `⏰ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
+            content: PROMOTE_ERROR_COOLDOWN
+              .replace('%h', hours)
+              .replace('%m', minutes),
             ephemeral: true
           });
         }
@@ -323,7 +325,7 @@ module.exports = {
       );
 
       const reminderId = require('crypto').randomUUID();
-      const nextPromotionTime = dayjs().add(24, 'hour').toISOString();
+      const nextPromotionTime = dayjs().add(PROMOTE_COOLDOWN_HOURS, 'hour').toISOString();
       
       logger.debug("Recording next promotion time:", {
         reminderId,

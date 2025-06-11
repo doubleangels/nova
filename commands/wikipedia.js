@@ -24,19 +24,6 @@ const WIKI_EMBED_COLOR = 0xFFFFFF;
 const WIKI_FOOTER_TEXT = 'Powered by Wikipedia API';
 const WIKI_ARTICLE_URL = 'https://en.wikipedia.org/?curid=%s';
 
-const WIKI_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Wikipedia.";
-const WIKI_ERROR_API = "⚠️ Failed to retrieve article from Wikipedia. Please try again later.";
-const WIKI_ERROR_RATE_LIMIT = "⚠️ Wikipedia API rate limit reached. Please try again in a few moments.";
-const WIKI_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const WIKI_ERROR_ACCESS_DENIED = "⚠️ Wikipedia API access denied. Please check API configuration.";
-const WIKI_ERROR_NO_RESULTS = "⚠️ No articles found matching your search.";
-const WIKI_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search term.";
-const WIKI_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
-const WIKI_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
-const WIKI_ERROR_ARTICLE_NOT_FOUND = "⚠️ The requested article could not be found.";
-const WIKI_ERROR_INVALID_ARTICLE = "⚠️ Invalid article specified.";
-const WIKI_ERROR_SEARCH_FAILED = "⚠️ Failed to search Wikipedia articles.";
-
 const cache = new Map();
 
 /**
@@ -122,7 +109,7 @@ module.exports = {
       }
 
       const embed = new EmbedBuilder()
-        .setColor('#FFFFFF')
+        .setColor(WIKI_EMBED_COLOR)
         .setTitle(article.title)
         .setDescription(summary)
         .setURL(`https://en.wikipedia.org/wiki/${encodeURIComponent(article.title)}`)
@@ -284,7 +271,7 @@ module.exports = {
       .setTitle(`📖 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}`)
       .setURL(url)
-      .setColor(WIKIPEDIA_EMBED_COLOR)
+      .setColor(WIKI_EMBED_COLOR)
       .addFields(
         { 
           name: '🔗 Wikipedia Link', 
@@ -298,7 +285,7 @@ module.exports = {
         }
       )
       .setFooter({ 
-        text: `${WIKIPEDIA_FOOTER_TEXT} • Result ${index + 1} of ${total} for "${query}"`
+        text: `${WIKI_FOOTER_TEXT} • Result ${index + 1} of ${total} for "${query}"`
       });
     
     return embed;
@@ -389,13 +376,13 @@ module.exports = {
   cacheResults(cacheKey, results) {
     cache.set(cacheKey, {
       results,
-      expiry: Date.now() + WIKIPEDIA_CACHE_TTL
+      expiry: Date.now() + WIKI_CACHE_TTL
     });
     
     logger.debug("Cached Wikipedia results:", { 
       cacheKey,
       resultCount: results.length,
-      expiryMinutes: WIKIPEDIA_CACHE_TTL / 60000
+      expiryMinutes: WIKI_CACHE_TTL / 60000
     });
   },
   

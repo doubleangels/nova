@@ -33,10 +33,6 @@ const REMINDER_ERROR_DATABASE_READ = "⚠️ Failed to retrieve reminder setting
 const REMINDER_ERROR_DATABASE_WRITE = "⚠️ Failed to update reminder settings. Please try again later.";
 const REMINDER_ERROR_INVALID_CHANNEL = "⚠️ Please select a text channel for reminders.";
 const REMINDER_ERROR_CONFIG_INCOMPLETE = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
-const REMINDER_ERROR_CHANNEL_NOT_FOUND = "⚠️ The reminder channel could not be found.";
-const REMINDER_ERROR_ROLE_NOT_FOUND = "⚠️ The reminder role could not be found.";
-const REMINDER_ERROR_SETUP_FAILED = "⚠️ Failed to set up reminder configuration.";
-const REMINDER_ERROR_STATUS_CHECK_FAILED = "⚠️ Failed to check reminder status.";
 
 /**
  * Module for the /reminder command.
@@ -173,7 +169,7 @@ module.exports = {
       ]);
       
       const [bumpReminder, promoteReminder] = await Promise.all([
-        this.getLatestReminderData(channelId, 'bump'),
+        this.getLatestReminderData(channelId, REMINDER_TYPE),
         this.getLatestReminderData(channelId, 'promote')
       ]);
       

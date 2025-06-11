@@ -9,16 +9,11 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const ROLE_EMBED_COLOR = '#FF0000';
-const ROLE_EMBED_TITLE = 'Role Removed';
-const ROLE_EMBED_FOOTER_PREFIX = 'Updated by';
-
 const ROLE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while removing the role.";
 const ROLE_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ You don't have permission to remove this role.";
 const ROLE_ERROR_MANAGED_ROLE = "⚠️ Cannot remove a managed role.";
 const ROLE_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
 const ROLE_ERROR_NOT_ASSIGNED = "⚠️ The user does not have this role.";
-const ROLE_ERROR_BOT_PERMISSIONS = "⚠️ I don't have permission to manage roles.";
 const ROLE_ERROR_HIERARCHY = "⚠️ Cannot remove a role that is higher than your highest role.";
 
 /**

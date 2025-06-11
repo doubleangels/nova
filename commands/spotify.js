@@ -16,7 +16,6 @@ const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
 const SPOTIFY_REQUEST_TIMEOUT = 10000;
 
 const SPOTIFY_SEARCH_MAX_RESULTS = 10;
-const SPOTIFY_DESCRIPTION_MAX_LENGTH = 150;
 const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000;
 
 const SPOTIFY_EMBED_COLOR = 0x1DB954;
@@ -35,9 +34,6 @@ const SPOTIFY_ERROR_ACCESS_DENIED = "⚠️ Spotify API access denied. Please ch
 const SPOTIFY_ERROR_NO_RESULTS = "⚠️ No results found for your search.";
 const SPOTIFY_ERROR_INVALID_TRACK = "⚠️ Invalid track specified.";
 const SPOTIFY_ERROR_AUTH = "⚠️ Failed to authenticate with Spotify.";
-const SPOTIFY_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search query.";
-const SPOTIFY_ERROR_SEARCH_FAILED = "⚠️ Failed to perform search.";
-const SPOTIFY_ERROR_TOKEN = "⚠️ Failed to get Spotify access token.";
 
 /**
  * We handle the /spotify command.

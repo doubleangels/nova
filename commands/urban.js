@@ -13,16 +13,11 @@ const { logError } = require('../errors');
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
 const URBAN_REQUEST_TIMEOUT = 10000;
 
-const URBAN_DESCRIPTION_MAX_LENGTH = 1024;
-const URBAN_EXAMPLE_MAX_LENGTH = 1024;
-
 const URBAN_EMBED_COLOR = 0x202C34;
 const URBAN_EMBED_FOOTER = 'Powered by Urban Dictionary';
 
 const URBAN_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Urban Dictionary.";
 const URBAN_ERROR_API = "⚠️ Failed to retrieve definition from Urban Dictionary. Please try again later.";
-const URBAN_ERROR_RATE_LIMIT = "⚠️ Urban Dictionary API rate limit reached. Please try again in a few moments.";
-const URBAN_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
 const URBAN_ERROR_ACCESS_DENIED = "⚠️ Urban Dictionary API access denied. Please check API configuration.";
 const URBAN_ERROR_NO_RESULTS = "⚠️ No definitions found for that term.";
 const URBAN_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search term.";
@@ -57,7 +52,9 @@ module.exports = {
                 guildId: interaction.guildId
             });
 
-            const response = await axios.get(`https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`);
+            const response = await axios.get(`${URBAN_API_URL}?term=${encodeURIComponent(term)}`, {
+                timeout: URBAN_REQUEST_TIMEOUT
+            });
             const definitions = response.data.list;
 
             if (!definitions || definitions.length === 0) {
@@ -90,19 +87,6 @@ module.exports = {
         } catch (error) {
             await this.handleError(interaction, error);
         }
-    },
-
-    /**
-     * Truncates text to a maximum length, adding ellipsis if necessary.
-     * Used to ensure text fits within Discord's embed field limits.
-     * @function truncateText
-     * @param {string} text - The text to truncate
-     * @param {number} maxLength - Maximum length of the text
-     * @returns {string} The truncated text
-     */
-    truncateText(text, maxLength) {
-        if (!text) return 'No example provided.';
-        return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
     },
 
     /**
