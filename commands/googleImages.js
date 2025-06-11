@@ -105,22 +105,29 @@ module.exports = {
           ephemeral: true
         });
       }
-      
+
+      const generateEmbed = (index) => this.generateImageEmbed(searchResults.items, index);
+
       await createPaginatedResults(
         interaction,
         searchResults.items,
-        index => this.generateImageEmbed(searchResults.items, index),
-        'img',
+        generateEmbed,
+        'googleimages',
         120000,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary,
-          prevLabel: "Previous",
-          nextLabel: "Next",
-          prevEmoji: "◀️",
-          nextEmoji: "▶️"
+          buttonStyle: ButtonStyle.Secondary,
+          nextLabel: 'Next',
+          prevEmoji: '⬅️',
+          nextEmoji: '➡️'
         }
       );
+
+      logger.info("Google Images search completed successfully:", {
+        userId: interaction.user.id,
+        query: searchParams.query,
+        resultCount: searchResults.items.length
+      });
     } catch (error) {
       await this.handleError(interaction, error);
     }

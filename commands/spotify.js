@@ -174,6 +174,13 @@ module.exports = {
         }
       );
 
+      logger.info("Spotify search completed successfully:", {
+        userId: interaction.user.id,
+        subcommand: subcommand,
+        query: interaction.options.getString('query'),
+        resultCount: results.length
+      });
+
     } catch (error) {
       await this.handleError(interaction, error);
     }

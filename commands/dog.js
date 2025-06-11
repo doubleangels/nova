@@ -24,7 +24,7 @@ const { logError } = require('../errors');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
-    .setDescription('Get a random dog image!'),
+    .setDescription('Fetch and display a random dog image.'),
   
   /**
    * Executes the dog command.
@@ -34,66 +34,35 @@ module.exports = {
    * @throws {Error} If API request fails
    */
   async execute(interaction) {
-    // Early validation of interaction
-    if (!interaction || !interaction.isChatInputCommand()) {
-      logger.error("Invalid interaction received:", {
-        type: interaction?.type,
-        userId: interaction?.user?.id
-      });
-      return;
-    }
-
-    let hasResponded = false;
-    const respond = async (content, ephemeral = true) => {
-      if (hasResponded) return;
-      try {
-        const options = typeof content === 'string' 
-          ? { content, ephemeral }
-          : { ...content, ephemeral };
-        
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply(options);
-        } else {
-          await interaction.editReply(options);
-        }
-        hasResponded = true;
-      } catch (error) {
-        logger.error("Failed to respond to interaction:", {
-          error: error.message,
-          userId: interaction.user?.id
-        });
-      }
-    };
-
     try {
+      await interaction.deferReply();
+      
       logger.info("/dog command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });
       
-      const response = await axios.get('https://dog.ceo/api/breeds/image/random');
-      const imageUrl = response.data.message;
+      const response = await axios.get("https://dog.ceo/api/breeds/image/random");
+      const dogData = response.data;
+      
+      if (!dogData.message) {
+        throw new Error("NO_IMAGE_URL");
+      }
       
       const embed = new EmbedBuilder()
         .setColor(0xA0522D)
         .setTitle('🐕 Random Dog')
-        .setImage(imageUrl)
-        .setFooter({ text: `Requested by ${interaction.user.tag}` })
-        .setTimestamp();
+        .setImage(dogData.message)
+        .setFooter({ text: 'Powered by Dog CEO API' });
       
-      await respond({ embeds: [embed] }, false);
+      await interaction.editReply({ embeds: [embed] });
       
       logger.info("Dog command completed successfully:", {
         userId: interaction.user.id,
-        imageUrl
+        imageUrl: dogData.message
       });
     } catch (error) {
-      logError(error, 'dog', {
-        userId: interaction.user?.id,
-        guildId: interaction.guild?.id
-      });
-      
-      await respond("⚠️ Failed to fetch a dog image. Please try again later.");
+      await this.handleError(interaction, error);
     }
   },
   

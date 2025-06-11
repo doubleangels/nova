@@ -142,6 +142,13 @@ module.exports = {
                 .setTimestamp();
             
             await interaction.editReply({ embeds: [embed] });
+            
+            logger.info("Gave perms to user successfully:", {
+              userId: interaction.user.id,
+              targetUserId: targetUser.id,
+              roleName: roleName.trim(),
+              colorHex: normalizedColorHex
+            });
                         
         } catch (error) {
             await this.handleError(interaction, error);

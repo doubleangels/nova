@@ -94,10 +94,11 @@ module.exports = {
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("No-text channel configured:", { 
+        logger.info("No-text channel configured successfully:", { 
           channelId: channel.id,
           guildId: interaction.guildId,
-          userId: interaction.user.id
+          userId: interaction.user.id,
+          action: 'set'
         });
 
       } else if (subcommand === 'remove') {
@@ -130,10 +131,11 @@ module.exports = {
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("No-text channel configuration removed:", { 
+        logger.info("No-text channel configuration removed successfully:", { 
           channelId: channel.id,
           guildId: interaction.guildId,
-          userId: interaction.user.id
+          userId: interaction.user.id,
+          action: 'remove'
         });
       }
 

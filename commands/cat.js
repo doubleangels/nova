@@ -4,7 +4,7 @@
  * @module commands/cat
  */
 
-const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder, InteractionResponseFlags } = require('discord.js');
+const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -22,44 +22,9 @@ module.exports = {
    * @throws {Error} If API request fails
    */
   async execute(interaction) {
-    // Early validation of interaction
-    if (!interaction || !interaction.isChatInputCommand()) {
-      logger.error("Invalid interaction received:", {
-        type: interaction?.type,
-        userId: interaction?.user?.id
-      });
-      return;
-    }
-
-    let hasResponded = false;
-    const respond = async (content, ephemeral = true) => {
-      if (hasResponded) return;
-      try {
-        const options = typeof content === 'string' 
-          ? { 
-              content, 
-              flags: ephemeral ? [InteractionResponseFlags.Ephemeral] : undefined 
-            }
-          : { 
-              ...content, 
-              flags: ephemeral ? [InteractionResponseFlags.Ephemeral] : undefined 
-            };
-        
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply(options);
-        } else {
-          await interaction.editReply(options);
-        }
-        hasResponded = true;
-      } catch (error) {
-        logger.error("Failed to respond to interaction:", {
-          error: error.message,
-          userId: interaction.user?.id
-        });
-      }
-    };
-
     try {
+      await interaction.deferReply();
+      
       logger.info("/cat command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
@@ -74,7 +39,7 @@ module.exports = {
         .setImage(catData.url)
         .setFooter({ text: 'Powered by The Cat API' });
       
-      await respond({ embeds: [embed] }, false);
+      await interaction.editReply({ embeds: [embed] });
       
       logger.info("Cat command completed successfully:", {
         userId: interaction.user.id,
@@ -98,7 +63,23 @@ module.exports = {
         errorMessage = "⚠️ Couldn't connect to the cat image service. Please check your internet connection.";
       }
       
-      await respond(errorMessage);
+      try {
+        await interaction.editReply({ 
+          content: errorMessage,
+          ephemeral: true 
+        });
+      } catch (followUpError) {
+        logger.error("Failed to send error response for cat command:", {
+          error: followUpError.message,
+          originalError: error.message,
+          userId: interaction.user?.id
+        });
+        
+        await interaction.reply({ 
+          content: errorMessage,
+          ephemeral: true 
+        }).catch(() => {});
+      }
     }
   },
 

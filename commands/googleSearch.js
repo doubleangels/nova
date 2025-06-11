@@ -108,6 +108,12 @@ module.exports = {
           nextEmoji: "▶️"
         }
       );
+
+      logger.info("Google search completed successfully:", {
+        userId: interaction.user.id,
+        query: searchParams.query,
+        resultCount: searchResults.items.length
+      });
     } catch (error) {
       await this.handleError(interaction, error);
     }

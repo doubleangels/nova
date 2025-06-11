@@ -83,7 +83,7 @@ module.exports = {
     
     await interaction.reply({ embeds: [embed] });
     
-    logger.info("Troll mode status check completed.", {
+    logger.info("Troll mode status check completed successfully:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled: settings.enabled

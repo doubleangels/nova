@@ -98,6 +98,13 @@ module.exports = {
         }
       );
 
+      logger.info("YouTube search completed successfully:", {
+        userId: interaction.user.id,
+        query,
+        contentType,
+        resultCount: searchResults.length
+      });
+
     } catch (error) {
       await this.handleError(interaction, error);
     }

@@ -64,7 +64,7 @@ module.exports = {
       }
       
       await interaction.editReply(timeDiffResult.message);
-      logger.info("Time difference calculation completed successfully.", {
+      logger.info("Time difference calculation completed successfully:", {
         userId: interaction.user.id,
         place1: timeDiffResult.formattedPlace1,
         place2: timeDiffResult.formattedPlace2,

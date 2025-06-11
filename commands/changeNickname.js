@@ -43,40 +43,12 @@ module.exports = {
      * @throws {Error} If nickname update fails or user is not manageable
      */
     async execute(interaction) {
-        // Early validation of interaction
-        if (!interaction || !interaction.isChatInputCommand()) {
-            logger.error("Invalid interaction received:", {
-                type: interaction?.type,
-                userId: interaction?.user?.id
-            });
-            return;
-        }
-
-        let hasResponded = false;
-        const respond = async (content, ephemeral = true) => {
-            if (hasResponded) return;
-            try {
-                const options = typeof content === 'string' 
-                    ? { content, ephemeral }
-                    : { ...content, ephemeral };
-                
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply(options);
-                } else {
-                    await interaction.editReply(options);
-                }
-                hasResponded = true;
-            } catch (error) {
-                logger.error("Failed to respond to interaction:", {
-                    error: error.message,
-                    userId: interaction.user?.id
-                });
-            }
-        };
-
         try {
+            await interaction.deferReply();
+            
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
+            const member = await interaction.guild.members.fetch(targetUser.id);
             
             logger.info("/changenickname command initiated:", {
                 userId: interaction.user.id,
@@ -85,47 +57,20 @@ module.exports = {
                 newNickname
             });
 
-            // Validate permissions first
             if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageNicknames)) {
-                await respond("⚠️ I don't have permission to manage nicknames in this server.");
-                return;
+                throw new Error("BOT_PERMISSION_DENIED");
             }
 
-            // Fetch member and validate
-            let member;
-            try {
-                member = await interaction.guild.members.fetch(targetUser.id);
-            } catch (error) {
-                await respond("⚠️ The specified user could not be found in this server.");
-                return;
-            }
-
-            // Validate member is manageable
             if (!member.manageable) {
-                await respond("⚠️ I cannot modify this user's nickname.");
-                return;
+                throw new Error("USER_NOT_MANAGEABLE");
             }
 
-            // Validate nickname length if provided
             if (newNickname && (newNickname.length < 1 || newNickname.length > 32)) {
-                await respond("⚠️ Nickname must be between 1 and 32 characters.");
-                return;
+                throw new Error("INVALID_NICKNAME_LENGTH");
             }
 
-            // Attempt to change nickname
-            try {
-                await member.setNickname(newNickname || null);
-            } catch (error) {
-                logger.error("Failed to set nickname:", {
-                    error: error.message,
-                    targetUserId: targetUser.id,
-                    newNickname
-                });
-                await respond("⚠️ Failed to change the nickname. Please try again later.");
-                return;
-            }
+            await member.setNickname(newNickname || null);
             
-            // Create success embed
             const userHighestRole = member.roles.highest;
             const embedColor = userHighestRole.color === 0 ? 0xcd41ff : userHighestRole.color;
             
@@ -138,20 +83,144 @@ module.exports = {
                 .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
             
-            await respond({ embeds: [embed] }, false);
+            await interaction.editReply({ embeds: [embed] });
             
             logger.info("Nickname updated successfully:", {
                 targetUserId: targetUser.id,
                 newNickname: newNickname || 'reset'
             });
         } catch (error) {
-            logError(error, 'changenickname', {
-                userId: interaction.user?.id,
-                guildId: interaction.guild?.id,
-                targetUserId: interaction.options?.getUser('user')?.id
+            await this.handleError(interaction, error);
+        }
+    },
+    
+    /**
+     * Handles errors that occur during command execution.
+     * @async
+     * @function handleError
+     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
+     * @param {Error} error - The error that occurred
+     */
+    async handleError(interaction, error) {
+        logError(error, 'changenickname', {
+            userId: interaction.user?.id,
+            guildId: interaction.guild?.id,
+            targetUserId: interaction.options?.getUser('user')?.id
+        });
+        
+        let errorMessage = "⚠️ An unexpected error occurred while changing the nickname.";
+        
+        if (error.message === "BOT_PERMISSION_DENIED") {
+            errorMessage = "⚠️ I don't have permission to manage nicknames in this server.";
+        } else if (error.message === "USER_NOT_MANAGEABLE") {
+            errorMessage = "⚠️ I cannot modify this user's nickname.";
+        } else if (error.message === "INVALID_NICKNAME_LENGTH") {
+            errorMessage = "⚠️ Nickname must be between 1 and 32 characters.";
+        }
+        
+        try {
+            await interaction.editReply({ 
+                content: errorMessage,
+                ephemeral: true 
+            });
+        } catch (followUpError) {
+            logger.error("Failed to send error response for change nickname command:", {
+                error: followUpError.message,
+                originalError: error.message,
+                userId: interaction.user?.id
             });
             
-            await respond("⚠️ An unexpected error occurred while changing the nickname.");
+            await interaction.reply({ 
+                content: errorMessage,
+                ephemeral: true 
+            }).catch(() => {
+            });
         }
+    },
+    
+    /**
+     * We validate that the nickname change can be performed.
+     * This function checks bot and user permissions, nickname length, and role hierarchy.
+     *
+     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
+     * @param {User} targetUser - The user whose nickname will be changed.
+     * @param {string} newNickname - The new nickname to set.
+     * @returns {Object} An object with success status, message, and targetMember if successful.
+     */
+    async validateNicknameChange(interaction, targetUser, newNickname) {
+        const botMember = await interaction.guild.members.fetchMe();
+        if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
+            logger.warn("Bot lacks ManageNicknames permission:", { 
+                guildId: interaction.guild.id
+            });
+            return {
+                success: false,
+                message: "⚠️ I don't have permission to manage nicknames in this server."
+            };
+        }
+
+        if (newNickname.length > 32) {
+            logger.warn("Nickname exceeds maximum length:", {
+                length: newNickname.length
+            });
+            return {
+                success: false,
+                message: "⚠️ Nickname must be between 1 and 32 characters."
+            };
+        }
+
+        if (targetUser.id === interaction.guild.ownerId) {
+            logger.warn("Attempted to change server owner's nickname:", {
+                targetUserId: targetUser.id
+            });
+            return {
+                success: false,
+                message: "⚠️ Cannot change the server owner's nickname."
+            };
+        }
+
+        if (targetUser.id === interaction.client.user.id) {
+            logger.warn("Attempted to change bot's nickname:", {
+                targetUserId: targetUser.id
+            });
+            return {
+                success: false,
+                message: "⚠️ Cannot change the bot's nickname."
+            };
+        }
+
+        if (interaction.guild.ownerId !== interaction.user.id) {
+            const issuerMember = await interaction.guild.members.fetch(interaction.user.id);
+            const targetMember = await interaction.guild.members.fetch(targetUser.id);
+            
+            if (targetMember.roles.highest.position >= issuerMember.roles.highest.position) {
+                logger.warn("User attempted to change nickname of user with higher or equal role:", {
+                    userId: interaction.user.id,
+                    targetUserId: targetUser.id
+                });
+                return {
+                    success: false,
+                    message: "⚠️ You cannot change the nickname of users with a higher or equal role."
+                };
+            }
+        }
+
+        let targetMember;
+        try {
+            targetMember = await interaction.guild.members.fetch(targetUser.id);
+        } catch (e) {
+            logger.warn("Target user not found in guild:", { 
+                targetUserId: targetUser.id
+            });
+            return {
+                success: false,
+                message: "⚠️ The specified user could not be found in this server."
+            };
+        }
+
+        return {
+            success: true,
+            targetMember
+        };
     }
-};
+}; 
