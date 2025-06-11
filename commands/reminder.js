@@ -28,12 +28,6 @@ const REMINDER_EMBED_COLOR = '#cd41ff';
 const REMINDER_EMBED_TITLE = '📌 Server Reminders Status';
 const REMINDER_EMBED_TITLE_SETUP = '✅ Reminder Setup Complete';
 
-const REMINDER_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing reminders.";
-const REMINDER_ERROR_DATABASE_READ = "⚠️ Failed to retrieve reminder settings. Please try again later.";
-const REMINDER_ERROR_DATABASE_WRITE = "⚠️ Failed to update reminder settings. Please try again later.";
-const REMINDER_ERROR_INVALID_CHANNEL = "⚠️ Please select a text channel for reminders.";
-const REMINDER_ERROR_CONFIG_INCOMPLETE = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
-
 /**
  * Module for the /reminder command.
  * We allow administrators to setup and check bump reminder settings for server management.
@@ -292,16 +286,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = REMINDER_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while managing reminders.";
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = REMINDER_ERROR_DATABASE_READ;
+      errorMessage = "⚠️ Failed to retrieve reminder settings. Please try again later.";
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = REMINDER_ERROR_DATABASE_WRITE;
+      errorMessage = "⚠️ Failed to update reminder settings. Please try again later.";
     } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = REMINDER_ERROR_INVALID_CHANNEL;
+      errorMessage = "⚠️ Please select a text channel for reminders.";
     } else if (error.message === "CONFIG_INCOMPLETE") {
-      errorMessage = REMINDER_ERROR_CONFIG_INCOMPLETE;
+      errorMessage = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
     }
     
     try {

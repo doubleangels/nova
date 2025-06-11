@@ -30,14 +30,6 @@ const IMAGES_EMBED_NEXT_LABEL = "Next";
 const IMAGES_EMBED_PREV_EMOJI = "◀️";
 const IMAGES_EMBED_NEXT_EMOJI = "▶️";
 
-const IMAGES_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const IMAGES_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search query.";
-const IMAGES_ERROR_NO_RESULTS = "⚠️ No images found for your search query.";
-const IMAGES_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching for images.";
-const IMAGES_ERROR_API = "⚠️ Failed to fetch search results. Please try again later.";
-const IMAGES_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
-const IMAGES_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-
 /**
  * We convert a string to title case for better presentation.
  * This function capitalizes the first letter of each word.
@@ -89,7 +81,7 @@ module.exports = {
           hasCseId: !!IMAGES_CSE_ID
         });
         return await interaction.editReply({
-          content: IMAGES_ERROR_CONFIG_MISSING,
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -103,7 +95,7 @@ module.exports = {
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters:", { reason: searchParams.error });
         return await interaction.editReply({
-          content: IMAGES_ERROR_INVALID_QUERY,
+          content: "⚠️ Please provide a valid search query.",
           ephemeral: true
         });
       }
@@ -127,7 +119,7 @@ module.exports = {
       if (searchResults.items.length === 0) {
         logger.warn("No image results found for query:", { query: searchParams.query });
         return await interaction.editReply({
-          content: IMAGES_ERROR_NO_RESULTS,
+          content: "⚠️ No images found for your search query.",
           ephemeral: true
         });
       }
@@ -261,14 +253,14 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = IMAGES_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while searching for images.";
     
     if (error.message.includes('API')) {
-      errorMessage = IMAGES_ERROR_API;
+      errorMessage = "⚠️ Failed to fetch search results. Please try again later.";
     } else if (error.message.includes('network')) {
-      errorMessage = IMAGES_ERROR_NETWORK;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message.includes('rate limit')) {
-      errorMessage = IMAGES_ERROR_RATE_LIMIT;
+      errorMessage = "⚠️ API rate limit reached. Please try again in a few moments.";
     }
     
     try {

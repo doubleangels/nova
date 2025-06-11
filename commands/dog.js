@@ -95,16 +95,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = DOG_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while fetching the dog image.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = DOG_ERROR_API;
+      errorMessage = "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.";
     } else if (error.message === "NO_IMAGE_URL") {
-      errorMessage = DOG_ERROR_NO_IMAGE;
+      errorMessage = "⚠️ Couldn't find a dog picture. Try again later.";
     } else if (error.message === "IMAGE_FETCH_ERROR") {
-      errorMessage = DOG_ERROR_IMAGE_FETCH;
+      errorMessage = "⚠️ Couldn't download the dog picture. Try again later.";
     } else if (error.message === "NETWORK_ERROR") {
-      errorMessage = DOG_ERROR_NETWORK;
+      errorMessage = "⚠️ Network error: Could not connect to the service. Please check your internet connection.";
     }
     
     try {

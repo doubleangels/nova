@@ -18,18 +18,6 @@ const IMDB_REQUEST_TIMEOUT = 10000;
 const IMDB_EMBED_COLOR = 0xFFD700;
 const IMDB_EMBED_FOOTER = "Powered by OMDb API";
 
-const IMDB_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const IMDB_ERROR_INVALID_INPUT = "⚠️ Please provide a valid title.";
-const IMDB_ERROR_INVALID_YEAR = "⚠️ Year must be in the format YYYY (e.g., 2021).";
-const IMDB_ERROR_NO_RESULTS = "⚠️ No results found for your search.";
-const IMDB_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching.";
-const IMDB_ERROR_API = "⚠️ Failed to fetch movie information. Please try again later.";
-const IMDB_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
-const IMDB_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const IMDB_ERROR_API_ACCESS = "⚠️ API access denied. Please check API configuration.";
-const IMDB_ERROR_TIMEOUT = "⚠️ The request timed out. Please try again later.";
-const IMDB_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Rate limit exceeded. Please try again later.";
-
 /**
  * We handle the imdb command.
  * This function allows users to search for movies and TV shows using the OMDb API.
@@ -81,7 +69,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: IMDB_ERROR_CONFIG_MISSING,
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -149,7 +137,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: IMDB_ERROR_INVALID_INPUT
+        message: "⚠️ Please provide a valid title."
       };
     }
 
@@ -160,7 +148,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: IMDB_ERROR_INVALID_YEAR
+        message: "⚠️ Year must be in the format YYYY (e.g., 2021)."
       };
     }
     
@@ -229,7 +217,7 @@ module.exports = {
         });
         return {
           error: true,
-          message: IMDB_ERROR_NO_RESULTS
+          message: "⚠️ No results found for your search."
         };
       }
     } catch (apiError) {
@@ -296,26 +284,26 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = IMDB_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while searching.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = IMDB_ERROR_API;
+      errorMessage = "⚠️ Failed to fetch movie information. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = IMDB_ERROR_RATE_LIMIT;
+      errorMessage = "⚠️ API rate limit reached. Please try again in a few moments.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = IMDB_ERROR_NETWORK;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = IMDB_ERROR_NO_RESULTS;
+      errorMessage = "⚠️ No results found for your search.";
     } else if (error.message === "INVALID_TITLE") {
-      errorMessage = IMDB_ERROR_API;
+      errorMessage = "⚠️ Failed to fetch movie information. Please try again later.";
     } else if (error.code === 'ECONNABORTED') {
-      errorMessage = IMDB_ERROR_TIMEOUT;
+      errorMessage = "⚠️ The request timed out. Please try again later.";
     } else if (error.response?.status === 403) {
-      errorMessage = IMDB_ERROR_API_ACCESS;
+      errorMessage = "⚠️ API access denied. Please check API configuration.";
     } else if (error.response?.status === 429) {
-      errorMessage = IMDB_ERROR_RATE_LIMIT_EXCEEDED;
+      errorMessage = "⚠️ Rate limit exceeded. Please try again later.";
     } else if (error.response?.status >= 500) {
-      errorMessage = IMDB_ERROR_API;
+      errorMessage = "⚠️ Failed to fetch movie information. Please try again later.";
     }
     
     try {

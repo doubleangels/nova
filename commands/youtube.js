@@ -204,30 +204,26 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = YT_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while searching YouTube.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = YT_ERROR_API;
+      errorMessage = "⚠️ Failed to search YouTube. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = YT_ERROR_RATE_LIMIT;
+      errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = YT_ERROR_NETWORK;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = YT_ERROR_NO_RESULTS;
-    } else if (error.message === "INVALID_VIDEO") {
-      errorMessage = YT_ERROR_INVALID_VIDEO;
-    } else if (error.code === 'ECONNABORTED') {
-      errorMessage = YT_ERROR_REQUEST_TIMEOUT;
-    } else if (error.response?.status === 403) {
-      errorMessage = YT_ERROR_ACCESS_DENIED;
-    } else if (error.response?.status === 429) {
-      errorMessage = YT_ERROR_RATE_LIMIT_EXCEEDED;
-    } else if (error.response?.status >= 500) {
-      errorMessage = YT_ERROR_API;
+      errorMessage = "⚠️ No results found for your search query.";
+    } else if (error.message === "INVALID_QUERY") {
+      errorMessage = "⚠️ Please provide a valid search query.";
     } else if (error.message === "INVALID_CONTENT_TYPE") {
-      errorMessage = YT_ERROR_INVALID_CONTENT_TYPE;
-    } else if (error.message === "SEARCH_FAILED") {
-      errorMessage = YT_ERROR_SEARCH_FAILED;
+      errorMessage = "⚠️ Invalid content type specified.";
+    } else if (error.message === "INVALID_SORT_METHOD") {
+      errorMessage = "⚠️ Invalid sort method specified.";
+    } else if (error.message === "INVALID_DURATION") {
+      errorMessage = "⚠️ Invalid duration specified.";
+    } else if (error.message === "CONFIG_MISSING") {
+      errorMessage = "⚠️ YouTube API key is missing. Please contact an administrator.";
     }
     
     try {

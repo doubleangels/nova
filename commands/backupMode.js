@@ -19,13 +19,6 @@ const BACKUP_EMBED_FOOTER_PREFIX = "Requested by";
 const BACKUP_EMBED_TITLE_STATUS = '🔄 Backup Mode Status';
 const BACKUP_EMBED_TITLE_UPDATE = '🔄 Backup Mode Updated';
 
-const BACKUP_ERROR_DATABASE_READ = "⚠️ Failed to retrieve backup mode settings. Please try again later.";
-const BACKUP_ERROR_DATABASE_WRITE = "⚠️ Failed to save backup mode settings. Please try again later.";
-const BACKUP_ERROR_INVALID_CHANNEL = "⚠️ The channel must be a text channel for welcome messages.";
-const BACKUP_ERROR_INVALID_ROLE = "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.";
-const BACKUP_ERROR_NO_SETTINGS = "⚠️ Please provide at least one setting to update (channel, role, or enabled status).";
-const BACKUP_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
-
 const BACKUP_STATUS_DISABLED = "❌";
 const BACKUP_STATUS_ENABLED = "✅";
 
@@ -95,16 +88,16 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = BACKUP_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
       
       if (error.message === "DATABASE_READ_ERROR") {
-        errorMessage = BACKUP_ERROR_DATABASE_READ;
+        errorMessage = "⚠️ Failed to retrieve backup mode settings. Please try again later.";
       } else if (error.message === "DATABASE_WRITE_ERROR") {
-        errorMessage = BACKUP_ERROR_DATABASE_WRITE;
+        errorMessage = "⚠️ Failed to save backup mode settings. Please try again later.";
       } else if (error.message === "INVALID_CHANNEL_TYPE") {
-        errorMessage = BACKUP_ERROR_INVALID_CHANNEL;
+        errorMessage = "⚠️ The channel must be a text channel for welcome messages.";
       } else if (error.message === "INVALID_ROLE") {
-        errorMessage = BACKUP_ERROR_INVALID_ROLE;
+        errorMessage = "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.";
       }
       
       try {
@@ -149,7 +142,7 @@ module.exports = {
       await this.updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings);
     } else {
       await interaction.editReply({
-        content: BACKUP_ERROR_NO_SETTINGS
+        content: "⚠️ Please provide at least one setting to update (channel, role, or enabled status)."
       });
     }
   },
@@ -210,7 +203,7 @@ module.exports = {
         type: channelOption.type 
       });
       await interaction.editReply({
-        content: BACKUP_ERROR_INVALID_CHANNEL,
+        content: "⚠️ The channel must be a text channel for welcome messages.",
         ephemeral: true
       });
       return true;
@@ -222,7 +215,7 @@ module.exports = {
         managed: roleOption.managed 
       });
       await interaction.editReply({
-        content: BACKUP_ERROR_INVALID_ROLE,
+        content: "⚠️ I cannot assign the selected role. Please choose a role that is below my highest role.",
         ephemeral: true
       });
       return true;

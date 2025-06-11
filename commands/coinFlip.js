@@ -13,10 +13,6 @@ const COIN_EMBED_COLOR = '#FFD700';
 const COIN_EMBED_FOOTER_PREFIX = "Requested by";
 const COIN_EMBED_TITLE = 'Coin Flip';
 
-const COIN_ERROR_RESPONSE_FAILED = "⚠️ Failed to send coin flip result.";
-const COIN_ERROR_RESULT_FAILED = "⚠️ Failed to generate coin flip result.";
-const COIN_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while flipping the coin.";
-
 const COIN_FACE_HEADS = 'Heads';
 const COIN_FACE_TAILS = 'Tails';
 const COIN_HEADS_PROBABILITY = 0.5;
@@ -100,12 +96,12 @@ module.exports = {
             guildId: interaction.guild?.id
         });
         
-        let errorMessage = COIN_ERROR_UNEXPECTED;
+        let errorMessage = "⚠️ An unexpected error occurred while flipping the coin.";
         
-        if (error.message === COIN_ERROR_RESULT_FAILED) {
-            errorMessage = COIN_ERROR_RESULT_FAILED;
-        } else if (error.message === COIN_ERROR_RESPONSE_FAILED) {
-            errorMessage = COIN_ERROR_RESPONSE_FAILED;
+        if (error.message === "RESULT_FAILED") {
+            errorMessage = "⚠️ Failed to generate coin flip result.";
+        } else if (error.message === "RESPONSE_FAILED") {
+            errorMessage = "⚠️ Failed to send coin flip result.";
         }
         
         try {

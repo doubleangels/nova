@@ -79,7 +79,7 @@ module.exports = {
                 guildId: interaction.guildId
             });
             return await interaction.reply({
-                content: PERMS_ERROR_CONFIG_MISSING,
+                content: "⚠️ This command is not properly configured. Please contact an administrator.",
                 ephemeral: true
             });
         }
@@ -114,7 +114,7 @@ module.exports = {
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
-                    content: PERMS_ERROR_USER_NOT_FOUND,
+                    content: "⚠️ The specified user could not be found in this server.",
                     ephemeral: true
                 });
             }
@@ -123,7 +123,7 @@ module.exports = {
             if (!colorValidationResult.success) {
                 logger.warn("Invalid color format provided:", { colorHex });
                 return await interaction.editReply({
-                    content: PERMS_ERROR_INVALID_COLOR,
+                    content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
                     ephemeral: true
                 });
             }
@@ -177,7 +177,7 @@ module.exports = {
             logger.warn("Invalid role name provided.", { roleName });
             return {
                 success: false,
-                message: PERMS_ERROR_INVALID_ROLE_NAME
+                message: "⚠️ Please provide a valid role name."
             };
         }
 
@@ -212,7 +212,7 @@ module.exports = {
             logger.error("Reference role not found.", { roleId: PERMS_POSITION_ABOVE_ROLE_ID });
             return {
                 success: false,
-                message: PERMS_ERROR_ROLE_NOT_FOUND
+                message: "⚠️ Required role not found. Please contact an administrator."
             };
         }
         
@@ -221,7 +221,7 @@ module.exports = {
             logger.error("Additional role not found.", { roleId: PERMS_FREN_ROLE_ID });
             return {
                 success: false,
-                message: PERMS_ERROR_ROLE_NOT_FOUND
+                message: "⚠️ Required role not found. Please contact an administrator."
             };
         }
         
@@ -233,7 +233,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: PERMS_ERROR_INSUFFICIENT_PERMISSIONS
+                message: "⚠️ I don't have permission to create or assign roles."
             };
         }
         
@@ -278,18 +278,18 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
-        let errorMessage = PERMS_ERROR_UNEXPECTED;
+        let errorMessage = "⚠️ An unexpected error occurred while granting permissions.";
         
         if (error.message === "CONFIG_MISSING") {
-            errorMessage = PERMS_ERROR_CONFIG_MISSING;
+            errorMessage = "⚠️ This command is not properly configured. Please contact an administrator.";
         } else if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = PERMS_ERROR_INSUFFICIENT_PERMISSIONS;
+            errorMessage = "⚠️ I don't have permission to create or assign roles.";
         } else if (error.message === "INVALID_ROLE_NAME") {
-            errorMessage = PERMS_ERROR_INVALID_ROLE_NAME;
+            errorMessage = "⚠️ Please provide a valid role name.";
         } else if (error.message === "INVALID_COLOR") {
-            errorMessage = PERMS_ERROR_INVALID_COLOR;
+            errorMessage = "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.";
         } else if (error.message === "USER_NOT_FOUND") {
-            errorMessage = PERMS_ERROR_USER_NOT_FOUND;
+            errorMessage = "⚠️ The specified user could not be found in this server.";
         }
         
         try {

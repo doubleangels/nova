@@ -25,16 +25,6 @@ const SPOTIFY_EMBED_NEXT_LABEL = "Next";
 const SPOTIFY_EMBED_PREV_EMOJI = "◀️";
 const SPOTIFY_EMBED_NEXT_EMOJI = "▶️";
 
-const SPOTIFY_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const SPOTIFY_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching Spotify.";
-const SPOTIFY_ERROR_API = "⚠️ Failed to search Spotify. Please try again later.";
-const SPOTIFY_ERROR_RATE_LIMIT = "⚠️ Spotify API rate limit reached. Please try again in a few moments.";
-const SPOTIFY_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const SPOTIFY_ERROR_ACCESS_DENIED = "⚠️ Spotify API access denied. Please check API configuration.";
-const SPOTIFY_ERROR_NO_RESULTS = "⚠️ No results found for your search.";
-const SPOTIFY_ERROR_INVALID_TRACK = "⚠️ Invalid track specified.";
-const SPOTIFY_ERROR_AUTH = "⚠️ Failed to authenticate with Spotify.";
-
 /**
  * We handle the /spotify command.
  * This function allows users to search for music, albums, artists, playlists, and podcasts on Spotify.
@@ -118,7 +108,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: SPOTIFY_ERROR_CONFIG_MISSING,
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -135,7 +125,7 @@ module.exports = {
       const accessToken = await this.getSpotifyAccessToken();
       if (!accessToken) {
         return await interaction.editReply({
-          content: SPOTIFY_ERROR_ACCESS_DENIED,
+          content: "⚠️ Spotify API access denied. Please check API configuration.",
           ephemeral: true
         });
       }
@@ -161,7 +151,7 @@ module.exports = {
 
       if (!results || results.length === 0) {
         return await interaction.editReply({
-          content: SPOTIFY_ERROR_NO_RESULTS,
+          content: "⚠️ No results found for your search.",
           ephemeral: true
         });
       }
@@ -645,20 +635,20 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = SPOTIFY_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while searching Spotify.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = SPOTIFY_ERROR_API;
+      errorMessage = "⚠️ Failed to search Spotify. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = SPOTIFY_ERROR_RATE_LIMIT;
+      errorMessage = "⚠️ Spotify API rate limit reached. Please try again in a few moments.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = SPOTIFY_ERROR_NETWORK;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = SPOTIFY_ERROR_NO_RESULTS;
+      errorMessage = "⚠️ No results found for your search.";
     } else if (error.message === "INVALID_TRACK") {
-      errorMessage = SPOTIFY_ERROR_INVALID_TRACK;
+      errorMessage = "⚠️ Invalid track specified.";
     } else if (error.message === "AUTH_ERROR") {
-      errorMessage = SPOTIFY_ERROR_AUTH;
+      errorMessage = "⚠️ Failed to authenticate with Spotify.";
     }
     
     try {

@@ -12,11 +12,6 @@ const { validateAndNormalizeColor } = require('../utils/colorUtils');
 const COLOR_EMBED_FOOTER_PREFIX = "Updated by";
 const COLOR_EMBED_TITLE = 'Role Color Updated';
 
-const COLOR_ERROR_BOT_PERMISSION = "⚠️ I don't have permission to manage roles in this server.";
-const COLOR_ERROR_INVALID_FORMAT = "⚠️ Invalid color format. Please provide a valid hex color code (e.g., #FF0000).";
-const COLOR_ERROR_ROLE_NOT_MANAGEABLE = "⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.";
-const COLOR_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
-
 /**
  * We handle the changecolor command.
  * This function changes the color of a specified role to the provided hex color.
@@ -100,14 +95,14 @@ module.exports = {
                 roleId: interaction.options?.getRole('role')?.id
             });
 
-            let errorMessage = COLOR_ERROR_UNEXPECTED;
+            let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
             
             if (error.message === "INVALID_COLOR") {
-                errorMessage = COLOR_ERROR_INVALID_FORMAT;
+                errorMessage = "⚠️ Invalid color format. Please provide a valid hex color code (e.g., #FF0000).";
             } else if (error.message === "BOT_PERMISSION_DENIED") {
-                errorMessage = COLOR_ERROR_BOT_PERMISSION;
+                errorMessage = "⚠️ I don't have permission to manage roles in this server.";
             } else if (error.message === "ROLE_NOT_MANAGEABLE") {
-                errorMessage = COLOR_ERROR_ROLE_NOT_MANAGEABLE;
+                errorMessage = "⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.";
             }
             
             try {

@@ -19,11 +19,6 @@ const CAT_EMBED_TITLE = '🐱 Random Cat';
 
 const CAT_DEFAULT_FILENAME = 'cat.jpg';
 
-const CAT_ERROR_API = "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.";
-const CAT_ERROR_INVALID_RESPONSE = "⚠️ The cat service didn't send a proper image. Please try again.";
-const CAT_ERROR_NETWORK = "⚠️ Couldn't connect to the cat image service. Please check your internet connection.";
-const CAT_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cat')
@@ -68,14 +63,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = CAT_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
       
       if (error.message === "API_ERROR") {
-        errorMessage = CAT_ERROR_API;
+        errorMessage = "⚠️ Couldn't fetch a cat picture due to an API error. Try again later.";
       } else if (error.message === "INVALID_RESPONSE") {
-        errorMessage = CAT_ERROR_INVALID_RESPONSE;
+        errorMessage = "⚠️ The cat service didn't send a proper image. Please try again.";
       } else if (error.message === "NETWORK_ERROR") {
-        errorMessage = CAT_ERROR_NETWORK;
+        errorMessage = "⚠️ Couldn't connect to the cat image service. Please check your internet connection.";
       }
       
       try {

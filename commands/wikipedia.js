@@ -399,26 +399,26 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = "⚠️ An unexpected error occurred while searching Wikipedia.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = "⚠️ Failed to search Wikipedia. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message === "NO_RESULTS") {
-      errorMessage = ERROR_MESSAGES.NO_RESULTS_FOUND;
+      errorMessage = "⚠️ No results found for your search query.";
     } else if (error.message === "INVALID_QUERY") {
-      errorMessage = ERROR_MESSAGES.INVALID_QUERY;
+      errorMessage = "⚠️ Please provide a valid search query.";
     } else if (error.code === 'ECONNABORTED') {
-      errorMessage = ERROR_MESSAGES.REQUEST_TIMEOUT;
+      errorMessage = "⚠️ Request timed out. Please try again later.";
     } else if (error.response?.status === 403) {
-      errorMessage = ERROR_MESSAGES.API_ACCESS_DENIED;
+      errorMessage = "⚠️ Access to Wikipedia API denied. Please try again later.";
     } else if (error.response?.status === 429) {
-      errorMessage = ERROR_MESSAGES.RATE_LIMIT_EXCEEDED;
+      errorMessage = "⚠️ Too many requests. Please try again in a few minutes.";
     } else if (error.response?.status >= 500) {
-      errorMessage = ERROR_MESSAGES.API_ERROR;
+      errorMessage = "⚠️ Wikipedia API is currently unavailable. Please try again later.";
     }
     
     try {

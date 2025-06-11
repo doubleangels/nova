@@ -23,12 +23,6 @@ const TROLL_EMBED_COLOR_DISABLED = '#FF0000';
 const TROLL_EMBED_TITLE_STATUS = '🎭 Troll Mode Status';
 const TROLL_EMBED_TITLE_UPDATE = '🎭 Troll Mode %s';
 
-const TROLL_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing troll mode settings.";
-const TROLL_ERROR_DATABASE_READ = "⚠️ Failed to retrieve troll mode settings. Please try again later.";
-const TROLL_ERROR_DATABASE_WRITE = "⚠️ Failed to update troll mode settings. Please try again later.";
-const TROLL_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to manage troll mode settings.";
-const TROLL_ERROR_INVALID_SETTINGS = "⚠️ Invalid troll mode settings provided.";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('trollmode')
@@ -249,16 +243,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = TROLL_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while managing troll mode settings.";
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = TROLL_ERROR_DATABASE_READ;
+      errorMessage = "⚠️ Failed to retrieve troll mode settings. Please try again later.";
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = TROLL_ERROR_DATABASE_WRITE;
+      errorMessage = "⚠️ Failed to update troll mode settings. Please try again later.";
     } else if (error.message === "PERMISSION_DENIED") {
-      errorMessage = TROLL_ERROR_PERMISSION_DENIED;
+      errorMessage = "⚠️ You don't have permission to manage troll mode settings.";
     } else if (error.message === "INVALID_SETTINGS") {
-      errorMessage = TROLL_ERROR_INVALID_SETTINGS;
+      errorMessage = "⚠️ Invalid troll mode settings provided.";
     }
     
     try {

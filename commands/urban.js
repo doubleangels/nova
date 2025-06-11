@@ -100,24 +100,21 @@ module.exports = {
     async handleError(interaction, error) {
         logError(error, 'urban', {
             userId: interaction.user?.id,
-            guildId: interaction.guild?.id,
-            channelId: interaction.channel?.id
+            guildId: interaction.guild?.id
         });
         
-        let errorMessage = URBAN_ERROR_UNEXPECTED;
+        let errorMessage = "⚠️ An unexpected error occurred while searching Urban Dictionary.";
         
-        if (error.message === "NO_DEFINITION") {
-            errorMessage = URBAN_ERROR_NO_RESULTS;
-        } else if (error.message === "INVALID_QUERY") {
-            errorMessage = URBAN_ERROR_INVALID_QUERY;
-        } else if (error.code === 'ECONNABORTED') {
-            errorMessage = URBAN_ERROR_REQUEST_TIMEOUT;
-        } else if (error.response?.status === 403) {
-            errorMessage = URBAN_ERROR_ACCESS_DENIED;
-        } else if (error.response?.status === 429) {
-            errorMessage = URBAN_ERROR_RATE_LIMIT_EXCEEDED;
-        } else if (error.response?.status >= 500) {
-            errorMessage = URBAN_ERROR_API;
+        if (error.message === "API_ERROR") {
+            errorMessage = "⚠️ Failed to search Urban Dictionary. Please try again later.";
+        } else if (error.message === "RATE_LIMIT") {
+            errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
+        } else if (error.message === "NETWORK_ERROR") {
+            errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
+        } else if (error.message === "NO_RESULTS") {
+            errorMessage = "⚠️ No definitions found for your search term.";
+        } else if (error.message === "INVALID_TERM") {
+            errorMessage = "⚠️ Please provide a valid search term.";
         }
         
         try {

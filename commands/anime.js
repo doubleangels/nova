@@ -17,13 +17,6 @@ const ANIME_EMBED_FOOTER = "Powered by MyAnimeList API";
 const ANIME_SEARCH_LIMIT = 1;
 const ANIME_WEBSITE_URL = 'https://myanimelist.net/anime';
 
-const ANIME_ERROR_API = "⚠️ Failed to communicate with MyAnimeList API. Please try again later.";
-const ANIME_ERROR_CONFIG = "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.";
-const ANIME_ERROR_NETWORK = "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.";
-const ANIME_ERROR_NO_RESULTS = "⚠️ No anime found matching your search. Please try a different title.";
-const ANIME_ERROR_RATE_LIMIT = "⚠️ MyAnimeList API rate limit reached. Please try again in a few moments.";
-const ANIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred. Please try again later.";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
@@ -46,7 +39,7 @@ module.exports = {
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
-          content: ANIME_ERROR_CONFIG,
+          content: "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.",
           ephemeral: true
         });
         return;
@@ -76,7 +69,7 @@ module.exports = {
       } else {
         logger.info("No anime results found for query:", { query: formattedTitle });
         await interaction.editReply({
-          content: ANIME_ERROR_NO_RESULTS
+          content: "⚠️ No anime found matching your search. Please try a different title."
         });
       }
     } catch (error) {
@@ -87,14 +80,14 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = ANIME_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
       
       if (error.message === "API_ERROR") {
-        errorMessage = ANIME_ERROR_API;
+        errorMessage = "⚠️ Failed to communicate with MyAnimeList API. Please try again later.";
       } else if (error.message === "API_RATE_LIMIT") {
-        errorMessage = ANIME_ERROR_RATE_LIMIT;
+        errorMessage = "⚠️ MyAnimeList API rate limit reached. Please try again in a few moments.";
       } else if (error.message === "API_NETWORK_ERROR") {
-        errorMessage = ANIME_ERROR_NETWORK;
+        errorMessage = "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.";
       }
       
       try {

@@ -16,17 +16,6 @@ const YAPPERS_TOP_VOICE_LIMIT = 5;
 
 const YAPPERS_EMBED_COLOR = 0xcd41ff;
 
-const YAPPERS_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching statistics.";
-const YAPPERS_ERROR_DM_NOT_SUPPORTED = "⚠️ This command cannot be used in direct messages.";
-const YAPPERS_ERROR_DATABASE_READ = "⚠️ Failed to retrieve statistics from the database. Please try again later.";
-const YAPPERS_ERROR_PERMISSION = "⚠️ You don't have permission to view server statistics.";
-const YAPPERS_ERROR_INVALID_GUILD = "⚠️ This command can only be used in a server.";
-const YAPPERS_ERROR_NO_STATS = "⚠️ No statistics available for this server.";
-const YAPPERS_ERROR_INVALID_CHANNEL = "⚠️ Invalid channel specified.";
-const YAPPERS_ERROR_CHANNEL_NOT_FOUND = "⚠️ The specified channel could not be found.";
-const YAPPERS_ERROR_INVALID_USER = "⚠️ Invalid user specified.";
-const YAPPERS_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found.";
-
 /**
  * Formats time in minutes to a human-readable string.
  * @function formatTime
@@ -87,7 +76,7 @@ module.exports = {
         });
         
         return await interaction.reply({
-          content: YAPPERS_ERROR_DM_NOT_SUPPORTED,
+          content: "⚠️ This command cannot be used in direct messages.",
           ephemeral: true
         });
       }
@@ -206,26 +195,26 @@ module.exports = {
       userTag: interaction.user.tag
     });
 
-    let errorMessage = YAPPERS_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while fetching statistics.";
     
     if (error.message === "DM_NOT_SUPPORTED") {
-      errorMessage = YAPPERS_ERROR_DM_NOT_SUPPORTED;
+      errorMessage = "⚠️ This command cannot be used in direct messages.";
     } else if (error.message === "DATABASE_ERROR") {
-      errorMessage = YAPPERS_ERROR_DATABASE_READ;
+      errorMessage = "⚠️ Failed to retrieve statistics from the database. Please try again later.";
     } else if (error.message === "PERMISSION_DENIED") {
-      errorMessage = YAPPERS_ERROR_PERMISSION;
+      errorMessage = "⚠️ You don't have permission to view server statistics.";
     } else if (error.message === "INVALID_GUILD") {
-      errorMessage = YAPPERS_ERROR_INVALID_GUILD;
+      errorMessage = "⚠️ This command can only be used in a server.";
     } else if (error.message === "NO_STATISTICS") {
-      errorMessage = YAPPERS_ERROR_NO_STATS;
+      errorMessage = "⚠️ No statistics available for this server.";
     } else if (error.message === "INVALID_CHANNEL") {
-      errorMessage = YAPPERS_ERROR_INVALID_CHANNEL;
+      errorMessage = "⚠️ Invalid channel specified.";
     } else if (error.message === "CHANNEL_NOT_FOUND") {
-      errorMessage = YAPPERS_ERROR_CHANNEL_NOT_FOUND;
+      errorMessage = "⚠️ The specified channel could not be found.";
     } else if (error.message === "INVALID_USER") {
-      errorMessage = YAPPERS_ERROR_INVALID_USER;
+      errorMessage = "⚠️ Invalid user specified.";
     } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = YAPPERS_ERROR_USER_NOT_FOUND;
+      errorMessage = "⚠️ The specified user could not be found.";
     }
     
     await interaction.editReply({

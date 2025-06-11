@@ -21,11 +21,6 @@ const FIX_EMBED_COLOR = '#cd41ff';
 const FIX_EMBED_FOOTER_PREFIX = "Updated by";
 const FIX_EMBED_TITLE = 'Disboard Bump Reminder Fixed';
 
-const FIX_ERROR_CHANNEL_NOT_FOUND = "⚠️ The reminder channel could not be found.";
-const FIX_ERROR_CONFIG_INCOMPLETE = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
-const FIX_ERROR_DATABASE = "⚠️ Failed to save reminder data to the database. Please try again later.";
-const FIX_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fixing the reminder.";
-
 const FIX_DELAY_SECONDS = 7200;
 
 const pool = new Pool({
@@ -71,7 +66,7 @@ module.exports = {
 
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
-        await interaction.editReply(FIX_ERROR_CONFIG_INCOMPLETE);
+        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.");
         return;
       }
 
@@ -173,12 +168,12 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = FIX_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while fixing the reminder.";
     
     if (error.message === "DATABASE_ERROR") {
-      errorMessage = FIX_ERROR_DATABASE;
+      errorMessage = "⚠️ Failed to save reminder data to the database. Please try again later.";
     } else if (error.message === "CHANNEL_NOT_FOUND") {
-      errorMessage = FIX_ERROR_CHANNEL_NOT_FOUND;
+      errorMessage = "⚠️ The reminder channel could not be found.";
     }
     
     try {

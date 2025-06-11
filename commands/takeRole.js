@@ -103,16 +103,16 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = ROLE_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while removing the role.";
     
     if (error.message === "INSUFFICIENT_PERMISSIONS") {
-      errorMessage = ROLE_ERROR_INSUFFICIENT_PERMISSIONS;
+      errorMessage = "⚠️ You don't have permission to remove this role.";
     } else if (error.message === "MANAGED_ROLE") {
-      errorMessage = ROLE_ERROR_MANAGED_ROLE;
+      errorMessage = "⚠️ Cannot remove a managed role.";
     } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = ROLE_ERROR_USER_NOT_FOUND;
+      errorMessage = "⚠️ The specified user could not be found in this server.";
     } else if (error.message === "ROLE_NOT_ASSIGNED") {
-      errorMessage = ROLE_ERROR_NOT_ASSIGNED;
+      errorMessage = "⚠️ The user does not have this role.";
     }
     
     try {
@@ -152,7 +152,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: ROLE_ERROR_INSUFFICIENT_PERMISSIONS
+        message: "⚠️ You don't have permission to remove this role."
       };
     }
 
@@ -163,7 +163,7 @@ module.exports = {
       });
       return {
         valid: false,
-        message: ROLE_ERROR_MANAGED_ROLE
+        message: "⚠️ Cannot remove a managed role."
       };
     }
     
@@ -172,7 +172,7 @@ module.exports = {
     if (!targetMember) {
       return {
         valid: false,
-        message: ROLE_ERROR_USER_NOT_FOUND
+        message: "⚠️ The specified user could not be found in this server."
       };
     }
 
@@ -184,7 +184,7 @@ module.exports = {
 
       return {
         valid: false,
-        message: ROLE_ERROR_NOT_ASSIGNED
+        message: "⚠️ The user does not have this role."
       };
     }
     
@@ -197,7 +197,7 @@ module.exports = {
       
       return {
         valid: false,
-        message: ROLE_ERROR_HIERARCHY
+        message: "⚠️ Cannot remove a role that is higher than your highest role."
       };
     }
     
@@ -211,7 +211,7 @@ module.exports = {
         
         return {
           valid: false,
-          message: ROLE_ERROR_HIERARCHY
+          message: "⚠️ Cannot remove a role that is higher than your highest role."
         };
       }
     }

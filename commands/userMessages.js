@@ -18,19 +18,6 @@ const MESSAGES_MESSAGE_INDICATOR = '📜';
 const MESSAGES_TIME_INDICATOR = '⏰';
 const MESSAGES_NO_CONTENT_TEXT = '[No text content]';
 
-const MESSAGES_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while fetching user messages.";
-const MESSAGES_ERROR_DM_NOT_SUPPORTED = "⚠️ This command cannot be used in direct messages.";
-const MESSAGES_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found.";
-const MESSAGES_ERROR_INVALID_CHANNEL = "⚠️ Please select a text or announcement channel.";
-const MESSAGES_ERROR_NO_PERMISSION = "⚠️ You don't have permission to view messages in this channel.";
-const MESSAGES_ERROR_FETCH_FAILED = "⚠️ Failed to fetch messages. Please try again later.";
-const MESSAGES_ERROR_INVALID_LIMIT = "⚠️ Invalid message limit specified.";
-const MESSAGES_ERROR_INVALID_DAYS = "⚠️ Invalid day limit specified.";
-const MESSAGES_ERROR_CHANNEL_NOT_FOUND = "⚠️ The specified channel could not be found.";
-const MESSAGES_ERROR_NO_MESSAGES = "⚠️ No messages found matching your criteria.";
-const MESSAGES_ERROR_INVALID_FILTER = "⚠️ Invalid filter specified.";
-const MESSAGES_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to use this command.";
-
 /**
  * We handle the usermessages command.
  * This function allows users to search and display messages from a specific user in a channel.
@@ -99,7 +86,7 @@ module.exports = {
         });
         
         return await interaction.reply({
-          content: MESSAGES_ERROR_DM_NOT_SUPPORTED,
+          content: "⚠️ This command cannot be used in direct messages.",
           ephemeral: true
         });
       }
@@ -234,7 +221,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: MESSAGES_ERROR_USER_NOT_FOUND
+        errorMessage: "⚠️ The specified user could not be found."
       };
     }
     
@@ -247,7 +234,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: MESSAGES_ERROR_INVALID_CHANNEL
+        errorMessage: "⚠️ Please select a text or announcement channel."
       };
     }
     
@@ -262,7 +249,7 @@ module.exports = {
       
       return {
         valid: false,
-        errorMessage: MESSAGES_ERROR_NO_PERMISSION
+        errorMessage: "⚠️ You don't have permission to view messages in this channel."
       };
     }
     
@@ -408,30 +395,30 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = MESSAGES_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while fetching user messages.";
     
-    if (error.message === MESSAGES_ERROR_DM_NOT_SUPPORTED) {
-      errorMessage = MESSAGES_ERROR_DM_NOT_SUPPORTED;
-    } else if (error.message === MESSAGES_ERROR_USER_NOT_FOUND) {
-      errorMessage = MESSAGES_ERROR_USER_NOT_FOUND;
-    } else if (error.message === MESSAGES_ERROR_INVALID_CHANNEL) {
-      errorMessage = MESSAGES_ERROR_INVALID_CHANNEL;
-    } else if (error.message === MESSAGES_ERROR_NO_PERMISSION) {
-      errorMessage = MESSAGES_ERROR_NO_PERMISSION;
-    } else if (error.message === MESSAGES_ERROR_FETCH_FAILED) {
-      errorMessage = MESSAGES_ERROR_FETCH_FAILED;
-    } else if (error.message === MESSAGES_ERROR_INVALID_LIMIT) {
-      errorMessage = MESSAGES_ERROR_INVALID_LIMIT;
-    } else if (error.message === MESSAGES_ERROR_INVALID_DAYS) {
-      errorMessage = MESSAGES_ERROR_INVALID_DAYS;
-    } else if (error.message === MESSAGES_ERROR_CHANNEL_NOT_FOUND) {
-      errorMessage = MESSAGES_ERROR_CHANNEL_NOT_FOUND;
-    } else if (error.message === MESSAGES_ERROR_NO_MESSAGES) {
-      errorMessage = MESSAGES_ERROR_NO_MESSAGES;
-    } else if (error.message === MESSAGES_ERROR_INVALID_FILTER) {
-      errorMessage = MESSAGES_ERROR_INVALID_FILTER;
-    } else if (error.message === MESSAGES_ERROR_PERMISSION_DENIED) {
-      errorMessage = MESSAGES_ERROR_PERMISSION_DENIED;
+    if (error.message === "DM_NOT_SUPPORTED") {
+      errorMessage = "⚠️ This command cannot be used in direct messages.";
+    } else if (error.message === "USER_NOT_FOUND") {
+      errorMessage = "⚠️ The specified user could not be found.";
+    } else if (error.message === "INVALID_CHANNEL") {
+      errorMessage = "⚠️ Please select a text or announcement channel.";
+    } else if (error.message === "NO_PERMISSION") {
+      errorMessage = "⚠️ You don't have permission to view messages in this channel.";
+    } else if (error.message === "FETCH_FAILED") {
+      errorMessage = "⚠️ Failed to fetch messages. Please try again later.";
+    } else if (error.message === "INVALID_LIMIT") {
+      errorMessage = "⚠️ Invalid message limit specified.";
+    } else if (error.message === "INVALID_DAYS") {
+      errorMessage = "⚠️ Invalid day limit specified.";
+    } else if (error.message === "CHANNEL_NOT_FOUND") {
+      errorMessage = "⚠️ The specified channel could not be found.";
+    } else if (error.message === "NO_MESSAGES") {
+      errorMessage = "⚠️ No messages found matching your criteria.";
+    } else if (error.message === "INVALID_FILTER") {
+      errorMessage = "⚠️ Invalid filter specified.";
+    } else if (error.message === "PERMISSION_DENIED") {
+      errorMessage = "⚠️ You don't have permission to use this command.";
     }
     
     try {

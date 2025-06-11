@@ -5,7 +5,7 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
-const { getErrorMessage, logError, ERROR_MESSAGES } = require('../errors');
+const { logError } = require('../errors');
 
 // These are the configuration constants for the weather command.
 const WEATHER_API_BASE_URL = 'https://api.pirateweather.net/forecast/';
@@ -121,7 +121,7 @@ module.exports = {
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: ERROR_MESSAGES.CONFIG_MISSING,
+          content: "⚠️ Weather API key is missing in configuration. Please contact the administrator.",
           ephemeral: true
         });
         return;
@@ -152,7 +152,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: ERROR_MESSAGES.WEATHER_INVALID_LOCATION,
+          content: "⚠️ Failed to get coordinates for the specified location. Please try a different place name.",
           ephemeral: true
         });
         return;
@@ -178,7 +178,7 @@ module.exports = {
         });
         
         await interaction.editReply({ 
-          content: ERROR_MESSAGES.WEATHER_API_ERROR,
+          content: "⚠️ Failed to fetch weather data. Please try again later.",
           ephemeral: true
         });
         return;
@@ -473,16 +473,16 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = ERROR_MESSAGES.UNEXPECTED_ERROR;
+    let errorMessage = "⚠️ An unexpected error occurred while fetching weather information.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = ERROR_MESSAGES.WEATHER_API_ERROR;
+      errorMessage = "⚠️ Failed to fetch weather data. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = ERROR_MESSAGES.API_RATE_LIMIT;
+      errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = ERROR_MESSAGES.API_NETWORK_ERROR;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message === "INVALID_LOCATION") {
-      errorMessage = ERROR_MESSAGES.WEATHER_INVALID_LOCATION;
+      errorMessage = "⚠️ Could not find the specified location. Please try a different place name.";
     }
     
     try {
@@ -501,7 +501,6 @@ module.exports = {
         content: errorMessage,
         ephemeral: true 
       }).catch(() => {
-        // We silently catch if all error handling attempts fail.
       });
     }
   }

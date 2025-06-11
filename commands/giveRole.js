@@ -13,13 +13,6 @@ const { logError } = require('../errors');
 const ROLE_EMBED_TITLE = 'Role Assigned';
 const ROLE_EMBED_FOOTER_PREFIX = "Updated by";
 
-const ROLE_ERROR_INSUFFICIENT_PERMISSIONS = "⚠️ I don't have permission to assign this role.";
-const ROLE_ERROR_ROLE_NOT_FOUND = "⚠️ The specified role could not be found.";
-const ROLE_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
-const ROLE_ERROR_INVALID_ROLE = "⚠️ Please provide a valid role.";
-const ROLE_ERROR_INVALID_USER = "⚠️ Please provide a valid user.";
-const ROLE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while assigning the role.";
-
 /**
  * We handle the giverole command.
  * This function assigns a specified role to a specified user in the server.
@@ -95,7 +88,7 @@ module.exports = {
                     targetRolePosition: role.position
                 });
                 return await interaction.editReply({
-                    content: ROLE_ERROR_INSUFFICIENT_PERMISSIONS,
+                    content: "⚠️ I don't have permission to assign this role.",
                     ephemeral: true
                 });
             }
@@ -141,7 +134,7 @@ module.exports = {
             logger.warn("Invalid role provided.");
             return {
                 success: false,
-                message: ROLE_ERROR_INVALID_ROLE
+                message: "⚠️ Please provide a valid role."
             };
         }
 
@@ -149,7 +142,7 @@ module.exports = {
             logger.warn("Invalid user provided.");
             return {
                 success: false,
-                message: ROLE_ERROR_INVALID_USER
+                message: "⚠️ Please provide a valid user."
             };
         }
         
@@ -170,14 +163,14 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
-        let errorMessage = ROLE_ERROR_UNEXPECTED;
+        let errorMessage = "⚠️ An unexpected error occurred while assigning the role.";
         
         if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = ROLE_ERROR_INSUFFICIENT_PERMISSIONS;
+            errorMessage = "⚠️ I don't have permission to assign this role.";
         } else if (error.message === "ROLE_NOT_FOUND") {
-            errorMessage = ROLE_ERROR_ROLE_NOT_FOUND;
+            errorMessage = "⚠️ The specified role could not be found.";
         } else if (error.message === "USER_NOT_FOUND") {
-            errorMessage = ROLE_ERROR_USER_NOT_FOUND;
+            errorMessage = "⚠️ The specified user could not be found in this server.";
         }
         
         try {

@@ -22,11 +22,6 @@ const MUTE_EMBED_COLOR_DISABLED = '#FF0000';
 const MUTE_EMBED_TITLE_STATUS = '🔇 Mute Mode Status';
 const MUTE_EMBED_TITLE_UPDATE = '🔇 Mute Mode Updated';
 
-const MUTE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing mute mode.";
-const MUTE_ERROR_DATABASE_READ = "⚠️ Failed to retrieve mute mode settings. Please try again later.";
-const MUTE_ERROR_DATABASE_WRITE = "⚠️ Failed to update mute mode settings. Please try again later.";
-const MUTE_ERROR_INVALID_TIME = "⚠️ Invalid time limit specified. Using default value.";
-
 /**
  * We handle the mutemode command.
  * This function allows administrators to manage auto-kicking of inactive users.
@@ -313,14 +308,14 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = MUTE_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while managing mute mode.";
     
     if (error.message === "DATABASE_READ_ERROR") {
-      errorMessage = MUTE_ERROR_DATABASE_READ;
+      errorMessage = "⚠️ Failed to retrieve mute mode settings. Please try again later.";
     } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = MUTE_ERROR_DATABASE_WRITE;
+      errorMessage = "⚠️ Failed to update mute mode settings. Please try again later.";
     } else if (error.message === "INVALID_TIME_LIMIT") {
-      errorMessage = MUTE_ERROR_INVALID_TIME;
+      errorMessage = "⚠️ Invalid time limit specified. Using default value.";
     }
     
     try {

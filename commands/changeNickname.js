@@ -13,15 +13,6 @@ const NICKNAME_EMBED_COLOR_DEFAULT = '#cd41ff';
 const NICKNAME_EMBED_FOOTER_PREFIX = "Updated by";
 const NICKNAME_EMBED_TITLE = 'Nickname Updated';
 
-const NICKNAME_ERROR_BOT_PERMISSION = "⚠️ I don't have permission to manage nicknames in this server.";
-const NICKNAME_ERROR_BOT_NICKNAME = "⚠️ Cannot change the bot's nickname.";
-const NICKNAME_ERROR_INVALID_LENGTH = "⚠️ Nickname must be between 1 and 32 characters.";
-const NICKNAME_ERROR_OWNER = "⚠️ Cannot change the server owner's nickname.";
-const NICKNAME_ERROR_ROLE_HIERARCHY = "⚠️ You cannot change the nickname of users with a higher or equal role.";
-const NICKNAME_ERROR_USER_NOT_FOUND = "⚠️ The specified user could not be found in this server.";
-const NICKNAME_ERROR_USER_NOT_MANAGEABLE = "⚠️ I cannot modify this user's nickname.";
-const NICKNAME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while changing the nickname.";
-
 const NICKNAME_MAX_LENGTH = 32;
 const NICKNAME_MIN_LENGTH = 1;
 
@@ -124,14 +115,14 @@ module.exports = {
             targetUserId: interaction.options?.getUser('user')?.id
         });
         
-        let errorMessage = NICKNAME_ERROR_UNEXPECTED;
+        let errorMessage = "⚠️ An unexpected error occurred while changing the nickname.";
         
         if (error.message === "BOT_PERMISSION_DENIED") {
-            errorMessage = NICKNAME_ERROR_BOT_PERMISSION;
+            errorMessage = "⚠️ I don't have permission to manage nicknames in this server.";
         } else if (error.message === "USER_NOT_MANAGEABLE") {
-            errorMessage = NICKNAME_ERROR_USER_NOT_MANAGEABLE;
+            errorMessage = "⚠️ I cannot modify this user's nickname.";
         } else if (error.message === "INVALID_NICKNAME_LENGTH") {
-            errorMessage = NICKNAME_ERROR_INVALID_LENGTH;
+            errorMessage = "⚠️ Nickname must be between 1 and 32 characters.";
         }
         
         try {
@@ -171,7 +162,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: NICKNAME_ERROR_BOT_PERMISSION
+                message: "⚠️ I don't have permission to manage nicknames in this server."
             };
         }
 
@@ -181,7 +172,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: NICKNAME_ERROR_INVALID_LENGTH
+                message: "⚠️ Nickname must be between 1 and 32 characters."
             };
         }
 
@@ -191,7 +182,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: NICKNAME_ERROR_OWNER
+                message: "⚠️ Cannot change the server owner's nickname."
             };
         }
 
@@ -201,7 +192,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: NICKNAME_ERROR_BOT_NICKNAME
+                message: "⚠️ Cannot change the bot's nickname."
             };
         }
 
@@ -216,7 +207,7 @@ module.exports = {
                 });
                 return {
                     success: false,
-                    message: NICKNAME_ERROR_ROLE_HIERARCHY
+                    message: "⚠️ You cannot change the nickname of users with a higher or equal role."
                 };
             }
         }
@@ -230,7 +221,7 @@ module.exports = {
             });
             return {
                 success: false,
-                message: NICKNAME_ERROR_USER_NOT_FOUND
+                message: "⚠️ The specified user could not be found in this server."
             };
         }
 

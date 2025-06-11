@@ -17,15 +17,6 @@ const TIMEZONE_EMBED_TITLE_STATUS = '📌 Timezone Status';
 const TIMEZONE_EMBED_TITLE_SETUP = '✅ Timezone Setup Complete';
 const TIMEZONE_EMBED_FOOTER_PREFIX = 'Updated by';
 
-const TIMEZONE_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const TIMEZONE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while managing timezone settings.";
-const TIMEZONE_ERROR_API = "⚠️ Failed to retrieve timezone information. Please try again later.";
-const TIMEZONE_ERROR_ACCESS_DENIED = "⚠️ API access denied. Please check API configuration.";
-const TIMEZONE_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
-const TIMEZONE_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
-const TIMEZONE_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone specified.";
-const TIMEZONE_ERROR_PERMISSION_DENIED = "⚠️ You don't have permission to manage timezones for other users.";
-
 /**
  * We handle the timezone command.
  * This function manages timezone settings for users in the server.
@@ -109,7 +100,7 @@ module.exports = {
           });
           
           await interaction.reply({
-              content: TIMEZONE_ERROR_CONFIG_MISSING,
+              content: "⚠️ This command is not properly configured. Please contact an administrator.",
               ephemeral: true
           });
           return;
@@ -165,7 +156,7 @@ module.exports = {
           });
           
           await interaction.editReply({
-              content: TIMEZONE_ERROR_INVALID_TIMEZONE,
+              content: "⚠️ Invalid timezone specified.",
               ephemeral: true
           });
           return;
@@ -298,7 +289,7 @@ module.exports = {
               
               return {
                   valid: false,
-                  message: TIMEZONE_ERROR_PERMISSION_DENIED
+                  message: "⚠️ You don't have permission to manage timezones for other users."
               };
           }
       }
@@ -327,18 +318,18 @@ module.exports = {
           guildId: interaction.guild?.id
       });
       
-      let errorMessage = TIMEZONE_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred while managing timezone settings.";
       
-      if (error.message === TIMEZONE_ERROR_API) {
-          errorMessage = TIMEZONE_ERROR_API;
+      if (error.message === "API_ERROR") {
+          errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
       } else if (error.code === 'ECONNABORTED') {
-          errorMessage = TIMEZONE_ERROR_REQUEST_TIMEOUT;
+          errorMessage = "⚠️ The request timed out. Please try again.";
       } else if (error.response?.status === 403) {
-          errorMessage = TIMEZONE_ERROR_ACCESS_DENIED;
+          errorMessage = "⚠️ API access denied. Please check API configuration.";
       } else if (error.response?.status === 429) {
-          errorMessage = TIMEZONE_ERROR_RATE_LIMIT_EXCEEDED;
+          errorMessage = "⚠️ Too many requests. Please try again later.";
       } else if (error.response?.status >= 500) {
-          errorMessage = TIMEZONE_ERROR_API;
+          errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
       }
       
       try {

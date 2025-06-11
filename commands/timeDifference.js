@@ -15,13 +15,6 @@ const TIME_EMBED_COLOR = '#cd41ff';
 const TIME_EMBED_TITLE = '⏳ Time Difference Information';
 const TIME_EMBED_FOOTER_PREFIX = 'Requested by';
 
-const TIME_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const TIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while calculating time difference.";
-const TIME_ERROR_API = "⚠️ Failed to retrieve timezone information. Please try again later.";
-const TIME_ERROR_ACCESS_DENIED = "⚠️ API access denied. Please check API configuration.";
-const TIME_ERROR_REQUEST_TIMEOUT = "⚠️ The request timed out. Please try again.";
-const TIME_ERROR_RATE_LIMIT_EXCEEDED = "⚠️ Too many requests. Please try again later.";
-
 /**
  * We handle the timedifference command.
  * This function allows users to calculate the time difference between two locations.
@@ -62,7 +55,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({ 
-          content: TIME_ERROR_CONFIG_MISSING,
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -248,18 +241,18 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = TIME_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while calculating time difference.";
     
-    if (error.message === TIME_ERROR_API) {
-      errorMessage = TIME_ERROR_API;
+    if (error.message === "API_ERROR") {
+      errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
     } else if (error.code === 'ECONNABORTED') {
-      errorMessage = TIME_ERROR_REQUEST_TIMEOUT;
+      errorMessage = "⚠️ The request timed out. Please try again.";
     } else if (error.response?.status === 403) {
-      errorMessage = TIME_ERROR_ACCESS_DENIED;
+      errorMessage = "⚠️ API access denied. Please check API configuration.";
     } else if (error.response?.status === 429) {
-      errorMessage = TIME_ERROR_RATE_LIMIT_EXCEEDED;
+      errorMessage = "⚠️ Too many requests. Please try again later.";
     } else if (error.response?.status >= 500) {
-      errorMessage = TIME_ERROR_API;
+      errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
     }
     
     try {

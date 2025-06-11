@@ -27,17 +27,6 @@ const PROMOTE_SERVER_INVITE = 'https://discord.gg/dafrens';
 
 const PROMOTE_EMBED_COLOR = 0xFF4500;
 
-const PROMOTE_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const PROMOTE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while promoting the server.";
-const PROMOTE_ERROR_API = "⚠️ Failed to post to Reddit. Please try again later.";
-const PROMOTE_ERROR_RATE_LIMIT = "⚠️ Reddit API rate limit reached. Please try again in a few moments.";
-const PROMOTE_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-const PROMOTE_ERROR_API_ACCESS = "⚠️ Reddit API access denied. Please check API configuration.";
-const PROMOTE_ERROR_FLAIR = "⚠️ Could not find the required flair. Please try again later or contact support.";
-const PROMOTE_ERROR_POST = "⚠️ Failed to submit post to Reddit.";
-const PROMOTE_ERROR_COOLDOWN = "⏰ Please wait %h hours and %m minutes before promoting again.";
-const PROMOTE_ERROR_DATABASE = "⚠️ Failed to record promotion time. Please try again later.";
-
 const reddit = new snoowrap({
   userAgent: 'Discord Bot Server Promoter',
   clientId: config.redditClientId,
@@ -62,7 +51,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: PROMOTE_ERROR_CONFIG_MISSING,
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -90,9 +79,7 @@ module.exports = {
           const hours = Math.floor(totalMinutes / 60);
           const minutes = totalMinutes % 60;
           return await interaction.editReply({
-            content: PROMOTE_ERROR_COOLDOWN
-              .replace('%h', hours)
-              .replace('%m', minutes),
+            content: `⏰ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
             ephemeral: true
           });
         }
@@ -160,7 +147,7 @@ module.exports = {
         logger.error('Could not find specified flair. Available flairs:', flairs);
         return {
           error: true,
-          message: PROMOTE_ERROR_FLAIR
+          message: "⚠️ Could not find the required flair. Please try again later or contact support."
         };
       }
 
@@ -181,7 +168,7 @@ module.exports = {
       });
 
       if (!submission || !submission.json || !submission.json.data) {
-        throw new Error(PROMOTE_ERROR_POST);
+        throw new Error("⚠️ Failed to submit post to Reddit.");
       }
 
       const postId = submission.json.data.id;
@@ -196,7 +183,7 @@ module.exports = {
       logger.error('Error posting to Reddit:', error);
       return {
         error: true,
-        message: PROMOTE_ERROR_API
+        message: "⚠️ Failed to post to Reddit. Please try again later."
       };
     }
   },
@@ -242,22 +229,22 @@ module.exports = {
   async handleError(interaction, error) {
     logger.error('Error in promote command:', error);
     
-    let errorMessage = PROMOTE_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while promoting the server.";
     
-    if (error.message === PROMOTE_ERROR_API) {
-      errorMessage = PROMOTE_ERROR_API;
-    } else if (error.message === PROMOTE_ERROR_RATE_LIMIT) {
-      errorMessage = PROMOTE_ERROR_RATE_LIMIT;
-    } else if (error.message === PROMOTE_ERROR_NETWORK) {
-      errorMessage = PROMOTE_ERROR_NETWORK;
-    } else if (error.message === PROMOTE_ERROR_API_ACCESS) {
-      errorMessage = PROMOTE_ERROR_API_ACCESS;
-    } else if (error.message === PROMOTE_ERROR_FLAIR) {
-      errorMessage = PROMOTE_ERROR_FLAIR;
-    } else if (error.message === PROMOTE_ERROR_POST) {
-      errorMessage = PROMOTE_ERROR_POST;
-    } else if (error.message === PROMOTE_ERROR_DATABASE) {
-      errorMessage = PROMOTE_ERROR_DATABASE;
+    if (error.message === "API_ERROR") {
+      errorMessage = "⚠️ Failed to post to Reddit. Please try again later.";
+    } else if (error.message === "API_RATE_LIMIT") {
+      errorMessage = "⚠️ Reddit API rate limit reached. Please try again in a few moments.";
+    } else if (error.message === "API_NETWORK_ERROR") {
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
+    } else if (error.message === "API_ACCESS_ERROR") {
+      errorMessage = "⚠️ Reddit API access denied. Please check API configuration.";
+    } else if (error.message === "FLAIR_ERROR") {
+      errorMessage = "⚠️ Could not find the required flair. Please try again later or contact support.";
+    } else if (error.message === "POST_ERROR") {
+      errorMessage = "⚠️ Failed to submit post to Reddit.";
+    } else if (error.message === "DATABASE_ERROR") {
+      errorMessage = "⚠️ Failed to record promotion time. Please try again later.";
     }
     
     if (interaction.replied || interaction.deferred) {

@@ -30,14 +30,6 @@ const SEARCH_EMBED_NEXT_LABEL = "Next";
 const SEARCH_EMBED_PREV_EMOJI = "◀️";
 const SEARCH_EMBED_NEXT_EMOJI = "▶️";
 
-const SEARCH_ERROR_CONFIG_MISSING = "⚠️ This command is not properly configured. Please contact an administrator.";
-const SEARCH_ERROR_INVALID_QUERY = "⚠️ Please provide a valid search query.";
-const SEARCH_ERROR_NO_RESULTS = "⚠️ No results found for your search query.";
-const SEARCH_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while searching.";
-const SEARCH_ERROR_API = "⚠️ Failed to fetch search results. Please try again later.";
-const SEARCH_ERROR_RATE_LIMIT = "⚠️ API rate limit reached. Please try again in a few moments.";
-const SEARCH_ERROR_NETWORK = "⚠️ Network error occurred. Please check your internet connection.";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('google')
@@ -76,7 +68,7 @@ module.exports = {
           hasCseId: !!SEARCH_CSE_ID
         });
         return await interaction.editReply({
-          content: SEARCH_ERROR_CONFIG_MISSING,
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           ephemeral: true
         });
       }
@@ -92,7 +84,7 @@ module.exports = {
       if (!searchParams.valid) {
         logger.warn("Invalid search parameters:", { reason: searchParams.error });
         return await interaction.editReply({
-          content: SEARCH_ERROR_INVALID_QUERY,
+          content: "⚠️ Please provide a valid search query.",
           ephemeral: true
         });
       }
@@ -114,7 +106,7 @@ module.exports = {
       if (searchResults.items.length === 0) {
         logger.warn("No search results found for query:", { query: searchParams.query });
         return await interaction.editReply({ 
-          content: SEARCH_ERROR_NO_RESULTS,
+          content: "⚠️ No results found for your search query.",
           ephemeral: true
         });
       }
@@ -153,14 +145,14 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = SEARCH_ERROR_UNEXPECTED;
+    let errorMessage = "⚠️ An unexpected error occurred while searching.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = SEARCH_ERROR_API;
+      errorMessage = "⚠️ Failed to fetch search results. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = SEARCH_ERROR_RATE_LIMIT;
+      errorMessage = "⚠️ API rate limit reached. Please try again in a few moments.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = SEARCH_ERROR_NETWORK;
+      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     }
     
     try {

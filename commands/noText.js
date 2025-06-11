@@ -12,13 +12,6 @@ const NOTEXT_DB_KEY = 'notext_channel';
 const NOTEXT_EMBED_COLOR = '#cd41ff';
 const NOTEXT_EMBED_TITLE = '🎭 No Text Channel Configuration';
 
-const NOTEXT_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while configuring the channel.";
-const NOTEXT_ERROR_DATABASE = "⚠️ Failed to save channel configuration. Please try again later.";
-const NOTEXT_ERROR_INVALID_CHANNEL = "⚠️ Please select a text channel.";
-const NOTEXT_ERROR_PERMISSIONS = "⚠️ I need permission to manage messages in the selected channel.";
-const NOTEXT_ERROR_ALREADY_CONFIGURED = "⚠️ This channel is already configured as a no-text channel.";
-const NOTEXT_ERROR_NOT_CONFIGURED = "⚠️ This channel is not configured as a no-text channel.";
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('notext')
@@ -62,7 +55,7 @@ module.exports = {
 
       if (!channel) {
         return await interaction.reply({
-          content: NOTEXT_ERROR_INVALID_CHANNEL,
+          content: "⚠️ Please select a text channel.",
           ephemeral: true
         });
       }
@@ -70,7 +63,7 @@ module.exports = {
       const permissions = channel.permissionsFor(interaction.client.user);
       if (!permissions.has(PermissionFlagsBits.ManageMessages)) {
         return await interaction.reply({
-          content: NOTEXT_ERROR_PERMISSIONS,
+          content: "⚠️ I need permission to manage messages in the selected channel.",
           ephemeral: true
         });
       }
@@ -79,7 +72,7 @@ module.exports = {
         const currentChannel = await getValue(NOTEXT_DB_KEY);
         if (currentChannel === channel.id) {
           return await interaction.reply({
-            content: NOTEXT_ERROR_ALREADY_CONFIGURED,
+            content: "⚠️ This channel is already configured as a no-text channel.",
             ephemeral: true
           });
         }
@@ -89,7 +82,7 @@ module.exports = {
         } catch (error) {
           logger.error("Failed to save no-text channel configuration:", { error: error.message });
           return await interaction.reply({
-            content: NOTEXT_ERROR_DATABASE,
+            content: "⚠️ Failed to save channel configuration. Please try again later.",
             ephemeral: true
           });
         }
@@ -112,7 +105,7 @@ module.exports = {
         const currentChannel = await getValue(NOTEXT_DB_KEY);
         if (currentChannel !== channel.id) {
           return await interaction.reply({
-            content: NOTEXT_ERROR_NOT_CONFIGURED,
+            content: "⚠️ This channel is not configured as a no-text channel.",
             ephemeral: true
           });
         }
@@ -122,7 +115,7 @@ module.exports = {
         } catch (error) {
           logger.error("Failed to remove no-text channel configuration:", { error: error.message });
           return await interaction.reply({
-            content: NOTEXT_ERROR_DATABASE,
+            content: "⚠️ Failed to save channel configuration. Please try again later.",
             ephemeral: true
           });
         }
@@ -145,7 +138,7 @@ module.exports = {
     } catch (error) {
       logger.error("Error in notext command:", { error: error.message });
       await interaction.reply({
-        content: NOTEXT_ERROR_UNEXPECTED,
+        content: "⚠️ An unexpected error occurred while configuring the channel.",
         ephemeral: true
       });
     }
