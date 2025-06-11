@@ -5,12 +5,11 @@
  */
 
 const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
+const logger = require('../logger')('timeUtils');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
-const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
 const TIME_FORMAT = 'h:mm A';
@@ -217,7 +216,10 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       toTimezone
     };
   } catch (error) {
-    logError('Error converting time zones', error);
+    logger.error('Error converting time zones', {
+      error: error.stack,
+      message: error.message
+    });
     throw new Error(TIME_ERROR_CONVERSION_FAILED);
   }
 }

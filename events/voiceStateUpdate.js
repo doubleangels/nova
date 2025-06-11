@@ -5,13 +5,13 @@
  */
 
 const path = require('path');
-const logger = require('../logger')('voiceStateUpdate.js');
+const logger = require('../logger')(path.basename(__filename));
 const { Pool } = require('pg');
 const config = require('../config');
 const { randomUUID } = require('crypto');
 const { addVoiceSessionToStats, addVoiceSessionToChannelStats } = require('../utils/database');
 const { logError } = require('../errors');
-const Sentry = require('../sentry');
+const { Events } = require('discord.js');
 
 const VOICE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing voice state update.";
 const VOICE_ERROR_STATE_UPDATE = "⚠️ Failed to process voice state update.";
@@ -35,7 +35,7 @@ const pool = new Pool({
  * @type {Object}
  */
 module.exports = {
-  name: 'voiceStateUpdate',
+  name: Events.VoiceStateUpdate,
   /**
    * Executes when a voice state is updated.
    * @async
@@ -51,7 +51,7 @@ module.exports = {
         return;
       }
 
-      logger.info(`Processing voice state update for user ${newState.member.user.tag}`);
+      logger.debug(`Processing voice state update for ${newState.member.user.tag}`);
       
       if (!oldState.channelId && newState.channelId) {
         await pool.query(
@@ -158,17 +158,10 @@ module.exports = {
       logger.info(`Successfully processed voice state update for ${newState.member.user.tag}`);
 
     } catch (error) {
-      Sentry.captureException(error, {
-        extra: {
-          event: 'voiceStateUpdate',
-          userId: newState.member.user.id,
-          guildId: newState.guild.id,
-          channelId: newState.channelId
-        }
-      });
-      logger.error(`Error processing voice state update:`, {
-        error: error.message,
-        stack: error.stack
+      logger.error('Error processing voice state update:', {
+        error: error.stack,
+        message: error.message,
+        userId: newState.member.user.id
       });
       
       logError(error, 'voiceStateUpdate', {

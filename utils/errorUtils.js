@@ -4,9 +4,7 @@
  * @module utils/errorUtils
  */
 
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
-const Sentry = require('../sentry');
+const logger = require('../logger')('errorUtils');
 
 const ERROR_LEVEL_WARNING = 'warning';
 const ERROR_LEVEL_ERROR = 'error';
@@ -19,53 +17,26 @@ const ERROR_TYPE_API = 'api';
 const ERROR_TYPE_NETWORK = 'network';
 
 /**
- * Logs an error to both the application logger and Sentry.
- * @function logError
- * @param {Error} error - The error object to log
- * @param {string} context - The context where the error occurred
- * @param {Object} [metadata={}] - Additional metadata to include with the error
+ * Logs an error to the application logger.
+ * @param {string} message - The error message
+ * @param {Error} error - The error object
+ * @param {Object} [context] - Additional context for the error
  */
-function logError(error, context, metadata = {}) {
-  // Log to application logger
-  logger.error(`Error in ${context}:`, {
-    error: error.message || error.toString(),
-    stack: error.stack,
-    ...metadata
-  });
-
-  // Log to Sentry with additional context
-  Sentry.captureException(error, {
-    extra: {
-      context,
-      ...metadata
-    },
-    tags: {
-      context,
-      errorType: error.name,
-      errorCode: error.code
-    }
+function logError(message, error, context = {}) {
+  logger.error(message, {
+    error: error?.stack,
+    message: error?.message || String(error),
+    ...context
   });
 }
 
 /**
- * Logs a warning to both the application logger and Sentry.
- * @function logWarning
+ * Logs a warning to the application logger.
  * @param {string} message - The warning message
- * @param {string} context - The context where the warning occurred
- * @param {Object} [metadata={}] - Additional metadata to include
+ * @param {Object} [context] - Additional context for the warning
  */
-function logWarning(message, context, metadata = {}) {
-  // Log to application logger
-  logger.warn(`Warning in ${context}: ${message}`, metadata);
-
-  // Log to Sentry as a warning
-  Sentry.captureMessage(message, {
-    level: 'warning',
-    extra: {
-      context,
-      ...metadata
-    }
-  });
+function logWarning(message, context = {}) {
+  logger.warn(message, context);
 }
 
 module.exports = {

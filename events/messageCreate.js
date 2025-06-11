@@ -9,8 +9,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementChannelMessageCount, getValue } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
-const Sentry = require('../sentry');
-const { logError } = require('../errors');
 const { Events } = require('discord.js');
 
 const MESSAGE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the message.";
@@ -40,6 +38,8 @@ module.exports = {
    * @throws {Error} If message processing fails
    */
   async execute(message) {
+    if (message.author.bot) return;
+
     try {
       if (message.partial) {
         try {
@@ -48,15 +48,6 @@ module.exports = {
           logger.error("Failed to fetch partial message:", { error: fetchError });
           throw new Error(MESSAGE_ERROR_FETCH);
         }
-      }
-
-      if (message.author.bot) {
-        logger.debug("Received bot message:", {
-          botName: message.author.tag,
-          content: message.content?.substring(0, 100),
-          hasEmbeds: !!message.embeds,
-          embedCount: message.embeds?.length
-        });
       }
 
       if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
@@ -145,20 +136,11 @@ module.exports = {
       }
 
     } catch (error) {
-      Sentry.captureException(error, {
-        extra: {
-          event: 'messageCreate',
-          messageId: message.id,
-          authorId: message.author?.id || 'unknown'
-        }
-      });
-      logger.error("Error processing messageCreate event:", { error });
-      
-      logError(error, 'messageCreate', {
-        messageId: message.id,
-        authorId: message.author?.id,
-        channelId: message.channel?.id,
-        guildId: message.guild?.id
+      logger.error('Error processing message:', {
+        error: error.stack,
+        message: error.message,
+        userId: message.author.id,
+        messageId: message.id
       });
 
       let errorMessage = MESSAGE_ERROR_UNEXPECTED;
@@ -197,9 +179,6 @@ async function processUserMessage(message) {
     await processTimeReferences(message);
     await incrementMessageCount(message.author.id, message.author.tag);
   } catch (error) {
-    Sentry.captureException(error, {
-      extra: { function: 'processUserMessage', userId: message.author.id }
-    });
     logger.error("Error processing user message:", { userId: message.author.id, error });
   }
 }
@@ -219,7 +198,6 @@ async function processTimeReferences(message) {
       }
     }
   } catch (error) {
-    Sentry.captureException(error, { extra: { function: 'processTimeReferences', messageId: message.id } });
     logger.error("Failed to process time references:", { error });
   }
 }
@@ -243,7 +221,6 @@ async function checkForBumpMessages(message) {
       logger.debug("Bump reminder scheduled for 2 hours.");
     }
   } catch (error) {
-    Sentry.captureException(error, { extra: { function: 'checkForBumpMessages', messageId: message.id } });
     logger.error("Failed to process bump message:", { error, messageId: message.id, author: message.author?.tag });
   }
 }

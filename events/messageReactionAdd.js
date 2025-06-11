@@ -5,7 +5,7 @@
  */
 
 const path = require('path');
-const logger = require('../logger')('messageReactionAdd.js');
+const logger = require('../logger')(path.basename(__filename));
 const { getUserTimezone } = require('../utils/database');
 const { extractTimeReferences, convertTimeZones, formatConvertedTimes } = require('../utils/timeUtils');
 const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');

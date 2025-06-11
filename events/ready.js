@@ -4,7 +4,7 @@
  * @module events/ready
  */
 
-const { ActivityType } = require('discord.js');
+const { ActivityType, Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -12,7 +12,6 @@ const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const { initializeDatabase } = require('../utils/database');
-const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
 const deployCommands = require('../deploy-commands');
@@ -40,13 +39,6 @@ async function performSetupTask(taskName, task, startMessage, successMessage) {
     logger.info(successMessage);
     return true;
   } catch (error) {
-    Sentry.captureException(error, {
-      extra: {
-        taskName,
-        startMessage
-      }
-    });
-    
     logger.error(`Failed to ${taskName}:`, { 
       error: error.message || error.toString(),
       stack: error.stack
@@ -60,7 +52,8 @@ async function performSetupTask(taskName, task, startMessage, successMessage) {
  * @type {Object}
  */
 module.exports = {
-  name: 'ready',
+  name: Events.ClientReady,
+  once: true,
   /**
    * Executes when the bot becomes ready.
    * @async
@@ -71,7 +64,7 @@ module.exports = {
   async execute(client) {
     try {
       client.user.setActivity(READY_BOT_ACTIVITY.name, { type: READY_BOT_ACTIVITY.type });
-      logger.info(`Logged in as ${client.user.tag}.`);
+      logger.info(`Ready! Logged in as ${client.user.tag}`);
 
       await initializeDatabase();
       logger.info('Database connection initialized successfully.');
@@ -84,9 +77,9 @@ module.exports = {
 
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {
-      logger.error('Error during bot initialization:', { 
-        error: error.message,
-        stack: error.stack
+      logger.error('Error in ready event:', {
+        error: error.stack,
+        message: error.message
       });
       
       logError(error, 'ready', {

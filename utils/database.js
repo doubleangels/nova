@@ -9,7 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
-const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
 const DB_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while accessing the database.";
@@ -54,12 +53,6 @@ const pool = new Pool(DB_CONNECTION_OPTIONS);
 
 pool.on('error', (err, client) => {
   logger.error('Unexpected error on idle client', { error: err });
-  Sentry.captureException(err, {
-    extra: {
-      context: 'database-pool',
-      clientId: client?.processID
-    }
-  });
 });
 
 /**
@@ -150,7 +143,7 @@ async function getValue(key) {
     const parsed = result.rows.length > 0 && result.rows[0].value 
       ? JSON.parse(result.rows[0].value) 
       : null;
-    logger.debug(`Retrieved config for key "${key}": ${parsed}`);
+    logger.debug(`Retrieved config for key "${key}": ${parsed}.`);
     return parsed;
   } catch (err) {
     logger.error(`Error getting key "${key}":`, { error: err });
@@ -625,13 +618,6 @@ async function query(text, params = [], options = {}) {
     }
     
     logger.error('Database query error:', { error });
-    Sentry.captureException(error, {
-      extra: {
-        query: text,
-        params,
-        timeout
-      }
-    });
     throw error;
   } finally {
     client.release();

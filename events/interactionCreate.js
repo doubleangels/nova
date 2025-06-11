@@ -6,8 +6,7 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const Sentry = require('../sentry');
-const { MessageFlags } = require('discord.js');
+const { MessageFlags, Events } = require('discord.js');
 const { Collection } = require('discord.js');
 const { logError } = require('../errors');
 
@@ -41,16 +40,6 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
       command: interaction.commandName 
     });
   } catch (error) {
-    Sentry.captureException(error, {
-      extra: {
-        commandType,
-        commandName: interaction.commandName,
-        userId: interaction.user.id,
-        userName: interaction.user.tag,
-        guildId: interaction.guildId
-      }
-    });
-    
     logger.error(`Error executing ${commandType}:`, { 
       command: interaction.commandName, 
       error 
@@ -68,13 +57,6 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
         await interaction.reply(errorMessage);
       }
     } catch (replyError) {
-      Sentry.captureException(replyError, {
-        extra: { 
-          originalError: error.message,
-          commandName: interaction.commandName,
-          commandType
-        }
-      });
       logger.error("Error sending error response:", { error: replyError });
     }
   }
@@ -85,7 +67,7 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
  * @type {Object}
  */
 module.exports = {
-  name: 'interactionCreate',
+  name: Events.InteractionCreate,
   /**
    * Executes when an interaction is created.
    * @async
@@ -94,70 +76,36 @@ module.exports = {
    * @throws {Error} If interaction handling fails
    */
   async execute(interaction) {
-    try {
-      if (interaction.isChatInputCommand()) {
-        const command = interaction.client.commands.get(interaction.commandName);
-        if (!command) {
-          logger.warn(`No command matching ${interaction.commandName} was found.`);
-          return;
-        }
+    if (!interaction.isChatInputCommand()) return;
 
-        try {
-          await command.execute(interaction);
-          logger.debug(`Executed command ${interaction.commandName} for user ${interaction.user.tag}.`);
-        } catch (error) {
-          logger.error(`Error executing command ${interaction.commandName}:`, {
-            error: error.message,
-            stack: error.stack
-          });
-          
-          const errorMessage = INTERACTION_ERROR_EXECUTION;
-          if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: errorMessage, ephemeral: true });
-          } else {
-            await interaction.reply({ content: errorMessage, ephemeral: true });
-          }
-        }
-      }
-      else if (interaction.isButton()) {
-        const [action, ...params] = interaction.customId.split('_');
-        const buttonHandler = interaction.client.buttonHandlers.get(action);
-        
-        if (buttonHandler) {
-          try {
-            await buttonHandler(interaction, params);
-            logger.debug(`Handled button interaction ${action} for user ${interaction.user.tag}.`);
-          } catch (error) {
-            logger.error(`Error handling button interaction ${action}:`, {
-              error: error.message,
-              stack: error.stack
-            });
-            await interaction.reply({ content: INTERACTION_ERROR_BUTTON, ephemeral: true });
-          }
-        }
-      }
-      else if (interaction.isStringSelectMenu()) {
-        const [action, ...params] = interaction.customId.split('_');
-        const selectHandler = interaction.client.selectHandlers.get(action);
-        
-        if (selectHandler) {
-          try {
-            await selectHandler(interaction, params);
-            logger.debug(`Handled select menu interaction ${action} for user ${interaction.user.tag}.`);
-          } catch (error) {
-            logger.error(`Error handling select menu interaction ${action}:`, {
-              error: error.message,
-              stack: error.stack
-            });
-            await interaction.reply({ content: INTERACTION_ERROR_SELECT_MENU, ephemeral: true });
-          }
-        }
-      }
+    const command = interaction.client.commands.get(interaction.commandName);
+    if (!command) {
+      logger.warn(`No command matching ${interaction.commandName} was found.`);
+      return;
+    }
+
+    try {
+      await command.execute(interaction);
     } catch (error) {
-      logger.error('Error in interactionCreate event:', {
-        error: error.message,
-        stack: error.stack
+      logger.error(`Error executing ${interaction.commandName}:`, {
+        error: error.stack,
+        message: error.message,
+        user: interaction.user.tag
       });
+
+      try {
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({ content: 'There was an error executing this command!', ephemeral: true });
+        } else {
+          await interaction.reply({ content: 'There was an error executing this command!', ephemeral: true });
+        }
+      } catch (replyError) {
+        logger.error('Error sending error response:', {
+          error: replyError.stack,
+          message: replyError.message,
+          originalError: error.message
+        });
+      }
     }
   }
 };
@@ -182,14 +130,6 @@ async function handleCommand(interaction, commandType) {
     await command.execute(interaction);
   } catch (error) {
     logger.error(`Error executing ${commandType} ${interaction.commandName}:`, { error });
-    Sentry.captureException(error, {
-      extra: {
-        command: interaction.commandName,
-        type: commandType,
-        userId: interaction.user.id,
-        guildId: interaction.guild?.id
-      }
-    });
 
     const errorMessage = {
       content: INTERACTION_ERROR_EXECUTION,

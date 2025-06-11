@@ -4,14 +4,13 @@
  * @module events/guildMemberAdd
  */
 
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, Events } = require('discord.js');
 const path = require('path');
-const logger = require('../logger')('guildMemberAdd.js');
+const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
-const Sentry = require('../sentry');
 const { logError } = require('../errors');
 
 const MEMBER_ADD_EMBED_COLOR = 0xCD41FF;
@@ -31,7 +30,7 @@ const MEMBER_ADD_ERROR_KICK = "⚠️ Failed to kick member due to age requireme
  * @type {Object}
  */
 module.exports = {
-  name: 'guildMemberAdd',
+  name: Events.GuildMemberAdd,
   /**
    * Executes when a new member joins the guild.
    * @async
@@ -41,7 +40,7 @@ module.exports = {
    */
   async execute(member) {
     try {
-      logger.info(`New member joined: ${member.user.tag} (ID: ${member.id})`);
+      logger.info(`New member joined: ${member.user.tag}`);
 
       const meetsAgeRequirement = await checkAccountAge(member);
       if (!meetsAgeRequirement) {
@@ -73,23 +72,10 @@ module.exports = {
 
       logger.info(`Successfully processed new member: ${member.user.tag}.`);
     } catch (error) {
-      Sentry.captureException(error, {
-        extra: {
-          event: 'guildMemberAdd',
-          memberId: member.id,
-          memberTag: member.user.tag,
-          guildId: member.guild.id
-        }
-      });
-      logger.error(`Error processing new member ${member.user.tag}:`, {
-        error: error.message,
-        stack: error.stack
-      });
-      
-      logError(error, 'guildMemberAdd', {
-        memberId: member.id,
-        memberTag: member.user.tag,
-        guildId: member.guild.id
+      logger.error('Error processing new member:', {
+        error: error.stack,
+        message: error.message,
+        userId: member.user.id
       });
 
       let errorMessage = MEMBER_ADD_ERROR_UNEXPECTED;

@@ -5,12 +5,10 @@
  */
 
 const path = require('path');
-const logger = require('../logger')('guildMemberRemove.js');
+const logger = require('../logger')(path.basename(__filename));
 const { removeTrackedMember } = require('../utils/database');
-const Sentry = require('../sentry');
-const { logError } = require('../errors');
+const { Events } = require('discord.js');
 
-const MEMBER_REMOVE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing member departure.";
 const MEMBER_REMOVE_ERROR_LEAVE_FAILED = "⚠️ Failed to process member departure.";
 const MEMBER_REMOVE_ERROR_TRACKING = "⚠️ Failed to remove member tracking data.";
 const MEMBER_REMOVE_ERROR_DATABASE = "⚠️ Database error occurred while processing member departure.";
@@ -23,7 +21,7 @@ const MEMBER_REMOVE_ERROR_BOT = "⚠️ Cannot process bot member departure.";
  * @type {Object}
  */
 module.exports = {
-  name: 'guildMemberRemove',
+  name: Events.GuildMemberRemove,
   /**
    * Executes when a member leaves the guild.
    * @async
@@ -46,24 +44,12 @@ module.exports = {
 
       logger.info(`Successfully processed member departure: ${member.user.tag}.`);
     } catch (error) {
-      Sentry.captureException(error, {
-        extra: {
-          event: 'guildMemberRemove',
-          memberId: member.id,
-          username: member.user?.username || "Unknown",
-        }
-      });
-      logger.error(`Error processing member departure ${member.user.tag}:`, {
-        error: error.message,
-        stack: error.stack
+      logger.error('Error processing member leave:', {
+        error: error.stack,
+        message: error.message,
+        userId: member.user.id
       });
       
-      logError(error, 'guildMemberRemove', {
-        memberId: member.id,
-        memberTag: member.user.tag,
-        guildId: member.guild.id
-      });
-
       let errorMessage = MEMBER_REMOVE_ERROR_UNEXPECTED;
       
       if (error.message === MEMBER_REMOVE_ERROR_TRACKING) {
