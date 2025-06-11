@@ -9,23 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
-const { logError } = require('../errors');
-
-const DB_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while accessing the database.";
-const DB_ERROR_CONNECTION = "⚠️ Failed to connect to the database.";
-const DB_ERROR_TIMEOUT = "⚠️ Database query timed out.";
-const DB_ERROR_DEADLOCK = "⚠️ Database deadlock detected.";
-const DB_ERROR_INVALID_QUERY = "⚠️ Invalid database query.";
-const DB_ERROR_PERMISSION = "⚠️ Insufficient database permissions.";
-const DB_ERROR_CONFIG_NOT_FOUND = "⚠️ Configuration not found in database.";
-const DB_ERROR_MEMBER_NOT_FOUND = "⚠️ Member not found in database.";
-const DB_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Timezone not found in database.";
-const DB_ERROR_VOICE_STATS_NOT_FOUND = "⚠️ Voice statistics not found.";
-const DB_ERROR_MESSAGE_STATS_NOT_FOUND = "⚠️ Message statistics not found.";
-const DB_ERROR_CHANNEL_STATS_NOT_FOUND = "⚠️ Channel statistics not found.";
-const DB_ERROR_INITIALIZATION = "⚠️ Failed to initialize database.";
-const DB_ERROR_TEST = "⚠️ Database connection test failed.";
-const DB_ERROR_CLEANUP = "⚠️ Failed to clean up database test data.";
 
 const DB_SCHEMA = 'main';
 const DB_DEFAULT_QUERY_TIMEOUT = 30000;

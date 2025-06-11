@@ -4,15 +4,10 @@
  * @module utils/colorUtils
  */
 
-const { logError } = require('../errors');
-
-const COLOR_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing color.";
 const COLOR_ERROR_INVALID_FORMAT = "⚠️ Invalid color format provided.";
 const COLOR_ERROR_EMPTY = "⚠️ Empty color value provided.";
 const COLOR_ERROR_OUT_OF_RANGE = "⚠️ Color value is out of valid range.";
 const COLOR_ERROR_INVALID_RGB = "⚠️ Invalid RGB values provided.";
-const COLOR_ERROR_CONVERSION = "⚠️ Failed to convert color format.";
-const COLOR_ERROR_VALIDATION = "⚠️ Color validation failed.";
 
 const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
 const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;

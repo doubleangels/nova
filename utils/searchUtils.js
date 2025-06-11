@@ -12,21 +12,7 @@ const SEARCH_MAX_RESULTS = 10;
 const SEARCH_TIMEOUT_MS = 5000;
 const SEARCH_MIN_LENGTH = 2;
 
-const SEARCH_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while performing search.";
 const SEARCH_ERROR_FAILED = "⚠️ Search operation failed.";
-const SEARCH_ERROR_INVALID_QUERY = "⚠️ Invalid search query provided.";
-const SEARCH_ERROR_INVALID_CHANNEL = "⚠️ Invalid channel provided.";
-const SEARCH_ERROR_INVALID_GUILD = "⚠️ Invalid guild provided.";
-const SEARCH_ERROR_INVALID_USER = "⚠️ Invalid user provided.";
-const SEARCH_ERROR_INVALID_MESSAGE = "⚠️ Invalid message provided.";
-const SEARCH_ERROR_PERMISSION = "⚠️ Insufficient permissions to perform search.";
-const SEARCH_ERROR_RATE_LIMIT = "⚠️ Search rate limit exceeded.";
-const SEARCH_ERROR_TIMEOUT = "⚠️ Search operation timed out.";
-const SEARCH_ERROR_NO_RESULTS = "⚠️ No search results found.";
-const SEARCH_ERROR_INVALID_TYPE = "⚠️ Invalid search type provided.";
-const SEARCH_ERROR_INVALID_PARAMS = "⚠️ Invalid search parameters provided.";
-const SEARCH_ERROR_CANCELLED = "⚠️ Search operation was cancelled.";
-const SEARCH_ERROR_IN_PROGRESS = "⚠️ Search operation already in progress.";
 
 /**
  * Creates a paginated interface for search results.

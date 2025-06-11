@@ -23,7 +23,6 @@ const READY_BOT_ACTIVITY = {
 const READY_BOT_STATUS = "online";
 
 const READY_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred during bot initialization.";
-const READY_ERROR_INITIALIZATION = "⚠️ Failed to initialize the bot.";
 const READY_ERROR_DATABASE = "⚠️ Failed to initialize database connection.";
 const READY_ERROR_MUTE_KICK = "⚠️ Failed to reschedule mute kicks.";
 const READY_ERROR_REMINDER = "⚠️ Failed to reschedule reminders.";

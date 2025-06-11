@@ -8,13 +8,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const LANG_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing language.";
 const LANG_ERROR_INVALID_FLAG = "⚠️ Invalid flag emoji provided for translation.";
-const LANG_ERROR_LANGUAGE_NOT_FOUND = "⚠️ Language not found for the provided flag.";
-const LANG_ERROR_INVALID_CODE = "⚠️ Invalid language code provided.";
-const LANG_ERROR_INVALID_NAME = "⚠️ Invalid language name provided.";
-const LANG_ERROR_FLAG_NOT_FOUND = "⚠️ Flag emoji not found for the provided language.";
-const LANG_ERROR_VALIDATION = "⚠️ Language validation failed.";
 
 const LANG_FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan

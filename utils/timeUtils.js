@@ -16,7 +16,6 @@ const TIME_FORMAT = 'h:mm A';
 const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
 
 // Error Messages
-const TIME_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing time.";
 const TIME_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone provided.";
 const TIME_ERROR_EMPTY_REFERENCE = "⚠️ No time reference provided.";
 const TIME_ERROR_PARSE_FAILED = "⚠️ Failed to parse time reference.";
@@ -25,12 +24,6 @@ const TIME_ERROR_INVALID_REFERENCE = "⚠️ Invalid time reference provided.";
 const TIME_ERROR_INVALID_TIMESTAMP = "⚠️ Invalid timestamp parameters provided.";
 const TIME_ERROR_INVALID_CONVERSION = "⚠️ Invalid time conversion provided.";
 const TIME_ERROR_NO_TIMES = "⚠️ No times provided for conversion.";
-const TIME_ERROR_INVALID_DATE = "⚠️ Invalid date provided.";
-const TIME_ERROR_INVALID_FORMAT = "⚠️ Invalid time format provided.";
-const TIME_ERROR_TIMEZONE_NOT_FOUND = "⚠️ Timezone not found.";
-const TIME_ERROR_INVALID_OFFSET = "⚠️ Invalid timezone offset provided.";
-const TIME_ERROR_TIMEZONE_CONVERSION = "⚠️ Failed to convert between timezones.";
-const TIME_ERROR_INVALID_RANGE = "⚠️ Invalid time range provided.";
 
 const TIME_VALID_TIMEZONES = new Set(moment.tz.names());
 

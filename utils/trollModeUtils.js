@@ -8,23 +8,9 @@ const logger = require('../logger')('trollModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
-const { logError } = require('../errors');
 
 const TROLL_DEFAULT_AGE_DAYS = 30;
 const TROLL_KICK_REASON = "Account age does not meet server requirements.";
-
-const TROLL_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing troll mode.";
-const TROLL_ERROR_ACCOUNT_CHECK = "⚠️ Failed to check account age.";
-const TROLL_ERROR_KICK = "⚠️ Failed to kick member.";
-const TROLL_ERROR_DM = "⚠️ Failed to send DM to member.";
-const TROLL_ERROR_INVALID_MEMBER = "⚠️ Invalid member provided.";
-const TROLL_ERROR_INVALID_AGE = "⚠️ Invalid account age provided.";
-const TROLL_ERROR_INVALID_REQUIRED_AGE = "⚠️ Invalid required age provided.";
-const TROLL_ERROR_PERMISSION = "⚠️ Insufficient permissions to perform operation.";
-const TROLL_ERROR_MEMBER_NOT_FOUND = "⚠️ Member not found.";
-const TROLL_ERROR_GUILD_NOT_FOUND = "⚠️ Guild not found.";
-const TROLL_ERROR_DATABASE = "⚠️ Database error occurred.";
-const TROLL_ERROR_CONFIG = "⚠️ Required configuration missing.";
 
 /**
  * Checks if a member's account meets the minimum age requirement.

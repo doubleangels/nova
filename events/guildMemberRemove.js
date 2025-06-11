@@ -9,7 +9,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { removeTrackedMember } = require('../utils/database');
 const { Events } = require('discord.js');
 
-const MEMBER_REMOVE_ERROR_LEAVE_FAILED = "⚠️ Failed to process member departure.";
 const MEMBER_REMOVE_ERROR_TRACKING = "⚠️ Failed to remove member tracking data.";
 const MEMBER_REMOVE_ERROR_DATABASE = "⚠️ Database error occurred while processing member departure.";
 const MEMBER_REMOVE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process member departure.";

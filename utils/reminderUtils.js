@@ -12,19 +12,8 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { logError } = require('../errors');
 
-const REMINDER_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing reminder.";
 const REMINDER_ERROR_CREATION = "⚠️ Failed to create reminder.";
 const REMINDER_ERROR_RESCEDULE = "⚠️ Failed to reschedule reminder.";
-const REMINDER_ERROR_NOT_FOUND = "⚠️ Reminder not found.";
-const REMINDER_ERROR_DELETION = "⚠️ Failed to delete reminder.";
-const REMINDER_ERROR_SEND = "⚠️ Failed to send reminder message.";
-const REMINDER_ERROR_CHANNEL_NOT_FOUND = "⚠️ Reminder channel not found.";
-const REMINDER_ERROR_ROLE_NOT_FOUND = "⚠️ Reminder role not found.";
-const REMINDER_ERROR_INVALID_TYPE = "⚠️ Invalid reminder type provided.";
-const REMINDER_ERROR_INVALID_DELAY = "⚠️ Invalid reminder delay provided.";
-const REMINDER_ERROR_INVALID_TIMESTAMP = "⚠️ Invalid timestamp provided.";
-const REMINDER_ERROR_DATABASE = "⚠️ Database error occurred.";
-const REMINDER_ERROR_CONFIG_MISSING = "⚠️ Required configuration missing.";
 
 const REMINDER_POOL = new Pool({
   connectionString: config.neonConnectionString,

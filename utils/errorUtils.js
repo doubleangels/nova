@@ -6,16 +6,6 @@
 
 const logger = require('../logger')('errorUtils');
 
-const ERROR_LEVEL_WARNING = 'warning';
-const ERROR_LEVEL_ERROR = 'error';
-
-const ERROR_TYPE_UNEXPECTED = 'unexpected';
-const ERROR_TYPE_VALIDATION = 'validation';
-const ERROR_TYPE_PERMISSION = 'permission';
-const ERROR_TYPE_DATABASE = 'database';
-const ERROR_TYPE_API = 'api';
-const ERROR_TYPE_NETWORK = 'network';
-
 /**
  * Logs an error to the application logger.
  * @param {string} message - The error message

@@ -21,7 +21,6 @@ const REACTION_CLOCK_EMOJI = '🕒';
 const REACTION_TIME_CONVERSION_TIMEOUT = 30000;
 
 const REACTION_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the reaction.";
-const REACTION_ERROR_HANDLING = "⚠️ Failed to process the reaction.";
 const REACTION_ERROR_FETCH = "⚠️ Failed to fetch reaction data.";
 const REACTION_ERROR_TIMEZONE = "⚠️ Invalid timezone for time conversion.";
 const REACTION_ERROR_TIME_REFERENCE = "⚠️ No time references found in the message.";

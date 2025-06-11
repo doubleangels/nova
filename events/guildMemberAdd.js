@@ -4,19 +4,14 @@
  * @module events/guildMemberAdd
  */
 
-const { EmbedBuilder, Events } = require('discord.js');
+const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const dayjs = require('dayjs');
 const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
-const { logError } = require('../errors');
-
-const MEMBER_ADD_EMBED_COLOR = 0xCD41FF;
 
 const MEMBER_ADD_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the new member.";
-const MEMBER_ADD_ERROR_JOIN_FAILED = "⚠️ Failed to process new member join.";
 const MEMBER_ADD_ERROR_TRACKING = "⚠️ Failed to track new member data.";
 const MEMBER_ADD_ERROR_MUTE_KICK = "⚠️ Failed to schedule mute kick for new member.";
 const MEMBER_ADD_ERROR_DATABASE = "⚠️ Database error occurred while processing new member.";

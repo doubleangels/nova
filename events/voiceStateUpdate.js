@@ -14,7 +14,6 @@ const { logError } = require('../errors');
 const { Events } = require('discord.js');
 
 const VOICE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing voice state update.";
-const VOICE_ERROR_STATE_UPDATE = "⚠️ Failed to process voice state update.";
 const VOICE_ERROR_DATABASE = "⚠️ Database error occurred while processing voice state.";
 const VOICE_ERROR_SESSION_START = "⚠️ Failed to start voice session.";
 const VOICE_ERROR_SESSION_END = "⚠️ Failed to end voice session.";

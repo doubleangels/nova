@@ -14,15 +14,10 @@ const INTERACTION_DEFAULT_COOLDOWN = 3000;
 const INTERACTION_CACHE_DURATION = 60000;
 
 const INTERACTION_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing your request.";
-const INTERACTION_ERROR_COMMAND_NOT_FOUND = "⚠️ The requested command could not be found.";
 const INTERACTION_ERROR_EXECUTION = "⚠️ Failed to execute the command.";
-const INTERACTION_ERROR_BUTTON = "⚠️ Failed to process the button interaction.";
-const INTERACTION_ERROR_SELECT_MENU = "⚠️ Failed to process the select menu interaction.";
 const INTERACTION_ERROR_COOLDOWN = "⚠️ Please wait before using this command again.";
 const INTERACTION_ERROR_PERMISSION = "⚠️ You don't have permission to use this command.";
-const INTERACTION_ERROR_INVALID = "⚠️ Invalid interaction received.";
-const INTERACTION_ERROR_REPLY = "⚠️ Failed to send response to interaction.";
-const INTERACTION_ERROR_FOLLOW_UP = "⚠️ Failed to send follow-up response.";
+
 
 const COOLDOWN_CACHE = new Map();
 const PERMISSION_CACHE = new Map();
