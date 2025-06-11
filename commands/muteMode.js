@@ -96,7 +96,7 @@ module.exports = {
     try {
       const currentSettings = await this.getCurrentSettings();
       
-      const embed = this.formatStatusMessage(currentSettings);
+      const embed = this.formatStatusMessage(currentSettings, interaction);
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("Mutemode status retrieved successfully:", {
@@ -147,7 +147,8 @@ module.exports = {
 
       const embed = this.formatUpdateMessage(
         currentSettings.isEnabled, isEnabled,
-        currentSettings.timeLimit, timeLimit
+        currentSettings.timeLimit, timeLimit,
+        interaction
       );
 
       await interaction.editReply({ embeds: [embed] });
@@ -219,9 +220,10 @@ module.exports = {
    * Formats a status message based on the current settings.
    * @function formatStatusMessage
    * @param {Object} settings - The current mute mode settings
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @returns {EmbedBuilder} The formatted status message
    */
-  formatStatusMessage(settings) {
+  formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
       .setTitle('🔇 Mute Mode Status')
@@ -234,7 +236,7 @@ module.exports = {
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Time Limit', value: `**${settings.timeLimit}** hours` }
     )
-    .setFooter({ text: `Updated by ${interaction.user.tag}` });
+    .setFooter({ text: `Requested by ${interaction.user.tag}` });
     
     if (settings.isEnabled) {
       embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.`);
@@ -250,9 +252,10 @@ module.exports = {
    * @param {boolean} newEnabled - The new enabled state
    * @param {number} oldTimeLimit - The previous time limit
    * @param {number} newTimeLimit - The new time limit
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @returns {EmbedBuilder} The formatted update message
    */
-  formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit) {
+  formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit, interaction) {
     const embed = new EmbedBuilder()
       .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
       .setTitle('🔇 Mute Mode Updated')

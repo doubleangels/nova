@@ -11,12 +11,6 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
-const ANIME_API_BASE_URL = 'https://api.myanimelist.net/v2';
-const ANIME_EMBED_COLOR = 0x2E51A2;
-const ANIME_EMBED_FOOTER = "Powered by MyAnimeList API";
-const ANIME_SEARCH_LIMIT = 1;
-const ANIME_WEBSITE_URL = 'https://myanimelist.net/anime';
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
@@ -176,13 +170,13 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle(`📺 **${animeData.title} (${releaseDate})**`)
       .setDescription(`📜 **Synopsis:** ${animeData.synopsis}`)
-      .setColor(ANIME_EMBED_COLOR)
+      .setColor(0x2E51A2)
       .addFields(
         { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
         { name: "⭐ MAL Rating", value: `🌟 ${animeData.rating}`, inline: true },
         { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
       )
-      .setFooter({ text: ANIME_EMBED_FOOTER });
+      .setFooter({ text: "Powered by MyAnimeList API" });
     
     if (animeData.imageUrl) {
       embed.setThumbnail(animeData.imageUrl);

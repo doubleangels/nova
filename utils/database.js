@@ -126,7 +126,7 @@ async function getValue(key) {
     const parsed = result.rows.length > 0 && result.rows[0].value 
       ? JSON.parse(result.rows[0].value) 
       : null;
-    logger.debug(`Retrieved config for key "${key}": ${parsed}.`);
+    logger.debug(`Retrieved config for key "${key}": ${parsed}`);
     return parsed;
   } catch (err) {
     logger.error(`Error getting key "${key}":`, { error: err });
