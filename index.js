@@ -4,213 +4,215 @@
  * @module index
  */
 
-const { Client, Collection, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
-const Sentry = require('./sentry');
-const { initializeDatabase } = require('./utils/database');
-const deployCommands = require('./deploy-commands');
-const { logError } = require('./errors');
+
+/** Directory containing command files */
+const COMMANDS_DIRECTORY = 'commands';
+/** Directory containing event handler files */
+const EVENTS_DIRECTORY = 'events';
+/** File extension for command and event files */
+const FILE_EXTENSION = '.js';
 
 /**
- * Error messages specific to bot initialization and operation.
- * @type {Object}
+ * Bot's required Discord gateway intents
+ * @type {Array<number>}
  */
-const ERROR_MESSAGES = {
-    UNEXPECTED_ERROR: "⚠️ An unexpected error occurred while running the bot.",
-    BOT_STARTUP_FAILED: "⚠️ Failed to start the bot.",
-    DATABASE_INITIALIZATION_FAILED: "⚠️ Failed to initialize database.",
-    COMMAND_LOADING_FAILED: "⚠️ Failed to load commands.",
-    EVENT_LOADING_FAILED: "⚠️ Failed to load events.",
-    INVALID_EVENT_FILE: "⚠️ Invalid event file structure.",
-    INVALID_COMMAND_FILE: "⚠️ Invalid command file structure.",
-    TOKEN_INVALID: "⚠️ Invalid bot token provided.",
-    CLIENT_INITIALIZATION_FAILED: "⚠️ Failed to initialize Discord client.",
-    COMMAND_DEPLOYMENT_FAILED: "⚠️ Failed to deploy commands.",
-    PERMISSION_DENIED: "⚠️ Insufficient permissions to perform operation.",
-    CONFIG_MISSING: "⚠️ Required configuration missing.",
-    SHUTDOWN_FAILED: "⚠️ Failed to shutdown bot gracefully."
-};
+const BOT_INTENTS = [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.MessageContent,
+];
 
-const COMMAND_EXTENSION = '.js';
-const EVENT_EXTENSION = '.js';
-const SENTRY_FLUSH_TIMEOUT = 2000;
+// Error message constants
+const ERROR_MESSAGE_COMMAND = 'There was an error executing that command!';
+const ERROR_MESSAGE_CONTEXT_MENU = 'There was an error executing that command!';
+
+/** Delay in milliseconds before forced process exit */
+const PROCESS_EXIT_DELAY = 1000;
 
 /**
- * Discord client instance with configured intents and partials.
+ * Discord client instance with required intents
  * @type {Client}
  */
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildVoiceStates,
-  ],
-  partials: [
-    Partials.Message,
-    Partials.Channel,
-    Partials.Reaction
-  ]
+  intents: BOT_INTENTS
 });
 
+// Initialize collections for commands and conversation history
 client.commands = new Collection();
-client.buttonHandlers = new Collection();
-client.selectHandlers = new Collection();
+client.conversationHistory = new Map();
 
-const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(COMMAND_EXTENSION));
-
-const disabledCommands = config.settings?.disabledCommands || [];
-const hasDisabledCommands = Array.isArray(disabledCommands) && disabledCommands.length > 0;
-
-if (hasDisabledCommands) {
-  logger.info(`Using disabledCommands filter - we will not load ${disabledCommands.length} specified commands.`);
-}
-
-let loadedCount = 0;
-let skippedCount = 0;
+// Load command files
+const commandsPath = path.join(__dirname, COMMANDS_DIRECTORY);
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(FILE_EXTENSION));
 
 for (const file of commandFiles) {
-  const commandName = file.replace(COMMAND_EXTENSION, ''); 
-  
-  if (hasDisabledCommands && disabledCommands.includes(commandName)) {
-    logger.debug(`Skipping disabled command: ${commandName}.`);
-    skippedCount++;
-    continue;
-  }
-  
   try {
-    const filePath = path.join(commandsPath, file);
-    const command = require(filePath);
+    const command = require(path.join(commandsPath, file));
     client.commands.set(command.data.name, command);
-    logger.info("Loaded command:", { command: command.data.name });
-    loadedCount++;
+    logger.info(`Loaded command: ${command.data.name}.`);
   } catch (error) {
-    logError('Failed to load command', error);
-    Sentry.captureException(error, {
-      extra: { context: 'command_loading_failure', commandName }
+    logger.error(`Error loading command file: ${file}.`, {
+      error: error.stack,
+      message: error.message
     });
   }
 }
 
-logger.info(`Command loading complete: ${loadedCount} loaded, ${skippedCount} skipped.`);
-
-const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(EVENT_EXTENSION));
+// Load event handler files
+const eventsPath = path.join(__dirname, EVENTS_DIRECTORY);
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(FILE_EXTENSION));
 
 for (const file of eventFiles) {
   try {
-    const filePath = path.join(eventsPath, file);
-    const event = require(filePath);
-    
-    if (!event.name || !event.execute) {
-      throw new Error(ERROR_MESSAGES.INVALID_EVENT_FILE);
-    }
-    
+    const event = require(path.join(eventsPath, file));
     if (event.once) {
       client.once(event.name, (...args) => {
-        logger.debug("Executing once event:", { event: event.name });
-        event.execute(...args, client);
+        try {
+          logger.debug(`Executing once event: ${event.name}.`);
+          event.execute(...args, client);
+        } catch (error) {
+          logger.error(`Error executing once event: ${event.name}.`, {
+            error: error.stack,
+            message: error.message
+          });
+        }
       });
     } else {
       client.on(event.name, (...args) => {
-        if (event.name !== 'typingStart' && event.name !== 'presenceUpdate') {
-          logger.debug("Executing event:", { event: event.name });
-        }
-        if (event.name === 'ready') {
+        try {
+          logger.debug(`Executing event: ${event.name}.`);
           event.execute(...args, client);
-        } else {
-          event.execute(...args);
+        } catch (error) {
+          logger.error(`Error executing event: ${event.name}.`, {
+            error: error.stack,
+            message: error.message
+          });
         }
       });
     }
-    logger.info("Loaded event:", { event: event.name });
+    logger.info(`Loaded event: ${event.name}.`);
   } catch (error) {
-    logError('Failed to load event', error);
-    Sentry.captureException(error, {
-      extra: { 
-        context: 'event_loading_failure', 
-        eventFile: file,
-        errorDetails: error.message || error
-      }
+    logger.error(`Error loading event file: ${file}.`, {
+      error: error.stack,
+      message: error.message
     });
   }
 }
 
 client.once('ready', async () => {
+  logger.info(`Bot is online: ${client.user.tag}`);
+});
+
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return;
+
   try {
-    await initializeDatabase();
-    logger.info("Bot is online:", { tag: client.user.tag });
-  } catch (error) {
-    logError('Failed to initialize database:', error);
-    Sentry.captureException(error, {
-      extra: { context: 'database_initialization_failure' }
+    logger.debug(`Executing command: ${interaction.commandName}`, { 
+      user: interaction.user.tag,
+      userId: interaction.user.id,
+      guildId: interaction.guildId
     });
-    process.exit(1);
+    await command.execute(interaction);
+  } catch (error) {
+    logger.error(`Error executing command: ${interaction.commandName}.`, {
+      error: error.stack,
+      message: error.message,
+      user: interaction.user.tag
+    });
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: ERROR_MESSAGE_COMMAND, ephemeral: true });
+      } else {
+        await interaction.reply({ content: ERROR_MESSAGE_COMMAND, ephemeral: true });
+      }
+    } catch (replyError) {
+      logger.error('Error sending error response.', {
+        error: replyError.stack,
+        message: replyError.message,
+        originalError: error.message
+      });
+    }
   }
 });
 
-/**
- * Starts the bot and performs necessary initialization.
- * @async
- * @function startBot
- * @throws {Error} If bot startup fails
- */
-async function startBot() {
-  try {
-    if (config.settings.deployCommandsOnStart) {
-      logger.info('Deploying commands before bot start...');
-      await deployCommands();
-      logger.info('Commands deployed successfully.');
-    }
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isContextMenuCommand()) return;
 
-    await initializeDatabase();
-    logger.info('Database initialized successfully.');
-
-    await client.login(config.token);
-  } catch (error) {
-    logError('Error during bot startup', error);
-    Sentry.captureException(error, {
-      extra: { context: 'bot_startup_failure' }
-    });
-    process.exit(1);
+  const command = client.commands.get(interaction.commandName);
+  if (!command) {
+    logger.warn(`Unknown context menu command: ${interaction.commandName}`);
+    return;
   }
-}
 
-startBot();
+  logger.debug(`Executing context menu command: ${interaction.commandName}`, { 
+    user: interaction.user.tag,
+    userId: interaction.user.id,
+    guildId: interaction.guildId
+  });
+
+  try {
+    await command.execute(interaction);
+    logger.debug(`Context menu command executed successfully: ${interaction.commandName}`);
+  } catch (error) {
+    logger.error(`Error executing context menu command: ${interaction.commandName}.`, { 
+      error: error.stack,
+      message: error.message,
+      user: interaction.user.tag
+    });
+
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: ERROR_MESSAGE_CONTEXT_MENU, ephemeral: true });
+      } else {
+        await interaction.reply({ content: ERROR_MESSAGE_CONTEXT_MENU, ephemeral: true });
+      }
+    } catch (replyError) {
+      logger.error('Error sending error response.', {
+        error: replyError.stack,
+        message: replyError.message,
+        originalError: error.message
+      });
+    }
+  }
+});
+
+client.login(config.token).catch(error => {
+  logger.error('Error logging in.', {
+    error: error.stack,
+    message: error.message
+  });
+});
 
 process.on('uncaughtException', (error) => {
-  logError('Uncaught Exception', error);
-  Sentry.captureException(error, {
-    extra: { context: 'uncaughtException' }
+  logger.error('Uncaught Exception.', {
+    error: error.stack,
+    message: error.message
   });
-  setTimeout(() => process.exit(1), SENTRY_FLUSH_TIMEOUT);
+  setTimeout(() => process.exit(1), PROCESS_EXIT_DELAY);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  logError('Unhandled Promise Rejection', reason);
-  Sentry.captureException(reason, {
-    extra: { context: 'unhandledRejection' }
+  logger.error('Unhandled Promise Rejection.', {
+    error: reason?.stack,
+    message: reason?.message || String(reason)
   });
 });
 
-/**
- * Handles graceful shutdown of the bot.
- * @function handleShutdown
- * @param {string} signal - The shutdown signal received
- */
-function handleShutdown(signal) {
-  logger.info(`Shutdown signal (${signal}) received. We're cleaning up and exiting...`);
-  Sentry.close(SENTRY_FLUSH_TIMEOUT).then(() => {
-    process.exit(0);
-  });
-}
+process.on('SIGINT', () => {
+  logger.info('Shutdown signal (SIGINT) received. Exiting...');
+  process.exit(0);
+});
 
-process.on('SIGINT', () => handleShutdown('SIGINT'));
+process.on('SIGTERM', () => {
+  logger.info('Shutdown signal (SIGTERM) received. Exiting...');
+  process.exit(0);
+});
 process.on('SIGTERM', () => handleShutdown('SIGTERM'));
