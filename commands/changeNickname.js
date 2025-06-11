@@ -85,7 +85,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("Nickname updated successfully:", {
+            logger.info("/changenickname command completed successfully:", {
                 targetUserId: targetUser.id,
                 newNickname: newNickname || 'reset'
             });

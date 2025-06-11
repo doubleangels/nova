@@ -260,7 +260,7 @@ module.exports = {
       );
       
       await interaction.editReply({ embeds: [embed] });
-      logger.info("Backup mode configuration updated successfully:", { 
+      logger.info("/backupmode command completed successfully:", { 
         userId: interaction.user.id,
         guildId: interaction.guild.id,
         channel: channelOption?.id, 

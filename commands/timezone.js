@@ -146,7 +146,7 @@ module.exports = {
       
       await setUserTimezone(memberId, timezoneId);
       
-      logger.info("Timezone set successfully.", {
+      logger.info("/timezone command completed successfully:", {
           userId: interaction.user.id,
           userTag: interaction.user.tag,
           targetUserId: memberId,

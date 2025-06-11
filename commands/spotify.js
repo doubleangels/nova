@@ -174,7 +174,7 @@ module.exports = {
         }
       );
 
-      logger.info("Spotify search completed successfully:", {
+      logger.info("/spotify command completed successfully:", {
         userId: interaction.user.id,
         subcommand: subcommand,
         query: interaction.options.getString('query'),

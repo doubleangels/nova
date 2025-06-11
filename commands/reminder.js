@@ -114,7 +114,7 @@ module.exports = {
       throw new Error("DATABASE_WRITE_ERROR");
     }
     
-    logger.info("Reminder configuration updated successfully:", {
+    logger.info("/reminder command completed successfully:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       channelId: channelOption.id,
@@ -200,7 +200,7 @@ module.exports = {
       }
 
       await interaction.editReply({ embeds: [embed] });
-      logger.info("Reminder status check completed successfully:", {
+      logger.info("/reminder command completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         configComplete

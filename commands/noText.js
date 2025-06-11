@@ -94,7 +94,7 @@ module.exports = {
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("No-text channel configured successfully:", { 
+        logger.info("/notext command completed successfully:", { 
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,
@@ -131,7 +131,7 @@ module.exports = {
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("No-text channel configuration removed successfully:", { 
+        logger.info("/notext command completed successfully:", { 
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,

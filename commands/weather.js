@@ -135,7 +135,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Weather information sent successfully:", { 
+      logger.info("/weather command completed successfully:", { 
         place: formattedAddress, 
         userId: interaction.user.id,
         units: unitsOption,

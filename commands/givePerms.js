@@ -143,7 +143,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("Gave perms to user successfully:", {
+            logger.info("/giveperms command completed successfully:", {
               userId: interaction.user.id,
               targetUserId: targetUser.id,
               roleName: roleName.trim(),

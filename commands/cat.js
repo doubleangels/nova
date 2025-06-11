@@ -41,7 +41,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Cat command completed successfully:", {
+      logger.info("/cat command completed successfully:", {
         userId: interaction.user.id,
         imageUrl: catData.url
       });

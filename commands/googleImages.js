@@ -123,7 +123,7 @@ module.exports = {
         }
       );
 
-      logger.info("Google Images search completed successfully:", {
+      logger.info("/googleimages command completed successfully:", {
         userId: interaction.user.id,
         query: searchParams.query,
         resultCount: searchResults.items.length

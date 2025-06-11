@@ -97,7 +97,7 @@ module.exports = {
       const embed = this.createSuccessEmbed(redditResponse);
       await interaction.editReply({ embeds: [embed] });
 
-      logger.info("Promote command completed successfully:", {
+      logger.info("/promote command completed successfully:", {
         userId: interaction.user.id,
         postId: redditResponse.id
       });

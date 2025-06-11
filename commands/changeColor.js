@@ -78,7 +78,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("Role color updated successfully:", {
+            logger.info("/changecolor command completed successfully:", {
                 roleId: role.id,
                 oldColor,
                 newColor: colorValidation.normalizedColor

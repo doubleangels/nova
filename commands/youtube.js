@@ -98,7 +98,7 @@ module.exports = {
         }
       );
 
-      logger.info("YouTube search completed successfully:", {
+      logger.info("/youtube command completed successfully:", {
         userId: interaction.user.id,
         query,
         contentType,

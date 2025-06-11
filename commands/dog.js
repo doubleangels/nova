@@ -57,7 +57,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Dog command completed successfully:", {
+      logger.info("/dog command completed successfully:", {
         userId: interaction.user.id,
         imageUrl: dogData.message
       });

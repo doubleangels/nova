@@ -56,7 +56,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("Coin flip completed successfully:", {
+            logger.info("/coinflip command completed successfully:", {
                 userId: interaction.user.id,
                 result
             });

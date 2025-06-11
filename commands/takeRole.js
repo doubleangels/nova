@@ -218,7 +218,7 @@ module.exports = {
     
     await targetMember.roles.remove(role, auditReason);
     
-    logger.info("Role successfully removed:", {
+    logger.info("/takerole command completed successfully:", {
       userId: targetMember.id,
       roleId: role.id,
       roleName: role.name

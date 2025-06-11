@@ -66,7 +66,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("Urban Dictionary command completed successfully:", {
+            logger.info("/urban command completed successfully:", {
                 userId: interaction.user.id,
                 term
             });

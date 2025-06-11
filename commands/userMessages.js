@@ -150,7 +150,7 @@ module.exports = {
         }
       );
       
-      logger.info("User messages command completed:", {
+      logger.info("/usermessages command completed successfully:", {
         targetUserId: targetUser.id,
         messageCount: allMessages.length,
         timeRange: dayLimit ? `last ${dayLimit} day${dayLimit !== 1 ? 's' : ''}` : "all time"

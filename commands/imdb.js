@@ -77,7 +77,7 @@ module.exports = {
       const embed = this.createMovieEmbed(movieData);
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("IMDb information sent successfully:", { 
+      logger.info("/imdb command completed successfully:", { 
         title: movieData.Title, 
         userId: interaction.user.id,
         imdbId: movieData.imdbID

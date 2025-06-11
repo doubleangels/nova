@@ -109,7 +109,7 @@ module.exports = {
         }
       );
 
-      logger.info("Google search completed successfully:", {
+      logger.info("/google command completed successfully:", {
         userId: interaction.user.id,
         query: searchParams.query,
         resultCount: searchResults.items.length

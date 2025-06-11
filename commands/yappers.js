@@ -156,7 +156,7 @@ module.exports = {
       logger.debug("Sending statistics embed.");
       await interaction.editReply({ embeds: [embed] });
 
-      logger.info("Yappers statistics sent successfully:", {
+      logger.info("/yappers command completed successfully:", {
         guildId: interaction.guild.id,
         guildName: interaction.guild.name,
         stats: {

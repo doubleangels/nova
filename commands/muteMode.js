@@ -99,7 +99,7 @@ module.exports = {
       const embed = this.formatStatusMessage(currentSettings, interaction);
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Mutemode status retrieved successfully:", {
+      logger.info("/mutemode command completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         settings: currentSettings
@@ -153,7 +153,7 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Mutemode configuration updated successfully:", {
+      logger.info("/mutemode command completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         isEnabled,

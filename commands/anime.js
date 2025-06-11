@@ -56,7 +56,7 @@ module.exports = {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
         
-        logger.info("Anime information sent successfully:", { 
+        logger.info("/anime command completed successfully:", { 
           animeTitle: animeData.title, 
           userId: interaction.user.id 
         });

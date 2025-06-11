@@ -108,7 +108,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Wikipedia command completed successfully:", {
+      logger.info("/wikipedia command completed successfully:", {
         userId: interaction.user.id,
         query,
         articleTitle: article.title
@@ -227,7 +227,7 @@ module.exports = {
       components: components
     });
     
-    logger.info("Wikipedia search results sent successfully:", { 
+    logger.info("/wikipedia command completed successfully:", { 
       userId: interaction.user.id,
       userTag: interaction.user.tag,
       query,

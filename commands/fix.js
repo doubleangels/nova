@@ -85,7 +85,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("Fix command completed successfully:", {
+      logger.info("/fix command completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guild.id,
         reminderId: reminderId,

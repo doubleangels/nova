@@ -83,7 +83,7 @@ module.exports = {
     
     await interaction.reply({ embeds: [embed] });
     
-    logger.info("Troll mode status check completed successfully:", {
+    logger.info("/trollmode command completed successfully:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled: settings.enabled
@@ -110,7 +110,7 @@ module.exports = {
     
     await interaction.reply({ embeds: [embed] });
     
-    logger.info("Troll mode settings updated.", {
+    logger.info("/trollmode command completed successfully:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled,
