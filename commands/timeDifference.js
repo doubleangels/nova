@@ -4,6 +4,11 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
 
+/**
+ * Command module for calculating time differences between locations.
+ * Uses Google Maps API to determine timezone information.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('timedifference')
@@ -21,6 +26,17 @@ module.exports = {
         .setRequired(true)
     ),
 
+  /**
+   * Executes the timeDifference command.
+   * This function:
+   * 1. Validates API configuration
+   * 2. Gets timezone information for both places
+   * 3. Calculates and displays time difference
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error calculating time difference
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -64,6 +80,11 @@ module.exports = {
     }
   },
   
+  /**
+   * Validates that required Google API configuration is present.
+   * 
+   * @returns {boolean} True if configuration is valid, false otherwise
+   */
   validateConfiguration() {
     if (!config.googleApiKey) {
       logger.error("Google API key is not configured in the application.", {
@@ -74,6 +95,14 @@ module.exports = {
     return true;
   },
 
+  /**
+   * Calculates the time difference between two places.
+   * 
+   * @param {string} place1 - The first place name
+   * @param {string} place2 - The second place name
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<Object>} Object containing time difference information and message
+   */
   async calculateTimeDifference(place1, place2, interaction) {
     try {
       const [offset1Result, offset2Result] = await Promise.all([
@@ -151,6 +180,12 @@ module.exports = {
     }
   },
   
+  /**
+   * Formats timezone information for display.
+   * 
+   * @param {Object} offsetResult - The timezone offset result
+   * @returns {string} Formatted timezone string
+   */
   formatTimeZone(offsetResult) {
     const sign = offsetResult.offset >= 0 ? '+' : '-';
     const absOffset = Math.abs(offsetResult.offset);
@@ -161,6 +196,12 @@ module.exports = {
     return `${formattedOffset} (${offsetResult.timeZoneName})`;
   },
   
+  /**
+   * Formats time difference for display.
+   * 
+   * @param {number} timeDiff - The time difference in hours
+   * @returns {string} Formatted time difference string
+   */
   formatTimeDifference(timeDiff) {
     const hours = Math.floor(timeDiff);
     const minutes = Math.round((timeDiff - hours) * 60);
@@ -172,6 +213,13 @@ module.exports = {
     }
   },
 
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in timedifference command:", {
       error: error.message,

@@ -5,6 +5,11 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 
+/**
+ * Command module for performing Google web searches.
+ * Provides paginated results with summaries and links.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('google')
@@ -22,6 +27,18 @@ module.exports = {
         .setRequired(false)
     ),
 
+  /**
+   * Executes the Google search command.
+   * This function:
+   * 1. Validates API configuration and search parameters
+   * 2. Fetches search results from Google API
+   * 3. Creates paginated embeds with result summaries
+   * 4. Handles error cases and rate limits
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error during the search process
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     await interaction.deferReply();
     logger.info("/google command initiated:", { 
@@ -105,6 +122,14 @@ module.exports = {
     }
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * Logs the error and sends an appropriate error message to the user.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in google command:", {
       error: error.message,
@@ -143,6 +168,13 @@ module.exports = {
     }
   },
   
+  /**
+   * Fetches search results from the Google API with error handling.
+   * 
+   * @param {string} query - The search query
+   * @param {number} resultsCount - Number of results to fetch
+   * @returns {Promise<Object>} Object containing search results or error information
+   */
   async fetchSearchResults(query, resultsCount) {
     const params = new URLSearchParams({
       key: config.googleApiKey,
@@ -182,6 +214,13 @@ module.exports = {
     }
   },
   
+  /**
+   * Generates an embed for displaying a search result.
+   * 
+   * @param {Array} items - Array of search result items
+   * @param {number} index - Index of the current result to display
+   * @returns {EmbedBuilder} Discord embed with result summary and metadata
+   */
   generateResultEmbed(items, index) {
     const item = items[index];
     const title = item.title || "No Title Found";

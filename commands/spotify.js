@@ -5,6 +5,11 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
+/**
+ * Command module for searching and displaying Spotify content.
+ * Supports searching for songs, albums, artists, playlists, and podcasts.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('spotify')
@@ -65,6 +70,18 @@ module.exports = {
         )
     ),
 
+  /**
+   * Executes the Spotify search command.
+   * This function:
+   * 1. Validates API configuration
+   * 2. Gets Spotify access token
+   * 3. Performs search based on subcommand
+   * 4. Displays results with pagination
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error during command execution
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -147,6 +164,11 @@ module.exports = {
     }
   },
 
+  /**
+   * Validates that required Spotify API configuration is present.
+   * 
+   * @returns {boolean} True if configuration is valid, false otherwise
+   */
   validateConfiguration() {
     if (!config.spotifyClientId || !config.spotifyClientSecret) {
       logger.error("Spotify API configuration is missing:", {
@@ -158,6 +180,11 @@ module.exports = {
     return true;
   },
 
+  /**
+   * Retrieves a Spotify access token using client credentials.
+   * 
+   * @returns {Promise<string|null>} The access token or null if authentication fails
+   */
   async getSpotifyAccessToken() {
     try {
       const response = await axios.post(

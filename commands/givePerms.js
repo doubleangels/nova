@@ -12,6 +12,23 @@ if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
     });
 }
 
+/**
+ * @typedef {Object} ValidationResult
+ * @property {boolean} success - Whether the validation was successful
+ * @property {string} [message] - Error message if validation failed
+ */
+
+/**
+ * @typedef {Object} RoleCreationResult
+ * @property {boolean} success - Whether the role creation was successful
+ * @property {string} [message] - Error message if role creation failed
+ */
+
+/**
+ * Command module for granting server permissions to users.
+ * Creates and assigns custom roles with specified names and colors.
+ * @type {Object}
+ */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giveperms')
@@ -30,6 +47,18 @@ module.exports = {
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
+    /**
+     * Executes the give permissions command.
+     * This function:
+     * 1. Validates command configuration and inputs
+     * 2. Creates a new role with specified name and color
+     * 3. Assigns the role and additional permissions to the target user
+     * 4. Sends a confirmation embed
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @throws {Error} If there's an error granting permissions
+     * @returns {Promise<void>}
+     */
     async execute(interaction) {
         if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
             logger.error("Command execution failed due to missing configuration:", {
@@ -128,6 +157,16 @@ module.exports = {
         }
     },
     
+    /**
+     * Validates the command inputs.
+     * Checks role name length and format.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {string} roleName - The name for the new role
+     * @param {string} colorHex - The color for the new role
+     * @param {User} targetUser - The user to receive the role
+     * @returns {ValidationResult} Object containing validation result
+     */
     validateInputs(interaction, roleName, colorHex, targetUser) {
         if (!roleName || roleName.trim().length === 0) {
             logger.warn("Invalid role name provided.", { roleName });
@@ -151,6 +190,16 @@ module.exports = {
         return { success: true };
     },
     
+    /**
+     * Creates and assigns roles to the target member.
+     * Creates a new role with specified name and color, and assigns it along with additional permissions.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {string} roleName - The name for the new role
+     * @param {number} colorDecimal - The decimal color value for the new role
+     * @param {GuildMember} targetMember - The member to receive the roles
+     * @returns {Promise<RoleCreationResult>} Object containing role creation result
+     */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
         const positionRole = interaction.guild.roles.cache.get(config.givePermsPositionAboveRoleId);
         if (!positionRole) {
@@ -209,6 +258,14 @@ module.exports = {
         return { success: true };
     },
     
+    /**
+     * Handles errors that occur during command execution.
+     * Logs the error and sends an appropriate error message to the user.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {Error} error - The error that occurred
+     * @returns {Promise<void>}
+     */
     async handleError(interaction, error) {
         logger.error("Error in giveperms command:", {
             error: error.message,

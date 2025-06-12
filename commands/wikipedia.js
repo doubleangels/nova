@@ -6,6 +6,11 @@ const he = require('he');
 
 const cache = new Map();
 
+/**
+ * Command module for searching and displaying Wikipedia article summaries.
+ * Supports article search and summary extraction with caching.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('wikipedia')
@@ -15,6 +20,17 @@ module.exports = {
         .setDescription('What do you want to search for?')
         .setRequired(true)),
 
+  /**
+   * Executes the Wikipedia search command.
+   * This function:
+   * 1. Searches for articles matching the query
+   * 2. Fetches summary of the first result
+   * 3. Creates and sends an embed with the article information
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error searching Wikipedia
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       await interaction.deferReply();

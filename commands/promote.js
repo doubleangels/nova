@@ -22,11 +22,28 @@ const reddit = new snoowrap({
 const PROMOTION_TITLE = "[21+]🎉 Congrats! You've found Da Frens! ✨ Only for adults who don't take things too seriously!";
 const PROMOTION_LINK = 'https://discord.gg/dEjjqec9RM';
 
+/**
+ * Command module for promoting users to moderator status.
+ * Manages moderator role assignment and permissions.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('promote')
     .setDescription('Post your server advertisement to r/findaserver.'),
 
+  /**
+   * Executes the promote command.
+   * This function:
+   * 1. Validates user permissions
+   * 2. Checks if target user is already a moderator
+   * 3. Assigns moderator role
+   * 4. Sends confirmation message
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error promoting the user
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {

@@ -2,6 +2,11 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
+/**
+ * Command module for removing roles from users.
+ * Handles role removal with permission checks and logging.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('takerole')
@@ -19,6 +24,17 @@ module.exports = {
         .setDescription('Reason for removing the role'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
+  /**
+   * Executes the takeRole command.
+   * This function:
+   * 1. Fetches the target guild member
+   * 2. Removes the specified role
+   * 3. Sends confirmation embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error removing the role
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -37,6 +53,13 @@ module.exports = {
     }
   },
 
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {Error} error - The error that occurred
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   */
   async handleError(error, interaction) {
     logger.error('Error in takeRole command:', {
       error: error.message,
@@ -68,6 +91,16 @@ module.exports = {
     }
   },
   
+  /**
+   * Removes a role from a guild member.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {GuildMember} targetMember - The member to remove the role from
+   * @param {Role} role - The role to remove
+   * @param {string} [reason] - The reason for removing the role
+   * @throws {Error} If the role cannot be removed
+   * @returns {Promise<void>}
+   */
   async removeRoleFromMember(interaction, targetMember, role, reason) {
     if (!targetMember.roles.cache.has(role.id)) {
       throw new Error("ROLE_NOT_ASSIGNED");
@@ -97,6 +130,13 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   },
   
+  /**
+   * Fetches a guild member by their user ID.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {string} userId - The ID of the user to fetch
+   * @returns {Promise<GuildMember|null>} The guild member or null if not found
+   */
   async fetchGuildMember(interaction, userId) {
     try {
       return await interaction.guild.members.fetch(userId);

@@ -5,6 +5,21 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 
+/**
+ * @typedef {Object} AnimeData
+ * @property {number} id - MyAnimeList anime ID
+ * @property {string} title - Anime title
+ * @property {string} synopsis - Anime synopsis
+ * @property {string|number} rating - MyAnimeList rating
+ * @property {Array<{name: string}>} genres - Array of genre objects
+ * @property {string|null} releaseDate - Release date string
+ * @property {string|null} imageUrl - URL to anime thumbnail
+ */
+
+/**
+ * Command module for searching and displaying anime information from MyAnimeList
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
@@ -15,6 +30,12 @@ module.exports = {
         .setRequired(true)
     ),
   
+  /**
+   * Executes the anime search command
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   * @throws {Error} If the command execution fails
+   */
   async execute(interaction) {
     try {
       if (!config.malClientId) {
@@ -91,6 +112,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Searches for an anime and retrieves its details from MyAnimeList API
+   * @param {string} title - The anime title to search for
+   * @returns {Promise<AnimeData|null>} Anime data or null if not found
+   * @throws {Error} If the API request fails
+   */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
     const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1`;
@@ -131,6 +158,11 @@ module.exports = {
     };
   },
 
+  /**
+   * Creates a Discord embed with anime information
+   * @param {AnimeData} animeData - The anime data to display
+   * @returns {EmbedBuilder} Discord embed with formatted anime information
+   */
   createAnimeEmbed(animeData) {
     const malLink = `https://myanimelist.net/anime/${animeData.id}`;
     const genres = animeData.genres.length > 0 

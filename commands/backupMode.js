@@ -3,6 +3,17 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
+/**
+ * @typedef {Object} BackupModeSettings
+ * @property {string|null} channelId - ID of the welcome channel
+ * @property {string|null} roleId - ID of the role to assign
+ * @property {boolean} isEnabled - Whether backup mode is enabled
+ */
+
+/**
+ * Command module for managing backup mode settings
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('backupmode')
@@ -38,6 +49,12 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
+  /**
+   * Executes the backup mode command
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   * @throws {Error} If the command execution fails
+   */
   async execute(interaction) {
     await interaction.deferReply();
     try {
@@ -94,6 +111,11 @@ module.exports = {
     }
   },
 
+  /**
+   * Handles the 'set' subcommand for configuring backup mode
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   */
   async handleSetSubcommand(interaction) {
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
@@ -115,10 +137,20 @@ module.exports = {
     }
   },
 
+  /**
+   * Handles the 'status' subcommand for checking backup mode configuration
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   */
   async handleStatusSubcommand(interaction) {
     await this.showBackupModeStatus(interaction);
   },
 
+  /**
+   * Retrieves current backup mode settings from the database
+   * @returns {Promise<BackupModeSettings>} Current backup mode settings
+   * @throws {Error} If database read fails
+   */
   async getCurrentSettings() {
     try {
       const [channelId, roleId, isEnabled] = await Promise.all([
@@ -142,6 +174,13 @@ module.exports = {
     }
   },
 
+  /**
+   * Validates input options for backup mode configuration
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {GuildChannel|null} channelOption - The selected channel
+   * @param {Role|null} roleOption - The selected role
+   * @returns {Promise<boolean>} True if validation failed, false otherwise
+   */
   async validateInputs(interaction, channelOption, roleOption) {
     if (channelOption && channelOption.type !== ChannelType.GuildText) {
       logger.warn("Invalid channel type selected for backup mode:", { 
@@ -170,6 +209,16 @@ module.exports = {
     return false;
   },
 
+  /**
+   * Updates backup mode settings in the database
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {GuildChannel|null} channelOption - The selected channel
+   * @param {Role|null} roleOption - The selected role
+   * @param {string|null} enabledOption - The enabled status
+   * @param {BackupModeSettings} currentSettings - Current backup mode settings
+   * @returns {Promise<void>}
+   * @throws {Error} If database write fails
+   */
   async updateBackupModeSettings(interaction, channelOption, roleOption, enabledOption, currentSettings) {
     try {
       let newIsEnabled = currentSettings.isEnabled;
@@ -226,6 +275,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Displays current backup mode status
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   * @throws {Error} If database read fails
+   */
   async showBackupModeStatus(interaction) {
     logger.debug("Retrieving current backup mode configuration.");
     
@@ -248,6 +303,17 @@ module.exports = {
     }
   },
 
+  /**
+   * Creates an embed message for backup mode updates
+   * @param {boolean} oldEnabled - Previous enabled status
+   * @param {boolean} newEnabled - New enabled status
+   * @param {string|null} oldChannelId - Previous channel ID
+   * @param {string|null} newChannelId - New channel ID
+   * @param {string|null} oldRoleId - Previous role ID
+   * @param {string|null} newRoleId - New role ID
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {EmbedBuilder} Discord embed with update information
+   */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     const embed = new EmbedBuilder()
       .setColor(newEnabled ? '#00FF00' : '#FF0000')
@@ -275,6 +341,12 @@ module.exports = {
     return embed;
   },
 
+  /**
+   * Creates an embed message for backup mode status
+   * @param {BackupModeSettings} settings - Current backup mode settings
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {EmbedBuilder} Discord embed with status information
+   */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')

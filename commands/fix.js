@@ -12,12 +12,28 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
+/**
+ * Command module for fixing Disboard bump reminder data.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
     .setDescription('Fix Disboard bump reminder data in the database.')
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
+  /**
+   * Executes the fix command.
+   * This function:
+   * 1. Validates reminder configuration
+   * 2. Creates a new reminder entry
+   * 3. Saves the reminder to the database
+   * 4. Sends a confirmation embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error fixing the reminder data
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       logger.info("/fix command initiated:", {
@@ -61,6 +77,11 @@ module.exports = {
     }
   },
 
+  /**
+   * Checks if there are any existing active reminders.
+   * 
+   * @returns {Promise<boolean>} True if there are existing reminders, false otherwise
+   */
   async checkExistingReminder() {
     try {
       const result = await pool.query(
@@ -73,6 +94,15 @@ module.exports = {
     }
   },
   
+  /**
+   * Saves a new reminder to the database.
+   * Cleans up any existing reminders before saving.
+   * 
+   * @param {string} reminderId - The unique identifier for the reminder
+   * @param {string} scheduledTime - The ISO string of when the reminder should trigger
+   * @throws {Error} If there's an error saving to the database
+   * @returns {Promise<void>}
+   */
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
       await pool.query(
@@ -96,6 +126,14 @@ module.exports = {
     }
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * Logs the error and sends an appropriate error message to the user.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in fix command:", {
       error: error.message,

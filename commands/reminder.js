@@ -13,6 +13,11 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
+/**
+ * Command module for configuring and managing Disboard bump reminders.
+ * Handles setup of reminder channels and roles, and displays reminder status.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
@@ -42,6 +47,17 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
+  /**
+   * Executes the reminder command.
+   * This function:
+   * 1. Defers the reply
+   * 2. Processes the subcommand (setup or status)
+   * 3. Handles any errors that occur
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error processing the command
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     await interaction.deferReply();
     
@@ -65,6 +81,17 @@ module.exports = {
     }
   },
 
+  /**
+   * Handles the reminder setup subcommand.
+   * This function:
+   * 1. Validates channel type
+   * 2. Updates database with channel and role settings
+   * 3. Sends confirmation embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error setting up reminders
+   * @returns {Promise<void>}
+   */
   async handleReminderSetup(interaction) {
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
@@ -110,6 +137,17 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   },
   
+  /**
+   * Handles the reminder status subcommand.
+   * This function:
+   * 1. Retrieves current reminder configuration
+   * 2. Gets latest reminder data
+   * 3. Displays status embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error retrieving reminder status
+   * @returns {Promise<void>}
+   */
   async handleReminderStatus(interaction) {
     logger.debug("Processing reminder status check:", { 
       userId: interaction.user.id,
@@ -185,6 +223,13 @@ module.exports = {
     }
   },
 
+  /**
+   * Retrieves the latest reminder data for a specific type.
+   * 
+   * @param {string} channelId - The ID of the channel to check
+   * @param {string} type - The type of reminder ('bump' or 'promote')
+   * @returns {Promise<Object|null>} The latest reminder data or null if none found
+   */
   async getLatestReminderData(channelId, type) {
     if (!channelId) return null;
     
@@ -203,6 +248,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Calculates the remaining time until a reminder.
+   * 
+   * @param {Object} reminderData - The reminder data containing the scheduled time
+   * @returns {string} Formatted string showing remaining time
+   */
   calculateRemainingTime(reminderData) {
     if (!reminderData || !reminderData.remind_at) {
       return '⚠️ Not scheduled!';
@@ -219,6 +270,13 @@ module.exports = {
     return `⏰ <t:${Math.floor(scheduled.valueOf() / 1000)}:R>`;
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in reminder command:", {
       error: error.message,

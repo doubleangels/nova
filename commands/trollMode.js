@@ -3,6 +3,11 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
+/**
+ * Command module for managing server-wide troll mode settings.
+ * Controls automatic kicking of new members based on account age.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('trollmode')
@@ -33,6 +38,17 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
+  /**
+   * Executes the trollmode command.
+   * This function:
+   * 1. Processes the subcommand (status or set)
+   * 2. Handles status checking or settings update
+   * 3. Manages any errors that occur
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error processing the command
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       const subcommand = interaction.options.getSubcommand();
@@ -56,6 +72,16 @@ module.exports = {
     }
   },
   
+  /**
+   * Handles the status subcommand.
+   * This function:
+   * 1. Gets current troll mode settings
+   * 2. Displays status information
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error checking status
+   * @returns {Promise<void>}
+   */
   async handleStatusSubcommand(interaction) {
     const settings = await this.getCurrentSettings();
     const embed = this.formatStatusMessage(settings, interaction);
@@ -69,6 +95,17 @@ module.exports = {
     });
   },
   
+  /**
+   * Handles the set subcommand.
+   * This function:
+   * 1. Gets new settings from options
+   * 2. Updates troll mode configuration
+   * 3. Displays confirmation message
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error updating settings
+   * @returns {Promise<void>}
+   */
   async handleSetSubcommand(interaction) {
     const enabled = interaction.options.getBoolean('enabled');
     const accountAge = interaction.options.getInteger('age');
@@ -91,6 +128,12 @@ module.exports = {
     });
   },
   
+  /**
+   * Retrieves current troll mode settings from the database.
+   * 
+   * @returns {Promise<Object>} Object containing current settings
+   * @throws {Error} If there's an error retrieving settings
+   */
   async getCurrentSettings() {
     try {
       const [enabled, accountAge] = await Promise.all([
@@ -111,6 +154,13 @@ module.exports = {
     }
   },
   
+  /**
+   * Updates troll mode settings in the database.
+   * 
+   * @param {Object} settings - The new settings to apply
+   * @throws {Error} If there's an error updating settings
+   * @returns {Promise<void>}
+   */
   async updateSettings(settings) {
     try {
       const updates = [];
@@ -134,6 +184,13 @@ module.exports = {
     }
   },
   
+  /**
+   * Creates an embed message showing current troll mode status.
+   * 
+   * @param {Object} settings - The current troll mode settings
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {EmbedBuilder} The formatted embed message
+   */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.enabled ? '#00FF00' : '#FF0000')
@@ -148,6 +205,14 @@ module.exports = {
     return embed;
   },
   
+  /**
+   * Creates an embed message confirming settings update.
+   * 
+   * @param {boolean} enabled - Whether troll mode is enabled
+   * @param {number|null} accountAge - The minimum account age requirement
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {EmbedBuilder} The formatted embed message
+   */
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
       .setColor(enabled ? '#00FF00' : '#FF0000')
@@ -166,6 +231,13 @@ module.exports = {
     return embed;
   },
 
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in trollmode command:", {
       error: error.message,

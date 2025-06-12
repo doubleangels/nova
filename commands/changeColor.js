@@ -3,6 +3,10 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
 
+/**
+ * Command module for changing role colors
+ * @type {Object}
+ */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
@@ -17,6 +21,12 @@ module.exports = {
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
+    /**
+     * Executes the change color command
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @returns {Promise<void>}
+     * @throws {Error} If the command execution fails
+     */
     async execute(interaction) {
         try {
             await interaction.deferReply();

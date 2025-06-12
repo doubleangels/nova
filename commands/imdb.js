@@ -4,6 +4,11 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
+/**
+ * Command module for searching movies and TV shows using IMDb data.
+ * Provides detailed information including plot, ratings, and cast.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('imdb')
@@ -15,6 +20,17 @@ module.exports = {
         .setRequired(true)
     ),
 
+  /**
+   * Executes the IMDb search command.
+   * This function:
+   * 1. Validates API configuration
+   * 2. Fetches movie/show data from OMDb API
+   * 3. Creates and sends an embed with the results
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error during the search process
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       if (!config.omdbApiKey) {
@@ -69,6 +85,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Creates a Discord embed with movie/show information.
+   * 
+   * @param {Object} movieData - The movie/show data from OMDb API
+   * @returns {EmbedBuilder} Discord embed with movie/show details
+   */
   createMovieEmbed(movieData) {
     const embed = new EmbedBuilder()
       .setColor(0xF5C518)
@@ -91,6 +113,14 @@ module.exports = {
     return embed;
   },
 
+  /**
+   * Handles errors that occur during command execution.
+   * Logs the error and sends an appropriate error message to the user.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in imdb command:", {
       error: error.message,

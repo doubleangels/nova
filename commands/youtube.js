@@ -7,6 +7,11 @@ const { createPaginatedResults } = require('../utils/searchUtils');
 
 const cache = new Map();
 
+/**
+ * Command module for searching and displaying YouTube content.
+ * Supports searching for videos, channels, and playlists with rich embeds.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
@@ -24,6 +29,17 @@ module.exports = {
           { name: 'Playlist', value: 'playlist' }
         )),
 
+  /**
+   * Executes the YouTube search command.
+   * This function:
+   * 1. Validates API configuration
+   * 2. Performs search based on query and content type
+   * 3. Creates paginated results with rich embeds
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error searching YouTube
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -83,6 +99,13 @@ module.exports = {
     }
   },
 
+  /**
+   * Fetches detailed information for a specific video.
+   * 
+   * @param {string} videoId - YouTube video ID
+   * @returns {Promise<Object>} Video details including duration and view count
+   * @throws {Error} If there's an error fetching video details
+   */
   async getVideoDetails(videoId) {
     try {
       const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
@@ -107,6 +130,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Formats ISO 8601 duration string to human-readable format.
+   * 
+   * @param {string} duration - ISO 8601 duration string
+   * @returns {string} Formatted duration string (HH:MM:SS)
+   */
   formatDuration(duration) {
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
     const hours = (match[1] || '').replace('H', '');
@@ -119,11 +148,25 @@ module.exports = {
     return result;
   },
 
+  /**
+   * Truncates text to specified maximum length.
+   * 
+   * @param {string} text - Text to truncate
+   * @param {number} maxLength - Maximum length before truncation
+   * @returns {string} Truncated text with ellipsis if needed
+   */
   truncateText(text, maxLength) {
     if (!text) return 'No description available.';
     return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
   },
 
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in youtube command:", {
       error: error.message,
@@ -173,6 +216,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Retrieves cached search results if available and not expired.
+   * 
+   * @param {string} key - Cache key
+   * @returns {Array|null} Cached results or null if not found/expired
+   */
   getCachedResults(key) {
     if (cache.has(key)) {
       const { timestamp, data } = cache.get(key);
@@ -184,6 +233,12 @@ module.exports = {
     return null;
   },
   
+  /**
+   * Stores search results in cache with timestamp.
+   * 
+   * @param {string} key - Cache key
+   * @param {Array} data - Search results to cache
+   */
   cacheResults(key, data) {
     cache.set(key, {
       timestamp: Date.now(),
@@ -191,6 +246,16 @@ module.exports = {
     });
   },
   
+  /**
+   * Searches YouTube for content matching the query.
+   * 
+   * @param {string} query - Search query
+   * @param {string} contentType - Type of content to search for
+   * @param {string} sortMethod - Method to sort results by
+   * @param {string} duration - Duration filter for videos
+   * @returns {Promise<Array>} Array of search results
+   * @throws {Error} If there's an error searching YouTube
+   */
   async searchYouTube(query, contentType, sortMethod, duration) {
     try {
       const params = {
@@ -238,6 +303,12 @@ module.exports = {
     }
   },
   
+  /**
+   * Enriches video search results with additional details.
+   * 
+   * @param {Array} videos - Array of video search results
+   * @returns {Promise<Array>} Enriched video results
+   */
   async enrichVideoResults(videos) {
     if (!videos || videos.length === 0) return [];
     
@@ -280,6 +351,12 @@ module.exports = {
     }
   },
 
+  /**
+   * Enriches channel search results with additional details.
+   * 
+   * @param {Array} channels - Array of channel search results
+   * @returns {Promise<Array>} Enriched channel results
+   */
   async enrichChannelResults(channels) {
     if (!channels || channels.length === 0) return [];
     
@@ -321,6 +398,12 @@ module.exports = {
     }
   },
   
+  /**
+   * Enriches playlist search results with additional details.
+   * 
+   * @param {Array} playlists - Array of playlist search results
+   * @returns {Promise<Array>} Enriched playlist results
+   */
   async enrichPlaylistResults(playlists) {
     if (!playlists || playlists.length === 0) return [];
     
@@ -362,6 +445,15 @@ module.exports = {
     }
   },
   
+  /**
+   * Creates a Discord embed for search results.
+   * 
+   * @param {Object} item - Search result item
+   * @param {string} contentType - Type of content
+   * @param {number} index - Index in results
+   * @param {number} totalItems - Total number of results
+   * @returns {EmbedBuilder} Discord embed with content information
+   */
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
       .setColor(0xFF0000)
@@ -381,6 +473,15 @@ module.exports = {
     }
   },
   
+  /**
+   * Creates a Discord embed for video results.
+   * 
+   * @param {Object} video - Video search result
+   * @param {EmbedBuilder} embed - Base embed to modify
+   * @param {number} index - Index in results
+   * @param {number} totalItems - Total number of results
+   * @returns {EmbedBuilder} Discord embed with video information
+   */
   createVideoEmbed(video, embed, index, totalItems) {
     const snippet = video.snippet;
     const statistics = video.statistics || {};
@@ -413,6 +514,15 @@ module.exports = {
       });
   },
   
+  /**
+   * Creates a Discord embed for channel results.
+   * 
+   * @param {Object} channel - Channel search result
+   * @param {EmbedBuilder} embed - Base embed to modify
+   * @param {number} index - Index in results
+   * @param {number} totalItems - Total number of results
+   * @returns {EmbedBuilder} Discord embed with channel information
+   */
   createChannelEmbed(channel, embed, index, totalItems) {
     const snippet = channel.snippet;
     const statistics = channel.statistics || {};
@@ -438,6 +548,15 @@ module.exports = {
       .setThumbnail(thumbnailUrl);
   },
 
+  /**
+   * Creates a Discord embed for playlist results.
+   * 
+   * @param {Object} playlist - Playlist search result
+   * @param {EmbedBuilder} embed - Base embed to modify
+   * @param {number} index - Index in results
+   * @param {number} totalItems - Total number of results
+   * @returns {EmbedBuilder} Discord embed with playlist information
+   */
   createPlaylistEmbed(playlist, embed, index, totalItems) {
     const snippet = playlist.snippet;
     const contentDetails = playlist.contentDetails || {};
@@ -464,6 +583,11 @@ module.exports = {
       });
   },
 
+  /**
+   * Validates that required API configuration is present.
+   * 
+   * @returns {boolean} True if configuration is valid
+   */
   validateConfiguration() {
     return config.googleApiKey;
   }

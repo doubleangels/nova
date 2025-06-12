@@ -3,11 +3,25 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
+/**
+ * Command module for fetching and displaying random dog images.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
     .setDescription('Fetch and display a random dog image.'),
 
+  /**
+   * Executes the dog image command.
+   * This function:
+   * 1. Fetches a random dog image from the Dog CEO API
+   * 2. Creates and sends an embed with the image
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error fetching or displaying the image
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -41,6 +55,14 @@ module.exports = {
     }
   },
 
+  /**
+   * Handles errors that occur during command execution.
+   * Logs the error and sends an appropriate error message to the user.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in dog command:", {
       error: error.message,

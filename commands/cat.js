@@ -3,11 +3,21 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
+/**
+ * Command module for fetching and displaying random cat images
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('cat')
     .setDescription('Fetch and display a random cat image.'),
 
+  /**
+   * Executes the cat command
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   * @throws {Error} If the command execution fails
+   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -70,6 +80,11 @@ module.exports = {
     }
   },
 
+  /**
+   * Fetches a random cat image from the Cat API
+   * @returns {Promise<Buffer>} The cat image as a buffer
+   * @throws {Error} If the API request fails or returns invalid data
+   */
   async fetchCatImage() {
     logger.debug("Fetching cat image from API.");
     try {

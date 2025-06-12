@@ -3,6 +3,11 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { createPaginatedResults } = require('../utils/searchUtils');
 
+/**
+ * Command module for searching and displaying user messages.
+ * Supports filtering by channel, time range, and content.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('usermessages')
@@ -38,6 +43,17 @@ module.exports = {
         .setMinValue(1)
         .setMaxValue(365)),
 
+  /**
+   * Executes the user messages search command.
+   * This function:
+   * 1. Validates command options
+   * 2. Fetches messages matching criteria
+   * 3. Displays results with pagination
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error fetching messages
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       logger.info("/usermessages command initiated:", {
@@ -160,6 +176,12 @@ module.exports = {
     }
   },
   
+  /**
+   * Parses and validates command options.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<Object>} Object containing validated options or error information
+   */
   async parseOptions(interaction) {
     const targetUser = interaction.options.getUser('user');
     const targetChannel = interaction.options.getChannel('channel');
@@ -222,6 +244,16 @@ module.exports = {
     };
   },
 
+  /**
+   * Fetches messages from a user in a specific channel.
+   * 
+   * @param {TextChannel|NewsChannel} channel - The channel to search in
+   * @param {string} userId - The ID of the user to search for
+   * @param {number} limit - Maximum number of messages to fetch
+   * @param {string|null} filterText - Text to filter messages by
+   * @param {number|null} dayLimit - Number of days to look back
+   * @returns {Promise<Array>} Array of message objects
+   */
   async fetchUserMessages(channel, userId, limit, filterText = null, dayLimit = null) {
     const allMessages = [];
     let lastMessageId = null;
@@ -273,6 +305,14 @@ module.exports = {
     return allMessages.slice(0, limit);
   },
 
+  /**
+   * Creates embed messages for displaying user messages.
+   * 
+   * @param {Array} messages - Array of message objects
+   * @param {User} targetUser - The user whose messages are being displayed
+   * @param {TextChannel|NewsChannel} targetChannel - The channel being searched
+   * @returns {Array<EmbedBuilder>} Array of embed messages
+   */
   createMessageEmbeds(messages, targetUser, targetChannel) {
     const embeds = [];
     const messagesPerEmbed = 10;
@@ -320,6 +360,13 @@ module.exports = {
     return embeds;
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in usermessages command:", {
       error: error.message,

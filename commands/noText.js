@@ -3,6 +3,11 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 
+/**
+ * Command module for configuring channels to only allow GIFs and stickers.
+ * Prevents text messages in designated channels.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('notext')
@@ -33,6 +38,17 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
+  /**
+   * Executes the no-text command.
+   * This function:
+   * 1. Validates channel permissions
+   * 2. Sets or removes no-text configuration
+   * 3. Sends confirmation embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error configuring the channel
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       const subcommand = interaction.options.getSubcommand();

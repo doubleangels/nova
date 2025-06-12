@@ -2,6 +2,11 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
 
+/**
+ * Command module for searching Urban Dictionary definitions.
+ * Fetches and displays word definitions with examples and ratings.
+ * @type {Object}
+ */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('urban')
@@ -11,6 +16,17 @@ module.exports = {
                 .setDescription('What do you want to search for?')
                 .setRequired(true)),
 
+    /**
+     * Executes the urban dictionary search command.
+     * This function:
+     * 1. Fetches definition from Urban Dictionary API
+     * 2. Formats and displays the result
+     * 3. Handles any errors that occur
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @throws {Error} If there's an error searching Urban Dictionary
+     * @returns {Promise<void>}
+     */
     async execute(interaction) {
         try {
             await interaction.deferReply();
@@ -59,6 +75,13 @@ module.exports = {
         }
     },
 
+    /**
+     * Handles errors that occur during command execution.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {Error} error - The error that occurred
+     * @returns {Promise<void>}
+     */
     async handleError(interaction, error) {
         logger.error("Error in urban command:", {
             error: error.message,

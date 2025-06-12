@@ -2,6 +2,17 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
+/**
+ * @typedef {Object} ValidationResult
+ * @property {boolean} success - Whether the validation was successful
+ * @property {string} [message] - Error message if validation failed
+ * @property {GuildMember} [targetMember] - The target member if validation succeeded
+ */
+
+/**
+ * Command module for changing user nicknames.
+ * @type {Object}
+ */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changenickname')
@@ -16,6 +27,17 @@ module.exports = {
                 .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames),
 
+    /**
+     * Executes the nickname change command.
+     * This function:
+     * 1. Validates bot permissions and user manageability
+     * 2. Changes the target user's nickname
+     * 3. Sends a confirmation embed with the result
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @throws {Error} If there's an error changing the nickname, with specific error messages for different failure cases
+     * @returns {Promise<void>}
+     */
     async execute(interaction) {
         try {
             await interaction.deferReply();
@@ -68,6 +90,14 @@ module.exports = {
         }
     },
 
+    /**
+     * Handles errors that occur during command execution.
+     * Logs the error and sends an appropriate error message to the user.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {Error} error - The error that occurred
+     * @returns {Promise<void>}
+     */
     async handleError(interaction, error) {
         logger.error("Error in changenickname command:", {
             error: error.message,
@@ -107,6 +137,15 @@ module.exports = {
         }
     },
     
+    /**
+     * Validates if a nickname change is allowed.
+     * Checks bot permissions, nickname length, and role hierarchy.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {User} targetUser - The user whose nickname will be changed
+     * @param {string} newNickname - The new nickname to set
+     * @returns {Promise<ValidationResult>} Object containing validation result and additional data
+     */
     async validateNicknameChange(interaction, targetUser, newNickname) {
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {

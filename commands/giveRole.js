@@ -2,6 +2,22 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
+/**
+ * @typedef {Object} ValidationResult
+ * @property {boolean} success - Whether the validation was successful
+ * @property {string} [message] - Error message if validation failed
+ */
+
+/**
+ * @typedef {Object} RoleAssignmentResult
+ * @property {boolean} success - Whether the role assignment was successful
+ * @property {string} [message] - Error message if role assignment failed
+ */
+
+/**
+ * Command module for assigning existing roles to users.
+ * @type {Object}
+ */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giverole')
@@ -16,6 +32,18 @@ module.exports = {
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
+    /**
+     * Executes the give role command.
+     * This function:
+     * 1. Validates the role and user inputs
+     * 2. Checks bot permissions and role hierarchy
+     * 3. Assigns the role to the target user
+     * 4. Sends a confirmation embed
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @throws {Error} If there's an error assigning the role
+     * @returns {Promise<void>}
+     */
     async execute(interaction) {
         await interaction.deferReply();
         logger.info("/giverole command initiated:", { 
@@ -77,6 +105,15 @@ module.exports = {
         }
     },
     
+    /**
+     * Validates the command inputs.
+     * Checks if role and user are provided and valid.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {Role} role - The role to be assigned
+     * @param {User} targetUser - The user to receive the role
+     * @returns {ValidationResult} Object containing validation result
+     */
     validateInputs(interaction, role, targetUser) {
         if (!role) {
             logger.warn("Invalid role provided.");
@@ -97,6 +134,15 @@ module.exports = {
         return { success: true };
     },
     
+    /**
+     * Assigns the role to the target member.
+     * Checks bot permissions and role hierarchy before assignment.
+     * 
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @param {Role} role - The role to be assigned
+     * @param {GuildMember} targetMember - The member to receive the role
+     * @returns {Promise<RoleAssignmentResult>} Object containing role assignment result
+     */
     async assignRole(interaction, role, targetMember) {
         const botMember = await interaction.guild.members.fetchMe();
         if (botMember.roles.highest.position <= role.position) {
@@ -123,6 +169,14 @@ module.exports = {
         return { success: true };
     },
     
+    /**
+     * Handles errors that occur during command execution.
+     * Logs the error and sends an appropriate error message to the user.
+     * 
+     * @param {Error} error - The error that occurred
+     * @param {CommandInteraction} interaction - The interaction that triggered the command
+     * @returns {Promise<void>}
+     */
     async handleError(error, interaction) {
         logger.error('Error in giveRole command:', {
             error: error.message,

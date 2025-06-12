@@ -5,6 +5,11 @@ const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
 
+/**
+ * Command module for managing user timezone settings.
+ * Handles setting and checking timezones based on location names.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
       .setName('timezone')
@@ -35,6 +40,17 @@ module.exports = {
               )
       ),
   
+  /**
+   * Executes the timezone command.
+   * This function:
+   * 1. Processes the subcommand (set or status)
+   * 2. Handles timezone setting or status checking
+   * 3. Manages any errors that occur
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error processing the command
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
       try {
           const subcommand = interaction.options.getSubcommand();
@@ -53,6 +69,18 @@ module.exports = {
       }
   },
   
+  /**
+   * Handles the set timezone subcommand.
+   * This function:
+   * 1. Validates API configuration
+   * 2. Processes location input
+   * 3. Gets timezone data
+   * 4. Updates user's timezone
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error setting the timezone
+   * @returns {Promise<void>}
+   */
   async handleSetTimezone(interaction) {
       if (!config.googleApiKey) {
           logger.error("Google API key is not configured in the application.", {
@@ -155,6 +183,17 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
   },
   
+  /**
+   * Handles the timezone status subcommand.
+   * This function:
+   * 1. Gets user's current timezone
+   * 2. Displays timezone information
+   * 3. Shows current local time if timezone is set
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error checking timezone status
+   * @returns {Promise<void>}
+   */
   async handleTimezoneStatus(interaction) {
       await interaction.deferReply();
       
@@ -218,6 +257,13 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
   },
   
+  /**
+   * Validates user permissions for timezone operations.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {User|null} targetUser - The user to set timezone for (if admin action)
+   * @returns {Promise<Object>} Object containing validation result and user info
+   */
   async validateUserPermissions(interaction, targetUser) {
       const isAdminAction = targetUser !== null && targetUser.id !== interaction.user.id;
       
@@ -251,6 +297,13 @@ module.exports = {
       };
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in timezone command:", {
       error: error.message,

@@ -3,6 +3,17 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
 
+/**
+ * @typedef {Object} MuteModeSettings
+ * @property {boolean} isEnabled - Whether mute mode is enabled
+ * @property {number} timeLimit - Time limit in hours before kicking silent users
+ */
+
+/**
+ * Command module for managing mute mode settings.
+ * Controls automatic kicking of users who don't send messages within a time limit.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('mutemode')
@@ -37,6 +48,17 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
+  /**
+   * Executes the mute mode command.
+   * This function:
+   * 1. Processes the selected subcommand
+   * 2. Handles status check or settings update
+   * 3. Sends appropriate response embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error managing mute mode
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     await interaction.deferReply();
     
@@ -59,6 +81,14 @@ module.exports = {
     }
   },
   
+  /**
+   * Handles the status subcommand.
+   * Retrieves and displays current mute mode settings.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error retrieving settings
+   * @returns {Promise<void>}
+   */
   async handleStatusSubcommand(interaction) {
     try {
       const currentSettings = await this.getCurrentSettings();
@@ -76,6 +106,14 @@ module.exports = {
     }
   },
   
+  /**
+   * Handles the set subcommand.
+   * Updates mute mode settings based on user input.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error updating settings
+   * @returns {Promise<void>}
+   */
   async handleSetSubcommand(interaction) {
     try {
       const currentSettings = await this.getCurrentSettings();
@@ -124,6 +162,12 @@ module.exports = {
     }
   },
   
+  /**
+   * Retrieves current mute mode settings from the database.
+   * 
+   * @returns {Promise<MuteModeSettings>} Current mute mode settings
+   * @throws {Error} If there's an error reading from the database
+   */
   async getCurrentSettings() {
     try {
       const [isEnabled, timeLimit] = await Promise.all([
@@ -145,6 +189,14 @@ module.exports = {
     }
   },
   
+  /**
+   * Updates mute mode settings in the database.
+   * 
+   * @param {boolean} isEnabled - Whether mute mode should be enabled
+   * @param {number} timeLimit - Time limit in hours
+   * @throws {Error} If there's an error writing to the database
+   * @returns {Promise<void>}
+   */
   async updateSettings(isEnabled, timeLimit) {
     try {
       await Promise.all([
@@ -161,6 +213,13 @@ module.exports = {
     }
   },
   
+  /**
+   * Creates an embed showing current mute mode status.
+   * 
+   * @param {MuteModeSettings} settings - Current mute mode settings
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {EmbedBuilder} Discord embed with status information
+   */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
@@ -183,6 +242,16 @@ module.exports = {
     return embed;
   },
   
+  /**
+   * Creates an embed showing mute mode settings update.
+   * 
+   * @param {boolean} oldEnabled - Previous enabled state
+   * @param {boolean} newEnabled - New enabled state
+   * @param {number} oldTimeLimit - Previous time limit
+   * @param {number} newTimeLimit - New time limit
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {EmbedBuilder} Discord embed with update information
+   */
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit, interaction) {
     const embed = new EmbedBuilder()
       .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
@@ -216,6 +285,14 @@ module.exports = {
     return embed;
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * Logs the error and sends an appropriate error message to the user.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in mutemode command:", {
       error: error.message,

@@ -22,6 +22,11 @@ const WEATHER_ICONS = {
   'default': '🌤️'
 };
 
+/**
+ * Command module for fetching and displaying weather information.
+ * Supports current conditions, forecasts, and multiple unit systems.
+ * @type {Object}
+ */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('weather')
@@ -51,6 +56,18 @@ module.exports = {
         .setMaxValue(7)
     ),
     
+  /**
+   * Executes the weather command.
+   * This function:
+   * 1. Validates API configuration
+   * 2. Gets location coordinates
+   * 3. Fetches weather data
+   * 4. Creates and sends weather embed
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error fetching weather data
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -146,6 +163,14 @@ module.exports = {
     }
   },
 
+  /**
+   * Fetches weather data from the PirateWeather API.
+   * 
+   * @param {number} lat - Latitude coordinate
+   * @param {number} lon - Longitude coordinate
+   * @param {string} units - Unit system ('si' or 'us')
+   * @returns {Promise<Object|null>} Weather data object or null if fetch fails
+   */
   async fetchWeatherData(lat, lon, units) {
     try {
       const url = `https://api.pirateweather.net/forecast/${config.pirateWeatherApiKey}/${lat},${lon}`;
@@ -179,6 +204,17 @@ module.exports = {
     }
   },
 
+  /**
+   * Creates a Discord embed with weather information.
+   * 
+   * @param {string} place - Location name
+   * @param {number} lat - Latitude coordinate
+   * @param {number} lon - Longitude coordinate
+   * @param {Object} data - Weather data from API
+   * @param {string} unitsOption - Unit system option ('metric' or 'imperial')
+   * @param {number} forecastDays - Number of forecast days to display
+   * @returns {EmbedBuilder} Discord embed with weather information
+   */
   createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
     const currently = data.currently || {};
     const daily = data.daily?.data || [];
@@ -298,6 +334,14 @@ module.exports = {
     return embed;
   },
 
+  /**
+   * Creates formatted text for weather forecast.
+   * 
+   * @param {Array} daily - Array of daily forecast data
+   * @param {string} unitsOption - Unit system option ('metric' or 'imperial')
+   * @param {number} daysToShow - Number of days to show in forecast
+   * @returns {string} Formatted forecast text
+   */
   createForecastText(daily, unitsOption, daysToShow) {
     let forecastText = "";
     const isMetric = unitsOption === 'metric';
@@ -337,6 +381,12 @@ module.exports = {
     return forecastText || "No forecast data available.";
   },
   
+  /**
+   * Gets wind direction from bearing angle.
+   * 
+   * @param {number} bearing - Wind bearing in degrees
+   * @returns {string} Wind direction abbreviation
+   */
   getWindDirection(bearing) {
     if (bearing === undefined || bearing === null) return '';
     
@@ -345,6 +395,13 @@ module.exports = {
     return `(${directions[index % 16]})`;
   },
   
+  /**
+   * Handles errors that occur during command execution.
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @param {Error} error - The error that occurred
+   * @returns {Promise<void>}
+   */
   async handleError(interaction, error) {
     logger.error("Error in weather command:", {
       error: error.message,
