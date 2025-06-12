@@ -1,24 +1,13 @@
-/**
- * Main entry point for the Discord bot.
- * Initializes the bot, loads commands and events, and handles startup/shutdown.
- * @module index
- */
-
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
-const { getAllMuteModeUsers, removeMuteModeUser, getValue } = require('./utils/database');
 
 const COMMANDS_DIRECTORY = 'commands';
 const EVENTS_DIRECTORY = 'events';
 const FILE_EXTENSION = '.js';
 
-/**
- * Bot's required Discord gateway intents
- * @type {Array<number>}
- */
 const BOT_INTENTS = [
   GatewayIntentBits.Guilds,
   GatewayIntentBits.GuildMessages,
@@ -28,30 +17,21 @@ const BOT_INTENTS = [
   GatewayIntentBits.GuildMessageReactions,
 ];
 
-// Error message constants
 const ERROR_MESSAGE_COMMAND = 'There was an error executing that command!';
 const ERROR_MESSAGE_CONTEXT_MENU = 'There was an error executing that command!';
 
-/** Delay in milliseconds before forced process exit */
 const PROCESS_EXIT_DELAY = 1000;
 
-/**
- * Discord client instance with required intents
- * @type {Client}
- */
 const client = new Client({
   intents: BOT_INTENTS
 });
 
-// Initialize collections for commands and conversation history
 client.commands = new Collection();
 client.conversationHistory = new Map();
 
-// Deploy slash commands on bot start
 const deployCommands = require('./deploy-commands');
 deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
 
-// Load command files
 const commandsPath = path.join(__dirname, COMMANDS_DIRECTORY);
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(FILE_EXTENSION));
 
@@ -68,7 +48,6 @@ for (const file of commandFiles) {
   }
 }
 
-// Load event files
 const eventsPath = path.join(__dirname, EVENTS_DIRECTORY);
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(FILE_EXTENSION));
 
@@ -89,10 +68,8 @@ for (const file of eventFiles) {
   }
 }
 
-// Login to Discord
 client.login(config.token);
 
-// Handle process termination
 process.on('SIGINT', () => {
   logger.info('Shutdown signal (SIGINT) received. Exiting...');
   process.exit(0);

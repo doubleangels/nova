@@ -1,28 +1,13 @@
-/**
- * Module for deploying Discord slash commands.
- * @module deploy-commands
- */
-
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
-/** Directory containing command files */
 const COMMANDS_DIRECTORY = 'commands';
-/** File extension for command files */
 const COMMAND_FILE_EXTENSION = '.js';
-/** Discord API version to use */
 const DISCORD_API_VERSION = '10';
 
-/**
- * Deploys slash commands to Discord.
- * Loads all command files from the commands directory and registers them with Discord.
- * 
- * @returns {Promise<void>} A promise that resolves when commands are deployed
- * @throws {Error} If command deployment fails
- */
 async function deployCommands() {
   const commands = [];
   
@@ -56,7 +41,6 @@ async function deployCommands() {
 
 module.exports = deployCommands;
 
-// Execute if this file is run directly
 if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully.'))

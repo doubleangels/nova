@@ -1,9 +1,3 @@
-/**
- * Configuration module for the Discord bot.
- * Loads environment variables and exports configuration settings.
- * @module config
- */
-
 require('dotenv').config();
 
 module.exports = {
