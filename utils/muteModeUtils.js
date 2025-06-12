@@ -40,7 +40,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             const embed = {
               color: 0xCD41FF,
               title: 'Kicked for Inactivity',
-              description: 'You were kicked from Da Frens for not sending a message in time.',
+              description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
               fields: [
                 { name: 'Want to rejoin?', value: 'You can rejoin at https://dafrens.games.' }
               ]
