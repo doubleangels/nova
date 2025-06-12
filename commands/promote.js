@@ -77,28 +77,41 @@ module.exports = {
       }
 
       const postData = {
-        subreddit: 'DiscordAdvertising',
+        subreddits: [
+          {
+            name: 'DiscordAdvertising',
+            flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
+          },
+          {
+            name: 'Discord_Servers_List',
+            flairId: '66184c9c-3e87-11ef-95bd-3e9ca3e6dbc4'
+          },
+          {
+            name: 'discordservers',
+            flairId: '3f59062c-abd2-11ec-aab6-e262df74cc9d'
+          }
+        ],
         title: '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥',
-        content: 'https://dafrens.games'
+        content: 'https://discord.gg/dEjjqec9RM'
       };
 
-      const redditResponse = await this.postToReddit(postData);
+      const redditResponses = await this.postToMultipleSubreddits(postData);
       
-      if (redditResponse.error) {
+      if (redditResponses.error) {
         return await interaction.editReply({
-          content: redditResponse.message,
+          content: redditResponses.message,
           ephemeral: true
         });
       }
 
       await this.recordPromotion();
 
-      const embed = this.createSuccessEmbed(redditResponse, interaction);
+      const embed = this.createSuccessEmbed(redditResponses, interaction);
       await interaction.editReply({ embeds: [embed] });
 
       logger.info("/promote command completed successfully:", {
         userId: interaction.user.id,
-        postId: redditResponse.id
+        responses: redditResponses
       });
 
     } catch (error) {
@@ -115,93 +128,110 @@ module.exports = {
   },
 
   /**
-   * Posts content to Reddit using snoowrap.
+   * Posts content to multiple Reddit subreddits using snoowrap.
    * @param {Object} postData - The post data to submit
-   * @returns {Promise<Object>} The Reddit API response
+   * @returns {Promise<Object>} The Reddit API responses
    */
-  async postToReddit(postData) {
-    try {
-      const subreddit = await reddit.getSubreddit(postData.subreddit);
-      
-      const flairs = await reddit.oauthRequest({
-        uri: `/r/${postData.subreddit}/api/link_flair`,
-        method: 'GET'
-      });
+  async postToMultipleSubreddits(postData) {
+    const responses = [];
+    const errors = [];
 
-      logger.info('Available flairs:', flairs);
+    for (const subreddit of postData.subreddits) {
+      try {
+        const subredditInstance = await reddit.getSubreddit(subreddit.name);
+        
+        const flairs = await reddit.oauthRequest({
+          uri: `/r/${subreddit.name}/api/link_flair`,
+          method: 'GET'
+        });
 
-      const serverFlair = flairs.find(flair => 
-        flair.id === '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
-      );
+        logger.info(`Available flairs for ${subreddit.name}:`, flairs);
 
-      if (!serverFlair) {
-        logger.error('Could not find specified flair. Available flairs:', flairs);
-        return {
-          error: true,
-          message: "⚠️ Could not find the required flair. Please try again later or contact support."
-        };
-      }
+        const serverFlair = flairs.find(flair => flair.id === subreddit.flairId);
 
-      logger.info("Using flair:", serverFlair);
-
-      const submission = await reddit.oauthRequest({
-        uri: '/api/submit',
-        method: 'POST',
-        form: {
-          kind: 'link',
-          sr: postData.subreddit,
-          title: postData.title,
-          url: postData.content,
-          api_type: 'json',
-          flair_id: serverFlair.id,
-          flair_text: serverFlair.text
+        if (!serverFlair) {
+          logger.error(`Could not find specified flair for ${subreddit.name}. Available flairs:`, flairs);
+          errors.push(`⚠️ Could not find the required flair for r/${subreddit.name}.`);
+          continue;
         }
-      });
 
-      if (!submission || !submission.json || !submission.json.data) {
-        throw new Error("⚠️ Failed to submit post to Reddit.");
+        logger.info(`Using flair for ${subreddit.name}:`, serverFlair);
+
+        const submission = await reddit.oauthRequest({
+          uri: '/api/submit',
+          method: 'POST',
+          form: {
+            kind: 'link',
+            sr: subreddit.name,
+            title: postData.title,
+            url: postData.content,
+            api_type: 'json',
+            flair_id: serverFlair.id,
+            flair_text: serverFlair.text
+          }
+        });
+
+        if (!submission || !submission.json || !submission.json.data) {
+          throw new Error(`⚠️ Failed to submit post to r/${subreddit.name}.`);
+        }
+
+        const postId = submission.json.data.id;
+        const permalink = `/r/${subreddit.name}/comments/${postId}`;
+
+        responses.push({
+          subreddit: subreddit.name,
+          id: postId,
+          permalink: permalink
+        });
+
+      } catch (error) {
+        logger.error(`Error posting to r/${subreddit.name}:`, error);
+        errors.push(`⚠️ Failed to post to r/${subreddit.name}.`);
       }
+    }
 
-      const postId = submission.json.data.id;
-      const permalink = `/r/${postData.subreddit}/comments/${postId}`;
-
-      return {
-        id: postId,
-        permalink: permalink
-      };
-
-    } catch (error) {
-      logger.error('Error posting to Reddit:', error);
+    if (responses.length === 0) {
       return {
         error: true,
-        message: "⚠️ Failed to post to Reddit. Please try again later."
+        message: "⚠️ Failed to post to any subreddits. " + errors.join(' ')
       };
     }
+
+    return {
+      error: false,
+      responses: responses,
+      errors: errors
+    };
   },
 
   /**
-   * Creates a success embed for the Reddit post.
-   * @param {Object} response - The Reddit API response
+   * Creates a success embed for the Reddit posts.
+   * @param {Object} response - The Reddit API responses
    * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @returns {EmbedBuilder} The formatted embed
    */
   createSuccessEmbed(response, interaction) {
-    let description = `Your server advertisement has been posted to r/findaserver. View your post on Reddit: https://reddit.com${response.permalink}`;
+    let description = 'Your server advertisement has been posted to the following subreddits:\n\n';
+    
+    response.responses.forEach(resp => {
+      description += `• r/${resp.subreddit}: https://reddit.com${resp.permalink}\n\n`;
+    });
+
+    if (response.errors && response.errors.length > 0) {
+      description += '\n⚠️ Some posts failed:\n';
+      response.errors.forEach(error => {
+        description += `• ${error}\n`;
+      });
+    }
+
     const embed = new EmbedBuilder()
       .setColor(0xFF4500)
       .setTitle('Server Promotion')
       .setDescription(description);
 
-    if (response && response.id) {
-      embed.addFields({ 
-        name: 'Post ID', 
-        value: response.id.toString() 
-      });
-    }
-
     embed.addFields({ 
       name: 'Status', 
-      value: 'Success' 
+      value: response.errors.length > 0 ? 'Partial Success' : 'Success' 
     });
 
     return embed
