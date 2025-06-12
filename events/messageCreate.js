@@ -40,7 +40,7 @@ module.exports = {
       logger.debug("Message received:", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
-        content: message.content?.substring(0, 50) || "No Content"
+        content: message.content?.replace(/\n/g, ' ') || "No Content"
       });
 
       // Remove from mute_mode table if present
@@ -180,7 +180,7 @@ async function checkForBumpMessages(message) {
     author: message.author?.tag,
     hasEmbeds: !!message.embeds,
     embedCount: message.embeds?.length,
-    content: message.content?.substring(0, 100)
+    content: message.content?.replace(/\n/g, ' ') || "No Content"
   });
   if (!message.embeds || message.embeds.length === 0) return;
   try {
