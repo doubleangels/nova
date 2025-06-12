@@ -4,10 +4,6 @@ const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
-const COMMANDS_DIRECTORY = 'commands';
-const EVENTS_DIRECTORY = 'events';
-const FILE_EXTENSION = '.js';
-
 const BOT_INTENTS = [
   GatewayIntentBits.Guilds,
   GatewayIntentBits.GuildMessages,
@@ -16,11 +12,6 @@ const BOT_INTENTS = [
   GatewayIntentBits.GuildPresences,
   GatewayIntentBits.GuildMessageReactions,
 ];
-
-const ERROR_MESSAGE_COMMAND = 'There was an error executing that command!';
-const ERROR_MESSAGE_CONTEXT_MENU = 'There was an error executing that command!';
-
-const PROCESS_EXIT_DELAY = 1000;
 
 const client = new Client({
   intents: BOT_INTENTS
@@ -32,8 +23,8 @@ client.conversationHistory = new Map();
 const deployCommands = require('./deploy-commands');
 deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
 
-const commandsPath = path.join(__dirname, COMMANDS_DIRECTORY);
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(FILE_EXTENSION));
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
   try {
@@ -48,8 +39,8 @@ for (const file of commandFiles) {
   }
 }
 
-const eventsPath = path.join(__dirname, EVENTS_DIRECTORY);
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith(FILE_EXTENSION));
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
 for (const file of eventFiles) {
   try {
