@@ -24,7 +24,6 @@
     "dotenv": "^16.5.0",
     "he": "^1.2.0",
     "luxon": "^3.6.1",
-    "moment-timezone": "^0.6.0",
     "node-cache": "^5.1.2",
     "pg": "^8.16.0",
     "snoowrap": "^1.23.0",

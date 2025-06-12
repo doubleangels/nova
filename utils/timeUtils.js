@@ -9,10 +9,7 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
-const moment = require('moment-timezone');
 const customParseFormat = require('dayjs/plugin/customParseFormat');
-
-const TIME_VALID_TIMEZONES = new Set(moment.tz.names());
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -64,18 +61,18 @@ function extractTimeReferences(content) {
         parsedTime = dayjs().hour(0).minute(0);
       } else {
         const timeStr = text.replace(/\s+/g, '');
-        parsedTime = dayjs(timeStr, ['h:mma', 'h:mm a', 'ha', 'h a']);
         
-        if (!parsedTime.isValid()) {
-          // Fallback for '12pm', '3am', etc.
-          parsedTime = dayjs(text, ['ha']);
+        // Try parsing with various formats
+        const formats = ['h:mma', 'h:mm a', 'ha', 'h a', 'H:mm'];
+        for (const format of formats) {
+          parsedTime = dayjs(timeStr, format);
+          if (parsedTime.isValid()) break;
         }
         
+        // If no format worked, try direct hour:minute parsing
         if (!parsedTime.isValid()) {
           const [hours, minutes] = timeStr.split(':').map(Number);
           if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-            const period = hours >= 12 ? 'PM' : 'AM';
-            const hour12 = hours % 12 || 12;
             parsedTime = dayjs().hour(hours).minute(minutes);
           }
         }
