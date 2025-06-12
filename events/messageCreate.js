@@ -6,7 +6,7 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getTrackedMember, removeTrackedMember, getValue, removeMuteModeUser } = require('../utils/database');
+const { getValue, removeMuteModeUser } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const { Events } = require('discord.js');
@@ -43,10 +43,8 @@ module.exports = {
         content: message.content?.substring(0, 50) || "No Content"
       });
 
-      const wasTracked = await removeTrackedMember(message.author.id);
-      if (wasTracked) {
-        logger.info(`User ${message.author.tag} sent their first message and was removed from mute tracking.`);
-      }
+      // Remove from mute_mode table if present
+      await removeMuteModeUser(message.author.id);
 
       if (message.content.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);

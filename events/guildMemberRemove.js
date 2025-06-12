@@ -6,7 +6,7 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { removeTrackedMember } = require('../utils/database');
+const { removeMuteModeUser } = require('../utils/database');
 const { Events } = require('discord.js');
 
 /**
@@ -30,10 +30,8 @@ module.exports = {
       }
       logger.info(`Member left: ${member.user.tag} (ID: ${member.id})`);
       
-      const wasTracked = await removeTrackedMember(member.id);
-      if (wasTracked) {
-        logger.info(`Removed tracked member: ${member.user.tag}`);
-      }
+      // Remove from mute_mode table
+      await removeMuteModeUser(member.id);
 
       logger.info(`Successfully processed member departure: ${member.user.tag}.`);
     } catch (error) {

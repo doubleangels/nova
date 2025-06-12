@@ -7,7 +7,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, trackNewMember, addMuteModeUser } = require('../utils/database');
+const { getValue, addMuteModeUser } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 
@@ -47,13 +47,6 @@ module.exports = {
         );
         logger.info(`Scheduled mute kick for new member: ${member.user.tag}.`);
       }
-
-      await trackNewMember(
-        member.id,
-        member.user.username,
-        member.joinedAt.toISOString()
-      );
-      logger.debug(`Tracked new member: ${member.user.tag}`);
 
       logger.info(`Successfully processed new member: ${member.user.tag}.`);
     } catch (error) {

@@ -198,137 +198,6 @@ async function getAllConfigs() {
 }
 
 /**
- * Tracks a new member in the database.
- * @async
- * @function trackNewMember
- * @param {string} memberId - The member's Discord ID
- * @param {string} username - The member's username
- * @param {string} joinTime - The member's join time in ISO format
- */
-async function trackNewMember(memberId, username, joinTime) {
-  const client = await pool.connect();
-  try {
-    const formattedJoinTime = dayjs(joinTime).toISOString();
-    logger.debug(`Tracking new member "${username}" (ID: ${memberId}) joining at ${formattedJoinTime}.`);
-    
-    await client.query(
-      `INSERT INTO ${DB_TABLES.CONFIG} (id, value) 
-       VALUES ($1, $2) 
-       ON CONFLICT (id) 
-       DO UPDATE SET value = $2`,
-      [`mute_join_${memberId}`, JSON.stringify(formattedJoinTime)]
-    );
-    
-    logger.info(`Successfully tracked member "${username}" (ID: ${memberId}).`);
-  } catch (err) {
-    logger.error(`Error tracking new member "${username}":`, { error: err });
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Retrieves tracking data for a member.
- * @async
- * @function getTrackedMember
- * @param {string} memberId - The member's Discord ID
- * @returns {Promise<Object|null>} The member's tracking data, or null if not found
- */
-async function getTrackedMember(memberId) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Retrieving tracking data for member ID "${memberId}".`);
-    
-    const joinTimeResult = await client.query(
-      `SELECT value FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
-      [`mute_join_${memberId}`]
-    );
-
-    if (joinTimeResult.rows.length > 0) {
-      const data = {
-        member_id: memberId,
-        username: joinTimeResult.rows[0].value
-      };
-      logger.debug(`Found tracking data for member ID "${memberId}": ${JSON.stringify(data)}`);
-      return data;
-    }
-    
-    logger.debug(`No tracking data found for member ID "${memberId}".`);
-    return null;
-  } catch (err) {
-    logger.error(`Error retrieving tracking data for member ID "${memberId}":`, { error: err });
-    return null;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Removes tracking data for a member.
- * @async
- * @function removeTrackedMember
- * @param {string} memberId - The member's Discord ID
- * @returns {Promise<boolean>} Whether the member was successfully removed from tracking
- */
-async function removeTrackedMember(memberId) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Removing tracking data for member ID "${memberId}".`);
-    
-    const result = await client.query(
-      `DELETE FROM ${DB_TABLES.CONFIG} WHERE id = $1 RETURNING *`,
-      [`mute_join_${memberId}`]
-    );
-    
-    if (result.rowCount === 0) {
-      logger.debug(`No tracking data found for member ID "${memberId}" to remove.`);
-      return false;
-    } else {
-      logger.info(`Successfully removed tracking data for member ID "${memberId}".`);
-      return true;
-    }
-  } catch (err) {
-    logger.error("Error removing tracked member:", { error: err });
-    return false;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Retrieves all tracked members from the database.
- * @async
- * @function getAllTrackedMembers
- * @returns {Promise<Array>} Array of tracked member records
- */
-async function getAllTrackedMembers() {
-  const client = await pool.connect();
-  try {
-    logger.debug("Retrieving all tracked members.");
-    
-    const joinTimesResult = await client.query(
-      `SELECT id, value FROM ${DB_TABLES.CONFIG} WHERE id LIKE 'mute_join_%'`
-    );
-
-    const trackedMembers = joinTimesResult.rows.map(row => {
-      const memberId = row.id.replace('mute_join_', '');
-      return {
-        member_id: memberId,
-        username: row.value
-      };
-    });
-
-    logger.info(`Retrieved ${trackedMembers.length} tracked member(s).`);
-    return trackedMembers;
-  } catch (err) {
-    logger.error("Error retrieving all tracked members:", { error: err });
-    return [];
-  } finally {
-    client.release();
-  }
-}
-
-/**
  * Sets a user's timezone in the database.
  * @async
  * @function setUserTimezone
@@ -505,98 +374,16 @@ async function getAllMuteModeUsers() {
   }
 }
 
-/**
- * Sets a mute mode recovery timestamp for a user.
- * @async
- * @function setMuteModeRecoveryTime
- * @param {string} userId - The user's Discord ID
- * @param {Date|string} kickAt - The timestamp (Date or ISO string) when the user should be kicked
- */
-async function setMuteModeRecoveryTime(userId, kickAt) {
-  const client = await pool.connect();
-  try {
-    // Accept Date or ISO string
-    const kickAtTimestamp = (kickAt instanceof Date) ? kickAt.toISOString() : new Date(kickAt).toISOString();
-    logger.debug(`Setting mute mode recovery time for user ${userId} to ${kickAtTimestamp}.`);
-    await client.query(
-      `INSERT INTO ${DB_TABLES.MUTE_MODE_RECOVERY} (user_id, kick_at)
-       VALUES ($1, $2)
-       ON CONFLICT (user_id) DO UPDATE SET kick_at = $2`,
-      [userId, kickAtTimestamp]
-    );
-    logger.debug(`Set mute mode recovery time for user ${userId} successfully.`);
-  } catch (err) {
-    logger.error(`Error setting mute mode recovery time for user ${userId}:`, { error: err });
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Gets a mute mode recovery timestamp for a user.
- * @async
- * @function getMuteModeRecoveryTime
- * @param {string} userId - The user's Discord ID
- * @returns {Promise<Date|null>} The kick_at timestamp as a Date object, or null if not found
- */
-async function getMuteModeRecoveryTime(userId) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Getting mute mode recovery time for user ${userId}`);
-    const result = await client.query(
-      `SELECT kick_at FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
-      [userId]
-    );
-    const kickAt = result.rows.length > 0 ? result.rows[0].kick_at : null;
-    logger.debug(`Retrieved mute mode recovery time for user ${userId}: ${kickAt}`);
-    return kickAt ? new Date(kickAt) : null;
-  } catch (err) {
-    logger.error(`Error getting mute mode recovery time for user ${userId}:`, { error: err });
-    return null;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Deletes a mute mode recovery timestamp for a user.
- * @async
- * @function deleteMuteModeRecoveryTime
- * @param {string} userId - The user's Discord ID
- */
-async function deleteMuteModeRecoveryTime(userId) {
-  const client = await pool.connect();
-  try {
-    logger.debug(`Deleting mute mode recovery time for user ${userId}`);
-    await client.query(
-      `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
-      [userId]
-    );
-    logger.debug(`Deleted mute mode recovery time for user ${userId}`);
-  } catch (err) {
-    logger.error(`Error deleting mute mode recovery time for user ${userId}:`, { error: err });
-  } finally {
-    client.release();
-  }
-}
-
 module.exports = {
   initializeDatabase,
   getValue,
   setValue,
   deleteValue,
   getAllConfigs,
-  trackNewMember,
-  getTrackedMember,
-  removeTrackedMember,
-  getAllTrackedMembers,
   setUserTimezone,
   getUserTimezone,
   query,
   addMuteModeUser,
   removeMuteModeUser,
-  getAllMuteModeUsers,
-  setMuteModeRecoveryTime,
-  getMuteModeRecoveryTime,
-  deleteMuteModeRecoveryTime
+  getAllMuteModeUsers
 };
