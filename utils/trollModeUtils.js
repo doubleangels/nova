@@ -58,7 +58,7 @@ async function performKick(member) {
       const embed = new EmbedBuilder()
         .setColor(0xCD41FF)
         .setTitle('Account Age Requirement')
-        .setDescription(`You have been kicked from Da Frens because your account is too new.`)
+        .setDescription(`You were kicked from Da Frens because your account is too new.`)
         .addFields(
           { name: 'Your Account Age', value: `${accountAge} days` },
           { name: 'Required Age', value: `${requiredAge} days` },
