@@ -26,6 +26,9 @@ const reddit = new snoowrap({
   password: config.redditPassword
 });
 
+const PROMOTION_TITLE = '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥';
+const PROMOTION_CONTENT = 'https://discord.gg/dEjjqec9RM';
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('promote')
@@ -87,12 +90,12 @@ module.exports = {
             flairId: '66184c9c-3e87-11ef-95bd-3e9ca3e6dbc4'
           },
           {
-            name: 'discordservers',
+            name: 'discordservers_',
             flairId: '3f59062c-abd2-11ec-aab6-e262df74cc9d'
           }
         ],
-        title: '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥',
-        content: 'https://discord.gg/dEjjqec9RM'
+        title: PROMOTION_TITLE,
+        content: PROMOTION_CONTENT
       };
 
       const redditResponses = await this.postToMultipleSubreddits(postData);
@@ -214,7 +217,9 @@ module.exports = {
     let description = 'Your server advertisement has been posted to the following subreddits:\n\n';
     
     response.responses.forEach(resp => {
-      description += `• r/${resp.subreddit}: https://reddit.com${resp.permalink}\n\n`;
+      // Escape underscores for Discord markdown
+      const safeSubreddit = resp.subreddit.replace(/_/g, '\\_');
+      description += `• r/${safeSubreddit}\n\n`;
     });
 
     if (response.errors && response.errors.length > 0) {
