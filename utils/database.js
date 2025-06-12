@@ -16,7 +16,6 @@ const DB_TABLES = {
   REMINDERS: 'main.reminder_data',
   TRACKED_MEMBERS: 'main.tracked_members',
   TIMEZONES: 'main.timezones',
-  MUTE_MODE: 'main.mute_mode',
   MUTE_MODE_RECOVERY: 'main.mute_mode_recovery'
 };
 
@@ -330,7 +329,7 @@ async function addMuteModeUser(userId, username) {
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO ${DB_TABLES.MUTE_MODE} (user_id, username, join_time)
+      `INSERT INTO ${DB_TABLES.MUTE_MODE_RECOVERY} (user_id, username, join_time)
        VALUES ($1, $2, NOW())
        ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = NOW()`,
       [userId, username]
@@ -350,7 +349,7 @@ async function removeMuteModeUser(userId) {
   const client = await pool.connect();
   try {
     await client.query(
-      `DELETE FROM ${DB_TABLES.MUTE_MODE} WHERE user_id = $1`,
+      `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
       [userId]
     );
   } finally {
@@ -367,7 +366,7 @@ async function removeMuteModeUser(userId) {
 async function getAllMuteModeUsers() {
   const client = await pool.connect();
   try {
-    const res = await client.query(`SELECT * FROM ${DB_TABLES.MUTE_MODE}`);
+    const res = await client.query(`SELECT * FROM ${DB_TABLES.MUTE_MODE_RECOVERY}`);
     return res.rows;
   } finally {
     client.release();
