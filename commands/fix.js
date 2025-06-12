@@ -59,8 +59,6 @@ module.exports = {
         await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder channel and role first.");
         return;
       }
-
-      const existingReminder = await this.checkExistingReminder();
       
       const reminderId = randomUUID();
       const scheduledTime = dayjs().add(7200, 'second');
@@ -77,10 +75,6 @@ module.exports = {
           .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
           .setFooter({ text: `Updated by ${interaction.user.tag}` })
           .setTimestamp();
-      
-      if (existingReminder) {
-          embed.addFields({ name: 'Note', value: '⚠️ An existing reminder was overwritten.' });
-      }
       
       await interaction.editReply({ embeds: [embed] });
       
