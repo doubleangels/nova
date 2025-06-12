@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
-const { getValue, setValue, getReminderData } = require('../utils/database');
+const { getValue, setValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
 

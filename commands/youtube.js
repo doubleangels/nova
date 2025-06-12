@@ -1,10 +1,9 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const crypto = require('crypto');
-const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
+const { createPaginatedResults } = require('../utils/searchUtils');
 
 const cache = new Map();
 

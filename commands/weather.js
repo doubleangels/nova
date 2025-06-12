@@ -4,7 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
-const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
+const { getGeocodingData } = require('../utils/locationUtils');
 
 const WEATHER_ICONS = {
   'clear-day': '☀️',
