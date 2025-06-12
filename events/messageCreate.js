@@ -25,7 +25,7 @@ module.exports = {
    * @throws {Error} If message processing fails
    */
   async execute(message) {
-    if (message.author.bot) return;
+    if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
     try {
       if (message.partial) {
@@ -36,8 +36,6 @@ module.exports = {
           throw new Error("⚠️ Failed to fetch message content.");
         }
       }
-
-      if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
       logger.debug("Message received:", {
         author: message.author?.tag || "Unknown Author",
