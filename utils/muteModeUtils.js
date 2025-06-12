@@ -17,6 +17,24 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Store active timeouts
+const activeTimeouts = new Map();
+
+/**
+ * Cancels a scheduled mute kick for a user
+ * @param {string} userId - The user's Discord ID
+ * @returns {boolean} True if a timeout was cancelled, false otherwise
+ */
+function cancelMuteKick(userId) {
+  if (activeTimeouts.has(userId)) {
+    clearTimeout(activeTimeouts.get(userId));
+    activeTimeouts.delete(userId);
+    logger.debug(`Cancelled mute kick timeout for user ${userId}`);
+    return true;
+  }
+  return false;
+}
+
 /**
  * Schedules a mute kick for a user based on join time and hours
  * @param {string} userId - The user's Discord ID
@@ -26,6 +44,9 @@ dayjs.extend(timezone);
  * @param {string} guildId - The guild ID
  */
 async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
+  // Cancel any existing timeout for this user
+  cancelMuteKick(userId);
+
   const joinDate = (joinTime instanceof Date) ? joinTime : new Date(joinTime);
   const kickAt = new Date(joinDate.getTime() + hours * 60 * 60 * 1000);
   const delay = kickAt.getTime() - Date.now();
@@ -58,7 +79,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
     }
     return;
   }
-  setTimeout(async () => {
+  const timeoutId = setTimeout(async () => {
     try {
       const guild = client.guilds.cache.get(guildId);
       if (guild) {
@@ -83,8 +104,12 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
       }
     } catch (e) {
       logger.error(`Failed to kick user ${userId} after timeout:`, e);
+    } finally {
+      activeTimeouts.delete(userId);
     }
   }, delay);
+  
+  activeTimeouts.set(userId, timeoutId);
   logger.debug(`Scheduled mute kick for user ${userId} in ${Math.round(delay/1000/60)} minutes.`);
 }
 
@@ -131,5 +156,6 @@ async function rescheduleAllMuteKicks(client) {
 
 module.exports = {
     scheduleMuteKick,
-    rescheduleAllMuteKicks
+    rescheduleAllMuteKicks,
+    cancelMuteKick
 };

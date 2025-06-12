@@ -10,6 +10,7 @@ const { getValue, removeMuteModeUser } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const { Events } = require('discord.js');
+const { cancelMuteKick } = require('../utils/muteModeUtils');
 
 /**
  * Event handler for message creation events.
@@ -154,8 +155,12 @@ module.exports = {
 async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
   try {
-    // Remove from mute_mode table if present
-    await removeMuteModeUser(message.author.id);
+    // Check if user has an active mute kick timeout
+    if (cancelMuteKick(message.author.id)) {
+      // Only remove from database if we cancelled a timeout
+      await removeMuteModeUser(message.author.id);
+      logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message`);
+    }
   } catch (error) {
     logger.error("Error processing user message:", { userId: message.author.id, error });
   }
