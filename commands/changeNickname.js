@@ -7,7 +7,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError } = require('../errors');
 
 /**
  * We handle the changenickname command.
@@ -102,7 +101,9 @@ module.exports = {
      * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
-        logError(error, 'changenickname', {
+        logger.error("Error in changenickname command:", {
+            error: error.message,
+            stack: error.stack,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             targetUserId: interaction.options?.getUser('user')?.id

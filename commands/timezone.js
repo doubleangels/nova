@@ -10,7 +10,6 @@ const logger = require('../logger.js')(path.basename(__filename));
 const { setUserTimezone, getUserTimezone } = require('../utils/database.js');
 const config = require('../config');
 const { getGeocodingData, getTimezoneData, isValidTimezone, formatErrorMessage } = require('../utils/locationUtils');
-const { logError } = require('../errors');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -295,43 +294,44 @@ module.exports = {
    * @param {Error} error - The error that occurred.
    */
   async handleError(interaction, error) {
-      logError(error, 'timezone', {
-          userId: interaction.user?.id,
-          guildId: interaction.guild?.id
+    logger.error("Error in timezone command:", {
+      error: error.message,
+      stack: error.stack,
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
+    
+    let errorMessage = "⚠️ An unexpected error occurred while managing timezone settings.";
+    
+    if (error.message === "API_ERROR") {
+      errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
+    } else if (error.code === 'ECONNABORTED') {
+      errorMessage = "⚠️ The request timed out. Please try again.";
+    } else if (error.response?.status === 403) {
+      errorMessage = "⚠️ API access denied. Please check API configuration.";
+    } else if (error.response?.status === 429) {
+      errorMessage = "⚠️ Too many requests. Please try again later.";
+    } else if (error.response?.status >= 500) {
+      errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
+    }
+    
+    try {
+      const replyMethod = interaction.deferred ? interaction.editReply : interaction.reply;
+      await replyMethod.call(interaction, { 
+        content: errorMessage,
+        ephemeral: true 
+      });
+    } catch (followUpError) {
+      logger.error("Failed to send error response for timezone command:", {
+        error: followUpError.message,
+        originalError: error.message,
+        userId: interaction.user?.id
       });
       
-      let errorMessage = "⚠️ An unexpected error occurred while managing timezone settings.";
-      
-      if (error.message === "API_ERROR") {
-          errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
-      } else if (error.code === 'ECONNABORTED') {
-          errorMessage = "⚠️ The request timed out. Please try again.";
-      } else if (error.response?.status === 403) {
-          errorMessage = "⚠️ API access denied. Please check API configuration.";
-      } else if (error.response?.status === 429) {
-          errorMessage = "⚠️ Too many requests. Please try again later.";
-      } else if (error.response?.status >= 500) {
-          errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";
-      }
-      
-      try {
-          const replyMethod = interaction.deferred ? interaction.editReply : interaction.reply;
-          await replyMethod.call(interaction, { 
-              content: errorMessage,
-              ephemeral: true 
-          });
-      } catch (followUpError) {
-          logger.error("Failed to send error response for timezone command:", {
-              error: followUpError.message,
-              originalError: error.message,
-              userId: interaction.user?.id
-          });
-          
-          await interaction.reply({ 
-              content: errorMessage,
-              ephemeral: true 
-          }).catch(() => {
-          });
-      }
+      await interaction.reply({ 
+        content: errorMessage,
+        ephemeral: true 
+      }).catch(() => {});
+    }
   }
 };

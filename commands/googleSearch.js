@@ -10,7 +10,6 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
-const { logError } = require('../errors');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -127,7 +126,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'google', {
+    logger.error("Error in google command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
       channelId: interaction.channel?.id
@@ -157,9 +158,8 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true
-      }).catch(() => {
-      });
+        ephemeral: true 
+      }).catch(() => {});
     }
   },
   

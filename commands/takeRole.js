@@ -78,7 +78,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'takerole', {
+    logger.error("Error in takerole command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
       channelId: interaction.channel?.id
@@ -111,8 +113,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   },
 

@@ -9,7 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const { logError } = require('../errors');
 
 /**
  * We handle the imdb command.
@@ -111,7 +110,9 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logError(error, 'imdb', {
+    logger.error("Error in imdb command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });

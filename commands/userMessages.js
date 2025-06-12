@@ -2,7 +2,6 @@ const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { createPaginatedResults } = require('../utils/searchUtils');
-const { logError } = require('../errors');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -322,7 +321,9 @@ module.exports = {
   },
   
   async handleError(interaction, error) {
-    logError(error, 'usermessages', {
+    logger.error("Error in usermessages command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
       channelId: interaction.channel?.id
@@ -369,8 +370,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

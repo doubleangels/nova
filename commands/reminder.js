@@ -13,7 +13,6 @@ dayjs.extend(duration);
 const { getValue, setValue, getReminderData } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { logError } = require('../errors');
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,
@@ -273,7 +272,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'reminder', {
+    logger.error("Error in reminder command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -305,8 +306,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

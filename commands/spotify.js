@@ -9,21 +9,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
-const { logError } = require('../errors');
 const { createPaginatedResults } = require('../utils/searchUtils');
-
-const SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1';
-const SPOTIFY_REQUEST_TIMEOUT = 10000;
-
-const SPOTIFY_SEARCH_MAX_RESULTS = 10;
-const SPOTIFY_COLLECTOR_TIMEOUT_MS = 120000;
-
-const SPOTIFY_EMBED_COLOR = 0x1DB954;
-const SPOTIFY_EMBED_FOOTER = "Powered by Spotify";
-const SPOTIFY_EMBED_PREV_LABEL = "Previous";
-const SPOTIFY_EMBED_NEXT_LABEL = "Next";
-const SPOTIFY_EMBED_PREV_EMOJI = "◀️";
-const SPOTIFY_EMBED_NEXT_EMOJI = "▶️";
 
 /**
  * We handle the /spotify command.
@@ -637,7 +623,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'spotify', {
+    logger.error("Error in spotify command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -673,8 +661,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 }; 

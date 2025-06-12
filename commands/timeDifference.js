@@ -9,7 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { getUtcOffset, formatPlaceName, formatErrorMessage } = require('../utils/locationUtils');
-const { logError } = require('../errors');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -220,7 +219,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'timedifference', {
+    logger.error("Error in timedifference command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -254,8 +255,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

@@ -216,7 +216,12 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logger.error('Error in promote command:', error);
+    logger.error("Error in promote command:", {
+      error: error.message,
+      stack: error.stack,
+      userId: interaction.user?.id,
+      guildId: interaction.guild?.id
+    });
     
     let errorMessage = "⚠️ An unexpected error occurred while promoting the server.";
     

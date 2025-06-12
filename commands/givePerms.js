@@ -10,7 +10,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
-const { logError } = require('../errors');
 
 if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
     logger.error("Missing required configuration for /giveperms command:", {
@@ -264,7 +263,9 @@ module.exports = {
      * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
-        logError(error, 'giveperms', {
+        logger.error("Error in giveperms command:", {
+            error: error.message,
+            stack: error.stack,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             channelId: interaction.channel?.id

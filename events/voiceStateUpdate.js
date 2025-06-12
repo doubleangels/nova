@@ -10,7 +10,6 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { randomUUID } = require('crypto');
 const { addVoiceSessionToStats, addVoiceSessionToChannelStats } = require('../utils/database');
-const { logError } = require('../errors');
 const { Events } = require('discord.js');
 
 const pool = new Pool({
@@ -149,10 +148,6 @@ module.exports = {
       logger.error('Error processing voice state update:', {
         error: error.stack,
         message: error.message,
-        userId: newState.member.user.id
-      });
-      
-      logError(error, 'voiceStateUpdate', {
         userId: newState.member.user.id,
         guildId: newState.guild.id,
         channelId: newState.channelId

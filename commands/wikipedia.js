@@ -9,7 +9,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const he = require('he');
-const { logError } = require('../errors');
 
 const WIKI_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
 const WIKI_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
@@ -385,7 +384,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'wikipedia', {
+    logger.error("Error in wikipedia command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -427,8 +428,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

@@ -5,7 +5,6 @@ const axios = require('axios');
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getCoordinates, getGeocodingData } = require('../utils/locationUtils');
-const { logError } = require('../errors');
 
 const WEATHER_ICONS = {
   'clear-day': '☀️',
@@ -347,7 +346,9 @@ module.exports = {
   },
   
   async handleError(interaction, error) {
-    logError(error, 'weather', {
+    logger.error("Error in weather command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -379,8 +380,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   }
 };

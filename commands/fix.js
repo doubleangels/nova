@@ -12,7 +12,6 @@ const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { logError } = require('../errors');
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,
@@ -154,7 +153,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'fix', {
+    logger.error("Error in fix command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });

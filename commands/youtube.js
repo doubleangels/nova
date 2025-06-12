@@ -11,7 +11,6 @@ const axios = require('axios');
 const config = require('../config');
 const crypto = require('crypto');
 const { createPaginatedResults, formatApiError } = require('../utils/searchUtils');
-const { logError } = require('../errors');
 
 const cache = new Map();
 
@@ -179,7 +178,9 @@ module.exports = {
    * @param {Error} error - The error that occurred
    */
   async handleError(interaction, error) {
-    logError(error, 'youtube', {
+    logger.error("Error in youtube command:", {
+      error: error.message,
+      stack: error.stack,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -221,8 +222,7 @@ module.exports = {
       await interaction.reply({ 
         content: errorMessage,
         ephemeral: true 
-      }).catch(() => {
-      });
+      }).catch(() => {});
     }
   },
 

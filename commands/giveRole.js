@@ -143,7 +143,9 @@ module.exports = {
     },
     
     async handleError(interaction, error) {
-        logError(error, 'giverole', {
+        logger.error("Error in giverole command:", {
+            error: error.message,
+            stack: error.stack,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             channelId: interaction.channel?.id

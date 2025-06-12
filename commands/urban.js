@@ -8,7 +8,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
-const { logError } = require('../errors');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -84,7 +83,9 @@ module.exports = {
      * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
-        logError(error, 'urban', {
+        logger.error("Error in urban command:", {
+            error: error.message,
+            stack: error.stack,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
         });
@@ -118,8 +119,7 @@ module.exports = {
             await interaction.reply({ 
                 content: errorMessage,
                 ephemeral: true 
-            }).catch(() => {
-            });
+            }).catch(() => {});
         }
     }
 };

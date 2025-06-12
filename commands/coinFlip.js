@@ -7,7 +7,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError } = require('../errors');
 
 /**
  * We handle the coin flip command.
@@ -82,7 +81,9 @@ module.exports = {
      * @param {Error} error - The error that occurred
      */
     async handleError(interaction, error) {
-        logError(error, 'coinflip', {
+        logger.error("Error in coinflip command:", {
+            error: error.message,
+            stack: error.stack,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
         });

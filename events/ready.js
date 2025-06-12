@@ -12,7 +12,6 @@ const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const { initializeDatabase } = require('../utils/database');
-const { logError } = require('../errors');
 
 const deployCommands = require('../deploy-commands');
 
@@ -68,10 +67,7 @@ module.exports = {
     } catch (error) {
       logger.error('Error in ready event:', {
         error: error.stack,
-        message: error.message
-      });
-      
-      logError(error, 'ready', {
+        message: error.message,
         clientId: client.user?.id,
         clientTag: client.user?.tag
       });
