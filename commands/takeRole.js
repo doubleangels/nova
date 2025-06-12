@@ -7,24 +7,22 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError } = require('../errors');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('takerole')
-    .setDescription('Remove a specified role from a user.')
-    .addRoleOption(option =>
-      option.setName('role')
-        .setDescription('What role would you like to remove?')
-        .setRequired(true))
+    .setDescription('Remove a role from a user')
     .addUserOption(option =>
       option.setName('user')
-        .setDescription('Which user should have this role removed?')
+        .setDescription('The user to remove the role from')
+        .setRequired(true))
+    .addRoleOption(option =>
+      option.setName('role')
+        .setDescription('The role to remove')
         .setRequired(true))
     .addStringOption(option =>
       option.setName('reason')
-        .setDescription('For what reason would you like to remove this role?')
-        .setRequired(false))
+        .setDescription('Reason for removing the role'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
   /**
@@ -35,38 +33,20 @@ module.exports = {
    * @throws {Error} If role removal fails
    */
   async execute(interaction) {
-    await interaction.deferReply();
-    
-    logger.info("/takerole command initiated:", {
-      userId: interaction.user.id,
-      guildId: interaction.guildId
-    });
-    
     try {
-      const role = interaction.options.getRole('role');
+      await interaction.deferReply();
       const targetUser = interaction.options.getUser('user');
+      const role = interaction.options.getRole('role');
       const reason = interaction.options.getString('reason');
-      
-      logger.debug("Processing command options:", {
-        targetUser: targetUser.id,
-        roleId: role.id
-      });
-      
-      const validationResult = await this.validateRoleRemoval(interaction, role, targetUser);
-      
-      if (!validationResult || !validationResult.valid) {
-        const errorMessage = validationResult?.message || "⚠️ An unexpected error occurred while removing the role.";
-        await interaction.editReply({
-          content: errorMessage,
-          ephemeral: true
-        });
-        return;
+
+      const targetMember = await this.fetchGuildMember(interaction, targetUser.id);
+      if (!targetMember) {
+        throw new Error("USER_NOT_FOUND");
       }
-      
-      const { targetMember } = validationResult;
+
       await this.removeRoleFromMember(interaction, targetMember, role, reason);
     } catch (error) {
-      await this.handleError(interaction, error);
+      await this.handleError(error, interaction);
     }
   },
 
@@ -74,134 +54,38 @@ module.exports = {
    * Handles errors that occur during command execution.
    * @async
    * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @param {Error} error - The error that occurred
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    */
-  async handleError(interaction, error) {
-    logger.error("Error in takerole command:", {
+  async handleError(error, interaction) {
+    logger.error('Error in takeRole command:', {
       error: error.message,
       stack: error.stack,
-      userId: interaction.user?.id,
-      guildId: interaction.guild?.id,
-      channelId: interaction.channel?.id
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      channelId: interaction.channelId
     });
-    
-    let errorMessage = "⚠️ An unexpected error occurred while removing the role.";
+
+    let errorMessage = "⚠️ An unexpected error occurred while taking the role.";
     
     if (error.message === "INSUFFICIENT_PERMISSIONS") {
-      errorMessage = "⚠️ You don't have permission to remove this role.";
+      errorMessage = "⚠️ I don't have permission to manage roles.";
     } else if (error.message === "MANAGED_ROLE") {
-      errorMessage = "⚠️ Cannot remove a managed role.";
+      errorMessage = "⚠️ This role is managed by an integration and cannot be removed.";
     } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = "⚠️ The specified user could not be found in this server.";
+      errorMessage = "⚠️ Could not find the specified user.";
     } else if (error.message === "ROLE_NOT_ASSIGNED") {
-      errorMessage = "⚠️ The user does not have this role.";
+      errorMessage = "⚠️ The user doesn't have this role.";
     }
-    
+
     try {
-      await interaction.editReply({ 
-        content: errorMessage,
-        ephemeral: true 
+      await interaction.editReply({ content: errorMessage });
+    } catch (replyError) {
+      logger.error('Failed to send error message:', {
+        error: replyError.message,
+        stack: replyError.stack
       });
-    } catch (followUpError) {
-      logger.error("Failed to send error response for takerole command:", {
-        error: followUpError.message,
-        originalError: error.message,
-        userId: interaction.user?.id
-      });
-      
-      await interaction.reply({ 
-        content: errorMessage,
-        ephemeral: true 
-      }).catch(() => {});
     }
-  },
-
-  /**
-   * Validates that the role can be removed from the user.
-   * @async
-   * @function validateRoleRemoval
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {import('discord.js').Role} role - The role to be removed
-   * @param {import('discord.js').User} targetUser - The user to remove the role from
-   * @returns {Promise<Object>} Validation result with success status and message
-   */
-  async validateRoleRemoval(interaction, role, targetUser) {
-    if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
-      logger.warn("Bot lacks ManageRoles permission:", {
-        guildId: interaction.guildId,
-        botId: interaction.client.user.id
-      });
-      return {
-        valid: false,
-        message: "⚠️ You don't have permission to remove this role."
-      };
-    }
-
-    if (role.managed) {
-      logger.warn("Attempted to remove a managed role:", {
-        roleId: role.id,
-        roleName: role.name
-      });
-      return {
-        valid: false,
-        message: "⚠️ Cannot remove a managed role."
-      };
-    }
-    
-    const targetMember = await this.fetchGuildMember(interaction, targetUser.id);
-    
-    if (!targetMember) {
-      return {
-        valid: false,
-        message: "⚠️ The specified user could not be found in this server."
-      };
-    }
-
-    if (!targetMember.roles.cache.has(role.id)) {
-      logger.debug("User does not have the role:", {
-        userId: targetUser.id,
-        roleId: role.id
-      });
-
-      return {
-        valid: false,
-        message: "⚠️ The user does not have this role."
-      };
-    }
-    
-    const botMember = interaction.guild.members.me;
-    if (botMember.roles.highest.position <= role.position) {
-      logger.warn("Bot's highest role is not high enough to remove the specified role:", {
-        botRolePosition: botMember.roles.highest.position,
-        targetRolePosition: role.position
-      });
-      
-      return {
-        valid: false,
-        message: "⚠️ Cannot remove a role that is higher than your highest role."
-      };
-    }
-    
-    if (interaction.guild.ownerId !== interaction.user.id) {
-      const executorMember = await this.fetchGuildMember(interaction, interaction.user.id);
-      if (executorMember && executorMember.roles.highest.position <= role.position) {
-        logger.warn("User attempted to remove a role higher than their highest role:", {
-          userRolePosition: executorMember.roles.highest.position,
-          targetRolePosition: role.position
-        });
-        
-        return {
-          valid: false,
-          message: "⚠️ Cannot remove a role that is higher than your highest role."
-        };
-      }
-    }
-    
-    return {
-      valid: true,
-      targetMember
-    };
   },
   
   /**
@@ -214,17 +98,16 @@ module.exports = {
    * @param {string|null} reason - The reason for removing the role
    */
   async removeRoleFromMember(interaction, targetMember, role, reason) {
-    const customReason = reason ? `: "${reason}"` : '';
-    const auditReason = `Role removed by ${interaction.user.tag} using takerole command${customReason}`;
-    
-    await targetMember.roles.remove(role, auditReason);
-    
-    logger.info("/takerole command completed successfully:", {
-      userId: targetMember.id,
-      roleId: role.id,
-      roleName: role.name
-    });
-    
+    if (!targetMember.roles.cache.has(role.id)) {
+      throw new Error("ROLE_NOT_ASSIGNED");
+    }
+
+    if (role.managed) {
+      throw new Error("MANAGED_ROLE");
+    }
+
+    await targetMember.roles.remove(role, reason);
+
     const embed = new EmbedBuilder()
       .setColor(role.color)
       .setTitle('Role Removed')
@@ -244,12 +127,12 @@ module.exports = {
   },
   
   /**
-   * Fetches a guild member with error handling.
+   * Fetches a guild member from the guild.
    * @async
    * @function fetchGuildMember
    * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @param {string} userId - The ID of the user to fetch
-   * @returns {Promise<import('discord.js').GuildMember|null>} The guild member or null if not found
+   * @returns {Promise<import('discord.js').GuildMember|null>} The fetched guild member or null if not found
    */
   async fetchGuildMember(interaction, userId) {
     try {

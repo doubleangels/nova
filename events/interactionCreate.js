@@ -8,7 +8,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
 const { Collection } = require('discord.js');
-const { logError } = require('../errors');
 
 const COOLDOWN_CACHE = new Map();
 const PERMISSION_CACHE = new Map();
@@ -216,5 +215,41 @@ async function checkPermissions(interaction, command) {
   } catch (error) {
     logger.error('Error checking permissions:', error);
     return false;
+  }
+}
+
+async function handleError(error, interaction) {
+  logger.error('Error in interaction:', {
+    error: error.message,
+    stack: error.stack,
+    userId: interaction.user.id,
+    guildId: interaction.guildId,
+    channelId: interaction.channelId,
+    commandName: interaction.commandName
+  });
+
+  let errorMessage = "⚠️ An unexpected error occurred while processing your command.";
+  
+  if (error.message === "INSUFFICIENT_PERMISSIONS") {
+    errorMessage = "⚠️ I don't have the required permissions to execute this command.";
+  } else if (error.message === "COMMAND_NOT_FOUND") {
+    errorMessage = "⚠️ This command is not available.";
+  } else if (error.message === "INVALID_INTERACTION") {
+    errorMessage = "⚠️ Invalid interaction received.";
+  } else if (error.message === "COMMAND_TIMEOUT") {
+    errorMessage = "⚠️ Command execution timed out.";
+  }
+
+  try {
+    if (interaction.replied || interaction.deferred) {
+      await interaction.editReply({ content: errorMessage });
+    } else {
+      await interaction.reply({ content: errorMessage, ephemeral: true });
+    }
+  } catch (replyError) {
+    logger.error('Failed to send error message:', {
+      error: replyError.message,
+      stack: replyError.stack
+    });
   }
 }

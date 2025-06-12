@@ -5,13 +5,14 @@
  */
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { logError } = require('../errors');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue } = require('./database');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
+const axios = require('axios');
+const config = require('../config');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -232,7 +233,7 @@ async function performSearch(query, options = {}) {
     const combinedResults = results.flat().sort((a, b) => b.relevance - a.relevance);
     return combinedResults.slice(0, 10);
   } catch (error) {
-    logError('Search operation failed', error);
+    logger.error('Search operation failed', error);
     throw new Error("⚠️ Search operation failed.");
   }
 }
@@ -363,6 +364,32 @@ function calculateRelevance(text, query) {
   );
   
   return matchingWords.length / queryWords.length;
+}
+
+function handleError(error, context) {
+  logger.error(`Error in ${context}:`, {
+    error: error.message,
+    stack: error.stack,
+    status: error.response?.status,
+    data: error.response?.data
+  });
+
+  if (error.response) {
+    switch (error.response.status) {
+      case 429:
+        throw new Error("API_RATE_LIMIT");
+      case 403:
+        throw new Error("API_ACCESS_ERROR");
+      case 404:
+        throw new Error("NO_RESULTS");
+      default:
+        throw new Error("API_ERROR");
+    }
+  } else if (error.request) {
+    throw new Error("API_NETWORK_ERROR");
+  } else {
+    throw new Error("API_ERROR");
+  }
 }
 
 module.exports = {

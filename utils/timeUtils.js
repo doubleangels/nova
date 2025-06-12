@@ -5,12 +5,11 @@
  */
 
 const path = require('path');
-const logger = require('../logger')('timeUtils');
+const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
-const { logError } = require('../errors');
 
 const TIME_VALID_TIMEZONES = new Set(moment.tz.names());
 
@@ -107,7 +106,10 @@ function extractTimeReferences(content) {
     
     return results;
   } catch (error) {
-    logError('Error parsing time references', error);
+    logger.error('Error parsing time references', {
+      error: error.stack,
+      message: error.message
+    });
     throw new Error("⚠️ Failed to parse time reference.");
   }
 }
@@ -270,6 +272,25 @@ function formatConvertedTimes(convertedTimes) {
   });
 
   return formattedTimes.join('\n');
+}
+
+function handleError(error, context) {
+  logger.error(`Error in ${context}:`, {
+    error: error.message,
+    stack: error.stack
+  });
+
+  if (error.message === "INVALID_TIMEZONE") {
+    throw new Error("⚠️ Invalid timezone provided.");
+  } else if (error.message === "INVALID_DATE") {
+    throw new Error("⚠️ Invalid date format provided.");
+  } else if (error.message === "INVALID_TIME") {
+    throw new Error("⚠️ Invalid time format provided.");
+  } else if (error.message === "PAST_DATE") {
+    throw new Error("⚠️ Cannot set time for past date.");
+  } else {
+    throw new Error("⚠️ An unexpected error occurred while processing time.");
+  }
 }
 
 module.exports = {

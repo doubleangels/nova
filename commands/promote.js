@@ -10,7 +10,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const snoowrap = require('snoowrap');
 const config = require('../config');
-const { logError } = require('../errors');
 const { Pool } = require('pg');
 const dayjs = require('dayjs');
 
@@ -103,7 +102,7 @@ module.exports = {
       });
 
     } catch (error) {
-      await this.handleError(interaction, error);
+      await this.handleError(error, interaction);
     }
   },
 
@@ -212,44 +211,41 @@ module.exports = {
 
   /**
    * Handles errors during command execution.
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @param {Error} error - The error that occurred
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    */
-  async handleError(interaction, error) {
-    logger.error("Error in promote command:", {
+  async handleError(error, interaction) {
+    logger.error('Error in promote command:', {
       error: error.message,
       stack: error.stack,
-      userId: interaction.user?.id,
-      guildId: interaction.guild?.id
+      userId: interaction.user.id,
+      guildId: interaction.guildId
     });
-    
-    let errorMessage = "⚠️ An unexpected error occurred while promoting the server.";
+
+    let errorMessage = "⚠️ An unexpected error occurred while promoting the post.";
     
     if (error.message === "API_ERROR") {
-      errorMessage = "⚠️ Failed to post to Reddit. Please try again later.";
+      errorMessage = "⚠️ Failed to communicate with Reddit API.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = "⚠️ Reddit API rate limit reached. Please try again in a few moments.";
+      errorMessage = "⚠️ Reddit API rate limit reached. Please try again later.";
     } else if (error.message === "API_NETWORK_ERROR") {
-      errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
+      errorMessage = "⚠️ Network error while connecting to Reddit API.";
     } else if (error.message === "API_ACCESS_ERROR") {
-      errorMessage = "⚠️ Reddit API access denied. Please check API configuration.";
+      errorMessage = "⚠️ Access denied to Reddit API. Please check API configuration.";
     } else if (error.message === "FLAIR_ERROR") {
-      errorMessage = "⚠️ Could not find the required flair. Please try again later or contact support.";
+      errorMessage = "⚠️ Failed to set post flair.";
     } else if (error.message === "POST_ERROR") {
-      errorMessage = "⚠️ Failed to submit post to Reddit.";
+      errorMessage = "⚠️ Failed to create or update post.";
     } else if (error.message === "DATABASE_ERROR") {
-      errorMessage = "⚠️ Failed to record promotion time. Please try again later.";
+      errorMessage = "⚠️ Database error occurred while processing promotion.";
     }
-    
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({
-        content: errorMessage,
-        ephemeral: true
-      });
-    } else {
-      await interaction.reply({
-        content: errorMessage,
-        ephemeral: true
+
+    try {
+      await interaction.editReply({ content: errorMessage });
+    } catch (replyError) {
+      logger.error('Failed to send error message:', {
+        error: replyError.message,
+        stack: replyError.stack
       });
     }
   },

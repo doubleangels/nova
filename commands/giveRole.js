@@ -4,11 +4,9 @@
  * @module commands/giveRole
  */
 
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError } = require('../errors');
 
 /**
  * We handle the giverole command.
@@ -92,7 +90,7 @@ module.exports = {
             await interaction.editReply({ embeds: [embed] });
                         
         } catch (error) {
-            await this.handleError(interaction, error);
+            await this.handleError(error, interaction);
         }
     },
     
@@ -142,43 +140,33 @@ module.exports = {
         return { success: true };
     },
     
-    async handleError(interaction, error) {
-        logger.error("Error in giverole command:", {
+    async handleError(error, interaction) {
+        logger.error('Error in giveRole command:', {
             error: error.message,
             stack: error.stack,
-            userId: interaction.user?.id,
-            guildId: interaction.guild?.id,
-            channelId: interaction.channel?.id
+            userId: interaction.user.id,
+            guildId: interaction.guildId,
+            channelId: interaction.channelId
         });
-        
-        let errorMessage = "⚠️ An unexpected error occurred while assigning the role.";
+
+        let errorMessage = "⚠️ An unexpected error occurred while giving the role.";
         
         if (error.message === "INSUFFICIENT_PERMISSIONS") {
-            errorMessage = "⚠️ I don't have permission to assign this role.";
+            errorMessage = "⚠️ I don't have permission to manage roles.";
         } else if (error.message === "INVALID_ROLE") {
-            errorMessage = "⚠️ Please provide a valid role.";
+            errorMessage = "⚠️ The specified role is invalid or doesn't exist.";
         } else if (error.message === "INVALID_USER") {
-            errorMessage = "⚠️ Please provide a valid user.";
+            errorMessage = "⚠️ The specified user is invalid or doesn't exist.";
         } else if (error.message === "USER_NOT_FOUND") {
-            errorMessage = "⚠️ The specified user could not be found in this server.";
+            errorMessage = "⚠️ Could not find the specified user.";
         }
-        
+
         try {
-            await interaction.editReply({ 
-                content: errorMessage,
-                ephemeral: true 
-            });
-        } catch (followUpError) {
-            logger.error("Failed to send error response for giverole command:", {
-                error: followUpError.message,
-                originalError: error.message,
-                userId: interaction.user?.id
-            });
-            
-            await interaction.reply({ 
-                content: errorMessage,
-                ephemeral: true 
-            }).catch(() => {
+            await interaction.editReply({ content: errorMessage });
+        } catch (replyError) {
+            logger.error('Failed to send error message:', {
+                error: replyError.message,
+                stack: replyError.stack
             });
         }
     }

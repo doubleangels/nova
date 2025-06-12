@@ -6,7 +6,8 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { logError } = require('../errors');
+const { Pool } = require('pg');
+const config = require('../config');
 
 const LANG_FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
@@ -256,6 +257,23 @@ function isValidTranslationFlag(emoji) {
     });
     
     return isValid;
+}
+
+function handleError(error, context) {
+  logger.error(`Error in ${context}:`, {
+    error: error.message,
+    stack: error.stack
+  });
+
+  if (error.message === "DATABASE_ERROR") {
+    throw new Error("⚠️ Database error occurred while processing language settings.");
+  } else if (error.message === "INVALID_LANGUAGE") {
+    throw new Error("⚠️ Invalid language provided.");
+  } else if (error.message === "LANGUAGE_NOT_SUPPORTED") {
+    throw new Error("⚠️ Language not supported.");
+  } else {
+    throw new Error("⚠️ An unexpected error occurred while processing language settings.");
+  }
 }
 
 module.exports = {

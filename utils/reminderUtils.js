@@ -4,13 +4,14 @@
  * @module utils/reminderUtils
  */
 
-const logger = require('../logger')('reminderUtils.js');
+const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { logError } = require('../errors');
+const { EmbedBuilder } = require('discord.js');
 
 const REMINDER_POOL = new Pool({
   connectionString: config.neonConnectionString,
@@ -130,8 +131,7 @@ async function handleReminder(message, delay, type = 'bump') {
     }, delay);
 
   } catch (error) {
-    logError('Failed to handle reminder', error);
-    throw new Error("⚠️ Failed to set reminder for bump message.");
+    handleError(error, 'handleReminder');
   }
 }
 
@@ -246,8 +246,34 @@ async function rescheduleReminder(client) {
       }
     }
   } catch (error) {
-    logError('Failed to reschedule reminder', error);
-    throw new Error("⚠️ Failed to reschedule reminder.");
+    handleError(error, 'rescheduleReminder');
+  }
+}
+
+async function handleError(error, context) {
+  logger.error(`Error in ${context}:`, {
+    error: error.message,
+    stack: error.stack
+  });
+
+  if (error.message === "DATABASE_ERROR") {
+    throw new Error("⚠️ Database error occurred while processing reminder.");
+  } else if (error.message === "REMINDER_CREATION_FAILED") {
+    throw new Error("⚠️ Failed to create reminder.");
+  } else if (error.message === "REMINDER_DELETION_FAILED") {
+    throw new Error("⚠️ Failed to delete reminder.");
+  } else if (error.message === "REMINDER_UPDATE_FAILED") {
+    throw new Error("⚠️ Failed to update reminder.");
+  } else if (error.message === "INVALID_TIME") {
+    throw new Error("⚠️ Invalid time format provided.");
+  } else if (error.message === "INVALID_DATE") {
+    throw new Error("⚠️ Invalid date format provided.");
+  } else if (error.message === "PAST_DATE") {
+    throw new Error("⚠️ Cannot set reminder for past date.");
+  } else if (error.message === "INVALID_INTERVAL") {
+    throw new Error("⚠️ Invalid interval provided.");
+  } else {
+    throw new Error("⚠️ An unexpected error occurred while processing reminder.");
   }
 }
 
