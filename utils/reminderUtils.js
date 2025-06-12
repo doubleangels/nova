@@ -109,7 +109,7 @@ async function handleReminder(message, delay, type = 'bump') {
       ? REMINDER_PROMOTION_CONFIRMATION.replace('%s', unixTimestamp)
       : REMINDER_CONFIRMATION_MESSAGE.replace('%s', unixTimestamp);
     
-    await message.reply(`${REMINDER_CONFIRMATION_EMOJI} ${confirmationMessage}`);
+    await channel.send(`${REMINDER_CONFIRMATION_EMOJI} ${confirmationMessage}`);
     logger.debug("Sent confirmation message:", { type, unixTimestamp });
 
     setTimeout(async () => {
