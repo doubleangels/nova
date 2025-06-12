@@ -94,7 +94,7 @@ module.exports = {
 
       await this.recordPromotion();
 
-      const embed = this.createSuccessEmbed(redditResponse);
+      const embed = this.createSuccessEmbed(redditResponse, interaction);
       await interaction.editReply({ embeds: [embed] });
 
       logger.info("/promote command completed successfully:", {
@@ -183,9 +183,10 @@ module.exports = {
   /**
    * Creates a success embed for the Reddit post.
    * @param {Object} response - The Reddit API response
+   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
    * @returns {EmbedBuilder} The formatted embed
    */
-  createSuccessEmbed(response) {
+  createSuccessEmbed(response, interaction) {
     const embed = new EmbedBuilder()
       .setColor(0xFF4500)
       .setTitle('Server Promotion')
