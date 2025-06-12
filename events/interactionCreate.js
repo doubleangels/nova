@@ -5,6 +5,13 @@ const { MessageFlags, Events } = require('discord.js');
 const COOLDOWN_CACHE = new Map();
 const PERMISSION_CACHE = new Map();
 
+/**
+ * Handles the execution of a command with error handling and logging
+ * @param {CommandInteraction} interaction - The interaction object
+ * @param {string} commandType - The type of command being executed
+ * @param {Function} executeCommand - The function to execute the command
+ * @returns {Promise<void>}
+ */
 async function handleCommandExecution(interaction, commandType, executeCommand) {
   try {
     logger.debug(`Executing ${commandType}:`, { 
@@ -43,6 +50,17 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
 module.exports = {
   name: Events.InteractionCreate,
 
+  /**
+   * Handles the event when a new interaction is created.
+   * This function:
+   * 1. Processes chat input commands
+   * 2. Handles command execution with error handling
+   * 3. Manages cooldowns and permissions
+   * 
+   * @param {Interaction} interaction - The interaction that was created
+   * @throws {Error} If there's an error processing the interaction
+   * @returns {Promise<void>}
+   */
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
@@ -84,6 +102,12 @@ module.exports = {
   }
 };
 
+/**
+ * Handles a command interaction with cooldown and permission checks
+ * @param {CommandInteraction} interaction - The interaction object
+ * @param {string} commandType - The type of command being handled
+ * @returns {Promise<void>}
+ */
 async function handleCommand(interaction, commandType) {
   const command = interaction.client[commandType]?.get(interaction.commandName);
   
@@ -118,6 +142,12 @@ async function handleCommand(interaction, commandType) {
   }
 }
 
+/**
+ * Checks if a user is on cooldown for a specific command
+ * @param {CommandInteraction} interaction - The interaction object
+ * @param {Command} command - The command being checked
+ * @returns {Promise<boolean>} True if the user is on cooldown, false otherwise
+ */
 async function isOnCooldown(interaction, command) {
   const cooldownAmount = command.cooldown || 3000;
   const key = `${interaction.user.id}-${interaction.commandName}`;
@@ -139,6 +169,12 @@ async function isOnCooldown(interaction, command) {
   return false;
 }
 
+/**
+ * Checks if a user has the required permissions for a command
+ * @param {CommandInteraction} interaction - The interaction object
+ * @param {Command} command - The command being checked
+ * @returns {Promise<boolean>} True if the user has permissions, false otherwise
+ */
 async function hasRequiredPermissions(interaction, command) {
   if (!command.permissions) return true;
   
@@ -172,6 +208,12 @@ async function hasRequiredPermissions(interaction, command) {
   return hasPermission;
 }
 
+/**
+ * Checks if a user has the required permissions for a command with caching
+ * @param {CommandInteraction} interaction - The interaction object
+ * @param {Command} command - The command being checked
+ * @returns {Promise<boolean>} True if the user has permissions, false otherwise
+ */
 async function checkPermissions(interaction, command) {
   const key = `${interaction.user.id}-${command.data.name}`;
   const cached = PERMISSION_CACHE.get(key);
@@ -193,6 +235,12 @@ async function checkPermissions(interaction, command) {
   }
 }
 
+/**
+ * Handles errors that occur during interaction processing
+ * @param {Error} error - The error that occurred
+ * @param {CommandInteraction} interaction - The interaction object
+ * @returns {Promise<void>}
+ */
 async function handleError(error, interaction) {
   logger.error('Error in interaction:', {
     error: error.message,

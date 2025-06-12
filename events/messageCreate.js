@@ -9,6 +9,18 @@ const { cancelMuteKick } = require('../utils/muteModeUtils');
 module.exports = {
   name: Events.MessageCreate,
 
+  /**
+   * Handles the event when a new message is created.
+   * This function:
+   * 1. Processes messages from users and specific bots
+   * 2. Handles mute mode tracking
+   * 3. Processes time references and reminders
+   * 4. Manages no-text channel restrictions
+   * 
+   * @param {Message} message - The message that was created
+   * @throws {Error} If there's an error processing the message
+   * @returns {Promise<void>}
+   */
   async execute(message) {
     if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
@@ -129,6 +141,11 @@ module.exports = {
   }
 };
 
+/**
+ * Processes a user message and handles mute mode tracking
+ * @param {Message} message - The message to process
+ * @returns {Promise<void>}
+ */
 async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
   try {
@@ -141,6 +158,11 @@ async function processUserMessage(message) {
   }
 }
 
+/**
+ * Processes time references in a message and adds clock reactions
+ * @param {Message} message - The message to process
+ * @returns {Promise<void>}
+ */
 async function processTimeReferences(message) {
   if (!message.content) return;
   try {
@@ -160,6 +182,11 @@ async function processTimeReferences(message) {
   }
 }
 
+/**
+ * Checks for bump messages and schedules reminders
+ * @param {Message} message - The message to check
+ * @returns {Promise<void>}
+ */
 async function checkForBumpMessages(message) {
   logger.debug("Checking message for bump:", {
     author: message.author?.tag,

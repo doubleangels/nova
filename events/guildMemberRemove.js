@@ -6,6 +6,16 @@ const { Events } = require('discord.js');
 module.exports = {
   name: Events.GuildMemberRemove,
 
+  /**
+   * Handles the event when a member leaves the guild.
+   * This function:
+   * 1. Skips processing if the leaving member is a bot
+   * 2. Removes the member from mute mode tracking
+   * 
+   * @param {GuildMember} member - The member that left the guild
+   * @throws {Error} If there's an error processing the member departure, with specific error messages for different failure cases
+   * @returns {Promise<void>}
+   */
   async execute(member) {
     try {
       if (member.user.bot) {

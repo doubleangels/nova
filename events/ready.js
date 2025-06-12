@@ -12,6 +12,14 @@ const READY_BOT_ACTIVITY = {
   type: ActivityType.Watching
 };
 
+/**
+ * Performs a setup task with error handling and logging
+ * @param {string} taskName - The name of the task being performed
+ * @param {Function} task - The async function to execute
+ * @param {string} startMessage - The message to log when starting
+ * @param {string} successMessage - The message to log on success
+ * @returns {Promise<boolean>} True if the task succeeded, false otherwise
+ */
 async function performSetupTask(taskName, task, startMessage, successMessage) {
   try {
     logger.debug(startMessage);
@@ -31,6 +39,17 @@ module.exports = {
   name: Events.ClientReady,
   once: true,
 
+  /**
+   * Handles the event when the bot is ready.
+   * This function:
+   * 1. Sets the bot's activity status
+   * 2. Initializes the database connection
+   * 3. Reschedules mute kicks and reminders
+   * 
+   * @param {Client} client - The Discord client instance
+   * @throws {Error} If there's an error during initialization
+   * @returns {Promise<void>}
+   */
   async execute(client) {
     try {
       client.user.setActivity(READY_BOT_ACTIVITY.name, { type: READY_BOT_ACTIVITY.type });
@@ -77,5 +96,10 @@ module.exports = {
   }
 };
 
+/**
+ * Initializes all required services for the bot
+ * @param {Client} client - The Discord client instance
+ * @returns {Promise<void>}
+ */
 async function initializeServices(client) {
 }

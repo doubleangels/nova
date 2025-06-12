@@ -8,6 +8,17 @@ const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 module.exports = {
   name: Events.GuildMemberAdd,
 
+  /**
+   * Handles the event when a new member joins the guild.
+   * This function:
+   * 1. Checks if the member's account meets age requirements
+   * 2. Adds the member to mute mode tracking
+   * 3. If mute mode is enabled, schedules an automatic kick after the configured time
+   * 
+   * @param {GuildMember} member - The member that joined the guild
+   * @throws {Error} If there's an error processing the new member, with specific error messages for different failure cases
+   * @returns {Promise<void>}
+   */
   async execute(member) {
     try {
       logger.info(`New member joined: ${member.user.tag}`);

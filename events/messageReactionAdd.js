@@ -16,6 +16,18 @@ dayjs.extend(timezone);
 module.exports = {
   name: Events.MessageReactionAdd,
 
+  /**
+   * Handles the event when a new reaction is added to a message.
+   * This function:
+   * 1. Processes clock reactions for time conversions
+   * 2. Handles translation requests via flag emojis
+   * 3. Manages partial message/reaction fetching
+   * 
+   * @param {MessageReaction} reaction - The reaction that was added
+   * @param {User} user - The user who added the reaction
+   * @throws {Error} If there's an error processing the reaction
+   * @returns {Promise<void>}
+   */
   async execute(reaction, user) {
     try {
       if (user.bot) {
@@ -97,6 +109,12 @@ module.exports = {
   }
 };
 
+/**
+ * Fetches partial data for reactions and messages
+ * @param {MessageReaction} reaction - The reaction to fetch data for
+ * @throws {Error} If there's an error fetching the data
+ * @returns {Promise<void>}
+ */
 async function fetchPartialData(reaction) {
   if (reaction.partial) {
     try {
@@ -128,6 +146,12 @@ async function fetchPartialData(reaction) {
   }
 }
 
+/**
+ * Handles clock reactions for time conversion
+ * @param {MessageReaction} reaction - The clock reaction
+ * @param {User} user - The user who added the reaction
+ * @returns {Promise<void>}
+ */
 async function handleClockReaction(reaction, user) {
   try {
     const userTimezone = await getUserTimezone(user.id);
@@ -178,6 +202,11 @@ async function handleClockReaction(reaction, user) {
   }
 }
 
+/**
+ * Gets time references from a message
+ * @param {Message} message - The message to get time references from
+ * @returns {Promise<Array>} Array of time references
+ */
 async function getTimeReferences(message) {
   let timeReferences = global.timeReferenceCache?.get(message.id);
   
@@ -200,6 +229,15 @@ async function getTimeReferences(message) {
   return timeReferences;
 }
 
+/**
+ * Processes time conversion between timezones
+ * @param {TextChannel} channel - The channel to send the conversion in
+ * @param {string} userId - The ID of the user requesting the conversion
+ * @param {Array} timeReferences - Array of time references to convert
+ * @param {string} fromTimezone - The source timezone
+ * @param {string} toTimezone - The target timezone
+ * @returns {Promise<void>}
+ */
 async function processTimeConversion(channel, userId, timeReferences, fromTimezone, toTimezone) {
   try {
     logger.info('Processing time conversion:', {
@@ -245,6 +283,13 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
   }
 }
 
+/**
+ * Sends a temporary message that will be deleted after a timeout
+ * @param {TextChannel} channel - The channel to send the message in
+ * @param {string|Object} content - The content to send
+ * @param {number} timeout - The timeout in milliseconds before deletion
+ * @returns {Promise<Message|null>} The sent message or null if failed
+ */
 async function sendTemporaryMessage(channel, content, timeout = 30000) {
   try {
     const reply = await channel.send(content);
@@ -271,6 +316,12 @@ async function sendTemporaryMessage(channel, content, timeout = 30000) {
   }
 }
 
+/**
+ * Handles translation requests via flag emoji reactions
+ * @param {MessageReaction} reaction - The flag emoji reaction
+ * @param {User} user - The user who added the reaction
+ * @returns {Promise<void>}
+ */
 async function handleTranslationRequest(reaction, user) {
     try {
         logger.debug('Handling translation request:', {
