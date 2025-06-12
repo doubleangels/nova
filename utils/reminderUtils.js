@@ -12,20 +12,10 @@ const { Pool } = require('pg');
 const config = require('../config');
 const { logError } = require('../errors');
 
-const REMINDER_ERROR_CREATION = "⚠️ Failed to create reminder.";
-const REMINDER_ERROR_RESCEDULE = "⚠️ Failed to reschedule reminder.";
-
 const REMINDER_POOL = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
-
-const REMINDER_CONFIRMATION_EMOJI = '❤️';
-const REMINDER_NOTIFICATION_EMOJI = '🔔';
-const REMINDER_CONFIRMATION_MESSAGE = "Thanks for bumping! I'll remind you again <t:%s:R>.";
-const REMINDER_NOTIFICATION_MESSAGE = " Time to bump the server! Use `/bump` to help us grow!";
-const REMINDER_PROMOTION_CONFIRMATION = "🎯 Server promoted successfully! I'll remind you to promote again <t:%s:R>.";
-const REMINDER_PROMOTION_NOTIFICATION = " Time to promote the server! Use `/promote` to post on Reddit!";
 
 /**
  * Retrieves the latest reminder data from the database.
@@ -106,17 +96,17 @@ async function handleReminder(message, delay, type = 'bump') {
 
     // Send confirmation message
     const confirmationMessage = type === 'promote'
-      ? REMINDER_PROMOTION_CONFIRMATION.replace('%s', unixTimestamp)
-      : REMINDER_CONFIRMATION_MESSAGE.replace('%s', unixTimestamp);
+      ? `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`
+      : `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
     
-    await channel.send(`${REMINDER_CONFIRMATION_EMOJI} ${confirmationMessage}`);
+    await channel.send(`❤️ ${confirmationMessage}`);
     logger.debug("Sent confirmation message:", { type, unixTimestamp });
 
     setTimeout(async () => {
       try {
         const reminderMessage = type === 'promote' 
-          ? `${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_PROMOTION_NOTIFICATION}`
-          : `${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_NOTIFICATION_MESSAGE}`;
+          ? `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`
+          : `🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`;
 
         await channel.send(reminderMessage);
         logger.debug("Sent scheduled reminder ping:", {
@@ -141,7 +131,7 @@ async function handleReminder(message, delay, type = 'bump') {
 
   } catch (error) {
     logError('Failed to handle reminder', error);
-    throw new Error(REMINDER_ERROR_CREATION);
+    throw new Error("⚠️ Failed to set reminder for bump message.");
   }
 }
 
@@ -201,7 +191,7 @@ async function rescheduleReminder(client) {
       if (delay > 0) {
         setTimeout(async () => {
           try {
-            await channel.send(`${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_NOTIFICATION_MESSAGE}`);
+            await channel.send(`🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`);
             logger.debug("Sent rescheduled bump reminder:", { reminder_id: bumpReminder.reminder_id });
 
             await REMINDER_POOL.query(
@@ -233,7 +223,7 @@ async function rescheduleReminder(client) {
       if (delay > 0) {
         setTimeout(async () => {
           try {
-            await channel.send(`${REMINDER_NOTIFICATION_EMOJI} <@&${reminderRole}> ${REMINDER_PROMOTION_NOTIFICATION}`);
+            await channel.send(`🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`);
             logger.debug("Sent rescheduled promotion reminder:", { reminder_id: promoteReminder.reminder_id });
 
             await REMINDER_POOL.query(
@@ -257,7 +247,7 @@ async function rescheduleReminder(client) {
     }
   } catch (error) {
     logError('Failed to reschedule reminder', error);
-    throw new Error(REMINDER_ERROR_RESCEDULE);
+    throw new Error("⚠️ Failed to reschedule reminder.");
   }
 }
 
