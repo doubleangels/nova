@@ -26,8 +26,8 @@ const reddit = new snoowrap({
   password: config.redditPassword
 });
 
-const PROMOTION_TITLE = '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥';
-const PROMOTION_CONTENT = 'https://discord.gg/dEjjqec9RM';
+const PROMOTION_TITLE = "[21+]🎉 Congrats! You've found Da Frens! ✨ Only for adults who don't take things too seriously!";
+const PROMOTION_LINK = 'https://discord.gg/dEjjqec9RM';
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -86,16 +86,15 @@ module.exports = {
             flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
           },
           {
-            name: 'Discord_Servers_List',
-            flairId: '66184c9c-3e87-11ef-95bd-3e9ca3e6dbc4'
-          },
-          {
             name: 'discordservers_',
             flairId: '3f59062c-abd2-11ec-aab6-e262df74cc9d'
+          },
+          {
+            name: 'findaserver',
+            flairId: 'b8ffcc5a-275b-11ec-8803-eade4b4709d8'
           }
         ],
-        title: PROMOTION_TITLE,
-        content: PROMOTION_CONTENT
+        title: PROMOTION_TITLE
       };
 
       const redditResponses = await this.postToMultipleSubreddits(postData);
@@ -160,21 +159,26 @@ module.exports = {
 
         logger.info(`Using flair for ${subreddit.name}:`, serverFlair);
 
+        // Always post as a link post
+        const form = {
+          kind: 'link',
+          sr: subreddit.name,
+          title: postData.title,
+          url: PROMOTION_LINK,
+          api_type: 'json',
+          flair_id: serverFlair.id,
+          flair_text: serverFlair.text
+        };
+
         const submission = await reddit.oauthRequest({
           uri: '/api/submit',
           method: 'POST',
-          form: {
-            kind: 'link',
-            sr: subreddit.name,
-            title: postData.title,
-            url: postData.content,
-            api_type: 'json',
-            flair_id: serverFlair.id,
-            flair_text: serverFlair.text
-          }
+          form
         });
 
         if (!submission || !submission.json || !submission.json.data) {
+          // Log the full submission object for debugging
+          logger.error(`Reddit submission error for r/${subreddit.name}:`, submission);
           throw new Error(`⚠️ Failed to submit post to r/${subreddit.name}.`);
         }
 
@@ -188,7 +192,8 @@ module.exports = {
         });
 
       } catch (error) {
-        logger.error(`Error posting to r/${subreddit.name}:`, error);
+        // Log the error object and stack for debugging
+        logger.error(`Error posting to r/${subreddit.name}:`, error, error.stack);
         errors.push(`⚠️ Failed to post to r/${subreddit.name}.`);
       }
     }
