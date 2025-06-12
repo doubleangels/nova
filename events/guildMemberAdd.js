@@ -43,12 +43,15 @@ module.exports = {
         const muteKickTime = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
         await scheduleMuteKick(
           member.id,
-          muteKickTime
+          member.joinedAt,
+          muteKickTime,
+          member.client,
+          member.guild.id
         );
-        logger.info(`Scheduled mute kick for new member: ${member.user.tag}.`);
+        logger.info(`Scheduled mute kick for new member: ${member.user.tag}`);
       }
 
-      logger.info(`Successfully processed new member: ${member.user.tag}.`);
+      logger.info(`Successfully processed new member: ${member.user.tag}`);
     } catch (error) {
       logger.error('Error processing new member:', {
         error: error.stack,

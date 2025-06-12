@@ -33,7 +33,7 @@ module.exports = {
       // Remove from mute_mode table
       await removeMuteModeUser(member.id);
 
-      logger.info(`Successfully processed member departure: ${member.user.tag}.`);
+      logger.info(`Successfully processed member departure: ${member.user.tag}`);
     } catch (error) {
       logger.error('Error processing member leave:', {
         error: error.stack,
