@@ -48,7 +48,6 @@ module.exports = {
           member.client,
           member.guild.id
         );
-        logger.info(`Scheduled mute kick for new member: ${member.user.tag}`);
       }
 
       logger.info(`Successfully processed new member: ${member.user.tag}`);
