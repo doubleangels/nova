@@ -1,16 +1,9 @@
-/**
- * Database utility module for managing PostgreSQL database operations.
- * Handles connection pooling, query execution, and data management.
- * @module utils/database
- */
-
 const { Pool } = require('pg');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
 
-// Database Tables
 const DB_TABLES = {
   CONFIG: 'main.config',
   REMINDERS: 'main.reminder_data',
@@ -31,12 +24,6 @@ pool.on('error', (err, client) => {
   logger.error('Unexpected error on idle client', { error: err });
 });
 
-/**
- * Initializes the database connection and performs a test query.
- * @async
- * @function initializeDatabase
- * @throws {Error} If database connection fails after retries
- */
 async function initializeDatabase() {
   const MAX_RETRIES = 3;
   const INITIAL_RETRY_DELAY = 1000;
@@ -101,13 +88,6 @@ async function initializeDatabase() {
   process.exit(1);
 }
 
-/**
- * Retrieves a configuration value from the database.
- * @async
- * @function getValue
- * @param {string} key - The configuration key to retrieve
- * @returns {Promise<any>} The configuration value, or null if not found
- */
 async function getValue(key) {
   const client = await pool.connect();
   try {
@@ -129,13 +109,6 @@ async function getValue(key) {
   }
 }
 
-/**
- * Sets a configuration value in the database.
- * @async
- * @function setValue
- * @param {string} key - The configuration key to set
- * @param {any} value - The value to store
- */
 async function setValue(key, value) {
   const client = await pool.connect();
   try {
@@ -156,12 +129,6 @@ async function setValue(key, value) {
   }
 }
 
-/**
- * Deletes a configuration value from the database.
- * @async
- * @function deleteValue
- * @param {string} key - The configuration key to delete
- */
 async function deleteValue(key) {
   const client = await pool.connect();
   try {
@@ -175,12 +142,6 @@ async function deleteValue(key) {
   }
 }
 
-/**
- * Retrieves all configuration values from the database.
- * @async
- * @function getAllConfigs
- * @returns {Promise<Array>} Array of configuration records
- */
 async function getAllConfigs() {
   const client = await pool.connect();
   try {
@@ -196,14 +157,6 @@ async function getAllConfigs() {
   }
 }
 
-/**
- * Sets a user's timezone in the database.
- * @async
- * @function setUserTimezone
- * @param {string} memberId - The member's Discord ID
- * @param {string} timezone - The timezone to set
- * @throws {Error} If timezone or memberId is invalid
- */
 async function setUserTimezone(memberId, timezone) {
   const client = await pool.connect();
   try {
@@ -232,13 +185,6 @@ async function setUserTimezone(memberId, timezone) {
   }
 }
 
-/**
- * Retrieves a user's timezone from the database.
- * @async
- * @function getUserTimezone
- * @param {string} memberId - The member's Discord ID
- * @returns {Promise<string|null>} The member's timezone, or null if not found
- */
 async function getUserTimezone(memberId) {
   const client = await pool.connect();
   try {
@@ -270,17 +216,6 @@ async function getUserTimezone(memberId) {
   }
 }
 
-/**
- * Executes a database query with timeout handling.
- * @async
- * @function query
- * @param {string} text - The SQL query text
- * @param {Array} [params=[]] - Query parameters
- * @param {Object} [options={}] - Query options
- * @param {number} [options.timeout=30000] - Query timeout in milliseconds
- * @returns {Promise<Object>} Query result
- * @throws {Error} If query times out or encounters an error
- */
 async function query(text, params = [], options = {}) {
   const client = await pool.connect();
   const timeout = options.timeout || 30000;
@@ -318,13 +253,6 @@ async function query(text, params = [], options = {}) {
   }
 }
 
-/**
- * Add user to mute_mode table
- * @async
- * @function addMuteModeUser
- * @param {string} userId - The user's Discord ID
- * @param {string} username - The user's username
- */
 async function addMuteModeUser(userId, username) {
   const client = await pool.connect();
   try {
@@ -339,12 +267,6 @@ async function addMuteModeUser(userId, username) {
   }
 }
 
-/**
- * Remove user from mute_mode table
- * @async
- * @function removeMuteModeUser
- * @param {string} userId - The user's Discord ID
- */
 async function removeMuteModeUser(userId) {
   const client = await pool.connect();
   try {
@@ -357,12 +279,6 @@ async function removeMuteModeUser(userId) {
   }
 }
 
-/**
- * Get all users in mute_mode table
- * @async
- * @function getAllMuteModeUsers
- * @returns {Promise<Array>} Array of mute_mode records
- */
 async function getAllMuteModeUsers() {
   const client = await pool.connect();
   try {

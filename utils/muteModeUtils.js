@@ -1,9 +1,3 @@
-/**
- * Mute mode utilities module for handling user mute functionality.
- * Manages mute timeouts and kick operations.
- * @module utils/muteModeUtils
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { 
@@ -17,14 +11,8 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Store active timeouts
 const activeTimeouts = new Map();
 
-/**
- * Cancels a scheduled mute kick for a user
- * @param {string} userId - The user's Discord ID
- * @returns {boolean} True if a timeout was cancelled, false otherwise
- */
 function cancelMuteKick(userId) {
   if (activeTimeouts.has(userId)) {
     clearTimeout(activeTimeouts.get(userId));
@@ -35,23 +23,13 @@ function cancelMuteKick(userId) {
   return false;
 }
 
-/**
- * Schedules a mute kick for a user based on join time and hours
- * @param {string} userId - The user's Discord ID
- * @param {string|Date} joinTime - The user's join time (ISO string or Date)
- * @param {number} hours - Number of hours until kick
- * @param {Client} client - The Discord client instance
- * @param {string} guildId - The guild ID
- */
 async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
-  // Cancel any existing timeout for this user
   cancelMuteKick(userId);
 
   const joinDate = (joinTime instanceof Date) ? joinTime : new Date(joinTime);
   const kickAt = new Date(joinDate.getTime() + hours * 60 * 60 * 1000);
   const delay = kickAt.getTime() - Date.now();
   if (delay <= 0) {
-    // Kick immediately
     try {
       const guild = client.guilds.cache.get(guildId);
       if (guild) {
@@ -89,7 +67,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             const embed = {
               color: 0xCD41FF,
               title: 'Kicked for Inactivity',
-              description: 'You were kicked from Da Frens for not sending a message in time.',
+              description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
               fields: [
                 { name: 'Want to rejoin?', value: 'You can rejoin at https://dafrens.games.' }
               ]
@@ -113,13 +91,6 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   logger.debug(`Scheduled mute kick for user ${userId} in ${Math.round(delay/1000/60)} minutes.`);
 }
 
-/**
- * Reschedules all mute kicks on bot startup.
- * @async
- * @function rescheduleAllMuteKicks
- * @param {Client} client - The Discord client instance
- * @throws {Error} If rescheduling fails
- */
 async function rescheduleAllMuteKicks(client) {
   try {
     if (!client) {

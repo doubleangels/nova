@@ -1,9 +1,3 @@
-/**
- * Time utilities module for handling time-related operations.
- * Manages timezone conversions, time parsing, and formatting.
- * @module utils/timeUtils
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -15,13 +9,6 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
-/**
- * Validates if a timezone string is valid.
- * @function isValidTimezone
- * @param {string} tz - The timezone to validate
- * @returns {boolean} Whether the timezone is valid
- * @throws {Error} If timezone is invalid
- */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
     throw new Error("⚠️ Invalid timezone provided.");
@@ -36,13 +23,6 @@ function isValidTimezone(tz) {
   }
 }
 
-/**
- * Extracts time references from text content.
- * @function extractTimeReferences
- * @param {string} content - The text content to parse
- * @returns {Array<Object>} Array of time reference objects
- * @throws {Error} If time parsing fails
- */
 function extractTimeReferences(content) {
   if (!content) {
     throw new Error("⚠️ No time reference provided.");
@@ -62,14 +42,12 @@ function extractTimeReferences(content) {
       } else {
         const timeStr = text.replace(/\s+/g, '');
         
-        // Try parsing with various formats
         const formats = ['h:mma', 'h:mm a', 'ha', 'h a', 'H:mm'];
         for (const format of formats) {
           parsedTime = dayjs(timeStr, format);
           if (parsedTime.isValid()) break;
         }
         
-        // If no format worked, try direct hour:minute parsing
         if (!parsedTime.isValid()) {
           const [hours, minutes] = timeStr.split(':').map(Number);
           if (!isNaN(hours) && !isNaN(minutes) && hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
@@ -118,15 +96,6 @@ function extractTimeReferences(content) {
   }
 }
 
-/**
- * Converts time between timezones.
- * @function convertTimeZones
- * @param {Object} timeRef - The time reference object
- * @param {string} fromTimezone - The source timezone
- * @param {string} toTimezone - The target timezone
- * @returns {Object} The converted time information
- * @throws {Error} If timezone conversion fails
- */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
     throw new Error("⚠️ Invalid time reference provided.");
@@ -210,14 +179,6 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   }
 }
 
-/**
- * Generates a Discord timestamp string.
- * @function generateDiscordTimestamp
- * @param {Date} date - The date to format
- * @param {string} timezone - The timezone to use
- * @returns {string} Discord timestamp string
- * @throws {Error} If timestamp generation fails
- */
 function generateDiscordTimestamp(date, timezone) {
   if (!date || !timezone) {
     throw new Error("⚠️ Invalid timestamp parameters provided.");
@@ -226,13 +187,6 @@ function generateDiscordTimestamp(date, timezone) {
   return `<t:${timestamp}:t>`;
 }
 
-/**
- * Default formatter for time conversions.
- * @function defaultFormatter
- * @param {Object} conversion - The conversion result
- * @returns {string} Formatted time string
- * @throws {Error} If formatting fails
- */
 function defaultFormatter(conversion) {
   if (!conversion) {
     throw new Error("⚠️ Invalid time conversion provided.");
@@ -251,13 +205,6 @@ function defaultFormatter(conversion) {
   return `your converted time is ${targetTimestamp} ${toTimezone}.`;
 }
 
-/**
- * Formats multiple converted times into a string.
- * @function formatConvertedTimes
- * @param {Array<Object>} convertedTimes - Array of converted time objects
- * @returns {string} Formatted time string
- * @throws {Error} If formatting fails
- */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
     throw new Error("⚠️ No times provided for conversion.");

@@ -1,9 +1,3 @@
-/**
- * Reminder utilities module for handling server bump reminders.
- * Manages reminder scheduling, persistence, and notifications.
- * @module utils/reminderUtils
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -18,14 +12,6 @@ const REMINDER_POOL = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
-/**
- * Retrieves the latest reminder data from the database.
- * @async
- * @function getLatestReminderData
- * @param {string} type - The type of reminder to retrieve ('bump' or 'promote')
- * @returns {Promise<Object|null>} The latest reminder data or null if none found
- * @throws {Error} If database query fails
- */
 async function getLatestReminderData(type) {
   try {
     const result = await REMINDER_POOL.query(
@@ -42,15 +28,6 @@ async function getLatestReminderData(type) {
   }
 }
 
-/**
- * Handles the creation and scheduling of a new reminder.
- * @async
- * @function handleReminder
- * @param {Message} message - The message that triggered the reminder
- * @param {number} delay - The delay in milliseconds before the reminder
- * @param {string} type - The type of reminder ('bump' or 'promote')
- * @throws {Error} If reminder creation fails
- */
 async function handleReminder(message, delay, type = 'bump') {
   try {
     const reminderRole = await getValue('reminder_role');
@@ -95,7 +72,6 @@ async function handleReminder(message, delay, type = 'bump') {
       [reminderId, scheduledTime.toISOString(), type]
     );
 
-    // Send confirmation message
     const confirmationMessage = type === 'promote'
       ? `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`
       : `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
@@ -135,13 +111,6 @@ async function handleReminder(message, delay, type = 'bump') {
   }
 }
 
-/**
- * Reschedules any existing reminders on bot startup.
- * @async
- * @function rescheduleReminder
- * @param {Client} client - The Discord client instance
- * @throws {Error} If rescheduling fails
- */
 async function rescheduleReminder(client) {
   try {
     const reminderChannelId = await getValue("reminder_channel");
@@ -157,7 +126,6 @@ async function rescheduleReminder(client) {
       return;
     }
 
-    // Get both bump and promotion reminders
     const [bumpReminder, promoteReminder] = await Promise.all([
       getLatestReminderData('bump'),
       getLatestReminderData('promote')
@@ -182,7 +150,6 @@ async function rescheduleReminder(client) {
       return;
     }
 
-    // Reschedule bump reminder if exists
     if (bumpReminder) {
       const scheduledTime = dayjs(bumpReminder.remind_at);
       const now = dayjs();
@@ -214,7 +181,6 @@ async function rescheduleReminder(client) {
       }
     }
 
-    // Reschedule promotion reminder if exists
     if (promoteReminder) {
       const scheduledTime = dayjs(promoteReminder.remind_at);
       const now = dayjs();

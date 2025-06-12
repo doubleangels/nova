@@ -1,9 +1,3 @@
-/**
- * Language utilities module for handling translation-related functionality.
- * Manages language code mapping and flag emoji validation.
- * @module utils/languageUtils
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { Pool } = require('pg');
@@ -208,13 +202,6 @@ const LANG_FLAG_TO_LANGUAGE = {
     '🇿🇼': { code: 'en', name: 'English' }, // Zimbabwe
 };
 
-/**
- * Gets language information for a flag emoji.
- * @function getLanguageInfo
- * @param {string} flagEmoji - The flag emoji to get language info for
- * @returns {Object|null} Language information object or null if not found
- * @throws {Error} If flag emoji is invalid
- */
 function getLanguageInfo(flagEmoji) {
     logger.debug("Getting language info for flag:", { flagEmoji });
     
@@ -235,13 +222,6 @@ function getLanguageInfo(flagEmoji) {
     return languageInfo;
 }
 
-/**
- * Validates if a flag emoji is valid for translation.
- * @function isValidTranslationFlag
- * @param {string} emoji - The emoji to validate
- * @returns {boolean} Whether the emoji is a valid translation flag
- * @throws {Error} If emoji is invalid
- */
 function isValidTranslationFlag(emoji) {
     logger.debug("Validating translation flag:", { emoji });
     

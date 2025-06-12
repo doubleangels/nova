@@ -1,21 +1,8 @@
-/**
- * Troll mode utilities module for handling server troll mode functionality.
- * Manages account age checks and automatic kicks for new members.
- * @module utils/trollModeUtils
- */
-
 const logger = require('../logger')('trollModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
 
-/**
- * Checks if a member's account meets the minimum age requirement.
- * @async
- * @function checkAccountAge
- * @param {GuildMember} member - The member to check
- * @returns {Promise<boolean>} True if account age meets requirements
- */
 async function checkAccountAge(member) {
   try {
     const trollModeEnabled = await getValue('troll_mode_enabled');
@@ -42,13 +29,6 @@ async function checkAccountAge(member) {
   }
 }
 
-/**
- * Performs the kick operation on a member.
- * @async
- * @function performKick
- * @param {GuildMember} member - The member to kick
- * @throws {Error} If kick operation fails
- */
 async function performKick(member) {
   try {
     const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
