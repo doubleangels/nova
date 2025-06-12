@@ -1,9 +1,3 @@
-/**
- * Event handler for when the bot becomes ready.
- * Handles bot initialization, status updates, and startup tasks.
- * @module events/ready
- */
-
 const { ActivityType, Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -33,20 +27,10 @@ async function performSetupTask(taskName, task, startMessage, successMessage) {
   }
 }
 
-/**
- * Event handler for bot ready events.
- * @type {Object}
- */
 module.exports = {
   name: Events.ClientReady,
   once: true,
-  /**
-   * Executes when the bot becomes ready.
-   * @async
-   * @function execute
-   * @param {Client} client - The Discord client instance
-   * @throws {Error} If bot initialization fails
-   */
+
   async execute(client) {
     try {
       client.user.setActivity(READY_BOT_ACTIVITY.name, { type: READY_BOT_ACTIVITY.type });
@@ -93,12 +77,5 @@ module.exports = {
   }
 };
 
-/**
- * Initializes required services for the bot.
- * @async
- * @function initializeServices
- * @param {Client} client - The Discord client instance
- * @returns {Promise<void>}
- */
 async function initializeServices(client) {
 }

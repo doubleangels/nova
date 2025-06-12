@@ -1,27 +1,11 @@
-/**
- * Event handler for when a member leaves the guild.
- * Handles cleanup of member tracking data.
- * @module events/guildMemberRemove
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { removeMuteModeUser } = require('../utils/database');
 const { Events } = require('discord.js');
 
-/**
- * Event handler for guild member leave events.
- * @type {Object}
- */
 module.exports = {
   name: Events.GuildMemberRemove,
-  /**
-   * Executes when a member leaves the guild.
-   * @async
-   * @function execute
-   * @param {GuildMember} member - The member that left
-   * @throws {Error} If member tracking removal fails
-   */
+
   async execute(member) {
     try {
       if (member.user.bot) {
@@ -30,7 +14,6 @@ module.exports = {
       }
       logger.info(`Member left: ${member.user.tag} (ID: ${member.id})`);
       
-      // Remove from mute_mode table
       await removeMuteModeUser(member.id);
 
       logger.info(`Successfully processed member departure: ${member.user.tag}`);

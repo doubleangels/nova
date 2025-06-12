@@ -1,9 +1,3 @@
-/**
- * Event handler for when reactions are added to messages.
- * Handles reaction-based interactions and role assignments.
- * @module events/messageReactionAdd
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getUserTimezone } = require('../utils/database');
@@ -19,20 +13,9 @@ const config = require('../config');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-/**
- * Event handler for message reaction events.
- * @type {Object}
- */
 module.exports = {
   name: Events.MessageReactionAdd,
-  /**
-   * Executes when a reaction is added to a message.
-   * @async
-   * @function execute
-   * @param {MessageReaction} reaction - The reaction that was added
-   * @param {User} user - The user that added the reaction
-   * @throws {Error} If reaction handling fails
-   */
+
   async execute(reaction, user) {
     try {
       if (user.bot) {

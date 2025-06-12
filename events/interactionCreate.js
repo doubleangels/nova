@@ -1,9 +1,3 @@
-/**
- * Event handler for Discord interactions (slash commands, buttons, etc.).
- * Manages command execution, permission checking, and cooldowns.
- * @module events/interactionCreate
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
@@ -47,19 +41,9 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
   }
 }
 
-/**
- * Event handler for Discord interactions.
- * @type {Object}
- */
 module.exports = {
   name: Events.InteractionCreate,
-  /**
-   * Executes when an interaction is created.
-   * @async
-   * @function execute
-   * @param {Interaction} interaction - The interaction that was created
-   * @throws {Error} If interaction handling fails
-   */
+
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
@@ -189,14 +173,6 @@ async function hasRequiredPermissions(interaction, command) {
   return hasPermission;
 }
 
-/**
- * Checks if a user has permission to use a command.
- * @async
- * @function checkPermissions
- * @param {Interaction} interaction - The interaction to check permissions for
- * @param {Command} command - The command to check permissions against
- * @returns {Promise<boolean>} Whether the user has permission
- */
 async function checkPermissions(interaction, command) {
   const key = `${interaction.user.id}-${command.data.name}`;
   const cached = PERMISSION_CACHE.get(key);

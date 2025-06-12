@@ -1,9 +1,3 @@
-/**
- * Event handler for new messages in Discord channels.
- * Handles message processing, command parsing, and bot responses.
- * @module events/messageCreate
- */
-
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, removeMuteModeUser } = require('../utils/database');
@@ -12,19 +6,9 @@ const { extractTimeReferences } = require('../utils/timeUtils');
 const { Events } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
 
-/**
- * Event handler for message creation events.
- * @type {Object}
- */
 module.exports = {
   name: Events.MessageCreate,
-  /**
-   * Executes when a new message is created.
-   * @async
-   * @function execute
-   * @param {Message} message - The message that was created
-   * @throws {Error} If message processing fails
-   */
+
   async execute(message) {
     if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
 
@@ -44,10 +28,8 @@ module.exports = {
         content: message.content?.replace(/\n/g, ' ') || "No Content"
       });
 
-      // Remove from mute_mode table if present
       await removeMuteModeUser(message.author.id);
 
-      // Add clock emote for time references
       await processTimeReferences(message);
 
       if (message.content.startsWith('!')) {
@@ -62,18 +44,15 @@ module.exports = {
 
       await processUserMessage(message);
       
-      // Only check for bump messages if the message has embeds
       if (message.embeds && message.embeds.length > 0) {
         await checkForBumpMessages(message);
       }
       
       logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
 
-      // Check if this is a no-text channel
       const noTextChannelId = await getValue('no_text_channel');
       if (message.channelId !== noTextChannelId) return;
 
-      // Check if message contains only GIFs, images, or stickers
       const hasGif = message.attachments.some(attachment => 
         attachment.url.toLowerCase().endsWith('.gif') || 
         attachment.contentType?.toLowerCase() === 'image/gif'
@@ -85,11 +64,9 @@ module.exports = {
       
       const hasSticker = message.stickers.size > 0;
 
-      // Check for emotes and tags
-      const hasEmote = message.content.match(/<a?:\w+:\d+>/g); // Matches both animated and static emotes
-      const hasTag = message.content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g); // Matches user mentions, role mentions, and channel mentions
+      const hasEmote = message.content.match(/<a?:\w+:\d+>/g);
+      const hasTag = message.content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g);
 
-      // If message doesn't contain any allowed content, delete it
       if (!hasGif && !hasImage && !hasSticker && !hasEmote && !hasTag) {
         try {
           await message.delete();
@@ -155,9 +132,7 @@ module.exports = {
 async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
   try {
-    // Check if user has an active mute kick timeout
     if (cancelMuteKick(message.author.id)) {
-      // Only remove from database if we cancelled a timeout
       await removeMuteModeUser(message.author.id);
       logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message`);
     }

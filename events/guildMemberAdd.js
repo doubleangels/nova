@@ -1,9 +1,3 @@
-/**
- * Event handler for when a new member joins the guild.
- * Tracks new members and handles mute mode functionality.
- * @module events/guildMemberAdd
- */
-
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -11,19 +5,9 @@ const { getValue, addMuteModeUser } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 
-/**
- * Event handler for guild member join events.
- * @type {Object}
- */
 module.exports = {
   name: Events.GuildMemberAdd,
-  /**
-   * Executes when a new member joins the guild.
-   * @async
-   * @function execute
-   * @param {GuildMember} member - The member that joined
-   * @throws {Error} If member tracking or mute kick scheduling fails
-   */
+
   async execute(member) {
     try {
       logger.info(`New member joined: ${member.user.tag}`);
@@ -34,10 +18,8 @@ module.exports = {
         return;
       }
 
-      // Add user to mute_mode table
       await addMuteModeUser(member.id, member.user.tag);
 
-      // Schedule mute kick for new member
       const muteModeEnabled = await getValue('mute_mode_enabled');
       if (muteModeEnabled) {
         const muteKickTime = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
