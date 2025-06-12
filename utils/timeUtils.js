@@ -10,11 +10,13 @@ const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
+const customParseFormat = require('dayjs/plugin/customParseFormat');
 
 const TIME_VALID_TIMEZONES = new Set(moment.tz.names());
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
 
 /**
  * Validates if a timezone string is valid.
@@ -50,7 +52,7 @@ function extractTimeReferences(content) {
   }
   
   try {
-    const matches = content.match(/\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i);
+    const matches = content.match(/\d+\s*:\s*\d+|\d+\s*[ap]\.?(?:m\.?|m)|noon|midnight/i);
     if (!matches) return [];
 
     const results = matches.map(text => {
@@ -63,6 +65,11 @@ function extractTimeReferences(content) {
       } else {
         const timeStr = text.replace(/\s+/g, '');
         parsedTime = dayjs(timeStr, ['h:mma', 'h:mm a', 'ha', 'h a']);
+        
+        if (!parsedTime.isValid()) {
+          // Fallback for '12pm', '3am', etc.
+          parsedTime = dayjs(text, ['ha']);
+        }
         
         if (!parsedTime.isValid()) {
           const [hours, minutes] = timeStr.split(':').map(Number);

@@ -46,6 +46,9 @@ module.exports = {
       // Remove from mute_mode table if present
       await removeMuteModeUser(message.author.id);
 
+      // Add clock emote for time references
+      await processTimeReferences(message);
+
       if (message.content.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
