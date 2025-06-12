@@ -7,7 +7,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, trackNewMember } = require('../utils/database');
+const { getValue, trackNewMember, addMuteModeUser } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 
@@ -34,27 +34,26 @@ module.exports = {
         return;
       }
 
+      // Add user to mute_mode table
+      await addMuteModeUser(member.id, member.user.tag);
+
+      // Schedule mute kick for new member
+      const muteModeEnabled = await getValue('mute_mode_enabled');
+      if (muteModeEnabled) {
+        const muteKickTime = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+        await scheduleMuteKick(
+          member.id,
+          muteKickTime
+        );
+        logger.info(`Scheduled mute kick for new member: ${member.user.tag}.`);
+      }
+
       await trackNewMember(
         member.id,
         member.user.username,
         member.joinedAt.toISOString()
       );
       logger.debug(`Tracked new member: ${member.user.tag}`);
-
-      const muteModeEnabled = await getValue('mute_mode_enabled');
-      if (muteModeEnabled) {
-        const muteKickTime = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-        
-        await scheduleMuteKick(
-          member.id,
-          member.user.username,
-          member.joinedAt.toISOString(),
-          muteKickTime,
-          member.guild.id,
-          member.client
-        );
-        logger.info(`Scheduled mute kick for new member: ${member.user.tag}.`);
-      }
 
       logger.info(`Successfully processed new member: ${member.user.tag}.`);
     } catch (error) {

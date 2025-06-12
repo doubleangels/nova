@@ -7,10 +7,8 @@
 const { ActivityType, Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const config = require('../config');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
-const { loadVoiceJoinTimes } = require('./voiceStateUpdate');
 const { initializeDatabase } = require('../utils/database');
 
 const deployCommands = require('../deploy-commands');

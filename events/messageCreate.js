@@ -6,7 +6,7 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getTrackedMember, removeTrackedMember, incrementMessageCount, incrementChannelMessageCount, getValue } = require('../utils/database');
+const { getTrackedMember, removeTrackedMember, getValue, removeMuteModeUser } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const { Events } = require('discord.js');
@@ -42,11 +42,6 @@ module.exports = {
         channelId: message.channel.id,
         content: message.content?.substring(0, 50) || "No Content"
       });
-      
-      if (!message.author.bot) {
-        await incrementMessageCount(message.author.id, message.author.username);
-        logger.debug(`Incremented message count for user ${message.author.tag}.`);
-      }
 
       const wasTracked = await removeTrackedMember(message.author.id);
       if (wasTracked) {
@@ -65,9 +60,6 @@ module.exports = {
 
       await processUserMessage(message);
       await checkForBumpMessages(message);
-      if (message.channel && message.channel.type === 0 && !message.author.bot) {
-        await incrementChannelMessageCount(message.channel.id, message.channel.name);
-      }
       logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}.`);
 
       // Check if this is a no-text channel
@@ -156,13 +148,8 @@ module.exports = {
 async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
   try {
-    const tracked = await getTrackedMember(message.author.id);
-    if (tracked) {
-      await removeTrackedMember(message.author.id);
-      logger.debug("User removed from mute tracking:", { user: message.author.tag });
-    }
-    await processTimeReferences(message);
-    await incrementMessageCount(message.author.id, message.author.tag);
+    // Remove from mute_mode table if present
+    await removeMuteModeUser(message.author.id);
   } catch (error) {
     logger.error("Error processing user message:", { userId: message.author.id, error });
   }

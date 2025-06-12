@@ -9,12 +9,10 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
+const { getAllMuteModeUsers, removeMuteModeUser, getValue } = require('./utils/database');
 
-/** Directory containing command files */
 const COMMANDS_DIRECTORY = 'commands';
-/** Directory containing event handler files */
 const EVENTS_DIRECTORY = 'events';
-/** File extension for command and event files */
 const FILE_EXTENSION = '.js';
 
 /**
@@ -25,6 +23,9 @@ const BOT_INTENTS = [
   GatewayIntentBits.Guilds,
   GatewayIntentBits.GuildMessages,
   GatewayIntentBits.MessageContent,
+  GatewayIntentBits.GuildMembers,
+  GatewayIntentBits.GuildPresences,
+  GatewayIntentBits.GuildMessageReactions,
 ];
 
 // Error message constants
