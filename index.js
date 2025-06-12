@@ -46,6 +46,10 @@ const client = new Client({
 client.commands = new Collection();
 client.conversationHistory = new Map();
 
+// Deploy slash commands on bot start
+const deployCommands = require('./deploy-commands');
+deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
+
 // Load command files
 const commandsPath = path.join(__dirname, COMMANDS_DIRECTORY);
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(FILE_EXTENSION));
