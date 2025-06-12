@@ -20,16 +20,6 @@ const READY_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
   type: ActivityType.Watching
 };
-const READY_BOT_STATUS = "online";
-
-const READY_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred during bot initialization.";
-const READY_ERROR_DATABASE = "⚠️ Failed to initialize database connection.";
-const READY_ERROR_MUTE_KICK = "⚠️ Failed to reschedule mute kicks.";
-const READY_ERROR_REMINDER = "⚠️ Failed to reschedule reminders.";
-const READY_ERROR_ACTIVITY = "⚠️ Failed to set bot activity.";
-const READY_ERROR_STATUS = "⚠️ Failed to set bot status.";
-const READY_ERROR_VOICE_JOIN = "⚠️ Failed to load voice join times.";
-const READY_ERROR_PERMISSION = "⚠️ Insufficient permissions for bot initialization.";
 
 async function performSetupTask(taskName, task, startMessage, successMessage) {
   try {
@@ -86,22 +76,22 @@ module.exports = {
         clientTag: client.user?.tag
       });
 
-      let errorMessage = READY_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred during bot initialization.";
       
-      if (error.message === READY_ERROR_DATABASE) {
-        errorMessage = READY_ERROR_DATABASE;
-      } else if (error.message === READY_ERROR_MUTE_KICK) {
-        errorMessage = READY_ERROR_MUTE_KICK;
-      } else if (error.message === READY_ERROR_REMINDER) {
-        errorMessage = READY_ERROR_REMINDER;
-      } else if (error.message === READY_ERROR_ACTIVITY) {
-        errorMessage = READY_ERROR_ACTIVITY;
-      } else if (error.message === READY_ERROR_STATUS) {
-        errorMessage = READY_ERROR_STATUS;
-      } else if (error.message === READY_ERROR_VOICE_JOIN) {
-        errorMessage = READY_ERROR_VOICE_JOIN;
-      } else if (error.message === READY_ERROR_PERMISSION) {
-        errorMessage = READY_ERROR_PERMISSION;
+      if (error.message === "⚠️ Failed to initialize database connection.") {
+        errorMessage = "⚠️ Failed to initialize database connection.";
+      } else if (error.message === "⚠️ Failed to reschedule mute kicks.") {
+        errorMessage = "⚠️ Failed to reschedule mute kicks.";
+      } else if (error.message === "⚠️ Failed to reschedule reminders.") {
+        errorMessage = "⚠️ Failed to reschedule reminders.";
+      } else if (error.message === "⚠️ Failed to set bot activity.") {
+        errorMessage = "⚠️ Failed to set bot activity.";
+      } else if (error.message === "⚠️ Failed to set bot status.") {
+        errorMessage = "⚠️ Failed to set bot status.";
+      } else if (error.message === "⚠️ Failed to load voice join times.") {
+        errorMessage = "⚠️ Failed to load voice join times.";
+      } else if (error.message === "⚠️ Insufficient permissions for bot initialization.") {
+        errorMessage = "⚠️ Insufficient permissions for bot initialization.";
       }
       
       throw new Error(errorMessage);

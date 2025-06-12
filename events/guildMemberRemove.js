@@ -9,12 +9,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { removeTrackedMember } = require('../utils/database');
 const { Events } = require('discord.js');
 
-const MEMBER_REMOVE_ERROR_TRACKING = "⚠️ Failed to remove member tracking data.";
-const MEMBER_REMOVE_ERROR_DATABASE = "⚠️ Database error occurred while processing member departure.";
-const MEMBER_REMOVE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process member departure.";
-const MEMBER_REMOVE_ERROR_INVALID = "⚠️ Invalid member data received.";
-const MEMBER_REMOVE_ERROR_BOT = "⚠️ Cannot process bot member departure.";
-
 /**
  * Event handler for guild member leave events.
  * @type {Object}
@@ -49,18 +43,18 @@ module.exports = {
         userId: member.user.id
       });
       
-      let errorMessage = MEMBER_REMOVE_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred while processing member departure.";
       
-      if (error.message === MEMBER_REMOVE_ERROR_TRACKING) {
-        errorMessage = MEMBER_REMOVE_ERROR_TRACKING;
-      } else if (error.message === MEMBER_REMOVE_ERROR_DATABASE) {
-        errorMessage = MEMBER_REMOVE_ERROR_DATABASE;
-      } else if (error.message === MEMBER_REMOVE_ERROR_PERMISSION) {
-        errorMessage = MEMBER_REMOVE_ERROR_PERMISSION;
-      } else if (error.message === MEMBER_REMOVE_ERROR_INVALID) {
-        errorMessage = MEMBER_REMOVE_ERROR_INVALID;
-      } else if (error.message === MEMBER_REMOVE_ERROR_BOT) {
-        errorMessage = MEMBER_REMOVE_ERROR_BOT;
+      if (error.message === "⚠️ Failed to remove member tracking data.") {
+        errorMessage = "⚠️ Failed to remove member tracking data.";
+      } else if (error.message === "⚠️ Database error occurred while processing member departure.") {
+        errorMessage = "⚠️ Database error occurred while processing member departure.";
+      } else if (error.message === "⚠️ Insufficient permissions to process member departure.") {
+        errorMessage = "⚠️ Insufficient permissions to process member departure.";
+      } else if (error.message === "⚠️ Invalid member data received.") {
+        errorMessage = "⚠️ Invalid member data received.";
+      } else if (error.message === "⚠️ Cannot process bot member departure.") {
+        errorMessage = "⚠️ Cannot process bot member departure.";
       }
       
       throw new Error(errorMessage);

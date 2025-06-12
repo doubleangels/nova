@@ -10,14 +10,6 @@ const { MessageFlags, Events } = require('discord.js');
 const { Collection } = require('discord.js');
 const { logError } = require('../errors');
 
-const INTERACTION_DEFAULT_COOLDOWN = 3000;
-const INTERACTION_CACHE_DURATION = 60000;
-
-const INTERACTION_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing your request.";
-const INTERACTION_ERROR_EXECUTION = "⚠️ Failed to execute the command.";
-const INTERACTION_ERROR_COOLDOWN = "⚠️ Please wait before using this command again.";
-const INTERACTION_ERROR_PERMISSION = "⚠️ You don't have permission to use this command.";
-
 const COOLDOWN_CACHE = new Map();
 const PERMISSION_CACHE = new Map();
 
@@ -41,7 +33,7 @@ async function handleCommandExecution(interaction, commandType, executeCommand) 
     
     try {
       const errorMessage = { 
-        content: INTERACTION_ERROR_UNEXPECTED, 
+        content: "⚠️ An unexpected error occurred while processing your request.", 
         flags: MessageFlags.Ephemeral 
       };
       
@@ -132,7 +124,7 @@ async function handleCommand(interaction, commandType) {
     logger.error(`Error executing ${commandType} ${interaction.commandName}:`, { error });
 
     const errorMessage = {
-      content: INTERACTION_ERROR_EXECUTION,
+      content: "⚠️ Failed to execute the command.",
       ephemeral: true
     };
 
@@ -145,7 +137,7 @@ async function handleCommand(interaction, commandType) {
 }
 
 async function isOnCooldown(interaction, command) {
-  const cooldownAmount = command.cooldown || INTERACTION_DEFAULT_COOLDOWN;
+  const cooldownAmount = command.cooldown || 3000;
   const key = `${interaction.user.id}-${interaction.commandName}`;
   const now = Date.now();
   
@@ -154,7 +146,7 @@ async function isOnCooldown(interaction, command) {
     if (now < expirationTime) {
       const remainingTime = Math.ceil((expirationTime - now) / 1000);
       await interaction.reply({
-        content: INTERACTION_ERROR_COOLDOWN.replace('{time}', remainingTime),
+        content: "⚠️ Please wait before using this command again.",
         ephemeral: true
       });
       return true;
@@ -185,12 +177,12 @@ async function hasRequiredPermissions(interaction, command) {
   
   PERMISSION_CACHE.set(key, {
     hasPermission,
-    expiresAt: now + INTERACTION_CACHE_DURATION
+    expiresAt: now + 60000
   });
   
   if (!hasPermission) {
     await interaction.reply({
-      content: INTERACTION_ERROR_PERMISSION,
+      content: "⚠️ You don't have permission to use this command.",
       ephemeral: true
     });
   }
@@ -210,7 +202,7 @@ async function checkPermissions(interaction, command) {
   const key = `${interaction.user.id}-${command.data.name}`;
   const cached = PERMISSION_CACHE.get(key);
   
-  if (cached && Date.now() - cached.timestamp < INTERACTION_CACHE_DURATION) {
+  if (cached && Date.now() - cached.timestamp < 60000) {
     return cached.hasPermission;
   }
 

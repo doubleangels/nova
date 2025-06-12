@@ -11,19 +11,6 @@ const { handleReminder } = require('../utils/reminderUtils');
 const { extractTimeReferences } = require('../utils/timeUtils');
 const { Events } = require('discord.js');
 
-const MESSAGE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the message.";
-const MESSAGE_ERROR_PROCESSING = "⚠️ Failed to process the message.";
-const MESSAGE_ERROR_FETCH = "⚠️ Failed to fetch message content.";
-const MESSAGE_ERROR_TRACKING = "⚠️ Failed to track message data.";
-const MESSAGE_ERROR_TIME_REFERENCE = "⚠️ Failed to process time references.";
-const MESSAGE_ERROR_BUMP = "⚠️ Failed to process bump message.";
-const MESSAGE_ERROR_DATABASE = "⚠️ Database error occurred while processing message.";
-const MESSAGE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process message.";
-const MESSAGE_ERROR_INVALID = "⚠️ Invalid message data received.";
-const MESSAGE_ERROR_REMINDER = "⚠️ Failed to set reminder for bump message.";
-
-const NOTEXT_DB_KEY = 'notext_channel';
-
 /**
  * Event handler for message creation events.
  * @type {Object}
@@ -46,7 +33,7 @@ module.exports = {
           await message.fetch();
         } catch (fetchError) {
           logger.error("Failed to fetch partial message:", { error: fetchError });
-          throw new Error(MESSAGE_ERROR_FETCH);
+          throw new Error("⚠️ Failed to fetch message content.");
         }
       }
 
@@ -86,7 +73,7 @@ module.exports = {
       logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}.`);
 
       // Check if this is a no-text channel
-      const noTextChannelId = await getValue(NOTEXT_DB_KEY);
+      const noTextChannelId = await getValue('notext_channel');
       if (message.channelId !== noTextChannelId) return;
 
       // Check if message contains only GIFs, images, or stickers
@@ -129,7 +116,7 @@ module.exports = {
             messageId: message.id
           });
           return await message.channel.send({
-            content: MESSAGE_ERROR_PROCESSING,
+            content: "⚠️ Failed to process the message.",
             ephemeral: true
           });
         }
@@ -143,24 +130,24 @@ module.exports = {
         messageId: message.id
       });
 
-      let errorMessage = MESSAGE_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred while processing the message.";
       
-      if (error.message === MESSAGE_ERROR_FETCH) {
-        errorMessage = MESSAGE_ERROR_FETCH;
-      } else if (error.message === MESSAGE_ERROR_TRACKING) {
-        errorMessage = MESSAGE_ERROR_TRACKING;
-      } else if (error.message === MESSAGE_ERROR_TIME_REFERENCE) {
-        errorMessage = MESSAGE_ERROR_TIME_REFERENCE;
-      } else if (error.message === MESSAGE_ERROR_BUMP) {
-        errorMessage = MESSAGE_ERROR_BUMP;
-      } else if (error.message === MESSAGE_ERROR_DATABASE) {
-        errorMessage = MESSAGE_ERROR_DATABASE;
-      } else if (error.message === MESSAGE_ERROR_PERMISSION) {
-        errorMessage = MESSAGE_ERROR_PERMISSION;
-      } else if (error.message === MESSAGE_ERROR_INVALID) {
-        errorMessage = MESSAGE_ERROR_INVALID;
-      } else if (error.message === MESSAGE_ERROR_REMINDER) {
-        errorMessage = MESSAGE_ERROR_REMINDER;
+      if (error.message === "⚠️ Failed to fetch message content.") {
+        errorMessage = "⚠️ Failed to fetch message content.";
+      } else if (error.message === "⚠️ Failed to track message data.") {
+        errorMessage = "⚠️ Failed to track message data.";
+      } else if (error.message === "⚠️ Failed to process time references.") {
+        errorMessage = "⚠️ Failed to process time references.";
+      } else if (error.message === "⚠️ Failed to process bump message.") {
+        errorMessage = "⚠️ Failed to process bump message.";
+      } else if (error.message === "⚠️ Database error occurred while processing message.") {
+        errorMessage = "⚠️ Database error occurred while processing message.";
+      } else if (error.message === "⚠️ Insufficient permissions to process message.") {
+        errorMessage = "⚠️ Insufficient permissions to process message.";
+      } else if (error.message === "⚠️ Invalid message data received.") {
+        errorMessage = "⚠️ Invalid message data received.";
+      } else if (error.message === "⚠️ Failed to set reminder for bump message.") {
+        errorMessage = "⚠️ Failed to set reminder for bump message.";
       }
       
       throw new Error(errorMessage);

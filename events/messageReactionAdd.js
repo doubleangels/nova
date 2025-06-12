@@ -16,23 +16,6 @@ const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
 
-const REACTION_CLOCK_EMOJI = '🕒';
-
-const REACTION_TIME_CONVERSION_TIMEOUT = 30000;
-
-const REACTION_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the reaction.";
-const REACTION_ERROR_FETCH = "⚠️ Failed to fetch reaction data.";
-const REACTION_ERROR_TIMEZONE = "⚠️ Invalid timezone for time conversion.";
-const REACTION_ERROR_TIME_REFERENCE = "⚠️ No time references found in the message.";
-const REACTION_ERROR_TRANSLATION_FLAG = "⚠️ Invalid translation flag provided.";
-const REACTION_ERROR_TRANSLATION_EMPTY = "⚠️ No text to translate found in the message.";
-const REACTION_ERROR_TRANSLATION_API = "⚠️ Translation API error occurred.";
-const REACTION_ERROR_TRANSLATION = "⚠️ Failed to translate the message.";
-const REACTION_ERROR_MESSAGE_NOT_FOUND = "⚠️ Message not found for translation.";
-const REACTION_ERROR_PERMISSION = "⚠️ Insufficient permissions to process reaction.";
-const REACTION_ERROR_INVALID = "⚠️ Invalid reaction data received.";
-const REACTION_ERROR_TEMPORARY_MESSAGE = "⚠️ Failed to send temporary message.";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -67,13 +50,13 @@ module.exports = {
             userId: user.id,
             messageId: reaction.message.id
           });
-          throw new Error(REACTION_ERROR_FETCH);
+          throw new Error("⚠️ Failed to fetch reaction data.");
         }
       }
 
       logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}`);
 
-      if (reaction.emoji.name === REACTION_CLOCK_EMOJI) {
+      if (reaction.emoji.name === '🕒') {
         await handleClockReaction(reaction, user);
         return;
       }
@@ -100,30 +83,30 @@ module.exports = {
         messageId: reaction.message.id
       });
 
-      let errorMessage = REACTION_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred while processing the reaction.";
       
-      if (error.message === REACTION_ERROR_FETCH) {
-        errorMessage = REACTION_ERROR_FETCH;
-      } else if (error.message === REACTION_ERROR_TIMEZONE) {
-        errorMessage = REACTION_ERROR_TIMEZONE;
-      } else if (error.message === REACTION_ERROR_TIME_REFERENCE) {
-        errorMessage = REACTION_ERROR_TIME_REFERENCE;
-      } else if (error.message === REACTION_ERROR_TRANSLATION_FLAG) {
-        errorMessage = REACTION_ERROR_TRANSLATION_FLAG;
-      } else if (error.message === REACTION_ERROR_TRANSLATION_EMPTY) {
-        errorMessage = REACTION_ERROR_TRANSLATION_EMPTY;
-      } else if (error.message === REACTION_ERROR_TRANSLATION_API) {
-        errorMessage = REACTION_ERROR_TRANSLATION_API;
-      } else if (error.message === REACTION_ERROR_TRANSLATION) {
-        errorMessage = REACTION_ERROR_TRANSLATION;
-      } else if (error.message === REACTION_ERROR_MESSAGE_NOT_FOUND) {
-        errorMessage = REACTION_ERROR_MESSAGE_NOT_FOUND;
-      } else if (error.message === REACTION_ERROR_PERMISSION) {
-        errorMessage = REACTION_ERROR_PERMISSION;
-      } else if (error.message === REACTION_ERROR_INVALID) {
-        errorMessage = REACTION_ERROR_INVALID;
-      } else if (error.message === REACTION_ERROR_TEMPORARY_MESSAGE) {
-        errorMessage = REACTION_ERROR_TEMPORARY_MESSAGE;
+      if (error.message === "⚠️ Failed to fetch reaction data.") {
+        errorMessage = "⚠️ Failed to fetch reaction data.";
+      } else if (error.message === "⚠️ Invalid timezone for time conversion.") {
+        errorMessage = "⚠️ Invalid timezone for time conversion.";
+      } else if (error.message === "⚠️ No time references found in the message.") {
+        errorMessage = "⚠️ No time references found in the message.";
+      } else if (error.message === "⚠️ Invalid translation flag provided.") {
+        errorMessage = "⚠️ Invalid translation flag provided.";
+      } else if (error.message === "⚠️ No text to translate found in the message.") {
+        errorMessage = "⚠️ No text to translate found in the message.";
+      } else if (error.message === "⚠️ Translation API error occurred.") {
+        errorMessage = "⚠️ Translation API error occurred.";
+      } else if (error.message === "⚠️ Failed to translate the message.") {
+        errorMessage = "⚠️ Failed to translate the message.";
+      } else if (error.message === "⚠️ Message not found for translation.") {
+        errorMessage = "⚠️ Message not found for translation.";
+      } else if (error.message === "⚠️ Insufficient permissions to process reaction.") {
+        errorMessage = "⚠️ Insufficient permissions to process reaction.";
+      } else if (error.message === "⚠️ Invalid reaction data received.") {
+        errorMessage = "⚠️ Invalid reaction data received.";
+      } else if (error.message === "⚠️ Failed to send temporary message.") {
+        errorMessage = "⚠️ Failed to send temporary message.";
       }
       
       throw new Error(errorMessage);
@@ -169,7 +152,7 @@ async function handleClockReaction(reaction, user) {
     if (!userTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ ${REACTION_ERROR_TIMEZONE}`
+        `⚠️ Invalid timezone for time conversion.`
       );
       return;
     }
@@ -180,7 +163,7 @@ async function handleClockReaction(reaction, user) {
     if (!messageAuthorTimezone) {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ ${REACTION_ERROR_TIMEZONE}`
+        `⚠️ Invalid timezone for time conversion.`
       );
       return;
     }
@@ -198,7 +181,7 @@ async function handleClockReaction(reaction, user) {
     } else {
       await sendTemporaryMessage(
         reaction.message.channel,
-        `⚠️ ${REACTION_ERROR_TIME_REFERENCE}`
+        `⚠️ No time references found in the message.`
       );
     }
   } catch (error) {
@@ -259,7 +242,7 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
 
     const embed = {
       color: embedColor,
-      title: `${REACTION_CLOCK_EMOJI} Time Conversion`,
+      title: `🕒 Time Conversion`,
       description: formattedTimes,
       footer: {
         text: `Requested by: ${member?.user.tag || userId}`
@@ -279,7 +262,7 @@ async function processTimeConversion(channel, userId, timeReferences, fromTimezo
   }
 }
 
-async function sendTemporaryMessage(channel, content, timeout = REACTION_TIME_CONVERSION_TIMEOUT) {
+async function sendTemporaryMessage(channel, content, timeout = 30000) {
   try {
     const reply = await channel.send(content);
     
@@ -318,7 +301,7 @@ async function handleTranslationRequest(reaction, user) {
         const languageInfo = getLanguageInfo(flagEmoji);
         if (!languageInfo) {
             logger.warn('Invalid translation flag:', { flagEmoji });
-            throw new Error(REACTION_ERROR_TRANSLATION_FLAG);
+            throw new Error("⚠️ Invalid translation flag provided.");
         }
 
         const message = reaction.message;
@@ -327,7 +310,7 @@ async function handleTranslationRequest(reaction, user) {
                 messageId: reaction.message?.id,
                 userId: user.id
             });
-            throw new Error(REACTION_ERROR_MESSAGE_NOT_FOUND);
+            throw new Error("⚠️ Message not found for translation.");
         }
 
         const originalText = message.content;
@@ -336,7 +319,7 @@ async function handleTranslationRequest(reaction, user) {
                 messageId: message.id,
                 userId: user.id
             });
-            throw new Error(REACTION_ERROR_TRANSLATION_EMPTY);
+            throw new Error("⚠️ No text to translate found in the message.");
         }
 
         logger.debug('Making translation API request:', {
@@ -413,8 +396,8 @@ async function handleTranslationRequest(reaction, user) {
         
         try {
             const errorMessage = error.response?.status === 403 
-                ? REACTION_ERROR_TRANSLATION_API
-                : REACTION_ERROR_TRANSLATION;
+                ? "⚠️ Translation API error occurred."
+                : "⚠️ Failed to translate the message.";
             
             logger.debug('Sending translation error response:', {
                 errorType: error.response?.status === 403 ? 'API_ERROR' : 'GENERAL_ERROR',

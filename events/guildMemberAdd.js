@@ -11,15 +11,6 @@ const { getValue, trackNewMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 
-const MEMBER_ADD_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing the new member.";
-const MEMBER_ADD_ERROR_TRACKING = "⚠️ Failed to track new member data.";
-const MEMBER_ADD_ERROR_MUTE_KICK = "⚠️ Failed to schedule mute kick for new member.";
-const MEMBER_ADD_ERROR_DATABASE = "⚠️ Database error occurred while processing new member.";
-const MEMBER_ADD_ERROR_PERMISSION = "⚠️ Insufficient permissions to process new member.";
-const MEMBER_ADD_ERROR_INVALID = "⚠️ Invalid member data received.";
-const MEMBER_ADD_ERROR_AGE_CHECK = "⚠️ Failed to verify account age.";
-const MEMBER_ADD_ERROR_KICK = "⚠️ Failed to kick member due to age requirement.";
-
 /**
  * Event handler for guild member join events.
  * @type {Object}
@@ -73,22 +64,22 @@ module.exports = {
         userId: member.user.id
       });
 
-      let errorMessage = MEMBER_ADD_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred while processing the new member.";
       
-      if (error.message === MEMBER_ADD_ERROR_TRACKING) {
-        errorMessage = MEMBER_ADD_ERROR_TRACKING;
-      } else if (error.message === MEMBER_ADD_ERROR_MUTE_KICK) {
-        errorMessage = MEMBER_ADD_ERROR_MUTE_KICK;
-      } else if (error.message === MEMBER_ADD_ERROR_DATABASE) {
-        errorMessage = MEMBER_ADD_ERROR_DATABASE;
-      } else if (error.message === MEMBER_ADD_ERROR_PERMISSION) {
-        errorMessage = MEMBER_ADD_ERROR_PERMISSION;
-      } else if (error.message === MEMBER_ADD_ERROR_INVALID) {
-        errorMessage = MEMBER_ADD_ERROR_INVALID;
-      } else if (error.message === MEMBER_ADD_ERROR_AGE_CHECK) {
-        errorMessage = MEMBER_ADD_ERROR_AGE_CHECK;
-      } else if (error.message === MEMBER_ADD_ERROR_KICK) {
-        errorMessage = MEMBER_ADD_ERROR_KICK;
+      if (error.message === "⚠️ Failed to track new member data.") {
+        errorMessage = "⚠️ Failed to track new member data.";
+      } else if (error.message === "⚠️ Failed to schedule mute kick for new member.") {
+        errorMessage = "⚠️ Failed to schedule mute kick for new member.";
+      } else if (error.message === "⚠️ Database error occurred while processing new member.") {
+        errorMessage = "⚠️ Database error occurred while processing new member.";
+      } else if (error.message === "⚠️ Insufficient permissions to process new member.") {
+        errorMessage = "⚠️ Insufficient permissions to process new member.";
+      } else if (error.message === "⚠️ Invalid member data received.") {
+        errorMessage = "⚠️ Invalid member data received.";
+      } else if (error.message === "⚠️ Failed to verify account age.") {
+        errorMessage = "⚠️ Failed to verify account age.";
+      } else if (error.message === "⚠️ Failed to kick member due to age requirement.") {
+        errorMessage = "⚠️ Failed to kick member due to age requirement.";
       }
       
       throw new Error(errorMessage);

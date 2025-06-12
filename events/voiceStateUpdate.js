@@ -13,17 +13,6 @@ const { addVoiceSessionToStats, addVoiceSessionToChannelStats } = require('../ut
 const { logError } = require('../errors');
 const { Events } = require('discord.js');
 
-const VOICE_ERROR_UNEXPECTED = "⚠️ An unexpected error occurred while processing voice state update.";
-const VOICE_ERROR_DATABASE = "⚠️ Database error occurred while processing voice state.";
-const VOICE_ERROR_SESSION_START = "⚠️ Failed to start voice session.";
-const VOICE_ERROR_SESSION_END = "⚠️ Failed to end voice session.";
-const VOICE_ERROR_SESSION_SWITCH = "⚠️ Failed to switch voice session.";
-const VOICE_ERROR_STATS_UPDATE = "⚠️ Failed to update voice statistics.";
-const VOICE_ERROR_CHANNEL_STATS = "⚠️ Failed to update channel statistics.";
-const VOICE_ERROR_PERMISSION = "⚠️ Insufficient permissions to process voice state.";
-const VOICE_ERROR_INVALID_STATE = "⚠️ Invalid voice state data received.";
-const VOICE_ERROR_RECOVERY = "⚠️ Failed to recover voice session data.";
-
 const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
@@ -169,26 +158,26 @@ module.exports = {
         channelId: newState.channelId
       });
 
-      let errorMessage = VOICE_ERROR_UNEXPECTED;
+      let errorMessage = "⚠️ An unexpected error occurred while processing voice state update.";
       
       if (error.message === "DATABASE_ERROR") {
-        errorMessage = VOICE_ERROR_DATABASE;
+        errorMessage = "⚠️ Database error occurred while processing voice state.";
       } else if (error.message === "SESSION_START_FAILED") {
-        errorMessage = VOICE_ERROR_SESSION_START;
+        errorMessage = "⚠️ Failed to start voice session.";
       } else if (error.message === "SESSION_END_FAILED") {
-        errorMessage = VOICE_ERROR_SESSION_END;
+        errorMessage = "⚠️ Failed to end voice session.";
       } else if (error.message === "SESSION_SWITCH_FAILED") {
-        errorMessage = VOICE_ERROR_SESSION_SWITCH;
+        errorMessage = "⚠️ Failed to switch voice session.";
       } else if (error.message === "STATS_UPDATE_FAILED") {
-        errorMessage = VOICE_ERROR_STATS_UPDATE;
+        errorMessage = "⚠️ Failed to update voice statistics.";
       } else if (error.message === "CHANNEL_STATS_UPDATE_FAILED") {
-        errorMessage = VOICE_ERROR_CHANNEL_STATS;
+        errorMessage = "⚠️ Failed to update channel statistics.";
       } else if (error.message === "PERMISSION_DENIED") {
-        errorMessage = VOICE_ERROR_PERMISSION;
+        errorMessage = "⚠️ Insufficient permissions to process voice state.";
       } else if (error.message === "INVALID_STATE") {
-        errorMessage = VOICE_ERROR_INVALID_STATE;
+        errorMessage = "⚠️ Invalid voice state data received.";
       } else if (error.message === "RECOVERY_FAILED") {
-        errorMessage = VOICE_ERROR_RECOVERY;
+        errorMessage = "⚠️ Failed to recover voice session data.";
       }
       
       throw new Error(errorMessage);
