@@ -1,3 +1,10 @@
+/**
+ * Validates and normalizes a hex color string to a standard 6-digit format
+ * @param {string} colorHex - The hex color string to validate and normalize
+ * @param {Object} [logger=null] - Optional logger instance for debug logging
+ * @throws {Error} If the color format is invalid or empty
+ * @returns {{success: boolean, normalizedColor?: string}} Object containing success status and normalized color if successful
+ */
 function validateAndNormalizeColor(colorHex, logger = null) {
     if (typeof colorHex !== 'string') {
         throw new Error("⚠️ Invalid color format provided.");
@@ -37,6 +44,12 @@ function validateAndNormalizeColor(colorHex, logger = null) {
     return { success: false };
 }
 
+/**
+ * Converts a hex color string to its decimal representation
+ * @param {string} hexColor - The hex color string to convert
+ * @throws {Error} If the color format is invalid or out of range
+ * @returns {number} The decimal representation of the hex color
+ */
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
@@ -53,6 +66,12 @@ function hexToDecimal(hexColor) {
     return decimal;
 }
 
+/**
+ * Converts a hex color string to its RGB components
+ * @param {string} hexColor - The hex color string to convert
+ * @throws {Error} If the color format is invalid
+ * @returns {{r: number, g: number, b: number}} Object containing RGB components
+ */
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
@@ -67,6 +86,14 @@ function hexToRgb(hexColor) {
     };
 }
 
+/**
+ * Converts RGB components to a hex color string
+ * @param {number} r - Red component (0-255)
+ * @param {number} g - Green component (0-255)
+ * @param {number} b - Blue component (0-255)
+ * @throws {Error} If any RGB component is invalid
+ * @returns {string} The hex color string
+ */
 function rgbToHex(r, g, b) {
     if (!Number.isInteger(r) || r < 0 || r > 255 ||
         !Number.isInteger(g) || g < 0 || g > 255 ||

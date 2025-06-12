@@ -8,6 +8,22 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+/**
+ * Creates a paginated message with navigation buttons
+ * @param {CommandInteraction} interaction - The interaction that triggered the pagination
+ * @param {Array} items - The items to paginate through
+ * @param {Function} generateEmbed - Function to generate the embed for each page
+ * @param {string} prefix - Prefix for button custom IDs
+ * @param {number} timeout - Timeout in milliseconds for the collector
+ * @param {Logger} logger - Logger instance for debugging
+ * @param {Object} [options={}] - Additional options for customization
+ * @param {ButtonStyle} [options.buttonStyle] - Style for the navigation buttons
+ * @param {string} [options.prevLabel] - Label for the previous button
+ * @param {string} [options.nextLabel] - Label for the next button
+ * @param {string} [options.prevEmoji] - Emoji for the previous button
+ * @param {string} [options.nextEmoji] - Emoji for the next button
+ * @returns {Promise<void>}
+ */
 async function createPaginatedResults(
   interaction, 
   items, 
@@ -131,6 +147,15 @@ async function createPaginatedResults(
   });
 }
 
+/**
+ * Normalizes search parameters and validates them
+ * @param {string} query - The search query
+ * @param {number} resultsCount - Number of results requested
+ * @param {number} defaultCount - Default number of results
+ * @param {number} minResults - Minimum allowed results
+ * @param {number} maxResults - Maximum allowed results
+ * @returns {{valid: boolean, error?: string, query?: string, count?: number}} Normalized parameters or error
+ */
 function normalizeSearchParams(query, resultsCount, defaultCount, minResults, maxResults) {
   if (!query || query.trim().length === 0) {
     return { valid: false, error: "Empty query" };
@@ -146,12 +171,27 @@ function normalizeSearchParams(query, resultsCount, defaultCount, minResults, ma
   };
 }
 
+/**
+ * Formats an API error message
+ * @param {Error} apiError - The API error object
+ * @returns {string} Formatted error message
+ */
 function formatApiError(apiError) {
   const statusCode = apiError.response?.status || "unknown";
   const errorMessage = apiError.response?.data?.error?.message || apiError.message;
   return `⚠️ Google API error (${statusCode}): ${errorMessage}`;
 }
 
+/**
+ * Performs a search across multiple categories
+ * @param {string} query - The search query
+ * @param {Object} [options={}] - Search options
+ * @param {boolean} [options.includeUsers=true] - Whether to include user results
+ * @param {boolean} [options.includeChannels=true] - Whether to include channel results
+ * @param {boolean} [options.includeMessages=true] - Whether to include message results
+ * @returns {Promise<Array>} Combined and sorted search results
+ * @throws {Error} If search fails or times out
+ */
 async function performSearch(query, options = {}) {
   try {
     if (!query || query.length < 2) {
@@ -191,6 +231,11 @@ async function performSearch(query, options = {}) {
   }
 }
 
+/**
+ * Searches for users matching the query
+ * @param {string} query - The search query
+ * @returns {Promise<Array<{type: string, id: string, name: string, nickname?: string, relevance: number}>>} Matching users
+ */
 async function searchUsers(query) {
   try {
     const users = await getAllUsers();
@@ -215,6 +260,11 @@ async function searchUsers(query) {
   }
 }
 
+/**
+ * Searches for channels matching the query
+ * @param {string} query - The search query
+ * @returns {Promise<Array<{type: string, id: string, name: string, topic?: string, relevance: number}>>} Matching channels
+ */
 async function searchChannels(query) {
   try {
     const channels = await getAllChannels();
@@ -239,6 +289,11 @@ async function searchChannels(query) {
   }
 }
 
+/**
+ * Searches for messages matching the query
+ * @param {string} query - The search query
+ * @returns {Promise<Array<{type: string, id: string, content: string, author: Object, channel: Object, relevance: number}>>} Matching messages
+ */
 async function searchMessages(query) {
   try {
     const messages = await getRecentMessages();
@@ -265,7 +320,12 @@ async function searchMessages(query) {
   }
 }
 
-
+/**
+ * Calculates the relevance score for a search result
+ * @param {string} text - The text to search in
+ * @param {string} query - The search query
+ * @returns {number} Relevance score between 0 and 1
+ */
 function calculateRelevance(text, query) {
   const normalizedText = text.toLowerCase();
   const normalizedQuery = query.toLowerCase();
@@ -289,6 +349,12 @@ function calculateRelevance(text, query) {
   return matchingWords.length / queryWords.length;
 }
 
+/**
+ * Handles errors that occur during search operations
+ * @param {Error} error - The error that occurred
+ * @param {string} context - The context where the error occurred
+ * @throws {Error} A formatted error message based on the error type
+ */
 function handleError(error, context) {
   logger.error(`Error in ${context}:`, {
     error: error.message,

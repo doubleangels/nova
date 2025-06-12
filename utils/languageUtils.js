@@ -1,6 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
+/** @type {Object.<string, {code: string, name: string}>} Mapping of flag emojis to language information */
 const LANG_FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
     '🇦🇱': { code: 'sq', name: 'Albanian' }, // Albania
@@ -200,6 +201,12 @@ const LANG_FLAG_TO_LANGUAGE = {
     '🇿🇼': { code: 'en', name: 'English' }, // Zimbabwe
 };
 
+/**
+ * Retrieves language information for a given flag emoji
+ * @param {string} flagEmoji - The flag emoji to get language info for
+ * @throws {Error} If the flag emoji is invalid
+ * @returns {{code: string, name: string}|null} Language information or null if not found
+ */
 function getLanguageInfo(flagEmoji) {
     logger.debug("Getting language info for flag:", { flagEmoji });
     
@@ -220,6 +227,12 @@ function getLanguageInfo(flagEmoji) {
     return languageInfo;
 }
 
+/**
+ * Validates if a given emoji is a valid translation flag
+ * @param {string} emoji - The emoji to validate
+ * @throws {Error} If the emoji is invalid
+ * @returns {boolean} True if the emoji is a valid translation flag
+ */
 function isValidTranslationFlag(emoji) {
     logger.debug("Validating translation flag:", { emoji });
     
@@ -237,6 +250,12 @@ function isValidTranslationFlag(emoji) {
     return isValid;
 }
 
+/**
+ * Handles errors that occur during language processing
+ * @param {Error} error - The error that occurred
+ * @param {string} context - The context where the error occurred
+ * @throws {Error} A formatted error message based on the error type
+ */
 function handleError(error, context) {
   logger.error(`Error in ${context}:`, {
     error: error.message,

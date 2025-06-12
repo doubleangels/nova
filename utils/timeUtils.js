@@ -9,6 +9,12 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.extend(customParseFormat);
 
+/**
+ * Validates if a timezone string is valid
+ * @param {string} tz - The timezone string to validate
+ * @returns {boolean} True if the timezone is valid
+ * @throws {Error} If the timezone string is invalid
+ */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
     throw new Error("⚠️ Invalid timezone provided.");
@@ -23,6 +29,12 @@ function isValidTimezone(tz) {
   }
 }
 
+/**
+ * Extracts time references from a message content
+ * @param {string} content - The message content to parse
+ * @returns {Array<{text: string, date: Date, timeOnly: boolean}>} Array of time references found
+ * @throws {Error} If parsing fails or no content provided
+ */
 function extractTimeReferences(content) {
   if (!content) {
     throw new Error("⚠️ No time reference provided.");
@@ -96,6 +108,14 @@ function extractTimeReferences(content) {
   }
 }
 
+/**
+ * Converts a time reference between timezones
+ * @param {{text: string, date: Date}} timeRef - The time reference to convert
+ * @param {string} fromTimezone - The source timezone
+ * @param {string} toTimezone - The target timezone
+ * @returns {{text: string, originalTime: string, targetTime: dayjs, toTimezone: string}} Converted time information
+ * @throws {Error} If conversion fails or timezones are invalid
+ */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
     throw new Error("⚠️ Invalid time reference provided.");
@@ -179,6 +199,13 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   }
 }
 
+/**
+ * Generates a Discord timestamp string
+ * @param {dayjs} date - The date to format
+ * @param {string} timezone - The timezone to use
+ * @returns {string} Discord timestamp string
+ * @throws {Error} If parameters are invalid
+ */
 function generateDiscordTimestamp(date, timezone) {
   if (!date || !timezone) {
     throw new Error("⚠️ Invalid timestamp parameters provided.");
@@ -187,6 +214,12 @@ function generateDiscordTimestamp(date, timezone) {
   return `<t:${timestamp}:t>`;
 }
 
+/**
+ * Default formatter for time conversions
+ * @param {{originalTime: string, targetTime: dayjs, toTimezone: string}} conversion - The conversion result
+ * @returns {string} Formatted time string
+ * @throws {Error} If conversion is invalid
+ */
 function defaultFormatter(conversion) {
   if (!conversion) {
     throw new Error("⚠️ Invalid time conversion provided.");
@@ -205,6 +238,12 @@ function defaultFormatter(conversion) {
   return `your converted time is ${targetTimestamp} ${toTimezone}.`;
 }
 
+/**
+ * Formats an array of converted times into a readable string
+ * @param {Array<{text: string, targetTime: dayjs, toTimezone: string, error?: string}>} convertedTimes - Array of converted times
+ * @returns {string} Formatted string of all conversions
+ * @throws {Error} If no times are provided
+ */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
     throw new Error("⚠️ No times provided for conversion.");
@@ -225,6 +264,12 @@ function formatConvertedTimes(convertedTimes) {
   return formattedTimes.join('\n');
 }
 
+/**
+ * Handles errors that occur during time operations
+ * @param {Error} error - The error that occurred
+ * @param {string} context - The context where the error occurred
+ * @throws {Error} A formatted error message based on the error type
+ */
 function handleError(error, context) {
   logger.error(`Error in ${context}:`, {
     error: error.message,

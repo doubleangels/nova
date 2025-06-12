@@ -8,8 +8,14 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+/** @type {Map<string, NodeJS.Timeout>} Map of active mute kick timeouts */
 const activeTimeouts = new Map();
 
+/**
+ * Cancels a scheduled mute kick for a user
+ * @param {string} userId - The ID of the user to cancel the mute kick for
+ * @returns {boolean} True if a timeout was cancelled, false otherwise
+ */
 function cancelMuteKick(userId) {
   if (activeTimeouts.has(userId)) {
     clearTimeout(activeTimeouts.get(userId));
@@ -20,6 +26,15 @@ function cancelMuteKick(userId) {
   return false;
 }
 
+/**
+ * Schedules a mute kick for a user after a specified time period
+ * @param {string} userId - The ID of the user to schedule the kick for
+ * @param {Date|string} joinTime - When the user joined
+ * @param {number} hours - Number of hours before the kick
+ * @param {Client} client - The Discord client instance
+ * @param {string} guildId - The ID of the guild
+ * @returns {Promise<void>}
+ */
 async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   cancelMuteKick(userId);
 
@@ -88,6 +103,11 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   logger.debug(`Scheduled mute kick for user ${userId} in ${Math.round(delay/1000/60)} minutes.`);
 }
 
+/**
+ * Reschedules all mute kicks for users in mute mode
+ * @param {Client} client - The Discord client instance
+ * @returns {Promise<void>}
+ */
 async function rescheduleAllMuteKicks(client) {
   try {
     if (!client) {

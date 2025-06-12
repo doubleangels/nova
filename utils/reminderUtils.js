@@ -6,11 +6,17 @@ const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
 
+/** @type {Pool} PostgreSQL connection pool for reminder operations */
 const REMINDER_POOL = new Pool({
   connectionString: config.neonConnectionString,
   ssl: { rejectUnauthorized: true }
 });
 
+/**
+ * Retrieves the latest reminder data for a specific type
+ * @param {string} type - The type of reminder ('bump' or 'promote')
+ * @returns {Promise<{reminder_id: string, remind_at: Date, type: string}|null>} The latest reminder data or null if none found
+ */
 async function getLatestReminderData(type) {
   try {
     const result = await REMINDER_POOL.query(
@@ -27,6 +33,14 @@ async function getLatestReminderData(type) {
   }
 }
 
+/**
+ * Handles the creation and scheduling of a reminder
+ * @param {Message} message - The Discord message that triggered the reminder
+ * @param {number} delay - The delay in milliseconds before the reminder
+ * @param {string} [type='bump'] - The type of reminder ('bump' or 'promote')
+ * @returns {Promise<void>}
+ * @throws {Error} If reminder creation fails or configuration is missing
+ */
 async function handleReminder(message, delay, type = 'bump') {
   try {
     const reminderRole = await getValue('reminder_role');
@@ -110,6 +124,12 @@ async function handleReminder(message, delay, type = 'bump') {
   }
 }
 
+/**
+ * Reschedules all active reminders after bot restart
+ * @param {Client} client - The Discord client instance
+ * @returns {Promise<void>}
+ * @throws {Error} If rescheduling fails or configuration is missing
+ */
 async function rescheduleReminder(client) {
   try {
     const reminderChannelId = await getValue("reminder_channel");
@@ -215,6 +235,12 @@ async function rescheduleReminder(client) {
   }
 }
 
+/**
+ * Handles errors that occur during reminder operations
+ * @param {Error} error - The error that occurred
+ * @param {string} context - The context where the error occurred
+ * @throws {Error} A formatted error message based on the error type
+ */
 async function handleError(error, context) {
   logger.error(`Error in ${context}:`, {
     error: error.message,

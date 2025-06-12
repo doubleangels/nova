@@ -3,6 +3,12 @@ const dayjs = require('dayjs');
 const { getValue } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
 
+/**
+ * Checks if a member's account meets the minimum age requirement
+ * @param {GuildMember} member - The member to check
+ * @returns {Promise<boolean>} True if the account meets the age requirement or if troll mode is disabled
+ * @throws {Error} If checking account age fails
+ */
 async function checkAccountAge(member) {
   try {
     const trollModeEnabled = await getValue('troll_mode_enabled');
@@ -29,6 +35,12 @@ async function checkAccountAge(member) {
   }
 }
 
+/**
+ * Performs a kick on a member who doesn't meet account age requirements
+ * @param {GuildMember} member - The member to kick
+ * @returns {Promise<void>}
+ * @throws {Error} If the kick operation fails
+ */
 async function performKick(member) {
   try {
     const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
