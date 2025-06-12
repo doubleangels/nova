@@ -121,18 +121,18 @@ async function checkRateLimit(type) {
     const now = Date.now();
     const windowStart = now - 60000;
     
-    let count = LOC_RATE_LIMIT_COUNTS.get(type) || 0;
-    count = count.filter(timestamp => timestamp > windowStart).length;
-    
-    if (count >= 50) {
-        throw new Error("Rate limit exceeded. Please try again later.");
-    }
-    
     if (!LOC_RATE_LIMIT_COUNTS.has(type)) {
         LOC_RATE_LIMIT_COUNTS.set(type, []);
     }
     
-    LOC_RATE_LIMIT_COUNTS.get(type).push(now);
+    const timestamps = LOC_RATE_LIMIT_COUNTS.get(type);
+    const recentRequests = timestamps.filter(timestamp => timestamp > windowStart);
+    
+    if (recentRequests.length >= 50) {
+        throw new Error("Rate limit exceeded. Please try again later.");
+    }
+    
+    timestamps.push(now);
 }
 
 /**
@@ -145,8 +145,137 @@ function secondsToHours(seconds) {
     return seconds / 3600;
 }
 
+/**
+ * Gets the UTC offset for a location.
+ * @async
+ * @function getUtcOffset
+ * @param {string} location - The location to get UTC offset for
+ * @returns {Promise<Object>} UTC offset information
+ * @throws {Error} If UTC offset lookup fails
+ */
+async function getUtcOffset(location) {
+    try {
+        const geocodingInfo = await getGeocodingInfo(location);
+        const { lat, lng } = geocodingInfo.geometry.location;
+        const timezoneInfo = await getTimezoneInfo(lat, lng);
+        
+        const totalOffset = secondsToHours(timezoneInfo.rawOffset + timezoneInfo.dstOffset);
+        
+        return {
+            offset: totalOffset,
+            timeZoneName: timezoneInfo.timeZoneName,
+            error: false
+        };
+    } catch (error) {
+        logger.error("Error getting UTC offset:", { error: error.message, location });
+        return {
+            error: true,
+            errorType: error.message
+        };
+    }
+}
+
+/**
+ * Formats a place name for display.
+ * @function formatPlaceName
+ * @param {string} place - The place name to format
+ * @returns {string} The formatted place name
+ */
+function formatPlaceName(place) {
+    return place.split(',')[0].trim();
+}
+
+/**
+ * Formats an error message for display.
+ * @function formatErrorMessage
+ * @param {string} place - The place that caused the error
+ * @param {string} errorType - The type of error
+ * @returns {string} The formatted error message
+ */
+function formatErrorMessage(place, errorType) {
+    if (errorType.includes('ZERO_RESULTS')) {
+        return `⚠️ Could not find location: ${place}`;
+    } else if (errorType.includes('OVER_QUERY_LIMIT')) {
+        return '⚠️ Too many requests. Please try again later.';
+    } else if (errorType.includes('REQUEST_DENIED')) {
+        return '⚠️ API access denied. Please check API configuration.';
+    } else if (errorType.includes('INVALID_REQUEST')) {
+        return `⚠️ Invalid location: ${place}`;
+    } else {
+        return `⚠️ Failed to get timezone information for ${place}`;
+    }
+}
+
+/**
+ * Gets geocoding data for a location.
+ * @async
+ * @function getGeocodingData
+ * @param {string} place - The place to get geocoding data for
+ * @returns {Promise<Object>} Geocoding data with location and formatted address
+ */
+async function getGeocodingData(place) {
+    try {
+        const geocodingInfo = await getGeocodingInfo(place);
+        return {
+            error: false,
+            location: geocodingInfo.geometry.location,
+            formattedAddress: geocodingInfo.formatted_address
+        };
+    } catch (error) {
+        logger.error("Error getting geocoding data:", { error: error.message, place });
+        return {
+            error: true,
+            type: error.message
+        };
+    }
+}
+
+/**
+ * Gets timezone data for coordinates.
+ * @async
+ * @function getTimezoneData
+ * @param {Object} location - The location object with lat and lng
+ * @returns {Promise<Object>} Timezone data with timezone ID
+ */
+async function getTimezoneData(location) {
+    try {
+        const timezoneInfo = await getTimezoneInfo(location.lat, location.lng);
+        return {
+            error: false,
+            timezoneId: timezoneInfo.timeZoneId
+        };
+    } catch (error) {
+        logger.error("Error getting timezone data:", { error: error.message, location });
+        return {
+            error: true,
+            type: error.message
+        };
+    }
+}
+
+/**
+ * Validates if a timezone identifier is valid.
+ * @function isValidTimezone
+ * @param {string} timezoneId - The timezone identifier to validate
+ * @returns {boolean} True if the timezone is valid
+ */
+function isValidTimezone(timezoneId) {
+    try {
+        Intl.DateTimeFormat(undefined, { timeZone: timezoneId });
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
 module.exports = {
     getGeocodingInfo,
     getTimezoneInfo,
-    secondsToHours
+    secondsToHours,
+    getUtcOffset,
+    formatPlaceName,
+    formatErrorMessage,
+    getGeocodingData,
+    getTimezoneData,
+    isValidTimezone
 };

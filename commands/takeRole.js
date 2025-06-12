@@ -12,13 +12,13 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('takerole')
     .setDescription('Remove a role from a user')
-    .addUserOption(option =>
-      option.setName('user')
-        .setDescription('The user to remove the role from')
-        .setRequired(true))
     .addRoleOption(option =>
       option.setName('role')
         .setDescription('The role to remove')
+        .setRequired(true))
+    .addUserOption(option =>
+      option.setName('user')
+        .setDescription('The user to remove the role from')
         .setRequired(true))
     .addStringOption(option =>
       option.setName('reason')
