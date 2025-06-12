@@ -189,7 +189,7 @@ module.exports = {
   createSuccessEmbed(response, interaction) {
     let description = 'Your server advertisement has been posted to r/findaserver.';
     if (response && response.permalink) {
-      description += `\n[View your post on Reddit!](https://reddit.com${response.permalink})`;
+      description += `\nView your post on Reddit: https://reddit.com${response.permalink}`;
     }
     const embed = new EmbedBuilder()
       .setColor(0xFF4500)
