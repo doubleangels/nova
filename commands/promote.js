@@ -187,10 +187,14 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed
    */
   createSuccessEmbed(response, interaction) {
+    let description = 'Your server advertisement has been posted to r/findaserver.';
+    if (response && response.permalink) {
+      description += `\n[View your post on Reddit!](https://reddit.com${response.permalink})`;
+    }
     const embed = new EmbedBuilder()
       .setColor(0xFF4500)
       .setTitle('Server Promotion')
-      .setDescription('Your server advertisement has been posted to r/findaserver.');
+      .setDescription(description);
 
     if (response && response.id) {
       embed.addFields({ 
@@ -203,13 +207,6 @@ module.exports = {
       name: 'Status', 
       value: 'Success' 
     });
-
-    if (response && response.permalink) {
-      embed.addFields({ 
-        name: 'View Post', 
-        value: `[Click here](https://reddit.com${response.permalink})` 
-      });
-    }
 
     return embed
       .setFooter({ text: `Updated by ${interaction.user.tag}` })
