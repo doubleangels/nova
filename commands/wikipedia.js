@@ -1,12 +1,8 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const he = require('he');
-
-const WIKI_SEARCH_MATCH_OPEN_REGEX = /<span class="searchmatch">/g;
-const WIKI_SEARCH_MATCH_CLOSE_REGEX = /<\/span>/g;
-const WIKI_HTML_TAG_REGEX = /<[^>]*>/g;
 
 const cache = new Map();
 
@@ -91,187 +87,21 @@ module.exports = {
       await this.handleError(interaction, error);
     }
   },
-  
-  async fetchWikipediaResults(query) {
-    try {
-      const params = new URLSearchParams({
-        action: 'query',
-        format: 'json',
-        list: 'search',
-        srsearch: query,
-        srlimit: 5,
-        utf8: '1',
-        prop: 'info|extracts',
-        inprop: 'url',
-        explaintext: '1'
-      });
-      
-      const requestUrl = `https://en.wikipedia.org/w/api.php?${params.toString()}`;
-      
-      logger.debug("Making Wikipedia API request:", { 
-        requestUrl
-      });
-      
-      const response = await axios.get(requestUrl, { timeout: 5000 });
-      
-      logger.debug("Wikipedia API response received:", { 
-        status: response.status
-      });
-      
-      if (response.status === 200 && response.data.query && response.data.query.search) {
-        const results = response.data.query.search;
-        
-        return results.map(result => ({
-          ...result,
-          url: `https://en.wikipedia.org/?curid=${result.pageid}`,
-          formattedSnippet: this.formatSnippet(result.snippet)
-        }));
-      }
-      
-      return [];
-    } catch (error) {
-      logger.error("Error fetching Wikipedia results:", { 
-        error: error.message,
-        query
-      });
-      throw new Error("API_ERROR");
-    }
-  },
 
   formatSnippet(snippet) {
     if (!snippet) return "No snippet available.";
     
     let formatted = snippet
-      .replace(WIKI_SEARCH_MATCH_OPEN_REGEX, '**')
-      .replace(WIKI_SEARCH_MATCH_CLOSE_REGEX, '**');
+      .replace(/<span class="searchmatch">/g, '**')
+      .replace(/<\/span>/g, '**');
     
-    formatted = formatted.replace(WIKI_HTML_TAG_REGEX, '');
+    formatted = formatted.replace(/<[^>]*>/g, '');
     
     formatted = he.decode(formatted);
     
     return formatted;
   },
-  
-  async sendSearchResults(interaction, query, results, index) {
-    const result = results[index];
-    
-    const embed = this.createResultEmbed(result, query, index, results.length);
-    
-    const components = [];
-    if (results.length > 1) {
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`wiki_prev_${index}`)
-          .setLabel('Previous')
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(index === 0),
-        new ButtonBuilder()
-          .setCustomId(`wiki_next_${index}`)
-          .setLabel('Next')
-          .setStyle(ButtonStyle.Secondary)
-          .setDisabled(index === results.length - 1)
-      );
-      components.push(row);
-    }
-    
-    const message = await interaction.editReply({ 
-      embeds: [embed],
-      components: components
-    });
-    
-    logger.info("/wikipedia command completed successfully:", { 
-      userId: interaction.user.id,
-      userTag: interaction.user.tag,
-      query,
-      resultIndex: index,
-      totalResults: results.length
-    });
-    
-    if (results.length > 1) {
-      this.setupPaginationCollector(message, interaction, query, results, index);
-    }
-  },
-  
-  createResultEmbed(result, query, index, total) {
-    const title = result.title || "No Title";
-    const snippet = result.formattedSnippet;
-    const url = result.url;
-    const wordCount = result.wordcount || 0;
-    const lastModified = result.timestamp ? 
-      new Date(result.timestamp).toLocaleDateString() : 
-      "Unknown";
-    
-    const embed = new EmbedBuilder()
-      .setTitle(`📖 ${title}`)
-      .setDescription(`📜 **Summary:** ${snippet}`)
-      .setURL(url)
-      .setColor(0xFFFFFF)
-      .addFields(
-        { 
-          name: '🔗 Wikipedia Link', 
-          value: `[Click Here](${url})`, 
-          inline: true 
-        },
-        {
-          name: '📊 Article Info',
-          value: `📝 Word Count: ${wordCount.toLocaleString()}\n📅 Last Updated: ${lastModified}`,
-          inline: true
-        }
-      )
-      .setFooter({ 
-        text: `Powered by Wikipedia API • Result ${index + 1} of ${total} for "${query}"`
-      });
-    
-    return embed;
-  },
-  
-  setupPaginationCollector(message, interaction, query, results, currentIndex) {
-    const filter = i => 
-      i.user.id === interaction.user.id && 
-      (i.customId.startsWith(`wiki_prev_`) || 
-       i.customId.startsWith(`wiki_next_`));
-    
-    const collector = message.createMessageComponentCollector({ 
-      filter, 
-      time: 300000
-    });
-    
-    collector.on('collect', async i => {
-      let newIndex = currentIndex;
-      
-      if (i.customId.startsWith(`wiki_next_`)) {
-        newIndex = Math.min(results.length - 1, currentIndex + 1);
-      } else if (i.customId.startsWith(`wiki_prev_`)) {
-        newIndex = Math.max(0, currentIndex - 1);
-      }
-      
-      await i.deferUpdate();
-      await this.sendSearchResults(interaction, query, results, newIndex);
-      
-      collector.stop();
-    });
-    
-    collector.on('end', collected => {
-      if (collected.size === 0) {
-        const embed = this.createResultEmbed(
-          results[currentIndex], 
-          query, 
-          currentIndex, 
-          results.length
-        );
-        
-        interaction.editReply({ 
-          embeds: [embed],
-          components: [] 
-        }).catch(err => {
-          logger.error("Failed to remove buttons after timeout", {
-            error: err.message
-          });
-        });
-      }
-    });
-  },
-  
+
   getCachedResults(cacheKey) {
     const cached = cache.get(cacheKey);
     
