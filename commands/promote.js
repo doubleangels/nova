@@ -164,8 +164,7 @@ module.exports = {
       }
 
       const postId = submission.json.data.id;
-      const subreddit = postData.subreddit;
-      const permalink = `/r/${subreddit}/comments/${postId}`;
+      const permalink = `/r/${postData.subreddit}/comments/${postId}`;
 
       return {
         id: postId,
