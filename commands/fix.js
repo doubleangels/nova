@@ -65,7 +65,6 @@ module.exports = {
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
       const channel = await interaction.client.channels.fetch(reminderChannelId);
-      const sentMsg = await channel.send(`⏰ Next bump reminder scheduled for: <t:${unixTimestamp}:R>`);
       
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
