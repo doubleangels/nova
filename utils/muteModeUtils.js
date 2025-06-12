@@ -6,7 +6,7 @@
 
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getUserTimezone } = require('./database');
+const { getUserTimezone, getValue, getAllTrackedMembers } = require('./database');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
@@ -14,40 +14,52 @@ const timezone = require('dayjs/plugin/timezone');
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+const MUTE_DEFAULT_KICK_TIME_HOURS = 4;
+
 /**
  * Schedules a mute kick for a user.
  * @async
  * @function scheduleMuteKick
- * @param {GuildMember} member - The member to schedule kick for
- * @param {number} [hours=4] - Hours until kick
+ * @param {string} memberId - The member ID to schedule kick for
+ * @param {string} username - The username of the member
+ * @param {number} joinTime - The timestamp when the member joined
+ * @param {number} hours - Hours until kick
+ * @param {string} guildId - The ID of the guild
+ * @param {Client} client - The Discord client instance
  * @returns {Promise<void>}
  */
-async function scheduleMuteKick(member, hours = 4) {
+async function scheduleMuteKick(memberId, username, joinTime, hours, guildId, client) {
     try {
         const kickTime = dayjs().add(hours, 'hour');
         const kickTimestamp = kickTime.valueOf();
         
-        logger.info(`Scheduling mute kick for ${member.user.tag} at ${kickTime.format()}`);
+        logger.info(`Scheduling mute kick for ${username} (${memberId}) at ${kickTime.format()}`);
         
         // Store kick time in database
-        await member.client.db.setValue(`mute_kick_${member.id}`, kickTimestamp);
+        await client.db.setValue(`mute_kick_${memberId}`, kickTimestamp);
         
         // Schedule the kick
         setTimeout(async () => {
             try {
-                const storedKickTime = await member.client.db.getValue(`mute_kick_${member.id}`);
+                const storedKickTime = await client.db.getValue(`mute_kick_${memberId}`);
                 
                 if (storedKickTime && storedKickTime === kickTimestamp) {
-                    await member.kick("User did not send a message in time.");
-                    logger.info(`Kicked ${member.user.tag} for not sending a message`);
+                    const guild = client.guilds.cache.get(guildId);
+                    if (guild) {
+                        const member = await guild.members.fetch(memberId).catch(() => null);
+                        if (member) {
+                            await member.kick("User did not send a message in time.");
+                            logger.info(`Kicked ${username} (${memberId}) for not sending a message`);
+                        }
+                    }
                 }
             } catch (error) {
-                logger.error(`Error executing mute kick for ${member.user.tag}:`, error);
+                logger.error(`Error executing mute kick for ${username} (${memberId}):`, error);
             }
         }, hours * 60 * 60 * 1000);
         
     } catch (error) {
-        logger.error(`Error scheduling mute kick for ${member.user.tag}:`, error);
+        logger.error(`Error scheduling mute kick for ${username} (${memberId}):`, error);
     }
 }
 
@@ -129,10 +141,56 @@ function formatRemainingTime(remainingMs) {
     return `${minutes} minute${minutes > 1 ? 's' : ''}`;
 }
 
+/**
+ * Reschedules all mute kicks on bot startup.
+ * @async
+ * @function rescheduleAllMuteKicks
+ * @param {Client} client - The Discord client instance
+ * @throws {Error} If rescheduling fails
+ */
+async function rescheduleAllMuteKicks(client) {
+  try {
+    if (!client) {
+      logger.error("Discord client is undefined. Cannot reschedule mute kicks without client instance.");
+      return;
+    }
+    
+    if (!client.guilds.cache.size) {
+      logger.warn("Bot is not in any guilds; cannot reschedule mute kicks.");
+      return;
+    }
+    
+    const muteKickTime = parseInt(await getValue("mute_mode_kick_time_hours"), 10) || MUTE_DEFAULT_KICK_TIME_HOURS;
+    const trackedMembers = await getAllTrackedMembers();
+    
+    if (!trackedMembers || trackedMembers.length === 0) {
+      logger.debug("No tracked members found for mute kick rescheduling.");
+      return;
+    }
+    
+    const guildId = client.guilds.cache.first().id;
+    
+    for (const memberData of trackedMembers) {
+      logger.debug(`Rescheduling mute kick for tracked member: ${JSON.stringify(memberData)}`);
+      await scheduleMuteKick(
+        memberData.member_id,
+        memberData.username,
+        memberData.join_time,
+        muteKickTime,
+        guildId,
+        client
+      );
+    }
+  } catch (e) {
+    logger.error(`Error rescheduling mute kicks on startup: ${e.message}`, { error: e, stack: e.stack });
+  }
+}
+
 module.exports = {
     scheduleMuteKick,
     cancelMuteKick,
     isUserMuted,
     getRemainingMuteTime,
-    formatRemainingTime
+    formatRemainingTime,
+    rescheduleAllMuteKicks
 };

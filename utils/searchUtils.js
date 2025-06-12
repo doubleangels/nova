@@ -6,8 +6,8 @@
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { logError } = require('../errors');
-const logger = require('../logger')(path.basename(__filename));
 const path = require('path');
+const logger = require('../logger')(path.basename(__filename));
 const { getValue } = require('./database');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
