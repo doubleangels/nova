@@ -1,9 +1,3 @@
-/**
- * Troll mode command module for managing server-wide troll mode settings.
- * Handles configuration updates, status checks, and permission validation.
- * @module commands/trollMode
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -40,13 +34,6 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
-  /**
-   * Executes the troll mode command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the command execution fails
-   */
   async execute(interaction) {
     try {
       const subcommand = interaction.options.getSubcommand();
@@ -70,12 +57,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Handles the status subcommand to check current troll mode settings.
-   * @async
-   * @function handleStatusSubcommand
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   */
   async handleStatusSubcommand(interaction) {
     const settings = await this.getCurrentSettings();
     const embed = this.formatStatusMessage(settings, interaction);
@@ -89,12 +70,6 @@ module.exports = {
     });
   },
   
-  /**
-   * Handles the set subcommand to update troll mode settings.
-   * @async
-   * @function handleSetSubcommand
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   */
   async handleSetSubcommand(interaction) {
     const enabled = interaction.options.getBoolean('enabled');
     const accountAge = interaction.options.getInteger('age');
@@ -117,11 +92,6 @@ module.exports = {
     });
   },
   
-  /**
-   * Retrieves the current troll mode settings.
-   * @function getCurrentSettings
-   * @returns {Object} The current troll mode settings
-   */
   async getCurrentSettings() {
     try {
       const [enabled, accountAge] = await Promise.all([
@@ -142,11 +112,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Updates the troll mode settings.
-   * @function updateSettings
-   * @param {Object} settings - The new settings to apply
-   */
   async updateSettings(settings) {
     try {
       const updates = [];
@@ -170,13 +135,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Formats a status message for the current troll mode settings.
-   * @function formatStatusMessage
-   * @param {Object} settings - The current troll mode settings
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @returns {EmbedBuilder} The formatted status message
-   */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.enabled ? '#00FF00' : '#FF0000')
@@ -191,14 +149,6 @@ module.exports = {
     return embed;
   },
   
-  /**
-   * Formats an update message for troll mode settings changes.
-   * @function formatUpdateMessage
-   * @param {boolean} enabled - Whether troll mode is enabled
-   * @param {number} accountAge - The current account age
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @returns {EmbedBuilder} The formatted update message
-   */
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
       .setColor(enabled ? '#00FF00' : '#FF0000')
@@ -217,13 +167,6 @@ module.exports = {
     return embed;
   },
 
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in trollmode command:", {
       error: error.message,

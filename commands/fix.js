@@ -1,9 +1,3 @@
-/**
- * Fix command module for managing Disboard bump reminder data.
- * Handles database operations, reminder scheduling, and status updates.
- * @module commands/fix
- */
-
 const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -18,33 +12,12 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
-/**
- * We handle the fix command.
- * This function runs the fix logic for Disboard by adding the service data to the database.
- *
- * We perform several tasks:
- * 1. We check if there is already an active reminder in the database.
- * 2. We generate unique reminder data with a random UUID and scheduled time.
- * 3. We save the reminder data to the database.
- * 4. We inform the user of the result.
- *
- * Only users with Administrator permissions can execute this command.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('fix')
     .setDescription('Fix Disboard bump reminder data in the database.')
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
     
-  /**
-   * Executes the fix command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If database operations fail
-   */
   async execute(interaction) {
     try {
       logger.info("/fix command initiated:", {
@@ -87,13 +60,7 @@ module.exports = {
       await this.handleError(interaction, error);
     }
   },
-  
-  /**
-   * Checks for existing reminders in the database.
-   * @async
-   * @function checkExistingReminder
-   * @returns {Promise<boolean>} True if a reminder exists, false otherwise
-   */
+
   async checkExistingReminder() {
     try {
       const result = await pool.query(
@@ -106,17 +73,8 @@ module.exports = {
     }
   },
   
-  /**
-   * Saves reminder data to the database.
-   * @async
-   * @function saveReminderToDatabase
-   * @param {string} reminderId - The unique ID for the reminder
-   * @param {string} scheduledTime - The ISO string of the scheduled time
-   * @throws {Error} If database write fails
-   */
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
-      // Clean up existing reminders first
       await pool.query(
         `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
         ['bump']
@@ -138,13 +96,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in fix command:", {
       error: error.message,

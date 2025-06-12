@@ -1,9 +1,3 @@
-/**
- * Time difference command module for calculating time differences between locations.
- * Handles Google API interactions, time zone calculations, and result formatting.
- * @module commands/timeDifference
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -26,14 +20,7 @@ module.exports = {
         .setDescription('What is the second place? (e.g., Tokyo, London, New York)')
         .setRequired(true)
     ),
-    
-  /**
-   * Executes the time difference command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the time difference calculation fails
-   */
+
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -77,11 +64,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Validates that the required configuration is available.
-   * @function validateConfiguration
-   * @returns {boolean} True if configuration is valid, false otherwise
-   */
   validateConfiguration() {
     if (!config.googleApiKey) {
       logger.error("Google API key is not configured in the application.", {
@@ -91,16 +73,7 @@ module.exports = {
     }
     return true;
   },
-  
-  /**
-   * Calculates the time difference between two places using their UTC offsets.
-   * @async
-   * @function calculateTimeDifference
-   * @param {string} place1 - The first place name
-   * @param {string} place2 - The second place name
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @returns {Promise<Object>} The time difference result with formatted message
-   */
+
   async calculateTimeDifference(place1, place2, interaction) {
     try {
       const [offset1Result, offset2Result] = await Promise.all([
@@ -178,12 +151,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Formats a time zone for display with UTC offset and time zone name.
-   * @function formatTimeZone
-   * @param {Object} offsetResult - The offset result from getUtcOffset
-   * @returns {string} The formatted time zone string
-   */
   formatTimeZone(offsetResult) {
     const sign = offsetResult.offset >= 0 ? '+' : '-';
     const absOffset = Math.abs(offsetResult.offset);
@@ -194,12 +161,6 @@ module.exports = {
     return `${formattedOffset} (${offsetResult.timeZoneName})`;
   },
   
-  /**
-   * Formats a time difference for display with appropriate pluralization.
-   * @function formatTimeDifference
-   * @param {number} timeDiff - The time difference in hours
-   * @returns {string} The formatted time difference string
-   */
   formatTimeDifference(timeDiff) {
     const hours = Math.floor(timeDiff);
     const minutes = Math.round((timeDiff - hours) * 60);
@@ -211,13 +172,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in timedifference command:", {
       error: error.message,

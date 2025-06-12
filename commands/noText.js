@@ -1,8 +1,3 @@
-/**
- * NoText command module for configuring channels to only allow GIFs and stickers.
- * @module commands/notext
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -38,12 +33,6 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
-  /**
-   * Executes the notext command.
-   * @async
-   * @function execute
-   * @param {Object} interaction - The Discord interaction object
-   */
   async execute(interaction) {
     try {
       const subcommand = interaction.options.getSubcommand();

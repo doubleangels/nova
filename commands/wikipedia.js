@@ -1,9 +1,3 @@
-/**
- * Wikipedia command module for searching and displaying Wikipedia articles.
- * Handles API interactions, result formatting, and pagination.
- * @module commands/wikipedia
- */
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -16,18 +10,6 @@ const WIKI_HTML_TAG_REGEX = /<[^>]*>/g;
 
 const cache = new Map();
 
-/**
- * We handle the wikipedia command.
- * This function fetches and displays Wikipedia article summaries.
- *
- * We perform several tasks:
- * 1. Search for the article on Wikipedia
- * 2. Fetch the article summary
- * 3. Create an embed with the article details
- * 4. Send the embed to the user
- *
- * @param {Interaction} interaction - The Discord interaction object
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('wikipedia')
@@ -37,13 +19,6 @@ module.exports = {
         .setDescription('What do you want to search for?')
         .setRequired(true)),
 
-  /**
-   * Executes the Wikipedia command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If article search or retrieval fails
-   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -117,13 +92,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Fetches search results from the Wikipedia API.
-   * @async
-   * @function fetchWikipediaResults
-   * @param {string} query - The search query
-   * @returns {Promise<Array>} Array of search results
-   */
   async fetchWikipediaResults(query) {
     try {
       const params = new URLSearchParams({
@@ -169,13 +137,7 @@ module.exports = {
       throw new Error("API_ERROR");
     }
   },
-  
-  /**
-   * Formats a snippet by replacing HTML tags and decoding entities.
-   * @function formatSnippet
-   * @param {string} snippet - The raw snippet from the API
-   * @returns {string} Formatted snippet
-   */
+
   formatSnippet(snippet) {
     if (!snippet) return "No snippet available.";
     
@@ -190,15 +152,6 @@ module.exports = {
     return formatted;
   },
   
-  /**
-   * Sends search results as an embed with pagination buttons.
-   * @async
-   * @function sendSearchResults
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {string} query - The search query
-   * @param {Array} results - Array of search results
-   * @param {number} index - Index of the current result to display
-   */
   async sendSearchResults(interaction, query, results, index) {
     const result = results[index];
     
@@ -239,15 +192,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Creates an embed for a Wikipedia search result.
-   * @function createResultEmbed
-   * @param {Object} result - The search result
-   * @param {string} query - The search query
-   * @param {number} index - Index of the current result
-   * @param {number} total - Total number of results
-   * @returns {EmbedBuilder} Discord embed with the result
-   */
   createResultEmbed(result, query, index, total) {
     const title = result.title || "No Title";
     const snippet = result.formattedSnippet;
@@ -281,15 +225,6 @@ module.exports = {
     return embed;
   },
   
-  /**
-   * Sets up a collector for pagination button interactions.
-   * @function setupPaginationCollector
-   * @param {import('discord.js').Message} message - The message with the pagination buttons
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The original interaction
-   * @param {string} query - The search query
-   * @param {Array} results - Array of search results
-   * @param {number} currentIndex - Current result index
-   */
   setupPaginationCollector(message, interaction, query, results, currentIndex) {
     const filter = i => 
       i.user.id === interaction.user.id && 
@@ -337,12 +272,6 @@ module.exports = {
     });
   },
   
-  /**
-   * Gets cached search results for a query.
-   * @function getCachedResults
-   * @param {string} cacheKey - The cache key
-   * @returns {Array|null} Cached results or null if not found
-   */
   getCachedResults(cacheKey) {
     const cached = cache.get(cacheKey);
     
@@ -356,13 +285,7 @@ module.exports = {
     
     return null;
   },
-  
-  /**
-   * Caches search results for a query.
-   * @function cacheResults
-   * @param {string} cacheKey - The cache key
-   * @param {Array} results - The search results to cache
-   */
+
   cacheResults(cacheKey, results) {
     cache.set(cacheKey, {
       results,
@@ -376,13 +299,6 @@ module.exports = {
     });
   },
   
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in wikipedia command:", {
       error: error.message,

@@ -1,9 +1,3 @@
-/**
- * YouTube command module for searching and displaying YouTube content.
- * Handles API interactions, result formatting, and pagination.
- * @module commands/youtube
- */
-
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -14,18 +8,6 @@ const { createPaginatedResults, formatApiError } = require('../utils/searchUtils
 
 const cache = new Map();
 
-/**
- * We handle the youtube command.
- * This function allows users to search for videos on YouTube.
- *
- * We perform several tasks:
- * 1. We validate YouTube API configuration.
- * 2. We process search requests for videos.
- * 3. We format and display search results.
- * 4. We handle errors and provide user feedback.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
@@ -43,13 +25,6 @@ module.exports = {
           { name: 'Playlist', value: 'playlist' }
         )),
 
-  /**
-   * Executes the YouTube command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If search or content retrieval fails
-   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -109,13 +84,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Gets detailed information about a YouTube video.
-   * @async
-   * @function getVideoDetails
-   * @param {string} videoId - The ID of the video to get details for
-   * @returns {Promise<Object>} The video details
-   */
   async getVideoDetails(videoId) {
     try {
       const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
@@ -140,12 +108,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Formats a YouTube duration string into a human-readable format.
-   * @function formatDuration
-   * @param {string} duration - The duration in ISO 8601 format
-   * @returns {string} The formatted duration
-   */
   formatDuration(duration) {
     const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
     const hours = (match[1] || '').replace('H', '');
@@ -158,25 +120,11 @@ module.exports = {
     return result;
   },
 
-  /**
-   * Truncates text to a maximum length and adds ellipsis if needed.
-   * @function truncateText
-   * @param {string} text - The text to truncate
-   * @param {number} maxLength - The maximum length allowed
-   * @returns {string} The truncated text
-   */
   truncateText(text, maxLength) {
     if (!text) return 'No description available.';
     return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
   },
 
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in youtube command:", {
       error: error.message,
@@ -226,12 +174,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Retrieves cached search results if they exist and haven't expired.
-   * @function getCachedResults
-   * @param {string} key - The cache key
-   * @returns {Array|null} The cached results or null if not found or expired
-   */
   getCachedResults(key) {
     if (cache.has(key)) {
       const { timestamp, data } = cache.get(key);
@@ -243,12 +185,6 @@ module.exports = {
     return null;
   },
   
-  /**
-   * Caches search results for future use.
-   * @function cacheResults
-   * @param {string} key - The cache key
-   * @param {Array} data - The data to cache
-   */
   cacheResults(key, data) {
     cache.set(key, {
       timestamp: Date.now(),
@@ -256,16 +192,6 @@ module.exports = {
     });
   },
   
-  /**
-   * Searches YouTube for content based on the provided parameters.
-   * @async
-   * @function searchYouTube
-   * @param {string} query - The search query
-   * @param {string} contentType - The type of content to search for
-   * @param {string} sortMethod - The method to sort results by
-   * @param {string} duration - The duration filter for videos
-   * @returns {Promise<Array>} The search results
-   */
   async searchYouTube(query, contentType, sortMethod, duration) {
     try {
       const params = {
@@ -313,13 +239,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Enriches video results with additional details.
-   * @async
-   * @function enrichVideoResults
-   * @param {Array} videos - The video search results
-   * @returns {Promise<Array>} The enriched video results
-   */
   async enrichVideoResults(videos) {
     if (!videos || videos.length === 0) return [];
     
@@ -361,14 +280,7 @@ module.exports = {
       return videos;
     }
   },
-  
-  /**
-   * Enriches channel results with additional details.
-   * @async
-   * @function enrichChannelResults
-   * @param {Array} channels - The channel search results
-   * @returns {Promise<Array>} The enriched channel results
-   */
+
   async enrichChannelResults(channels) {
     if (!channels || channels.length === 0) return [];
     
@@ -410,13 +322,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Enriches playlist results with additional details.
-   * @async
-   * @function enrichPlaylistResults
-   * @param {Array} playlists - The playlist search results
-   * @returns {Promise<Array>} The enriched playlist results
-   */
   async enrichPlaylistResults(playlists) {
     if (!playlists || playlists.length === 0) return [];
     
@@ -458,15 +363,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Creates an embed for a search result.
-   * @function createContentEmbed
-   * @param {Object} item - The search result item
-   * @param {string} contentType - The type of content
-   * @param {number} index - The index of the current item
-   * @param {number} totalItems - The total number of items
-   * @returns {EmbedBuilder} The generated embed
-   */
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
       .setColor(0xFF0000)
@@ -486,15 +382,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Creates an embed for a video search result.
-   * @function createVideoEmbed
-   * @param {Object} video - The video search result
-   * @param {EmbedBuilder} embed - The embed builder
-   * @param {number} index - The index of the current item
-   * @param {number} totalItems - The total number of items
-   * @returns {EmbedBuilder} The generated embed
-   */
   createVideoEmbed(video, embed, index, totalItems) {
     const snippet = video.snippet;
     const statistics = video.statistics || {};
@@ -527,15 +414,6 @@ module.exports = {
       });
   },
   
-  /**
-   * Creates an embed for a channel search result.
-   * @function createChannelEmbed
-   * @param {Object} channel - The channel search result
-   * @param {EmbedBuilder} embed - The embed builder
-   * @param {number} index - The index of the current item
-   * @param {number} totalItems - The total number of items
-   * @returns {EmbedBuilder} The generated embed
-   */
   createChannelEmbed(channel, embed, index, totalItems) {
     const snippet = channel.snippet;
     const statistics = channel.statistics || {};
@@ -560,16 +438,7 @@ module.exports = {
       .setDescription(`${description}\n\n${stats}`)
       .setThumbnail(thumbnailUrl);
   },
-  
-  /**
-   * Creates an embed for a playlist search result.
-   * @function createPlaylistEmbed
-   * @param {Object} playlist - The playlist search result
-   * @param {EmbedBuilder} embed - The embed builder
-   * @param {number} index - The index of the current item
-   * @param {number} totalItems - The total number of items
-   * @returns {EmbedBuilder} The generated embed
-   */
+
   createPlaylistEmbed(playlist, embed, index, totalItems) {
     const snippet = playlist.snippet;
     const contentDetails = playlist.contentDetails || {};
@@ -596,11 +465,6 @@ module.exports = {
       });
   },
 
-  /**
-   * Validates that the YouTube API configuration is properly set up.
-   * @function validateConfiguration
-   * @returns {boolean} Whether the configuration is valid
-   */
   validateConfiguration() {
     return config.googleApiKey;
   }

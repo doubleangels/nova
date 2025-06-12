@@ -1,9 +1,3 @@
-/**
- * Reminder command module for managing Disboard bump reminders.
- * Handles channel and role configuration, reminder scheduling, and status updates.
- * @module commands/reminder
- */
-
 const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -19,10 +13,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: true }
 });
 
-/**
- * Module for the /reminder command.
- * We allow administrators to setup and check bump reminder settings for server management.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
@@ -52,13 +42,6 @@ module.exports = {
     )
     .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
 
-  /**
-   * Executes the reminder command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the command execution fails
-   */
   async execute(interaction) {
     await interaction.deferReply();
     
@@ -82,13 +65,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Handles the setup of reminder configuration.
-   * @async
-   * @function handleReminderSetup
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If setup fails
-   */
   async handleReminderSetup(interaction) {
     const channelOption = interaction.options.getChannel('channel');
     const roleOption = interaction.options.getRole('role');
@@ -134,13 +110,6 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   },
   
-  /**
-   * Handles checking the status of the current reminder configuration.
-   * @async
-   * @function handleReminderStatus
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If status check fails
-   */
   async handleReminderStatus(interaction) {
     logger.debug("Processing reminder status check:", { 
       userId: interaction.user.id,
@@ -216,14 +185,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Gets the latest reminder data for a channel and type.
-   * @async
-   * @function getLatestReminderData
-   * @param {string} channelId - The channel ID to get reminder data for
-   * @param {string} type - The type of reminder to get ('bump' or 'promote')
-   * @returns {Promise<Object|null>} The reminder data if found, otherwise null
-   */
   async getLatestReminderData(channelId, type) {
     if (!channelId) return null;
     
@@ -242,12 +203,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Calculates the time remaining until the next scheduled reminder.
-   * @function calculateRemainingTime
-   * @param {Object} reminderData - The reminder data from the database
-   * @returns {string} A formatted string showing the remaining time
-   */
   calculateRemainingTime(reminderData) {
     if (!reminderData || !reminderData.remind_at) {
       return '⚠️ Not scheduled!';
@@ -264,13 +219,6 @@ module.exports = {
     return `⏰ <t:${Math.floor(scheduled.valueOf() / 1000)}:R>`;
   },
   
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in reminder command:", {
       error: error.message,

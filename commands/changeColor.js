@@ -1,26 +1,8 @@
-/**
- * Change color command module for modifying role colors.
- * Handles color validation, role updates, and permission checks.
- * @module commands/changeColor
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
 
-/**
- * We handle the changecolor command.
- * This function changes the color of a specified role to the provided hex color.
- *
- * We perform several tasks:
- * 1. We validate the provided hex color.
- * 2. We check if the role exists and is editable.
- * 3. We update the role's color.
- * 4. We notify the user of the change.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changecolor')
@@ -35,13 +17,6 @@ module.exports = {
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
     
-    /**
-     * Executes the change color command.
-     * @async
-     * @function execute
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @throws {Error} If role update fails or color is invalid
-     */
     async execute(interaction) {
         try {
             await interaction.deferReply();

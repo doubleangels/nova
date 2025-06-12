@@ -1,9 +1,3 @@
-/**
- * Timezone command module for retrieving and displaying timezone information.
- * Handles Google API interactions, timezone lookups, and result formatting.
- * @module commands/timezone
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger.js')(path.basename(__filename));
@@ -41,13 +35,6 @@ module.exports = {
               )
       ),
   
-  /**
-   * We execute the /timezone command.
-   * This function manages user timezone settings and routes to subcommands.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the command is complete.
-   */
   async execute(interaction) {
       try {
           const subcommand = interaction.options.getSubcommand();
@@ -66,13 +53,6 @@ module.exports = {
       }
   },
   
-  /**
-   * We handle the 'set' subcommand to set a user's timezone.
-   * This function sets the timezone for a user based on a location.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the timezone is set.
-   */
   async handleSetTimezone(interaction) {
       if (!config.googleApiKey) {
           logger.error("Google API key is not configured in the application.", {
@@ -175,13 +155,6 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
   },
   
-  /**
-   * We handle the 'status' subcommand to check a user's timezone.
-   * This function checks and displays the current timezone for a user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @returns {Promise<void>} Resolves when the status is displayed.
-   */
   async handleTimezoneStatus(interaction) {
       await interaction.deferReply();
       
@@ -245,14 +218,6 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
   },
   
-  /**
-   * We validate user permissions for timezone operations.
-   * This function checks if the user can set the timezone for another user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {User|null} targetUser - The target user if specified.
-   * @returns {Promise<Object>} Object with validation results.
-   */
   async validateUserPermissions(interaction, targetUser) {
       const isAdminAction = targetUser !== null && targetUser.id !== interaction.user.id;
       
@@ -286,13 +251,6 @@ module.exports = {
       };
   },
   
-  /**
-   * We handle errors that occur during command execution.
-   * This function logs the error and attempts to notify the user.
-   *
-   * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-   * @param {Error} error - The error that occurred.
-   */
   async handleError(interaction, error) {
     logger.error("Error in timezone command:", {
       error: error.message,

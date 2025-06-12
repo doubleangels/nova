@@ -1,24 +1,7 @@
-/**
- * Give role command module for managing user roles.
- * Handles role assignment and permission validation.
- * @module commands/giveRole
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-/**
- * We handle the giverole command.
- * This function assigns a specified role to a user.
- *
- * We perform several tasks:
- * 1. We validate command inputs and permissions.
- * 2. We assign the specified role to the target user.
- * 3. We handle errors and provide user feedback.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giverole')

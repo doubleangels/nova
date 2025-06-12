@@ -1,10 +1,3 @@
-/**
- * Urban Dictionary command module for searching and displaying word definitions.
- * Handles API interactions with Urban Dictionary, result formatting, and error management.
- * Uses embeds for better presentation of definitions and examples.
- * @module commands/urban
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
@@ -18,14 +11,6 @@ module.exports = {
                 .setDescription('What do you want to search for?')
                 .setRequired(true)),
 
-    /**
-     * Executes the Urban Dictionary command.
-     * Fetches definitions from Urban Dictionary API and displays them in an embed.
-     * @async
-     * @function execute
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @throws {Error} If the API request fails or if no definitions are found
-     */
     async execute(interaction) {
         try {
             await interaction.deferReply();
@@ -74,14 +59,6 @@ module.exports = {
         }
     },
 
-    /**
-     * Handles errors that occur during command execution.
-     * Logs the error and sends an appropriate error message to the user.
-     * @async
-     * @function handleError
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {Error} error - The error that occurred
-     */
     async handleError(interaction, error) {
         logger.error("Error in urban command:", {
             error: error.message,

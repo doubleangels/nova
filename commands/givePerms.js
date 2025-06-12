@@ -1,9 +1,3 @@
-/**
- * Give permissions command module for managing user roles and permissions.
- * Handles role creation, assignment, and permission validation.
- * @module commands/givePerms
- */
-
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
@@ -18,19 +12,6 @@ if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
     });
 }
 
-/**
- * We handle the giveperms command.
- * This function creates a custom role with specified name and color for a user,
- * and assigns them both this role and a predefined "fren" role.
- *
- * We perform several tasks:
- * 1. We validate command inputs and configuration.
- * 2. We create a new role with the specified name and color.
- * 3. We assign the new role and the fren role to the target user.
- * 4. We handle errors and provide user feedback.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('giveperms')
@@ -48,14 +29,7 @@ module.exports = {
                 .setDescription('What user should receive the permissions?')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
-    
-    /**
-     * Executes the give permissions command.
-     * @async
-     * @function execute
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @throws {Error} If role creation or assignment fails
-     */
+
     async execute(interaction) {
         if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
             logger.error("Command execution failed due to missing configuration:", {
@@ -154,15 +128,6 @@ module.exports = {
         }
     },
     
-    /**
-     * Validates command input parameters.
-     * @function validateInputs
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {string} roleName - The name for the new role
-     * @param {string} colorHex - The color for the new role
-     * @param {import('discord.js').User} targetUser - The user to receive the role
-     * @returns {Object} Validation result with success status and message
-     */
     validateInputs(interaction, roleName, colorHex, targetUser) {
         if (!roleName || roleName.trim().length === 0) {
             logger.warn("Invalid role name provided.", { roleName });
@@ -186,17 +151,6 @@ module.exports = {
         return { success: true };
     },
     
-    /**
-     * Creates and assigns roles to a user.
-     * @async
-     * @function createAndAssignRoles
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {string} roleName - The name for the new role
-     * @param {number} colorDecimal - The color for the new role in decimal format
-     * @param {import('discord.js').GuildMember} targetMember - The member to receive the roles
-     * @returns {Object} Result with success status and message
-     * @throws {Error} If role creation or assignment fails
-     */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
         const positionRole = interaction.guild.roles.cache.get(config.givePermsPositionAboveRoleId);
         if (!positionRole) {
@@ -255,13 +209,6 @@ module.exports = {
         return { success: true };
     },
     
-    /**
-     * Handles errors that occur during command execution.
-     * @async
-     * @function handleError
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {Error} error - The error that occurred
-     */
     async handleError(interaction, error) {
         logger.error("Error in giveperms command:", {
             error: error.message,

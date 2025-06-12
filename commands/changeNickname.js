@@ -1,25 +1,7 @@
-/**
- * Change nickname command module for modifying user nicknames.
- * Handles permission checks, nickname validation, and user updates.
- * @module commands/changeNickname
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
-/**
- * We handle the changenickname command.
- * This function changes a user's nickname in the server.
- *
- * We perform several tasks:
- * 1. We validate permissions and nickname length.
- * 2. We check if the user has permission to change nicknames.
- * 3. We change the nickname.
- * 4. We handle errors and provide user feedback.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('changenickname')
@@ -33,14 +15,7 @@ module.exports = {
                 .setDescription('What nickname do you want to set?')
                 .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageNicknames),
-    
-    /**
-     * Executes the change nickname command.
-     * @async
-     * @function execute
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @throws {Error} If nickname update fails or user is not manageable
-     */
+
     async execute(interaction) {
         try {
             await interaction.deferReply();
@@ -92,14 +67,7 @@ module.exports = {
             await this.handleError(interaction, error);
         }
     },
-    
-    /**
-     * Handles errors that occur during command execution.
-     * @async
-     * @function handleError
-     * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-     * @param {Error} error - The error that occurred
-     */
+
     async handleError(interaction, error) {
         logger.error("Error in changenickname command:", {
             error: error.message,
@@ -139,15 +107,6 @@ module.exports = {
         }
     },
     
-    /**
-     * We validate that the nickname change can be performed.
-     * This function checks bot and user permissions, nickname length, and role hierarchy.
-     *
-     * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
-     * @param {User} targetUser - The user whose nickname will be changed.
-     * @param {string} newNickname - The new nickname to set.
-     * @returns {Object} An object with success status, message, and targetMember if successful.
-     */
     async validateNicknameChange(interaction, targetUser, newNickname) {
         const botMember = await interaction.guild.members.fetchMe();
         if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {

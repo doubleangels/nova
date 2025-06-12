@@ -1,9 +1,3 @@
-/**
- * Spotify command module for searching and displaying music information.
- * Handles API interactions with Spotify and result formatting.
- * @module commands/spotify
- */
-
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -11,18 +5,6 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
-/**
- * We handle the /spotify command.
- * This function allows users to search for music, albums, artists, playlists, and podcasts on Spotify.
- *
- * We perform several tasks:
- * 1. We validate Spotify API configuration.
- * 2. We process search requests for different Spotify entities.
- * 3. We format and display paginated search results.
- * 4. We handle errors and provide user feedback.
- *
- * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('spotify')
@@ -83,13 +65,6 @@ module.exports = {
         )
     ),
 
-  /**
-   * Executes the Spotify search command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the command execution fails
-   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -172,11 +147,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Validates that the required API configuration is available.
-   * @function validateConfiguration
-   * @returns {boolean} True if configuration is valid, false otherwise
-   */
   validateConfiguration() {
     if (!config.spotifyClientId || !config.spotifyClientSecret) {
       logger.error("Spotify API configuration is missing:", {
@@ -188,12 +158,6 @@ module.exports = {
     return true;
   },
 
-  /**
-   * Gets a Spotify access token using client credentials.
-   * @async
-   * @function getSpotifyAccessToken
-   * @returns {Promise<string|null>} The access token or null if failed
-   */
   async getSpotifyAccessToken() {
     try {
       const response = await axios.post(
@@ -221,14 +185,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Searches for a song on Spotify.
-   * @async
-   * @function searchSong
-   * @param {string} query - The search query
-   * @param {string} accessToken - The Spotify access token
-   * @returns {Promise<Object|null>} The song data or null if not found
-   */
   async searchSong(query, accessToken) {
     try {
       const response = await axios.get('https://api.spotify.com/v1/search', {
@@ -276,14 +232,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Searches for an album on Spotify.
-   * @async
-   * @function searchAlbum
-   * @param {string} query - The search query
-   * @param {string} accessToken - The Spotify access token
-   * @returns {Promise<Object|null>} The album data or null if not found
-   */
   async searchAlbum(query, accessToken) {
     try {
       const response = await axios.get('https://api.spotify.com/v1/search', {
@@ -327,14 +275,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Searches for an artist on Spotify.
-   * @async
-   * @function searchArtist
-   * @param {string} query - The search query
-   * @param {string} accessToken - The Spotify access token
-   * @returns {Promise<Object|null>} The artist data or null if not found
-   */
   async searchArtist(query, accessToken) {
     try {
       const response = await axios.get('https://api.spotify.com/v1/search', {
@@ -378,14 +318,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Searches for a playlist on Spotify.
-   * @async
-   * @function searchPlaylist
-   * @param {string} query - The search query
-   * @param {string} accessToken - The Spotify access token
-   * @returns {Promise<Object|null>} The playlist data or null if not found
-   */
   async searchPlaylist(query, accessToken) {
     try {
       const response = await axios.get('https://api.spotify.com/v1/search', {
@@ -435,14 +367,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Searches for a podcast on Spotify.
-   * @async
-   * @function searchPodcast
-   * @param {string} query - The search query
-   * @param {string} accessToken - The Spotify access token
-   * @returns {Promise<Object|null>} The podcast data or null if not found
-   */
   async searchPodcast(query, accessToken) {
     try {
       const response = await axios.get('https://api.spotify.com/v1/search', {
@@ -492,14 +416,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Creates an embed for the search result.
-   * @function createEmbed
-   * @param {Array} results - The array of search results
-   * @param {string} type - The type of result (song, album, artist, playlist, podcast)
-   * @param {number} index - The index of the result to display
-   * @returns {import('discord.js').EmbedBuilder} The formatted embed
-   */
   createEmbed(results, type, index = 0) {
     const item = results[index];
     
@@ -593,35 +509,16 @@ module.exports = {
     return embed;
   },
 
-  /**
-   * Formats milliseconds into a readable duration string.
-   * @function formatDuration
-   * @param {number} ms - Duration in milliseconds
-   * @returns {string} Formatted duration string
-   */
   formatDuration(ms) {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   },
 
-  /**
-   * Formats a number with commas for readability.
-   * @function formatNumber
-   * @param {number} num - The number to format
-   * @returns {string} Formatted number string
-   */
   formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   },
 
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in spotify command:", {
       error: error.message,

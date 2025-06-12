@@ -1,10 +1,3 @@
-/**
-/**
- * Promote command module for Reddit post promotion.
- * Handles posting server advertisements to r/findaserver using the Reddit API.
- * @module commands/promote
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -34,13 +27,6 @@ module.exports = {
     .setName('promote')
     .setDescription('Post your server advertisement to r/findaserver.'),
 
-  /**
-   * Executes the promote command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the Reddit API request fails
-   */
   async execute(interaction) {
     try {
       if (!this.validateConfiguration()) {
@@ -56,7 +42,6 @@ module.exports = {
         guildId: interaction.guildId 
       });
 
-      // Check for cooldown
       const nextPromotionTime = await this.getLastPromotion();
       if (nextPromotionTime) {
         const now = dayjs();
@@ -121,19 +106,10 @@ module.exports = {
     }
   },
 
-  /**
-   * Validates the Reddit API configuration.
-   * @returns {boolean} True if configuration is valid
-   */
   validateConfiguration() {
     return !!(config.redditClientId && config.redditClientSecret && config.redditUsername && config.redditPassword);
   },
 
-  /**
-   * Posts content to multiple Reddit subreddits using snoowrap.
-   * @param {Object} postData - The post data to submit
-   * @returns {Promise<Object>} The Reddit API responses
-   */
   async postToMultipleSubreddits(postData) {
     const responses = [];
     const errors = [];
@@ -159,7 +135,6 @@ module.exports = {
 
         logger.info(`Using flair for ${subreddit.name}:`, serverFlair);
 
-        // Always post as a link post
         const form = {
           kind: 'link',
           sr: subreddit.name,
@@ -177,7 +152,6 @@ module.exports = {
         });
 
         if (!submission || !submission.json || !submission.json.data) {
-          // Log the full submission object for debugging
           logger.error(`Reddit submission error for r/${subreddit.name}:`, submission);
           throw new Error(`⚠️ Failed to submit post to r/${subreddit.name}.`);
         }
@@ -192,7 +166,6 @@ module.exports = {
         });
 
       } catch (error) {
-        // Log the error object and stack for debugging
         logger.error(`Error posting to r/${subreddit.name}:`, error, error.stack);
         errors.push(`⚠️ Failed to post to r/${subreddit.name}.`);
       }
@@ -212,17 +185,10 @@ module.exports = {
     };
   },
 
-  /**
-   * Creates a success embed for the Reddit posts.
-   * @param {Object} response - The Reddit API responses
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @returns {EmbedBuilder} The formatted embed
-   */
   createSuccessEmbed(response, interaction) {
     let description = 'Your server advertisement has been posted to the following subreddits:\n\n';
     
     response.responses.forEach(resp => {
-      // Escape underscores for Discord markdown
       const safeSubreddit = resp.subreddit.replace(/_/g, '\\_');
       description += `• r/${safeSubreddit}\n\n`;
     });
@@ -249,11 +215,6 @@ module.exports = {
       .setTimestamp();
   },
 
-  /**
-   * Handles errors during command execution.
-   * @param {Error} error - The error that occurred
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   */
   async handleError(error, interaction) {
     logger.error('Error in promote command:', {
       error: error.message,
@@ -290,12 +251,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Gets the timestamp of the next allowed promotion.
-   * @async
-   * @function getLastPromotion
-   * @returns {Promise<string|null>} The ISO timestamp of the next allowed promotion or null if none found
-   */
   async getLastPromotion() {
     try {
       await pool.query(
@@ -328,11 +283,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Records the next allowed promotion time (24 hours from now).
-   * @async
-   * @function recordPromotion
-   */
   async recordPromotion() {
     try {
       await pool.query(

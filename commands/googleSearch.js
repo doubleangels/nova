@@ -1,9 +1,3 @@
-/**
- * Google Search command module for searching and displaying web results.
- * Handles API interactions with Google Custom Search and result formatting.
- * @module commands/googleSearch
- */
-
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -28,13 +22,6 @@ module.exports = {
         .setRequired(false)
     ),
 
-  /**
-   * Executes the Google web search command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the API request fails
-   */
   async execute(interaction) {
     await interaction.deferReply();
     logger.info("/google command initiated:", { 
@@ -118,13 +105,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in google command:", {
       error: error.message,
@@ -163,14 +143,6 @@ module.exports = {
     }
   },
   
-  /**
-   * We fetch search results from the Google Custom Search API.
-   * This function retrieves and processes the web search results.
-   *
-   * @param {string} query - The search query.
-   * @param {number} resultsCount - The number of results to fetch.
-   * @returns {Object} The search results or error information.
-   */
   async fetchSearchResults(query, resultsCount) {
     const params = new URLSearchParams({
       key: config.googleApiKey,
@@ -210,14 +182,6 @@ module.exports = {
     }
   },
   
-  /**
-   * We generate an embed for a search result with proper formatting.
-   * This function creates a visually appealing embed for each search result.
-   *
-   * @param {Array} items - The search result items.
-   * @param {number} index - The index of the current item.
-   * @returns {EmbedBuilder} The generated embed with search result information.
-   */
   generateResultEmbed(items, index) {
     const item = items[index];
     const title = item.title || "No Title Found";

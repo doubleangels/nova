@@ -1,37 +1,13 @@
-/**
- * Dog command module for fetching and displaying random dog images.
- * Handles API interactions with Dog CEO API and image display formatting.
- * @module commands/dog
- */
-
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 
-/**
- * We handle the dog command.
- * This function fetches and displays a random dog image.
- *
- * We perform several tasks:
- * 1. We fetch a random dog image from the API.
- * 2. We create an embed with the dog image.
- * 3. We send the embed to the user.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
     .setDescription('Fetch and display a random dog image.'),
-  
-  /**
-   * Executes the dog command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If API request fails
-   */
+
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -64,14 +40,7 @@ module.exports = {
       await this.handleError(interaction, error);
     }
   },
-  
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
+
   async handleError(interaction, error) {
     logger.error("Error in dog command:", {
       error: error.message,

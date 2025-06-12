@@ -1,9 +1,3 @@
-/**
- * Google Images command module for searching and displaying images.
- * Handles API interactions with Google Custom Search and image result formatting.
- * @module commands/googleImages
- */
-
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -11,13 +5,6 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 
-/**
- * We convert a string to title case for better presentation.
- * This function capitalizes the first letter of each word.
- *
- * @param {string} str - The input string.
- * @returns {string} The title-cased string.
- */
 const titleCase = str =>
   str
     .split(' ')
@@ -41,13 +28,6 @@ module.exports = {
         .setRequired(false)
     ),
 
-  /**
-   * Executes the Google Images search command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If the API request fails
-   */
   async execute(interaction) {
     await interaction.deferReply();
     logger.info("/googleimages command initiated:", { 
@@ -131,15 +111,7 @@ module.exports = {
       await this.handleError(interaction, error);
     }
   },
-  
-  /**
-   * Searches for images using Google Custom Search API.
-   * @async
-   * @function searchImages
-   * @param {string} query - The search query
-   * @returns {Promise<Array<Object>>} Array of image search results
-   * @throws {Error} If the API request fails
-   */
+
   async searchImages(query) {
     const url = new URL('https://www.googleapis.com/customsearch/v1');
     url.searchParams.append('key', config.googleApiKey);
@@ -157,14 +129,6 @@ module.exports = {
     return data.items || [];
   },
   
-  /**
-   * We fetch image search results from the Google Custom Search API.
-   * This function retrieves and processes the image search results.
-   *
-   * @param {string} query - The search query.
-   * @param {number} resultsCount - The number of results to fetch.
-   * @returns {Object} The search results or error information.
-   */
   async fetchImageResults(query, resultsCount) {
     const params = new URLSearchParams({
       key: config.googleApiKey,
@@ -205,14 +169,6 @@ module.exports = {
     }
   },
   
-  /**
-   * We generate an embed for an image search result with proper formatting.
-   * This function creates a visually appealing embed for each image result.
-   *
-   * @param {Array} items - The search result items.
-   * @param {number} index - The index of the current item.
-   * @returns {EmbedBuilder} The generated embed with image and metadata.
-   */
   generateImageEmbed(items, index) {
     const item = items[index];
     const title = item.title || "No Title";
@@ -227,13 +183,6 @@ module.exports = {
       .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
   },
 
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {Error} error - The error that occurred
-   */
   async handleError(interaction, error) {
     logger.error("Error in googleimages command:", {
       error: error.message,

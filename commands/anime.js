@@ -1,9 +1,3 @@
-/**
- * Anime command module for MyAnimeList integration.
- * Handles anime searches, data retrieval, and result formatting.
- * @module commands/anime
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -21,13 +15,6 @@ module.exports = {
         .setRequired(true)
     ),
   
-  /**
-   * Executes the anime search command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If API request fails or configuration is missing
-   */
   async execute(interaction) {
     try {
       if (!config.malClientId) {
@@ -104,14 +91,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Searches for anime and retrieves detailed information.
-   * @async
-   * @function searchAndGetAnimeDetails
-   * @param {string} title - The anime title to search for
-   * @returns {Promise<Object|null>} Anime details or null if not found
-   * @throws {Error} If API request fails
-   */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
     const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1`;
@@ -152,12 +131,6 @@ module.exports = {
     };
   },
 
-  /**
-   * Creates an embed with anime information.
-   * @function createAnimeEmbed
-   * @param {Object} animeData - The anime data to display
-   * @returns {EmbedBuilder} The formatted embed
-   */
   createAnimeEmbed(animeData) {
     const malLink = `https://myanimelist.net/anime/${animeData.id}`;
     const genres = animeData.genres.length > 0 

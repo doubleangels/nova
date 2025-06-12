@@ -1,9 +1,3 @@
-/**
- * Cat command module for fetching and displaying random cat images.
- * Handles API interactions with The Cat API and image display formatting.
- * @module commands/cat
- */
-
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -14,13 +8,6 @@ module.exports = {
     .setName('cat')
     .setDescription('Fetch and display a random cat image.'),
 
-  /**
-   * Executes the cat command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If API request fails
-   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -83,13 +70,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Fetches a cat image from the API.
-   * @async
-   * @function fetchCatImage
-   * @returns {Promise<Buffer>} The cat image buffer
-   * @throws {Error} If API request fails or returns invalid response
-   */
   async fetchCatImage() {
     logger.debug("Fetching cat image from API.");
     try {

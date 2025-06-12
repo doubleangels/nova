@@ -1,27 +1,9 @@
-/**
- * IMDb command module for searching and displaying movie and TV show information.
- * Handles API interactions with OMDb and result formatting.
- * @module commands/imdb
- */
-
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 
-/**
- * We handle the imdb command.
- * This function allows users to search for movies and TV shows using the OMDb API.
- *
- * We perform several tasks:
- * 1. We validate OMDb API configuration.
- * 2. We process search requests for movies and TV shows.
- * 3. We format and display detailed media information.
- * 4. We handle errors and provide user feedback.
- *
- * @param {Interaction} interaction - The Discord interaction object.
- */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('imdb')

@@ -1,9 +1,3 @@
-/**
- * Take role command module for removing roles from users.
- * Handles role removal, permission validation, and audit logging.
- * @module commands/takeRole
- */
-
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -25,13 +19,6 @@ module.exports = {
         .setDescription('Reason for removing the role'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   
-  /**
-   * Executes the take role command.
-   * @async
-   * @function execute
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @throws {Error} If role removal fails
-   */
   async execute(interaction) {
     try {
       await interaction.deferReply();
@@ -50,13 +37,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Handles errors that occur during command execution.
-   * @async
-   * @function handleError
-   * @param {Error} error - The error that occurred
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   */
   async handleError(error, interaction) {
     logger.error('Error in takeRole command:', {
       error: error.message,
@@ -88,15 +68,6 @@ module.exports = {
     }
   },
   
-  /**
-   * Removes a role from a guild member and sends a response.
-   * @async
-   * @function removeRoleFromMember
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {import('discord.js').GuildMember} targetMember - The member to remove the role from
-   * @param {import('discord.js').Role} role - The role to be removed
-   * @param {string|null} reason - The reason for removing the role
-   */
   async removeRoleFromMember(interaction, targetMember, role, reason) {
     if (!targetMember.roles.cache.has(role.id)) {
       throw new Error("ROLE_NOT_ASSIGNED");
@@ -126,14 +97,6 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   },
   
-  /**
-   * Fetches a guild member from the guild.
-   * @async
-   * @function fetchGuildMember
-   * @param {import('discord.js').ChatInputCommandInteraction} interaction - The interaction object
-   * @param {string} userId - The ID of the user to fetch
-   * @returns {Promise<import('discord.js').GuildMember|null>} The fetched guild member or null if not found
-   */
   async fetchGuildMember(interaction, userId) {
     try {
       return await interaction.guild.members.fetch(userId);
