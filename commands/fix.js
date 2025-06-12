@@ -57,7 +57,7 @@ module.exports = {
 
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
-        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.");
+        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder channel and role first.");
         return;
       }
 
