@@ -60,8 +60,13 @@ module.exports = {
       }
 
       await processUserMessage(message);
-      await checkForBumpMessages(message);
-      logger.debug(`Processed message from ${message.author.tag} in ${message.channel.name}.`);
+      
+      // Only check for bump messages if the message has embeds
+      if (message.embeds && message.embeds.length > 0) {
+        await checkForBumpMessages(message);
+      }
+      
+      logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
 
       // Check if this is a no-text channel
       const noTextChannelId = await getValue('notext_channel');
@@ -178,16 +183,22 @@ async function processTimeReferences(message) {
 async function checkForBumpMessages(message) {
   logger.debug("Checking message for bump:", {
     author: message.author?.tag,
-    hasEmbeds: !!message.embeds,
-    embedCount: message.embeds?.length,
+    hasEmbeds: message.embeds?.length > 0,
+    embedCount: message.embeds?.length || 0,
     content: message.content?.replace(/\n/g, ' ') || "No Content"
   });
+  
   if (!message.embeds || message.embeds.length === 0) return;
+  
   try {
     const bumpEmbed = message.embeds.find(embed => {
-      logger.debug("Checking embed:", { description: embed.description?.substring(0, 100), hasDescription: !!embed.description });
+      logger.debug("Checking embed:", { 
+        description: embed.description?.replace(/\n/g, ' ') || "No Description", 
+        hasDescription: !!embed.description 
+      });
       return embed.description && embed.description.includes("Bump done!");
     });
+    
     if (bumpEmbed) {
       logger.info("Bump detected, scheduling reminder");
       await handleReminder(message, 7200000);
