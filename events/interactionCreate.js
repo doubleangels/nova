@@ -1,7 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
-const { Collection } = require('discord.js');
 
 const COOLDOWN_CACHE = new Map();
 const PERMISSION_CACHE = new Map();

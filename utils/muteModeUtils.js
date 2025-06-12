@@ -1,9 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { 
-  getAllMuteModeUsers,
-  getValue
-} = require('./database');
+const { getAllMuteModeUsers, getValue } = require('./database');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');

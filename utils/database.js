@@ -1,7 +1,6 @@
 const { Pool } = require('pg');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const dayjs = require('dayjs');
 const config = require('../config');
 
 const DB_TABLES = {

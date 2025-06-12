@@ -5,7 +5,6 @@ const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { Pool } = require('pg');
 const config = require('../config');
-const { EmbedBuilder } = require('discord.js');
 
 const REMINDER_POOL = new Pool({
   connectionString: config.neonConnectionString,

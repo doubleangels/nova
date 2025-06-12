@@ -1,7 +1,5 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { Pool } = require('pg');
-const config = require('../config');
 
 const LANG_FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
