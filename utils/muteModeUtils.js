@@ -48,6 +48,19 @@ async function scheduleMuteKick(memberId, username, joinTime, hours, guildId, cl
                     if (guild) {
                         const member = await guild.members.fetch(memberId).catch(() => null);
                         if (member) {
+                            try {
+                                const embed = {
+                                    color: 0xCD41FF,
+                                    title: 'Kicked for Inactivity',
+                                    description: 'You were kicked from Da Frens for not sending a message in time.',
+                                    fields: [
+                                        { name: 'Want to rejoin?', value: 'You can rejoin at https://dafrens.games.' }
+                                    ]
+                                };
+                                await member.send({ embeds: [embed] });
+                            } catch (dmError) {
+                                logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, { error: dmError.message });
+                            }
                             await member.kick("User did not send a message in time.");
                             logger.info(`Kicked ${username} (${memberId}) for not sending a message`);
                         }
