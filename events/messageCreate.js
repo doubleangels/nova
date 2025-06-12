@@ -69,7 +69,7 @@ module.exports = {
       logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
 
       // Check if this is a no-text channel
-      const noTextChannelId = await getValue('notext_channel');
+      const noTextChannelId = await getValue('no_text_channel');
       if (message.channelId !== noTextChannelId) return;
 
       // Check if message contains only GIFs, images, or stickers
