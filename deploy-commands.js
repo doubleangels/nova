@@ -4,6 +4,16 @@ const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
+/**
+ * Deploys slash commands to Discord's API
+ * This function:
+ * 1. Loads all command files from the commands directory
+ * 2. Registers them with Discord's API
+ * 3. Updates existing commands if they've changed
+ * 
+ * @returns {Promise<void>}
+ * @throws {Error} If command deployment fails
+ */
 async function deployCommands() {
   const commands = [];
   

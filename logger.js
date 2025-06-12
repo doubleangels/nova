@@ -1,6 +1,12 @@
 const { createLogger, format, transports } = require('winston');
 const config = require('./config');
 
+/**
+ * Creates a Winston logger instance with the specified label
+ * @param {string} label - The label to identify the logger instance
+ * @returns {winston.Logger} Configured Winston logger instance
+ * @throws {Error} If label is invalid or logger creation fails
+ */
 function getLogger(label) {
   if (!label || typeof label !== 'string') {
     throw new Error('Invalid logger label provided.');

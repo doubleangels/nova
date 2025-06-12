@@ -1,5 +1,37 @@
 require('dotenv').config();
 
+/**
+ * @typedef {Object} BotSettings
+ * @property {boolean} deployCommandsOnStart - Whether to deploy slash commands on bot startup
+ * @property {boolean} rescheduleReminderOnStart - Whether to reschedule reminders on bot startup
+ * @property {boolean} rescheduleAllMuteKicksOnStart - Whether to reschedule mute kicks on bot startup
+ * @property {string[]} disabledCommands - Array of command names that are disabled
+ */
+
+/**
+ * @typedef {Object} BotConfig
+ * @property {BotSettings} settings - Bot behavior settings
+ * @property {string} token - Discord bot token
+ * @property {string} clientId - Discord application client ID
+ * @property {string} neonConnectionString - Neon database connection string
+ * @property {string} googleApiKey - Google API key for search functionality
+ * @property {string} searchEngineId - Google Custom Search Engine ID
+ * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images
+ * @property {string} omdbApiKey - OMDB API key for movie information
+ * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information
+ * @property {string} malClientId - MyAnimeList API client ID
+ * @property {string} spotifyClientId - Spotify API client ID
+ * @property {string} spotifyClientSecret - Spotify API client secret
+ * @property {string} redditClientId - Reddit API client ID
+ * @property {string} redditClientSecret - Reddit API client secret
+ * @property {string} redditUsername - Reddit account username
+ * @property {string} redditPassword - Reddit account password
+ * @property {string} logLevel - Logging level (default: 'info')
+ * @property {string} givePermsPositionAboveRoleId - Role ID for permission management
+ * @property {string} givePermsFrenRoleId - Role ID for Fren role
+ */
+
+/** @type {BotConfig} */
 module.exports = {
   settings: {
     deployCommandsOnStart: true,
