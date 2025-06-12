@@ -80,7 +80,7 @@ module.exports = {
       const postData = {
         subreddit: 'DiscordAdvertising',
         title: '🎉 [21+] Welcome to Da Frens – Real Talk, Sweaty Games, Spicy Banter, and Endless Laughs 🔥',
-        content: 'https://discord.gg/dafrens'
+        content: 'https://dafrens.games'
       };
 
       const redditResponse = await this.postToReddit(postData);
@@ -187,10 +187,7 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed
    */
   createSuccessEmbed(response, interaction) {
-    let description = 'Your server advertisement has been posted to r/findaserver.';
-    if (response && response.permalink) {
-      description += `\nView your post on Reddit: https://reddit.com${response.permalink}`;
-    }
+    let description = `Your server advertisement has been posted to r/findaserver. View your post on Reddit: https://reddit.com${response.permalink}`;
     const embed = new EmbedBuilder()
       .setColor(0xFF4500)
       .setTitle('Server Promotion')
