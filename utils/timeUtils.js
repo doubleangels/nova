@@ -12,19 +12,6 @@ const timezone = require('dayjs/plugin/timezone');
 const moment = require('moment-timezone');
 const { logError } = require('../errors');
 
-const TIME_FORMAT = 'h:mm A';
-const TIME_PATTERN = /\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i;
-
-// Error Messages
-const TIME_ERROR_INVALID_TIMEZONE = "⚠️ Invalid timezone provided.";
-const TIME_ERROR_EMPTY_REFERENCE = "⚠️ No time reference provided.";
-const TIME_ERROR_PARSE_FAILED = "⚠️ Failed to parse time reference.";
-const TIME_ERROR_CONVERSION_FAILED = "⚠️ Failed to convert time between timezones.";
-const TIME_ERROR_INVALID_REFERENCE = "⚠️ Invalid time reference provided.";
-const TIME_ERROR_INVALID_TIMESTAMP = "⚠️ Invalid timestamp parameters provided.";
-const TIME_ERROR_INVALID_CONVERSION = "⚠️ Invalid time conversion provided.";
-const TIME_ERROR_NO_TIMES = "⚠️ No times provided for conversion.";
-
 const TIME_VALID_TIMEZONES = new Set(moment.tz.names());
 
 dayjs.extend(utc);
@@ -39,7 +26,7 @@ dayjs.extend(timezone);
  */
 function isValidTimezone(tz) {
   if (!tz || typeof tz !== 'string') {
-    throw new Error(TIME_ERROR_INVALID_TIMEZONE);
+    throw new Error("⚠️ Invalid timezone provided.");
   }
   
   try {
@@ -60,11 +47,11 @@ function isValidTimezone(tz) {
  */
 function extractTimeReferences(content) {
   if (!content) {
-    throw new Error(TIME_ERROR_EMPTY_REFERENCE);
+    throw new Error("⚠️ No time reference provided.");
   }
   
   try {
-    const matches = content.match(TIME_PATTERN);
+    const matches = content.match(/\d+\s*:\s*\d+|\d+\s*[ap]\.?m\.?|noon|midnight/i);
     if (!matches) return [];
 
     const results = matches.map(text => {
@@ -121,7 +108,7 @@ function extractTimeReferences(content) {
     return results;
   } catch (error) {
     logError('Error parsing time references', error);
-    throw new Error(TIME_ERROR_PARSE_FAILED);
+    throw new Error("⚠️ Failed to parse time reference.");
   }
 }
 
@@ -136,11 +123,11 @@ function extractTimeReferences(content) {
  */
 function convertTimeZones(timeRef, fromTimezone, toTimezone) {
   if (!timeRef || !timeRef.text) {
-    throw new Error(TIME_ERROR_INVALID_REFERENCE);
+    throw new Error("⚠️ Invalid time reference provided.");
   }
 
   if (!isValidTimezone(fromTimezone) || !isValidTimezone(toTimezone)) {
-    throw new Error(TIME_ERROR_INVALID_TIMEZONE);
+    throw new Error("⚠️ Invalid timezone provided.");
   }
 
   try {
@@ -178,7 +165,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     if (fromTimezone === toTimezone) {
       return {
         text: timeRef.text,
-        originalTime: sourceTime.format(TIME_FORMAT),
+        originalTime: sourceTime.format('h:mm A'),
         targetTime: sourceTime,
         toTimezone
       };
@@ -195,8 +182,8 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       targetOffset: targetTime.utcOffset(),
       parsedDate: timeRef.date.toISOString(),
       originalText: timeRef.text,
-      sourceFormatted: sourceTime.format(TIME_FORMAT),
-      targetFormatted: targetTime.format(TIME_FORMAT),
+      sourceFormatted: sourceTime.format('h:mm A'),
+      targetFormatted: targetTime.format('h:mm A'),
       timezoneDifference: (targetTime.utcOffset() - sourceTime.utcOffset()) / 60,
       isSameTimezone: fromTimezone === toTimezone,
       isTimeOnly
@@ -204,7 +191,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
     
     return {
       text: timeRef.text,
-      originalTime: sourceTime.format(TIME_FORMAT),
+      originalTime: sourceTime.format('h:mm A'),
       targetTime,
       toTimezone
     };
@@ -213,7 +200,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
       error: error.stack,
       message: error.message
     });
-    throw new Error(TIME_ERROR_CONVERSION_FAILED);
+    throw new Error("⚠️ Failed to convert time between timezones.");
   }
 }
 
@@ -227,7 +214,7 @@ function convertTimeZones(timeRef, fromTimezone, toTimezone) {
  */
 function generateDiscordTimestamp(date, timezone) {
   if (!date || !timezone) {
-    throw new Error(TIME_ERROR_INVALID_TIMESTAMP);
+    throw new Error("⚠️ Invalid timestamp parameters provided.");
   }
   const timestamp = date.tz(timezone).unix();
   return `<t:${timestamp}:t>`;
@@ -242,7 +229,7 @@ function generateDiscordTimestamp(date, timezone) {
  */
 function defaultFormatter(conversion) {
   if (!conversion) {
-    throw new Error(TIME_ERROR_INVALID_CONVERSION);
+    throw new Error("⚠️ Invalid time conversion provided.");
   }
   const { 
     originalTime, 
@@ -267,7 +254,7 @@ function defaultFormatter(conversion) {
  */
 function formatConvertedTimes(convertedTimes) {
   if (!convertedTimes || convertedTimes.length === 0) {
-    throw new Error(TIME_ERROR_NO_TIMES);
+    throw new Error("⚠️ No times provided for conversion.");
   }
 
   const formattedTimes = convertedTimes.map(conversion => {
@@ -279,7 +266,7 @@ function formatConvertedTimes(convertedTimes) {
       return `"${conversion.text}" - Could not parse time`;
     }
 
-    return `"${conversion.text}" → ${conversion.targetTime.format(TIME_FORMAT)} (${conversion.toTimezone})`;
+    return `"${conversion.text}" → ${conversion.targetTime.format('h:mm A')} (${conversion.toTimezone})`;
   });
 
   return formattedTimes.join('\n');

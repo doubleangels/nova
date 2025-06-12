@@ -8,8 +8,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { logError } = require('../errors');
 
-const LANG_ERROR_INVALID_FLAG = "⚠️ Invalid flag emoji provided for translation.";
-
 const LANG_FLAG_TO_LANGUAGE = {
     '🇦🇫': { code: 'ps', name: 'Pashto' }, // Afghanistan
     '🇦🇱': { code: 'sq', name: 'Albanian' }, // Albania
@@ -221,7 +219,7 @@ function getLanguageInfo(flagEmoji) {
     
     if (!flagEmoji || typeof flagEmoji !== 'string') {
         logger.warn("Invalid flag emoji provided:", { flagEmoji });
-        throw new Error(LANG_ERROR_INVALID_FLAG);
+        throw new Error("⚠️ Invalid flag emoji provided for translation.");
     }
     
     const languageInfo = LANG_FLAG_TO_LANGUAGE[flagEmoji] || null;
@@ -248,7 +246,7 @@ function isValidTranslationFlag(emoji) {
     
     if (!emoji || typeof emoji !== 'string') {
         logger.warn("Invalid emoji provided for validation:", { emoji });
-        throw new Error(LANG_ERROR_INVALID_FLAG);
+        throw new Error("⚠️ Invalid flag emoji provided for translation.");
     }
     
     const isValid = emoji in LANG_FLAG_TO_LANGUAGE;

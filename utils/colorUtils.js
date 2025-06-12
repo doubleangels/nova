@@ -4,17 +4,6 @@
  * @module utils/colorUtils
  */
 
-const COLOR_ERROR_INVALID_FORMAT = "⚠️ Invalid color format provided.";
-const COLOR_ERROR_EMPTY = "⚠️ Empty color value provided.";
-const COLOR_ERROR_OUT_OF_RANGE = "⚠️ Color value is out of valid range.";
-const COLOR_ERROR_INVALID_RGB = "⚠️ Invalid RGB values provided.";
-
-const COLOR_PATTERN_HEX_WITH_HASH = /^#[0-9A-Fa-f]{6}$/;
-const COLOR_PATTERN_HEX_WITHOUT_HASH = /^[0-9A-Fa-f]{6}$/;
-const COLOR_PATTERN_HEX_SHORT = /^#[0-9A-Fa-f]{3}$/;
-
-const COLOR_MAX_DISCORD = 0xFFFFFF;
-
 /**
  * Validates and normalizes a hex color string.
  * @function validateAndNormalizeColor
@@ -25,15 +14,15 @@ const COLOR_MAX_DISCORD = 0xFFFFFF;
  */
 function validateAndNormalizeColor(colorHex, logger = null) {
     if (typeof colorHex !== 'string') {
-        throw new Error(COLOR_ERROR_INVALID_FORMAT);
+        throw new Error("⚠️ Invalid color format provided.");
     }
     if (!colorHex.trim()) {
-        throw new Error(COLOR_ERROR_EMPTY);
+        throw new Error("⚠️ Empty color value provided.");
     }
 
     let normalizedColorHex = colorHex.trim();
     
-    if (COLOR_PATTERN_HEX_SHORT.test(normalizedColorHex)) {
+    if (/^#[0-9A-Fa-f]{3}$/.test(normalizedColorHex)) {
         normalizedColorHex = '#' + 
             normalizedColorHex[1] + normalizedColorHex[1] +
             normalizedColorHex[2] + normalizedColorHex[2] +
@@ -46,7 +35,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
         }
     }
     
-    if (COLOR_PATTERN_HEX_WITHOUT_HASH.test(normalizedColorHex)) {
+    if (/^[0-9A-Fa-f]{6}$/.test(normalizedColorHex)) {
         normalizedColorHex = `#${normalizedColorHex}`;
         if (logger) {
             logger.debug("Color format normalized.", { 
@@ -55,7 +44,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
             });
         }
         return { success: true, normalizedColor: normalizedColorHex };
-    } else if (COLOR_PATTERN_HEX_WITH_HASH.test(normalizedColorHex)) {
+    } else if (/^#[0-9A-Fa-f]{6}$/.test(normalizedColorHex)) {
         return { success: true, normalizedColor: normalizedColorHex };
     }
     
@@ -72,14 +61,14 @@ function validateAndNormalizeColor(colorHex, logger = null) {
 function hexToDecimal(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
-        throw new Error(COLOR_ERROR_INVALID_FORMAT);
+        throw new Error("⚠️ Invalid color format provided.");
     }
 
     const hex = validation.normalizedColor.slice(1);
     const decimal = parseInt(hex, 16);
 
-    if (decimal > COLOR_MAX_DISCORD) {
-        throw new Error(COLOR_ERROR_OUT_OF_RANGE);
+    if (decimal > 0xFFFFFF) {
+        throw new Error("⚠️ Color value is out of valid range.");
     }
 
     return decimal;
@@ -95,7 +84,7 @@ function hexToDecimal(hexColor) {
 function hexToRgb(hexColor) {
     const validation = validateAndNormalizeColor(hexColor);
     if (!validation.success) {
-        throw new Error(COLOR_ERROR_INVALID_FORMAT);
+        throw new Error("⚠️ Invalid color format provided.");
     }
 
     const hex = validation.normalizedColor.slice(1);
@@ -119,7 +108,7 @@ function rgbToHex(r, g, b) {
     if (!Number.isInteger(r) || r < 0 || r > 255 ||
         !Number.isInteger(g) || g < 0 || g > 255 ||
         !Number.isInteger(b) || b < 0 || b > 255) {
-        throw new Error(COLOR_ERROR_INVALID_RGB);
+        throw new Error("⚠️ Invalid RGB values provided.");
     }
 
     return '#' + 

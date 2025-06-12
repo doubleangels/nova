@@ -9,9 +9,6 @@ const dayjs = require('dayjs');
 const { getValue } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
 
-const TROLL_DEFAULT_AGE_DAYS = 30;
-const TROLL_KICK_REASON = "Account age does not meet server requirements.";
-
 /**
  * Checks if a member's account meets the minimum age requirement.
  * @async
@@ -26,7 +23,7 @@ async function checkAccountAge(member) {
       return true;
     }
 
-    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || TROLL_DEFAULT_AGE_DAYS;
+    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     logger.debug(`Checking account age for ${member.user.tag}:`, {
@@ -54,7 +51,7 @@ async function checkAccountAge(member) {
  */
 async function performKick(member) {
   try {
-    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || TROLL_DEFAULT_AGE_DAYS;
+    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     try {
@@ -72,7 +69,7 @@ async function performKick(member) {
       logger.warn(`Failed to send DM to member ${member.user.tag} before kick:`, { error: dmError.message });
     }
 
-    await member.kick(TROLL_KICK_REASON);
+    await member.kick("Account age does not meet server requirements.");
     logger.info(`Member ${member.user.tag} kicked due to insufficient account age.`, {
       accountAge,
       requiredAge

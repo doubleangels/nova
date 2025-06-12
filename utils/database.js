@@ -10,29 +10,25 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
 
-const DB_SCHEMA = 'main';
-const DB_DEFAULT_QUERY_TIMEOUT = 30000;
-const DB_CONNECTION_OPTIONS = {
+// Database Tables
+const DB_TABLES = {
+  CONFIG: 'main.config',
+  REMINDERS: 'main.reminder_data',
+  TRACKED_MEMBERS: 'main.tracked_members',
+  TIMEZONES: 'main.timezones',
+  MESSAGE_COUNTS: 'main.message_counts',
+  VOICE_TIME: 'main.voice_time',
+  VOICE_CHANNEL_TIME: 'main.voice_channel_time',
+  MESSAGE_CHANNEL_COUNTS: 'main.message_channel_counts'
+};
+
+const pool = new Pool({
   connectionString: config.neonConnectionString,
   ssl: {
     rejectUnauthorized: true 
   },
-  query_timeout: DB_DEFAULT_QUERY_TIMEOUT
-};
-
-// Database Tables
-const DB_TABLES = {
-  CONFIG: `${DB_SCHEMA}.config`,
-  REMINDERS: `${DB_SCHEMA}.reminder_data`,
-  TRACKED_MEMBERS: `${DB_SCHEMA}.tracked_members`,
-  TIMEZONES: `${DB_SCHEMA}.timezones`,
-  MESSAGE_COUNTS: `${DB_SCHEMA}.message_counts`,
-  VOICE_TIME: `${DB_SCHEMA}.voice_time`,
-  VOICE_CHANNEL_TIME: `${DB_SCHEMA}.voice_channel_time`,
-  MESSAGE_CHANNEL_COUNTS: `${DB_SCHEMA}.message_channel_counts`
-};
-
-const pool = new Pool(DB_CONNECTION_OPTIONS);
+  query_timeout: 30000
+});
 
 pool.on('error', (err, client) => {
   logger.error('Unexpected error on idle client', { error: err });
@@ -566,13 +562,13 @@ async function getUserVoiceTime(memberId) {
  * @param {string} text - The SQL query text
  * @param {Array} [params=[]] - Query parameters
  * @param {Object} [options={}] - Query options
- * @param {number} [options.timeout=DB_DEFAULT_QUERY_TIMEOUT] - Query timeout in milliseconds
+ * @param {number} [options.timeout=30000] - Query timeout in milliseconds
  * @returns {Promise<Object>} Query result
  * @throws {Error} If query times out or encounters an error
  */
 async function query(text, params = [], options = {}) {
   const client = await pool.connect();
-  const timeout = options.timeout || DB_DEFAULT_QUERY_TIMEOUT;
+  const timeout = options.timeout || 30000;
   
   try {
     await client.query(`SET statement_timeout = ${timeout}`);

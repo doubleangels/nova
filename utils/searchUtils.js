@@ -6,13 +6,15 @@
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { logError } = require('../errors');
-const logger = require('../logger')('searchUtils.js');
+const logger = require('../logger')(path.basename(__filename));
+const path = require('path');
+const { getValue } = require('./database');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
 
-const SEARCH_MAX_RESULTS = 10;
-const SEARCH_TIMEOUT_MS = 5000;
-const SEARCH_MIN_LENGTH = 2;
-
-const SEARCH_ERROR_FAILED = "⚠️ Search operation failed.";
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /**
  * Creates a paginated interface for search results.
@@ -198,8 +200,8 @@ function formatApiError(apiError) {
  */
 async function performSearch(query, options = {}) {
   try {
-    if (!query || query.length < SEARCH_MIN_LENGTH) {
-      throw new Error(`Search query must be at least ${SEARCH_MIN_LENGTH} characters long.`);
+    if (!query || query.length < 2) {
+      throw new Error(`Search query must be at least 2 characters long.`);
     }
 
     const searchOptions = {
@@ -223,15 +225,15 @@ async function performSearch(query, options = {}) {
     const results = await Promise.race([
       Promise.all(searchPromises),
       new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Search timed out')), SEARCH_TIMEOUT_MS)
+        setTimeout(() => reject(new Error('Search timed out')), 5000)
       )
     ]);
 
     const combinedResults = results.flat().sort((a, b) => b.relevance - a.relevance);
-    return combinedResults.slice(0, SEARCH_MAX_RESULTS);
+    return combinedResults.slice(0, 10);
   } catch (error) {
     logError('Search operation failed', error);
-    throw new Error(SEARCH_ERROR_FAILED);
+    throw new Error("⚠️ Search operation failed.");
   }
 }
 
