@@ -30,7 +30,7 @@ const PROMOTION_LINK = 'https://discord.gg/dEjjqec9RM';
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('promote')
-    .setDescription('Post your server advertisement to r/findaserver.'),
+    .setDescription('Post your server advertisement to various subreddits.'),
 
   /**
    * Executes the promote command.
