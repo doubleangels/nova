@@ -208,7 +208,7 @@ async function rescheduleReminder(client) {
       if (delay > 0) {
         setTimeout(async () => {
           try {
-            await channel.send(`🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote post\` to post on Reddit!`);
+            await channel.send(`🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`);
             logger.debug("Sent rescheduled promotion reminder:", { reminder_id: promoteReminder.reminder_id });
 
             await REMINDER_POOL.query(
