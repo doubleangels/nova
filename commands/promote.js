@@ -272,7 +272,7 @@ module.exports = {
         },
         {
           name: 'DiscordAdults',
-          flairId: 'c535d438-4639-11ef-9ddd-aa882aff8604'
+          flairId: 'c535d438-4639-11ef-9ddd-aa882aff8604git a'
         }
       ],
       title: PROMOTION_TITLE
@@ -341,33 +341,42 @@ module.exports = {
   },
 
   createSuccessEmbed(response, interaction) {
-    let description = 'Your server advertisement has been posted to the following subreddits:\n\n';
-    
-    response.responses.forEach(resp => {
-      const safeSubreddit = resp.subreddit.replace(/_/g, '\\_');
-      description += `• r/${safeSubreddit}\n\n`;
-    });
+    const embed = new EmbedBuilder()
+      .setColor(0x00FF00)
+      .setTitle('🎉 Server Promotion Successful!')
+      .setDescription('Your server has been promoted to the following subreddits:')
+      .setTimestamp();
 
-    if (response.errors && response.errors.length > 0) {
-      description += '\n⚠️ Some posts failed:\n';
-      response.errors.forEach(error => {
-        description += `• ${error}\n`;
+    // Add successful posts
+    if (response.results && response.results.length > 0) {
+      const successList = response.results.map(result => 
+        `• [r/${result.subreddit}](${result.url})`
+      ).join('\n');
+      
+      embed.addFields({
+        name: '✅ Successfully Posted To',
+        value: successList || 'No successful posts'
       });
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(0xFF4500)
-      .setTitle('Server Promotion')
-      .setDescription(description);
+    // Add any errors
+    if (response.errors && response.errors.length > 0) {
+      const errorList = response.errors.map(error => 
+        `• r/${error.subreddit}: ${error.error}`
+      ).join('\n');
+      
+      embed.addFields({
+        name: '❌ Failed Posts',
+        value: errorList || 'No errors'
+      });
+    }
 
-    embed.addFields({ 
-      name: 'Status', 
-      value: response.errors.length > 0 ? 'Partial Success' : 'Success' 
+    // Add footer with next promotion time
+    embed.setFooter({ 
+      text: 'Next promotion available in 24 hours' 
     });
 
-    return embed
-      .setFooter({ text: `Updated by ${interaction.user.tag}` })
-      .setTimestamp();
+    return embed;
   },
 
   async handleError(error, interaction) {
