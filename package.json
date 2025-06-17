@@ -17,7 +17,7 @@
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
     "axios": "^1.10.0",
-    "brace-expansion": "^2.0.2",
+    "brace-expansion": "^4.0.1",
     "chrono-node": "^2.8.3",
     "dayjs": "^1.11.13",
     "discord.js": "^14.20.0",
