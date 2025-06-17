@@ -19,7 +19,7 @@ const reddit = new snoowrap({
   password: config.redditPassword
 });
 
-const PROMOTION_TITLE = "[21+]🎉 Congrats! You've found Da Frens! ✨ Only for adults who don't take things too seriously!";
+const PROMOTION_TITLE = "[21+]🎉 Congrats! You've found Da Frens! ✨ A group of Frens with few restrictions... usually bantering or playing games, come join us!";
 const PROMOTION_LINK = 'https://discord.gg/dEjjqec9RM';
 
 /**
@@ -213,7 +213,7 @@ module.exports = {
 
   async handlePost(interaction) {
     await interaction.deferReply();
-    logger.info("/promote post command initiated:", { 
+    logger.info("/promote command initiated:", { 
       userId: interaction.user.id, 
       guildId: interaction.guildId 
     });
@@ -252,18 +252,6 @@ module.exports = {
         },
         {
           name: 'findaserver',
-          flairId: 'b8ffcc5a-275b-11ec-8803-eade4b4709d8'
-        },
-        {
-          name: 'DiscordServerPromos',
-          flairId: 'cf35d898-f441-11ed-b221-ba5aeaa6ad8a'
-        },
-        {
-          name: 'Discord_Servers_List',
-          flairId: '66184c9c-3e87-11ef-95bd-3e9ca3e6dbc4'
-        },
-        {
-          name: 'DiscordServersAd',
           flairId: 'da3bbd30-122c-11ee-8fc7-460118f7beb8'
         },
         {
@@ -272,30 +260,36 @@ module.exports = {
         },
         {
           name: 'DiscordAdults',
-          flairId: 'c535d438-4639-11ef-9ddd-aa882aff8604git a'
+          flairId: 'c535d438-4639-11ef-9ddd-aa882aff8604'
         }
-      ],
-      title: PROMOTION_TITLE
+      ]
     };
 
-    const redditResponses = await this.postToMultipleSubreddits(postData);
-    
-    if (redditResponses.error) {
-      return await interaction.editReply({
-        content: redditResponses.message,
-        ephemeral: true
+    // Send initial response
+    const initialEmbed = new EmbedBuilder()
+      .setColor(0xFFFF00)
+      .setTitle('🔄 Server Promotion Started')
+      .setDescription('Your server promotion is being processed in the background.\nYou will be notified when all posts are complete.')
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [initialEmbed] });
+
+    // Start background posting process
+    this.postToMultipleSubreddits(postData)
+      .then(async (response) => {
+        const finalEmbed = this.createSuccessEmbed(response, interaction);
+        await interaction.followUp({ embeds: [finalEmbed] });
+      })
+      .catch(async (error) => {
+        logger.error("Error in background posting:", error);
+        await interaction.followUp({
+          content: "⚠️ An error occurred while posting to subreddits. Please check the logs for details.",
+          ephemeral: true
+        });
       });
-    }
 
+    // Record the promotion time immediately
     await this.recordPromotion();
-
-    const embed = this.createSuccessEmbed(redditResponses, interaction);
-    await interaction.editReply({ embeds: [embed] });
-
-    logger.info("/promote post command completed successfully:", {
-      userId: interaction.user.id,
-      responses: redditResponses
-    });
   },
 
   validateConfiguration() {
@@ -310,10 +304,22 @@ module.exports = {
       try {
         logger.info(`Attempting to post to r/${subreddit.name}...`);
         
+        // First try to get available flairs
+        const flairs = await reddit.oauthRequest({
+          uri: `/r/${subreddit.name}/api/link_flair`,
+          method: 'GET'
+        }).catch(error => {
+          logger.warn(`Could not fetch flairs for r/${subreddit.name}:`, error);
+          return null;
+        });
+
+        // If we can't get flairs, try posting without a flair
+        const flairId = flairs ? subreddit.flairId : null;
+        
         const response = await reddit.getSubreddit(subreddit.name).submitLink({
           title: PROMOTION_TITLE,
           url: PROMOTION_LINK,
-          flairId: subreddit.flairId
+          ...(flairId && { flairId })
         });
 
         logger.info(`Successfully posted to r/${subreddit.name}`);
@@ -330,9 +336,18 @@ module.exports = {
 
       } catch (error) {
         logger.error(`Error posting to r/${subreddit.name}:`, error);
+        let errorMessage = error.message || 'Unknown error';
+        
+        // Handle specific error cases
+        if (errorMessage.includes('BAD_FLAIR_TEMPLATE_ID')) {
+          errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs.';
+        } else if (errorMessage.includes('RATELIMIT')) {
+          errorMessage = 'Rate limit exceeded. Please try again later.';
+        }
+        
         errors.push({
           subreddit: subreddit.name,
-          error: error.message || 'Unknown error'
+          error: errorMessage
         });
       }
     }
