@@ -95,7 +95,7 @@ async function handleReminder(message, delay, type = 'bump') {
     setTimeout(async () => {
       try {
         const reminderMessage = type === 'promote' 
-          ? `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`
+          ? `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote post\` to post on Reddit!`
           : `🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`;
 
         await channel.send(reminderMessage);
