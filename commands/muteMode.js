@@ -236,7 +236,7 @@ module.exports = {
     .setFooter({ text: `Requested by ${interaction.user.tag}` });
     
     if (settings.isEnabled) {
-      embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.`);
+      embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
@@ -279,7 +279,7 @@ module.exports = {
     }
     
     if (newEnabled) {
-      embed.setDescription(`New users must send a message within **${newTimeLimit}** hours or they will be kicked.`);
+      embed.setDescription(`New users must send a message within **${newTimeLimit}** hours or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
