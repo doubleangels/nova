@@ -246,22 +246,6 @@ module.exports = {
           name: 'DiscordAdvertising',
           flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
         },
-        {
-          name: 'discordservers_',
-          flairId: '3f59062c-abd2-11ec-aab6-e262df74cc9d'
-        },
-        {
-          name: 'findaserver',
-          flairId: 'da3bbd30-122c-11ee-8fc7-460118f7beb8'
-        },
-        {
-          name: 'PromoteDiscordServer',
-          flairId: '9f208758-6e8a-11ed-aa22-d2a70759c546'
-        },
-        {
-          name: 'DiscordAdults',
-          flairId: 'c535d438-4639-11ef-9ddd-aa882aff8604'
-        }
       ]
     };
 
