@@ -103,7 +103,7 @@ module.exports = {
       logger.info("Successfully posted to r/DiscordAdvertising");
       
       const embed = new EmbedBuilder()
-        .setColor(0x00FF00)
+        .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
         .setDescription('Your server has been promoted on r/DiscordAdvertising.')
         .addFields({
