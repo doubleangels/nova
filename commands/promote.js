@@ -93,21 +93,22 @@ module.exports = {
     try {
       logger.info("Attempting to post to r/DiscordAdvertising...");
       
-      const response = await reddit.getSubreddit('DiscordAdvertising').submitLink({
+      const submission = await reddit.getSubreddit('DiscordAdvertising').submitLink({
         title: PROMOTION_TITLE,
         url: PROMOTION_LINK,
         flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
       });
+      const post = await submission.fetch(); // Ensure all properties are loaded
 
       logger.info("Successfully posted to r/DiscordAdvertising");
       
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
         .setTitle('🎉 Server Promotion Successful!')
-        .setDescription('Your server has been promoted to r/DiscordAdvertising')
+        .setDescription('Your server has been promoted on r/DiscordAdvertising.')
         .addFields({
           name: '✅ Post Link',
-          value: `[View Post](${response.url})`
+          value: `[View Post](${post.url})`
         })
         .setFooter({ 
           text: 'Next promotion available in 24 hours' 
