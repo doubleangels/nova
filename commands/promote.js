@@ -107,7 +107,7 @@ module.exports = {
         .setTitle('🎉 Server Promotion Successful!')
         .setDescription('Your server has been promoted on r/DiscordAdvertising.')
         .addFields({
-          name: '✅ Post Link',
+          name: 'Post Link',
           value: `[View Post](${post.url})`
         })
         .setFooter({ 
