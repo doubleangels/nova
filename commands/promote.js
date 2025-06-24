@@ -21,7 +21,7 @@ const reddit = new snoowrap({
 });
 
 const PROMOTION_TITLE = "[21+]🎉 Congrats! You've found Da Frens! ✨ A group of Frens with few restrictions... usually bantering or playing games, come join us!";
-const PROMOTION_LINK = 'https://discord.gg/dEjjqec9RM';
+const PROMOTION_LINK = 'https://discord.gg/dafrens';
 
 /**
  * Command module for promoting users to moderator status.
