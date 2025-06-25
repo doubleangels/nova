@@ -109,7 +109,7 @@ module.exports = {
         .setDescription('Your server has been promoted on r/DiscordAdvertising.')
         .addFields({
           name: 'Post Link',
-          value: `[View Post](${post.url})`
+          value: `[View Post](https://reddit.com${submission.permalink})`
         })
         .setFooter({ 
           text: 'Next promotion available in 24 hours' 
