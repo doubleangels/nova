@@ -100,6 +100,7 @@ module.exports = {
         flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
       });
       const post = await submission.fetch();
+      const permalink = await post.permalink;
 
       logger.info("Successfully posted to r/DiscordAdvertising");
       
@@ -109,7 +110,7 @@ module.exports = {
         .setDescription('Your server has been promoted on r/DiscordAdvertising.')
         .addFields({
           name: 'Post Link',
-          value: `[View Post](https://reddit.com${post.permalink})`
+          value: `[View Post](https://reddit.com${permalink})`
         })
         .setFooter({ 
           text: 'Next promotion available in 24 hours' 
