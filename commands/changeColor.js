@@ -100,7 +100,7 @@ module.exports = {
                 });
                 
                 const errorEmbed = new EmbedBuilder()
-                    .setColor(0xcd41ff)
+                    .setColor(0xc03728)
                     .setTitle('Error')
                     .setDescription(errorMessage)
                     .setTimestamp();

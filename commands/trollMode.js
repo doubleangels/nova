@@ -193,7 +193,7 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.enabled ? '#00FF00' : '#FF0000')
+      .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
       .setTitle('🎭 Troll Mode Status')
       .addFields(
         { name: 'Status', value: settings.enabled ? '✅ Enabled' : '❌ Disabled' },
@@ -215,7 +215,7 @@ module.exports = {
    */
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(enabled ? '#00FF00' : '#FF0000')
+      .setColor(enabled ? 0x00FF00 : 0xFF0000)
       .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
       .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`)
       .setFooter({ text: `Updated by ${interaction.user.tag}` })
