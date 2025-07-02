@@ -3,8 +3,14 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const config = require('../config');
-const { getGeocodingData } = require('../utils/locationUtils');
+const { getGeocodingData, getTimezoneData } = require('../utils/locationUtils');
 
 const WEATHER_ICONS = {
   'clear-day': '☀️',
@@ -140,7 +146,7 @@ module.exports = {
         return;
       }
       
-      const embed = this.createWeatherEmbed(
+      const embed = await this.createWeatherEmbed(
         formattedAddress, 
         lat, 
         lon, 
@@ -213,9 +219,9 @@ module.exports = {
    * @param {Object} data - Weather data from API
    * @param {string} unitsOption - Unit system option ('metric' or 'imperial')
    * @param {number} forecastDays - Number of forecast days to display
-   * @returns {EmbedBuilder} Discord embed with weather information
+   * @returns {Promise<EmbedBuilder>} Discord embed with weather information
    */
-  createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
+  async createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
     const currently = data.currently || {};
     const daily = data.daily?.data || [];
     
@@ -252,10 +258,27 @@ module.exports = {
     
     const windDirection = this.getWindDirection(weatherInfo.windBearing);
     
-    const forecastText = this.createForecastText(daily, unitsOption, forecastDays);
+    const forecastText = this.createForecastText(daily, unitsOption, forecastDays, timezoneResult?.timezoneId);
     
-    const timestamp = new Date();
-    const formattedTime = timestamp.toLocaleString();
+    // Get timezone information for the location
+    let formattedTime;
+    try {
+      const timezoneResult = await getTimezoneData({ lat, lng: lon });
+      if (!timezoneResult.error && timezoneResult.timezoneId) {
+        // Format time in the location's timezone
+        formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MM/DD/YYYY h:mm A');
+      } else {
+        // Fallback to UTC if timezone lookup fails
+        formattedTime = dayjs().utc().format('MM/DD/YYYY h:mm A UTC');
+      }
+    } catch (error) {
+      logger.warn("Failed to get timezone for location, using UTC:", { 
+        lat, 
+        lon, 
+        error: error.message 
+      });
+      formattedTime = dayjs().utc().format('MM/DD/YYYY h:mm A UTC');
+    }
     
     const embed = new EmbedBuilder()
       .setTitle(`${weatherIcon} Weather in ${place}`)
@@ -340,9 +363,10 @@ module.exports = {
    * @param {Array} daily - Array of daily forecast data
    * @param {string} unitsOption - Unit system option ('metric' or 'imperial')
    * @param {number} daysToShow - Number of days to show in forecast
+   * @param {string} timezoneId - Timezone ID for the location
    * @returns {string} Formatted forecast text
    */
-  createForecastText(daily, unitsOption, daysToShow) {
+  createForecastText(daily, unitsOption, daysToShow, timezoneId) {
     let forecastText = "";
     const isMetric = unitsOption === 'metric';
     const tempUnit = isMetric ? '°C' : '°F';
@@ -351,9 +375,16 @@ module.exports = {
     
     for (let i = 0; i < days; i++) {
       const day = daily[i] || {};
-      const forecastDate = day.time ? 
-        dayjs.unix(day.time).format('MM/DD/YYYY') : 
-        'Unknown date';
+      let forecastDate;
+      if (day.time) {
+        if (timezoneId) {
+          forecastDate = dayjs.unix(day.time).tz(timezoneId).format('MM/DD/YYYY');
+        } else {
+          forecastDate = dayjs.unix(day.time).utc().format('MM/DD/YYYY UTC');
+        }
+      } else {
+        forecastDate = 'Unknown date';
+      }
       
       const daySummary = day.summary || "No data";
       
