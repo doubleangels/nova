@@ -108,10 +108,6 @@ module.exports = {
         .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
         .setDescription('Your server has been promoted on r/DiscordAdvertising.')
-        .addFields({
-          name: 'Post Link',
-          value: `[View Post](https://reddit.com${permalink})`
-        })
         .setFooter({ 
           text: 'Next promotion available in 24 hours' 
         })
