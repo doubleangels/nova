@@ -23,6 +23,11 @@ module.exports = {
     try {
       logger.info(`New member joined: ${member.user.tag}`);
 
+      if (member.user.bot) {
+        logger.debug("Bot joined; skipping mute mode tracking:", { botTag: member.user.tag });
+        return;
+      }
+
       const meetsAgeRequirement = await checkAccountAge(member);
       if (!meetsAgeRequirement) {
         await performKick(member);
