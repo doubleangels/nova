@@ -258,25 +258,26 @@ module.exports = {
     
     const windDirection = this.getWindDirection(weatherInfo.windBearing);
     
-    const forecastText = this.createForecastText(daily, unitsOption, forecastDays, timezoneResult?.timezoneId);
-    
     // Get timezone information for the location
-    let formattedTime;
+    let timezoneResult;
     try {
-      const timezoneResult = await getTimezoneData({ lat, lng: lon });
-      if (!timezoneResult.error && timezoneResult.timezoneId) {
-        // Format time in the location's timezone
-        formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MM/DD/YYYY h:mm A');
-      } else {
-        // Fallback to UTC if timezone lookup fails
-        formattedTime = dayjs().utc().format('MM/DD/YYYY h:mm A UTC');
-      }
+      timezoneResult = await getTimezoneData({ lat, lng: lon });
     } catch (error) {
       logger.warn("Failed to get timezone for location, using UTC:", { 
         lat, 
         lon, 
         error: error.message 
       });
+      timezoneResult = { timezoneId: null, error: true };
+    }
+
+    const forecastText = this.createForecastText(daily, unitsOption, forecastDays, timezoneResult?.timezoneId);
+    
+    // Format time in the location's timezone
+    let formattedTime;
+    if (!timezoneResult.error && timezoneResult.timezoneId) {
+      formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MM/DD/YYYY h:mm A');
+    } else {
       formattedTime = dayjs().utc().format('MM/DD/YYYY h:mm A UTC');
     }
     
