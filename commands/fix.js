@@ -58,7 +58,7 @@ module.exports = {
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
       const embed = new EmbedBuilder()
-          .setColor(0xcd41ff)
+          .setColor(0xc03728)
           .setTitle('Disboard Bump Reminder Fixed')
           .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
           .setFooter({ text: `Updated by ${interaction.user.tag}` })

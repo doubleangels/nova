@@ -319,7 +319,7 @@ module.exports = {
 
     for (let i = 0; i < messages.length; i += messagesPerEmbed) {
       const embed = new EmbedBuilder()
-        .setColor(0xcd41ff)
+        .setColor(0xc03728)
         .setAuthor({
           name: `Messages from ${targetUser.username} in #${targetChannel.name}`,
           iconURL: targetUser.displayAvatarURL()

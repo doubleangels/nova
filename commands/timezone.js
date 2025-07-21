@@ -164,7 +164,7 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-        .setColor('#cd41ff')
+        .setColor(0xc03728)
         .setTitle('✅ Timezone Setup Complete')
         .setDescription(isAdminAction 
           ? `You have set ${targetUser}'s timezone to: \`${timezoneId}\` based on location: ${formattedAddress}`
@@ -214,7 +214,7 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-        .setColor('#cd41ff')
+        .setColor(0xc03728)
         .setTitle('📌 Timezone Status')
         .setFooter({ text: 'Requested by ' + interaction.user.tag })
         .setTimestamp();

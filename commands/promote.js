@@ -5,6 +5,7 @@ const snoowrap = require('snoowrap');
 const config = require('../config');
 const { Pool } = require('pg');
 const dayjs = require('dayjs');
+const { handleReminder } = require('../utils/reminderUtils');
 
 const pool = new Pool({
   connectionString: config.neonConnectionString,
@@ -98,7 +99,8 @@ module.exports = {
         url: PROMOTION_LINK,
         flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
       });
-      const post = await submission.fetch(); // Ensure all properties are loaded
+      const post = await submission.fetch();
+      const permalink = await post.permalink;
 
       logger.info("Successfully posted to r/DiscordAdvertising");
       
@@ -106,10 +108,6 @@ module.exports = {
         .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
         .setDescription('Your server has been promoted on r/DiscordAdvertising.')
-        .addFields({
-          name: 'Post Link',
-          value: `[View Post](${post.url})`
-        })
         .setFooter({ 
           text: 'Next promotion available in 24 hours' 
         })
@@ -117,8 +115,8 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
 
-      // Record the promotion time
-      await this.recordPromotion();
+      const mockMessage = { client: interaction.client };
+      await handleReminder(mockMessage, 86400000, 'promote');
 
     } catch (error) {
       logger.error("Error posting to r/DiscordAdvertising:", error);
@@ -206,33 +204,6 @@ module.exports = {
     } catch (error) {
       logger.error("Error getting next promotion time:", { error: error.message });
       return null;
-    }
-  },
-
-  async recordPromotion() {
-    try {
-      await pool.query(
-        `DELETE FROM main.reminder_recovery 
-         WHERE type = $1`,
-        ['promote']
-      );
-
-      const reminderId = require('crypto').randomUUID();
-      const nextPromotionTime = dayjs().add(24, 'hour').toISOString();
-      
-      logger.debug("Recording next promotion time:", {
-        reminderId,
-        nextPromotionTime,
-        now: dayjs().toISOString()
-      });
-
-      await pool.query(
-        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) 
-         VALUES ($1, $2::timestamp AT TIME ZONE 'UTC', $3)`,
-        [reminderId, nextPromotionTime, 'promote']
-      );
-    } catch (error) {
-      logger.error("Error recording next promotion time:", { error: error.message });
     }
   }
 }; 

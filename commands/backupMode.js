@@ -316,7 +316,7 @@ module.exports = {
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(newEnabled ? '#00FF00' : '#FF0000')
+      .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
       .setTitle('🔄 Backup Mode Updated')
       .setTimestamp();
 
@@ -349,7 +349,7 @@ module.exports = {
    */
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? '#00FF00' : '#FF0000')
+      .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
       .setTitle('🔄 Backup Mode Status')
       .setTimestamp();
 
