@@ -1,6 +1,5 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getUserTimezone } = require('../utils/database');
 const { extractTimeReferences, convertTimeZones, formatConvertedTimes } = require('../utils/timeUtils');
 const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');
 const dayjs = require('dayjs');
@@ -51,11 +50,6 @@ module.exports = {
 
       logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}`);
 
-      if (reaction.emoji.name === '🕒') {
-        await handleClockReaction(reaction, user);
-        return;
-      }
-
       if (reaction.message.guild) {
         const member = reaction.message.guild.members.cache.get(user.id);
         if (member) {
@@ -82,10 +76,6 @@ module.exports = {
       
       if (error.message === "⚠️ Failed to fetch reaction data.") {
         errorMessage = "⚠️ Failed to fetch reaction data.";
-      } else if (error.message === "⚠️ Invalid timezone for time conversion.") {
-        errorMessage = "⚠️ Invalid timezone for time conversion.";
-      } else if (error.message === "⚠️ No time references found in the message.") {
-        errorMessage = "⚠️ No time references found in the message.";
       } else if (error.message === "⚠️ Invalid translation flag provided.") {
         errorMessage = "⚠️ Invalid translation flag provided.";
       } else if (error.message === "⚠️ No text to translate found in the message.") {
@@ -143,176 +133,6 @@ async function fetchPartialData(reaction) {
       });
       throw error;
     }
-  }
-}
-
-/**
- * Handles clock reactions for time conversion
- * @param {MessageReaction} reaction - The clock reaction
- * @param {User} user - The user who added the reaction
- * @returns {Promise<void>}
- */
-async function handleClockReaction(reaction, user) {
-  try {
-    const userTimezone = await getUserTimezone(user.id);
-    
-    if (!userTimezone) {
-      await sendTemporaryMessage(
-        reaction.message.channel,
-        `⚠️ Invalid timezone for time conversion.`
-      );
-      return;
-    }
-    
-    const messageAuthorId = reaction.message.author.id;
-    const messageAuthorTimezone = await getUserTimezone(messageAuthorId);
-    
-    if (!messageAuthorTimezone) {
-      await sendTemporaryMessage(
-        reaction.message.channel,
-        `⚠️ Invalid timezone for time conversion.`
-      );
-      return;
-    }
-    
-    const timeReferences = await getTimeReferences(reaction.message);
-    
-    if (timeReferences && timeReferences.length > 0) {
-      await processTimeConversion(
-        reaction.message.channel,
-        user.id,
-        timeReferences,
-        messageAuthorTimezone,
-        userTimezone
-      );
-    } else {
-      await sendTemporaryMessage(
-        reaction.message.channel,
-        `⚠️ No time references found in the message.`
-      );
-    }
-  } catch (error) {
-    logger.error('Error handling clock reaction:', {
-      error: error.stack,
-      message: error.message,
-      emoji: reaction.emoji?.name || 'unknown',
-      messageId: reaction.message?.id || 'unknown',
-      userId: user.id
-    });
-  }
-}
-
-/**
- * Gets time references from a message
- * @param {Message} message - The message to get time references from
- * @returns {Promise<Array>} Array of time references
- */
-async function getTimeReferences(message) {
-  let timeReferences = global.timeReferenceCache?.get(message.id);
-  
-  if (!timeReferences && message.content) {
-    timeReferences = extractTimeReferences(message.content);
-    
-    if (timeReferences.length > 0) {
-      if (!global.timeReferenceCache) {
-        global.timeReferenceCache = new Map();
-      }
-      global.timeReferenceCache.set(message.id, timeReferences);
-      
-      logger.debug('Re-extracted time references for message:', {
-        messageId: message.id,
-        references: timeReferences.map(ref => ref.text)
-      });
-    }
-  }
-  
-  return timeReferences;
-}
-
-/**
- * Processes time conversion between timezones
- * @param {TextChannel} channel - The channel to send the conversion in
- * @param {string} userId - The ID of the user requesting the conversion
- * @param {Array} timeReferences - Array of time references to convert
- * @param {string} fromTimezone - The source timezone
- * @param {string} toTimezone - The target timezone
- * @returns {Promise<void>}
- */
-async function processTimeConversion(channel, userId, timeReferences, fromTimezone, toTimezone) {
-  try {
-    logger.info('Processing time conversion:', {
-      fromTimezone,
-      toTimezone,
-      references: timeReferences.map(ref => ref.text)
-    });
-    
-    const convertedTimes = timeReferences.map(ref => {
-      return convertTimeZones(ref, fromTimezone, toTimezone);
-    });
-    
-    const formattedTimes = formatConvertedTimes(convertedTimes);
-
-    let embedColor = 0x0099ff;
-    const member = channel.guild?.members.cache.get(userId);
-    if (member) {
-      const highestRole = member.roles.highest;
-      if (highestRole && highestRole.color !== 0) {
-        embedColor = highestRole.color;
-      }
-    }
-
-    const embed = {
-      color: embedColor,
-      title: `🕒 Time Conversion`,
-      description: formattedTimes,
-      footer: {
-        text: `Requested by: ${member?.user.tag || userId}`
-      },
-      timestamp: new Date()
-    };
-    
-    await sendTemporaryMessage(channel, { embeds: [embed] }, 15000);
-  } catch (error) {
-    logger.error('Failed to process time conversion:', {
-      error: error.stack,
-      message: error.message,
-      fromTimezone,
-      toTimezone,
-      timeReferences: timeReferences.map(ref => ref.text)
-    });
-  }
-}
-
-/**
- * Sends a temporary message that will be deleted after a timeout
- * @param {TextChannel} channel - The channel to send the message in
- * @param {string|Object} content - The content to send
- * @param {number} timeout - The timeout in milliseconds before deletion
- * @returns {Promise<Message|null>} The sent message or null if failed
- */
-async function sendTemporaryMessage(channel, content, timeout = 30000) {
-  try {
-    const reply = await channel.send(content);
-    
-    setTimeout(() => {
-      reply.delete().catch(error => {
-        logger.error('Failed to delete temporary message:', {
-          error: error.stack,
-          message: error.message,
-          channelId: channel.id,
-          messageId: reply.id
-        });
-      });
-    }, timeout);
-    
-    return reply;
-  } catch (error) {
-    logger.error('Failed to send temporary message:', {
-      error: error.stack,
-      message: error.message,
-      channelId: channel.id
-    });
-    return null;
   }
 }
 

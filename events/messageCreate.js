@@ -170,12 +170,6 @@ async function processTimeReferences(message) {
     if (timeReferences.length > 0) {
       if (!global.timeReferenceCache) global.timeReferenceCache = new Map();
       global.timeReferenceCache.set(message.id, timeReferences);
-      if (message.guild && message.channel.permissionsFor(message.guild.members.me).has('AddReactions')) {
-        await message.react('🕒');
-        logger.debug("Added clock reaction to message with time reference:", { messageId: message.id, references: timeReferences.map(ref => ref.text) });
-      } else {
-        logger.warn("Missing permission to add reactions in channel:", { channelId: message.channel.id });
-      }
     }
   } catch (error) {
     logger.error("Failed to process time references:", { error });

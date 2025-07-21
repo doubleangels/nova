@@ -184,77 +184,6 @@ async function getAllConfigs() {
 }
 
 /**
- * Sets a user's timezone in the database
- * @param {string} memberId - The Discord member ID
- * @param {string} timezone - The timezone string
- * @throws {Error} If memberId or timezone is invalid
- * @returns {Promise<void>}
- */
-async function setUserTimezone(memberId, timezone) {
-  const client = await pool.connect();
-  try {
-    if (typeof timezone !== 'string' || timezone.trim() === '') {
-        throw new Error(`Invalid timezone provided: ${timezone}`);
-    }
-    if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
-        throw new Error(`Invalid memberId provided (must be a string representing an integer): ${memberId}`);
-    }
-
-    logger.debug(`Setting timezone for member ID "${memberId}" to "${timezone}".`);
-
-    const query = `
-      INSERT INTO ${DB_TABLES.TIMEZONES} (member_id, timezone)
-      VALUES ($1::bigint, $2)
-      ON CONFLICT (member_id)
-      DO UPDATE SET timezone = $2;
-    `;
-    await client.query(query, [memberId, timezone.trim()]);
-
-    logger.info(`Successfully set timezone for member ID "${memberId}".`);
-  } catch (err) {
-    logger.error(`Error setting timezone for member ID "${memberId}":`, { error: err });
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Retrieves a user's timezone from the database
- * @param {string} memberId - The Discord member ID
- * @returns {Promise<string|null>} The user's timezone, or null if not found
- */
-async function getUserTimezone(memberId) {
-  const client = await pool.connect();
-  try {
-    if (typeof memberId !== 'string' || memberId.trim() === '' || !/^\d+$/.test(memberId)) {
-        logger.warn(`Attempted to get timezone with invalid memberId format: ${memberId}`);
-        return null;
-    }
-
-    logger.debug(`Getting timezone for member ID "${memberId}".`);
-
-    const result = await client.query(
-      `SELECT timezone FROM ${DB_TABLES.TIMEZONES} WHERE member_id = $1::bigint`,
-      [memberId]
-    );
-
-    if (result.rows.length > 0) {
-      const timezone = result.rows[0].timezone;
-      logger.debug(`Found timezone for member ID "${memberId}": ${timezone}`);
-      return timezone;
-    } else {
-      logger.debug(`No timezone found for member ID "${memberId}".`);
-      return null;
-    }
-  } catch (err) {
-    logger.error(`Error getting timezone for member ID "${memberId}":`, { error: err });
-    return null;
-  } finally {
-    client.release();
-  }
-}
-
-/**
  * Executes a database query with timeout and error handling
  * @param {string} text - The SQL query text
  * @param {Array} [params=[]] - Query parameters
@@ -357,8 +286,6 @@ module.exports = {
   setValue,
   deleteValue,
   getAllConfigs,
-  setUserTimezone,
-  getUserTimezone,
   query,
   addMuteModeUser,
   removeMuteModeUser,
