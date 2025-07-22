@@ -74,7 +74,7 @@ module.exports = {
                 .setColor(embedColor)
                 .setTitle('Nickname Updated')
                 .setDescription(newNickname 
-                    ? `Successfully changed ${targetUser}'s nickname to "${newNickname}!"`
+                    ? `Successfully changed ${targetUser}'s nickname to "${newNickname}"!`
                     : `Successfully reset ${targetUser}'s nickname!`)
                 .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
