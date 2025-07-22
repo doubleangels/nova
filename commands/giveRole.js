@@ -93,7 +93,7 @@ module.exports = {
                 .setDescription(`✅ Successfully gave <@${targetUser.id}> the ${role.name} role!`)
                 .addFields(
                     { name: 'Role', value: role.name, inline: true },
-                    { name: 'Role ID', value: role.id, inline: true }
+                    { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
                 )
                 .setFooter({ text: `Updated by ${interaction.user.tag}` })
                 .setTimestamp();
