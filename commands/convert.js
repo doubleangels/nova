@@ -46,6 +46,33 @@ const MASS_UNITS = {
 };
 const TEMP_UNITS = ['c', 'celsius', 'f', 'fahrenheit', 'k', 'kelvin'];
 
+// Currency codes for choices (major world currencies)
+const CURRENCY_CODES = [
+  'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK', 'NZD',
+  'MXN', 'SGD', 'HKD', 'NOK', 'KRW', 'TRY', 'INR', 'RUB', 'BRL', 'ZAR'
+];
+
+// Unit choices for measurement
+const LENGTH_CHOICES = [
+  { name: 'Meter (m)', value: 'm' },
+  { name: 'Foot (ft)', value: 'ft' },
+  { name: 'Kilometer (km)', value: 'km' },
+  { name: 'Mile (mi)', value: 'mi' },
+  { name: 'Centimeter (cm)', value: 'cm' },
+  { name: 'Inch (in)', value: 'in' }
+];
+const MASS_CHOICES = [
+  { name: 'Kilogram (kg)', value: 'kg' },
+  { name: 'Gram (g)', value: 'g' },
+  { name: 'Pound (lb)', value: 'lb' },
+  { name: 'Ounce (oz)', value: 'oz' }
+];
+const TEMP_CHOICES = [
+  { name: 'Celsius (C)', value: 'c' },
+  { name: 'Fahrenheit (F)', value: 'f' },
+  { name: 'Kelvin (K)', value: 'k' }
+];
+
 function convertLength(value, from, to) {
   const fromFactor = LENGTH_UNITS[from.toLowerCase()];
   const toFactor = LENGTH_UNITS[to.toLowerCase()];
@@ -78,46 +105,87 @@ function convertTemp(value, from, to) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('convert')
-    .setDescription('Convert between units of measurement or currencies.')
-    .addNumberOption(option =>
-      option.setName('amount')
-        .setDescription('What is the amount or quantity you want to convert?')
-        .setRequired(true))
-    .addStringOption(option =>
-      option.setName('from')
-        .setDescription('What is the unit or currency you want to convert from? (e.g., USD, m, kg, C)')
-        .setRequired(true))
-    .addStringOption(option =>
-      option.setName('to')
-        .setDescription('What is the unit or currency you want to convert to? (e.g., EUR, ft, lb, F)')
-        .setRequired(true)),
+    .setDescription('Convert between currencies or measurement units.')
+    .addSubcommand(sub =>
+      sub.setName('currency')
+        .setDescription('Convert between currencies.')
+        .addNumberOption(option =>
+          option.setName('amount')
+            .setDescription('Amount to convert')
+            .setRequired(true))
+        .addStringOption(option => {
+          let opt = option.setName('from')
+            .setDescription('Currency to convert from')
+            .setRequired(true);
+          CURRENCY_CODES.forEach(code => opt = opt.addChoices({ name: code, value: code }));
+          return opt;
+        })
+        .addStringOption(option => {
+          let opt = option.setName('to')
+            .setDescription('Currency to convert to')
+            .setRequired(true);
+          CURRENCY_CODES.forEach(code => opt = opt.addChoices({ name: code, value: code }));
+          return opt;
+        })
+    )
+    .addSubcommand(sub =>
+      sub.setName('measurement')
+        .setDescription('Convert between measurement units.')
+        .addNumberOption(option =>
+          option.setName('amount')
+            .setDescription('Amount to convert')
+            .setRequired(true))
+        .addStringOption(option => {
+          let opt = option.setName('type')
+            .setDescription('Type of measurement')
+            .setRequired(true)
+            .addChoices(
+              { name: 'Length', value: 'length' },
+              { name: 'Mass', value: 'mass' },
+              { name: 'Temperature', value: 'temperature' }
+            );
+          return opt;
+        })
+        .addStringOption(option => {
+          let opt = option.setName('from')
+            .setDescription('Unit to convert from')
+            .setRequired(true);
+          LENGTH_CHOICES.forEach(choice => opt = opt.addChoices(choice));
+          MASS_CHOICES.forEach(choice => opt = opt.addChoices(choice));
+          TEMP_CHOICES.forEach(choice => opt = opt.addChoices(choice));
+          return opt;
+        })
+        .addStringOption(option => {
+          let opt = option.setName('to')
+            .setDescription('Unit to convert to')
+            .setRequired(true);
+          LENGTH_CHOICES.forEach(choice => opt = opt.addChoices(choice));
+          MASS_CHOICES.forEach(choice => opt = opt.addChoices(choice));
+          TEMP_CHOICES.forEach(choice => opt = opt.addChoices(choice));
+          return opt;
+        })
+    ),
 
   /**
    * Executes the convert command.
-   * This function:
-   * 1. Determines conversion type (currency, length, mass, temperature)
-   * 2. Performs the conversion
-   * 3. Creates and sends an embed with the result
-   * 4. Handles errors and unsupported conversions
-   *
-   * @param {CommandInteraction} interaction - The interaction that triggered the command
-   * @returns {Promise<void>}
+   * Handles currency and measurement subcommands.
+   * @param {CommandInteraction} interaction
    */
   async execute(interaction) {
     try {
       await interaction.deferReply();
-      const amount = interaction.options.getNumber('amount');
-      const from = interaction.options.getString('from');
-      const to = interaction.options.getString('to');
+      const subcommand = interaction.options.getSubcommand();
       logger.info('/convert command initiated:', {
         userId: interaction.user.id,
         guildId: interaction.guildId,
-        amount, from, to
+        subcommand
       });
 
-      // Try currency conversion first (ISO 4217 codes are 3 letters)
-      if (from.length === 3 && to.length === 3) {
-        const url = `https://api.exchangerate.host/convert?from=${from.toUpperCase()}&to=${to.toUpperCase()}&amount=${amount}`;
+      if (subcommand === 'currency') {
+        const amount = interaction.options.getNumber('amount');
+        const from = interaction.options.getString('from');
+        const to = interaction.options.getString('to');
+        const url = `https://api.exchangerate.host/convert?from=${from}&to=${to}&amount=${amount}`;
         const response = await axios.get(url, { timeout: 10000 });
         if (response.data && response.data.result != null) {
           const embed = this.createCurrencyEmbed(amount, from, to, response.data.result);
@@ -127,38 +195,35 @@ module.exports = {
         } else {
           throw new Error('Currency conversion failed.');
         }
-      }
-
-      // Try length
-      if (LENGTH_UNITS[from.toLowerCase()] && LENGTH_UNITS[to.toLowerCase()]) {
-        const result = convertLength(amount, from, to);
-        if (result == null) throw new Error('Unit conversion failed.');
-        const embed = this.createLengthEmbed(amount, from, to, result);
+      } else if (subcommand === 'measurement') {
+        const amount = interaction.options.getNumber('amount');
+        const type = interaction.options.getString('type');
+        const from = interaction.options.getString('from');
+        const to = interaction.options.getString('to');
+        let result = null, embed = null;
+        if (type === 'length' && LENGTH_UNITS[from] && LENGTH_UNITS[to]) {
+          result = convertLength(amount, from, to);
+          embed = this.createLengthEmbed(amount, from, to, result);
+        } else if (type === 'mass' && MASS_UNITS[from] && MASS_UNITS[to]) {
+          result = convertMass(amount, from, to);
+          embed = this.createMassEmbed(amount, from, to, result);
+        } else if (type === 'temperature' && TEMP_UNITS.includes(from) && TEMP_UNITS.includes(to)) {
+          result = convertTemp(amount, from, to);
+          embed = this.createTempEmbed(amount, from, to, result);
+        } else {
+          await interaction.editReply({
+            content: '⚠️ Unsupported or mismatched units for the selected measurement type.',
+            ephemeral: true
+          });
+          logger.warn('/convert measurement unsupported:', { amount, type, from, to });
+          return;
+        }
         await interaction.editReply({ embeds: [embed] });
-        logger.info('/convert length completed:', { amount, from, to, result });
+        logger.info('/convert measurement completed:', { amount, type, from, to, result });
         return;
       }
-      // Try mass
-      if (MASS_UNITS[from.toLowerCase()] && MASS_UNITS[to.toLowerCase()]) {
-        const result = convertMass(amount, from, to);
-        if (result == null) throw new Error('Unit conversion failed.');
-        const embed = this.createMassEmbed(amount, from, to, result);
-        await interaction.editReply({ embeds: [embed] });
-        logger.info('/convert mass completed:', { amount, from, to, result });
-        return;
-      }
-      // Try temperature
-      if (TEMP_UNITS.includes(from.toLowerCase()) && TEMP_UNITS.includes(to.toLowerCase())) {
-        const result = convertTemp(amount, from, to);
-        if (result == null) throw new Error('Temperature conversion failed.');
-        const embed = this.createTempEmbed(amount, from, to, result);
-        await interaction.editReply({ embeds: [embed] });
-        logger.info('/convert temperature completed:', { amount, from, to, result });
-        return;
-      }
-
       // If none matched
-      logger.warn('/convert unsupported:', { amount, from, to });
+      logger.warn('/convert unsupported subcommand:', { subcommand });
       await interaction.editReply({
         content: '⚠️ Unsupported conversion. Please use valid units or currency codes.',
         ephemeral: true
@@ -168,20 +233,13 @@ module.exports = {
     }
   },
 
-  /**
-   * Creates an embed for currency conversion results.
-   */
   createCurrencyEmbed(amount, from, to, result) {
     return new EmbedBuilder()
       .setColor(0x4CAF50)
       .setTitle('💱 Currency Conversion')
-      .setDescription(`**${amount} ${from.toUpperCase()} = ${result} ${to.toUpperCase()}**`)
+      .setDescription(`**${amount} ${from} = ${result} ${to}**`)
       .setFooter({ text: 'Powered by exchangerate.host' });
   },
-
-  /**
-   * Creates an embed for length conversion results.
-   */
   createLengthEmbed(amount, from, to, result) {
     return new EmbedBuilder()
       .setColor(0x2196F3)
@@ -189,10 +247,6 @@ module.exports = {
       .setDescription(`**${amount} ${from} = ${result} ${to}**`)
       .setFooter({ text: 'Basic unit conversion (in-code)' });
   },
-
-  /**
-   * Creates an embed for mass conversion results.
-   */
   createMassEmbed(amount, from, to, result) {
     return new EmbedBuilder()
       .setColor(0xFF9800)
@@ -200,10 +254,6 @@ module.exports = {
       .setDescription(`**${amount} ${from} = ${result} ${to}**`)
       .setFooter({ text: 'Basic unit conversion (in-code)' });
   },
-
-  /**
-   * Creates an embed for temperature conversion results.
-   */
   createTempEmbed(amount, from, to, result) {
     return new EmbedBuilder()
       .setColor(0xE91E63)
@@ -211,13 +261,6 @@ module.exports = {
       .setDescription(`**${amount}°${from[0].toUpperCase()} = ${result}°${to[0].toUpperCase()}**`)
       .setFooter({ text: 'Basic unit conversion (in-code)' });
   },
-
-  /**
-   * Handles errors that occur during command execution.
-   * @param {CommandInteraction} interaction - The interaction that triggered the command
-   * @param {Error} error - The error that occurred
-   * @returns {Promise<void>}
-   */
   async handleError(interaction, error) {
     logger.error('Error in convert command:', {
       error: error.message,
