@@ -52,7 +52,7 @@ module.exports = {
       const partOfSpeech = meanings ? meanings.partOfSpeech : 'Unknown';
 
       const embed = new EmbedBuilder()
-        .setColor(0x222f44)
+        .setColor(0x820627)
         .setTitle(`Dictionary: ${data.word}`)
         .setDescription(definition ? definition.definition : 'No definition found.')
         .addFields(
@@ -60,7 +60,7 @@ module.exports = {
           { name: 'Part of Speech', value: partOfSpeech, inline: true },
           { name: 'Example', value: example }
         )
-        .setFooter({ text: 'Powered by Free Dictionary API (dictionaryapi.dev)' });
+        .setFooter({ text: 'Powered by Free Dictionary API' });
 
       await interaction.editReply({ embeds: [embed] });
       logger.info('/dictionary command completed successfully:', {
