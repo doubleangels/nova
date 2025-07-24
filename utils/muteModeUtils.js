@@ -47,7 +47,6 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
       if (guild) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
-          // Skip if user is a bot
           if (member.user.bot) {
             logger.debug(`Skipping mute kick for bot user ${userId}.`);
             return;
@@ -81,7 +80,6 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
       if (guild) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
-          // Skip if user is a bot
           if (member.user.bot) {
             logger.debug(`Skipping mute kick for bot user ${userId}`);
             return;

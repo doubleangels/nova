@@ -14,7 +14,7 @@ async function main() {
 
   try {
     logger.info('Fetching link flairs for r/DiscordAdvertising...');
-    const subreddit = await reddit.getSubreddit('discordapp');
+    const subreddit = await reddit.getSubreddit('DiscordAdvertising');
     const linkFlairs = await subreddit.getLinkFlairTemplates();
     logger.info('Raw linkFlairs response:', { linkFlairs });
     if (Array.isArray(linkFlairs) && linkFlairs.length > 0) {

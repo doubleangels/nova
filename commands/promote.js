@@ -97,7 +97,7 @@ module.exports = {
       const submission = await reddit.getSubreddit('DiscordAdvertising').submitLink({
         title: PROMOTION_TITLE,
         url: PROMOTION_LINK,
-        flairId: '6c962c88-1c3c-11e9-82ef-0e886aa2f7fc'
+        flairId: 'b505512c-34cb-11e9-9f48-0e762a63b82e'
       });
       const post = await submission.fetch();
       const permalink = await post.permalink;
