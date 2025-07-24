@@ -46,6 +46,7 @@ services:
       - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
       - GOOGLE_API_KEY=your_google_api_key_here
       - IMAGE_SEARCH_ENGINE_ID=your_image_search_engine_id_here
+      - EXCHANGERATE_API_KEY=your_exchangerate_api_key_here
       - LOG_LEVEL=your_desired_log_level_here
       - MAL_CLIENT_ID=your_mal_client_id_here
       - NEON_CONNECTION_STRING=your_neon_connection_string_here
@@ -74,6 +75,7 @@ Here is a table of all available environment variables:
 | Variable                            | Description                                               | Required | Default | Example                                                                          |
 | ----------------------------------- | --------------------------------------------------------- | :------: | :-----: | -------------------------------------------------------------------------------- |
 | `DISCORD_BOT_TOKEN`                 | Authentication token for your Discord bot                 |    ✅    |    -    | -                                                                                |
+| `EXCHANGERATE_API_KEY`              | API key for exchangerate.host (currency conversion)       |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ✅    |    -    | -                                                                                |
 | `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ✅    |    -    | -                                                                                |
 | `GOOGLE_API_KEY`                    | API key for Google services                               |    ✅    |    -    | -                                                                                |

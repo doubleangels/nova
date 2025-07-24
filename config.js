@@ -29,6 +29,7 @@ require('dotenv').config();
  * @property {string} logLevel - Logging level (default: 'info')
  * @property {string} givePermsPositionAboveRoleId - Role ID for permission management
  * @property {string} givePermsFrenRoleId - Role ID for Fren role
+ * @property {string} exchangeRateApiKey - exchangerate.host API key for currency conversion
  */
 
 /** @type {BotConfig} */
@@ -39,22 +40,23 @@ module.exports = {
     rescheduleAllMuteKicksOnStart: true,
     disabledCommands: [],
   },
-  token: process.env.DISCORD_BOT_TOKEN,
   clientId: "1280311987154456657",
-  neonConnectionString: process.env.NEON_CONNECTION_STRING,
+  exchangeRateApiKey: process.env.EXCHANGERATE_API_KEY,
+  givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
+  givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
   googleApiKey: process.env.GOOGLE_API_KEY,
-  searchEngineId: process.env.SEARCH_ENGINE_ID,
   imageSearchEngineId: process.env.IMAGE_SEARCH_ENGINE_ID,
+  logLevel: process.env.LOG_LEVEL || 'info',
+  malClientId: process.env.MAL_CLIENT_ID,
+  neonConnectionString: process.env.NEON_CONNECTION_STRING,
   omdbApiKey: process.env.OMDB_API_KEY,
   pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
-  malClientId: process.env.MAL_CLIENT_ID,
-  spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
-  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
   redditClientId: process.env.REDDIT_CLIENT_ID,
   redditClientSecret: process.env.REDDIT_CLIENT_SECRET,
-  redditUsername: process.env.REDDIT_USERNAME,
   redditPassword: process.env.REDDIT_PASSWORD,
-  logLevel: process.env.LOG_LEVEL || 'info',
-  givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
-  givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
+  redditUsername: process.env.REDDIT_USERNAME,
+  searchEngineId: process.env.SEARCH_ENGINE_ID,
+  spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
+  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  token: process.env.DISCORD_BOT_TOKEN,
 };
