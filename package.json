@@ -16,15 +16,15 @@
   },
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
-    "axios": "^1.10.0",
+    "axios": "^1.11.0",
     "brace-expansion": "^4.0.1",
     "dayjs": "^1.11.13",
     "discord.js": "^14.21.0",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "he": "^1.2.0",
     "node-cache": "^5.1.2",
     "pg": "^8.16.3",
-    "snoowrap": "^1.16.0",
+    "snoowrap": "^1.23.0",
     "winston": "^3.17.0"
   }
 }
