@@ -48,7 +48,6 @@ module.exports = {
       const meanings = data.meanings && data.meanings.length > 0 ? data.meanings[0] : null;
       const definition = meanings && meanings.definitions && meanings.definitions.length > 0 ? meanings.definitions[0] : null;
       const phonetic = data.phonetic || (data.phonetics && data.phonetics[0] && data.phonetics[0].text) || '';
-      const example = definition && definition.example ? definition.example : 'No example provided.';
       const partOfSpeech = meanings ? meanings.partOfSpeech : 'Unknown';
 
       const embed = new EmbedBuilder()
@@ -57,9 +56,7 @@ module.exports = {
         .setDescription(definition ? definition.definition : 'No definition found.')
         .addFields(
           { name: 'Phonetic', value: phonetic || 'N/A', inline: true },
-          { name: 'Part of Speech', value: partOfSpeech, inline: true },
-          { name: 'Example', value: example }
-        )
+          { name: 'Part of Speech', value: partOfSpeech, inline: true }        )
         .setFooter({ text: 'Powered by Free Dictionary API' });
 
       await interaction.editReply({ embeds: [embed] });
