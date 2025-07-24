@@ -13,11 +13,23 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('imdb')
     .setDescription('Search for movies and TV shows using IMDb.')
-    .addStringOption(option =>
-      option
-        .setName('title')
-        .setDescription('What movie or TV show do you want to search for?')
-        .setRequired(true)
+    .addSubcommand(sub =>
+      sub.setName('movie')
+        .setDescription('Search for a movie on IMDb.')
+        .addStringOption(option =>
+          option.setName('title')
+            .setDescription('What movie do you want to search for?')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand(sub =>
+      sub.setName('tv')
+        .setDescription('Search for a TV show on IMDb.')
+        .addStringOption(option =>
+          option.setName('title')
+            .setDescription('What TV show do you want to search for?')
+            .setRequired(true)
+        )
     ),
 
   /**
@@ -43,43 +55,48 @@ module.exports = {
       }
 
       await interaction.deferReply();
-      
-      logger.info("/imdb command initiated:", { 
-        userId: interaction.user.id, 
-        userTag: interaction.user.tag 
-      });
-
+      const subcommand = interaction.options.getSubcommand();
       const titleQuery = interaction.options.getString('title');
-      logger.debug("Processing search query:", { titleQuery });
+      logger.info(`/imdb ${subcommand} command initiated:`, {
+        userId: interaction.user.id,
+        userTag: interaction.user.tag,
+        subcommand
+      });
       const formattedTitle = titleQuery.trim();
-
+      let typeParam = undefined;
+      let typeLabel = '';
+      if (subcommand === 'movie') {
+        typeParam = 'movie';
+        typeLabel = 'Movie';
+      } else if (subcommand === 'tv') {
+        typeParam = 'series';
+        typeLabel = 'TV Show';
+      }
       const response = await axios.get(`http://www.omdbapi.com/`, {
         params: {
           apikey: config.omdbApiKey,
           t: formattedTitle,
-          plot: 'full'
+          plot: 'full',
+          type: typeParam
         },
         timeout: 5000
       });
-
       if (response.data.Error) {
-        logger.warn("No results found for query:", { query: formattedTitle });
+        logger.warn("No results found for query:", { query: formattedTitle, type: typeParam });
         await interaction.editReply({
-          content: "⚠️ No results found for your search. Please try a different title."
+          content: `⚠️ No results found for your search. Please try a different title.`
         });
         return;
       }
-
-      const movieData = response.data;
-      const embed = this.createMovieEmbed(movieData);
+      const data = response.data;
+      const embed = this.createMediaEmbed(data, typeLabel);
       await interaction.editReply({ embeds: [embed] });
-      
-      logger.info("/imdb command completed successfully:", { 
-        title: movieData.Title, 
+      logger.info(`/imdb ${subcommand} command completed successfully:`, {
+        title: data.Title,
         userId: interaction.user.id,
-        imdbId: movieData.imdbID
+        imdbId: data.imdbID,
+        type: typeParam
       });
-
     } catch (error) {
       await this.handleError(interaction, error);
     }
@@ -87,29 +104,27 @@ module.exports = {
 
   /**
    * Creates a Discord embed with movie/show information.
-   * 
-   * @param {Object} movieData - The movie/show data from OMDb API
-   * @returns {EmbedBuilder} Discord embed with movie/show details
+   * @param {Object} data - The movie/show data from OMDb API
+   * @param {string} typeLabel - 'Movie' or 'TV Show'
+   * @returns {EmbedBuilder} Discord embed with details
    */
-  createMovieEmbed(movieData) {
+  createMediaEmbed(data, typeLabel) {
     const embed = new EmbedBuilder()
       .setColor(0xF5C518)
-      .setTitle(`🎬 ${movieData.Title}`)
-      .setDescription(movieData.Plot || 'No plot available')
+      .setTitle(`${typeLabel === 'Movie' ? '🎬' : '📺'} ${data.Title}`)
+      .setDescription(data.Plot || 'No plot available')
       .addFields(
-        { name: '📅 Year', value: movieData.Year, inline: true },
-        { name: '⭐ Rating', value: movieData.imdbRating || 'N/A', inline: true },
-        { name: '🎭 Genre', value: movieData.Genre || 'N/A', inline: true },
-        { name: '🎥 Director', value: movieData.Director || 'N/A', inline: true },
-        { name: '👥 Actors', value: movieData.Actors || 'N/A', inline: true },
-        { name: '🏆 Awards', value: movieData.Awards || 'N/A', inline: true }
+        { name: '📅 Year', value: data.Year, inline: true },
+        { name: '⭐ Rating', value: data.imdbRating || 'N/A', inline: true },
+        { name: '🎭 Genre', value: data.Genre || 'N/A', inline: true },
+        { name: '🎥 Director', value: data.Director || 'N/A', inline: true },
+        { name: '👥 Actors', value: data.Actors || 'N/A', inline: true },
+        { name: '🏆 Awards', value: data.Awards || 'N/A', inline: true }
       )
-      .setFooter({ text: 'Powered by OMDb API' });
-
-    if (movieData.Poster && movieData.Poster !== 'N/A') {
-      embed.setThumbnail(movieData.Poster);
+      .setFooter({ text: `Powered by OMDb API • ${typeLabel}` });
+    if (data.Poster && data.Poster !== 'N/A') {
+      embed.setThumbnail(data.Poster);
     }
-
     return embed;
   },
 
