@@ -258,7 +258,6 @@ module.exports = {
     
     const windDirection = this.getWindDirection(weatherInfo.windBearing);
     
-    // Get timezone information for the location
     let timezoneResult;
     try {
       timezoneResult = await getTimezoneData({ lat, lng: lon });
@@ -273,7 +272,6 @@ module.exports = {
 
     const forecastText = this.createForecastText(daily, unitsOption, forecastDays, timezoneResult?.timezoneId);
     
-    // Format time in the location's timezone
     let formattedTime;
     if (!timezoneResult.error && timezoneResult.timezoneId) {
       formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MM/DD/YYYY h:mm A');

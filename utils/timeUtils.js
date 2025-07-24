@@ -40,9 +40,7 @@ function extractTimeReferences(content) {
     throw new Error("⚠️ No time reference provided.");
   }
   try {
-    // Remove URLs
     let cleaned = content.replace(/https?:\/\/\S+/gi, '');
-    // Remove anything inside <...> (Discord tags, emotes, etc)
     cleaned = cleaned.replace(/<[^>]*>/g, '');
 
     const matches = cleaned.match(/\d+\s*:\s*\d+|\d+\s*[ap]\.?(?:m\.?|m)|noon|midnight/gi);
