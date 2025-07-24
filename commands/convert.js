@@ -74,6 +74,29 @@ const TEMP_CHOICES = [
   { name: 'Kelvin (K)', value: 'k' }
 ];
 
+const CURRENCY_CHOICES = [
+  { name: 'US Dollar (USD)', value: 'USD' },
+  { name: 'Euro (EUR)', value: 'EUR' },
+  { name: 'British Pound (GBP)', value: 'GBP' },
+  { name: 'Japanese Yen (JPY)', value: 'JPY' },
+  { name: 'Australian Dollar (AUD)', value: 'AUD' },
+  { name: 'Canadian Dollar (CAD)', value: 'CAD' },
+  { name: 'Swiss Franc (CHF)', value: 'CHF' },
+  { name: 'Chinese Yuan (CNY)', value: 'CNY' },
+  { name: 'Swedish Krona (SEK)', value: 'SEK' },
+  { name: 'New Zealand Dollar (NZD)', value: 'NZD' },
+  { name: 'Mexican Peso (MXN)', value: 'MXN' },
+  { name: 'Singapore Dollar (SGD)', value: 'SGD' },
+  { name: 'Hong Kong Dollar (HKD)', value: 'HKD' },
+  { name: 'Norwegian Krone (NOK)', value: 'NOK' },
+  { name: 'South Korean Won (KRW)', value: 'KRW' },
+  { name: 'Turkish Lira (TRY)', value: 'TRY' },
+  { name: 'Indian Rupee (INR)', value: 'INR' },
+  { name: 'Russian Ruble (RUB)', value: 'RUB' },
+  { name: 'Brazilian Real (BRL)', value: 'BRL' },
+  { name: 'South African Rand (ZAR)', value: 'ZAR' }
+];
+
 function convertLength(value, from, to) {
   const fromFactor = LENGTH_UNITS[from.toLowerCase()];
   const toFactor = LENGTH_UNITS[to.toLowerCase()];
@@ -112,20 +135,20 @@ module.exports = {
         .setDescription('Convert between currencies.')
         .addNumberOption(option =>
           option.setName('amount')
-            .setDescription('What is the amount you want to convert?')
+            .setDescription('Amount to convert')
             .setRequired(true))
         .addStringOption(option => {
           let opt = option.setName('from')
-            .setDescription('What is the currency you want to convert from?')
+            .setDescription('Currency to convert from')
             .setRequired(true);
-          CURRENCY_CODES.forEach(code => opt = opt.addChoices({ name: code, value: code }));
+          CURRENCY_CHOICES.forEach(choice => opt = opt.addChoices(choice));
           return opt;
         })
         .addStringOption(option => {
           let opt = option.setName('to')
-            .setDescription('What is the currency you want to convert to?')
+            .setDescription('Currency to convert to')
             .setRequired(true);
-          CURRENCY_CODES.forEach(code => opt = opt.addChoices({ name: code, value: code }));
+          CURRENCY_CHOICES.forEach(choice => opt = opt.addChoices(choice));
           return opt;
         })
     )
