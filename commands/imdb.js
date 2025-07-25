@@ -109,6 +109,7 @@ module.exports = {
    * @returns {EmbedBuilder} Discord embed with details
    */
   createMediaEmbed(data, typeLabel) {
+    const imdbUrl = data.imdbID ? `https://www.imdb.com/title/${data.imdbID}/` : null;
     const embed = new EmbedBuilder()
       .setColor(0xF5C518)
       .setTitle(`${typeLabel === 'Movie' ? '🎬' : '📺'} ${data.Title}`)
@@ -119,9 +120,10 @@ module.exports = {
         { name: '🎭 Genre', value: data.Genre || 'N/A', inline: true },
         { name: '🎥 Director', value: data.Director || 'N/A', inline: true },
         { name: '👥 Actors', value: data.Actors || 'N/A', inline: true },
-        { name: '🏆 Awards', value: data.Awards || 'N/A', inline: true }
-      )
-      .setFooter({ text: `Powered by OMDb API • ${typeLabel}` });
+        { name: '🏆 Awards', value: data.Awards || 'N/A', inline: true },
+        imdbUrl ? { name: '🔗 IMDb', value: `[View on IMDb](${imdbUrl})`, inline: false } : null
+      ).setFooter({ text: `Powered by OMDb API • ${typeLabel}` });
+    if (imdbUrl) embed.setURL(imdbUrl);
     if (data.Poster && data.Poster !== 'N/A') {
       embed.setThumbnail(data.Poster);
     }
