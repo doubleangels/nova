@@ -63,7 +63,7 @@ module.exports = {
       switch (subcommand) {
         case 'search':
           const query = interaction.options.getString('query');
-          results = await this.searchBooks(query, 10);
+          results = await this.searchBooks(query, 5);
           break;
         case 'isbn':
           const isbn = interaction.options.getString('isbn');
@@ -88,7 +88,7 @@ module.exports = {
         120000,
         logger,
         {
-          buttonStyle: ButtonStyle.Primary,
+          buttonStyle: ButtonStyle.Secondary,
           prevLabel: "Previous",
           nextLabel: "Next",
           prevEmoji: "◀️",
@@ -115,7 +115,7 @@ module.exports = {
    * @param {number} maxResults - Maximum number of results to return
    * @returns {Promise<Array|null>} Array of book results or null if no results
    */
-  async searchBooks(query, maxResults = 10) {
+  async searchBooks(query, maxResults = 5) {
     try {
       const apiKey = config.googleBooksApiKey;
       if (!apiKey) {
