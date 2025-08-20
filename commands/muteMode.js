@@ -231,7 +231,7 @@ module.exports = {
     
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
-      { name: 'Time Limit', value: `**${settings.timeLimit}** hours` }
+      { name: 'Time Limit', value: `${settings.timeLimit} hours` }
     )
     .setFooter({ text: `Requested by ${interaction.user.tag}` });
     
@@ -269,12 +269,12 @@ module.exports = {
     if (oldTimeLimit !== newTimeLimit) {
       embed.addFields({ 
         name: 'Time Limit', 
-        value: `**${oldTimeLimit}** → **${newTimeLimit}** hours` 
+        value: `${oldTimeLimit} → ${newTimeLimit} hours` 
       });
     } else {
       embed.addFields({ 
         name: 'Time Limit', 
-        value: `**${newTimeLimit}** hours` 
+        value: `${newTimeLimit} hours` 
       });
     }
     
