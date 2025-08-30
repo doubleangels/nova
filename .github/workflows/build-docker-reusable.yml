@@ -115,25 +115,3 @@ jobs:
           echo "Successfully built and pushed to Google Artifact Registry:"
           echo "Tags: us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }}"
           echo "       us-central1-docker.pkg.dev/da-frens/nova/nova:${{ github.ref_name }}"
-
-      - name: Deploy to Cloud Run (Main Branch)
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-        run: |
-          echo "Deploying to Cloud Run..."
-          echo "Image: us-central1-docker.pkg.dev/da-frens/nova/nova:latest"
-
-          # Check if image exists
-          gcloud artifacts docker images list us-central1-docker.pkg.dev/da-frens/nova/nova || echo "Image not found, will create service with placeholder"
-
-          # Deploy the service
-          gcloud run deploy nova-discord-bot \
-            --image us-central1-docker.pkg.dev/da-frens/nova/nova:latest \
-            --platform managed \
-            --region us-central1 \
-            --allow-unauthenticated \
-            --memory 512Mi \
-            --cpu 1 \
-            --max-instances 10 \
-            --min-instances 0 \
-            --set-env-vars DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }},DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }} \
-            --quiet
