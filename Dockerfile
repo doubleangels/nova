@@ -27,4 +27,4 @@ USER discordbot
 ENTRYPOINT ["dumb-init", "--"]
 
 # Define the default command to run your application
-CMD ["node", "index.js"]
+CMD ["node", "start.js"]
