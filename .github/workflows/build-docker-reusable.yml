@@ -115,3 +115,17 @@ jobs:
           echo "Successfully built and pushed to Google Artifact Registry:"
           echo "Tags: us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }}"
           echo "       us-central1-docker.pkg.dev/da-frens/nova/nova:${{ github.ref_name }}"
+
+      - name: Update Cloud Run Service (nova)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "Updating Cloud Run service 'nova'..."
+          echo "Image: us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }}"
+
+          # Update the Cloud Run service with the new image
+          gcloud run services update nova \
+            --image us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }} \
+            --region us-central1 \
+            --quiet
+
+          echo "Cloud Run service 'nova' updated successfully!"
