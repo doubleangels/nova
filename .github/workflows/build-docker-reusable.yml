@@ -46,7 +46,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Google Auth for GAR
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         id: auth
         uses: google-github-actions/auth@v2
         with:
@@ -54,7 +54,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Configure Docker for GAR
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev
 
@@ -89,19 +89,22 @@ jobs:
           echo "Labels: ${{ steps.meta.outputs.labels }}"
 
       - name: Build and push to Google Artifact Registry
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.GAR_REGISTRY }}/nova-discord-bot:latest
+          tags: |
+            ${{ secrets.GAR_REGISTRY }}/nova:${{ inputs.default-tag }}
+            ${{ secrets.GAR_REGISTRY }}/nova:${{ github.ref_name }}
           cache-from: type=gha,scope=${{ inputs.cache-scope }}
           cache-to: type=gha,mode=max,scope=${{ inputs.cache-scope }}
           provenance: false
 
       - name: Output GAR image info
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        if: github.event_name != 'pull_request'
         run: |
           echo "Successfully built and pushed to Google Artifact Registry:"
-          echo "Image: ${{ secrets.GAR_REGISTRY }}/nova-discord-bot:latest"
+          echo "Tags: ${{ secrets.GAR_REGISTRY }}/nova:${{ inputs.default-tag }}"
+          echo "       ${{ secrets.GAR_REGISTRY }}/nova:${{ github.ref_name }}"
