@@ -50,7 +50,7 @@ jobs:
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=${{ inputs.image_tag }},enable={{is_default}}
+            type=raw,value=${{ inputs.image_tag }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
