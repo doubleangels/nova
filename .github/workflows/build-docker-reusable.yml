@@ -44,6 +44,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Google Auth for GAR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for GAR
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -73,3 +86,21 @@ jobs:
           echo "Built and pushed images:"
           echo "${{ steps.meta.outputs.tags }}"
           echo "Labels: ${{ steps.meta.outputs.labels }}"
+
+      - name: Build and push to Google Artifact Registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.GAR_REGISTRY }}/nova-discord-bot:latest
+          cache-from: type=gha,scope=${{ inputs.cache-scope }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.cache-scope }}
+          provenance: false
+
+      - name: Output GAR image info
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          echo "Successfully built and pushed to Google Artifact Registry:"
+          echo "Image: ${{ secrets.GAR_REGISTRY }}/nova-discord-bot:latest"
