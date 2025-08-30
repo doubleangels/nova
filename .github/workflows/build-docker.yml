@@ -11,6 +11,10 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build-docker-reusable.yml
+    secrets:
+      gcp-sa-key: ${{ secrets.GCP_SA_KEY }}
+      gcp-project-id: ${{ secrets.GCP_PROJECT_ID }}
+      gar-registry: ${{ secrets.GAR_REGISTRY }}
     with:
       branch: main
       default-tag: latest

@@ -12,6 +12,13 @@ on:
       cache-scope:
         required: true
         type: string
+    secrets:
+      gcp-sa-key:
+        required: false
+      gcp-project-id:
+        required: false
+      gar-registry:
+        required: false
 
 jobs:
   build-and-push:
@@ -50,8 +57,8 @@ jobs:
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          credentials_json: ${{ secrets.gcp-sa-key }}
+          project_id: ${{ secrets.gcp-project-id }}
 
       - name: Configure Docker for GAR
         if: github.event_name != 'pull_request'
@@ -96,8 +103,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ secrets.GAR_REGISTRY }}/nova:${{ inputs.default-tag }}
-            ${{ secrets.GAR_REGISTRY }}/nova:${{ github.ref_name }}
+            ${{ secrets.gar-registry }}/nova:${{ inputs.default-tag }}
+            ${{ secrets.gar-registry }}/nova:${{ github.ref_name }}
           cache-from: type=gha,scope=${{ inputs.cache-scope }}
           cache-to: type=gha,mode=max,scope=${{ inputs.cache-scope }}
           provenance: false
@@ -106,5 +113,5 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           echo "Successfully built and pushed to Google Artifact Registry:"
-          echo "Tags: ${{ secrets.GAR_REGISTRY }}/nova:${{ inputs.default-tag }}"
-          echo "       ${{ secrets.GAR_REGISTRY }}/nova:${{ github.ref_name }}"
+          echo "Tags: ${{ secrets.gar-registry }}/nova:${{ inputs.default-tag }}"
+          echo "       ${{ secrets.gar-registry }}/nova:${{ github.ref_name }}"
