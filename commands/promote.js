@@ -66,7 +66,9 @@ module.exports = {
     await interaction.deferReply();
     logger.info("/promote command initiated:", { 
       userId: interaction.user.id, 
-      guildId: interaction.guildId 
+      guildId: interaction.guildId,
+      promotionTitle: PROMOTION_TITLE,
+      promotionLink: PROMOTION_LINK
     });
 
     const nextPromotionTime = await this.getLastPromotion();
@@ -92,7 +94,12 @@ module.exports = {
     }
 
     try {
-      logger.info("Attempting to post to r/DiscordAdvertising...");
+      logger.info("Attempting to post to r/DiscordAdvertising", {
+        subreddit: 'DiscordAdvertising',
+        title: PROMOTION_TITLE,
+        link: PROMOTION_LINK,
+        userId: interaction.user.id
+      });
       
       const submission = await reddit.getSubreddit('DiscordAdvertising').submitLink({
         title: PROMOTION_TITLE,
@@ -102,12 +109,18 @@ module.exports = {
       const post = await submission.fetch();
       const permalink = await post.permalink;
 
-      logger.info("Successfully posted to r/DiscordAdvertising");
+      logger.info("Successfully posted to r/DiscordAdvertising", {
+        postUrl: `https://reddit.com${permalink}`,
+        postId: post.id,
+        title: PROMOTION_TITLE,
+        userId: interaction.user.id,
+        guildId: interaction.guildId
+      });
       
       const embed = new EmbedBuilder()
         .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
-        .setDescription('Your server has been promoted on r/DiscordAdvertising.')
+        .setDescription(`Your server has been promoted on r/DiscordAdvertising.\n\n**View your post:** [View on Reddit](${`https://reddit.com${permalink}`})`)
         .setFooter({ 
           text: 'Next promotion available in 24 hours' 
         })
