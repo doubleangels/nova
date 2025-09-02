@@ -250,28 +250,7 @@ function isValidTranslationFlag(emoji) {
     return isValid;
 }
 
-/**
- * Handles errors that occur during language processing
- * @param {Error} error - The error that occurred
- * @param {string} context - The context where the error occurred
- * @throws {Error} A formatted error message based on the error type
- */
-function handleError(error, context) {
-  logger.error(`Error in ${context}:`, {
-    error: error.message,
-    stack: error.stack
-  });
 
-  if (error.message === "DATABASE_ERROR") {
-    throw new Error("⚠️ Database error occurred while processing language settings.");
-  } else if (error.message === "INVALID_LANGUAGE") {
-    throw new Error("⚠️ Invalid language provided.");
-  } else if (error.message === "LANGUAGE_NOT_SUPPORTED") {
-    throw new Error("⚠️ Language not supported.");
-  } else {
-    throw new Error("⚠️ An unexpected error occurred while processing language settings.");
-  }
-}
 
 module.exports = {
     LANG_FLAG_TO_LANGUAGE,
