@@ -1,16 +1,9 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { extractTimeReferences, convertTimeZones, formatConvertedTimes } = require('../utils/timeUtils');
 const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-const timezone = require('dayjs/plugin/timezone');
 const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
 
 module.exports = {
   name: Events.MessageReactionAdd,
@@ -18,9 +11,8 @@ module.exports = {
   /**
    * Handles the event when a new reaction is added to a message.
    * This function:
-   * 1. Processes clock reactions for time conversions
-   * 2. Handles translation requests via flag emojis
-   * 3. Manages partial message/reaction fetching
+   * 1. Handles translation requests via flag emojis
+   * 2. Manages partial message/reaction fetching
    * 
    * @param {MessageReaction} reaction - The reaction that was added
    * @param {User} user - The user who added the reaction
@@ -99,42 +91,7 @@ module.exports = {
   }
 };
 
-/**
- * Fetches partial data for reactions and messages
- * @param {MessageReaction} reaction - The reaction to fetch data for
- * @throws {Error} If there's an error fetching the data
- * @returns {Promise<void>}
- */
-async function fetchPartialData(reaction) {
-  if (reaction.partial) {
-    try {
-      await reaction.fetch();
-    } catch (error) {
-      logger.error('Failed to fetch partial reaction:', {
-        error: error.stack,
-        message: error.message,
-        emoji: reaction.emoji?.name || 'unknown',
-        messageId: reaction.message?.id || 'unknown',
-        userId: reaction.user?.id || 'unknown'
-      });
-      throw error;
-    }
-  }
-  
-  if (reaction.message.partial) {
-    try {
-      await reaction.message.fetch();
-    } catch (error) {
-      logger.error('Failed to fetch partial message:', {
-        error: error.stack,
-        message: error.message,
-        messageId: reaction.message?.id || 'unknown',
-        userId: reaction.user?.id || 'unknown'
-      });
-      throw error;
-    }
-  }
-}
+
 
 /**
  * Handles translation requests via flag emoji reactions

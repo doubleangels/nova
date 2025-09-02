@@ -250,8 +250,6 @@ function isValidTimezone(timezoneId) {
 }
 
 module.exports = {
-    getGeocodingInfo,
-    getTimezoneInfo,
     secondsToHours,
     getUtcOffset,
     formatPlaceName,

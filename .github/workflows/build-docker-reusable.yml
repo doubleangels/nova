@@ -94,38 +94,3 @@ jobs:
           echo "Built and pushed images:"
           echo "${{ steps.meta.outputs.tags }}"
           echo "Labels: ${{ steps.meta.outputs.labels }}"
-
-      - name: Build and push to Google Artifact Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }}
-            us-central1-docker.pkg.dev/da-frens/nova/nova:${{ github.ref_name }}
-          cache-from: type=gha,scope=${{ inputs.cache-scope }}
-          cache-to: type=gha,mode=max,scope=${{ inputs.cache-scope }}
-          provenance: false
-
-      - name: Output GAR image info
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "Successfully built and pushed to Google Artifact Registry:"
-          echo "Tags: us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }}"
-          echo "       us-central1-docker.pkg.dev/da-frens/nova/nova:${{ github.ref_name }}"
-
-      - name: Update Cloud Run Service (nova)
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "Updating Cloud Run service 'nova'..."
-          echo "Image: us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }}"
-
-          # Update the Cloud Run service with the new image
-          gcloud run services update nova \
-            --image us-central1-docker.pkg.dev/da-frens/nova/nova:${{ inputs.default-tag }} \
-            --region us-central1 \
-            --quiet
-
-          echo "Cloud Run service 'nova' updated successfully!"
