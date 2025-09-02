@@ -3,15 +3,23 @@ updates:
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     target-branch: "dev"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+    allow:
+      - dependency-type: "direct"
     commit-message:
       prefix: "[Github Actions]"
   
   - package-ecosystem: npm
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
     target-branch: "dev"
+    open-pull-requests-limit: 10
+    rebase-strategy: "auto"
+    allow:
+      - dependency-type: "direct"
     commit-message:
       prefix: "[NPM]"
