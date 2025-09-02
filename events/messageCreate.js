@@ -2,7 +2,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, removeMuteModeUser } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
-const { extractTimeReferences } = require('../utils/timeUtils');
 const { Events } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
 
@@ -41,8 +40,6 @@ module.exports = {
       });
 
       await removeMuteModeUser(message.author.id);
-
-      await processTimeReferences(message);
 
       if (message.content.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
@@ -122,8 +119,6 @@ module.exports = {
         errorMessage = "⚠️ Failed to fetch message content.";
       } else if (error.message === "⚠️ Failed to track message data.") {
         errorMessage = "⚠️ Failed to track message data.";
-      } else if (error.message === "⚠️ Failed to process time references.") {
-        errorMessage = "⚠️ Failed to process time references.";
       } else if (error.message === "⚠️ Failed to process bump message.") {
         errorMessage = "⚠️ Failed to process bump message.";
       } else if (error.message === "⚠️ Database error occurred while processing message.") {
@@ -158,23 +153,7 @@ async function processUserMessage(message) {
   }
 }
 
-/**
- * Processes time references in a message and adds clock reactions
- * @param {Message} message - The message to process
- * @returns {Promise<void>}
- */
-async function processTimeReferences(message) {
-  if (!message.content) return;
-  try {
-    const timeReferences = extractTimeReferences(message.content);
-    if (timeReferences.length > 0) {
-      if (!global.timeReferenceCache) global.timeReferenceCache = new Map();
-      global.timeReferenceCache.set(message.id, timeReferences);
-    }
-  } catch (error) {
-    logger.error("Failed to process time references:", { error });
-  }
-}
+
 
 /**
  * Checks for bump messages and schedules reminders
