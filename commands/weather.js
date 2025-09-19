@@ -274,13 +274,11 @@ module.exports = {
     
     let formattedTime;
     if (!timezoneResult.error && timezoneResult.timezoneId) {
-      // Use dynamic timestamp for better localization
-      const now = dayjs().tz(timezoneResult.timezoneId);
-      formattedTime = `<t:${Math.floor(now.valueOf() / 1000)}:F>`;
+      // Use formatted time with timezone
+      formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MMM D, YYYY h:mm A');
     } else {
-      // Fallback to UTC with dynamic timestamp
-      const now = dayjs().utc();
-      formattedTime = `<t:${Math.floor(now.valueOf() / 1000)}:F> UTC`;
+      // Fallback to UTC
+      formattedTime = dayjs().utc().format('MMM D, YYYY h:mm A UTC');
     }
     
     const embed = new EmbedBuilder()
@@ -354,8 +352,7 @@ module.exports = {
           inline: false 
         }
       )
-      .setFooter({ text: `Powered by PirateWeather • Data as of ${formattedTime}` })
-      .setTimestamp();
+      .setFooter({ text: `Powered by PirateWeather • ${formattedTime}` });
     
     return embed;
   },
