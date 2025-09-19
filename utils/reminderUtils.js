@@ -74,16 +74,23 @@ async function handleReminder(message, delay, type = 'bump') {
       return;
     }
 
-    await REMINDER_POOL.query(
+    // Clean up existing reminders first
+    const cleanupResult = await REMINDER_POOL.query(
       `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
       [type]
     );
-    logger.debug("Cleaned up existing reminders of type:", type);
+    logger.debug("Cleaned up existing reminders of type:", { type, deletedCount: cleanupResult.rowCount });
 
-    await REMINDER_POOL.query(
-      `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
-      [reminderId, scheduledTime.toISOString(), type]
-    );
+    // Only insert if cleanup was successful
+    if (cleanupResult !== null) {
+      await REMINDER_POOL.query(
+        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
+        [reminderId, scheduledTime.toISOString(), type]
+      );
+      logger.debug("Successfully inserted new reminder:", { reminderId, type, scheduledTime: scheduledTime.toISOString() });
+    } else {
+      throw new Error("Failed to cleanup existing reminders, aborting new reminder creation");
+    }
 
     const confirmationMessage = type === 'promote'
       ? `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`
