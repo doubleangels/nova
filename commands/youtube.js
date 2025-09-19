@@ -501,7 +501,7 @@ module.exports = {
     }
     
     const uploadDate = snippet.publishedAt ? 
-      `📅 ${new Date(snippet.publishedAt).toLocaleDateString()}` : '';
+      `📅 <t:${Math.floor(new Date(snippet.publishedAt).getTime() / 1000)}:D>` : '';
     
     return embed
       .setTitle(`🎬 ${snippet.title}`)

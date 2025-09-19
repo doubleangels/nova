@@ -274,9 +274,13 @@ module.exports = {
     
     let formattedTime;
     if (!timezoneResult.error && timezoneResult.timezoneId) {
-      formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MM/DD/YYYY h:mm A');
+      // Use dynamic timestamp for better localization
+      const now = dayjs().tz(timezoneResult.timezoneId);
+      formattedTime = `<t:${Math.floor(now.valueOf() / 1000)}:F>`;
     } else {
-      formattedTime = dayjs().utc().format('MM/DD/YYYY h:mm A UTC');
+      // Fallback to UTC with dynamic timestamp
+      const now = dayjs().utc();
+      formattedTime = `<t:${Math.floor(now.valueOf() / 1000)}:F> UTC`;
     }
     
     const embed = new EmbedBuilder()
