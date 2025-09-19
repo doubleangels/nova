@@ -325,7 +325,7 @@ module.exports = {
           iconURL: targetUser.displayAvatarURL()
         })
         .setFooter({
-          text: `Page ${Math.floor(i / messagesPerEmbed) + 1}/${Math.ceil(messages.length / messagesPerEmbed)}`
+          text: `Powered by Discord API • Page ${Math.floor(i / messagesPerEmbed) + 1}/${Math.ceil(messages.length / messagesPerEmbed)}`
         });
       
       const messagesChunk = messages.slice(i, i + messagesPerEmbed);

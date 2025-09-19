@@ -456,7 +456,7 @@ module.exports = {
       .setURL(item.url)
       .setThumbnail(item.imageUrl)
       .setFooter({ 
-        text: `Previous ${index + 1} of ${results.length} • Powered by Spotify`
+        text: `Powered by Spotify • Result ${index + 1} of ${results.length}`
       });
 
     switch (type) {
@@ -547,9 +547,9 @@ module.exports = {
   },
 
   /**
-   * Formats a release date string to Discord dynamic timestamp
+   * Formats a release date string to a readable date format
    * @param {string} releaseDate - The release date string (YYYY-MM-DD, YYYY-MM, or YYYY)
-   * @returns {string} Formatted timestamp or 'Unknown'
+   * @returns {string} Formatted date or 'Unknown'
    */
   formatReleaseDate(releaseDate) {
     if (!releaseDate || releaseDate === 'Unknown') {
@@ -560,23 +560,25 @@ module.exports = {
       // Handle different date formats from Spotify API
       let date;
       if (releaseDate.length === 4) {
-        // Year only - use January 1st of that year
-        date = new Date(`${releaseDate}-01-01`);
+        // Year only - just return the year
+        return releaseDate;
       } else if (releaseDate.length === 7) {
-        // Year-Month - use first day of that month
+        // Year-Month - format as "Month YYYY"
         date = new Date(`${releaseDate}-01`);
+        if (isNaN(date.getTime())) {
+          return releaseDate;
+        }
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
       } else {
-        // Full date
+        // Full date - format as readable date
         date = new Date(releaseDate);
+        if (isNaN(date.getTime())) {
+          return releaseDate;
+        }
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       }
-      
-      if (isNaN(date.getTime())) {
-        return 'Unknown';
-      }
-      
-      return `<t:${Math.floor(date.getTime() / 1000)}:D>`;
     } catch (error) {
-      return 'Unknown';
+      return releaseDate;
     }
   },
 

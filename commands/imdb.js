@@ -122,7 +122,7 @@ module.exports = {
         { name: '👥 Actors', value: data.Actors || 'N/A', inline: true },
         { name: '🏆 Awards', value: data.Awards || 'N/A', inline: true },
         imdbUrl ? { name: '🔗 IMDb', value: `[View on IMDb](${imdbUrl})`, inline: false } : null
-      ).setFooter({ text: `Powered by OMDb API • ${typeLabel}` });
+      ).setFooter({ text: `Powered by OMDb API` });
     if (imdbUrl) embed.setURL(imdbUrl);
     if (data.Poster && data.Poster !== 'N/A') {
       embed.setThumbnail(data.Poster);

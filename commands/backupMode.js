@@ -317,8 +317,7 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldChannelId, newChannelId, oldRoleId, newRoleId, interaction) {
     const embed = new EmbedBuilder()
       .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔄 Backup Mode Updated')
-      .setTimestamp();
+      .setTitle('🔄 Backup Mode Updated');
 
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
@@ -336,8 +335,6 @@ module.exports = {
       embed.setDescription(`New members will be welcomed in <#${newChannelId || 'unset'}> and assigned the <@&${newRoleId || 'unset'}> role.`);
     }
 
-    embed.setFooter({ text: `Updated by ${interaction.user.tag}` });
-    
     return embed;
   },
 
@@ -350,8 +347,7 @@ module.exports = {
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔄 Backup Mode Status')
-      .setTimestamp();
+      .setTitle('🔄 Backup Mode Status');
 
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
@@ -370,8 +366,6 @@ module.exports = {
       embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.`);
     }
 
-    embed.setFooter({ text: `Requested by ${interaction.user.tag}` });
-    
     return embed;
   }
 };

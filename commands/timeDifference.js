@@ -151,9 +151,7 @@ module.exports = {
         .addFields(
           { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },
           { name: formattedPlace2, value: this.formatTimeZone(offset2Result) }
-        )
-        .setFooter({ text: `Requested by ${interaction.user.tag}` })
-        .setTimestamp();
+        );
 
       if (rawTimeDiff === 0) {
         embed.setDescription(`**${formattedPlace1}** and **${formattedPlace2}** are in the same time zone.`);

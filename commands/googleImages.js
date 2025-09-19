@@ -218,7 +218,7 @@ module.exports = {
       .setDescription(`🔗 **[View Original Source](${pageLink})**`)
       .setColor(0x4285F4)
       .setImage(imageLink)
-      .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Image Search` });
+      .setFooter({ text: `Powered by Google Image Search • Result ${index + 1} of ${items.length}` });
   },
 
   /**

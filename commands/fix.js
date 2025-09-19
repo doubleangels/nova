@@ -60,9 +60,7 @@ module.exports = {
       const embed = new EmbedBuilder()
           .setColor(0xc03728)
           .setTitle('Disboard Bump Reminder Fixed')
-          .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
-          .setFooter({ text: `Updated by ${interaction.user.tag}` })
-          .setTimestamp();
+          .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`);
       
       await interaction.editReply({ embeds: [embed] });
       

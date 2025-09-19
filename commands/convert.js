@@ -269,13 +269,29 @@ module.exports = {
           url += `&access_key=${encodeURIComponent(config.exchangeRateApiKey)}`;
         }
         const response = await axios.get(url, { timeout: 10000 });
+        
+        // Log the response for debugging
+        logger.debug('Currency API response:', { 
+          status: response.status, 
+          data: response.data,
+          url: url
+        });
+        
         if (response.data && response.data.result != null) {
           const embed = this.createCurrencyEmbed(amount, from, to, response.data.result);
           await interaction.editReply({ embeds: [embed] });
           logger.info('/convert currency completed:', { amount, from, to, result: response.data.result });
           return;
+        } else if (response.data && response.data.error) {
+          // Handle API error responses
+          logger.warn('Currency API returned error:', { error: response.data.error });
+          await interaction.editReply({ 
+            content: `⚠️ Currency conversion failed: ${response.data.error.info || 'Unknown error'}` 
+          });
+          return;
         } else {
-          throw new Error('Currency conversion failed.');
+          logger.warn('Currency API returned invalid response:', { data: response.data });
+          throw new Error('Currency conversion failed - invalid API response.');
         }
       } else if (subcommand === 'length') {
         const amount = interaction.options.getNumber('amount');

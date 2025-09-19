@@ -352,7 +352,7 @@ module.exports = {
           inline: false 
         }
       )
-      .setFooter({ text: `Powered by PirateWeather • ${formattedTime}` });
+      .setFooter({ text: 'Powered by PirateWeather' });
     
     return embed;
   },

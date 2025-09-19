@@ -119,9 +119,7 @@ module.exports = {
       .addFields(
         { name: 'Role', value: role.name, inline: true },
         { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
-      )
-      .setFooter({ text: `Updated by ${interaction.user.tag}` })
-      .setTimestamp();
+      );
 
     if (reason) {
       embed.addFields({ name: 'Reason', value: reason });

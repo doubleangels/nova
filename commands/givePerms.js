@@ -139,9 +139,7 @@ module.exports = {
                 .addFields(
                     { name: 'New Role', value: roleName.trim(), inline: true },
                     { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }
-                )
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
-                .setTimestamp();
+                );
             
             await interaction.editReply({ embeds: [embed] });
             

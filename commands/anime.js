@@ -190,9 +190,9 @@ module.exports = {
   },
 
   /**
-   * Formats a release date string to Discord dynamic timestamp or year
+   * Formats a release date string to a readable date format
    * @param {string} releaseDate - The release date string from MyAnimeList API
-   * @returns {string} Formatted timestamp or year
+   * @returns {string} Formatted date or year
    */
   formatReleaseDate(releaseDate) {
     if (!releaseDate || releaseDate === 'Unknown') {
@@ -205,19 +205,19 @@ module.exports = {
         // Year only - just return the year
         return releaseDate;
       } else if (releaseDate.length === 7) {
-        // Year-Month - use first day of that month for dynamic timestamp
+        // Year-Month - format as "Month YYYY"
         const date = new Date(`${releaseDate}-01`);
         if (isNaN(date.getTime())) {
           return releaseDate;
         }
-        return `<t:${Math.floor(date.getTime() / 1000)}:D>`;
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
       } else if (releaseDate.length === 10) {
-        // Full date - use dynamic timestamp
+        // Full date - format as readable date
         const date = new Date(releaseDate);
         if (isNaN(date.getTime())) {
           return releaseDate;
         }
-        return `<t:${Math.floor(date.getTime() / 1000)}:D>`;
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
       } else {
         return releaseDate;
       }

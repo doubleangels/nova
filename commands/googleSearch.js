@@ -231,6 +231,6 @@ module.exports = {
       .setTitle(`🔍 ${title}`)
       .setDescription(`📜 **Summary:** ${snippet}\n🔗 [Read More](${link})`)
       .setColor(0x4285F4)
-      .setFooter({ text: `Result ${index + 1} of ${items.length} • Powered by Google Search` });
+      .setFooter({ text: `Powered by Google Search • Result ${index + 1} of ${items.length}` });
   }
 };

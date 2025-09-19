@@ -265,7 +265,7 @@ module.exports = {
       .setTitle(`📚 ${book.title}`)
       .setDescription(this.truncateDescription(book.description))
       .setFooter({ 
-        text: `Book ${index + 1} of ${books.length} • Powered by Google Books`
+        text: `Powered by Google Books • Book ${index + 1} of ${books.length}`
       });
 
     // Add authors

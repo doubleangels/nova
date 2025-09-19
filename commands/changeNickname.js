@@ -75,9 +75,7 @@ module.exports = {
                 .setTitle('Nickname Updated')
                 .setDescription(newNickname 
                     ? `Successfully changed ${targetUser}'s nickname to "${newNickname}"!`
-                    : `Successfully reset ${targetUser}'s nickname!`)
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
-                .setTimestamp();
+                    : `Successfully reset ${targetUser}'s nickname!`);
             
             await interaction.editReply({ embeds: [embed] });
             

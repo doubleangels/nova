@@ -458,7 +458,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0xFF0000)
       .setFooter({ 
-        text: `Result ${index + 1} of ${totalItems} • Powered by YouTube`
+        text: `Powered by YouTube • Result ${index + 1} of ${totalItems}`
       });
     
     switch (contentType) {
@@ -501,7 +501,7 @@ module.exports = {
     }
     
     const uploadDate = snippet.publishedAt ? 
-      `📅 <t:${Math.floor(new Date(snippet.publishedAt).getTime() / 1000)}:D>` : '';
+      `📅 ${new Date(snippet.publishedAt).toLocaleDateString()}` : '';
     
     return embed
       .setTitle(`🎬 ${snippet.title}`)
