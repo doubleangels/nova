@@ -4,7 +4,7 @@
   "description": "Dockerized multi-purpose bot for Discord servers.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "update": "npm outdated && npm update --save"
   },
   "repository": {
     "type": "git",
