@@ -124,7 +124,7 @@ module.exports = {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(0xc03728)
+      .setColor(0xcd41ff)
       .setTitle('✅ Reminder Setup Complete')
       .addFields(
         { name: '📢 Channel', value: `<#${channelOption.id}>` },
@@ -188,7 +188,7 @@ module.exports = {
       const configComplete = channelId && roleId;
       
       const embed = new EmbedBuilder()
-        .setColor(0xc03728)
+        .setColor(0xcd41ff)
         .setTitle('📌 Server Reminders Status')
         .addFields(
           { name: '📢 Channel', value: channelStr },

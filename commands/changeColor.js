@@ -98,7 +98,7 @@ module.exports = {
                 });
                 
                 const errorEmbed = new EmbedBuilder()
-                    .setColor(0xc03728)
+                    .setColor(0xcd41ff)
                     .setTitle('Error')
                     .setDescription(errorMessage);
                 
