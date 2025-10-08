@@ -456,7 +456,7 @@ module.exports = {
       .setURL(item.url)
       .setThumbnail(item.imageUrl)
       .setFooter({ 
-        text: `Previous ${index + 1} of ${results.length} • Powered by Spotify`
+        text: `Powered by Spotify • Result ${index + 1} of ${results.length}`
       });
 
     switch (type) {
@@ -467,7 +467,7 @@ module.exports = {
             { name: 'Album', value: `[${item.album}](${item.albumUrl})`, inline: true },
             { name: 'Duration', value: item.duration, inline: true },
             { name: 'Popularity', value: `${item.popularity}%`, inline: true },
-            { name: 'Release Date', value: item.releaseDate || 'Unknown', inline: true },
+            { name: 'Release Date', value: this.formatReleaseDate(item.releaseDate), inline: true },
             { name: 'Track Number', value: item.trackNumber ? `${item.trackNumber}/${item.totalTracks}` : 'Unknown', inline: true },
             { name: 'Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
             { name: 'Disc Number', value: item.discNumber?.toString() || 'Unknown', inline: true },
@@ -479,7 +479,7 @@ module.exports = {
         embed
           .setDescription(`👤 ${item.artists}`)
           .addFields(
-            { name: 'Release Date', value: item.releaseDate, inline: true },
+            { name: 'Release Date', value: this.formatReleaseDate(item.releaseDate), inline: true },
             { name: 'Tracks', value: item.totalTracks.toString(), inline: true },
             { name: 'Album Type', value: item.albumType || 'Unknown', inline: true },
             { name: 'Label', value: item.label || 'Unknown', inline: true },
@@ -525,7 +525,7 @@ module.exports = {
             { 
               name: 'Latest Episodes', 
               value: item.episodes.slice(0, 5).map(episode => 
-                `[${episode.name}](${episode.url}) - ${episode.duration} (${episode.releaseDate})`
+                `[${episode.name}](${episode.url}) - ${episode.duration} (${this.formatReleaseDate(episode.releaseDate)})`
               ).join('\n'),
               inline: false 
             }
@@ -544,6 +544,42 @@ module.exports = {
 
   formatNumber(num) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  },
+
+  /**
+   * Formats a release date string to a readable date format
+   * @param {string} releaseDate - The release date string (YYYY-MM-DD, YYYY-MM, or YYYY)
+   * @returns {string} Formatted date or 'Unknown'
+   */
+  formatReleaseDate(releaseDate) {
+    if (!releaseDate || releaseDate === 'Unknown') {
+      return 'Unknown';
+    }
+    
+    try {
+      // Handle different date formats from Spotify API
+      let date;
+      if (releaseDate.length === 4) {
+        // Year only - just return the year
+        return releaseDate;
+      } else if (releaseDate.length === 7) {
+        // Year-Month - format as "Month YYYY"
+        date = new Date(`${releaseDate}-01`);
+        if (isNaN(date.getTime())) {
+          return releaseDate;
+        }
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      } else {
+        // Full date - format as readable date
+        date = new Date(releaseDate);
+        if (isNaN(date.getTime())) {
+          return releaseDate;
+        }
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+    } catch (error) {
+      return releaseDate;
+    }
   },
 
   async handleError(interaction, error) {

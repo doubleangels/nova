@@ -274,9 +274,11 @@ module.exports = {
     
     let formattedTime;
     if (!timezoneResult.error && timezoneResult.timezoneId) {
-      formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MM/DD/YYYY h:mm A');
+      // Use formatted time with timezone
+      formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MMM D, YYYY h:mm A');
     } else {
-      formattedTime = dayjs().utc().format('MM/DD/YYYY h:mm A UTC');
+      // Fallback to UTC
+      formattedTime = dayjs().utc().format('MMM D, YYYY h:mm A UTC');
     }
     
     const embed = new EmbedBuilder()
@@ -350,8 +352,7 @@ module.exports = {
           inline: false 
         }
       )
-      .setFooter({ text: `Powered by PirateWeather • Data as of ${formattedTime}` })
-      .setTimestamp();
+      .setFooter({ text: 'Powered by PirateWeather' });
     
     return embed;
   },

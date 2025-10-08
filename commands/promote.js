@@ -120,11 +120,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
-        .setDescription(`Your server has been promoted on r/DiscordAdvertising.\n\n**View your post:** [View on Reddit](${`https://reddit.com${permalink}`})`)
-        .setFooter({ 
-          text: 'Next promotion available in 24 hours' 
-        })
-        .setTimestamp();
+        .setDescription(`Your server has been promoted on r/DiscordAdvertising.\n\n**View your post:** [View on Reddit](${`https://reddit.com${permalink}`})`);
 
       await interaction.editReply({ embeds: [embed] });
 

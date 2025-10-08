@@ -130,9 +130,7 @@ module.exports = {
         { name: '📢 Channel', value: `<#${channelOption.id}>` },
         { name: '🎭 Role', value: `<@&${roleOption.id}>` }
       )
-      .setDescription(`Disboard bump reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`)
-      .setFooter({ text: `Updated by ${interaction.user.tag}` })
-      .setTimestamp();
+      .setDescription(`Disboard bump reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`);
 
     await interaction.editReply({ embeds: [embed] });
   },
@@ -197,9 +195,7 @@ module.exports = {
           { name: '🎭 Role', value: roleStr },
           { name: '⏰ Next Bump', value: bumpTimeStr },
           { name: '🎯 Next Promotion', value: promoteTimeStr }
-        )
-        .setFooter({ text: `Updated by ${interaction.user.tag}` })
-        .setTimestamp();
+        );
 
       if (!configComplete) {
         embed.setDescription('⚠️ **Warning:** Reminder configuration is incomplete.');

@@ -68,16 +68,14 @@ module.exports = {
             await member.setNickname(newNickname || null);
             
             const userHighestRole = member.roles.highest;
-            const embedColor = userHighestRole.color === 0 ? 0xc03728 : userHighestRole.color;
+            const embedColor = userHighestRole.color === 0 ? 0xcd41ff : userHighestRole.color;
             
             const embed = new EmbedBuilder()
                 .setColor(embedColor)
                 .setTitle('Nickname Updated')
                 .setDescription(newNickname 
                     ? `Successfully changed ${targetUser}'s nickname to "${newNickname}"!`
-                    : `Successfully reset ${targetUser}'s nickname!`)
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
-                .setTimestamp();
+                    : `Successfully reset ${targetUser}'s nickname!`);
             
             await interaction.editReply({ embeds: [embed] });
             

@@ -319,13 +319,13 @@ module.exports = {
 
     for (let i = 0; i < messages.length; i += messagesPerEmbed) {
       const embed = new EmbedBuilder()
-        .setColor(0xc03728)
+        .setColor(0xcd41ff)
         .setAuthor({
           name: `Messages from ${targetUser.username} in #${targetChannel.name}`,
           iconURL: targetUser.displayAvatarURL()
         })
         .setFooter({
-          text: `Page ${Math.floor(i / messagesPerEmbed) + 1}/${Math.ceil(messages.length / messagesPerEmbed)}`
+          text: `Powered by Discord API • Page ${Math.floor(i / messagesPerEmbed) + 1}/${Math.ceil(messages.length / messagesPerEmbed)}`
         });
       
       const messagesChunk = messages.slice(i, i + messagesPerEmbed);

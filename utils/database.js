@@ -7,8 +7,6 @@ const config = require('../config');
 const DB_TABLES = {
   CONFIG: 'main.config',
   REMINDERS: 'main.reminder_data',
-  TRACKED_MEMBERS: 'main.tracked_members',
-  TIMEZONES: 'main.timezones',
   MUTE_MODE_RECOVERY: 'main.mute_mode_recovery'
 };
 

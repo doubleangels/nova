@@ -57,9 +57,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(colorValidation.normalizedColor)
                 .setTitle('Role Color Updated')
-                .setDescription(`Successfully changed the color of ${role} from \`${oldColor}\` to \`${colorValidation.normalizedColor}\`!`)
-                .setFooter({ text: `Updated by ${interaction.user.tag}` })
-                .setTimestamp();
+                .setDescription(`Successfully changed the color of ${role} from \`${oldColor}\` to \`${colorValidation.normalizedColor}\`!`);
             
             await interaction.editReply({ embeds: [embed] });
             
@@ -100,10 +98,9 @@ module.exports = {
                 });
                 
                 const errorEmbed = new EmbedBuilder()
-                    .setColor(0xc03728)
+                    .setColor(0xcd41ff)
                     .setTitle('Error')
-                    .setDescription(errorMessage)
-                    .setTimestamp();
+                    .setDescription(errorMessage);
                 
                 await interaction.reply({ 
                     embeds: [errorEmbed],

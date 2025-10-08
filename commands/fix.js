@@ -58,11 +58,9 @@ module.exports = {
       await this.saveReminderToDatabase(reminderId, scheduledTime.toISOString());
       
       const embed = new EmbedBuilder()
-          .setColor(0xc03728)
+          .setColor(0xcd41ff)
           .setTitle('Disboard Bump Reminder Fixed')
-          .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`)
-          .setFooter({ text: `Updated by ${interaction.user.tag}` })
-          .setTimestamp();
+          .setDescription(`✅ Disboard bump reminder successfully fixed!\n⏰ Next bump reminder scheduled <t:${unixTimestamp}:R>.`);
       
       await interaction.editReply({ embeds: [embed] });
       
@@ -105,21 +103,27 @@ module.exports = {
    */
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
-      await pool.query(
+      // Clean up existing reminders first
+      const cleanupResult = await pool.query(
         `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
         ['bump']
       );
-      logger.debug("Cleaned up existing reminders of type:", 'bump');
+      logger.debug("Cleaned up existing reminders of type:", { type: 'bump', deletedCount: cleanupResult.rowCount });
 
-      await pool.query(
-        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
-        [reminderId, scheduledTime, 'bump']
-      );
-      logger.debug("Reminder data saved to database:", { 
-        reminderId: reminderId, 
-        scheduledTime: scheduledTime,
-        type: 'bump'
-      });
+      // Only insert if cleanup was successful
+      if (cleanupResult !== null) {
+        await pool.query(
+          `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
+          [reminderId, scheduledTime, 'bump']
+        );
+        logger.debug("Reminder data saved to database:", { 
+          reminderId: reminderId, 
+          scheduledTime: scheduledTime,
+          type: 'bump'
+        });
+      } else {
+        throw new Error("Failed to cleanup existing reminders, aborting new reminder creation");
+      }
     } catch (error) {
       logger.error("Database error while saving reminder:", { error: error.message, reminderId: reminderId });
       throw new Error("DATABASE_ERROR");

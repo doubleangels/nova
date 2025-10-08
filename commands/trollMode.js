@@ -198,9 +198,7 @@ module.exports = {
       .addFields(
         { name: 'Status', value: settings.enabled ? '✅ Enabled' : '❌ Disabled' },
         { name: 'Minimum Account Age', value: `${settings.accountAge} days` }
-      )
-      .setFooter({ text: `Requested by ${interaction.user.tag}` })
-      .setTimestamp();
+      );
 
     return embed;
   },
@@ -217,9 +215,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(enabled ? 0x00FF00 : 0xFF0000)
       .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
-      .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`)
-      .setFooter({ text: `Updated by ${interaction.user.tag}` })
-      .setTimestamp();
+      .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`);
 
     if (accountAge !== null) {
       embed.addFields({ 

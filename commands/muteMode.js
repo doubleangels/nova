@@ -223,8 +223,7 @@ module.exports = {
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔇 Mute Mode Status')
-      .setTimestamp();
+      .setTitle('🔇 Mute Mode Status');
 
     const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
@@ -232,8 +231,7 @@ module.exports = {
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Time Limit', value: `${settings.timeLimit} hours` }
-    )
-    .setFooter({ text: `Requested by ${interaction.user.tag}` });
+    );
     
     if (settings.isEnabled) {
       embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -255,16 +253,14 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit, interaction) {
     const embed = new EmbedBuilder()
       .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔇 Mute Mode Updated')
-      .setTimestamp();
+      .setTitle('🔇 Mute Mode Updated');
 
     const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
     
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` }
-    )
-    .setFooter({ text: `Updated by ${interaction.user.tag}` });
+    );
     
     if (oldTimeLimit !== newTimeLimit) {
       embed.addFields({ 

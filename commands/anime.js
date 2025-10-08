@@ -168,17 +168,16 @@ module.exports = {
     const genres = animeData.genres.length > 0 
       ? animeData.genres.map(g => g.name).join(", ") 
       : "Unknown";
-    const releaseDate = animeData.releaseDate 
-      ? dayjs(animeData.releaseDate).format('YYYY') 
-      : "Unknown";
+    const releaseDate = this.formatReleaseDate(animeData.releaseDate);
     
     const embed = new EmbedBuilder()
-      .setTitle(`📺 **${animeData.title} (${releaseDate})**`)
+      .setTitle(`📺 **${animeData.title}**`)
       .setDescription(`📜 **Synopsis:** ${animeData.synopsis}`)
       .setColor(0x2E51A2)
       .addFields(
         { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
         { name: "⭐ MAL Rating", value: `🌟 ${animeData.rating}`, inline: true },
+        { name: "📅 Release Date", value: releaseDate, inline: true },
         { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
       )
       .setFooter({ text: "Powered by MyAnimeList API" });
@@ -188,5 +187,42 @@ module.exports = {
     }
     
     return embed;
+  },
+
+  /**
+   * Formats a release date string to a readable date format
+   * @param {string} releaseDate - The release date string from MyAnimeList API
+   * @returns {string} Formatted date or year
+   */
+  formatReleaseDate(releaseDate) {
+    if (!releaseDate || releaseDate === 'Unknown') {
+      return 'Unknown';
+    }
+    
+    try {
+      // MyAnimeList API can return YYYY-MM-DD, YYYY-MM, or YYYY
+      if (releaseDate.length === 4) {
+        // Year only - just return the year
+        return releaseDate;
+      } else if (releaseDate.length === 7) {
+        // Year-Month - format as "Month YYYY"
+        const date = new Date(`${releaseDate}-01`);
+        if (isNaN(date.getTime())) {
+          return releaseDate;
+        }
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+      } else if (releaseDate.length === 10) {
+        // Full date - format as readable date
+        const date = new Date(releaseDate);
+        if (isNaN(date.getTime())) {
+          return releaseDate;
+        }
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      } else {
+        return releaseDate;
+      }
+    } catch (error) {
+      return releaseDate;
+    }
   }
 };

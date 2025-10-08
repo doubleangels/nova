@@ -89,13 +89,10 @@ module.exports = {
         }
 
         const embed = {
-          color: 0xc03728,
+          color: 0xcd41ff,
           title: '🎭 No Text Channel Configuration',
           description: `✅ Channel ${channel} has been configured to only allow GIFs and stickers.`,
-          timestamp: new Date().toISOString(),
-          footer: {
-            text: `Updated by ${interaction.user.tag}`
-          }
+          timestamp: new Date().toISOString()
         };
 
         await interaction.reply({ embeds: [embed] });
@@ -126,13 +123,10 @@ module.exports = {
         }
 
         const embed = {
-          color: 0xc03728,
+          color: 0xcd41ff,
           title: '🎭 No Text Channel Configuration',
           description: `✅ Channel ${channel} is no longer restricted to GIFs and stickers.`,
-          timestamp: new Date().toISOString(),
-          footer: {
-            text: `Updated by ${interaction.user.tag}`
-          }
+          timestamp: new Date().toISOString()
         };
 
         await interaction.reply({ embeds: [embed] });

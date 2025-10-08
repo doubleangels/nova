@@ -61,8 +61,7 @@ module.exports = {
                     { name: 'Author', value: definition.author },
                     { name: '👍', value: definition.thumbs_up.toString(), inline: true },
                     { name: '👎', value: definition.thumbs_down.toString(), inline: true }
-                )
-                .setFooter({ text: 'Powered by Urban Dictionary' });
+                );
             
             await interaction.editReply({ embeds: [embed] });
             
