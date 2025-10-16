@@ -59,7 +59,7 @@ module.exports = {
       }
       const embed = new EmbedBuilder()
         .setColor(0x24f2dc)
-        .setTitle(`${country.name.common} ${flag ? '' : ''}`)
+        .setTitle(`${country.name.common} ${country.flag || ''}`)
         .setDescription(country.name.official || country.name.common)
         .addFields(
           { name: '🌍 Region', value: `${region} (${subregion})`, inline: true },

@@ -117,7 +117,7 @@ module.exports = {
    */
   async searchBooks(query, maxResults = 5) {
     try {
-      const apiKey = config.googleBooksApiKey;
+      const apiKey = config.googleApiKey;
       if (!apiKey) {
         logger.error("Google Books API key is not configured");
         throw new Error("API_KEY_MISSING");
@@ -178,7 +178,7 @@ module.exports = {
    */
   async searchByISBN(isbn) {
     try {
-      const apiKey = config.googleBooksApiKey;
+      const apiKey = config.googleApiKey;
       if (!apiKey) {
         logger.error("Google Books API key is not configured");
         throw new Error("API_KEY_MISSING");

@@ -56,7 +56,7 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(colorValidation.normalizedColor)
-                .setTitle('Role Color Updated')
+                .setTitle('🎨 Role Color Updated')
                 .setDescription(`Successfully changed the color of ${role} from \`${oldColor}\` to \`${colorValidation.normalizedColor}\`!`);
             
             await interaction.editReply({ embeds: [embed] });

@@ -94,22 +94,59 @@ module.exports = {
     }
 
     try {
-      logger.info("Attempting to post to r/DiscordAdvertising", {
-        subreddit: 'DiscordAdvertising',
+      logger.info("Attempting to post to r/findaserver", {
+        subreddit: 'findaserver',
         title: PROMOTION_TITLE,
         link: PROMOTION_LINK,
         userId: interaction.user.id
       });
+
+      // Fetch and log all available flairs
+      let availableFlairs = [];
+      try {
+        const subreddit = reddit.getSubreddit('findaserver');
+        const flairs = await subreddit.getLinkFlairTemplates();
+        
+        availableFlairs = flairs.map((flair, index) => {
+          const flairData = {
+            index: index,
+            id: flair.flair_template_id,
+            text: flair.flair_text,
+            css_class: flair.flair_css_class,
+            text_editable: flair.flair_text_editable
+          };
+          return flairData;
+        });
+        
+        logger.info("Available flairs for r/findaserver:", {
+          flairs: availableFlairs,
+          totalCount: availableFlairs.length
+        });
+      } catch (flairError) {
+        logger.warn("Could not fetch flairs for r/findaserver:", flairError);
+      }
+
+      // Try to find a valid flair or post without one
+      const targetFlairId = '2566b69c-2a68-11ec-a4f1-7a9ed949ab8e'; // 21+ Gaming Server
+      const validFlair = availableFlairs.find(flair => flair.id === targetFlairId);
       
-      const submission = await reddit.getSubreddit('DiscordAdvertising').submitLink({
+      let submissionOptions = {
         title: PROMOTION_TITLE,
-        url: PROMOTION_LINK,
-        flairId: 'b505512c-34cb-11e9-9f48-0e762a63b82e'
-      });
+        url: PROMOTION_LINK
+      };
+
+      if (validFlair) {
+        submissionOptions.flairId = targetFlairId;
+        logger.info("Using flair:", { flair: validFlair });
+      } else {
+        logger.warn("Target flair not found, posting without flair");
+      }
+      
+      const submission = await reddit.getSubreddit('findaserver').submitLink(submissionOptions);
       const post = await submission.fetch();
       const permalink = await post.permalink;
 
-      logger.info("Successfully posted to r/DiscordAdvertising", {
+      logger.info("Successfully posted to r/findaserver", {
         postUrl: `https://reddit.com${permalink}`,
         postId: post.id,
         title: PROMOTION_TITLE,
@@ -120,7 +157,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
-        .setDescription(`Your server has been promoted on r/DiscordAdvertising.\n\n**View your post:** [View on Reddit](${`https://reddit.com${permalink}`})`);
+        .setDescription(`Your server has been promoted on r/findaserver.\n\n**View your post:** [View on Reddit](${`https://reddit.com${permalink}`})`);
 
       await interaction.editReply({ embeds: [embed] });
 
@@ -128,17 +165,21 @@ module.exports = {
       await handleReminder(mockMessage, 86400000, 'promote');
 
     } catch (error) {
-      logger.error("Error posting to r/DiscordAdvertising:", error);
+      logger.error("Error posting to r/findaserver:", error);
       let errorMessage = error.message || 'Unknown error';
       
       if (errorMessage.includes('BAD_FLAIR_TEMPLATE_ID')) {
-        errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs.';
+        errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs. Check the logs for available flairs.';
       } else if (errorMessage.includes('RATELIMIT')) {
         errorMessage = 'Rate limit exceeded. Please try again later.';
+      } else if (errorMessage.includes('SUBREDDIT_NOEXIST')) {
+        errorMessage = 'Subreddit does not exist or is private.';
+      } else if (errorMessage.includes('SUBREDDIT_NOTALLOWED')) {
+        errorMessage = 'You are not allowed to post to this subreddit.';
       }
       
       await interaction.editReply({
-        content: `⚠️ Failed to post to r/DiscordAdvertising: ${errorMessage}`,
+        content: `⚠️ Failed to post to r/findaserver: ${errorMessage}`,
         ephemeral: true
       });
     }

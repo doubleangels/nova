@@ -1,44 +1,41 @@
 const { SlashCommandBuilder, EmbedBuilder, ChannelType, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { createPaginatedResults } = require('../utils/searchUtils');
 
 /**
- * Command module for searching and displaying user messages.
- * Lists recent messages by user in a channel (all time).
+ * Command module for finding the last message from a specific user in a channel.
  * @type {Object}
  */
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('usermessages')
-    .setDescription('List the last messages from a specific user in a specified channel.')
+    .setName('lastmessage')
+    .setDescription('Find the last message from a specific user in a channel.')
     .addUserOption(option => 
       option
         .setName('user')
-        .setDescription("What user's messages do you want to see?")
+        .setDescription("What user's last message do you want to find?")
         .setRequired(true))
     .addChannelOption(option =>
       option
         .setName('channel')
         .setDescription('What channel do you want to search in?')
         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setRequired(true))
-    ,
+        .setRequired(true)),
 
   /**
-   * Executes the user messages search command.
+   * Executes the last message search command.
    * This function:
    * 1. Validates command options
-   * 2. Fetches messages matching criteria
-   * 3. Displays results with pagination
+   * 2. Fetches the last message from the user
+   * 3. Displays the result in an embed
    * 
    * @param {CommandInteraction} interaction - The interaction that triggered the command
-   * @throws {Error} If there's an error fetching messages
+   * @throws {Error} If there's an error fetching the message
    * @returns {Promise<void>}
    */
   async execute(interaction) {
     try {
-      logger.info("/usermessages command initiated:", {
+      logger.info("/lastmessage command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -56,62 +53,38 @@ module.exports = {
       
       const { targetUser, targetChannel } = commandOptions;
       
-      logger.info("Fetching messages for user:", { 
+      logger.info("Searching for last message from user:", { 
         targetUserTag: targetUser.tag, 
         targetUserId: targetUser.id,
         requestedByUserTag: interaction.user.tag,
         requestedByUserId: interaction.user.id
       });
 
-      const allMessages = await this.fetchUserMessages(
+      const lastMessage = await this.findLastMessage(
         targetChannel, 
-        targetUser.id,
-        50
+        targetUser.id
       );
       
-      if (allMessages.length === 0) {
-        logger.info("No messages found for user:", { 
+      if (!lastMessage) {
+        logger.info("No message found for user:", { 
           targetUserTag: targetUser.tag,
           channelName: targetChannel.name
         });
         
-        let noMessagesText = `No recent messages found from ${targetUser.username} in ${targetChannel.name}.`;
+        let noMessageText = `No recent message found from ${targetUser.username} in ${targetChannel.name}`;
         
         return interaction.editReply({
-          content: noMessagesText,
+          content: noMessageText,
           ephemeral: true 
         });
       }
       
-      const embeds = this.createMessageEmbeds(allMessages, targetUser, targetChannel);
+      const embed = this.createLastMessageEmbed(lastMessage, targetUser, targetChannel);
+      await interaction.editReply({ embeds: [embed] });
       
-      logger.debug("Created message embeds:", { 
-        embedCount: embeds.length, 
-        messagesPerPage: 10,
-        totalMessages: allMessages.length
-      });
-      
-      const generateEmbed = (index) => embeds[index];
-      
-      await createPaginatedResults(
-        interaction,
-        embeds,
-        generateEmbed,
-        'usermsg',
-        300000,
-        logger,
-        {
-          buttonStyle: 'Primary',
-          prevLabel: 'Previous',
-          nextLabel: 'Next',
-          prevEmoji: '◀️',
-          nextEmoji: '▶️'
-        }
-      );
-      
-      logger.info("/usermessages command completed successfully:", {
+      logger.info("/lastmessage command completed successfully:", {
         targetUserId: targetUser.id,
-        messageCount: allMessages.length,
+        messageId: lastMessage.messageId,
         timeRange: "all time"
       });
       
@@ -129,7 +102,6 @@ module.exports = {
   async parseOptions(interaction) {
     const targetUser = interaction.options.getUser('user');
     const targetChannel = interaction.options.getChannel('channel');
-    const messageLimit = 50;
     
     logger.debug("Processing command options:", {
       targetUser: targetUser.id,
@@ -179,26 +151,24 @@ module.exports = {
     return {
       valid: true,
       targetUser,
-      targetChannel,
-      messageLimit
+      targetChannel
     };
   },
 
   /**
-   * Fetches messages from a user in a specific channel.
+   * Finds the last message from a user in a specific channel.
    * 
    * @param {TextChannel|NewsChannel} channel - The channel to search in
    * @param {string} userId - The ID of the user to search for
-   * @param {number} limit - Maximum number of messages to fetch
-   * @param {string|null} filterText - Text to filter messages by
    * @param {number|null} dayLimit - Number of days to look back
-   * @returns {Promise<Array>} Array of message objects
+   * @returns {Promise<Object|null>} The last message object or null if none found
    */
-  async fetchUserMessages(channel, userId, limit = 50) {
-    const allMessages = [];
-    let lastMessageId = null;
+  async findLastMessage(channel, userId) {
 
-    while (allMessages.length < limit) {
+    let lastMessageId = null;
+    let lastUserMessage = null;
+
+    while (true) {
       const messages = await channel.messages.fetch({ 
         limit: 100, 
         before: lastMessageId 
@@ -208,82 +178,72 @@ module.exports = {
 
       const userMessages = messages.filter(msg => msg.author.id === userId);
       
-      allMessages.push(...userMessages.map(msg => ({
-        content: msg.content || '[No text content]',
-        attachments: msg.attachments.size > 0,
-        embeds: msg.embeds.length > 0,
-        timestamp: msg.createdTimestamp,
-        channelName: channel.name,
-        messageUrl: msg.url,
-        hasCodeBlock: msg.content.includes('```') || msg.content.includes('`'),
-        reactionCount: msg.reactions.cache.size
-      })));
+      if (userMessages.size > 0) {
+        const message = userMessages.first();
+        lastUserMessage = {
+          content: message.content || '[No text content]',
+          attachments: message.attachments.size > 0,
+          embeds: message.embeds.length > 0,
+          timestamp: message.createdTimestamp,
+          channelName: channel.name,
+          messageUrl: message.url,
+          hasCodeBlock: message.content.includes('```') || message.content.includes('`'),
+          reactionCount: message.reactions.cache.size,
+          messageId: message.id
+        };
+        break;
+      }
 
       lastMessageId = messages.last().id;
-
-      if (allMessages.length >= limit) break;
       
-      // continue fetching all-time until no more messages or limit reached
+      // search all time until exhausted
     }
 
-    allMessages.sort((a, b) => b.timestamp - a.timestamp);
-    
-    return allMessages.slice(0, limit);
+    return lastUserMessage;
   },
 
   /**
-   * Creates embed messages for displaying user messages.
+   * Creates an embed for displaying the last message.
    * 
-   * @param {Array} messages - Array of message objects
-   * @param {User} targetUser - The user whose messages are being displayed
+   * @param {Object} message - The message object
+   * @param {User} targetUser - The user whose message is being displayed
    * @param {TextChannel|NewsChannel} targetChannel - The channel being searched
-   * @returns {Array<EmbedBuilder>} Array of embed messages
+   * @param {number|null} dayLimit - The day limit used in search
+   * @returns {EmbedBuilder} The formatted embed message
    */
-  createMessageEmbeds(messages, targetUser, targetChannel, filterText = null, dayLimit = null) {
-    const embeds = [];
-    const messagesPerEmbed = 10;
-
-    for (let i = 0; i < messages.length; i += messagesPerEmbed) {
-      const embed = new EmbedBuilder()
-        .setColor(0xcd41ff)
-        .setAuthor({
-          name: `🔍 Messages from ${targetUser.username} in #${targetChannel.name}`,
-          iconURL: targetUser.displayAvatarURL()
-        })
-        .setFooter({
-          text: `Powered by Discord API • Page ${Math.floor(i / messagesPerEmbed) + 1}/${Math.ceil(messages.length / messagesPerEmbed)}`
-        });
-      
-      const messagesChunk = messages.slice(i, i + messagesPerEmbed);
-      
-      messagesChunk.forEach((msg, index) => {
-        const messageNumber = i + index + 1;
-        const timestamp = Math.floor(msg.timestamp / 1000);
-        let content = msg.content;
-        
-        if (content.length > 200) {
-          content = content.substring(0, 200) + '...';
-        }
-        
-        let extras = [];
-        if (msg.attachments) extras.push('📎');
-        if (msg.embeds) extras.push('🖼️');
-        if (msg.hasCodeBlock) extras.push('`');
-        if (msg.reactionCount > 0) extras.push(`💬 ${msg.reactionCount}`);
-        
-        const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
-        
-        embed.addFields({
-          name: `${messageNumber}. ${extraText}`,
-          value: `📜 **Message:** ${content}\n⏰ **Posted:** <t:${timestamp}:R>\n[Jump to Message](${msg.messageUrl})`,
-          inline: false
-        });
+  createLastMessageEmbed(message, targetUser, targetChannel) {
+    const embed = new EmbedBuilder()
+      .setColor(0xcd41ff)
+      .setAuthor({
+        name: `🔍 Last Message from ${targetUser.username} in #${targetChannel.name}`,
+        iconURL: targetUser.displayAvatarURL()
+      })
+      .setFooter({
+        text: `Powered by Discord API`
       });
-      
-      embeds.push(embed);
+    
+    let content = message.content;
+    
+    if (content.length > 200) {
+      content = content.substring(0, 200) + '...';
     }
+    
+    let extras = [];
+    if (message.attachments) extras.push('📎');
+    if (message.embeds) extras.push('🖼️');
+    if (message.hasCodeBlock) extras.push('`');
+    if (message.reactionCount > 0) extras.push(`💬 ${message.reactionCount}`);
+    
+    const extraText = extras.length > 0 ? ` ${extras.join(' ')}` : '';
+    const timestamp = Math.floor(message.timestamp / 1000);
+    
+    embed.addFields({
+      name: `📜 Message${extraText}`,
+      value: `**Content:** ${content}\n**Posted:** <t:${timestamp}:R>\n[Jump to Message](${message.messageUrl})`,
+      inline: false
+    });
 
-    return embeds;
+    return embed;
   },
   
   /**
@@ -294,7 +254,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in usermessages command:", {
+    logger.error("Error in lastmessage command:", {
       error: error.message,
       stack: error.stack,
       userId: interaction.user?.id,
@@ -302,7 +262,7 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while fetching user messages.";
+    let errorMessage = "⚠️ An unexpected error occurred while fetching the last message.";
     
     if (error.message === "DM_NOT_SUPPORTED") {
       errorMessage = "⚠️ This command cannot be used in direct messages.";
@@ -314,16 +274,12 @@ module.exports = {
       errorMessage = "⚠️ You don't have permission to view messages in this channel.";
     } else if (error.message === "FETCH_FAILED") {
       errorMessage = "⚠️ Failed to fetch messages. Please try again later.";
-    } else if (error.message === "INVALID_LIMIT") {
-      errorMessage = "⚠️ Invalid message limit specified.";
     } else if (error.message === "INVALID_DAYS") {
       errorMessage = "⚠️ Invalid day limit specified.";
     } else if (error.message === "CHANNEL_NOT_FOUND") {
       errorMessage = "⚠️ The specified channel could not be found.";
     } else if (error.message === "NO_MESSAGES") {
       errorMessage = "⚠️ No messages found matching your criteria.";
-    } else if (error.message === "INVALID_FILTER") {
-      errorMessage = "⚠️ Invalid filter specified.";
     } else if (error.message === "PERMISSION_DENIED") {
       errorMessage = "⚠️ You don't have permission to use this command.";
     }
@@ -334,7 +290,7 @@ module.exports = {
         ephemeral: true 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for usermessages command:", {
+      logger.error("Failed to send error response for lastmessage command:", {
         error: followUpError.message,
         originalError: error.message,
         userId: interaction.user?.id

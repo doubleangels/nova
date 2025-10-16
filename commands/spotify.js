@@ -464,14 +464,14 @@ module.exports = {
         embed
           .setDescription(`🎵 ${item.artists}`)
           .addFields(
-            { name: 'Album', value: `[${item.album}](${item.albumUrl})`, inline: true },
-            { name: 'Duration', value: item.duration, inline: true },
-            { name: 'Popularity', value: `${item.popularity}%`, inline: true },
-            { name: 'Release Date', value: this.formatReleaseDate(item.releaseDate), inline: true },
-            { name: 'Track Number', value: item.trackNumber ? `${item.trackNumber}/${item.totalTracks}` : 'Unknown', inline: true },
-            { name: 'Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
-            { name: 'Disc Number', value: item.discNumber?.toString() || 'Unknown', inline: true },
-            { name: 'ISRC', value: item.isrc || 'Unknown', inline: true }
+            { name: '💿 Album', value: `[${item.album}](${item.albumUrl})`, inline: true },
+            { name: '⏱️ Duration', value: item.duration, inline: true },
+            { name: '📊 Popularity', value: `${item.popularity}%`, inline: true },
+            { name: '📅 Release Date', value: this.formatReleaseDate(item.releaseDate), inline: true },
+            { name: '🔢 Track Number', value: item.trackNumber ? `${item.trackNumber}/${item.totalTracks}` : 'Unknown', inline: true },
+            { name: '🔞 Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
+            { name: '💿 Disc Number', value: item.discNumber?.toString() || 'Unknown', inline: true },
+            { name: '🏷️ ISRC', value: item.isrc || 'Unknown', inline: true }
           );
         break;
 
@@ -479,22 +479,22 @@ module.exports = {
         embed
           .setDescription(`👤 ${item.artists}`)
           .addFields(
-            { name: 'Release Date', value: this.formatReleaseDate(item.releaseDate), inline: true },
-            { name: 'Tracks', value: item.totalTracks.toString(), inline: true },
-            { name: 'Album Type', value: item.albumType || 'Unknown', inline: true },
-            { name: 'Label', value: item.label || 'Unknown', inline: true },
-            { name: 'Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
-            { name: 'Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true }
+            { name: '📅 Release Date', value: this.formatReleaseDate(item.releaseDate), inline: true },
+            { name: '🎵 Tracks', value: item.totalTracks.toString(), inline: true },
+            { name: '💿 Album Type', value: item.albumType || 'Unknown', inline: true },
+            { name: '🏢 Label', value: item.label || 'Unknown', inline: true },
+            { name: '©️ Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
+            { name: '🌍 Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true }
           );
         break;
 
       case 'artist':
         embed
           .addFields(
-            { name: 'Followers', value: this.formatNumber(item.followers), inline: true },
-            { name: 'Popularity', value: `${item.popularity}%`, inline: true },
-            { name: 'Genres', value: item.genres?.join(', ') || 'No genres listed', inline: false },
-            { name: 'Top Tracks', value: item.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false }
+            { name: '👥 Followers', value: this.formatNumber(item.followers), inline: true },
+            { name: '📊 Popularity', value: `${item.popularity}%`, inline: true },
+            { name: '🎭 Genres', value: item.genres?.join(', ') || 'No genres listed', inline: false },
+            { name: '🎵 Top Tracks', value: item.topTracks?.map(track => `[${track.name}](${track.url})`).join('\n') || 'No top tracks available', inline: false }
           );
         break;
 
@@ -502,13 +502,13 @@ module.exports = {
         embed
           .setDescription(item.description || 'No description available')
           .addFields(
-            { name: 'Created by', value: `[${item.owner}](${item.ownerUrl})`, inline: true },
-            { name: 'Tracks', value: item.tracks.toString(), inline: true },
-            { name: 'Followers', value: this.formatNumber(item.followers) || 'Unknown', inline: true },
-            { name: 'Last Updated', value: item.lastUpdated || 'Unknown', inline: true },
-            { name: 'Collaborative', value: item.collaborative ? 'Yes' : 'No', inline: true },
-            { name: 'Public', value: item.public ? 'Yes' : 'No', inline: true },
-            { name: 'Snapshot ID', value: item.snapshotId || 'Unknown', inline: true }
+            { name: '👤 Created by', value: `[${item.owner}](${item.ownerUrl})`, inline: true },
+            { name: '🎵 Tracks', value: item.tracks.toString(), inline: true },
+            { name: '👥 Followers', value: this.formatNumber(item.followers) || 'Unknown', inline: true },
+            { name: '🕒 Last Updated', value: item.lastUpdated || 'Unknown', inline: true },
+            { name: '🤝 Collaborative', value: item.collaborative ? 'Yes' : 'No', inline: true },
+            { name: '🌐 Public', value: item.public ? 'Yes' : 'No', inline: true },
+            { name: '🆔 Snapshot ID', value: item.snapshotId || 'Unknown', inline: true }
           );
         break;
 
@@ -516,14 +516,14 @@ module.exports = {
         embed
           .setDescription(item.description)
           .addFields(
-            { name: 'Publisher', value: item.publisher, inline: true },
-            { name: 'Total Episodes', value: item.totalEpisodes.toString(), inline: true },
-            { name: 'Languages', value: item.languages, inline: true },
-            { name: 'Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
-            { name: 'Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
-            { name: 'Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true },
+            { name: '📻 Publisher', value: item.publisher, inline: true },
+            { name: '🎙️ Total Episodes', value: item.totalEpisodes.toString(), inline: true },
+            { name: '🗣️ Languages', value: item.languages, inline: true },
+            { name: '🔞 Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
+            { name: '©️ Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
+            { name: '🌍 Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true },
             { 
-              name: 'Latest Episodes', 
+              name: '🎧 Latest Episodes', 
               value: item.episodes.slice(0, 5).map(episode => 
                 `[${episode.name}](${episode.url}) - ${episode.duration} (${this.formatReleaseDate(episode.releaseDate)})`
               ).join('\n'),
