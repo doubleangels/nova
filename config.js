@@ -19,7 +19,6 @@ require('dotenv').config();
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images
  * @property {string} omdbApiKey - OMDB API key for movie information
  * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information
- * @property {string} nasaApiKey - NASA API key for APOD and other endpoints
  * @property {string} malClientId - MyAnimeList API client ID
  * @property {string} spotifyClientId - Spotify API client ID
  * @property {string} spotifyClientSecret - Spotify API client secret
@@ -51,7 +50,6 @@ module.exports = {
   malClientId: process.env.MAL_CLIENT_ID,
   neonConnectionString: process.env.NEON_CONNECTION_STRING,
   omdbApiKey: process.env.OMDB_API_KEY,
-  nasaApiKey: process.env.NASA_API_KEY,
   pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
   redditClientId: process.env.REDDIT_CLIENT_ID,
   redditClientSecret: process.env.REDDIT_CLIENT_SECRET,
