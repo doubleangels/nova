@@ -15,11 +15,11 @@ require('dotenv').config();
  * @property {string} clientId - Discord application client ID
  * @property {string} neonConnectionString - Neon database connection string
  * @property {string} googleApiKey - Google API key for search functionality
- * @property {string} googleBooksApiKey - Google Books API key (falls back to googleApiKey if not set)
  * @property {string} searchEngineId - Google Custom Search Engine ID
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images
  * @property {string} omdbApiKey - OMDB API key for movie information
  * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information
+ * @property {string} nasaApiKey - NASA API key for APOD and other endpoints
  * @property {string} malClientId - MyAnimeList API client ID
  * @property {string} spotifyClientId - Spotify API client ID
  * @property {string} spotifyClientSecret - Spotify API client secret
@@ -46,12 +46,12 @@ module.exports = {
   givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
   givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
   googleApiKey: process.env.GOOGLE_API_KEY,
-  googleBooksApiKey: process.env.GOOGLE_BOOKS_API_KEY || process.env.GOOGLE_API_KEY,
   imageSearchEngineId: process.env.IMAGE_SEARCH_ENGINE_ID,
   logLevel: process.env.LOG_LEVEL || 'info',
   malClientId: process.env.MAL_CLIENT_ID,
   neonConnectionString: process.env.NEON_CONNECTION_STRING,
   omdbApiKey: process.env.OMDB_API_KEY,
+  nasaApiKey: process.env.NASA_API_KEY,
   pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
   redditClientId: process.env.REDDIT_CLIENT_ID,
   redditClientSecret: process.env.REDDIT_CLIENT_SECRET,

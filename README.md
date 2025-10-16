@@ -53,6 +53,7 @@ services:
       - NEWS_API_KEY=your_newsapi_key_here
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
+      - NASA_API_KEY=your_nasa_api_key_here
       - REDDIT_CLIENT_ID=your_reddit_client_id_here
       - REDDIT_CLIENT_SECRET=your_reddit_client_secret_here
       - REDDIT_PASSWORD=your_reddit_password_here
@@ -86,6 +87,7 @@ Here is a table of all available environment variables:
 | `NEWS_API_KEY`                      | API key for NewsAPI (for /news command)                   |    ✅    |    -    | -                                                                                |
 | `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |    -    | -                                                                                |
 | `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |    -    | -                                                                                |
+| `NASA_API_KEY`                      | API key for NASA APIs (APOD for /space)                   |    ❌    | `DEMO_KEY` | -                                                                              |
 | `REDDIT_CLIENT_ID`                  | Client ID for Reddit API                                  |    ✅    |    -    | -                                                                                |
 | `REDDIT_CLIENT_SECRET`              | Client Secret for Reddit API                              |    ✅    |    -    | -                                                                                |
 | `REDDIT_PASSWORD`                   | Reddit password for API authentication                    |    ✅    |    -    | -                                                                                |
