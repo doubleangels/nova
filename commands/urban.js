@@ -54,7 +54,7 @@ module.exports = {
             const definition = definitions[0];
             const embed = new EmbedBuilder()
                 .setColor(0x202C34)
-                .setTitle(`Urban Dictionary: ${definition.word}`)
+                .setTitle(`📚 Urban Dictionary: ${definition.word}`)
                 .setDescription(definition.definition)
                 .addFields(
                     { name: 'Example', value: definition.example || 'No example provided.' },

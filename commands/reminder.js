@@ -125,7 +125,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xc03728)
-      .setTitle('✅ Reminder Setup Complete')
+      .setTitle('⏰ Reminder Setup Complete')
       .addFields(
         { name: '📢 Channel', value: `<#${channelOption.id}>` },
         { name: '🎭 Role', value: `<@&${roleOption.id}>` }
@@ -189,7 +189,7 @@ module.exports = {
       
       const embed = new EmbedBuilder()
         .setColor(0xc03728)
-        .setTitle('📌 Server Reminders Status')
+        .setTitle('⏰ Server Reminders Status')
         .addFields(
           { name: '📢 Channel', value: channelStr },
           { name: '🎭 Role', value: roleStr },

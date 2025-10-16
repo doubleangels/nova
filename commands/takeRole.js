@@ -114,8 +114,8 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(role.color)
-      .setTitle('Role Removed')
-      .setDescription(`✅ Successfully removed the ${role.name} role from <@${targetMember.id}>!`)
+      .setTitle('🗑️ Role Removed')
+      .setDescription(`Successfully removed the ${role.name} role from <@${targetMember.id}>!`)
       .addFields(
         { name: 'Role', value: role.name, inline: true },
         { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }

@@ -90,8 +90,8 @@ module.exports = {
 
         const embed = {
           color: 0xcd41ff,
-          title: '🎭 No Text Channel Configuration',
-          description: `✅ Channel ${channel} has been configured to only allow GIFs and stickers.`,
+          title: '🚫 No Text Channel Configuration',
+          description: `Channel ${channel} has been configured to only allow GIFs and stickers.`,
           timestamp: new Date().toISOString()
         };
 
@@ -124,8 +124,8 @@ module.exports = {
 
         const embed = {
           color: 0xcd41ff,
-          title: '🎭 No Text Channel Configuration',
-          description: `✅ Channel ${channel} is no longer restricted to GIFs and stickers.`,
+          title: '🚫 No Text Channel Configuration',
+          description: `Channel ${channel} is no longer restricted to GIFs and stickers.`,
           timestamp: new Date().toISOString()
         };
 

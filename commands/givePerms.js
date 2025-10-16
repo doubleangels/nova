@@ -134,8 +134,8 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(colorDecimal)
-                .setTitle('Permissions Granted')
-                .setDescription(`✅ Successfully gave <@${targetUser.id}> permissions in the server!`)
+                .setTitle('🔑 Permissions Granted')
+                .setDescription(`Successfully gave <@${targetUser.id}> permissions in the server!`)
                 .addFields(
                     { name: 'New Role', value: roleName.trim(), inline: true },
                     { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }

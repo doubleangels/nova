@@ -89,8 +89,8 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(role.color)
-                .setTitle('Role Assigned')
-                .setDescription(`✅ Successfully gave <@${targetUser.id}> the ${role.name} role!`)
+                .setTitle('🎭 Role Assigned')
+                .setDescription(`Successfully gave <@${targetUser.id}> the ${role.name} role!`)
                 .addFields(
                     { name: 'Role', value: role.name, inline: true },
                     { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
