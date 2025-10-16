@@ -6,7 +6,7 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('source')
-    .setDescription('Admin: Open important bot links (source & database).')
+    .setDescription('Open important bot links (source & database).')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   /**
@@ -21,10 +21,9 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(0x00A67E)
         .setTitle('🤖 Bot Resources')
-        .setDescription(`• 🗄️ **Database Console:** [Open Neon Console](${neonUrl})\n• 🧩 **GitHub Repo:** [doubleangels/nova](${githubUrl})`)
-        .setFooter({ text: 'Admin-only links' });
+        .setDescription(`• 🗄️ **Database Console:** [Open Neon Console](${neonUrl})\n• 🧩 **GitHub Repo:** [doubleangels/nova](${githubUrl})`);
 
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed] });
 
       logger.info('/source command sent resource links', {
         userId: interaction.user.id,
