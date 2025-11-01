@@ -19,7 +19,7 @@
     "axios": "^1.13.1",
     "brace-expansion": "^4.0.1",
     "dayjs": "^1.11.18",
-    "discord.js": "^14.24.0",
+    "discord.js": "^14.24.2",
     "dotenv": "^17.2.3",
     "he": "^1.2.0",
     "node-cache": "^5.1.2",
