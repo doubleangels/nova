@@ -156,9 +156,7 @@ module.exports = {
                 .setDescription(`Successfully removed moderator permissions from <@${targetUser.id}>!`)
                 .addFields(
                     { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-                    { name: 'Role Updated', value: userRoleAbovePosition.name, inline: true },
-                    { name: 'Help Role', value: helpRole.name, inline: true },
-                    { name: 'Permissions', value: 'All permissions removed', inline: false }
+                    { name: 'Role Updated', value: userRoleAbovePosition.name, inline: true }
                 );
             
             await interaction.editReply({ embeds: [embed] });

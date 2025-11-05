@@ -156,9 +156,7 @@ module.exports = {
                 .setDescription(`Successfully gave <@${targetUser.id}> moderator permissions!`)
                 .addFields(
                     { name: 'User', value: `<@${targetUser.id}>`, inline: true },
-                    { name: 'Role Updated', value: userRoleAbovePosition.name, inline: true },
-                    { name: 'Help Role', value: helpRole.name, inline: true },
-                    { name: 'Permissions', value: 'All permissions except Administrator', inline: false }
+                    { name: 'Role Updated', value: userRoleAbovePosition.name, inline: true }
                 );
             
             await interaction.editReply({ embeds: [embed] });
