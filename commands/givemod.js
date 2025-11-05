@@ -2,7 +2,6 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue } = require('../utils/database');
-const config = require('../config');
 
 /**
  * @typedef {Object} ValidationResult
@@ -71,18 +70,20 @@ module.exports = {
                 });
             }
             
-            // Get the reference role position from config
-            if (!config.givePermsPositionAboveRoleId) {
+            // Get the position above role ID from the database
+            const positionAboveRoleId = await getValue('perms_position_above_role');
+            
+            if (!positionAboveRoleId) {
                 return await interaction.editReply({
-                    content: "⚠️ The position reference role is not configured. Please set GIVE_PERMS_POSITION_ABOVE_ROLE_ID in the environment.",
+                    content: "⚠️ The position reference role is not configured. Please set 'perms_position_above_role' in the database.",
                     ephemeral: true
                 });
             }
             
-            const positionRole = interaction.guild.roles.cache.get(config.givePermsPositionAboveRoleId);
+            const positionRole = await interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null);
             if (!positionRole) {
                 return await interaction.editReply({
-                    content: `⚠️ The reference role (ID: ${config.givePermsPositionAboveRoleId}) was not found in this server.`,
+                    content: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`,
                     ephemeral: true
                 });
             }
@@ -100,12 +101,12 @@ module.exports = {
                 });
             }
             
-            // Get the help role ID (from config or database)
-            const helpRoleId = process.env.GIVE_MOD_HELP_ROLE_ID || await getValue('help_role');
+            // Get the help role ID from the database
+            const helpRoleId = await getValue('help_role');
             
             if (!helpRoleId) {
                 return await interaction.editReply({
-                    content: "⚠️ The help role is not configured. Please set GIVE_MOD_HELP_ROLE_ID in the environment or 'help_role' in the database.",
+                    content: "⚠️ The help role is not configured. Please set 'help_role' in the database.",
                     ephemeral: true
                 });
             }

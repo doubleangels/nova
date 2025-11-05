@@ -2,15 +2,8 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
-
-if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
-    logger.error("Missing required configuration for /giveperms command:", {
-        positionAboveRoleId: config.givePermsPositionAboveRoleId,
-        frenRoleId: config.givePermsFrenRoleId
-    });
-}
+const { getValue } = require('../utils/database');
 
 /**
  * @typedef {Object} ValidationResult
@@ -60,17 +53,6 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async execute(interaction) {
-        if (!config.givePermsPositionAboveRoleId || !config.givePermsFrenRoleId) {
-            logger.error("Command execution failed due to missing configuration:", {
-                commandName: 'giveperms',
-                guildId: interaction.guildId
-            });
-            return await interaction.reply({
-                content: "⚠️ This command is not properly configured. Please contact an administrator.",
-                ephemeral: true
-            });
-        }
-        
         await interaction.deferReply();
         logger.info("/giveperms command initiated:", { 
             userId: interaction.user.id, 
@@ -199,21 +181,59 @@ module.exports = {
      * @returns {Promise<RoleCreationResult>} Object containing role creation result
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        const positionRole = interaction.guild.roles.cache.get(config.givePermsPositionAboveRoleId);
-        if (!positionRole) {
-            logger.error("Reference role not found.", { roleId: config.givePermsPositionAboveRoleId });
+        // Get the position above role ID from the database
+        const positionAboveRoleIdRaw = await getValue('perms_position_above_role');
+        
+        // Check if position above role ID is valid (not null, not undefined, not empty string)
+        if (!positionAboveRoleIdRaw || (typeof positionAboveRoleIdRaw === 'string' && positionAboveRoleIdRaw.trim().length === 0)) {
+            logger.error("Position above role not configured in database.", { 
+                key: 'perms_position_above_role',
+                value: positionAboveRoleIdRaw,
+                type: typeof positionAboveRoleIdRaw
+            });
             return {
                 success: false,
-                message: "⚠️ Required role not found. Please contact an administrator."
+                message: "⚠️ The position reference role is not configured. Please set 'perms_position_above_role' in the database with a valid role ID."
             };
         }
         
-        const additionalRole = interaction.guild.roles.cache.get(config.givePermsFrenRoleId);
-        if (!additionalRole) {
-            logger.error("Additional role not found.", { roleId: config.givePermsFrenRoleId });
+        // Convert to string and trim whitespace
+        const positionAboveRoleId = String(positionAboveRoleIdRaw).trim();
+        
+        const positionRole = await interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null);
+        if (!positionRole) {
+            logger.error("Reference role not found.", { roleId: positionAboveRoleId });
             return {
                 success: false,
-                message: "⚠️ Required role not found. Please contact an administrator."
+                message: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`
+            };
+        }
+        
+        // Get the fren role ID from the database
+        const frenRoleIdRaw = await getValue('fren_role');
+        
+        // Check if fren role ID is valid (not null, not undefined, not empty string)
+        if (!frenRoleIdRaw || (typeof frenRoleIdRaw === 'string' && frenRoleIdRaw.trim().length === 0)) {
+            logger.error("Fren role not configured in database.", { 
+                key: 'fren_role',
+                value: frenRoleIdRaw,
+                type: typeof frenRoleIdRaw
+            });
+            return {
+                success: false,
+                message: "⚠️ The fren role is not configured. Please set 'fren_role' in the database with a valid role ID."
+            };
+        }
+        
+        // Convert to string and trim whitespace
+        const frenRoleId = String(frenRoleIdRaw).trim();
+        
+        const additionalRole = await interaction.guild.roles.fetch(frenRoleId).catch(() => null);
+        if (!additionalRole) {
+            logger.error("Additional role not found.", { roleId: frenRoleId });
+            return {
+                success: false,
+                message: `⚠️ The fren role (ID: ${frenRoleId}) was not found in this server.`
             };
         }
         
