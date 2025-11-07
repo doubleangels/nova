@@ -23,7 +23,6 @@ jobs:
       cache-scope: nova-dev
 
   delete-workflow-runs:
-    needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
