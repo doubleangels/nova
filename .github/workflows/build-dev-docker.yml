@@ -9,9 +9,13 @@ on:
     branches:
       - dev
 
+permissions:
+  pull-requests: write
+  contents: write
+  actions: write
+
 jobs:
   build:
-    if: github.event_name != 'pull_request' || github.actor != 'dependabot[bot]'
     uses: ./.github/workflows/build-docker-reusable.yml
     secrets:
       gcp-sa-key: ${{ secrets.GCP_SA_KEY }}
@@ -36,3 +40,20 @@ jobs:
           repository: ${{ github.repository }}
           retain_days: 30
           keep_minimum_runs: 5
+
+  automerge:
+    needs: [build]
+    if: >
+      github.event_name == 'pull_request' &&
+      github.actor == 'dependabot[bot]' &&
+      needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Auto-merge Dependabot PRs
+        uses: fastify/github-action-merge-dependabot@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-method: merge
