@@ -49,7 +49,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/nova
+          images: ghcr.io/${{ github.repository_owner }}/chatgpt
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -64,8 +64,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=nova-dev
-          cache-to: type=gha,mode=max,scope=nova-dev
+          cache-from: type=gha,scope=chatgpt-dev
+          cache-to: type=gha,mode=max,scope=chatgpt-dev
           provenance: false
 
       - name: Output image info
@@ -107,11 +107,3 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: merge
-
-      - name: Auto-merge Dependabot PRs
-        uses: fastify/github-action-merge-dependabot@v3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          merge-method: merge
-          skip-commit-verification: true
-          skip-verification: true
