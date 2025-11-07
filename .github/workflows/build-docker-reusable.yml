@@ -21,8 +21,7 @@ on:
         required: false
 
 jobs:
-  build-and-push:
-    name: build-and-push-image
+  build-and-push-image:
     runs-on: ubuntu-latest
     concurrency: build-${{ inputs.branch }}
     permissions:
