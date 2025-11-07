@@ -5,7 +5,6 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "dev"
-    open-pull-requests-limit: 10
     rebase-strategy: "auto"
     allow:
       - dependency-type: "direct"
@@ -17,7 +16,6 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "dev"
-    open-pull-requests-limit: 10
     rebase-strategy: "auto"
     allow:
       - dependency-type: "direct"
