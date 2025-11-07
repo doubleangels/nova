@@ -5,9 +5,6 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "dev"
-    rebase-strategy: "auto"
-    allow:
-      - dependency-type: "direct"
     commit-message:
       prefix: "[Github Actions]"
   
@@ -16,8 +13,5 @@ updates:
     schedule:
       interval: "daily"
     target-branch: "dev"
-    rebase-strategy: "auto"
-    allow:
-      - dependency-type: "direct"
     commit-message:
       prefix: "[NPM]"
