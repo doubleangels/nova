@@ -1,4 +1,4 @@
-name: Auto-merge Dependabot PRs
+name: Dependabot Auto-Merge
 
 on:
     workflow_run:
