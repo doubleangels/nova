@@ -7,7 +7,8 @@ const config = require('../config');
 const DB_TABLES = {
   CONFIG: 'main.config',
   REMINDERS: 'main.reminder_data',
-  MUTE_MODE_RECOVERY: 'main.mute_mode_recovery'
+  MUTE_MODE_RECOVERY: 'main.mute_mode_recovery',
+  SPAM_MODE_JOIN_TIMES: 'main.spam_mode_join_times'
 };
 
 /** @type {Pool} PostgreSQL connection pool */
@@ -249,41 +250,22 @@ async function addMuteModeUser(userId, username) {
 
 /**
  * Removes a user from mute mode tracking
- * Only removes if the user is past the mute mode kick time window
- * (keeps users in database for spam mode tracking)
+ * Removes immediately when called (e.g., when user sends a message)
  * @param {string} userId - The Discord user ID
  * @returns {Promise<void>}
  */
 async function removeMuteModeUser(userId) {
   const client = await pool.connect();
   try {
-    // Get user's join time and mute mode kick time
-    const userRes = await client.query(
-      `SELECT join_time FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
+    // Remove user from mute mode tracking immediately
+    // This prevents them from being kicked for inactivity
+    const result = await client.query(
+      `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
       [userId]
     );
     
-    if (userRes.rows.length === 0) {
-      // User not in database, nothing to remove
-      return;
-    }
-    
-    const joinTime = new Date(userRes.rows[0].join_time);
-    const muteKickTimeHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-    const muteKickTimeMs = muteKickTimeHours * 60 * 60 * 1000;
-    const now = Date.now();
-    const timeSinceJoin = now - joinTime.getTime();
-    
-    // Only remove if user is past the mute mode kick time window
-    // This keeps users in the database for spam mode tracking during the window
-    if (timeSinceJoin >= muteKickTimeMs) {
-      await client.query(
-        `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
-        [userId]
-      );
+    if (result.rowCount > 0) {
       logger.debug(`Removed user ${userId} from mute mode tracking.`);
-    } else {
-      logger.debug(`Keeping user ${userId} in database for spam mode tracking.`);
     }
   } catch (error) {
     logger.error(`Error removing mute mode user ${userId}:`, { error: error.message });
@@ -353,6 +335,100 @@ async function updateUserJoinTime(userId, username, joinTime = null) {
   }
 }
 
+/**
+ * Adds a user's join time to spam mode tracking
+ * @param {string} userId - The Discord user ID
+ * @param {string} username - The Discord username
+ * @param {Date|string} joinTime - The join time
+ * @returns {Promise<void>}
+ */
+async function addSpamModeJoinTime(userId, username, joinTime) {
+  const client = await pool.connect();
+  try {
+    const timeToSet = joinTime instanceof Date ? joinTime : new Date(joinTime);
+    
+    await client.query(
+      `INSERT INTO ${DB_TABLES.SPAM_MODE_JOIN_TIMES} (user_id, username, join_time)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = $3`,
+      [userId, username, timeToSet]
+    );
+    logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet.toISOString()}`);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Gets the join time for a user from spam mode tracking
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<Date|null>} The join time or null if user not found
+ */
+async function getSpamModeJoinTime(userId) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `SELECT join_time FROM ${DB_TABLES.SPAM_MODE_JOIN_TIMES} WHERE user_id = $1`,
+      [userId]
+    );
+    if (res.rows.length > 0 && res.rows[0].join_time) {
+      return new Date(res.rows[0].join_time);
+    }
+    return null;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Updates a user's join time in spam mode tracking (useful for testing)
+ * @param {string} userId - The Discord user ID
+ * @param {string} username - The Discord username
+ * @param {Date|string|null} joinTime - The join time to set (null = set to NOW())
+ * @returns {Promise<void>}
+ */
+async function updateSpamModeJoinTime(userId, username, joinTime = null) {
+  const client = await pool.connect();
+  try {
+    const timeToSet = joinTime 
+      ? (joinTime instanceof Date ? joinTime : new Date(joinTime))
+      : new Date();
+    
+    await client.query(
+      `INSERT INTO ${DB_TABLES.SPAM_MODE_JOIN_TIMES} (user_id, username, join_time)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = $3`,
+      [userId, username, timeToSet]
+    );
+    logger.debug(`Updated spam mode join time for user ${userId} to ${timeToSet.toISOString()}`);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Removes a user from spam mode tracking (after they're past the window)
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<void>}
+ */
+async function removeSpamModeJoinTime(userId) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `DELETE FROM ${DB_TABLES.SPAM_MODE_JOIN_TIMES} WHERE user_id = $1`,
+      [userId]
+    );
+    
+    if (result.rowCount > 0) {
+      logger.debug(`Removed user ${userId} from spam mode tracking.`);
+    }
+  } catch (error) {
+    logger.error(`Error removing spam mode join time for user ${userId}:`, { error: error.message });
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -364,5 +440,9 @@ module.exports = {
   removeMuteModeUser,
   getAllMuteModeUsers,
   getUserJoinTime,
-  updateUserJoinTime
+  updateUserJoinTime,
+  addSpamModeJoinTime,
+  getSpamModeJoinTime,
+  updateSpamModeJoinTime,
+  removeSpamModeJoinTime
 };

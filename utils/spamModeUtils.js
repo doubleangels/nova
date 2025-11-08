@@ -1,7 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { EmbedBuilder } = require('discord.js');
-const { getValue, getUserJoinTime } = require('./database');
+const { getValue, getSpamModeJoinTime } = require('./database');
 
 /** @type {Map<string, Map<string, Array>>} Map of userId -> normalized content -> message occurrences */
 const userMessageTracker = new Map();
@@ -25,7 +25,7 @@ function normalizeContent(content) {
  */
 async function isNewUser(userId) {
   try {
-    const joinTime = await getUserJoinTime(userId);
+    const joinTime = await getSpamModeJoinTime(userId);
     if (!joinTime) {
       return { isNew: false, timeRemaining: null };
     }
@@ -112,9 +112,9 @@ async function trackNewUserMessage(message) {
     }
 
     // Get the cutoff time (when user joined + spam mode window)
-    const joinTime = await getUserJoinTime(userId);
+    const joinTime = await getSpamModeJoinTime(userId);
     if (!joinTime) {
-      logger.debug(`Spam mode: User ${userId} not found in database, skipping`);
+      logger.debug(`Spam mode: User ${userId} not found in spam mode tracking, skipping`);
       return;
     }
     
@@ -333,14 +333,55 @@ async function postSpamWarning(guild, user, occurrences, content) {
 }
 
 /**
+ * Stores a user's join time in the cache (for spam mode tracking)
+ * @param {string} userId - The user ID
+ * @param {Date} joinTime - The join time
+ */
+function storeUserJoinTime(userId, joinTime) {
+  userJoinTimeCache.set(userId, joinTime instanceof Date ? joinTime : new Date(joinTime));
+  logger.debug(`Stored join time for user ${userId} in spam mode cache`);
+}
+
+/**
+ * Cleans up old join times from the cache (users past the spam mode window)
+ * @param {string} userId - The user ID
+ */
+async function cleanupUserJoinTime(userId) {
+  const joinTime = userJoinTimeCache.get(userId);
+  if (!joinTime) {
+    return;
+  }
+  
+  // Get spam mode window, default to mute mode kick time if not set
+  let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
+  if (!windowHours) {
+    // Fallback to mute mode kick time
+    windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+  }
+  
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const now = Date.now();
+  const timeSinceJoin = now - joinTime.getTime();
+  
+  // Remove from cache if past the spam mode window
+  if (timeSinceJoin >= windowMs) {
+    userJoinTimeCache.delete(userId);
+    logger.debug(`Removed join time for user ${userId} from spam mode cache (past window)`);
+  }
+}
+
+/**
  * Clears all tracked messages (useful for testing or reset)
  */
 function clearTracker() {
   userMessageTracker.clear();
-  logger.debug('Spam mode message tracker cleared');
+  userJoinTimeCache.clear();
+  logger.debug('Spam mode message tracker and join time cache cleared');
 }
 
 module.exports = {
   trackNewUserMessage,
+  storeUserJoinTime,
+  cleanupUserJoinTime,
   clearTracker
 };

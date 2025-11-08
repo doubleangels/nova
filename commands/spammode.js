@@ -30,7 +30,7 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('threshold')
-            .setDescription('Number of duplicate messages required to trigger (2-10)')
+            .setDescription('What is the minimum number of duplicate messages required to trigger spam mode? (2-10)')
             .setMinValue(2)
             .setMaxValue(10)
             .setRequired(false)
@@ -296,7 +296,7 @@ module.exports = {
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Message Threshold', value: `${settings.threshold} duplicate messages` },
-      { name: 'Tracking Window', value: `${settings.window} hours` }
+      { name: 'Tracking Window', value: `${settings.window} ${settings.window === 1 ? 'hour' : 'hours'}` }
     );
     
     if (settings.warningChannelId) {
@@ -324,6 +324,11 @@ module.exports = {
         value: 'Not configured'
       });
     }
+    
+    if (settings.enabled) {
+      const hourText = settings.window === 1 ? 'hour' : 'hours';
+      embed.setDescription(`New users sending **${settings.threshold}** or more duplicate messages within **${settings.window}** ${hourText} will have their messages deleted and warnings posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
+    }
 
     return embed;
   },
@@ -346,7 +351,7 @@ module.exports = {
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Message Threshold', value: `${threshold} duplicate messages` },
-      { name: 'Tracking Window', value: `${window} hours` }
+      { name: 'Tracking Window', value: `${window} ${window === 1 ? 'hour' : 'hours'}` }
     );
     
     if (warningChannel) {
@@ -371,6 +376,11 @@ module.exports = {
         name: 'Ping Role',
         value: 'Not configured'
       });
+    }
+    
+    if (enabled) {
+      const hourText = window === 1 ? 'hour' : 'hours';
+      embed.setDescription(`New users sending **${threshold}** or more duplicate messages within **${window}** ${hourText} will have their messages deleted and warnings posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;

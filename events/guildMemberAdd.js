@@ -1,7 +1,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, addMuteModeUser } = require('../utils/database');
+const { getValue, addMuteModeUser, addSpamModeJoinTime } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 
@@ -35,6 +35,9 @@ module.exports = {
       }
 
       await addMuteModeUser(member.id, member.user.tag);
+      
+      // Store join time in spam mode tracking (for tracking even after user sends message)
+      await addSpamModeJoinTime(member.id, member.user.tag, member.joinedAt);
 
       const muteModeEnabled = await getValue('mute_mode_enabled');
       if (muteModeEnabled) {

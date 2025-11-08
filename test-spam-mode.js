@@ -11,7 +11,7 @@
  */
 
 require('dotenv').config();
-const { updateUserJoinTime } = require('./utils/database');
+const { initializeDatabase, updateSpamModeJoinTime } = require('./utils/database');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -37,6 +37,9 @@ async function main() {
   }
 
   try {
+    // Initialize database connection
+    await initializeDatabase();
+    
     // Calculate join time (X minutes ago)
     const joinTime = new Date(Date.now() - minutesAgo * 60 * 1000);
     
@@ -44,9 +47,10 @@ async function main() {
     console.log(`Setting join time to: ${joinTime.toISOString()}`);
     console.log(`This is ${minutesAgo} minutes ago`);
     
-    await updateUserJoinTime(userId, username, joinTime);
+    // Update spam mode join time in database
+    await updateSpamModeJoinTime(userId, username, joinTime);
     
-    console.log('✅ Successfully updated join time!');
+    console.log('✅ Successfully updated join time in database!');
     console.log('');
     console.log('Now you can test spam mode by:');
     console.log('1. Make sure spam mode is enabled: /spammode set enabled:true');
