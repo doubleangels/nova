@@ -100,7 +100,7 @@ async function trackNewUserMessage(message) {
     const { isNew, timeRemaining } = await isNewUser(userId);
     if (!isNew) {
       // User is not new, skip tracking and remove from database
-      logger.debug(`Spam mode: User ${userId} is not new, removing from tracking`);
+      logger.debug(`Spam mode: User ${userId} is not new, removing from tracking.`);
       await removeSpamModeJoinTime(userId);
       return;
     }
@@ -108,14 +108,14 @@ async function trackNewUserMessage(message) {
     // Skip if message is too short (less than 3 characters after normalization)
     const normalizedContent = normalizeContent(message.content);
     if (normalizedContent.length < 3) {
-      logger.debug(`Spam mode: Message too short (${normalizedContent.length} chars), skipping`);
+      logger.debug(`Spam mode: Message too short, skipping tracking.`);
       return;
     }
 
     // Get the cutoff time (when user joined + spam mode window)
     const joinTime = await getSpamModeJoinTime(userId);
     if (!joinTime) {
-      logger.debug(`Spam mode: User ${userId} not found in spam mode tracking, skipping`);
+      logger.debug(`Spam mode: User ${userId} not found in spam mode tracking, skipping.`);
       return;
     }
     
@@ -161,7 +161,7 @@ async function trackNewUserMessage(message) {
       const threshold = parseInt(await getValue('spam_mode_threshold'), 10) || 3;
       
       // Log if there are threshold or more occurrences (same or different channels)
-      logger.debug(`Spam mode: Found ${existingOccurrences.length} occurrences of message for user ${userId} (threshold: ${threshold})`);
+      logger.debug(`Spam mode: Found ${existingOccurrences.length} occurrences of message for user ${userId} (threshold: ${threshold}).`);
       if (existingOccurrences.length >= threshold) {
         const uniqueChannels = [...new Set(existingOccurrences.map(occ => occ.channelName))];
         const isMultipleChannels = uniqueChannels.length > 1;
@@ -207,7 +207,7 @@ async function trackNewUserMessage(message) {
  */
 async function deleteOffendingMessages(guild, occurrences) {
   if (!guild) {
-    logger.warn('Cannot delete offending messages: no guild provided');
+    logger.warn('Cannot delete offending messages: no guild provided.');
     return;
   }
   
@@ -218,14 +218,14 @@ async function deleteOffendingMessages(guild, occurrences) {
     try {
       const channel = await guild.channels.fetch(occurrence.channelId).catch(() => null);
       if (!channel) {
-        logger.debug(`Channel ${occurrence.channelId} not found, skipping message deletion`);
+        logger.debug(`Channel ${occurrence.channelId} not found, skipping message deletion.`);
         failedCount++;
         continue;
       }
       
       const messageToDelete = await channel.messages.fetch(occurrence.messageId).catch(() => null);
       if (!messageToDelete) {
-        logger.debug(`Message ${occurrence.messageId} not found, may have been already deleted`);
+        logger.debug(`Message ${occurrence.messageId} not found, may have been already deleted.`);
         failedCount++;
         continue;
       }
