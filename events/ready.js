@@ -60,17 +60,18 @@ module.exports = {
       try {
         const botStatusConfig = await getValue('bot_status');
         if (botStatusConfig && botStatusConfig.name) {
-          // Map activity type string to ActivityType enum
+          // Map activity type string to ActivityType enum (case-insensitive)
           const activityTypeMap = {
-            'Playing': ActivityType.Playing,
-            'Streaming': ActivityType.Streaming,
-            'Listening': ActivityType.Listening,
-            'Watching': ActivityType.Watching,
-            'Competing': ActivityType.Competing,
-            'Custom': ActivityType.Custom
+            'playing': ActivityType.Playing,
+            'streaming': ActivityType.Streaming,
+            'listening': ActivityType.Listening,
+            'watching': ActivityType.Watching,
+            'competing': ActivityType.Competing,
+            'custom': ActivityType.Custom
           };
           
-          const activityType = activityTypeMap[botStatusConfig.type] || ActivityType.Watching;
+          const typeKey = (botStatusConfig.type || '').toLowerCase().trim();
+          const activityType = activityTypeMap[typeKey] || ActivityType.Watching;
           botActivity = {
             name: botStatusConfig.name,
             type: activityType
@@ -83,6 +84,7 @@ module.exports = {
         logger.warn('Failed to load bot status from database, using default:', { error: error.message });
       }
 
+      logger.debug(`Setting bot activity: name="${botActivity.name}", type=${botActivity.type}`);
       client.user.setActivity(botActivity.name, { type: botActivity.type });
       logger.info(`Ready! Logged in as ${client.user.tag}`);
 
