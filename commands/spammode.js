@@ -327,7 +327,7 @@ module.exports = {
     
     if (settings.enabled) {
       const hourText = settings.window === 1 ? 'hour' : 'hours';
-      embed.setDescription(`New users sending **${settings.threshold}** or more duplicate messages within **${settings.window}** ${hourText} will have their messages deleted and warnings posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
+      embed.setDescription(`New users sending **${settings.threshold}** or more duplicate messages within **${settings.window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
@@ -380,7 +380,7 @@ module.exports = {
     
     if (enabled) {
       const hourText = window === 1 ? 'hour' : 'hours';
-      embed.setDescription(`New users sending **${threshold}** or more duplicate messages within **${window}** ${hourText} will have their messages deleted and warnings posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
+      embed.setDescription(`New users sending **${threshold}** or more duplicate messages within **${window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
