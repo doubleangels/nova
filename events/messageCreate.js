@@ -57,6 +57,25 @@ module.exports = {
         await checkForBumpMessages(message);
       }
       
+      // Auto-react to "Dubz" or "Dubzie" mentions (case-insensitive)
+      const messageContentLower = message.content?.toLowerCase() || '';
+      if (messageContentLower.includes('dubz') || messageContentLower.includes('dubzie')) {
+        try {
+          // Get dubz emoji from database config
+          const dubzEmoji = await getValue('dubz_emoji');
+          if (dubzEmoji) {
+            await message.react(dubzEmoji);
+            logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}`);
+          }
+        } catch (error) {
+          logger.error("Failed to react to Dubz/Dubzie mention:", {
+            error: error.message,
+            messageId: message.id,
+            channelId: message.channel.id
+          });
+        }
+      }
+      
       logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
 
       const noTextChannelId = await getValue('no_text_channel');
