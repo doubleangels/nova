@@ -76,7 +76,7 @@ module.exports = {
             name: botStatusConfig.name,
             type: activityType
           };
-          logger.info(`Loaded bot status from database: ${botStatusConfig.type} ${botStatusConfig.name}`);
+          logger.info(`Loaded bot status from database: {"name":"${botStatusConfig.name}","type":"${botStatusConfig.type}"}`);
         } else {
           logger.info('No bot_status config found in database, using default.');
         }
@@ -84,7 +84,7 @@ module.exports = {
         logger.warn('Failed to load bot status from database, using default:', { error: error.message });
       }
 
-      logger.debug(`Setting bot activity: name="${botActivity.name}", type=${botActivity.type}`);
+      logger.debug(`Setting bot activity:`, JSON.stringify(botActivity));
       client.user.setActivity(botActivity.name, { type: botActivity.type });
       logger.info(`Ready! Logged in as ${client.user.tag}`);
 
