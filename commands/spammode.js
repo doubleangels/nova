@@ -64,6 +64,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
+    await interaction.deferReply();
+    
     try {
       const subcommand = interaction.options.getSubcommand();
       
@@ -100,7 +102,7 @@ module.exports = {
     const settings = await this.getCurrentSettings();
     const embed = this.formatStatusMessage(settings, interaction);
     
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
     
     logger.info("/spammode command completed successfully:", {
       userId: interaction.user.id,
@@ -154,7 +156,7 @@ module.exports = {
       interaction
     );
     
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
     
     logger.info("/spammode command completed successfully:", {
       userId: interaction.user.id,
