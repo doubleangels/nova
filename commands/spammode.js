@@ -49,12 +49,6 @@ module.exports = {
             .setDescription('What channel do you want to send spam warnings to?')
             .setRequired(false)
         )
-        .addRoleOption(option =>
-          option
-            .setName('role')
-            .setDescription('What role do you want to ping for spam warnings?')
-            .setRequired(false)
-        )
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
@@ -131,7 +125,6 @@ module.exports = {
     const threshold = interaction.options.getInteger('threshold');
     const window = interaction.options.getInteger('window');
     const warningChannel = interaction.options.getChannel('channel');
-    const pingRole = interaction.options.getRole('role');
     
     const currentSettings = await this.getCurrentSettings();
     const settings = { enabled };
@@ -144,21 +137,13 @@ module.exports = {
     if (warningChannel !== null) {
       settings.warningChannelId = warningChannel.id;
     }
-    if (pingRole !== null) {
-      settings.pingRoleId = pingRole.id;
-    }
     
     await this.updateSettings(settings);
     
-    // Get the warning channel and role for display
+    // Get the warning channel for display
     let displayWarningChannel = warningChannel;
     if (!displayWarningChannel && currentSettings.warningChannelId) {
       displayWarningChannel = interaction.guild?.channels.cache.get(currentSettings.warningChannelId);
-    }
-    
-    let displayPingRole = pingRole;
-    if (!displayPingRole && currentSettings.pingRoleId) {
-      displayPingRole = interaction.guild?.roles.cache.get(currentSettings.pingRoleId);
     }
     
     const embed = this.formatUpdateMessage(
@@ -166,7 +151,6 @@ module.exports = {
       threshold ?? currentSettings.threshold,
       window ?? currentSettings.window,
       displayWarningChannel,
-      displayPingRole,
       interaction
     );
     
@@ -178,8 +162,7 @@ module.exports = {
       enabled,
       threshold: threshold ?? currentSettings.threshold,
       window: window ?? currentSettings.window,
-      warningChannelId: warningChannel?.id ?? currentSettings.warningChannelId,
-      pingRoleId: pingRole?.id ?? currentSettings.pingRoleId
+      warningChannelId: warningChannel?.id ?? currentSettings.warningChannelId
     });
   },
   
@@ -191,12 +174,11 @@ module.exports = {
    */
   async getCurrentSettings() {
     try {
-      const [enabled, threshold, window, warningChannelId, pingRoleId] = await Promise.all([
+      const [enabled, threshold, window, warningChannelId] = await Promise.all([
         getValue('spam_mode_enabled'),
         getValue('spam_mode_threshold'),
         getValue('spam_mode_window_hours'),
-        getValue('spam_mode_channel_id'),
-        getValue('spam_mode_role_id')
+        getValue('spam_mode_channel_id')
       ]);
       
       // Default window to mute mode kick time if not set
@@ -214,8 +196,7 @@ module.exports = {
         enabled: enabled === true,
         threshold: threshold ? parseInt(threshold, 10) : 3,
         window: window ? parseInt(window, 10) : defaultWindow,
-        warningChannelId: warningChannelId || null,
-        pingRoleId: pingRoleId || null
+        warningChannelId: warningChannelId || null
       };
     } catch (error) {
       logger.error("Failed to retrieve spam mode settings:", {
@@ -255,15 +236,6 @@ module.exports = {
         } else {
           // If null/empty, remove the setting
           updates.push(setValue('spam_mode_channel_id', null));
-        }
-      }
-      
-      if (settings.pingRoleId !== undefined) {
-        if (settings.pingRoleId) {
-          updates.push(setValue('spam_mode_role_id', settings.pingRoleId));
-        } else {
-          // If null/empty, remove the setting
-          updates.push(setValue('spam_mode_role_id', null));
         }
       }
       
@@ -312,19 +284,6 @@ module.exports = {
       });
     }
     
-    if (settings.pingRoleId) {
-      const pingRole = interaction.guild?.roles.cache.get(settings.pingRoleId);
-      embed.addFields({
-        name: 'Ping Role',
-        value: pingRole ? `${pingRole}` : `<@&${settings.pingRoleId}>`
-      });
-    } else {
-      embed.addFields({
-        name: 'Ping Role',
-        value: 'Not configured'
-      });
-    }
-    
     if (settings.enabled) {
       const hourText = settings.window === 1 ? 'hour' : 'hours';
       embed.setDescription(`New users sending **${settings.threshold}** or more duplicate messages within **${settings.window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -340,7 +299,7 @@ module.exports = {
    * @param {CommandInteraction} interaction - The interaction that triggered the command
    * @returns {EmbedBuilder} The formatted embed message
    */
-  formatUpdateMessage(enabled, threshold, window, warningChannel, pingRole, interaction) {
+  formatUpdateMessage(enabled, threshold, window, warningChannel, interaction) {
     const embed = new EmbedBuilder()
       .setColor(enabled ? 0x00FF00 : 0xFF0000)
       .setTitle(`🔤 Spam Mode ${enabled ? 'Enabled' : 'Disabled'}`);
@@ -362,18 +321,6 @@ module.exports = {
     } else {
       embed.addFields({
         name: 'Warning Channel',
-        value: 'Not configured'
-      });
-    }
-    
-    if (pingRole) {
-      embed.addFields({
-        name: 'Ping Role',
-        value: `${pingRole}`
-      });
-    } else {
-      embed.addFields({
-        name: 'Ping Role',
         value: 'Not configured'
       });
     }

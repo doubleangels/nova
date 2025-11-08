@@ -1,7 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { EmbedBuilder } = require('discord.js');
-const { getValue, getSpamModeJoinTime } = require('./database');
+const { getValue, getSpamModeJoinTime, removeSpamModeJoinTime } = require('./database');
 
 /** @type {Map<string, Map<string, Array>>} Map of userId -> normalized content -> message occurrences */
 const userMessageTracker = new Map();
@@ -99,8 +99,9 @@ async function trackNewUserMessage(message) {
     // Check if user is new
     const { isNew, timeRemaining } = await isNewUser(userId);
     if (!isNew) {
-      // User is not new, skip tracking
-      logger.debug(`Spam mode: User ${userId} is not new, skipping tracking`);
+      // User is not new, skip tracking and remove from database
+      logger.debug(`Spam mode: User ${userId} is not new, removing from tracking`);
+      await removeSpamModeJoinTime(userId);
       return;
     }
 
@@ -304,24 +305,10 @@ async function postSpamWarning(guild, user, occurrences, content) {
       });
     }
     
-    // Get ping role if configured
-    const pingRoleId = await getValue('spam_mode_ping_role_id');
-    let pingContent = '';
-    if (pingRoleId) {
-      const pingRole = guild.roles.cache.get(pingRoleId);
-      if (pingRole) {
-        pingContent = `${pingRole}`;
-      } else {
-        // Role not found, use mention anyway
-        pingContent = `<@&${pingRoleId}>`;
-      }
-    }
-    
     await warningChannel.send({ 
-      content: pingContent || undefined,
       embeds: [embed] 
     });
-    logger.info(`Posted spam warning to channel ${warningChannel.name} for user ${user.tag}${pingRoleId ? ` (pinged role ${pingRoleId})` : ''}`);
+    logger.info(`Posted spam warning to channel ${warningChannel.name} for user ${user.tag}`);
   } catch (error) {
     logger.error('Error posting spam warning:', {
       error: error.message,
@@ -333,55 +320,14 @@ async function postSpamWarning(guild, user, occurrences, content) {
 }
 
 /**
- * Stores a user's join time in the cache (for spam mode tracking)
- * @param {string} userId - The user ID
- * @param {Date} joinTime - The join time
- */
-function storeUserJoinTime(userId, joinTime) {
-  userJoinTimeCache.set(userId, joinTime instanceof Date ? joinTime : new Date(joinTime));
-  logger.debug(`Stored join time for user ${userId} in spam mode cache`);
-}
-
-/**
- * Cleans up old join times from the cache (users past the spam mode window)
- * @param {string} userId - The user ID
- */
-async function cleanupUserJoinTime(userId) {
-  const joinTime = userJoinTimeCache.get(userId);
-  if (!joinTime) {
-    return;
-  }
-  
-  // Get spam mode window, default to mute mode kick time if not set
-  let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
-  if (!windowHours) {
-    // Fallback to mute mode kick time
-    windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-  }
-  
-  const windowMs = windowHours * 60 * 60 * 1000;
-  const now = Date.now();
-  const timeSinceJoin = now - joinTime.getTime();
-  
-  // Remove from cache if past the spam mode window
-  if (timeSinceJoin >= windowMs) {
-    userJoinTimeCache.delete(userId);
-    logger.debug(`Removed join time for user ${userId} from spam mode cache (past window)`);
-  }
-}
-
-/**
  * Clears all tracked messages (useful for testing or reset)
  */
 function clearTracker() {
   userMessageTracker.clear();
-  userJoinTimeCache.clear();
-  logger.debug('Spam mode message tracker and join time cache cleared');
+  logger.debug('Spam mode message tracker cleared');
 }
 
 module.exports = {
   trackNewUserMessage,
-  storeUserJoinTime,
-  cleanupUserJoinTime,
   clearTracker
 };
