@@ -35,7 +35,7 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('time')
-            .setDescription('Time limit in hours before a silent user is kicked (1-72)')
+            .setDescription('How many hours a user must be silent before they are kicked? (1-72)')
             .setRequired(false)
             .setMinValue(1)
             .setMaxValue(72)
