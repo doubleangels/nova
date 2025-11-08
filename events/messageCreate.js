@@ -61,8 +61,12 @@ module.exports = {
       const messageContentLower = message.content?.toLowerCase() || '';
       if (messageContentLower.includes('dubz') || messageContentLower.includes('dubzie')) {
         try {
-          await message.react('<:dubz:1299496825484480584>');
-          logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}`);
+          // Get dubz emoji from database config
+          const dubzEmoji = await getValue('dubz_emoji');
+          if (dubzEmoji) {
+            await message.react(dubzEmoji);
+            logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}`);
+          }
         } catch (error) {
           logger.error("Failed to react to Dubz/Dubzie mention:", {
             error: error.message,
