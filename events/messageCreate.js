@@ -4,6 +4,7 @@ const { getValue, removeMuteModeUser } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
+const { trackNewUserMessage } = require('../utils/spamModeUtils');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -13,8 +14,9 @@ module.exports = {
    * This function:
    * 1. Processes messages from users and specific bots
    * 2. Handles mute mode tracking
-   * 3. Processes time references and reminders
-   * 4. Manages no-text channel restrictions
+   * 3. Tracks new user messages for spam mode (duplicate detection across channels within mute mode kick time)
+   * 4. Processes time references and reminders
+   * 5. Manages no-text channel restrictions
    * 
    * @param {Message} message - The message that was created
    * @throws {Error} If there's an error processing the message
@@ -38,6 +40,19 @@ module.exports = {
         channelId: message.channel.id,
         content: message.content?.replace(/\n/g, ' ') || "No Content"
       });
+
+      // Track new user messages for spam mode if enabled (BEFORE removing from mute mode)
+      try {
+        const spamModeEnabled = await getValue('spam_mode_enabled');
+        if (spamModeEnabled === true) {
+          await trackNewUserMessage(message);
+        }
+      } catch (error) {
+        logger.error("Error checking spam mode or tracking new user message:", {
+          error: error.message,
+          messageId: message.id
+        });
+      }
 
       await removeMuteModeUser(message.author.id);
 

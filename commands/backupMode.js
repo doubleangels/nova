@@ -332,7 +332,9 @@ module.exports = {
     }
     
     if (newEnabled) {
-      embed.setDescription(`New members will be welcomed in <#${newChannelId || 'unset'}> and assigned the <@&${newRoleId || 'unset'}> role.`);
+      const channelStr = newChannelId ? `<#${newChannelId}>` : 'unset';
+      const roleStr = newRoleId ? `<@&${newRoleId}>` : 'unset';
+      embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
@@ -363,7 +365,7 @@ module.exports = {
     embed.addFields({ name: 'New Member Role', value: roleStr });
     
     if (settings.isEnabled) {
-      embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.`);
+      embed.setDescription(`New members will be welcomed in ${channelStr} and assigned the ${roleStr} role.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
