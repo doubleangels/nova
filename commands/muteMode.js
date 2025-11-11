@@ -35,7 +35,7 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('time')
-            .setDescription('Time limit in hours before a silent user is kicked (1-72)')
+            .setDescription('How many hours a user must be silent before they are kicked? (1-72)')
             .setRequired(false)
             .setMinValue(1)
             .setMaxValue(72)
@@ -230,11 +230,12 @@ module.exports = {
     
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
-      { name: 'Time Limit', value: `${settings.timeLimit} hours` }
+      { name: 'Time Limit', value: `${settings.timeLimit} ${settings.timeLimit === 1 ? 'hour' : 'hours'}` }
     );
     
     if (settings.isEnabled) {
-      embed.setDescription(`New users must send a message within **${settings.timeLimit}** hours or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
+      const hourText = settings.timeLimit === 1 ? 'hour' : 'hours';
+      embed.setDescription(`New users must send a message within **${settings.timeLimit}** ${hourText} or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
@@ -263,19 +264,22 @@ module.exports = {
     );
     
     if (oldTimeLimit !== newTimeLimit) {
+      const oldHourText = oldTimeLimit === 1 ? 'hour' : 'hours';
+      const newHourText = newTimeLimit === 1 ? 'hour' : 'hours';
       embed.addFields({ 
         name: 'Time Limit', 
-        value: `${oldTimeLimit} → ${newTimeLimit} hours` 
+        value: `${oldTimeLimit} ${oldHourText} → ${newTimeLimit} ${newHourText}` 
       });
     } else {
       embed.addFields({ 
         name: 'Time Limit', 
-        value: `${newTimeLimit} hours` 
+        value: `${newTimeLimit} ${newTimeLimit === 1 ? 'hour' : 'hours'}` 
       });
     }
     
     if (newEnabled) {
-      embed.setDescription(`New users must send a message within **${newTimeLimit}** hours or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
+      const hourText = newTimeLimit === 1 ? 'hour' : 'hours';
+      embed.setDescription(`New users must send a message within **${newTimeLimit}** ${hourText} or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;

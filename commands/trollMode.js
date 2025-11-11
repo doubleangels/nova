@@ -110,13 +110,15 @@ module.exports = {
     const enabled = interaction.options.getBoolean('enabled');
     const accountAge = interaction.options.getInteger('age');
     
+    const currentSettings = await this.getCurrentSettings();
     const settings = { enabled };
     if (accountAge !== null) {
       settings.accountAge = accountAge;
     }
     
     await this.updateSettings(settings);
-    const embed = this.formatUpdateMessage(enabled, accountAge, interaction);
+    const finalAccountAge = accountAge !== null ? accountAge : currentSettings.accountAge;
+    const embed = this.formatUpdateMessage(enabled, finalAccountAge, interaction);
     
     await interaction.reply({ embeds: [embed] });
     
@@ -124,7 +126,7 @@ module.exports = {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled,
-      accountAge
+      accountAge: finalAccountAge
     });
   },
   
@@ -194,11 +196,20 @@ module.exports = {
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🎭 Troll Mode Status')
-      .addFields(
-        { name: 'Status', value: settings.enabled ? '✅ Enabled' : '❌ Disabled' },
-        { name: 'Minimum Account Age', value: `${settings.accountAge} days` }
-      );
+      .setTitle('🎭 Troll Mode Status');
+
+    const statusEmoji = settings.enabled ? "✅" : "❌";
+    const statusText = settings.enabled ? "Enabled" : "Disabled";
+    
+    embed.addFields(
+      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Minimum Account Age', value: `${settings.accountAge} ${settings.accountAge === 1 ? 'day' : 'days'}` }
+    );
+    
+    if (settings.enabled) {
+      const dayText = settings.accountAge === 1 ? 'day' : 'days';
+      embed.setDescription(`New members with accounts younger than **${settings.accountAge}** ${dayText} will be automatically kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
+    }
 
     return embed;
   },
@@ -214,14 +225,19 @@ module.exports = {
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
       .setColor(enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
-      .setDescription(`Troll mode has been ${enabled ? 'enabled' : 'disabled'} for this server.`);
+      .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`);
 
-    if (accountAge !== null) {
-      embed.addFields({ 
-        name: 'Minimum Account Age', 
-        value: `${accountAge} days` 
-      });
+    const statusEmoji = enabled ? "✅" : "❌";
+    const statusText = enabled ? "Enabled" : "Disabled";
+    
+    embed.addFields(
+      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Minimum Account Age', value: `${accountAge} ${accountAge === 1 ? 'day' : 'days'}` }
+    );
+    
+    if (enabled) {
+      const dayText = accountAge === 1 ? 'day' : 'days';
+      embed.setDescription(`New members with accounts younger than **${accountAge}** ${dayText} will be automatically kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
     }
 
     return embed;
