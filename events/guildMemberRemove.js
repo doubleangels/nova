@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { removeMuteModeUser } = require('../utils/database');
+const { removeMuteModeUser, removeSpamModeJoinTime } = require('../utils/database');
 const { Events } = require('discord.js');
 
 module.exports = {
@@ -11,6 +11,7 @@ module.exports = {
    * This function:
    * 1. Skips processing if the leaving member is a bot
    * 2. Removes the member from mute mode tracking
+   * 3. Removes the member from spam mode tracking
    * 
    * @param {GuildMember} member - The member that left the guild
    * @throws {Error} If there's an error processing the member departure, with specific error messages for different failure cases
@@ -25,6 +26,7 @@ module.exports = {
       logger.info(`Member left: ${member.user.tag} (ID: ${member.id})`);
       
       await removeMuteModeUser(member.id);
+      await removeSpamModeJoinTime(member.id);
 
       logger.info(`Successfully processed member departure: ${member.user.tag}`);
     } catch (error) {
