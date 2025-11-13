@@ -264,7 +264,7 @@ async function postSpamWarning(guild, user, occurrences, content) {
   }
   
   try {
-    const warningChannelId = await getValue('spam_mode_warning_channel_id');
+    const warningChannelId = await getValue('spam_mode_channel_id');
     if (!warningChannelId) {
       // No warning channel configured
       return;
