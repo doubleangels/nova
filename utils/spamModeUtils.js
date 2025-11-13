@@ -283,7 +283,6 @@ async function postSpamWarning(guild, user, occurrences, content) {
     }
     
     const uniqueChannels = [...new Set(occurrences.map(occ => occ.channelName))];
-    const isMultipleChannels = uniqueChannels.length > 1;
     const channelMentions = uniqueChannels.map(name => `#${name}`).join(', ');
     
     const embed = new EmbedBuilder()
@@ -296,14 +295,6 @@ async function postSpamWarning(guild, user, occurrences, content) {
         { name: 'Channels', value: channelMentions || 'Unknown', inline: false },
         { name: 'Message Content', value: content.substring(0, 500) || 'No content', inline: false }
       );
-    
-    if (isMultipleChannels) {
-      embed.addFields({
-        name: '⚠️ Multiple Channels',
-        value: 'This message was sent across multiple channels.',
-        inline: false
-      });
-    }
     
     await warningChannel.send({ 
       embeds: [embed] 
