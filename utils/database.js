@@ -506,7 +506,7 @@ async function cleanupOldTrackingUsers(client = null) {
     }
     
     if (spamModeRemoved > 0 || muteModeRemoved > 0) {
-      logger.info(`Cleaned up old tracking users: ${spamModeRemoved} from spam mode, ${muteModeRemoved} from mute mode`);
+      logger.info(`Cleaned up old tracking users: ${spamModeRemoved} users were removed from spam mode and ${muteModeRemoved} users were removed from mute mode.`);
     } else {
       logger.debug(`Cleanup completed: no old users found to remove`);
     }
