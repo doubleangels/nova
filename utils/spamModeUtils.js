@@ -105,8 +105,24 @@ async function trackNewUserMessage(message) {
       return;
     }
 
-    // Skip if message is too short (less than 3 characters after normalization)
-    const normalizedContent = normalizeContent(message.content);
+    // Remove emote patterns from content for tracking: <:name:id> or <a:name:id>
+    let contentWithoutEmotes = message.content || '';
+    contentWithoutEmotes = contentWithoutEmotes.replace(/<a?:\w+:\d+>/g, '').trim();
+    
+    // Skip if message only contains stickers (has stickers but no text content after removing emotes)
+    if (message.stickers && message.stickers.size > 0 && contentWithoutEmotes.length === 0) {
+      logger.debug(`Spam mode: Message only contains stickers, skipping tracking.`);
+      return;
+    }
+
+    // Skip if message only contains emotes (no stickers, no text content after removing emotes)
+    if ((!message.stickers || message.stickers.size === 0) && contentWithoutEmotes.length === 0) {
+      logger.debug(`Spam mode: Message only contains emotes, skipping tracking.`);
+      return;
+    }
+
+    // Skip if message is too short (less than 3 characters after normalization and emote removal)
+    const normalizedContent = normalizeContent(contentWithoutEmotes);
     if (normalizedContent.length < 3) {
       logger.debug(`Spam mode: Message too short, skipping tracking.`);
       return;
