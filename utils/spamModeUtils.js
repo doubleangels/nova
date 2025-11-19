@@ -108,6 +108,11 @@ async function trackNewUserMessage(message) {
     // Skip if message is a slash command (starts with "/")
     if (message.content && message.content.trim().startsWith('/')) {
       logger.debug(`Spam mode: Message is a slash command, skipping tracking.`);
+      // Check if user is no longer new before returning
+      const { isNew: stillNew } = await isNewUser(userId);
+      if (!stillNew) {
+        await removeSpamModeJoinTime(userId);
+      }
       return;
     }
 
@@ -118,12 +123,22 @@ async function trackNewUserMessage(message) {
     // Skip if message only contains stickers (has stickers but no text content after removing emotes)
     if (message.stickers && message.stickers.size > 0 && contentWithoutEmotes.length === 0) {
       logger.debug(`Spam mode: Message only contains stickers, skipping tracking.`);
+      // Check if user is no longer new before returning
+      const { isNew: stillNew } = await isNewUser(userId);
+      if (!stillNew) {
+        await removeSpamModeJoinTime(userId);
+      }
       return;
     }
 
     // Skip if message only contains emotes (no stickers, no text content after removing emotes)
     if ((!message.stickers || message.stickers.size === 0) && contentWithoutEmotes.length === 0) {
       logger.debug(`Spam mode: Message only contains emotes, skipping tracking.`);
+      // Check if user is no longer new before returning
+      const { isNew: stillNew } = await isNewUser(userId);
+      if (!stillNew) {
+        await removeSpamModeJoinTime(userId);
+      }
       return;
     }
 
@@ -131,6 +146,11 @@ async function trackNewUserMessage(message) {
     const normalizedContent = normalizeContent(contentWithoutEmotes);
     if (normalizedContent.length < 3) {
       logger.debug(`Spam mode: Message too short, skipping tracking.`);
+      // Check if user is no longer new before returning
+      const { isNew: stillNew } = await isNewUser(userId);
+      if (!stillNew) {
+        await removeSpamModeJoinTime(userId);
+      }
       return;
     }
 

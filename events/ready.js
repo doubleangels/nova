@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
-const { initializeDatabase, getValue } = require('../utils/database');
+const { initializeDatabase, getValue, cleanupOldTrackingUsers } = require('../utils/database');
 
 const deployCommands = require('../deploy-commands');
 
@@ -93,6 +93,25 @@ module.exports = {
 
       await rescheduleReminder(client);
       logger.info('Reminders rescheduled successfully.');
+
+      // Run cleanup on startup
+      try {
+        await cleanupOldTrackingUsers(client);
+        logger.info('Initial cleanup of old tracking users completed.');
+      } catch (error) {
+        logger.error('Failed to run initial cleanup:', { error: error.message });
+      }
+
+      // Schedule periodic cleanup every hour
+      const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+      setInterval(async () => {
+        try {
+          await cleanupOldTrackingUsers(client);
+        } catch (error) {
+          logger.error('Error in scheduled cleanup:', { error: error.message });
+        }
+      }, CLEANUP_INTERVAL_MS);
+      logger.info(`Scheduled periodic cleanup every ${CLEANUP_INTERVAL_MS / 1000 / 60} minutes.`);
 
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {

@@ -428,6 +428,98 @@ async function removeSpamModeJoinTime(userId) {
   }
 }
 
+/**
+ * Cleans up old users from tracking tables who are past their tracking windows
+ * Removes users from spam_mode_join_times and mute_mode_recovery who are older than their respective windows
+ * @param {Client} client - The Discord client instance (optional, for checking if users are still in guild)
+ * @returns {Promise<{spamModeRemoved: number, muteModeRemoved: number}>} Number of users removed from each table
+ */
+async function cleanupOldTrackingUsers(client = null) {
+  const client_conn = await pool.connect();
+  try {
+    // Get window settings
+    let spamWindowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
+    if (!spamWindowHours) {
+      spamWindowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+    }
+    
+    let muteWindowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+    
+    const spamWindowMs = spamWindowHours * 60 * 60 * 1000;
+    const muteWindowMs = muteWindowHours * 60 * 60 * 1000;
+    const now = Date.now();
+    const spamCutoffTime = new Date(now - spamWindowMs);
+    const muteCutoffTime = new Date(now - muteWindowMs);
+    
+    // Clean up spam mode join times - remove users past the tracking window
+    const spamResult = await client_conn.query(
+      `DELETE FROM ${DB_TABLES.SPAM_MODE_JOIN_TIMES} 
+       WHERE join_time < $1`,
+      [spamCutoffTime]
+    );
+    const spamModeRemoved = spamResult.rowCount || 0;
+    
+    // Clean up mute mode recovery - remove users past the mute mode window
+    // Only remove if they're not in the guild (if client is provided)
+    let muteModeRemoved = 0;
+    if (client) {
+      // Get all mute mode users
+      const muteUsers = await client_conn.query(
+        `SELECT user_id FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE join_time < $1`,
+        [muteCutoffTime]
+      );
+      
+      // Check each user to see if they're still in the guild
+      for (const row of muteUsers.rows) {
+        const userId = row.user_id;
+        let shouldRemove = true;
+        
+        // Check all guilds the bot is in
+        for (const guild of client.guilds.cache.values()) {
+          try {
+            const member = await guild.members.fetch(userId).catch(() => null);
+            if (member) {
+              shouldRemove = false;
+              break;
+            }
+          } catch (error) {
+            // If fetch fails, assume user is not in guild
+          }
+        }
+        
+        if (shouldRemove) {
+          await client_conn.query(
+            `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
+            [userId]
+          );
+          muteModeRemoved++;
+        }
+      }
+    } else {
+      // If no client provided, just remove all old entries
+      const muteResult = await client_conn.query(
+        `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} 
+         WHERE join_time < $1`,
+        [muteCutoffTime]
+      );
+      muteModeRemoved = muteResult.rowCount || 0;
+    }
+    
+    if (spamModeRemoved > 0 || muteModeRemoved > 0) {
+      logger.info(`Cleaned up old tracking users: ${spamModeRemoved} from spam mode, ${muteModeRemoved} from mute mode`);
+    } else {
+      logger.debug(`Cleanup completed: no old users found to remove`);
+    }
+    
+    return { spamModeRemoved, muteModeRemoved };
+  } catch (error) {
+    logger.error('Error cleaning up old tracking users:', { error: error.message });
+    throw error;
+  } finally {
+    client_conn.release();
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -443,5 +535,6 @@ module.exports = {
   addSpamModeJoinTime,
   getSpamModeJoinTime,
   updateSpamModeJoinTime,
-  removeSpamModeJoinTime
+  removeSpamModeJoinTime,
+  cleanupOldTrackingUsers
 };
