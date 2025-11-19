@@ -105,6 +105,12 @@ async function trackNewUserMessage(message) {
       return;
     }
 
+    // Skip if message is a slash command (starts with "/")
+    if (message.content && message.content.trim().startsWith('/')) {
+      logger.debug(`Spam mode: Message is a slash command, skipping tracking.`);
+      return;
+    }
+
     // Remove emote patterns from content for tracking: <:name:id> or <a:name:id>
     let contentWithoutEmotes = message.content || '';
     contentWithoutEmotes = contentWithoutEmotes.replace(/<a?:\w+:\d+>/g, '').trim();
