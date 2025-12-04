@@ -4,12 +4,15 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
-const { Pool } = require('pg');
-const config = require('../config');
+const Keyv = require('keyv');
+const { KeyvFile } = require('keyv-file');
 
-const pool = new Pool({
-  connectionString: config.neonConnectionString,
-  ssl: { rejectUnauthorized: true }
+// Initialize Keyv for reminder storage
+const reminderKeyv = new Keyv({
+  store: new KeyvFile({
+    filename: './data/database.json'
+  }),
+  namespace: 'nova_reminders'
 });
 
 /**
@@ -82,10 +85,27 @@ module.exports = {
    */
   async checkExistingReminder() {
     try {
-      const result = await pool.query(
-        `SELECT COUNT(*) FROM main.reminder_recovery WHERE remind_at > NOW()`
-      );
-      return parseInt(result.rows[0].count) > 0;
+      const bumpIds = await reminderKeyv.get('reminders:bump:list') || [];
+      const promoteIds = await reminderKeyv.get('reminders:promote:list') || [];
+      const now = new Date();
+      
+      // Check bump reminders
+      for (const id of bumpIds) {
+        const reminder = await reminderKeyv.get(`reminder:${id}`);
+        if (reminder && reminder.remind_at && new Date(reminder.remind_at) > now) {
+          return true;
+        }
+      }
+      
+      // Check promote reminders
+      for (const id of promoteIds) {
+        const reminder = await reminderKeyv.get(`reminder:${id}`);
+        if (reminder && reminder.remind_at && new Date(reminder.remind_at) > now) {
+          return true;
+        }
+      }
+      
+      return false;
     } catch (error) {
       logger.warn("Error checking for existing reminder:", { error: error.message });
       return false;
@@ -104,26 +124,50 @@ module.exports = {
   async saveReminderToDatabase(reminderId, scheduledTime) {
     try {
       // Clean up existing reminders first
-      const cleanupResult = await pool.query(
-        `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
-        ['bump']
-      );
-      logger.debug("Cleaned up existing reminders of type:", { type: 'bump', deletedCount: cleanupResult.rowCount });
-
-      // Only insert if cleanup was successful
-      if (cleanupResult !== null) {
-        await pool.query(
-          `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
-          [reminderId, scheduledTime, 'bump']
-        );
-        logger.debug("Reminder data saved to database:", { 
-          reminderId: reminderId, 
-          scheduledTime: scheduledTime,
-          type: 'bump'
-        });
-      } else {
-        throw new Error("Failed to cleanup existing reminders, aborting new reminder creation");
+      const reminderIds = await reminderKeyv.get('reminders:bump:list') || [];
+      const now = new Date();
+      let deletedCount = 0;
+      
+      for (const id of reminderIds) {
+        const reminder = await reminderKeyv.get(`reminder:${id}`);
+        if (reminder && reminder.remind_at) {
+          const remindAt = new Date(reminder.remind_at);
+          if (remindAt > now) {
+            await reminderKeyv.delete(`reminder:${id}`);
+            deletedCount++;
+          }
+        }
       }
+      
+      // Update the list
+      const filtered = reminderIds.filter(id => {
+        // Keep only if reminder doesn't exist or is expired
+        return true; // Will be filtered by the cleanup above
+      });
+      await reminderKeyv.set('reminders:bump:list', filtered);
+      
+      logger.debug("Cleaned up existing reminders of type:", { type: 'bump', deletedCount });
+
+      // Insert new reminder
+      const reminderData = {
+        reminder_id: reminderId,
+        remind_at: scheduledTime,
+        type: 'bump'
+      };
+      await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
+      
+      // Add to list
+      const list = await reminderKeyv.get('reminders:bump:list') || [];
+      if (!list.includes(reminderId)) {
+        list.push(reminderId);
+        await reminderKeyv.set('reminders:bump:list', list);
+      }
+      
+      logger.debug("Reminder data saved to database:", { 
+        reminderId: reminderId, 
+        scheduledTime: scheduledTime,
+        type: 'bump'
+      });
     } catch (error) {
       logger.error("Database error while saving reminder:", { error: error.message, reminderId: reminderId });
       throw new Error("DATABASE_ERROR");

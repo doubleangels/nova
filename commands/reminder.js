@@ -5,13 +5,7 @@ const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
 const { getValue, setValue } = require('../utils/database');
-const { Pool } = require('pg');
-const config = require('../config');
-
-const pool = new Pool({
-  connectionString: config.neonConnectionString,
-  ssl: { rejectUnauthorized: true }
-});
+const { getLatestReminderData } = require('../utils/reminderUtils');
 
 /**
  * Command module for configuring and managing Disboard bump reminders.
@@ -222,7 +216,7 @@ module.exports = {
   /**
    * Retrieves the latest reminder data for a specific type.
    * 
-   * @param {string} channelId - The ID of the channel to check
+   * @param {string} channelId - The ID of the channel to check (not used with Keyv, kept for compatibility)
    * @param {string} type - The type of reminder ('bump' or 'promote')
    * @returns {Promise<Object|null>} The latest reminder data or null if none found
    */
@@ -230,14 +224,7 @@ module.exports = {
     if (!channelId) return null;
     
     try {
-      const result = await pool.query(
-        `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
-         WHERE remind_at > NOW() AND type = $1
-         ORDER BY remind_at ASC 
-         LIMIT 1`,
-        [type]
-      );
-      return result.rows.length > 0 ? result.rows[0] : null;
+      return await getLatestReminderData(type);
     } catch (err) {
       logger.error("Error getting latest reminder data:", { error: err, type });
       return null;

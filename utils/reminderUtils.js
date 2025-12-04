@@ -3,14 +3,56 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
-const { Pool } = require('pg');
-const config = require('../config');
+const Keyv = require('keyv');
+const { KeyvFile } = require('keyv-file');
 
-/** @type {Pool} PostgreSQL connection pool for reminder operations */
-const REMINDER_POOL = new Pool({
-  connectionString: config.neonConnectionString,
-  ssl: { rejectUnauthorized: true }
+// Initialize Keyv for reminder storage
+const reminderKeyv = new Keyv({
+  store: new KeyvFile({
+    filename: './data/database.json'
+  }),
+  namespace: 'nova_reminders'
 });
+
+reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error:', { error: err }));
+
+/**
+ * Helper function to get all reminder IDs for a type
+ * @param {string} type - The type of reminder ('bump' or 'promote')
+ * @returns {Promise<string[]>} Array of reminder IDs
+ */
+async function getReminderIds(type) {
+  const listKey = `reminders:${type}:list`;
+  return await reminderKeyv.get(listKey) || [];
+}
+
+/**
+ * Helper function to add a reminder ID to the list
+ * @param {string} type - The type of reminder
+ * @param {string} reminderId - The reminder ID
+ * @returns {Promise<void>}
+ */
+async function addReminderId(type, reminderId) {
+  const listKey = `reminders:${type}:list`;
+  const list = await getReminderIds(type);
+  if (!list.includes(reminderId)) {
+    list.push(reminderId);
+    await reminderKeyv.set(listKey, list);
+  }
+}
+
+/**
+ * Helper function to remove a reminder ID from the list
+ * @param {string} type - The type of reminder
+ * @param {string} reminderId - The reminder ID
+ * @returns {Promise<void>}
+ */
+async function removeReminderId(type, reminderId) {
+  const listKey = `reminders:${type}:list`;
+  const list = await getReminderIds(type);
+  const filtered = list.filter(id => id !== reminderId);
+  await reminderKeyv.set(listKey, filtered);
+}
 
 /**
  * Retrieves the latest reminder data for a specific type
@@ -19,14 +61,27 @@ const REMINDER_POOL = new Pool({
  */
 async function getLatestReminderData(type) {
   try {
-    const result = await REMINDER_POOL.query(
-      `SELECT reminder_id, remind_at, type FROM main.reminder_recovery 
-       WHERE remind_at > NOW() AND type = $1
-       ORDER BY remind_at ASC 
-       LIMIT 1`,
-      [type]
-    );
-    return result.rows.length > 0 ? result.rows[0] : null;
+    const reminderIds = await getReminderIds(type);
+    const now = new Date();
+    let latestReminder = null;
+    let latestTime = null;
+    
+    for (const reminderId of reminderIds) {
+      const reminder = await reminderKeyv.get(`reminder:${reminderId}`);
+      if (reminder && reminder.remind_at) {
+        const remindAt = new Date(reminder.remind_at);
+        if (remindAt > now && (!latestTime || remindAt < latestTime)) {
+          latestTime = remindAt;
+          latestReminder = {
+            reminder_id: reminder.reminder_id,
+            remind_at: remindAt,
+            type: reminder.type
+          };
+        }
+      }
+    }
+    
+    return latestReminder;
   } catch (err) {
     logger.error("Error getting latest reminder data:", { error: err });
     return null;
@@ -75,22 +130,30 @@ async function handleReminder(message, delay, type = 'bump') {
     }
 
     // Clean up existing reminders first
-    const cleanupResult = await REMINDER_POOL.query(
-      `DELETE FROM main.reminder_recovery WHERE remind_at > NOW() AND type = $1`,
-      [type]
-    );
-    logger.debug("Cleaned up existing reminders of type:", { type, deletedCount: cleanupResult.rowCount });
-
-    // Only insert if cleanup was successful
-    if (cleanupResult !== null) {
-      await REMINDER_POOL.query(
-        `INSERT INTO main.reminder_recovery (reminder_id, remind_at, type) VALUES ($1, $2, $3)`,
-        [reminderId, scheduledTime.toISOString(), type]
-      );
-      logger.debug("Successfully inserted new reminder:", { reminderId, type, scheduledTime: scheduledTime.toISOString() });
-    } else {
-      throw new Error("Failed to cleanup existing reminders, aborting new reminder creation");
+    const reminderIds = await getReminderIds(type);
+    let deletedCount = 0;
+    for (const id of reminderIds) {
+      const reminder = await reminderKeyv.get(`reminder:${id}`);
+      if (reminder && reminder.remind_at) {
+        const remindAt = new Date(reminder.remind_at);
+        if (remindAt > new Date()) {
+          await reminderKeyv.delete(`reminder:${id}`);
+          await removeReminderId(type, id);
+          deletedCount++;
+        }
+      }
     }
+    logger.debug("Cleaned up existing reminders of type:", { type, deletedCount });
+
+    // Insert new reminder
+    const reminderData = {
+      reminder_id: reminderId,
+      remind_at: scheduledTime.toISOString(),
+      type: type
+    };
+    await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
+    await addReminderId(type, reminderId);
+    logger.debug("Successfully inserted new reminder:", { reminderId, type, scheduledTime: scheduledTime.toISOString() });
 
     const confirmationMessage = type === 'promote'
       ? `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`
@@ -112,10 +175,8 @@ async function handleReminder(message, delay, type = 'bump') {
           type
         });
 
-        await REMINDER_POOL.query(
-          `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
-          [reminderId]
-        );
+        await reminderKeyv.delete(`reminder:${reminderId}`);
+        await removeReminderId(type, reminderId);
         logger.debug("Cleaned up sent reminder from recovery table:", { reminderId });
       } catch (err) {
         logger.error("Error while sending scheduled reminder:", {
@@ -187,10 +248,8 @@ async function rescheduleReminder(client) {
             await channel.send(`🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`);
             logger.debug("Sent rescheduled bump reminder:", { reminder_id: bumpReminder.reminder_id });
 
-            await REMINDER_POOL.query(
-              `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
-              [bumpReminder.reminder_id]
-            );
+            await reminderKeyv.delete(`reminder:${bumpReminder.reminder_id}`);
+            await removeReminderId('bump', bumpReminder.reminder_id);
           } catch (err) {
             logger.error("Error while sending rescheduled bump reminder:", {
               error: err.message,
@@ -218,10 +277,8 @@ async function rescheduleReminder(client) {
             await channel.send(`🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`);
             logger.debug("Sent rescheduled promotion reminder:", { reminder_id: promoteReminder.reminder_id });
 
-            await REMINDER_POOL.query(
-              `DELETE FROM main.reminder_recovery WHERE reminder_id = $1`,
-              [promoteReminder.reminder_id]
-            );
+            await reminderKeyv.delete(`reminder:${promoteReminder.reminder_id}`);
+            await removeReminderId('promote', promoteReminder.reminder_id);
           } catch (err) {
             logger.error("Error while sending rescheduled promotion reminder:", {
               error: err.message,
@@ -277,5 +334,6 @@ async function handleError(error, context) {
 
 module.exports = {
   handleReminder,
-  rescheduleReminder
+  rescheduleReminder,
+  getLatestReminderData
 };

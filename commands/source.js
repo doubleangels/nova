@@ -15,13 +15,12 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      const neonUrl = 'https://console.neon.tech/app/projects/round-brook-90345203';
       const githubUrl = 'https://github.com/doubleangels/nova';
 
       const embed = new EmbedBuilder()
         .setColor(0x00A67E)
         .setTitle('🤖 Bot Resources')
-        .setDescription(`• 🗄️ **Database Console:** [Open Neon Console](${neonUrl})\n• 🧩 **GitHub Repo:** [doubleangels/nova](${githubUrl})`);
+        .setDescription(`• 🧩 **GitHub Repo:** [doubleangels/nova](${githubUrl})`);
 
       await interaction.reply({ embeds: [embed] });
 

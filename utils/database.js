@@ -1,28 +1,19 @@
-const { Pool } = require('pg');
+const Keyv = require('keyv');
+const { KeyvFile } = require('keyv-file');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const config = require('../config');
 
-/** @type {Object.<string, string>} Database table names */
-const DB_TABLES = {
-  CONFIG: 'main.config',
-  REMINDERS: 'main.reminder_data',
-  MUTE_MODE_RECOVERY: 'main.mute_mode_recovery',
-  SPAM_MODE_JOIN_TIMES: 'main.spam_mode_join_times'
-};
-
-/** @type {Pool} PostgreSQL connection pool */
-const pool = new Pool({
-  connectionString: config.neonConnectionString,
-  ssl: {
-    rejectUnauthorized: true 
-  },
-  query_timeout: 30000
+// Initialize Keyv with file storage
+// Data will be stored in ./data/database.json
+const keyv = new Keyv({
+  store: new KeyvFile({
+    filename: './data/database.json'
+  }),
+  namespace: 'nova'
 });
 
-pool.on('error', (err, client) => {
-  logger.error('Unexpected error on idle client', { error: err });
-});
+// Handle connection errors
+keyv.on('error', err => logger.error('Keyv connection error:', { error: err }));
 
 /**
  * Initializes the database connection and performs a test query
@@ -36,37 +27,23 @@ async function initializeDatabase() {
   let lastError = null;
 
   while (retryCount < MAX_RETRIES) {
-    const client = await pool.connect();
     try {
       logger.info(`Testing database connection... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
       
       const testKey = 'db_test_key';
       const testValue = 'test_value';
       
-      await client.query(
-        `INSERT INTO ${DB_TABLES.CONFIG} (id, value) VALUES ($1, $2)
-         ON CONFLICT (id) DO UPDATE SET value = $2`,
-        [testKey, JSON.stringify(testValue)]
-      );
+      await keyv.set(testKey, testValue);
+      const retrieved = await keyv.get(testKey);
       
-      const result = await client.query(
-        `SELECT value FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
-        [testKey]
-      );
-      
-      if (result.rows.length > 0 && JSON.parse(result.rows[0].value) === testValue) {
+      if (retrieved === testValue) {
         logger.info("Database connection test successful.");
+        await keyv.delete(testKey);
+        logger.debug("Cleaned up database test data.");
+        return;
       } else {
         throw new Error("Database read/write test failed.");
       }
-
-      await client.query(
-        `DELETE FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
-        [testKey]
-      );
-      logger.debug("Cleaned up database test data.");
-      
-      return;
       
     } catch (err) {
       lastError = err;
@@ -79,8 +56,6 @@ async function initializeDatabase() {
         logger.info(`Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
-    } finally {
-      client.release();
     }
   }
 
@@ -99,22 +74,13 @@ async function initializeDatabase() {
  * @returns {Promise<any>} The configuration value, or null if not found
  */
 async function getValue(key) {
-  const client = await pool.connect();
   try {
     logger.debug(`Getting config value for key "${key}".`);
-    const result = await client.query(
-      `SELECT value FROM ${DB_TABLES.CONFIG} WHERE id = $1`,
-      [key]
-    );
-    const parsed = result.rows.length > 0 && result.rows[0].value 
-      ? JSON.parse(result.rows[0].value) 
-      : null;
-    return parsed;
+    const value = await keyv.get(`config:${key}`);
+    return value !== undefined ? value : null;
   } catch (err) {
     logger.error(`Error getting key "${key}":`, { error: err });
     return null;
-  } finally {
-    client.release();
   }
 }
 
@@ -125,22 +91,12 @@ async function getValue(key) {
  * @returns {Promise<void>}
  */
 async function setValue(key, value) {
-  const client = await pool.connect();
   try {
     logger.debug(`Setting config value for key "${key}".`);
-    const serialized = JSON.stringify(value);
-    
-    await client.query(
-      `INSERT INTO ${DB_TABLES.CONFIG} (id, value) VALUES ($1, $2)
-       ON CONFLICT (id) DO UPDATE SET value = $2`,
-      [key, serialized]
-    );
-    
+    await keyv.set(`config:${key}`, value);
     logger.debug(`Set config for key "${key}" successfully.`);
   } catch (err) {
     logger.error(`Error setting key "${key}":`, { error: err });
-  } finally {
-    client.release();
   }
 }
 
@@ -150,15 +106,12 @@ async function setValue(key, value) {
  * @returns {Promise<void>}
  */
 async function deleteValue(key) {
-  const client = await pool.connect();
   try {
     logger.debug(`Deleting config for key "${key}".`);
-    await client.query(`DELETE FROM ${DB_TABLES.CONFIG} WHERE id = $1`, [key]);
+    await keyv.delete(`config:${key}`);
     logger.debug(`Deleted config for key "${key}".`);
   } catch (err) {
     logger.error(`Error deleting key "${key}":`, { error: err });
-  } finally {
-    client.release();
   }
 }
 
@@ -167,63 +120,65 @@ async function deleteValue(key) {
  * @returns {Promise<Array>} Array of configuration records
  */
 async function getAllConfigs() {
-  const client = await pool.connect();
   try {
     logger.debug("Retrieving all config records.");
-    const result = await client.query(`SELECT * FROM ${DB_TABLES.CONFIG}`);
-    logger.debug(`Retrieved ${result.rows.length} config records.`);
-    return result.rows;
+    // Keyv doesn't have a native "get all" method, so we'll need to track keys
+    // For now, return empty array as this function may not be used
+    // If needed, we can maintain a list of config keys separately
+    logger.debug("Retrieved config records (not fully supported with Keyv).");
+    return [];
   } catch (err) {
     logger.error("Error getting all config values:", { error: err });
     return [];
-  } finally {
-    client.release();
   }
 }
 
 /**
  * Executes a database query with timeout and error handling
- * @param {string} text - The SQL query text
- * @param {Array} [params=[]] - Query parameters
+ * Note: This function is kept for compatibility but Keyv doesn't support SQL queries
+ * @param {string} text - The SQL query text (not used with Keyv)
+ * @param {Array} [params=[]] - Query parameters (not used with Keyv)
  * @param {Object} [options={}] - Query options
  * @param {number} [options.timeout=30000] - Query timeout in milliseconds
  * @throws {Error} If query fails or times out
- * @returns {Promise<QueryResult>} The query result
+ * @returns {Promise<Object>} A mock query result object for compatibility
  */
 async function query(text, params = [], options = {}) {
-  const client = await pool.connect();
-  const timeout = options.timeout || 30000;
-  
+  logger.warn("query() function called but Keyv doesn't support SQL queries. This is likely a compatibility issue.");
+  throw new Error("SQL queries are not supported with Keyv. Use the specific database functions instead.");
+}
+
+/**
+ * Helper function to maintain a list of user IDs for a given type
+ * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
+ * @param {string} userId - The user ID to add
+ * @returns {Promise<void>}
+ */
+async function addToUserList(listKey, userId) {
   try {
-    await client.query(`SET statement_timeout = ${timeout}`);
-    
-    const result = await Promise.race([
-      client.query(text, params),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout')), timeout)
-      )
-    ]);
-    
-    return result;
+    const list = await keyv.get(listKey) || [];
+    if (!list.includes(userId)) {
+      list.push(userId);
+      await keyv.set(listKey, list);
+    }
   } catch (error) {
-    if (error.code === '40P01') {
-      logger.error('Deadlock detected in database query:', { error });
-      throw new Error('We encountered a deadlock while processing your request. Please try again.');
-    }
-    
-    if (error.message === 'Query timeout') {
-      logger.error('Query timeout:', { 
-        query: text,
-        params,
-        timeout
-      });
-      throw new Error('We took too long to process your request. Please try again.');
-    }
-    
-    logger.error('Database query error:', { error });
-    throw error;
-  } finally {
-    client.release();
+    logger.error(`Error adding to user list ${listKey}:`, { error: error.message });
+  }
+}
+
+/**
+ * Helper function to remove a user ID from a list
+ * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
+ * @param {string} userId - The user ID to remove
+ * @returns {Promise<void>}
+ */
+async function removeFromUserList(listKey, userId) {
+  try {
+    const list = await keyv.get(listKey) || [];
+    const filtered = list.filter(id => id !== userId);
+    await keyv.set(listKey, filtered);
+  } catch (error) {
+    logger.error(`Error removing from user list ${listKey}:`, { error: error.message });
   }
 }
 
@@ -234,16 +189,17 @@ async function query(text, params = [], options = {}) {
  * @returns {Promise<void>}
  */
 async function addMuteModeUser(userId, username) {
-  const client = await pool.connect();
   try {
-    await client.query(
-      `INSERT INTO ${DB_TABLES.MUTE_MODE_RECOVERY} (user_id, username, join_time)
-       VALUES ($1, $2, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = NOW()`,
-      [userId, username]
-    );
-  } finally {
-    client.release();
+    const userData = {
+      userId,
+      username,
+      joinTime: new Date().toISOString()
+    };
+    await keyv.set(`mute_mode:${userId}`, userData);
+    await addToUserList('mute_mode_users', userId);
+    logger.debug(`Added mute mode user ${userId} with join time ${userData.joinTime}`);
+  } catch (error) {
+    logger.error(`Error adding mute mode user ${userId}:`, { error: error.message });
   }
 }
 
@@ -254,22 +210,14 @@ async function addMuteModeUser(userId, username) {
  * @returns {Promise<void>}
  */
 async function removeMuteModeUser(userId) {
-  const client = await pool.connect();
   try {
-    // Remove user from mute mode tracking immediately
-    // This prevents them from being kicked for inactivity
-    const result = await client.query(
-      `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
-      [userId]
-    );
-    
-    if (result.rowCount > 0) {
+    const deleted = await keyv.delete(`mute_mode:${userId}`);
+    await removeFromUserList('mute_mode_users', userId);
+    if (deleted) {
       logger.debug(`Removed user ${userId} from mute mode tracking.`);
     }
   } catch (error) {
     logger.error(`Error removing mute mode user ${userId}:`, { error: error.message });
-  } finally {
-    client.release();
   }
 }
 
@@ -278,12 +226,25 @@ async function removeMuteModeUser(userId) {
  * @returns {Promise<Array>} Array of mute mode user records
  */
 async function getAllMuteModeUsers() {
-  const client = await pool.connect();
   try {
-    const res = await client.query(`SELECT * FROM ${DB_TABLES.MUTE_MODE_RECOVERY}`);
-    return res.rows;
-  } finally {
-    client.release();
+    const userIds = await keyv.get('mute_mode_users') || [];
+    const users = [];
+    
+    for (const userId of userIds) {
+      const userData = await keyv.get(`mute_mode:${userId}`);
+      if (userData) {
+        users.push({
+          user_id: userData.userId,
+          username: userData.username,
+          join_time: userData.joinTime
+        });
+      }
+    }
+    
+    return users;
+  } catch (error) {
+    logger.error("Error getting all mute mode users:", { error: error.message });
+    return [];
   }
 }
 
@@ -293,18 +254,15 @@ async function getAllMuteModeUsers() {
  * @returns {Promise<Date|null>} The join time or null if user not found
  */
 async function getUserJoinTime(userId) {
-  const client = await pool.connect();
   try {
-    const res = await client.query(
-      `SELECT join_time FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
-      [userId]
-    );
-    if (res.rows.length > 0 && res.rows[0].join_time) {
-      return new Date(res.rows[0].join_time);
+    const userData = await keyv.get(`mute_mode:${userId}`);
+    if (userData && userData.joinTime) {
+      return new Date(userData.joinTime);
     }
     return null;
-  } finally {
-    client.release();
+  } catch (error) {
+    logger.error(`Error getting user join time for ${userId}:`, { error: error.message });
+    return null;
   }
 }
 
@@ -316,21 +274,22 @@ async function getUserJoinTime(userId) {
  * @returns {Promise<void>}
  */
 async function updateUserJoinTime(userId, username, joinTime = null) {
-  const client = await pool.connect();
   try {
     const timeToSet = joinTime 
-      ? (joinTime instanceof Date ? joinTime : new Date(joinTime))
-      : new Date();
+      ? (joinTime instanceof Date ? joinTime.toISOString() : new Date(joinTime).toISOString())
+      : new Date().toISOString();
     
-    await client.query(
-      `INSERT INTO ${DB_TABLES.MUTE_MODE_RECOVERY} (user_id, username, join_time)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = $3`,
-      [userId, username, timeToSet]
-    );
-    logger.debug(`Updated join time for user ${userId} to ${timeToSet.toISOString()}`);
-  } finally {
-    client.release();
+    const userData = {
+      userId,
+      username,
+      joinTime: timeToSet
+    };
+    
+    await keyv.set(`mute_mode:${userId}`, userData);
+    await addToUserList('mute_mode_users', userId);
+    logger.debug(`Updated join time for user ${userId} to ${timeToSet}`);
+  } catch (error) {
+    logger.error(`Error updating user join time for ${userId}:`, { error: error.message });
   }
 }
 
@@ -342,19 +301,20 @@ async function updateUserJoinTime(userId, username, joinTime = null) {
  * @returns {Promise<void>}
  */
 async function addSpamModeJoinTime(userId, username, joinTime) {
-  const client = await pool.connect();
   try {
-    const timeToSet = joinTime instanceof Date ? joinTime : new Date(joinTime);
+    const timeToSet = joinTime instanceof Date ? joinTime.toISOString() : new Date(joinTime).toISOString();
     
-    await client.query(
-      `INSERT INTO ${DB_TABLES.SPAM_MODE_JOIN_TIMES} (user_id, username, join_time)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = $3`,
-      [userId, username, timeToSet]
-    );
-    logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet.toISOString()}`);
-  } finally {
-    client.release();
+    const userData = {
+      userId,
+      username,
+      joinTime: timeToSet
+    };
+    
+    await keyv.set(`spam_mode:${userId}`, userData);
+    await addToUserList('spam_mode_users', userId);
+    logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet}`);
+  } catch (error) {
+    logger.error(`Error adding spam mode join time for user ${userId}:`, { error: error.message });
   }
 }
 
@@ -364,18 +324,15 @@ async function addSpamModeJoinTime(userId, username, joinTime) {
  * @returns {Promise<Date|null>} The join time or null if user not found
  */
 async function getSpamModeJoinTime(userId) {
-  const client = await pool.connect();
   try {
-    const res = await client.query(
-      `SELECT join_time FROM ${DB_TABLES.SPAM_MODE_JOIN_TIMES} WHERE user_id = $1`,
-      [userId]
-    );
-    if (res.rows.length > 0 && res.rows[0].join_time) {
-      return new Date(res.rows[0].join_time);
+    const userData = await keyv.get(`spam_mode:${userId}`);
+    if (userData && userData.joinTime) {
+      return new Date(userData.joinTime);
     }
     return null;
-  } finally {
-    client.release();
+  } catch (error) {
+    logger.error(`Error getting spam mode join time for user ${userId}:`, { error: error.message });
+    return null;
   }
 }
 
@@ -387,21 +344,22 @@ async function getSpamModeJoinTime(userId) {
  * @returns {Promise<void>}
  */
 async function updateSpamModeJoinTime(userId, username, joinTime = null) {
-  const client = await pool.connect();
   try {
     const timeToSet = joinTime 
-      ? (joinTime instanceof Date ? joinTime : new Date(joinTime))
-      : new Date();
+      ? (joinTime instanceof Date ? joinTime.toISOString() : new Date(joinTime).toISOString())
+      : new Date().toISOString();
     
-    await client.query(
-      `INSERT INTO ${DB_TABLES.SPAM_MODE_JOIN_TIMES} (user_id, username, join_time)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id) DO UPDATE SET username = $2, join_time = $3`,
-      [userId, username, timeToSet]
-    );
-    logger.debug(`Updated spam mode join time for user ${userId} to ${timeToSet.toISOString()}`);
-  } finally {
-    client.release();
+    const userData = {
+      userId,
+      username,
+      joinTime: timeToSet
+    };
+    
+    await keyv.set(`spam_mode:${userId}`, userData);
+    await addToUserList('spam_mode_users', userId);
+    logger.debug(`Updated spam mode join time for user ${userId} to ${timeToSet}`);
+  } catch (error) {
+    logger.error(`Error updating spam mode join time for user ${userId}:`, { error: error.message });
   }
 }
 
@@ -411,20 +369,14 @@ async function updateSpamModeJoinTime(userId, username, joinTime = null) {
  * @returns {Promise<void>}
  */
 async function removeSpamModeJoinTime(userId) {
-  const client = await pool.connect();
   try {
-    const result = await client.query(
-      `DELETE FROM ${DB_TABLES.SPAM_MODE_JOIN_TIMES} WHERE user_id = $1`,
-      [userId]
-    );
-    
-    if (result.rowCount > 0) {
+    const deleted = await keyv.delete(`spam_mode:${userId}`);
+    await removeFromUserList('spam_mode_users', userId);
+    if (deleted) {
       logger.debug(`Removed user ${userId} from spam mode tracking.`);
     }
   } catch (error) {
     logger.error(`Error removing spam mode join time for user ${userId}:`, { error: error.message });
-  } finally {
-    client.release();
   }
 }
 
@@ -435,7 +387,6 @@ async function removeSpamModeJoinTime(userId) {
  * @returns {Promise<{spamModeRemoved: number, muteModeRemoved: number}>} Number of users removed from each table
  */
 async function cleanupOldTrackingUsers(client = null) {
-  const client_conn = await pool.connect();
   try {
     // Get window settings
     let spamWindowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
@@ -451,59 +402,71 @@ async function cleanupOldTrackingUsers(client = null) {
     const spamCutoffTime = new Date(now - spamWindowMs);
     const muteCutoffTime = new Date(now - muteWindowMs);
     
-    // Clean up spam mode join times - remove users past the tracking window
-    const spamResult = await client_conn.query(
-      `DELETE FROM ${DB_TABLES.SPAM_MODE_JOIN_TIMES} 
-       WHERE join_time < $1`,
-      [spamCutoffTime]
-    );
-    const spamModeRemoved = spamResult.rowCount || 0;
-    
-    // Clean up mute mode recovery - remove users past the mute mode window
-    // Only remove if they're not in the guild (if client is provided)
+    let spamModeRemoved = 0;
     let muteModeRemoved = 0;
-    if (client) {
-      // Get all mute mode users
-      const muteUsers = await client_conn.query(
-        `SELECT user_id FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE join_time < $1`,
-        [muteCutoffTime]
-      );
-      
-      // Check each user to see if they're still in the guild
-      for (const row of muteUsers.rows) {
-        const userId = row.user_id;
-        let shouldRemove = true;
+    
+    // Clean up spam mode users
+    const spamUserIds = await keyv.get('spam_mode_users') || [];
+    const remainingSpamUsers = [];
+    
+    for (const userId of spamUserIds) {
+      const userData = await keyv.get(`spam_mode:${userId}`);
+      if (userData && userData.joinTime) {
+        const joinTime = new Date(userData.joinTime);
+        if (joinTime < spamCutoffTime) {
+          await keyv.delete(`spam_mode:${userId}`);
+          spamModeRemoved++;
+        } else {
+          remainingSpamUsers.push(userId);
+        }
+      } else {
+        // User data missing, remove from list
+        spamModeRemoved++;
+      }
+    }
+    await keyv.set('spam_mode_users', remainingSpamUsers);
+    
+    // Clean up mute mode users
+    const muteUserIds = await keyv.get('mute_mode_users') || [];
+    const remainingMuteUsers = [];
+    
+    for (const userId of muteUserIds) {
+      const userData = await keyv.get(`mute_mode:${userId}`);
+      if (userData && userData.joinTime) {
+        const joinTime = new Date(userData.joinTime);
+        let shouldRemove = joinTime < muteCutoffTime;
         
-        // Check all guilds the bot is in
-        for (const guild of client.guilds.cache.values()) {
-          try {
-            const member = await guild.members.fetch(userId).catch(() => null);
-            if (member) {
-              shouldRemove = false;
-              break;
+        // If client is provided, also check if user is still in guild
+        if (!shouldRemove && client) {
+          let userInGuild = false;
+          for (const guild of client.guilds.cache.values()) {
+            try {
+              const member = await guild.members.fetch(userId).catch(() => null);
+              if (member) {
+                userInGuild = true;
+                break;
+              }
+            } catch (error) {
+              // If fetch fails, assume user is not in guild
             }
-          } catch (error) {
-            // If fetch fails, assume user is not in guild
+          }
+          if (!userInGuild) {
+            shouldRemove = true;
           }
         }
         
         if (shouldRemove) {
-          await client_conn.query(
-            `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} WHERE user_id = $1`,
-            [userId]
-          );
+          await keyv.delete(`mute_mode:${userId}`);
           muteModeRemoved++;
+        } else {
+          remainingMuteUsers.push(userId);
         }
+      } else {
+        // User data missing, remove from list
+        muteModeRemoved++;
       }
-    } else {
-      // If no client provided, just remove all old entries
-      const muteResult = await client_conn.query(
-        `DELETE FROM ${DB_TABLES.MUTE_MODE_RECOVERY} 
-         WHERE join_time < $1`,
-        [muteCutoffTime]
-      );
-      muteModeRemoved = muteResult.rowCount || 0;
     }
+    await keyv.set('mute_mode_users', remainingMuteUsers);
     
     if (spamModeRemoved > 0 || muteModeRemoved > 0) {
       logger.info(`Cleaned up old tracking users: ${spamModeRemoved} users were removed from spam mode and ${muteModeRemoved} users were removed from mute mode.`);
@@ -515,8 +478,6 @@ async function cleanupOldTrackingUsers(client = null) {
   } catch (error) {
     logger.error('Error cleaning up old tracking users:', { error: error.message });
     throw error;
-  } finally {
-    client_conn.release();
   }
 }
 

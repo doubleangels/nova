@@ -3,13 +3,17 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const snoowrap = require('snoowrap');
 const config = require('../config');
-const { Pool } = require('pg');
 const dayjs = require('dayjs');
-const { handleReminder } = require('../utils/reminderUtils');
+const { handleReminder, getLatestReminderData } = require('../utils/reminderUtils');
+const Keyv = require('keyv');
+const { KeyvFile } = require('keyv-file');
 
-const pool = new Pool({
-  connectionString: config.neonConnectionString,
-  ssl: { rejectUnauthorized: true }
+// Initialize Keyv for reminder storage
+const reminderKeyv = new Keyv({
+  store: new KeyvFile({
+    filename: './data/database.json'
+  }),
+  namespace: 'nova_reminders'
 });
 
 const reddit = new snoowrap({
@@ -227,30 +231,33 @@ module.exports = {
 
   async getLastPromotion() {
     try {
-      await pool.query(
-        `DELETE FROM main.reminder_recovery 
-         WHERE type = $1 
-         AND remind_at <= NOW()`,
-        ['promote']
-      );
-
-      const result = await pool.query(
-        `SELECT remind_at::timestamp AT TIME ZONE 'UTC' as remind_at 
-         FROM main.reminder_recovery 
-         WHERE type = $1 
-         ORDER BY remind_at DESC 
-         LIMIT 1`,
-        ['promote']
-      );
-
-      if (result.rows.length > 0) {
-        logger.debug("Found next promotion time:", {
-          remind_at: result.rows[0].remind_at,
-          now: dayjs().toISOString()
-        });
+      // Clean up expired reminders
+      const reminderIds = await reminderKeyv.get('reminders:promote:list') || [];
+      const now = new Date();
+      for (const id of reminderIds) {
+        const reminder = await reminderKeyv.get(`reminder:${id}`);
+        if (reminder && reminder.remind_at) {
+          const remindAt = new Date(reminder.remind_at);
+          if (remindAt <= now) {
+            await reminderKeyv.delete(`reminder:${id}`);
+            const list = reminderIds.filter(rid => rid !== id);
+            await reminderKeyv.set('reminders:promote:list', list);
+          }
+        }
       }
 
-      return result.rows.length > 0 ? result.rows[0].remind_at : null;
+      // Get latest reminder
+      const latestReminder = await getLatestReminderData('promote');
+      
+      if (latestReminder && latestReminder.remind_at) {
+        logger.debug("Found next promotion time:", {
+          remind_at: latestReminder.remind_at,
+          now: dayjs().toISOString()
+        });
+        return latestReminder.remind_at;
+      }
+
+      return null;
     } catch (error) {
       logger.error("Error getting next promotion time:", { error: error.message });
       return null;

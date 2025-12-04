@@ -19,8 +19,7 @@ Nova is a custom, admin-level Discord bot designed to bring a range of advanced 
 Before deploying Nova, ensure you have the following:
 
 - A valid [Discord Bot Token](https://discord.com/developers/applications)
-- A [Neon](https://neon.tech) connection string
-- Database configuration keys set in the `main.config` table:
+- Database configuration keys set using bot commands:
   - `fren_role` - Discord role ID to assign alongside custom roles
   - `perms_position_above_role` - Discord role ID that new roles should be positioned above
   - `help_role` - Discord role ID for the help role (used by /givemod and /takemod)
@@ -51,7 +50,6 @@ services:
       - EXCHANGERATE_API_KEY=your_exchangerate_api_key_here
       - LOG_LEVEL=your_desired_log_level_here
       - MAL_CLIENT_ID=your_mal_client_id_here
-      - NEON_CONNECTION_STRING=your_neon_connection_string_here
       - NEWS_API_KEY=your_newsapi_key_here
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
@@ -74,31 +72,30 @@ networks:
 
 Here is a table of all available environment variables:
 
-| Variable                 | Description                                         | Required | Default | Example                                                                          |
-| ------------------------ | --------------------------------------------------- | :------: | :-----: | -------------------------------------------------------------------------------- |
-| `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot           |    ✅    |    -    | -                                                                                |
-| `EXCHANGERATE_API_KEY`   | API key for exchangerate.host (currency conversion) |    ✅    |    -    | -                                                                                |
-| `GOOGLE_API_KEY`         | API key for Google services                         |    ✅    |    -    | -                                                                                |
-| `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches   |    ✅    |    -    | -                                                                                |
-| `LOG_LEVEL`              | Determines the verbosity of logs                    |    ❌    | `info`  | `error`, `warn`, `info`, `debug`                                                 |
-| `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                       |    ✅    |    -    | -                                                                                |
-| `NEON_CONNECTION_STRING` | Connection string for Neon PostgreSQL database      |    ✅    |    -    | `postgresql://user:password@your-neon-url-123456.us-east-2.aws.neon.tech/neondb` |
-| `NEWS_API_KEY`           | API key for NewsAPI (for /news command)             |    ✅    |    -    | -                                                                                |
-| `OMDB_API_KEY`           | API key for Open Movie Database                     |    ✅    |    -    | -                                                                                |
-| `PIRATEWEATHER_API_KEY`  | API key for PirateWeather forecast service          |    ✅    |    -    | -                                                                                |
-| `REDDIT_CLIENT_ID`       | Client ID for Reddit API                            |    ✅    |    -    | -                                                                                |
-| `REDDIT_CLIENT_SECRET`   | Client Secret for Reddit API                        |    ✅    |    -    | -                                                                                |
-| `REDDIT_PASSWORD`        | Reddit password for API authentication              |    ✅    |    -    | -                                                                                |
-| `REDDIT_USERNAME`        | Reddit username for API authentication              |    ✅    |    -    | -                                                                                |
-| `SEARCH_ENGINE_ID`       | Google Custom Search Engine ID for web searches     |    ✅    |    -    | -                                                                                |
-| `SPOTIFY_CLIENT_ID`      | Client ID for Spotify API                           |    ✅    |    -    | -                                                                                |
-| `SPOTIFY_CLIENT_SECRET`  | Client Secret for Spotify API                       |    ✅    |    -    | -                                                                                |
-| `TWITCH_CLIENT_ID`       | Client ID for Twitch API                            |    ✅    |    -    | -                                                                                |
-| `TWITCH_CLIENT_SECRET`   | Client Secret for Twitch API                        |    ✅    |    -    | -                                                                                |
+| Variable                 | Description                                         | Required | Default | Example                          |
+| ------------------------ | --------------------------------------------------- | :------: | :-----: | -------------------------------- |
+| `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot           |    ✅    |    -    | -                                |
+| `EXCHANGERATE_API_KEY`   | API key for exchangerate.host (currency conversion) |    ✅    |    -    | -                                |
+| `GOOGLE_API_KEY`         | API key for Google services                         |    ✅    |    -    | -                                |
+| `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches   |    ✅    |    -    | -                                |
+| `LOG_LEVEL`              | Determines the verbosity of logs                    |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
+| `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                       |    ✅    |    -    | -                                |
+| `NEWS_API_KEY`           | API key for NewsAPI (for /news command)             |    ✅    |    -    | -                                |
+| `OMDB_API_KEY`           | API key for Open Movie Database                     |    ✅    |    -    | -                                |
+| `PIRATEWEATHER_API_KEY`  | API key for PirateWeather forecast service          |    ✅    |    -    | -                                |
+| `REDDIT_CLIENT_ID`       | Client ID for Reddit API                            |    ✅    |    -    | -                                |
+| `REDDIT_CLIENT_SECRET`   | Client Secret for Reddit API                        |    ✅    |    -    | -                                |
+| `REDDIT_PASSWORD`        | Reddit password for API authentication              |    ✅    |    -    | -                                |
+| `REDDIT_USERNAME`        | Reddit username for API authentication              |    ✅    |    -    | -                                |
+| `SEARCH_ENGINE_ID`       | Google Custom Search Engine ID for web searches     |    ✅    |    -    | -                                |
+| `SPOTIFY_CLIENT_ID`      | Client ID for Spotify API                           |    ✅    |    -    | -                                |
+| `SPOTIFY_CLIENT_SECRET`  | Client Secret for Spotify API                       |    ✅    |    -    | -                                |
+| `TWITCH_CLIENT_ID`       | Client ID for Twitch API                            |    ✅    |    -    | -                                |
+| `TWITCH_CLIENT_SECRET`   | Client Secret for Twitch API                        |    ✅    |    -    | -                                |
 
 ## Database Configuration
 
-Nova uses a PostgreSQL database (via Neon) to store configuration values. The following keys must be set in the database's `main.config` table:
+Nova uses Keyv (a key-value storage system) to store configuration values. The following keys can be set using bot commands or directly via the database API:
 
 | Database Key                | Description                                               | Used By                                           |
 | --------------------------- | --------------------------------------------------------- | ------------------------------------------------- |

@@ -13,7 +13,6 @@ require('dotenv').config();
  * @property {BotSettings} settings - Bot behavior settings
  * @property {string} token - Discord bot token
  * @property {string} clientId - Discord application client ID
- * @property {string} neonConnectionString - Neon database connection string
  * @property {string} googleApiKey - Google API key for search functionality
  * @property {string} searchEngineId - Google Custom Search Engine ID
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images
@@ -48,7 +47,6 @@ module.exports = {
   imageSearchEngineId: process.env.IMAGE_SEARCH_ENGINE_ID,
   logLevel: process.env.LOG_LEVEL || 'info',
   malClientId: process.env.MAL_CLIENT_ID,
-  neonConnectionString: process.env.NEON_CONNECTION_STRING,
   omdbApiKey: process.env.OMDB_API_KEY,
   pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
   redditClientId: process.env.REDDIT_CLIENT_ID,
