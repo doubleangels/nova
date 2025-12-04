@@ -4,7 +4,10 @@
   "description": "Dockerized multi-purpose bot for Discord servers.",
   "main": "index.js",
   "scripts": {
-    "update": "npm outdated && npm update --save"
+    "update": "npm outdated && npm update --save",
+    "set-value": "node set-value.js",
+    "delete-value": "node delete-value.js",
+    "read-value": "node read-value.js"
   },
   "repository": {
     "type": "git",

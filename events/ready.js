@@ -58,8 +58,21 @@ module.exports = {
       // Get bot status from database config
       let botActivity = DEFAULT_BOT_ACTIVITY;
       try {
-        const botStatusConfig = await getValue('bot_status');
-        if (botStatusConfig && botStatusConfig.name) {
+        const botStatus = await getValue('bot_status');
+        const botStatusType = await getValue('bot_status_type');
+        
+        if (botStatus) {
+          // Handle both old format (object) and new format (string)
+          let statusName = botStatus;
+          if (typeof botStatus === 'object' && botStatus !== null) {
+            // Old format: extract name from object
+            statusName = botStatus.name || String(botStatus);
+            logger.warn('bot_status is stored as an object. Please update it to a string using: node set-value.js bot_status "your status text"');
+          } else {
+            // New format: use as string
+            statusName = String(botStatus);
+          }
+          
           // Map activity type string to ActivityType enum (case-insensitive)
           const activityTypeMap = {
             'playing': ActivityType.Playing,
@@ -70,13 +83,13 @@ module.exports = {
             'custom': ActivityType.Custom
           };
           
-          const typeKey = (botStatusConfig.type || '').toLowerCase().trim();
+          const typeKey = (botStatusType || 'watching').toLowerCase().trim();
           const activityType = activityTypeMap[typeKey] || ActivityType.Watching;
           botActivity = {
-            name: botStatusConfig.name,
+            name: statusName,
             type: activityType
           };
-          logger.info(`Loaded bot status from database: {"name":"${botStatusConfig.name}","type":"${botStatusConfig.type}"}`);
+          logger.info(`Loaded bot status from database: name="${statusName}", type="${botStatusType || 'watching'}"`);
         } else {
           logger.info('No bot_status config found in database, using default.');
         }

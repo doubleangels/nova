@@ -62,6 +62,8 @@ services:
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
       - TWITCH_CLIENT_ID=your_twitch_client_id_here
       - TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
+    volumes:
+      - ./data:/app/data
 
 networks:
   default:

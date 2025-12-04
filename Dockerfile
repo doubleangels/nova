@@ -17,7 +17,13 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --chown=discordbot:nodejs . .
 
+# Create data directory for database persistence
+RUN mkdir -p /app/data && chown -R discordbot:nodejs /app/data
+
 USER discordbot
+
+# Create volume mount point for database persistence
+VOLUME ["/app/data"]
 
 ENTRYPOINT ["dumb-init", "--"]
 
