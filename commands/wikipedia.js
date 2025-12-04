@@ -50,6 +50,9 @@ module.exports = {
           srsearch: query,
           format: 'json',
           origin: '*'
+        },
+        headers: {
+          'User-Agent': 'Nova Discord Bot (https://github.com/doubleangels/nova)'
         }
       });
 
@@ -74,6 +77,9 @@ module.exports = {
           titles: article.title,
           format: 'json',
           origin: '*'
+        },
+        headers: {
+          'User-Agent': 'Nova Discord Bot (https://github.com/doubleangels/nova)'
         }
       });
 
