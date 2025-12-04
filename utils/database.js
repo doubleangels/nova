@@ -1,13 +1,35 @@
 const Keyv = require('keyv');
 const { KeyvFile } = require('keyv-file');
 const path = require('path');
+const fs = require('fs');
 const logger = require('../logger')(path.basename(__filename));
+
+// Ensure data directory exists with proper permissions
+const dataDir = path.resolve(process.cwd(), 'data');
+const dbFilePath = path.join(dataDir, 'database.json');
+
+try {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 });
+    logger.info(`Created data directory: ${dataDir}`);
+  }
+  // Ensure the directory is writable
+  try {
+    fs.accessSync(dataDir, fs.constants.W_OK);
+  } catch (accessError) {
+    logger.error(`Data directory is not writable: ${dataDir}`, { error: accessError.message });
+    logger.error('Please ensure the data directory has write permissions for the bot user.');
+  }
+} catch (error) {
+  logger.error(`Failed to create/access data directory: ${dataDir}`, { error: error.message });
+  logger.error('This is likely a permissions issue. Please check directory permissions.');
+}
 
 // Initialize Keyv with file storage
 // Data will be stored in ./data/database.json
 const keyv = new Keyv({
   store: new KeyvFile({
-    filename: './data/database.json'
+    filename: dbFilePath
   }),
   namespace: 'nova'
 });
