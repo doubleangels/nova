@@ -5,13 +5,12 @@
 </div>
 <br>
 
-Nova is a custom, admin-level Discord bot designed to bring a range of advanced functionalities to the [Da Frens](https://dafrens.games) server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Supabase, and more, Nova offers a dynamic and customizable experience.
+Nova is a custom, admin-level Discord bot designed to bring a range of advanced functionalities to the [Da Frens](https://dafrens.games) server. With integrations for Google APIs, OMDB, PirateWeather, MAL, and more, Nova offers a dynamic and customizable experience.
 
 ## Features
 
-- **Multi-Platform Integration:** Connect with Google, OMDB, MAL, NewsAPI, and other APIs for enriched data and interactivity.
+- **Multi-Platform Integration:** Connect with Google, OMDB, MAL, and other APIs for enriched data and interactivity.
 - **Robust Commands:** A wide array of commands to fetch information, perform searches, simplify administrative duties, and display dynamic content.
-  - `/news` — Get the latest news headlines about a topic, with interactive pagination.
 - **Scalable & Reliable:** Containerized with Docker for streamlined deployment and auto-restart for high availability.
 
 ## Prerequisites
@@ -29,8 +28,6 @@ Before deploying Nova, ensure you have the following:
   - PirateWeather
   - MAL (MyAnimeList) Client ID
   - Spotify (Client ID and Client Secret)
-  - NewsAPI (for /news command)
-  - Twitch (Client ID and Client Secret)
   - Reddit (Client ID, Client Secret)
 
 ## Docker Compose Setup
@@ -50,7 +47,6 @@ services:
       - EXCHANGERATE_API_KEY=your_exchangerate_api_key_here
       - LOG_LEVEL=your_desired_log_level_here
       - MAL_CLIENT_ID=your_mal_client_id_here
-      - NEWS_API_KEY=your_newsapi_key_here
       - OMDB_API_KEY=your_omdb_api_key_here
       - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
       - REDDIT_CLIENT_ID=your_reddit_client_id_here
@@ -60,8 +56,6 @@ services:
       - SEARCH_ENGINE_ID=your_search_engine_id_here
       - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
-      - TWITCH_CLIENT_ID=your_twitch_client_id_here
-      - TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
     volumes:
       - ./data:/app/data
 
@@ -82,7 +76,6 @@ Here is a table of all available environment variables:
 | `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches   |    ✅    |    -    | -                                |
 | `LOG_LEVEL`              | Determines the verbosity of logs                    |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
 | `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                       |    ✅    |    -    | -                                |
-| `NEWS_API_KEY`           | API key for NewsAPI (for /news command)             |    ✅    |    -    | -                                |
 | `OMDB_API_KEY`           | API key for Open Movie Database                     |    ✅    |    -    | -                                |
 | `PIRATEWEATHER_API_KEY`  | API key for PirateWeather forecast service          |    ✅    |    -    | -                                |
 | `REDDIT_CLIENT_ID`       | Client ID for Reddit API                            |    ✅    |    -    | -                                |
@@ -92,8 +85,6 @@ Here is a table of all available environment variables:
 | `SEARCH_ENGINE_ID`       | Google Custom Search Engine ID for web searches     |    ✅    |    -    | -                                |
 | `SPOTIFY_CLIENT_ID`      | Client ID for Spotify API                           |    ✅    |    -    | -                                |
 | `SPOTIFY_CLIENT_SECRET`  | Client Secret for Spotify API                       |    ✅    |    -    | -                                |
-| `TWITCH_CLIENT_ID`       | Client ID for Twitch API                            |    ✅    |    -    | -                                |
-| `TWITCH_CLIENT_SECRET`   | Client Secret for Twitch API                        |    ✅    |    -    | -                                |
 
 ## Database Configuration
 
@@ -106,3 +97,52 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 | `help_role`                 | Discord role ID for the help role                         | `/givemod` and `/takemod` commands                |
 
 **Note:** All three commands (`/giveperms`, `/givemod`, and `/takemod`) use the `perms_position_above_role` database key for the position reference role.
+
+### Managing Database Values
+
+You can manage database values directly using the provided scripts. When running in Docker, use `docker exec` to run these scripts inside the container:
+
+#### Reading Values
+
+```bash
+docker exec nova node read-value.js <key>
+```
+
+**Examples:**
+
+```bash
+docker exec nova node read-value.js reminder_channel
+docker exec nova node read-value.js bot_status
+docker exec nova node read-value.js spam_mode_enabled
+```
+
+#### Setting Values
+
+```bash
+docker exec nova node set-value.js <key> <value>
+```
+
+**Examples:**
+
+```bash
+docker exec nova node set-value.js reminder_channel "123456789012345678"
+docker exec nova node set-value.js bot_status "Playing games"
+docker exec nova node set-value.js bot_status_type "playing"
+docker exec nova node set-value.js spam_mode_enabled true
+docker exec nova node set-value.js mute_mode_kick_time_hours 4
+```
+
+#### Deleting Values
+
+```bash
+docker exec nova node delete-value.js <key>
+```
+
+**Examples:**
+
+```bash
+docker exec nova node delete-value.js reminder_channel
+docker exec nova node delete-value.js spam_mode_enabled
+```
+
+**Note:** The database file is stored in `./data/database.json` on the host (mounted as a volume), so changes persist across container restarts.
