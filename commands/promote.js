@@ -243,16 +243,26 @@ module.exports = {
       // Clean up expired reminders
       const reminderIds = await reminderKeyv.get('reminders:promote:list') || [];
       const now = new Date();
+      const idsToRemove = [];
+      
+      // Collect all expired reminder IDs first
       for (const id of reminderIds) {
         const reminder = await reminderKeyv.get(`reminder:${id}`);
         if (reminder && reminder.remind_at) {
           const remindAt = new Date(reminder.remind_at);
           if (remindAt <= now) {
-            await reminderKeyv.delete(`reminder:${id}`);
-            const list = reminderIds.filter(rid => rid !== id);
-            await reminderKeyv.set('reminders:promote:list', list);
+            idsToRemove.push(id);
           }
         }
+      }
+      
+      // Remove all expired reminders and update the list once
+      if (idsToRemove.length > 0) {
+        for (const id of idsToRemove) {
+          await reminderKeyv.delete(`reminder:${id}`);
+        }
+        const remainingIds = reminderIds.filter(rid => !idsToRemove.includes(rid));
+        await reminderKeyv.set('reminders:promote:list', remainingIds);
       }
 
       // Get latest reminder
