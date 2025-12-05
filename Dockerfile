@@ -16,6 +16,7 @@ COPY package*.json ./
 # Install build dependencies for native modules (better-sqlite3)
 RUN apk add --no-cache --virtual .build-deps \
     python3 \
+    py3-setuptools \
     make \
     g++ \
     build-base
