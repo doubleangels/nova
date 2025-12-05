@@ -13,7 +13,17 @@ RUN addgroup -g 1001 -S nodejs && \
 
 COPY package*.json ./
 
+# Install build dependencies for native modules (better-sqlite3)
+RUN apk add --no-cache --virtual .build-deps \
+    python3 \
+    make \
+    g++ \
+    build-base
+
 RUN npm ci --omit=dev && npm cache clean --force
+
+# Remove build dependencies to reduce image size
+RUN apk del .build-deps
 
 COPY --chown=discordbot:nodejs . .
 
