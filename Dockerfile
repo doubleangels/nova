@@ -22,7 +22,8 @@ COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 # Create data directory for database persistence
-RUN mkdir -p /app/data && chown -R discordbot:nodejs /app/data && chmod 755 /app/data
+# 750 = rwxr-x--- (owner: read/write/execute, group: read/execute, others: no access)
+RUN mkdir -p /app/data && chown -R discordbot:nodejs /app/data && chmod 750 /app/data
 
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]

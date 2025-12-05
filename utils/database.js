@@ -10,7 +10,8 @@ const dbFilePath = path.join(dataDir, 'database.json');
 
 try {
   if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 });
+    // 0o750 = rwxr-x--- (owner: read/write/execute, group: read/execute, others: no access)
+    fs.mkdirSync(dataDir, { recursive: true, mode: 0o750 });
     logger.info(`Created data directory: ${dataDir}`);
   }
   // Ensure the directory is writable
@@ -37,6 +38,16 @@ const keyv = new Keyv({
 // Handle connection errors
 keyv.on('error', err => logger.error('Keyv connection error:', { error: err }));
 
+// Ensure database file has correct permissions if it exists
+// 0o600 = rw------- (owner: read/write, group: no access, others: no access)
+try {
+  if (fs.existsSync(dbFilePath)) {
+    fs.chmodSync(dbFilePath, 0o600);
+  }
+} catch (chmodError) {
+  logger.warn(`Could not set permissions on database file (this is OK if running as non-root): ${chmodError.message}`);
+}
+
 /**
  * Initializes the database connection and performs a test query
  * @throws {Error} If database connection fails after all retries
@@ -62,6 +73,18 @@ async function initializeDatabase() {
         logger.info("Database connection test successful.");
         await keyv.delete(testKey);
         logger.debug("Cleaned up database test data.");
+        
+        // Ensure database file has correct permissions after creation
+        // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
+        try {
+          if (fs.existsSync(dbFilePath)) {
+            fs.chmodSync(dbFilePath, 0o600);
+          }
+        } catch (chmodError) {
+          // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
+          logger.debug(`Could not set permissions on database file: ${chmodError.message}`);
+        }
+        
         return;
       } else {
         throw new Error("Database read/write test failed.");
