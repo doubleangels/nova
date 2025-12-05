@@ -10,7 +10,6 @@ const BOT_INTENTS = [
   GatewayIntentBits.GuildMessages,
   GatewayIntentBits.MessageContent,
   GatewayIntentBits.GuildMembers,
-  GatewayIntentBits.GuildPresences,
   GatewayIntentBits.GuildMessageReactions,
 ];
 
