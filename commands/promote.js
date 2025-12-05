@@ -240,29 +240,53 @@ module.exports = {
 
   async getLastPromotion() {
     try {
-      // Clean up expired reminders
+      // Clean up expired and invalid reminders
       const reminderIds = await reminderKeyv.get('reminders:promote:list') || [];
       const now = new Date();
       const idsToRemove = [];
       
-      // Collect all expired reminder IDs first
+      // Collect all expired and invalid reminder IDs first
       for (const id of reminderIds) {
         const reminder = await reminderKeyv.get(`reminder:${id}`);
-        if (reminder && reminder.remind_at) {
-          const remindAt = new Date(reminder.remind_at);
-          if (remindAt <= now) {
-            idsToRemove.push(id);
-          }
+        
+        if (!reminder) {
+          // Reminder data missing, mark for cleanup
+          idsToRemove.push(id);
+          continue;
+        }
+        
+        if (!reminder.remind_at) {
+          // Invalid reminder data (missing remind_at), mark for cleanup
+          idsToRemove.push(id);
+          continue;
+        }
+        
+        // Handle both Date objects and ISO strings
+        const remindAt = reminder.remind_at instanceof Date 
+          ? reminder.remind_at 
+          : new Date(reminder.remind_at);
+        
+        // Check if the date is valid
+        if (isNaN(remindAt.getTime())) {
+          // Invalid date, mark for cleanup
+          idsToRemove.push(id);
+          continue;
+        }
+        
+        // Mark expired reminders for cleanup
+        if (remindAt <= now) {
+          idsToRemove.push(id);
         }
       }
       
-      // Remove all expired reminders and update the list once
+      // Remove all expired/invalid reminders and update the list once
       if (idsToRemove.length > 0) {
         for (const id of idsToRemove) {
           await reminderKeyv.delete(`reminder:${id}`);
         }
         const remainingIds = reminderIds.filter(rid => !idsToRemove.includes(rid));
         await reminderKeyv.set('reminders:promote:list', remainingIds);
+        logger.debug(`Cleaned up ${idsToRemove.length} expired/invalid promote reminder(s)`);
       }
 
       // Get latest reminder
