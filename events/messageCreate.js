@@ -93,7 +93,7 @@ module.exports = {
       
       logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
 
-      const noTextChannelId = await getValue('no_text_channel');
+      const noTextChannelId = await getValue('notext_channel');
       if (message.channelId !== noTextChannelId) return;
 
       const hasGif = message.attachments.some(attachment => 

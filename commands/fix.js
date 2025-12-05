@@ -48,10 +48,16 @@ module.exports = {
 
       // Use handleReminder from reminderUtils to properly save the reminder
       // This ensures consistency with how reminders are created elsewhere
+      // Skip confirmation message since we send our own embed
       const mockMessage = { client: interaction.client };
       const delayMs = scheduledTime.diff(dayjs(), 'millisecond');
       
-      await handleReminder(mockMessage, delayMs, 'bump');
+      await handleReminder(mockMessage, delayMs, 'bump', true);
+      
+      logger.info("Reminder saved via handleReminder:", {
+        delayMs,
+        scheduledTime: scheduledTime.toISOString()
+      });
       
       const embed = new EmbedBuilder()
           .setColor(0xcd41ff)

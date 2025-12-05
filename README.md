@@ -145,4 +145,4 @@ docker exec nova node delete-value.js reminder_channel
 docker exec nova node delete-value.js spam_mode_enabled
 ```
 
-**Note:** The database file is stored in `./data/database.json` on the host (mounted as a volume), so changes persist across container restarts.
+**Note:** The database file is stored in `./data/database.sqlite` on the host (mounted as a volume), so changes persist across container restarts.

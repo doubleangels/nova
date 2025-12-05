@@ -1,12 +1,12 @@
 const Keyv = require('keyv');
-const { KeyvFile } = require('keyv-file');
+const KeyvSqlite = require('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../logger')(path.basename(__filename));
 
 // Ensure data directory exists with proper permissions
 const dataDir = path.resolve(process.cwd(), 'data');
-const dbFilePath = path.join(dataDir, 'database.json');
+const sqlitePath = path.join(dataDir, 'database.sqlite');
 
 try {
   if (!fs.existsSync(dataDir)) {
@@ -26,13 +26,14 @@ try {
   logger.error('This is likely a permissions issue. Please check directory permissions.');
 }
 
-// Initialize Keyv with file storage
-// Data will be stored in ./data/database.json
+// Initialize Keyv with SQLite storage
+// Data will be stored in ./data/database.sqlite
 const keyv = new Keyv({
-  store: new KeyvFile({
-    filename: dbFilePath
+  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
+    table: 'keyv',
+    busyTimeout: 10000
   }),
-  namespace: 'nova'
+  namespace: 'main'
 });
 
 // Handle connection errors
@@ -41,8 +42,8 @@ keyv.on('error', err => logger.error('Keyv connection error:', { error: err }));
 // Ensure database file has correct permissions if it exists
 // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
 try {
-  if (fs.existsSync(dbFilePath)) {
-    fs.chmodSync(dbFilePath, 0o600);
+  if (fs.existsSync(sqlitePath)) {
+    fs.chmodSync(sqlitePath, 0o600);
   }
 } catch (chmodError) {
   logger.warn(`Could not set permissions on database file (this is OK if running as non-root): ${chmodError.message}`);
@@ -77,8 +78,8 @@ async function initializeDatabase() {
         // Ensure database file has correct permissions after creation
         // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
         try {
-          if (fs.existsSync(dbFilePath)) {
-            fs.chmodSync(dbFilePath, 0o600);
+          if (fs.existsSync(sqlitePath)) {
+            fs.chmodSync(sqlitePath, 0o600);
           }
         } catch (chmodError) {
           // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
@@ -201,10 +202,11 @@ async function query(text, params = [], options = {}) {
  */
 async function addToUserList(listKey, userId) {
   try {
-    const list = await keyv.get(listKey) || [];
+    const configKey = `config:${listKey}`;
+    const list = await keyv.get(configKey) || [];
     if (!list.includes(userId)) {
       list.push(userId);
-      await keyv.set(listKey, list);
+      await keyv.set(configKey, list);
     }
   } catch (error) {
     logger.error(`Error adding to user list ${listKey}:`, { error: error.message });
@@ -219,9 +221,10 @@ async function addToUserList(listKey, userId) {
  */
 async function removeFromUserList(listKey, userId) {
   try {
-    const list = await keyv.get(listKey) || [];
+    const configKey = `config:${listKey}`;
+    const list = await keyv.get(configKey) || [];
     const filtered = list.filter(id => id !== userId);
-    await keyv.set(listKey, filtered);
+    await keyv.set(configKey, filtered);
   } catch (error) {
     logger.error(`Error removing from user list ${listKey}:`, { error: error.message });
   }
@@ -272,7 +275,7 @@ async function removeMuteModeUser(userId) {
  */
 async function getAllMuteModeUsers() {
   try {
-    const userIds = await keyv.get('mute_mode_users') || [];
+    const userIds = await keyv.get('config:mute_mode_users') || [];
     const users = [];
     
     for (const userId of userIds) {
@@ -451,7 +454,7 @@ async function cleanupOldTrackingUsers(client = null) {
     let muteModeRemoved = 0;
     
     // Clean up spam mode users
-    const spamUserIds = await keyv.get('spam_mode_users') || [];
+    const spamUserIds = await keyv.get('config:spam_mode_users') || [];
     const remainingSpamUsers = [];
     
     for (const userId of spamUserIds) {
@@ -469,10 +472,10 @@ async function cleanupOldTrackingUsers(client = null) {
         spamModeRemoved++;
       }
     }
-    await keyv.set('spam_mode_users', remainingSpamUsers);
+    await keyv.set('config:spam_mode_users', remainingSpamUsers);
     
     // Clean up mute mode users
-    const muteUserIds = await keyv.get('mute_mode_users') || [];
+    const muteUserIds = await keyv.get('config:mute_mode_users') || [];
     const remainingMuteUsers = [];
     
     for (const userId of muteUserIds) {
@@ -511,7 +514,7 @@ async function cleanupOldTrackingUsers(client = null) {
         muteModeRemoved++;
       }
     }
-    await keyv.set('mute_mode_users', remainingMuteUsers);
+    await keyv.set('config:mute_mode_users', remainingMuteUsers);
     
     if (spamModeRemoved > 0 || muteModeRemoved > 0) {
       logger.info(`Cleaned up old tracking users: ${spamModeRemoved} users were removed from spam mode and ${muteModeRemoved} users were removed from mute mode.`);

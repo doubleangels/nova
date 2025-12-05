@@ -12,22 +12,24 @@
 
 require('dotenv').config();
 const Keyv = require('keyv');
-const { KeyvFile } = require('keyv-file');
+const KeyvSqlite = require('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
 
 // Ensure data directory exists
-const dataDir = './data';
+const dataDir = path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Initialize Keyv
+// Initialize Keyv with SQLite
+const sqlitePath = path.join(dataDir, 'database.sqlite');
 const keyv = new Keyv({
-  store: new KeyvFile({
-    filename: './data/database.json'
+  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
+    table: 'keyv',
+    busyTimeout: 10000
   }),
-  namespace: 'nova'
+  namespace: 'main'
 });
 
 async function setValue(key, value) {

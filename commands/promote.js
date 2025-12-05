@@ -6,12 +6,21 @@ const config = require('../config');
 const dayjs = require('dayjs');
 const { handleReminder, getLatestReminderData } = require('../utils/reminderUtils');
 const Keyv = require('keyv');
-const { KeyvFile } = require('keyv-file');
+const KeyvSqlite = require('@keyv/sqlite');
+const fs = require('fs');
 
-// Initialize Keyv for reminder storage
+// Ensure data directory exists
+const dataDir = path.resolve(process.cwd(), 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Initialize Keyv for reminder storage using SQLite (same database as main)
+const sqlitePath = path.join(dataDir, 'database.sqlite');
 const reminderKeyv = new Keyv({
-  store: new KeyvFile({
-    filename: './data/database.json'
+  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
+    table: 'keyv',
+    busyTimeout: 10000
   }),
   namespace: 'nova_reminders'
 });

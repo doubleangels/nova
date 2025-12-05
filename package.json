@@ -7,7 +7,7 @@
     "update": "npm outdated && npm update --save",
     "set-value": "node set-value.js",
     "delete-value": "node delete-value.js",
-    "read-value": "node read-value.js"
+    "list-values": "node list-values.js"
   },
   "repository": {
     "type": "git",
@@ -27,6 +27,8 @@
     "he": "^1.2.0",
     "keyv": "^4.5.4",
     "keyv-file": "^5.3.3",
+    "@keyv/sqlite": "^3.0.0",
+    "better-sqlite3": "^11.0.0",
     "node-cache": "^5.1.2",
     "pino": "^9.14.0",
     "pino-pretty": "^13.1.3",
