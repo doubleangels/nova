@@ -102,18 +102,21 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 
 You can manage database values directly using the provided scripts. When running in Docker, use `docker exec` to run these scripts inside the container:
 
-#### Reading Values
+#### Reading/Listing Values
 
 ```bash
-docker exec nova node read-value.js <key>
+docker exec nova node list-values.js [<key>]
 ```
+
+If no key is provided, lists all values in the database. If a key is provided, reads that specific value.
 
 **Examples:**
 
 ```bash
-docker exec nova node read-value.js reminder_channel
-docker exec nova node read-value.js bot_status
-docker exec nova node read-value.js spam_mode_enabled
+docker exec nova node list-values.js                    # List all values
+docker exec nova node list-values.js reminder_channel   # Read specific key
+docker exec nova node list-values.js bot_status
+docker exec nova node list-values.js spam_mode_enabled
 ```
 
 #### Setting Values
