@@ -19,7 +19,9 @@
   },
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
+    "@keyv/sqlite": "^3.6.7",
     "axios": "^1.13.2",
+    "better-sqlite3": "^11.10.0",
     "brace-expansion": "^4.0.1",
     "dayjs": "^1.11.19",
     "discord.js": "^14.25.1",
@@ -27,8 +29,6 @@
     "he": "^1.2.0",
     "keyv": "^4.5.4",
     "keyv-file": "^5.3.3",
-    "@keyv/sqlite": "^3.0.0",
-    "better-sqlite3": "^11.0.0",
     "node-cache": "^5.1.2",
     "pino": "^9.14.0",
     "pino-pretty": "^13.1.3",
