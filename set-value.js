@@ -55,10 +55,16 @@ async function setValue(key, value) {
       } else if (value.toLowerCase() === 'null') {
         parsedValue = null;
       } else {
-        // Try to parse as number
+        // Try to parse as number, but preserve large numbers (Discord IDs) as strings
         const numValue = Number(value);
         if (!isNaN(numValue) && value.trim() !== '') {
-          parsedValue = numValue;
+          // Discord snowflake IDs are 64-bit integers that exceed JavaScript's safe integer range
+          // Keep them as strings to preserve precision
+          if (numValue > Number.MAX_SAFE_INTEGER || numValue < Number.MIN_SAFE_INTEGER) {
+            parsedValue = value; // Keep as string for large numbers
+          } else {
+            parsedValue = numValue;
+          }
         } else {
           // Use as string
           parsedValue = value;
