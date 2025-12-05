@@ -144,7 +144,7 @@ module.exports = {
     async assignRole(interaction, role, targetMember) {
         const botMember = await interaction.guild.members.fetchMe();
         if (botMember.roles.highest.position <= role.position) {
-            logger.warn("Bot's highest role is not high enough to assign the specified role.", {
+            logger.warn("Bot's highest role is not high enough to assign the specified role:", {
                 botHighestRolePosition: botMember.roles.highest.position,
                 rolePosition: role.position
             });

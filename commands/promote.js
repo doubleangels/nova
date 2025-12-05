@@ -107,7 +107,7 @@ module.exports = {
     }
 
     try {
-      logger.info("Attempting to post to r/findaserver", {
+      logger.info("Attempting to post to r/findaserver:", {
         subreddit: 'findaserver',
         title: PROMOTION_TITLE,
         link: PROMOTION_LINK,
@@ -152,14 +152,14 @@ module.exports = {
         submissionOptions.flairId = targetFlairId;
         logger.info("Using flair:", { flair: validFlair });
       } else {
-        logger.warn("Target flair not found, posting without flair");
+        logger.warn("Target flair not found, posting without flair.");
       }
       
       const submission = await reddit.getSubreddit('findaserver').submitLink(submissionOptions);
       const post = await submission.fetch();
       const permalink = await post.permalink;
 
-      logger.info("Successfully posted to r/findaserver", {
+      logger.info("Successfully posted to r/findaserver:", {
         postUrl: `https://reddit.com${permalink}`,
         postId: post.id,
         title: PROMOTION_TITLE,

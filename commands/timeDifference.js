@@ -87,7 +87,7 @@ module.exports = {
    */
   validateConfiguration() {
     if (!config.googleApiKey) {
-      logger.error("Google API key is not configured in the application.", {
+      logger.error("Google API key is not configured in the application:", {
         command: 'timedifference'
       });
       return false;
@@ -111,7 +111,7 @@ module.exports = {
       ]);
       
       if (offset1Result.error) {
-        logger.warn("Failed to retrieve timezone for the first location.", {
+        logger.warn("Failed to retrieve timezone for the first location:", {
           place: place1,
           errorType: offset1Result.errorType
         });
@@ -169,7 +169,7 @@ module.exports = {
         timeZone2: offset2Result.timeZoneName
       };
     } catch (error) {
-      logger.error("Error calculating time difference.", {
+      logger.error("Error calculating time difference:", {
         error: error.message,
         place1,
         place2

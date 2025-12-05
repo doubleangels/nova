@@ -20,7 +20,7 @@ function cancelMuteKick(userId) {
   if (activeTimeouts.has(userId)) {
     clearTimeout(activeTimeouts.get(userId));
     activeTimeouts.delete(userId);
-    logger.debug(`Cancelled mute kick timeout for user ${userId}`);
+    logger.debug(`Cancelled mute kick timeout for user ${userId}.`);
     return true;
   }
   return false;
@@ -81,7 +81,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
           if (member.user.bot) {
-            logger.debug(`Skipping mute kick for bot user ${userId}`);
+            logger.debug(`Skipping mute kick for bot user ${userId}.`);
             return;
           }
 

@@ -113,7 +113,7 @@ async function getLatestReminderData(type) {
     if (latestReminder) {
       logger.debug(`Latest reminder found for type "${type}": ${latestReminder.reminder_id}, scheduled for ${latestReminder.remind_at.toISOString()}`);
     } else {
-      logger.debug(`No active reminders found for type "${type}"`);
+      logger.debug(`No active reminders found for type "${type}".`);
     }
     
     return latestReminder;
@@ -224,7 +224,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     
     // Save reminder data - SQLite provides ACID guarantees for immediate persistence
     await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
-    logger.debug(`Saved reminder data for ${reminderId}`);
+    logger.debug(`Saved reminder data for ${reminderId}.`);
     
     // Verify the reminder was saved by reading it back
     const savedReminder = await reminderKeyv.get(`reminder:${reminderId}`);
@@ -263,7 +263,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         });
         throw new Error(`Failed to persist reminder ${reminderId} to list`);
       } else {
-        logger.info(`Successfully set reminder ${reminderId} in list after retry`);
+        logger.info(`Successfully set reminder ${reminderId} in list after retry.`);
       }
     }
     

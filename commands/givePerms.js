@@ -157,7 +157,7 @@ module.exports = {
         }
 
         if (roleName.length > 100) {
-            logger.warn("Role name exceeds maximum length.", { 
+            logger.warn("Role name exceeds maximum length:", { 
                 roleName, 
                 maxLength: 100 
             });
@@ -186,7 +186,7 @@ module.exports = {
         
         // Check if position above role ID is valid (not null, not undefined, not empty string)
         if (!positionAboveRoleIdRaw || (typeof positionAboveRoleIdRaw === 'string' && positionAboveRoleIdRaw.trim().length === 0)) {
-            logger.error("Position above role not configured in database.", { 
+            logger.error("Position above role not configured in database:", { 
                 key: 'perms_position_above_role',
                 value: positionAboveRoleIdRaw,
                 type: typeof positionAboveRoleIdRaw
@@ -202,7 +202,7 @@ module.exports = {
         
         const positionRole = await interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null);
         if (!positionRole) {
-            logger.error("Reference role not found.", { roleId: positionAboveRoleId });
+            logger.error("Reference role not found:", { roleId: positionAboveRoleId });
             return {
                 success: false,
                 message: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`
@@ -214,7 +214,7 @@ module.exports = {
         
         // Check if fren role ID is valid (not null, not undefined, not empty string)
         if (!frenRoleIdRaw || (typeof frenRoleIdRaw === 'string' && frenRoleIdRaw.trim().length === 0)) {
-            logger.error("Fren role not configured in database.", { 
+            logger.error("Fren role not configured in database:", { 
                 key: 'fren_role',
                 value: frenRoleIdRaw,
                 type: typeof frenRoleIdRaw
@@ -230,7 +230,7 @@ module.exports = {
         
         const additionalRole = await interaction.guild.roles.fetch(frenRoleId).catch(() => null);
         if (!additionalRole) {
-            logger.error("Additional role not found.", { roleId: frenRoleId });
+            logger.error("Additional role not found:", { roleId: frenRoleId });
             return {
                 success: false,
                 message: `⚠️ The fren role (ID: ${frenRoleId}) was not found in this server.`
@@ -239,7 +239,7 @@ module.exports = {
         
         const botMember = await interaction.guild.members.fetchMe();
         if (botMember.roles.highest.position <= positionRole.position) {
-            logger.warn("Bot's highest role is not high enough to create a role above the reference role.", {
+            logger.warn("Bot's highest role is not high enough to create a role above the reference role:", {
                 botHighestRolePosition: botMember.roles.highest.position,
                 referenceRolePosition: positionRole.position
             });

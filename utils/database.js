@@ -245,7 +245,7 @@ async function addMuteModeUser(userId, username) {
     };
     await keyv.set(`mute_mode:${userId}`, userData);
     await addToUserList('mute_mode_users', userId);
-    logger.debug(`Added mute mode user ${userId} with join time ${userData.joinTime}`);
+    logger.debug(`Added mute mode user ${userId} with join time ${userData.joinTime}.`);
   } catch (error) {
     logger.error(`Error adding mute mode user ${userId}:`, { error: error.message });
   }
@@ -335,7 +335,7 @@ async function updateUserJoinTime(userId, username, joinTime = null) {
     
     await keyv.set(`mute_mode:${userId}`, userData);
     await addToUserList('mute_mode_users', userId);
-    logger.debug(`Updated join time for user ${userId} to ${timeToSet}`);
+    logger.debug(`Updated join time for user ${userId} to ${timeToSet}.`);
   } catch (error) {
     logger.error(`Error updating user join time for ${userId}:`, { error: error.message });
   }
@@ -360,7 +360,7 @@ async function addSpamModeJoinTime(userId, username, joinTime) {
     
     await keyv.set(`spam_mode:${userId}`, userData);
     await addToUserList('spam_mode_users', userId);
-    logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet}`);
+    logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet}.`);
   } catch (error) {
     logger.error(`Error adding spam mode join time for user ${userId}:`, { error: error.message });
   }
@@ -405,7 +405,7 @@ async function updateSpamModeJoinTime(userId, username, joinTime = null) {
     
     await keyv.set(`spam_mode:${userId}`, userData);
     await addToUserList('spam_mode_users', userId);
-    logger.debug(`Updated spam mode join time for user ${userId} to ${timeToSet}`);
+    logger.debug(`Updated spam mode join time for user ${userId} to ${timeToSet}.`);
   } catch (error) {
     logger.error(`Error updating spam mode join time for user ${userId}:`, { error: error.message });
   }
@@ -519,7 +519,7 @@ async function cleanupOldTrackingUsers(client = null) {
     if (spamModeRemoved > 0 || muteModeRemoved > 0) {
       logger.info(`Cleaned up old tracking users: ${spamModeRemoved} users were removed from spam mode and ${muteModeRemoved} users were removed from mute mode.`);
     } else {
-      logger.debug(`Cleanup completed: no old users found to remove`);
+      logger.debug(`Cleanup completed: no old users found to remove.`);
     }
     
     return { spamModeRemoved, muteModeRemoved };

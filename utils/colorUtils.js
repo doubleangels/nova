@@ -21,7 +21,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
             normalizedColorHex[2] + normalizedColorHex[2] +
             normalizedColorHex[3] + normalizedColorHex[3];
         if (logger) {
-            logger.debug("Expanded 3-digit hex color.", { 
+            logger.debug("Expanded 3-digit hex color:", { 
                 original: colorHex, 
                 normalized: normalizedColorHex 
             });
@@ -31,7 +31,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
     if (/^[0-9A-Fa-f]{6}$/.test(normalizedColorHex)) {
         normalizedColorHex = `#${normalizedColorHex}`;
         if (logger) {
-            logger.debug("Color format normalized.", { 
+            logger.debug("Color format normalized:", { 
                 original: colorHex, 
                 normalized: normalizedColorHex 
             });

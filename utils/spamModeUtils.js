@@ -357,7 +357,7 @@ async function postSpamWarning(guild, user, occurrences, content) {
  */
 function clearTracker() {
   userMessageTracker.clear();
-  logger.debug('Spam mode message tracker cleared');
+  logger.debug('Spam mode message tracker cleared.');
 }
 
 module.exports = {

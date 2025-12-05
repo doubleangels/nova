@@ -119,7 +119,7 @@ module.exports = {
     try {
       const apiKey = config.googleApiKey;
       if (!apiKey) {
-        logger.error("Google Books API key is not configured");
+        logger.error("Google Books API key is not configured.");
         throw new Error("API_KEY_MISSING");
       }
 
@@ -180,7 +180,7 @@ module.exports = {
     try {
       const apiKey = config.googleApiKey;
       if (!apiKey) {
-        logger.error("Google Books API key is not configured");
+        logger.error("Google Books API key is not configured.");
         throw new Error("API_KEY_MISSING");
       }
 

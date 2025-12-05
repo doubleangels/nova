@@ -82,7 +82,7 @@ async function createPaginatedResults(
   collector.on('collect', async i => {
     const buttonType = i.customId.split('_')[1];
     
-    logger.debug("Navigation button pressed.", {
+    logger.debug("Navigation button pressed:", {
       buttonType,
       currentIndex,
       userId: i.user.id
@@ -137,7 +137,7 @@ async function createPaginatedResults(
     
     await interaction.editReply({
       components: [disabledNavRow]
-    }).catch(err => logger.error("Failed to update timed out message.", { error: err.message }));
+    }).catch(err => logger.error("Failed to update timed out message:", { error: err.message }));
   });
 }
 

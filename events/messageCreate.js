@@ -80,7 +80,7 @@ module.exports = {
           const dubzEmoji = await getValue('dubz_emoji');
           if (dubzEmoji) {
             await message.react(dubzEmoji);
-            logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}`);
+            logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}.`);
           }
         } catch (error) {
           logger.error("Failed to react to Dubz/Dubzie mention:", {
@@ -180,7 +180,7 @@ async function processUserMessage(message) {
   try {
     if (cancelMuteKick(message.author.id)) {
       await removeMuteModeUser(message.author.id);
-      logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message`);
+      logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message.`);
     }
   } catch (error) {
     logger.error("Error processing user message:", { userId: message.author.id, error });
@@ -214,7 +214,7 @@ async function checkForBumpMessages(message) {
     });
     
     if (bumpEmbed) {
-      logger.info("Bump detected, scheduling reminder");
+      logger.info("Bump detected, scheduling reminder.");
       await handleReminder(message, 7200000);
       logger.debug("Bump reminder scheduled for 2 hours.");
     }

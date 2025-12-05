@@ -207,7 +207,7 @@ module.exports = {
         
         // Check if bot can manage this role
         if (botMember.roles.highest.position <= role.position) {
-            logger.warn("Bot's highest role is not high enough to modify the specified role.", {
+            logger.warn("Bot's highest role is not high enough to modify the specified role:", {
                 botHighestRolePosition: botMember.roles.highest.position,
                 rolePosition: role.position
             });
@@ -219,7 +219,7 @@ module.exports = {
         
         // Check if the user can manage this role
         if (interaction.member.roles.highest.position <= role.position && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-            logger.warn("User's highest role is not high enough to modify the specified role.", {
+            logger.warn("User's highest role is not high enough to modify the specified role:", {
                 userHighestRolePosition: interaction.member.roles.highest.position,
                 rolePosition: role.position
             });

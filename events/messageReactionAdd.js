@@ -40,7 +40,7 @@ module.exports = {
         }
       }
 
-      logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}`);
+      logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}.`);
 
       if (reaction.message.guild) {
         const member = reaction.message.guild.members.cache.get(user.id);
@@ -54,7 +54,7 @@ module.exports = {
         return;
       }
 
-      logger.info(`Successfully processed reaction from ${user.tag}`);
+      logger.info(`Successfully processed reaction from ${user.tag}.`);
     } catch (error) {
       logger.error('Error processing reaction:', {
         error: error.stack,

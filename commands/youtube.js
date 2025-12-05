@@ -278,7 +278,7 @@ module.exports = {
       });
       
       if (!response.data || !response.data.items || response.data.items.length === 0) {
-        logger.debug("YouTube API returned no results.", { query, contentType });
+        logger.debug("YouTube API returned no results:", { query, contentType });
         return [];
       }
       
