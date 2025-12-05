@@ -140,7 +140,7 @@ module.exports = {
             
             // Assign the help role to the user
             if (!targetMember.roles.cache.has(helpRole.id)) {
-                const auditReason = `Help role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using givemod command`;
+                const auditReason = `Help role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using givemod command.`;
                 await targetMember.roles.add(helpRole.id, auditReason);
                 
                 logger.info("Help role assigned to user:", {
@@ -256,7 +256,7 @@ module.exports = {
         }
         
         const allPermissionsExceptAdmin = this.getAllPermissionsExceptAdmin();
-        const auditReason = `Moderator permissions granted by ${interaction.user.tag} (ID: ${interaction.user.id}) using givemod command`;
+        const auditReason = `Moderator permissions granted by ${interaction.user.tag} (ID: ${interaction.user.id}) using givemod command.`;
         
         await role.edit({
             permissions: allPermissionsExceptAdmin,

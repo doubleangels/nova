@@ -154,7 +154,7 @@ module.exports = {
             };
         }
         
-        const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command`;
+        const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;
         await targetMember.roles.add(role.id, auditReason);
         
         logger.info("/giverole command completed successfully:", { 

@@ -249,7 +249,7 @@ module.exports = {
             };
         }
         
-        const auditReason = `Role created by ${interaction.user.tag} (ID: ${interaction.user.id}) using giveperms command`;
+        const auditReason = `Role created by ${interaction.user.tag} (ID: ${interaction.user.id}) using giveperms command.`;
         const newRole = await interaction.guild.roles.create({
             name: roleName,
             color: colorDecimal,

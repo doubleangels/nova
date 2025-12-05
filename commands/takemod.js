@@ -140,7 +140,7 @@ module.exports = {
             
             // Remove the help role from the user
             if (targetMember.roles.cache.has(helpRole.id)) {
-                const auditReason = `Help role removed by ${interaction.user.tag} (ID: ${interaction.user.id}) using takemod command`;
+                const auditReason = `Help role removed by ${interaction.user.tag} (ID: ${interaction.user.id}) using takemod command.`;
                 await targetMember.roles.remove(helpRole.id, auditReason);
                 
                 logger.info("Help role removed from user:", {
@@ -231,7 +231,7 @@ module.exports = {
         
         // Remove all permissions (set to 0)
         const noPermissions = BigInt(0);
-        const auditReason = `Moderator permissions removed by ${interaction.user.tag} (ID: ${interaction.user.id}) using takemod command`;
+        const auditReason = `Moderator permissions removed by ${interaction.user.tag} (ID: ${interaction.user.id}) using takemod command.`;
         
         await role.edit({
             permissions: noPermissions,
