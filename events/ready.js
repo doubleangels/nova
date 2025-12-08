@@ -4,7 +4,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, getValue, cleanupOldTrackingUsers } = require('../utils/database');
-const { execFile } = require('child_process');
 
 const deployCommands = require('../deploy-commands');
 
@@ -107,33 +106,6 @@ module.exports = {
 
       await rescheduleReminder(client);
       logger.info('Reminders rescheduled successfully.');
-
-      // Dump current Keyv contents to logs for visibility on startup
-      try {
-        const scriptPath = path.resolve(__dirname, '..', 'list-values.js');
-        logger.info('Running list-values.js to dump database contents...');
-        execFile('node', [scriptPath], { cwd: process.cwd() }, (error, stdout, stderr) => {
-          if (stdout) {
-            stdout
-              .trim()
-              .split('\n')
-              .forEach(line => logger.info(`[list-values] ${line}`));
-          }
-          if (stderr) {
-            stderr
-              .trim()
-              .split('\n')
-              .forEach(line => logger.warn(`[list-values][stderr] ${line}`));
-          }
-          if (error) {
-            logger.error('list-values.js exited with error', { error: error.message });
-          } else {
-            logger.info('list-values.js completed successfully.');
-          }
-        });
-      } catch (listError) {
-        logger.error('Failed to run list-values.js on startup', { error: listError.message });
-      }
 
       // Run cleanup on startup
       try {
