@@ -1,7 +1,7 @@
 {
   "name": "nova",
   "version": "1.0.0",
-  "description": "Dockerized multi-purpose bot for Discord servers.",
+  "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
   "scripts": {
     "update": "npm outdated && npm update --save",
