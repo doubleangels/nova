@@ -7,8 +7,8 @@
  * If no key is provided, lists all values in the database.
  * 
  * Examples:
- *   node list-values.js                    # List all values
- *   node list-values.js reminder_channel   # Read specific key
+ *   node list-values.js                    # List all values (all namespaces)
+ *   node list-values.js reminder_channel   # Read specific config key
  *   node list-values.js spam_mode_enabled
  *   node list-values.js bot_status
  *   node list-values.js bot_status_type
@@ -40,20 +40,18 @@ const keyv = new Keyv({
 });
 
 /**
- * Get all keys from the SQLite database
+ * Get all keys from the SQLite database, across all namespaces
  */
 async function getAllKeys() {
   try {
     // Directly query SQLite to get all keys
     const db = new Database(sqlitePath, { readonly: true });
-    const namespace = 'main:';
     
     const rows = db.prepare(`
       SELECT key, value 
       FROM keyv 
-      WHERE key LIKE ?
       ORDER BY key
-    `).all(`${namespace}%`);
+    `).all();
     
     db.close();
     
@@ -69,8 +67,12 @@ async function getAllKeys() {
           parsedValue = parsed;
         }
       }
+      const [namespace, ...rest] = row.key.split(':');
+      const actualKey = rest.join(':');
       return {
-        key: row.key.substring(namespace.length), // Remove namespace prefix
+        namespace: namespace || '(default)',
+        rawKey: row.key,
+        key: actualKey || row.key,
         value: parsedValue
       };
     });
@@ -89,7 +91,7 @@ async function readValue(key) {
     const value = await keyv.get(`config:${key}`);
     
     if (value === undefined) {
-      console.log(`⚠️  Key "${key}" does not exist in the database.`);
+      console.log(`Key "${key}" does not exist in the database.`);
       process.exit(0);
     }
     
@@ -105,7 +107,7 @@ async function readValue(key) {
     }
     
   } catch (error) {
-    console.error(`❌ Error reading value:`, error.message);
+    console.error(`Error reading value:`, error.message);
     process.exit(1);
   } finally {
     await keyv.disconnect();
@@ -117,42 +119,49 @@ async function listAllValues() {
     const allData = await getAllKeys();
     
     if (allData.length === 0) {
-      console.log('📋 No values found in the database.');
+      console.log('No values found in the database.');
       return;
     }
     
-    console.log(`📋 Found ${allData.length} value(s) in the database:\n`);
+    console.log(`Found ${allData.length} value(s) in the database:\n`);
     
-    // Group by prefix (config:, mute_mode_recovery:, etc.)
+    // Group by namespace, then by prefix (config:, reminders:, etc.)
     const grouped = {};
     for (const item of allData) {
       const colonIndex = item.key.indexOf(':');
       const prefix = colonIndex > 0 ? item.key.substring(0, colonIndex + 1) : '(root)';
       const actualKey = colonIndex > 0 ? item.key.substring(colonIndex + 1) : item.key;
       
-      if (!grouped[prefix]) {
-        grouped[prefix] = [];
+      if (!grouped[item.namespace]) {
+        grouped[item.namespace] = {};
       }
-      grouped[prefix].push({ key: actualKey, value: item.value });
+      if (!grouped[item.namespace][prefix]) {
+        grouped[item.namespace][prefix] = [];
+      }
+      grouped[item.namespace][prefix].push({ key: actualKey, value: item.value });
     }
     
-    // Display grouped
-    for (const [prefix, items] of Object.entries(grouped).sort()) {
-      console.log(`${prefix === '(root)' ? '📦 Root' : `📦 ${prefix.substring(0, prefix.length - 1)}`}:`);
-      for (const item of items.sort((a, b) => a.key.localeCompare(b.key))) {
-        const valueStr = typeof item.value === 'object' && item.value !== null
-          ? JSON.stringify(item.value).substring(0, 80) + (JSON.stringify(item.value).length > 80 ? '...' : '')
-          : String(item.value);
-        const typeStr = typeof item.value === 'object' && item.value !== null
-          ? (Array.isArray(item.value) ? 'array' : 'object')
-          : typeof item.value;
-        console.log(`   ${item.key.padEnd(30)} = ${valueStr.padEnd(50)} (${typeStr})`);
+    // Display grouped by namespace
+    for (const [namespace, prefixes] of Object.entries(grouped).sort()) {
+      console.log(`Namespace: ${namespace}`);
+      for (const [prefix, items] of Object.entries(prefixes).sort()) {
+        const label = prefix === '(root)' ? 'Root' : prefix.substring(0, prefix.length - 1);
+        console.log(` ${label}:`);
+        for (const item of items.sort((a, b) => a.key.localeCompare(b.key))) {
+          const valueStr = typeof item.value === 'object' && item.value !== null
+            ? JSON.stringify(item.value).substring(0, 80) + (JSON.stringify(item.value).length > 80 ? '...' : '')
+            : String(item.value);
+          const typeStr = typeof item.value === 'object' && item.value !== null
+            ? (Array.isArray(item.value) ? 'array' : 'object')
+            : typeof item.value;
+          console.log(`    ${item.key.padEnd(30)} = ${valueStr.padEnd(50)} (${typeStr})`);
+        }
+        console.log('');
       }
-      console.log('');
     }
     
   } catch (error) {
-    console.error(`❌ Error listing values:`, error.message);
+    console.error(`Error listing values:`, error.message);
     process.exit(1);
   } finally {
     await keyv.disconnect();

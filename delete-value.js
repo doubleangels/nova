@@ -38,7 +38,7 @@ async function deleteValue(key) {
     const existingValue = await keyv.get(`config:${key}`);
     
     if (existingValue === undefined) {
-      console.log(`⚠️  Key "${key}" does not exist in the database.`);
+      console.log(`Key "${key}" does not exist in the database.`);
       process.exit(0);
     }
     
@@ -46,14 +46,14 @@ async function deleteValue(key) {
     const deleted = await keyv.delete(`config:${key}`);
     
     if (deleted) {
-      console.log(`✅ Successfully deleted "${key}"`);
+      console.log(`Successfully deleted "${key}"`);
       console.log(`   Previous value was: ${JSON.stringify(existingValue)}`);
     } else {
-      console.log(`⚠️  Key "${key}" was not found or could not be deleted.`);
+      console.log(`Key "${key}" was not found or could not be deleted.`);
     }
     
   } catch (error) {
-    console.error(`❌ Error deleting value:`, error.message);
+    console.error(`Error deleting value:`, error.message);
     process.exit(1);
   } finally {
     await keyv.disconnect();

@@ -77,11 +77,11 @@ async function setValue(key, value) {
     // Store with config: prefix to match the database.js implementation
     await keyv.set(`config:${key}`, parsedValue);
     
-    console.log(`✅ Successfully set "${key}" = ${JSON.stringify(parsedValue)}`);
+    console.log(`Successfully set "${key}" = ${JSON.stringify(parsedValue)}`);
     console.log(`   Type: ${typeof parsedValue}`);
     
   } catch (error) {
-    console.error(`❌ Error setting value:`, error.message);
+    console.error(`Error setting value:`, error.message);
     process.exit(1);
   } finally {
     await keyv.disconnect();
