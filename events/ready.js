@@ -12,29 +12,6 @@ const DEFAULT_BOT_ACTIVITY = {
   type: ActivityType.Watching
 };
 
-/**
- * Performs a setup task with error handling and logging
- * @param {string} taskName - The name of the task being performed
- * @param {Function} task - The async function to execute
- * @param {string} startMessage - The message to log when starting
- * @param {string} successMessage - The message to log on success
- * @returns {Promise<boolean>} True if the task succeeded, false otherwise
- */
-async function performSetupTask(taskName, task, startMessage, successMessage) {
-  try {
-    logger.debug(startMessage);
-    await task();
-    logger.info(successMessage);
-    return true;
-  } catch (error) {
-    logger.error(`Failed to ${taskName}:`, { 
-      error: error.message || error.toString(),
-      stack: error.stack
-    });
-    return false;
-  }
-}
-
 module.exports = {
   name: Events.ClientReady,
   once: true,
