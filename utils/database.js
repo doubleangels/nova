@@ -1,7 +1,6 @@
-const KeyvModule = require('keyv');
-const Keyv = KeyvModule.default || KeyvModule;
-const KeyvSqliteModule = require('@keyv/sqlite');
-const KeyvSqlite = KeyvSqliteModule.default || KeyvSqliteModule;
+const requireDefault = (m) => (require(m).default || require(m));
+const Keyv = requireDefault('keyv');
+const KeyvSqlite = requireDefault('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
 const logger = require('../logger')(path.basename(__filename));

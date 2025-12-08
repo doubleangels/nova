@@ -4,10 +4,9 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
-const KeyvModule = require('keyv');
-const Keyv = KeyvModule.default || KeyvModule;
-const KeyvSqliteModule = require('@keyv/sqlite');
-const KeyvSqlite = KeyvSqliteModule.default || KeyvSqliteModule;
+const requireDefault = (m) => (require(m).default || require(m));
+const Keyv = requireDefault('keyv');
+const KeyvSqlite = requireDefault('@keyv/sqlite');
 
 // Ensure data directory exists
 const dataDir = path.resolve(process.cwd(), 'data');

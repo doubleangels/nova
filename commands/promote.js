@@ -5,10 +5,9 @@ const snoowrap = require('snoowrap');
 const config = require('../config');
 const dayjs = require('dayjs');
 const { handleReminder, getLatestReminderData } = require('../utils/reminderUtils');
-const KeyvModule = require('keyv');
-const Keyv = KeyvModule.default || KeyvModule;
-const KeyvSqliteModule = require('@keyv/sqlite');
-const KeyvSqlite = KeyvSqliteModule.default || KeyvSqliteModule;
+const requireDefault = (m) => (require(m).default || require(m));
+const Keyv = requireDefault('keyv');
+const KeyvSqlite = requireDefault('@keyv/sqlite');
 const fs = require('fs');
 
 // Ensure data directory exists
