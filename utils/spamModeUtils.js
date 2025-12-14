@@ -202,6 +202,13 @@ async function trackNewUserMessage(message) {
       // Get threshold from database (default: 3)
       const threshold = parseInt(await getValue('spam_mode_threshold'), 10) || 3;
       
+      // Get spam mode window for the notification message
+      let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
+      if (!windowHours) {
+        // Fallback to mute mode kick time
+        windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+      }
+      
       // Log if there are threshold or more occurrences (same or different channels)
       logger.debug(`Spam mode: Found ${existingOccurrences.length} occurrences of message for user ${userId} (threshold: ${threshold}).`);
       if (existingOccurrences.length >= threshold) {
@@ -221,8 +228,28 @@ async function trackNewUserMessage(message) {
           timeRemaining: timeRemaining ? `${Math.round(timeRemaining / 1000 / 60)} minutes` : null
         });
         
-        // Delete all offending messages
-        await deleteOffendingMessages(message.guild, existingOccurrences);
+        // Delete all offending messages except the most recent one
+        const mostRecentMessage = await deleteOffendingMessages(message.guild, existingOccurrences);
+        
+        // Reply to the most recent message telling the user they are spamming
+        if (mostRecentMessage) {
+          try {
+            const windowText = windowHours === 1 ? '1 hour' : `${windowHours} hours`;
+            const notificationMessage = `⚠️ **Spam Detected**\n\n` +
+              `As a new member, you are subject to spam monitoring for your first **${windowText}** on the server. ` +
+              `Spam tracking is **server-wide**, meaning duplicate messages sent across any channel are monitored. ` +
+              `Your duplicate messages have been removed. Please avoid sending the same message multiple times.\n\n` +
+              `Thank you for your understanding!`;
+            
+            await mostRecentMessage.reply(notificationMessage);
+          } catch (error) {
+            logger.warn('Failed to reply to spam message:', {
+              error: error.message,
+              messageId: mostRecentMessage.id,
+              userId: message.author.id
+            });
+          }
+        }
         
         // Post warning to configured channel
         await postSpamWarning(message.guild, message.author, existingOccurrences, normalizedContent);
@@ -242,21 +269,36 @@ async function trackNewUserMessage(message) {
 }
 
 /**
- * Deletes all offending duplicate messages
+ * Deletes all offending duplicate messages except the most recent one
  * @param {Guild} guild - The Discord guild
  * @param {Array} occurrences - Array of message occurrences to delete
- * @returns {Promise<void>}
+ * @returns {Promise<Message|null>} The most recent message that was kept, or null if not found
  */
 async function deleteOffendingMessages(guild, occurrences) {
   if (!guild) {
     logger.warn('Cannot delete offending messages: no guild provided.');
-    return;
+    return null;
   }
+  
+  if (occurrences.length === 0) {
+    return null;
+  }
+  
+  // Sort occurrences by timestamp (most recent last)
+  const sortedOccurrences = [...occurrences].sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Get the most recent occurrence (last in sorted array)
+  const mostRecentOccurrence = sortedOccurrences[sortedOccurrences.length - 1];
+  
+  // Get all occurrences except the most recent one
+  const occurrencesToDelete = sortedOccurrences.slice(0, -1);
   
   let deletedCount = 0;
   let failedCount = 0;
+  let mostRecentMessage = null;
   
-  for (const occurrence of occurrences) {
+  // Delete all messages except the most recent one
+  for (const occurrence of occurrencesToDelete) {
     try {
       const channel = await guild.channels.fetch(occurrence.channelId).catch(() => null);
       if (!channel) {
@@ -285,11 +327,27 @@ async function deleteOffendingMessages(guild, occurrences) {
     }
   }
   
-  logger.info(`Deleted ${deletedCount} spam messages (${failedCount} failed)`, {
+  // Fetch the most recent message to return it
+  try {
+    const channel = await guild.channels.fetch(mostRecentOccurrence.channelId).catch(() => null);
+    if (channel) {
+      mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
+    }
+  } catch (error) {
+    logger.warn(`Failed to fetch most recent message ${mostRecentOccurrence.messageId}:`, {
+      error: error.message,
+      messageId: mostRecentOccurrence.messageId
+    });
+  }
+  
+  logger.info(`Deleted ${deletedCount} spam messages (${failedCount} failed), kept most recent message`, {
     totalOccurrences: occurrences.length,
     deletedCount,
-    failedCount
+    failedCount,
+    mostRecentMessageId: mostRecentOccurrence.messageId
   });
+  
+  return mostRecentMessage;
 }
 
 /**
