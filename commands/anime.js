@@ -71,7 +71,8 @@ module.exports = {
       } else {
         logger.info("No anime results found for query:", { query: formattedTitle });
         await interaction.editReply({
-          content: "⚠️ No anime found matching your search. Please try a different title."
+          content: "⚠️ No anime found matching your search. Please try a different title.",
+          ephemeral: true
         });
       }
     } catch (error) {

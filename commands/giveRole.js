@@ -197,7 +197,7 @@ module.exports = {
         }
 
         try {
-            await interaction.editReply({ content: errorMessage });
+            await interaction.editReply({ content: errorMessage, ephemeral: true });
         } catch (replyError) {
             logger.error('Failed to send error message:', {
                 error: replyError.message,

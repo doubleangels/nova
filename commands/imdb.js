@@ -84,7 +84,8 @@ module.exports = {
       if (response.data.Error) {
         logger.warn("No results found for query:", { query: formattedTitle, type: typeParam });
         await interaction.editReply({
-          content: `⚠️ No results found for your search. Please try a different title.`
+          content: `⚠️ No results found for your search. Please try a different title.`,
+          ephemeral: true
         });
         return;
       }
