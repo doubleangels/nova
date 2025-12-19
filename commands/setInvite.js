@@ -33,7 +33,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
       
       const inviteUrl = interaction.options.getString('url');
       
@@ -90,8 +90,7 @@ module.exports = {
       
       try {
         await interaction.editReply({ 
-          content: errorMessage,
-          ephemeral: true 
+          content: errorMessage
         });
       } catch (followUpError) {
         logger.error("Failed to send error response for setinvite command:", {
@@ -101,8 +100,7 @@ module.exports = {
         });
         
         await interaction.reply({ 
-          content: errorMessage,
-          ephemeral: true 
+          content: errorMessage
         }).catch(() => {});
       }
     }
