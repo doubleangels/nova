@@ -53,12 +53,13 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           }
 
           try {
+            const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
             const embed = {
               color: 0xCD41FF,
               title: 'Kicked for Inactivity',
               description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
               fields: [
-                { name: 'Want to rejoin?', value: 'You can rejoin at https://dafrens.games.' }
+                { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
               ]
             };
             await member.send({ embeds: [embed] });
@@ -86,12 +87,13 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           }
 
           try {
+            const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
             const embed = {
               color: 0xCD41FF,
               title: 'Kicked for Inactivity',
               description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
               fields: [
-                { name: 'Want to rejoin?', value: 'You can rejoin at https://dafrens.games.' }
+                { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
               ]
             };
             await member.send({ embeds: [embed] });

@@ -47,7 +47,6 @@ async function performKick(member) {
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     try {
-      const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
       const embed = new EmbedBuilder()
         .setColor(0xCD41FF)
         .setTitle('Account Age Requirement')
@@ -55,7 +54,7 @@ async function performKick(member) {
         .addFields(
           { name: 'Your Account Age', value: `${accountAge} days` },
           { name: 'Required Age', value: `${requiredAge} days` },
-          { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl} once your account meets the age requirement.` }
+          { name: 'Want to rejoin?', value: 'You can rejoin at [dafrens.games](https://dafrens.games) once your account meets the age requirement.' }
         );
       await member.send({ embeds: [embed] });
     } catch (dmError) {
