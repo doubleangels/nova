@@ -24,7 +24,7 @@ module.exports = {
 
       await interaction.reply({ embeds: [embed] });
 
-      logger.info('/source command sent resource links', {
+      logger.info('/source command sent resource links:', {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });

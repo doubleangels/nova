@@ -27,7 +27,7 @@ module.exports = {
 
       await interaction.reply({ embeds: [embed] });
 
-      logger.info('/website command responded with site link', {
+      logger.info('/website command responded with site link:', {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
