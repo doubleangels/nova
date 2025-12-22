@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
+const config = require('../config');
 const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
@@ -60,7 +61,7 @@ module.exports = {
       });
       
       const embed = new EmbedBuilder()
-          .setColor(0xcd41ff)
+          .setColor(config.baseEmbedColor)
           .setTitle('🔧 Disboard Bump Reminder Fixed')
           .setDescription(`Disboard bump reminder successfully fixed! Next bump reminder scheduled <t:${unixTimestamp}:R>.`);
       

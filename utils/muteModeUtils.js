@@ -2,6 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getAllMuteModeUsers, getValue } = require('./database');
 const dayjs = require('dayjs');
+const config = require('../config');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 
@@ -55,7 +56,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           try {
             const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
             const embed = {
-              color: 0xCD41FF,
+              color: config.baseEmbedColor,
               title: 'Kicked for Inactivity',
               description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
               fields: [
@@ -89,7 +90,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           try {
             const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
             const embed = {
-              color: 0xCD41FF,
+              color: config.baseEmbedColor,
               title: 'Kicked for Inactivity',
               description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
               fields: [

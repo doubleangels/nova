@@ -2,6 +2,7 @@ const logger = require('../logger')('trollModeUtils.js');
 const dayjs = require('dayjs');
 const { getValue } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
+const config = require('../config');
 
 /**
  * Checks if a member's account meets the minimum age requirement
@@ -49,7 +50,7 @@ async function performKick(member) {
     try {
       const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
       const embed = new EmbedBuilder()
-        .setColor(0xCD41FF)
+        .setColor(config.baseEmbedColor)
         .setTitle('Account Age Requirement')
         .setDescription(`You were kicked from Da Frens because your account is too new.`)
         .addFields(

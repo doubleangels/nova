@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('disco
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
+const config = require('../config');
 
 /**
  * Command module for configuring channels to only allow GIFs and stickers.
@@ -89,7 +90,7 @@ module.exports = {
         }
 
         const embed = {
-          color: 0xcd41ff,
+          color: config.baseEmbedColor,
           title: '🚫 No Text Channel Configuration',
           description: `Channel ${channel} has been configured to only allow GIFs and stickers.`,
           timestamp: new Date().toISOString()
@@ -123,7 +124,7 @@ module.exports = {
         }
 
         const embed = {
-          color: 0xcd41ff,
+          color: config.baseEmbedColor,
           title: '🚫 No Text Channel Configuration',
           description: `Channel ${channel} is no longer restricted to GIFs and stickers.`,
           timestamp: new Date().toISOString()

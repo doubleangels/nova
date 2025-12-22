@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
+const config = require('../config');
 
 /**
  * Command module for changing role colors
@@ -98,7 +99,7 @@ module.exports = {
                 });
                 
                 const errorEmbed = new EmbedBuilder()
-                    .setColor(0xcd41ff)
+                    .setColor(config.baseEmbedColor)
                     .setTitle('Error')
                     .setDescription(errorMessage);
                 

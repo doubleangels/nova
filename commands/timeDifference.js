@@ -146,7 +146,7 @@ module.exports = {
       const formattedTimeDiff = this.formatTimeDifference(timeDiff);
       
       const embed = new EmbedBuilder()
-        .setColor(0xcd41ff)
+        .setColor(config.baseEmbedColor)
         .setTitle('⏳ Time Difference Information')
         .addFields(
           { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },

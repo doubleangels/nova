@@ -29,6 +29,7 @@ require('dotenv').config();
  * @property {string} givePermsPositionAboveRoleId - Role ID for permission management
  * @property {string} givePermsFrenRoleId - Role ID for Fren role
  * @property {string} exchangeRateApiKey - exchangerate.host API key for currency conversion
+ * @property {number} baseEmbedColor - Base embed color (hex number, default: 0xcd41ff)
  */
 
 /** @type {BotConfig} */
@@ -57,4 +58,5 @@ module.exports = {
   spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
   token: process.env.DISCORD_BOT_TOKEN,
+  baseEmbedColor: process.env.BASE_EMBED_COLOR ? parseInt(process.env.BASE_EMBED_COLOR.replace(/^#|^0x/i, ''), 16) : 0xcd41ff,
 };

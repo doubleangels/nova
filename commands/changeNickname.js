@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 
 /**
  * @typedef {Object} ValidationResult
@@ -68,7 +69,7 @@ module.exports = {
             await member.setNickname(newNickname || null);
             
             const userHighestRole = member.roles.highest;
-            const embedColor = userHighestRole.color === 0 ? 0xcd41ff : userHighestRole.color;
+            const embedColor = userHighestRole.color === 0 ? config.baseEmbedColor : userHighestRole.color;
             
             const embed = new EmbedBuilder()
                 .setColor(embedColor)

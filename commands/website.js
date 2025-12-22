@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 
 /**
  * Command module for linking to the project's website.
@@ -19,7 +20,7 @@ module.exports = {
   async execute(interaction) {
     try {
       const embed = new EmbedBuilder()
-        .setColor(0xcd41ff)
+        .setColor(config.baseEmbedColor)
         .setTitle('🌐 Official Website')
         .setDescription('Visit our website: https://dafrens.games')
         .setURL('https://dafrens.games');
