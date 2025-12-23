@@ -254,8 +254,8 @@ async function trackNewUserMessage(message) {
         // Post warning to configured channel
         await postSpamWarning(message.guild, message.author, existingOccurrences, normalizedContent);
         
-        // Timeout the user for 1 minute
-        await timeoutUser(message.guild, message.author, 60);
+        // Timeout the user for 10 minutes
+        await timeoutUser(message.guild, message.author, 600);
       }
     } else {
       // First occurrence of this content for this user
