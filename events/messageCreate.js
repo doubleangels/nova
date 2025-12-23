@@ -222,7 +222,8 @@ async function checkForBumpMessages(message) {
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
-    if ((!message.embeds || message.embeds.length === 0) && message.content) {
+    // Only trigger from bot messages to prevent users from faking bumps
+    if ((!message.embeds || message.embeds.length === 0) && message.content && message.author.bot) {
       const discadiaBumpPattern = /has been successfully bumped!/i;
       if (discadiaBumpPattern.test(message.content)) {
         logger.info("Discadia bump detected, scheduling reminder.");
