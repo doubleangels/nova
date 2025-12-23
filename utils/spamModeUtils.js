@@ -253,6 +253,9 @@ async function trackNewUserMessage(message) {
         
         // Post warning to configured channel
         await postSpamWarning(message.guild, message.author, existingOccurrences, normalizedContent);
+        
+        // Timeout the user for 1 minute
+        await timeoutUser(message.guild, message.author, 60);
       }
     } else {
       // First occurrence of this content for this user
@@ -406,6 +409,55 @@ async function postSpamWarning(guild, user, occurrences, content) {
       stack: error.stack,
       guildId: guild.id,
       userId: user.id
+    });
+  }
+}
+
+/**
+ * Timeouts a user for a specified duration
+ * @param {Guild} guild - The Discord guild
+ * @param {User} user - The user to timeout
+ * @param {number} durationSeconds - Duration of timeout in seconds
+ * @returns {Promise<void>}
+ */
+async function timeoutUser(guild, user, durationSeconds) {
+  if (!guild || !user) {
+    logger.warn('Cannot timeout user: missing guild or user.');
+    return;
+  }
+  
+  try {
+    const member = await guild.members.fetch(user.id).catch(() => null);
+    if (!member) {
+      logger.warn(`Cannot timeout user ${user.id}: member not found in guild.`);
+      return;
+    }
+    
+    // Check if bot has permission to timeout members
+    const botMember = guild.members.me;
+    if (!botMember.permissions.has('ModerateMembers')) {
+      logger.warn(`Cannot timeout user ${user.id}: bot lacks ModerateMembers permission.`);
+      return;
+    }
+    
+    // Check if the user's highest role is higher than bot's highest role
+    if (member.roles.highest.position >= botMember.roles.highest.position) {
+      logger.warn(`Cannot timeout user ${user.id}: user's role is higher than or equal to bot's role.`);
+      return;
+    }
+    
+    // Calculate timeout end time (current time + duration)
+    const timeoutUntil = new Date(Date.now() + (durationSeconds * 1000));
+    
+    await member.timeout(timeoutUntil, 'Spam detected - automatic timeout');
+    
+    logger.info(`Timed out user ${user.tag} (${user.id}) for ${durationSeconds} seconds due to spam detection.`);
+  } catch (error) {
+    logger.error('Error timing out user:', {
+      error: error.message,
+      stack: error.stack,
+      userId: user.id,
+      guildId: guild.id
     });
   }
 }
