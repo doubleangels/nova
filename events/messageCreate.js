@@ -68,9 +68,8 @@ module.exports = {
 
       await processUserMessage(message);
       
-      if (message.embeds && message.embeds.length > 0) {
-        await checkForBumpMessages(message);
-      }
+      // Check for bump messages (both Disboard with embeds and Discadia without embeds)
+      await checkForBumpMessages(message);
       
       // Auto-react to "Dubz" or "Dubzie" mentions (case-insensitive)
       const messageContentLower = message.content?.toLowerCase() || '';
@@ -191,6 +190,7 @@ async function processUserMessage(message) {
 
 /**
  * Checks for bump messages and schedules reminders
+ * Supports both Disboard (embed) and Discadia (text, no embed) bump messages
  * @param {Message} message - The message to check
  * @returns {Promise<void>}
  */
@@ -202,21 +202,34 @@ async function checkForBumpMessages(message) {
     content: message.content?.replace(/\n/g, ' ') || "No Content"
   });
   
-  if (!message.embeds || message.embeds.length === 0) return;
-  
   try {
-    const bumpEmbed = message.embeds.find(embed => {
-      logger.debug("Checking embed:", { 
-        description: embed.description?.replace(/\n/g, ' ') || "No Description", 
-        hasDescription: !!embed.description 
+    // Check for Disboard bump (has embed with "Bump done!")
+    if (message.embeds && message.embeds.length > 0) {
+      const bumpEmbed = message.embeds.find(embed => {
+        logger.debug("Checking embed:", { 
+          description: embed.description?.replace(/\n/g, ' ') || "No Description", 
+          hasDescription: !!embed.description 
+        });
+        return embed.description && embed.description.includes("Bump done!");
       });
-      return embed.description && embed.description.includes("Bump done!");
-    });
+      
+      if (bumpEmbed) {
+        logger.info("Disboard bump detected, scheduling reminder.");
+        await handleReminder(message, 7200000, 'bump');
+        logger.debug("Bump reminder scheduled for 2 hours.");
+        return;
+      }
+    }
     
-    if (bumpEmbed) {
-      logger.info("Bump detected, scheduling reminder.");
-      await handleReminder(message, 7200000);
-      logger.debug("Bump reminder scheduled for 2 hours.");
+    // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
+    if ((!message.embeds || message.embeds.length === 0) && message.content) {
+      const discadiaBumpPattern = /has been successfully bumped!/i;
+      if (discadiaBumpPattern.test(message.content)) {
+        logger.info("Discadia bump detected, scheduling reminder.");
+        await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
+        logger.debug("Bump reminder scheduled for 24 hours.");
+        return;
+      }
     }
   } catch (error) {
     logger.error("Failed to process bump message:", { error, messageId: message.id, author: message.author?.tag });

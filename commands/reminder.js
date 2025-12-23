@@ -8,14 +8,14 @@ const { getValue, setValue } = require('../utils/database');
 const { getLatestReminderData } = require('../utils/reminderUtils');
 
 /**
- * Command module for configuring and managing Disboard bump reminders.
- * Handles setup of reminder channels and roles, and displays reminder status.
+ * Command module for configuring and managing reminders.
+ * Handles setup of reminder channels and roles, displays reminder status, and fixes reminder data.
  * @type {Object}
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
-    .setDescription('Configure and manage Disboard bump reminders.')
+    .setDescription('Configure and manage server reminders (Disboard, Discadia, and Reddit promotions).')
     .addSubcommand(subcommand =>
       subcommand
         .setName('setup')
@@ -124,7 +124,7 @@ module.exports = {
         { name: '📢 Channel', value: `<#${channelOption.id}>` },
         { name: '🎭 Role', value: `<@&${roleOption.id}>` }
       )
-      .setDescription(`Disboard bump reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`);
+      .setDescription(`Reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`);
 
     await interaction.editReply({ embeds: [embed] });
   },
@@ -152,8 +152,9 @@ module.exports = {
         getValue('reminder_role')
       ]);
       
-      const [bumpReminder, promoteReminder] = await Promise.all([
+      const [bumpReminder, discadiaReminder, promoteReminder] = await Promise.all([
         this.getLatestReminderData(channelId, 'bump'),
+        this.getLatestReminderData(channelId, 'discadia'),
         this.getLatestReminderData(channelId, 'promote')
       ]);
       
@@ -161,6 +162,7 @@ module.exports = {
         channelId, 
         roleId,
         hasBumpReminder: !!bumpReminder,
+        hasDiscadiaReminder: !!discadiaReminder,
         hasPromoteReminder: !!promoteReminder,
         guildId: interaction.guildId
       });
@@ -178,6 +180,7 @@ module.exports = {
       }
       
       const bumpTimeStr = this.calculateRemainingTime(bumpReminder);
+      const discadiaTimeStr = this.calculateRemainingTime(discadiaReminder);
       const promoteTimeStr = this.calculateRemainingTime(promoteReminder);
       const configComplete = channelId && roleId;
       
@@ -187,7 +190,8 @@ module.exports = {
         .addFields(
           { name: '📢 Channel', value: channelStr },
           { name: '🎭 Role', value: roleStr },
-          { name: '⏰ Next Bump', value: bumpTimeStr },
+          { name: '⏰ Next Bump (Disboard)', value: bumpTimeStr },
+          { name: '⏰ Next Bump (Discadia)', value: discadiaTimeStr },
           { name: '🎯 Next Promotion', value: promoteTimeStr }
         );
 
@@ -217,7 +221,7 @@ module.exports = {
    * Retrieves the latest reminder data for a specific type.
    * 
    * @param {string} channelId - The ID of the channel to check (not used with Keyv, kept for compatibility)
-   * @param {string} type - The type of reminder ('bump' or 'promote')
+   * @param {string} type - The type of reminder ('bump', 'discadia', or 'promote')
    * @returns {Promise<Object|null>} The latest reminder data or null if none found
    */
   async getLatestReminderData(channelId, type) {
