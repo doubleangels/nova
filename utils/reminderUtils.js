@@ -534,7 +534,7 @@ async function rescheduleReminder(client) {
       const now = dayjs();
       const delay = scheduledTime.diff(now, 'millisecond');
       
-      logger.info("Processing bump reminder for rescheduling:", {
+      logger.info("Processing disboard reminder for rescheduling:", {
         reminder_id: bumpReminder.reminder_id,
         scheduledTime: scheduledTime.toISOString(),
         now: now.toISOString(),
@@ -558,7 +558,7 @@ async function rescheduleReminder(client) {
           }
         }, delay);
         
-        logger.info("Successfully rescheduled bump reminder:", {
+        logger.info("Successfully rescheduled disboard reminder:", {
           reminder_id: bumpReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
