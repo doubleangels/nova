@@ -112,7 +112,7 @@ async function handleCommand(interaction, commandType) {
   const command = interaction.client[commandType]?.get(interaction.commandName);
   
   if (!command) {
-    logger.warn(`Command not found: ${interaction.commandName}`);
+    logger.warn(`Command not found: ${interaction.commandName}.`);
     return;
   }
 

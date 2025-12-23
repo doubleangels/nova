@@ -21,7 +21,7 @@ module.exports = {
    */
   async execute(member) {
     try {
-      logger.info(`New member joined: ${member.user.tag}`);
+      logger.info(`New member joined: ${member.user.tag}.`);
 
       if (member.user.bot) {
         logger.debug("Bot joined; skipping mute mode tracking:", { botTag: member.user.tag });
@@ -51,7 +51,7 @@ module.exports = {
         );
       }
 
-      logger.info(`Successfully processed new member: ${member.user.tag}`);
+      logger.info(`Successfully processed new member: ${member.user.tag}.`);
     } catch (error) {
       logger.error('Error processing new member:', {
         error: error.stack,

@@ -13,7 +13,7 @@ try {
   if (!fs.existsSync(dataDir)) {
     // 0o750 = rwxr-x--- (owner: read/write/execute, group: read/execute, others: no access)
     fs.mkdirSync(dataDir, { recursive: true, mode: 0o750 });
-    logger.info(`Created data directory: ${dataDir}`);
+    logger.info(`Created data directory: ${dataDir}.`);
   }
   // Ensure the directory is writable
   try {

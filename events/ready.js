@@ -76,7 +76,7 @@ module.exports = {
 
       logger.debug(`Setting bot activity:`, JSON.stringify(botActivity));
       client.user.setActivity(botActivity.name, { type: botActivity.type });
-      logger.info(`Ready! Logged in as ${client.user.tag}`);
+      logger.info(`Ready! Logged in as ${client.user.tag}.`);
 
       await rescheduleAllMuteKicks(client);
       logger.info('Mute kicks rescheduled successfully.');

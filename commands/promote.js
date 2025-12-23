@@ -287,7 +287,7 @@ module.exports = {
         }
         const remainingIds = reminderIds.filter(rid => !idsToRemove.includes(rid));
         await reminderKeyv.set('reminders:promote:list', remainingIds);
-        logger.debug(`Cleaned up ${idsToRemove.length} expired/invalid promote reminder(s)`);
+        logger.debug(`Cleaned up ${idsToRemove.length} expired/invalid promote reminder(s).`);
       }
 
       // Get latest reminder

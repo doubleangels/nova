@@ -319,7 +319,7 @@ async function deleteOffendingMessages(guild, occurrences) {
       
       await messageToDelete.delete();
       deletedCount++;
-      logger.debug(`Deleted spam message ${occurrence.messageId} from channel ${occurrence.channelName}`);
+      logger.debug(`Deleted spam message ${occurrence.messageId} from channel ${occurrence.channelName}.`);
     } catch (error) {
       logger.warn(`Failed to delete message ${occurrence.messageId} from channel ${occurrence.channelName}:`, {
         error: error.message,
@@ -343,7 +343,7 @@ async function deleteOffendingMessages(guild, occurrences) {
     });
   }
   
-  logger.info(`Deleted ${deletedCount} spam messages (${failedCount} failed), kept most recent message`, {
+  logger.info(`Deleted ${deletedCount} spam messages (${failedCount} failed), kept most recent message:`, {
     totalOccurrences: occurrences.length,
     deletedCount,
     failedCount,
@@ -375,13 +375,13 @@ async function postSpamWarning(guild, user, occurrences, content) {
     
     const warningChannel = await guild.channels.fetch(warningChannelId).catch(() => null);
     if (!warningChannel) {
-      logger.warn(`Warning channel ${warningChannelId} not found in guild ${guild.id}`);
+      logger.warn(`Warning channel ${warningChannelId} not found in guild ${guild.id}.`);
       return;
     }
     
     // Check if bot can send messages in this channel
     if (!warningChannel.permissionsFor(guild.members.me)?.has(['SendMessages', 'EmbedLinks'])) {
-      logger.warn(`Bot lacks permissions to send messages in warning channel ${warningChannelId}`);
+      logger.warn(`Bot lacks permissions to send messages in warning channel ${warningChannelId}.`);
       return;
     }
     
@@ -402,7 +402,7 @@ async function postSpamWarning(guild, user, occurrences, content) {
     await warningChannel.send({ 
       embeds: [embed] 
     });
-    logger.info(`Posted spam warning to channel ${warningChannel.name} for user ${user.tag}`);
+    logger.info(`Posted spam warning to channel ${warningChannel.name} for user ${user.tag}.`);
   } catch (error) {
     logger.error('Error posting spam warning:', {
       error: error.message,

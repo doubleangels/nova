@@ -23,12 +23,12 @@ module.exports = {
         logger.debug("Bot member left; skipping tracking removal:", { botTag: member.user.tag });
         return;
       }
-      logger.info(`Member left: ${member.user.tag} (ID: ${member.id})`);
+      logger.info(`Member left: ${member.user.tag} (ID: ${member.id}).`);
       
       await removeMuteModeUser(member.id);
       await removeSpamModeJoinTime(member.id);
 
-      logger.info(`Successfully processed member departure: ${member.user.tag}`);
+      logger.info(`Successfully processed member departure: ${member.user.tag}.`);
     } catch (error) {
       logger.error('Error processing member leave:', {
         error: error.stack,

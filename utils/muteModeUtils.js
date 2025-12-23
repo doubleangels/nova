@@ -140,8 +140,8 @@ async function rescheduleAllMuteKicks(client) {
     }
     const guildId = client.guilds.cache.first().id;
     for (const userData of muteModeUsers) {
-      logger.debug(`Rescheduling mute kick for user: ${JSON.stringify(userData)}`);
-      logger.debug(`Using muteKickTime: ${muteKickTime}`);
+      logger.debug(`Rescheduling mute kick for user: ${JSON.stringify(userData)}.`);
+      logger.debug(`Using muteKickTime: ${muteKickTime}.`);
       await scheduleMuteKick(
         userData.user_id,
         userData.join_time,
