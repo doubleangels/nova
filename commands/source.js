@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 
 // Admin-only command that links to bot resources (source & infra)
 module.exports = {
@@ -18,7 +19,7 @@ module.exports = {
       const githubUrl = 'https://github.com/doubleangels/nova';
 
       const embed = new EmbedBuilder()
-        .setColor(0x00A67E)
+        .setColor(config.baseEmbedColor)
         .setTitle('🤖 Bot Resources')
         .setDescription(`• 🧩 **GitHub Repo:** [doubleangels/nova](${githubUrl})`);
 

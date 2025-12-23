@@ -58,5 +58,15 @@ module.exports = {
   spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
   token: process.env.DISCORD_BOT_TOKEN,
-  baseEmbedColor: process.env.BASE_EMBED_COLOR ? parseInt(process.env.BASE_EMBED_COLOR.replace(/^#|^0x/i, ''), 16) : 0xcd41ff,
+  baseEmbedColor: (() => {
+    if (!process.env.BASE_EMBED_COLOR) {
+      return 0xcd41ff;
+    }
+    const colorStr = process.env.BASE_EMBED_COLOR.trim();
+    // Remove # or 0x prefix if present
+    const cleanColor = colorStr.replace(/^#/, '').replace(/^0x/i, '');
+    const parsed = parseInt(cleanColor, 16);
+    // If parsing fails, return default
+    return isNaN(parsed) ? 0xcd41ff : parsed;
+  })(),
 };
