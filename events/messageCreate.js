@@ -23,7 +23,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(message) {
-    if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova')) return;
+    if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova') && !message.author.tag.toLowerCase().includes('discadia')) return;
 
     try {
       if (message.partial) {
@@ -195,11 +195,18 @@ async function processUserMessage(message) {
  * @returns {Promise<void>}
  */
 async function checkForBumpMessages(message) {
+  // Get message content - always try to fetch for bot messages if content is missing
+  // Sometimes Discord.js doesn't populate content immediately for interaction/webhook messages
+  let messageContent = message.content;
+  
   logger.debug("Checking message for bump:", {
     author: message.author?.tag,
     hasEmbeds: message.embeds?.length > 0,
     embedCount: message.embeds?.length || 0,
-    content: message.content?.replace(/\n/g, ' ') || "No Content"
+    content: messageContent?.replace(/\n/g, ' ') || "No Content",
+    hasWebhook: !!message.webhookId,
+    isInteraction: !!message.interaction,
+    isPartial: message.partial
   });
   
   try {
@@ -222,14 +229,43 @@ async function checkForBumpMessages(message) {
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
-    // Only trigger from bot messages to prevent users from faking bumps
-    if ((!message.embeds || message.embeds.length === 0) && message.content && message.author.bot) {
-      const discadiaBumpPattern = /has been successfully bumped!/i;
-      if (discadiaBumpPattern.test(message.content)) {
-        logger.info("Discadia bump detected, scheduling reminder.");
-        await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
-        logger.debug("Bump reminder scheduled for 24 hours.");
-        return;
+    // Temporarily allowing all messages for testing (normally would check message.author.bot)
+    if ((!message.embeds || message.embeds.length === 0)) {
+      // Always try to fetch message content for bot messages if it's missing
+      // This handles cases where Discord.js doesn't populate content immediately
+      if (!messageContent) {
+        try {
+          const fetchedMessage = await message.fetch();
+          messageContent = fetchedMessage.content;
+          logger.debug("Fetched message content for Discadia check:", { 
+            content: messageContent?.substring(0, 100) || "Still no content after fetch",
+            messageId: message.id
+          });
+        } catch (fetchError) {
+          logger.debug("Could not fetch message for Discadia check:", { 
+            error: fetchError.message,
+            messageId: message.id 
+          });
+        }
+      }
+      
+      if (messageContent) {
+        const discadiaBumpPattern = /has been successfully bumped!/i;
+        if (discadiaBumpPattern.test(messageContent)) {
+          logger.info("Discadia bump detected, scheduling reminder.");
+          await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
+          logger.debug("Bump reminder scheduled for 24 hours.");
+          return;
+        } else {
+          logger.debug("Discadia pattern not found in content:", { 
+            content: messageContent.substring(0, 100) 
+          });
+        }
+      } else {
+        logger.debug("No message content available for Discadia check:", {
+          messageId: message.id,
+          author: message.author?.tag
+        });
       }
     }
   } catch (error) {
