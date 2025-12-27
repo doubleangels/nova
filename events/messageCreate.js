@@ -212,6 +212,24 @@ async function checkForBumpMessages(message) {
   try {
     // Check for Disboard bump (has embed with "Bump done!")
     if (message.embeds && message.embeds.length > 0) {
+      // Always fetch message to ensure we have the latest embed data
+      // Discord.js sometimes doesn't populate embeds immediately
+      try {
+        const fetchedMessage = await message.fetch();
+        if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
+          message.embeds = fetchedMessage.embeds;
+          logger.debug("Fetched message embeds for Disboard check:", {
+            embedCount: fetchedMessage.embeds.length,
+            messageId: message.id
+          });
+        }
+      } catch (fetchError) {
+        logger.debug("Could not fetch message for Disboard check:", {
+          error: fetchError.message,
+          messageId: message.id
+        });
+      }
+      
       const bumpEmbed = message.embeds.find(embed => {
         logger.debug("Checking embed:", { 
           description: embed.description?.replace(/\n/g, ' ') || "No Description", 
@@ -231,40 +249,50 @@ async function checkForBumpMessages(message) {
     // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
     // Only trigger from bot messages to prevent users from faking bumps
     if ((!message.embeds || message.embeds.length === 0) && message.author.bot) {
-      // Always try to fetch message content for bot messages if it's missing
-      // This handles cases where Discord.js doesn't populate content immediately
-      if (!messageContent) {
-        try {
-          const fetchedMessage = await message.fetch();
-          messageContent = fetchedMessage.content;
-          logger.debug("Fetched message content for Discadia check:", { 
-            content: messageContent?.substring(0, 100) || "Still no content after fetch",
-            messageId: message.id
-          });
-        } catch (fetchError) {
-          logger.debug("Could not fetch message for Discadia check:", { 
-            error: fetchError.message,
-            messageId: message.id 
-          });
+      // Always fetch message content to ensure we have the latest content
+      // Discord.js sometimes doesn't populate content immediately for interaction/webhook messages
+      try {
+        const fetchedMessage = await message.fetch();
+        messageContent = fetchedMessage.content;
+        logger.debug("Fetched message content for Discadia check:", { 
+          content: messageContent?.substring(0, 100) || "No content after fetch",
+          messageId: message.id,
+          originalContent: message.content?.substring(0, 50) || "No original content",
+          isBot: message.author.bot
+        });
+      } catch (fetchError) {
+        logger.debug("Could not fetch message for Discadia check:", { 
+          error: fetchError.message,
+          messageId: message.id,
+          usingOriginalContent: !!messageContent
+        });
+        // Fall back to original content if fetch fails
+        if (!messageContent) {
+          messageContent = message.content;
         }
       }
       
       if (messageContent) {
         const discadiaBumpPattern = /has been successfully bumped!/i;
-        if (discadiaBumpPattern.test(messageContent)) {
+        const patternMatch = discadiaBumpPattern.test(messageContent);
+        logger.debug("Discadia pattern check:", {
+          patternMatch,
+          content: messageContent.substring(0, 100),
+          contentLength: messageContent.length
+        });
+        
+        if (patternMatch) {
           logger.info("Discadia bump detected, scheduling reminder.");
           await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
           logger.debug("Bump reminder scheduled for 24 hours.");
           return;
-        } else {
-          logger.debug("Discadia pattern not found in content:", { 
-            content: messageContent.substring(0, 100) 
-          });
         }
       } else {
         logger.debug("No message content available for Discadia check:", {
           messageId: message.id,
-          author: message.author?.tag
+          author: message.author?.tag,
+          hasWebhook: !!message.webhookId,
+          isInteraction: !!message.interaction
         });
       }
     }
