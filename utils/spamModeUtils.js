@@ -462,15 +462,6 @@ async function timeoutUser(guild, user, durationSeconds) {
   }
 }
 
-/**
- * Clears all tracked messages (useful for testing or reset)
- */
-function clearTracker() {
-  userMessageTracker.clear();
-  logger.debug('Spam mode message tracker cleared.');
-}
-
 module.exports = {
-  trackNewUserMessage,
-  clearTracker
+  trackNewUserMessage
 };

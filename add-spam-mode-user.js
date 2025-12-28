@@ -11,7 +11,7 @@
  */
 
 require('dotenv').config();
-const { addSpamModeJoinTime, updateSpamModeJoinTime } = require('./utils/database');
+const { addSpamModeJoinTime } = require('./utils/database');
 
 async function addUserToSpamMode(userId, username = null, joinTime = null) {
   try {

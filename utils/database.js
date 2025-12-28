@@ -173,39 +173,6 @@ async function deleteValue(key) {
 }
 
 /**
- * Retrieves all configuration records from the database
- * @returns {Promise<Array>} Array of configuration records
- */
-async function getAllConfigs() {
-  try {
-    logger.debug("Retrieving all config records.");
-    // Keyv doesn't have a native "get all" method, so we'll need to track keys
-    // For now, return empty array as this function may not be used
-    // If needed, we can maintain a list of config keys separately
-    logger.debug("Retrieved config records (not fully supported with Keyv).");
-    return [];
-  } catch (err) {
-    logger.error("Error getting all config values:", { error: err });
-    return [];
-  }
-}
-
-/**
- * Executes a database query with timeout and error handling
- * Note: This function is kept for compatibility but Keyv doesn't support SQL queries
- * @param {string} text - The SQL query text (not used with Keyv)
- * @param {Array} [params=[]] - Query parameters (not used with Keyv)
- * @param {Object} [options={}] - Query options
- * @param {number} [options.timeout=30000] - Query timeout in milliseconds
- * @throws {Error} If query fails or times out
- * @returns {Promise<Object>} A mock query result object for compatibility
- */
-async function query(text, params = [], options = {}) {
-  logger.warn("query() function called but Keyv doesn't support SQL queries. This is likely a compatibility issue.");
-  throw new Error("SQL queries are not supported with Keyv. Use the specific database functions instead.");
-}
-
-/**
  * Helper function to maintain a list of user IDs for a given type
  * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
  * @param {string} userId - The user ID to add
@@ -326,33 +293,6 @@ async function getUserJoinTime(userId) {
 }
 
 /**
- * Updates a user's join time in mute mode tracking (useful for testing)
- * @param {string} userId - The Discord user ID
- * @param {string} username - The Discord username
- * @param {Date|string|null} joinTime - The join time to set (null = set to NOW())
- * @returns {Promise<void>}
- */
-async function updateUserJoinTime(userId, username, joinTime = null) {
-  try {
-    const timeToSet = joinTime 
-      ? (joinTime instanceof Date ? joinTime.toISOString() : new Date(joinTime).toISOString())
-      : new Date().toISOString();
-    
-    const userData = {
-      userId,
-      username,
-      joinTime: timeToSet
-    };
-    
-    await keyv.set(`mute_mode:${userId}`, userData);
-    await addToUserList('mute_mode_users', userId);
-    logger.debug(`Updated join time for user ${userId} to ${timeToSet}.`);
-  } catch (error) {
-    logger.error(`Error updating user join time for ${userId}:`, { error: error.message });
-  }
-}
-
-/**
  * Adds a user's join time to spam mode tracking
  * @param {string} userId - The Discord user ID
  * @param {string} username - The Discord username
@@ -392,33 +332,6 @@ async function getSpamModeJoinTime(userId) {
   } catch (error) {
     logger.error(`Error getting spam mode join time for user ${userId}:`, { error: error.message });
     return null;
-  }
-}
-
-/**
- * Updates a user's join time in spam mode tracking (useful for testing)
- * @param {string} userId - The Discord user ID
- * @param {string} username - The Discord username
- * @param {Date|string|null} joinTime - The join time to set (null = set to NOW())
- * @returns {Promise<void>}
- */
-async function updateSpamModeJoinTime(userId, username, joinTime = null) {
-  try {
-    const timeToSet = joinTime 
-      ? (joinTime instanceof Date ? joinTime.toISOString() : new Date(joinTime).toISOString())
-      : new Date().toISOString();
-    
-    const userData = {
-      userId,
-      username,
-      joinTime: timeToSet
-    };
-    
-    await keyv.set(`spam_mode:${userId}`, userData);
-    await addToUserList('spam_mode_users', userId);
-    logger.debug(`Updated spam mode join time for user ${userId} to ${timeToSet}.`);
-  } catch (error) {
-    logger.error(`Error updating spam mode join time for user ${userId}:`, { error: error.message });
   }
 }
 
@@ -586,25 +499,6 @@ async function deleteInviteTag(tagName) {
   } catch (err) {
     logger.error(`Error deleting invite tag "${tagName}":`, { error: err });
     throw new Error("DATABASE_DELETE_ERROR");
-  }
-}
-
-/**
- * Gets all invite tags from the invites namespace
- * Note: Keyv doesn't have a native "get all" method, so this returns an empty array
- * If you need to list all invites, you'll need to track tag names separately
- * @returns {Promise<Array>} Array of invite tag objects (currently not fully supported)
- */
-async function getAllInviteTags() {
-  try {
-    logger.debug("Retrieving all invite tags.");
-    // Keyv doesn't have a native "get all" method
-    // If needed, we can maintain a list of tag names separately
-    logger.debug("Retrieved invite tags (not fully supported with Keyv).");
-    return [];
-  } catch (err) {
-    logger.error("Error getting all invite tags:", { error: err });
-    return [];
   }
 }
 
@@ -781,22 +675,17 @@ module.exports = {
   getValue,
   setValue,
   deleteValue,
-  getAllConfigs,
-  query,
   addMuteModeUser,
   removeMuteModeUser,
   getAllMuteModeUsers,
   getUserJoinTime,
-  updateUserJoinTime,
   addSpamModeJoinTime,
   getSpamModeJoinTime,
-  updateSpamModeJoinTime,
   removeSpamModeJoinTime,
   cleanupOldTrackingUsers,
   setInviteTag,
   getInviteTag,
   deleteInviteTag,
-  getAllInviteTags,
   setInviteNotificationChannel,
   getInviteNotificationChannel,
   setInviteUsage,

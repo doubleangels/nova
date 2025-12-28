@@ -5,8 +5,6 @@ const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, getValue, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 
-const deployCommands = require('../deploy-commands');
-
 const DEFAULT_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
   type: ActivityType.Watching

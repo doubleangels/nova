@@ -253,7 +253,6 @@ function isValidTranslationFlag(emoji) {
 
 
 module.exports = {
-    LANG_FLAG_TO_LANGUAGE,
     getLanguageInfo,
     isValidTranslationFlag
 }; 

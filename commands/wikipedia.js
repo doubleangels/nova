@@ -4,7 +4,6 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const he = require('he');
 
-const cache = new Map();
 
 /**
  * Command module for searching and displaying Wikipedia article summaries.
@@ -110,47 +109,6 @@ module.exports = {
     }
   },
 
-  formatSnippet(snippet) {
-    if (!snippet) return "No snippet available.";
-    
-    let formatted = snippet
-      .replace(/<span class="searchmatch">/g, '**')
-      .replace(/<\/span>/g, '**');
-    
-    formatted = formatted.replace(/<[^>]*>/g, '');
-    
-    formatted = he.decode(formatted);
-    
-    return formatted;
-  },
-
-  getCachedResults(cacheKey) {
-    const cached = cache.get(cacheKey);
-    
-    if (cached && cached.expiry > Date.now()) {
-      return cached.results;
-    }
-    
-    if (cached) {
-      cache.delete(cacheKey);
-    }
-    
-    return null;
-  },
-
-  cacheResults(cacheKey, results) {
-    cache.set(cacheKey, {
-      results,
-      expiry: Date.now() + (1000 * 60 * 60)
-    });
-    
-    logger.debug("Cached Wikipedia results:", { 
-      cacheKey,
-      resultCount: results.length,
-      expiryMinutes: 60
-    });
-  },
-  
   async handleError(interaction, error) {
     logger.error("Error in wikipedia command:", {
       error: error.message,

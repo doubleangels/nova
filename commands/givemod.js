@@ -175,26 +175,6 @@ module.exports = {
     },
     
     /**
-     * Validates the command inputs.
-     * Checks if role is provided and valid.
-     * 
-     * @param {CommandInteraction} interaction - The interaction that triggered the command
-     * @param {Role} role - The role to be updated
-     * @returns {ValidationResult} Object containing validation result
-     */
-    validateInputs(interaction, role) {
-        if (!role) {
-            logger.warn("Invalid role provided.");
-            return {
-                success: false,
-                message: "⚠️ Please provide a valid role."
-            };
-        }
-        
-        return { success: true };
-    },
-    
-    /**
      * Gets all permissions except Administrator.
      * 
      * @returns {bigint} Combined permissions value

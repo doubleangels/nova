@@ -128,30 +128,6 @@ module.exports = {
       await this.handleError(interaction, error);
     }
   },
-
-  /**
-   * Searches for images using the Google Custom Search API.
-   * 
-   * @param {string} query - The search query
-   * @returns {Promise<Array>} Array of image search results
-   * @throws {Error} If the API request fails
-   */
-  async searchImages(query) {
-    const url = new URL('https://www.googleapis.com/customsearch/v1');
-    url.searchParams.append('key', config.googleApiKey);
-    url.searchParams.append('cx', config.imageSearchEngineId);
-    url.searchParams.append('q', query);
-    url.searchParams.append('searchType', 'image');
-    url.searchParams.append('num', '10');
-    
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      throw new Error(`Google API request failed: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.items || [];
-  },
   
   /**
    * Fetches image results from the Google API with error handling.

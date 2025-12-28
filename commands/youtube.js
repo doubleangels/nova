@@ -5,8 +5,6 @@ const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
-const cache = new Map();
-
 /**
  * Command module for searching and displaying YouTube content.
  * Supports searching for videos, channels, and playlists with rich embeds.
@@ -100,67 +98,6 @@ module.exports = {
   },
 
   /**
-   * Fetches detailed information for a specific video.
-   * 
-   * @param {string} videoId - YouTube video ID
-   * @returns {Promise<Object>} Video details including duration and view count
-   * @throws {Error} If there's an error fetching video details
-   */
-  async getVideoDetails(videoId) {
-    try {
-      const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-        params: {
-          part: 'contentDetails,statistics',
-          id: videoId,
-          key: config.googleApiKey
-        },
-        timeout: 10000
-      });
-
-      return {
-        duration: response.data.items[0].contentDetails.duration,
-        viewCount: parseInt(response.data.items[0].statistics.viewCount)
-      };
-    } catch (error) {
-      logger.error("Failed to get video details:", {
-        error: error.message,
-        videoId
-      });
-      throw new Error("API_ERROR");
-    }
-  },
-
-  /**
-   * Formats ISO 8601 duration string to human-readable format.
-   * 
-   * @param {string} duration - ISO 8601 duration string
-   * @returns {string} Formatted duration string (HH:MM:SS)
-   */
-  formatDuration(duration) {
-    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-    const hours = (match[1] || '').replace('H', '');
-    const minutes = (match[2] || '').replace('M', '');
-    const seconds = (match[3] || '').replace('S', '');
-
-    let result = '';
-    if (hours) result += `${hours}:`;
-    result += `${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}`;
-    return result;
-  },
-
-  /**
-   * Truncates text to specified maximum length.
-   * 
-   * @param {string} text - Text to truncate
-   * @param {number} maxLength - Maximum length before truncation
-   * @returns {string} Truncated text with ellipsis if needed
-   */
-  truncateText(text, maxLength) {
-    if (!text) return 'No description available.';
-    return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-  },
-
-  /**
    * Handles errors that occur during command execution.
    * 
    * @param {CommandInteraction} interaction - The interaction that triggered the command
@@ -214,36 +151,6 @@ module.exports = {
         ephemeral: true 
       }).catch(() => {});
     }
-  },
-
-  /**
-   * Retrieves cached search results if available and not expired.
-   * 
-   * @param {string} key - Cache key
-   * @returns {Array|null} Cached results or null if not found/expired
-   */
-  getCachedResults(key) {
-    if (cache.has(key)) {
-      const { timestamp, data } = cache.get(key);
-      if (Date.now() - timestamp < (1000 * 60 * 10)) {
-        return data;
-      }
-      cache.delete(key);
-    }
-    return null;
-  },
-  
-  /**
-   * Stores search results in cache with timestamp.
-   * 
-   * @param {string} key - Cache key
-   * @param {Array} data - Search results to cache
-   */
-  cacheResults(key, data) {
-    cache.set(key, {
-      timestamp: Date.now(),
-      data
-    });
   },
   
   /**

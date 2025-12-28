@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getInviteNotificationChannel, getValue, setValue, getAllInviteTagsData } = require('../utils/database');
+const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getValue, setValue, getAllInviteTagsData } = require('../utils/database');
 
 /**
  * Command module for managing invite codes with tags/names.
@@ -19,13 +19,13 @@ module.exports = {
         .addStringOption(option =>
           option
             .setName('code')
-            .setDescription('The invite code (e.g., xxxxx from discord.gg/xxxxx)')
+            .setDescription('What is the invite code?')
             .setRequired(true)
         )
         .addStringOption(option =>
           option
             .setName('name')
-            .setDescription('The name/tag to associate with this invite code')
+            .setDescription('What is the name/tag to associate with this invite code?')
             .setRequired(true)
         )
     )
@@ -36,7 +36,7 @@ module.exports = {
         .addChannelOption(option =>
           option
             .setName('channel')
-            .setDescription('What channel do you want to send invite notifications to?')
+            .setDescription('What channel do you want to send the invite notifications to?')
             .addChannelTypes(ChannelType.GuildText)
             .setRequired(true)
         )
@@ -53,20 +53,20 @@ module.exports = {
         .addStringOption(option =>
           option
             .setName('name')
-            .setDescription('The name/tag for this invite')
+            .setDescription('What is the name/tag for this invite?')
             .setRequired(true)
         )
         .addChannelOption(option =>
           option
             .setName('channel')
-            .setDescription('The channel to create the invite for (defaults to first available channel)')
+            .setDescription('What channel do you want to create the invite for?')
             .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice, ChannelType.GuildForum)
             .setRequired(false)
         )
         .addIntegerOption(option =>
           option
             .setName('max_uses')
-            .setDescription('Maximum number of uses (0 = unlimited)')
+            .setDescription('What is the maximum number of uses for this invite? (0 = unlimited)')
             .setMinValue(0)
             .setMaxValue(100)
             .setRequired(false)
@@ -74,7 +74,7 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('max_age')
-            .setDescription('Maximum age in seconds (0 = never expires)')
+            .setDescription('What is the maximum age in seconds for this invite? (0 = never expires)')
             .setMinValue(0)
             .setMaxValue(604800)
             .setRequired(false)
@@ -87,7 +87,7 @@ module.exports = {
         .addStringOption(option =>
           option
             .setName('name')
-            .setDescription('The name/tag of the invite to remove')
+            .setDescription('What is the name/tag of the invite to remove?')
             .setRequired(true)
             .setAutocomplete(true)
         )
