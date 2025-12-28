@@ -3,7 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
-const { initializeDatabase, getValue, cleanupOldTrackingUsers } = require('../utils/database');
+const { initializeDatabase, getValue, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 
 const deployCommands = require('../deploy-commands');
 
@@ -103,6 +103,14 @@ module.exports = {
       }, CLEANUP_INTERVAL_MS);
       logger.info(`Scheduled periodic cleanup every ${CLEANUP_INTERVAL_MS / 1000 / 60} minutes.`);
 
+      // Initialize invite usage tracking for all guilds
+      try {
+        await initializeInviteUsage(client);
+        logger.info('Invite usage tracking initialized for all guilds.');
+      } catch (error) {
+        logger.error('Failed to initialize invite usage tracking:', { error: error.message });
+      }
+
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {
       logger.error('Error in ready event:', {
@@ -136,9 +144,30 @@ module.exports = {
 };
 
 /**
- * Initializes all required services for the bot
+ * Initializes invite usage tracking for all guilds
  * @param {Client} client - The Discord client instance
  * @returns {Promise<void>}
  */
-async function initializeServices(client) {
+async function initializeInviteUsage(client) {
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      // Check if bot has permission to view invites
+      if (!guild.members.me?.permissions.has('ManageGuild')) {
+        logger.debug(`Bot doesn't have ManageGuild permission in ${guild.name}, skipping invite usage initialization.`);
+        continue;
+      }
+
+      const invites = await guild.invites.fetch().catch(() => null);
+      if (invites) {
+        const usage = {};
+        invites.each(invite => {
+          usage[invite.code] = invite.uses || 0;
+        });
+        await setInviteUsage(guild.id, usage);
+        logger.debug(`Initialized invite usage tracking for guild ${guild.name} (${guild.id}).`);
+      }
+    } catch (error) {
+      logger.warn(`Failed to initialize invite usage for guild ${guild.name}:`, { error: error.message });
+    }
+  }
 }

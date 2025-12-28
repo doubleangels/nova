@@ -37,8 +37,18 @@ const keyv = new Keyv({
   namespace: 'main'
 });
 
+// Initialize separate Keyv instance for invites namespace
+const inviteKeyv = new Keyv({
+  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
+    table: 'keyv',
+    busyTimeout: 10000
+  }),
+  namespace: 'invites'
+});
+
 // Handle connection errors
 keyv.on('error', err => logger.error('Keyv connection error:', { error: err }));
+inviteKeyv.on('error', err => logger.error('Invite Keyv connection error:', { error: err }));
 
 // Ensure database file has correct permissions if it exists
 // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
@@ -530,6 +540,242 @@ async function cleanupOldTrackingUsers(client = null) {
   }
 }
 
+/**
+ * Sets an invite tag in the invites namespace under tags: prefix
+ * @param {string} tagName - The tag name (will be lowercased for storage)
+ * @param {Object} inviteData - The invite data object containing code, name, createdAt, createdBy
+ * @returns {Promise<void>}
+ */
+async function setInviteTag(tagName, inviteData) {
+  try {
+    logger.debug(`Setting invite tag "${tagName}".`);
+    await inviteKeyv.set(`tags:${tagName.toLowerCase()}`, inviteData);
+    logger.debug(`Set invite tag "${tagName}" successfully.`);
+  } catch (err) {
+    logger.error(`Error setting invite tag "${tagName}":`, { error: err });
+    throw new Error("DATABASE_WRITE_ERROR");
+  }
+}
+
+/**
+ * Gets an invite tag from the invites namespace under tags: prefix
+ * @param {string} tagName - The tag name to retrieve
+ * @returns {Promise<Object|null>} The invite data object, or null if not found
+ */
+async function getInviteTag(tagName) {
+  try {
+    logger.debug(`Getting invite tag "${tagName}".`);
+    const value = await inviteKeyv.get(`tags:${tagName.toLowerCase()}`);
+    return value !== undefined ? value : null;
+  } catch (err) {
+    logger.error(`Error getting invite tag "${tagName}":`, { error: err });
+    return null;
+  }
+}
+
+/**
+ * Deletes an invite tag from the invites namespace under tags: prefix
+ * @param {string} tagName - The tag name to delete
+ * @returns {Promise<void>}
+ */
+async function deleteInviteTag(tagName) {
+  try {
+    logger.debug(`Deleting invite tag "${tagName}".`);
+    await inviteKeyv.delete(`tags:${tagName.toLowerCase()}`);
+    logger.debug(`Deleted invite tag "${tagName}".`);
+  } catch (err) {
+    logger.error(`Error deleting invite tag "${tagName}":`, { error: err });
+    throw new Error("DATABASE_DELETE_ERROR");
+  }
+}
+
+/**
+ * Gets all invite tags from the invites namespace
+ * Note: Keyv doesn't have a native "get all" method, so this returns an empty array
+ * If you need to list all invites, you'll need to track tag names separately
+ * @returns {Promise<Array>} Array of invite tag objects (currently not fully supported)
+ */
+async function getAllInviteTags() {
+  try {
+    logger.debug("Retrieving all invite tags.");
+    // Keyv doesn't have a native "get all" method
+    // If needed, we can maintain a list of tag names separately
+    logger.debug("Retrieved invite tags (not fully supported with Keyv).");
+    return [];
+  } catch (err) {
+    logger.error("Error getting all invite tags:", { error: err });
+    return [];
+  }
+}
+
+/**
+ * Sets the notification channel for invite tags in the main config namespace
+ * @param {string} channelId - The Discord channel ID
+ * @returns {Promise<void>}
+ */
+async function setInviteNotificationChannel(channelId) {
+  try {
+    logger.debug(`Setting invite notification channel to "${channelId}".`);
+    await keyv.set('config:invite_notification_channel', channelId);
+    logger.debug(`Set invite notification channel successfully.`);
+  } catch (err) {
+    logger.error(`Error setting invite notification channel:`, { error: err });
+    throw new Error("DATABASE_WRITE_ERROR");
+  }
+}
+
+/**
+ * Gets the notification channel for invite tags from the main config namespace
+ * @returns {Promise<string|null>} The channel ID, or null if not set
+ */
+async function getInviteNotificationChannel() {
+  try {
+    logger.debug("Getting invite notification channel.");
+    const value = await keyv.get('config:invite_notification_channel');
+    return value !== undefined ? value : null;
+  } catch (err) {
+    logger.error("Error getting invite notification channel:", { error: err });
+    return null;
+  }
+}
+
+/**
+ * Stores invite usage counts for a guild
+ * @param {string} guildId - The guild ID
+ * @param {Object} inviteUsage - Object mapping invite codes to their usage counts
+ * @returns {Promise<void>}
+ */
+async function setInviteUsage(guildId, inviteUsage) {
+  try {
+    logger.debug(`Setting invite usage for guild "${guildId}".`);
+    await keyv.set(`invite_usage:${guildId}`, inviteUsage);
+    logger.debug(`Set invite usage for guild "${guildId}" successfully.`);
+  } catch (err) {
+    logger.error(`Error setting invite usage for guild "${guildId}":`, { error: err });
+  }
+}
+
+/**
+ * Gets invite usage counts for a guild
+ * @param {string} guildId - The guild ID
+ * @returns {Promise<Object>} Object mapping invite codes to their usage counts
+ */
+async function getInviteUsage(guildId) {
+  try {
+    logger.debug(`Getting invite usage for guild "${guildId}".`);
+    const value = await keyv.get(`invite_usage:${guildId}`);
+    return value || {};
+  } catch (err) {
+    logger.error(`Error getting invite usage for guild "${guildId}":`, { error: err });
+    return {};
+  }
+}
+
+/**
+ * Gets all invite tags from the invites namespace
+ * This queries the SQLite database directly to get all tags
+ * @returns {Promise<Array>} Array of invite tag objects with {tagName, code, name, createdAt, updatedAt}
+ */
+async function getAllInviteTagsData() {
+  try {
+    logger.debug("Getting all invite tags");
+    const Database = require('better-sqlite3');
+    const db = new Database(sqlitePath, { readonly: true });
+    
+    // Query all keys from invites namespace that start with tags:
+    const rows = db.prepare(`
+      SELECT key, value 
+      FROM keyv 
+      WHERE key LIKE 'invites:tags:%'
+    `).all();
+    
+    db.close();
+    
+    const tags = [];
+    
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.value);
+        // Keyv stores values wrapped in {value: ..., expires: null}
+        const tagData = parsed?.value || parsed;
+        
+        if (tagData && tagData.code && tagData.name) {
+          // Extract tag name from key (invites:tags:disboard -> disboard)
+          const tagName = row.key.replace('invites:tags:', '');
+          tags.push({
+            tagName,
+            code: tagData.code,
+            name: tagData.name,
+            createdAt: tagData.createdAt,
+            updatedAt: tagData.updatedAt,
+            createdBy: tagData.createdBy,
+            updatedBy: tagData.updatedBy
+          });
+        }
+      } catch (parseError) {
+        logger.warn(`Failed to parse tag data for key ${row.key}:`, { error: parseError.message });
+      }
+    }
+    
+    return tags;
+  } catch (err) {
+    logger.error("Error getting all invite tags:", { error: err });
+    return [];
+  }
+}
+
+/**
+ * Rebuilds the code-to-tag mapping from all existing invite tags
+ * This queries the SQLite database directly to get all tags from the invites namespace
+ * @returns {Promise<Object>} The rebuilt code-to-tag mapping
+ */
+async function rebuildCodeToTagMap() {
+  try {
+    logger.debug("Rebuilding code-to-tag mapping from existing tags");
+    const Database = require('better-sqlite3');
+    const db = new Database(sqlitePath, { readonly: true });
+    
+    // Query all keys from invites namespace that start with tags:
+    const rows = db.prepare(`
+      SELECT key, value 
+      FROM keyv 
+      WHERE key LIKE 'invites:tags:%'
+    `).all();
+    
+    db.close();
+    
+    const codeToTagMap = {};
+    
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.value);
+        // Keyv stores values wrapped in {value: ..., expires: null}
+        const tagData = parsed?.value || parsed;
+        
+        if (tagData && tagData.code && tagData.name) {
+          // Extract tag name from key (invites:tags:disboard -> disboard)
+          const tagName = row.key.replace('invites:tags:', '');
+          codeToTagMap[tagData.code.toLowerCase()] = tagName;
+          logger.debug(`Rebuilt mapping: ${tagData.code.toLowerCase()} -> ${tagName}`);
+        }
+      } catch (parseError) {
+        logger.warn(`Failed to parse tag data for key ${row.key}:`, { error: parseError.message });
+      }
+    }
+    
+    // Save the rebuilt mapping
+    if (Object.keys(codeToTagMap).length > 0) {
+      await setValue('invite_code_to_tag_map', codeToTagMap);
+      logger.info(`Rebuilt code-to-tag mapping with ${Object.keys(codeToTagMap).length} entries`);
+    }
+    
+    return codeToTagMap;
+  } catch (err) {
+    logger.error("Error rebuilding code-to-tag mapping:", { error: err });
+    return {};
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -546,5 +792,15 @@ module.exports = {
   getSpamModeJoinTime,
   updateSpamModeJoinTime,
   removeSpamModeJoinTime,
-  cleanupOldTrackingUsers
+  cleanupOldTrackingUsers,
+  setInviteTag,
+  getInviteTag,
+  deleteInviteTag,
+  getAllInviteTags,
+  setInviteNotificationChannel,
+  getInviteNotificationChannel,
+  setInviteUsage,
+  getInviteUsage,
+  rebuildCodeToTagMap,
+  getAllInviteTagsData
 };
