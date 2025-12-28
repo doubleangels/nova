@@ -54,7 +54,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           }
 
           try {
-            const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
+            const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
             const embed = {
               color: config.baseEmbedColor,
               title: 'Kicked for Inactivity',
@@ -88,7 +88,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           }
 
           try {
-            const inviteUrl = await getValue('server_invite_url') || 'https://dafrens.games';
+            const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
             const embed = {
               color: config.baseEmbedColor,
               title: 'Kicked for Inactivity',
