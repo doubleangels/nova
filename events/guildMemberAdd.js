@@ -151,10 +151,12 @@ module.exports = {
       const previousUsage = await getInviteUsage(member.guild.id);
       logger.debug(`Previous usage data:`, JSON.stringify(previousUsage));
       
-      // Build current usage map
+      // Build current usage map and store invite objects for later use
       const currentUsage = {};
+      const inviteObjects = new Map();
       currentInvites.each(invite => {
         currentUsage[invite.code] = invite.uses || 0;
+        inviteObjects.set(invite.code, invite);
       });
       logger.debug(`Current usage data:`, JSON.stringify(currentUsage));
 
@@ -273,7 +275,74 @@ module.exports = {
             logger.warn(`Tag found but code mismatch: tag code=${inviteTag.code}, used code=${usedInviteCode}`);
           }
         } else {
-          logger.debug(`No tag found for invite code: ${usedInviteCode}. Create one with: /invite tag code:${usedInviteCode} name:YourTagName`);
+          // No tag found - send notification with invite creator info
+          logger.debug(`No tag found for invite code: ${usedInviteCode}. Sending notification with creator info.`);
+          
+          const usedInvite = inviteObjects.get(usedInviteCode);
+          if (usedInvite) {
+            try {
+              let creatorInfo = 'Unknown';
+              let creatorId = null;
+              
+              // Get invite creator
+              if (usedInvite.inviter) {
+                creatorInfo = `${usedInvite.inviter.tag} (${usedInvite.inviter.id})`;
+                creatorId = usedInvite.inviter.id;
+              } else if (usedInvite.inviterId) {
+                // Try to fetch the user if we only have the ID
+                try {
+                  const creator = await member.client.users.fetch(usedInvite.inviterId);
+                  creatorInfo = `${creator.tag} (${creator.id})`;
+                  creatorId = creator.id;
+                } catch (fetchError) {
+                  creatorInfo = `User ID: ${usedInvite.inviterId}`;
+                  creatorId = usedInvite.inviterId;
+                }
+              }
+              
+              const embed = new EmbedBuilder()
+                .setColor(0x3498DB)
+                .setTitle('👤 New Member Joined via Invite')
+                .setDescription(`${member.user} joined the server using an invite.`)
+                .addFields(
+                  { name: 'Member', value: `${member.user.tag} (${member.user.id})`, inline: true },
+                  { name: 'Invite Creator', value: creatorInfo, inline: true },
+                  { name: 'Invite Code', value: usedInviteCode, inline: true },
+                  { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }
+                )
+                .setThumbnail(member.user.displayAvatarURL())
+                .setTimestamp();
+              
+              // Add channel info if available
+              if (usedInvite.channel) {
+                embed.addFields({ name: 'Channel', value: `${usedInvite.channel}`, inline: true });
+              }
+              
+              // Add uses info if available
+              if (usedInvite.uses !== null && usedInvite.maxUses !== null) {
+                embed.addFields({ 
+                  name: 'Uses', 
+                  value: `${usedInvite.uses}${usedInvite.maxUses > 0 ? `/${usedInvite.maxUses}` : ''}`, 
+                  inline: true 
+                });
+              }
+              
+              logger.debug(`Attempting to send notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
+              
+              const sentMessage = await notificationChannel.send({ embeds: [embed] });
+              logger.info(`✅ Sent invite notification for member ${member.user.tag} using untagged invite created by ${creatorInfo} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+            } catch (sendError) {
+              logger.error(`Failed to send notification for untagged invite:`, { 
+                error: sendError.message,
+                stack: sendError.stack,
+                channelId: notificationChannel.id,
+                channelName: notificationChannel.name,
+                guildId: member.guild.id
+              });
+            }
+          } else {
+            logger.warn(`Invite object not found for code ${usedInviteCode}`);
+          }
         }
       } else {
         logger.debug("No invite code detected for this join");

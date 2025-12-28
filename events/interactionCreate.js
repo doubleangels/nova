@@ -62,6 +62,27 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
+    // Handle autocomplete interactions
+    if (interaction.isAutocomplete()) {
+      const command = interaction.client.commands.get(interaction.commandName);
+      if (!command) {
+        logger.warn(`No command matching ${interaction.commandName} was found for autocomplete.`);
+        return;
+      }
+
+      try {
+        if (command.autocomplete) {
+          await command.autocomplete(interaction);
+        }
+      } catch (error) {
+        logger.error(`Error handling autocomplete for ${interaction.commandName}:`, {
+          error: error.stack,
+          message: error.message
+        });
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand() && !interaction.isMessageContextMenuCommand()) return;
 
     const command = interaction.client.commands.get(interaction.commandName);

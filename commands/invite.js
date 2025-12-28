@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { setInviteTag, getInviteTag, setInviteNotificationChannel, getInviteNotificationChannel, getValue, setValue, getAllInviteTagsData } = require('../utils/database');
+const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getInviteNotificationChannel, getValue, setValue, getAllInviteTagsData } = require('../utils/database');
 
 /**
  * Command module for managing invite codes with tags/names.
@@ -80,6 +80,18 @@ module.exports = {
             .setRequired(false)
         )
     )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('remove')
+        .setDescription('Remove a tagged invite.')
+        .addStringOption(option =>
+          option
+            .setName('name')
+            .setDescription('The name/tag of the invite to remove')
+            .setRequired(true)
+            .setAutocomplete(true)
+        )
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
   /**
@@ -118,6 +130,9 @@ module.exports = {
           break;
         case 'create':
           await this.handleCreateSubcommand(interaction);
+          break;
+        case 'remove':
+          await this.handleRemoveSubcommand(interaction);
           break;
         default:
           await interaction.editReply({
@@ -508,6 +523,119 @@ module.exports = {
         .setDescription(`An error occurred while creating the invite: ${error.message}`);
       
       await interaction.editReply({ embeds: [embed] });
+    }
+  },
+
+  /**
+   * Handles the remove subcommand.
+   * This function:
+   * 1. Retrieves the invite tag
+   * 2. Removes it from the database
+   * 3. Removes it from the code-to-tag mapping
+   * 4. Displays confirmation message
+   * 
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @throws {Error} If there's an error processing the removal
+   * @returns {Promise<void>}
+   */
+  async handleRemoveSubcommand(interaction) {
+    const tagName = interaction.options.getString('name');
+    
+    // Get the invite tag to verify it exists and get the code
+    const inviteTag = await getInviteTag(tagName);
+    
+    if (!inviteTag) {
+      const embed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setTitle('❌ Tag Not Found')
+        .setDescription(`No tagged invite found with the name "${tagName}".\n\nUse \`/invite list\` to see all tagged invites.`);
+      
+      await interaction.editReply({ embeds: [embed] });
+      return;
+    }
+    
+    try {
+      // Delete the invite tag
+      await deleteInviteTag(tagName);
+      
+      // Remove from code-to-tag mapping
+      const codeToTagMap = await getValue('invite_code_to_tag_map') || {};
+      if (inviteTag.code) {
+        delete codeToTagMap[inviteTag.code.toLowerCase()];
+        await setValue('invite_code_to_tag_map', codeToTagMap);
+        logger.debug(`Removed code mapping: ${inviteTag.code.toLowerCase()} -> ${tagName}`);
+      }
+      
+      const embed = new EmbedBuilder()
+        .setColor(0x00FF00)
+        .setTitle('✅ Tagged Invite Removed')
+        .setDescription(`The tagged invite "${tagName}" has been successfully removed.`)
+        .addFields(
+          { name: 'Tag Name', value: tagName, inline: true },
+          { name: 'Invite Code', value: inviteTag.code || 'N/A', inline: true },
+          { name: 'Full URL', value: inviteTag.code ? `https://discord.gg/${inviteTag.code}` : 'N/A', inline: false }
+        )
+        .setTimestamp();
+      
+      await interaction.editReply({ embeds: [embed] });
+      
+      logger.info("/invite remove command completed successfully:", {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        tagName,
+        code: inviteTag.code
+      });
+      
+    } catch (error) {
+      logger.error("Error removing invite tag:", {
+        error: error.message,
+        stack: error.stack,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        tagName
+      });
+      
+      const embed = new EmbedBuilder()
+        .setColor(0xFF0000)
+        .setTitle('❌ Failed to Remove Tag')
+        .setDescription(`An error occurred while removing the tag: ${error.message}`);
+      
+      await interaction.editReply({ embeds: [embed] });
+    }
+  },
+
+  /**
+   * Handles autocomplete for the remove subcommand name option.
+   * 
+   * @param {AutocompleteInteraction} interaction - The autocomplete interaction
+   * @returns {Promise<void>}
+   */
+  async autocomplete(interaction) {
+    const focusedOption = interaction.options.getFocused(true);
+    
+    if (focusedOption.name === 'name') {
+      try {
+        const tags = await getAllInviteTagsData();
+        const query = focusedOption.value.toLowerCase();
+        
+        // Filter tags that match the query
+        const filtered = tags
+          .filter(tag => {
+            const nameMatch = tag.name?.toLowerCase().includes(query);
+            const tagNameMatch = tag.tagName?.toLowerCase().includes(query);
+            return nameMatch || tagNameMatch;
+          })
+          .slice(0, 25) // Discord autocomplete limit
+          .map(tag => ({
+            name: tag.name || tag.tagName,
+            value: tag.tagName
+          }));
+        
+        await interaction.respond(filtered);
+      } catch (error) {
+        logger.error("Error in autocomplete:", { error: error.message });
+        await interaction.respond([]);
+      }
     }
   },
 
