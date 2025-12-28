@@ -219,14 +219,20 @@ async function checkForBumpMessages(message) {
         if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
           message.embeds = fetchedMessage.embeds;
           logger.debug("Fetched message embeds for Disboard check:", {
+            label: "messageCreate.js",
             embedCount: fetchedMessage.embeds.length,
-            messageId: message.id
+            messageId: message.id,
+            originalEmbedCount: message.embeds?.length || 0,
+            isBot: message.author.bot
           });
         }
       } catch (fetchError) {
         logger.debug("Could not fetch message for Disboard check:", {
+          label: "messageCreate.js",
           error: fetchError.message,
-          messageId: message.id
+          messageId: message.id,
+          hasWebhook: !!message.webhookId,
+          isInteraction: !!message.interaction
         });
       }
       
@@ -244,6 +250,14 @@ async function checkForBumpMessages(message) {
         logger.debug("Bump reminder scheduled for 2 hours.");
         return;
       }
+    } else {
+      logger.debug("No message embeds available for Disboard check:", {
+        label: "messageCreate.js",
+        messageId: message.id,
+        author: message.author?.tag,
+        hasWebhook: !!message.webhookId,
+        isInteraction: !!message.interaction
+      });
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
@@ -254,7 +268,8 @@ async function checkForBumpMessages(message) {
       try {
         const fetchedMessage = await message.fetch();
         messageContent = fetchedMessage.content;
-        logger.debug("Fetched message content for Discadia check:", { 
+        logger.debug("Fetched message content for Discadia check:", {
+          label: "messageCreate.js",
           content: messageContent?.substring(0, 100) || "No content after fetch",
           messageId: message.id,
           originalContent: message.content?.substring(0, 50) || "No original content",
@@ -289,6 +304,7 @@ async function checkForBumpMessages(message) {
         }
       } else {
         logger.debug("No message content available for Discadia check:", {
+          label: "messageCreate.js",
           messageId: message.id,
           author: message.author?.tag,
           hasWebhook: !!message.webhookId,
