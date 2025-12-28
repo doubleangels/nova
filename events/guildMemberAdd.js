@@ -242,9 +242,9 @@ module.exports = {
               const embed = new EmbedBuilder()
                 .setColor(config.baseEmbedColor)
                 .setTitle('🎉 New Member Joined via Tagged Invite')
-                .setDescription(`${member.user} joined the server using a tagged invite.`)
+                .setDescription(`${member.user.username} (${member.user.id}) joined the server using a tagged invite.`)
                 .addFields(
-                  { name: 'Member', value: `${member.user}`, inline: true },
+                  { name: 'Member', value: `${member.user.username} (${member.user.id})`, inline: true },
                   { name: 'Invite Tag', value: inviteTag.name || tagName, inline: true },
                   { name: 'Invite Code', value: usedInviteCode, inline: true },
                   { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }
@@ -287,20 +287,25 @@ module.exports = {
               
               // Get invite creator
               if (usedInvite.inviter) {
-                creatorMention = `${usedInvite.inviter}`;
+                creatorMention = `${usedInvite.inviter.username} (${usedInvite.inviter.id})`;
                 creatorId = usedInvite.inviter.id;
               } else if (usedInvite.inviterId) {
-                // Use mention format with ID
-                creatorMention = `<@${usedInvite.inviterId}>`;
+                // Fetch user to get username
+                try {
+                  const inviter = await member.client.users.fetch(usedInvite.inviterId);
+                  creatorMention = `${inviter.username} (${inviter.id})`;
+                } catch (fetchError) {
+                  creatorMention = `Unknown (${usedInvite.inviterId})`;
+                }
                 creatorId = usedInvite.inviterId;
               }
               
               const embed = new EmbedBuilder()
                 .setColor(config.baseEmbedColor)
                 .setTitle('👤 New Member Joined via Invite')
-                .setDescription(`${member.user} joined the server using an invite.`)
+                .setDescription(`${member.user.username} (${member.user.id}) joined the server using an invite.`)
                 .addFields(
-                  { name: 'Member', value: `${member.user}`, inline: true },
+                  { name: 'Member', value: `${member.user.username} (${member.user.id})`, inline: true },
                   { name: 'Invite Creator', value: creatorMention, inline: true },
                   { name: 'Invite Code', value: usedInviteCode, inline: true },
                   { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }

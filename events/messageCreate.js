@@ -23,8 +23,6 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(message) {
-    if (message.author.bot && !message.author.tag.toLowerCase().includes('disboard') && !message.author.tag.toLowerCase().includes('nova') && !message.author.tag.toLowerCase().includes('discadia')) return;
-
     try {
       if (message.partial) {
         try {
