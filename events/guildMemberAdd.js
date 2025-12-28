@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
+const config = require('../config');
 
 module.exports = {
   name: Events.GuildMemberAdd,
@@ -239,11 +240,11 @@ module.exports = {
             // Send notification
             try {
               const embed = new EmbedBuilder()
-                .setColor(0x00FF00)
+                .setColor(config.baseEmbedColor)
                 .setTitle('🎉 New Member Joined via Tagged Invite')
                 .setDescription(`${member.user} joined the server using a tagged invite.`)
                 .addFields(
-                  { name: 'Member', value: `${member.user.tag} (${member.user.id})`, inline: true },
+                  { name: 'Member', value: `${member.user}`, inline: true },
                   { name: 'Invite Tag', value: inviteTag.name || tagName, inline: true },
                   { name: 'Invite Code', value: usedInviteCode, inline: true },
                   { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }
@@ -281,32 +282,26 @@ module.exports = {
           const usedInvite = inviteObjects.get(usedInviteCode);
           if (usedInvite) {
             try {
-              let creatorInfo = 'Unknown';
+              let creatorMention = 'Unknown';
               let creatorId = null;
               
               // Get invite creator
               if (usedInvite.inviter) {
-                creatorInfo = `${usedInvite.inviter.tag} (${usedInvite.inviter.id})`;
+                creatorMention = `${usedInvite.inviter}`;
                 creatorId = usedInvite.inviter.id;
               } else if (usedInvite.inviterId) {
-                // Try to fetch the user if we only have the ID
-                try {
-                  const creator = await member.client.users.fetch(usedInvite.inviterId);
-                  creatorInfo = `${creator.tag} (${creator.id})`;
-                  creatorId = creator.id;
-                } catch (fetchError) {
-                  creatorInfo = `User ID: ${usedInvite.inviterId}`;
-                  creatorId = usedInvite.inviterId;
-                }
+                // Use mention format with ID
+                creatorMention = `<@${usedInvite.inviterId}>`;
+                creatorId = usedInvite.inviterId;
               }
               
               const embed = new EmbedBuilder()
-                .setColor(0x3498DB)
+                .setColor(config.baseEmbedColor)
                 .setTitle('👤 New Member Joined via Invite')
                 .setDescription(`${member.user} joined the server using an invite.`)
                 .addFields(
-                  { name: 'Member', value: `${member.user.tag} (${member.user.id})`, inline: true },
-                  { name: 'Invite Creator', value: creatorInfo, inline: true },
+                  { name: 'Member', value: `${member.user}`, inline: true },
+                  { name: 'Invite Creator', value: creatorMention, inline: true },
                   { name: 'Invite Code', value: usedInviteCode, inline: true },
                   { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }
                 )
@@ -330,7 +325,7 @@ module.exports = {
               logger.debug(`Attempting to send notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
               
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`✅ Sent invite notification for member ${member.user.tag} using untagged invite created by ${creatorInfo} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info(`✅ Sent invite notification for member ${member.user.tag} using untagged invite created by ${creatorId ? `user ${creatorId}` : 'unknown'} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
             } catch (sendError) {
               logger.error(`Failed to send notification for untagged invite:`, { 
                 error: sendError.message,
