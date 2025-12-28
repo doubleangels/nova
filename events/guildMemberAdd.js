@@ -1,7 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, rebuildCodeToTagMap } = require('../utils/database');
+const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 
@@ -204,7 +204,7 @@ module.exports = {
       // Check if the used invite code matches any tagged invite
       if (usedInviteCode) {
         // Check if we have a direct code match stored
-        let codeToTagMap = await getValue('invite_code_to_tag_map') || {};
+        let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
         logger.debug(`Code to tag map:`, JSON.stringify(codeToTagMap));
         
         let tagName = codeToTagMap[usedInviteCode.toLowerCase()];
@@ -213,7 +213,7 @@ module.exports = {
         // If mapping is empty or doesn't have this code, try to rebuild it from existing tags
         if (!tagName && Object.keys(codeToTagMap).length === 0) {
           logger.debug("Code-to-tag map is empty, attempting to rebuild from existing tags");
-          codeToTagMap = await rebuildCodeToTagMap();
+          codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
           tagName = codeToTagMap[usedInviteCode.toLowerCase()];
           logger.debug(`After rebuild, tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
         }
@@ -221,7 +221,7 @@ module.exports = {
         // If still not found, try rebuilding even if map wasn't empty (might be missing this specific code)
         if (!tagName) {
           logger.debug("Tag not found in mapping, attempting to rebuild from existing tags");
-          codeToTagMap = await rebuildCodeToTagMap();
+          codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
           tagName = codeToTagMap[usedInviteCode.toLowerCase()];
           logger.debug(`After rebuild, tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
         }

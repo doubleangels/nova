@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getValue, setValue, getAllInviteTagsData } = require('../utils/database');
+const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getValue, setValue, getAllInviteTagsData, getInviteCodeToTagMap, setInviteCodeToTagMap } = require('../utils/database');
 
 /**
  * Command module for managing invite codes with tags/names.
@@ -199,7 +199,7 @@ module.exports = {
     await setInviteTag(tagName, inviteData);
     
     // Update code-to-tag mapping for quick lookups
-    const codeToTagMap = await getValue('invite_code_to_tag_map') || {};
+    const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
     
     // Remove old code mapping if tag was updated with a new code
     if (isUpdate && existingTag.code && existingTag.code.toLowerCase() !== cleanCode.toLowerCase()) {
@@ -209,7 +209,7 @@ module.exports = {
     
     // Add new code mapping
     codeToTagMap[cleanCode.toLowerCase()] = tagName;
-    await setValue('invite_code_to_tag_map', codeToTagMap);
+    await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
     logger.debug(`Updated code-to-tag mapping: ${cleanCode.toLowerCase()} -> ${tagName}`);
     logger.debug(`Full code-to-tag map:`, JSON.stringify(codeToTagMap));
     
@@ -450,7 +450,7 @@ module.exports = {
       await setInviteTag(tagName, inviteData);
       
       // Update code-to-tag mapping
-      const codeToTagMap = await getValue('invite_code_to_tag_map') || {};
+      const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
       
       // Remove old code mapping if tag was updated
       if (isUpdate && existingTag.code && existingTag.code.toLowerCase() !== inviteCode.toLowerCase()) {
@@ -460,7 +460,7 @@ module.exports = {
       
       // Add new code mapping
       codeToTagMap[inviteCode.toLowerCase()] = tagName;
-      await setValue('invite_code_to_tag_map', codeToTagMap);
+      await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
       logger.debug(`Updated code-to-tag mapping: ${inviteCode.toLowerCase()} -> ${tagName}`);
       
       // Build embed
@@ -559,10 +559,10 @@ module.exports = {
       await deleteInviteTag(tagName);
       
       // Remove from code-to-tag mapping
-      const codeToTagMap = await getValue('invite_code_to_tag_map') || {};
+      const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
       if (inviteTag.code) {
         delete codeToTagMap[inviteTag.code.toLowerCase()];
-        await setValue('invite_code_to_tag_map', codeToTagMap);
+        await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
         logger.debug(`Removed code mapping: ${inviteTag.code.toLowerCase()} -> ${tagName}`);
       }
       

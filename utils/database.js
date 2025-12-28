@@ -566,6 +566,38 @@ async function getInviteUsage(guildId) {
 }
 
 /**
+ * Stores invite code-to-tag mapping for a guild
+ * @param {string} guildId - The guild ID
+ * @param {Object} codeToTagMap - Object mapping invite codes (lowercase) to tag names
+ * @returns {Promise<void>}
+ */
+async function setInviteCodeToTagMap(guildId, codeToTagMap) {
+  try {
+    logger.debug(`Setting invite code-to-tag map for guild "${guildId}".`);
+    await keyv.set(`invite_code_to_tag_map:${guildId}`, codeToTagMap);
+    logger.debug(`Set invite code-to-tag map for guild "${guildId}" successfully.`);
+  } catch (err) {
+    logger.error(`Error setting invite code-to-tag map for guild "${guildId}":`, { error: err });
+  }
+}
+
+/**
+ * Gets invite code-to-tag mapping for a guild
+ * @param {string} guildId - The guild ID
+ * @returns {Promise<Object>} Object mapping invite codes (lowercase) to tag names
+ */
+async function getInviteCodeToTagMap(guildId) {
+  try {
+    logger.debug(`Getting invite code-to-tag map for guild "${guildId}".`);
+    const value = await keyv.get(`invite_code_to_tag_map:${guildId}`);
+    return value || {};
+  } catch (err) {
+    logger.error(`Error getting invite code-to-tag map for guild "${guildId}":`, { error: err });
+    return {};
+  }
+}
+
+/**
  * Gets all invite tags from the invites namespace
  * This queries the SQLite database directly to get all tags
  * @returns {Promise<Array>} Array of invite tag objects with {tagName, code, name, createdAt, updatedAt}
@@ -621,11 +653,12 @@ async function getAllInviteTagsData() {
 /**
  * Rebuilds the code-to-tag mapping from all existing invite tags
  * This queries the SQLite database directly to get all tags from the invites namespace
+ * @param {string} guildId - The guild ID to rebuild the mapping for
  * @returns {Promise<Object>} The rebuilt code-to-tag mapping
  */
-async function rebuildCodeToTagMap() {
+async function rebuildCodeToTagMap(guildId) {
   try {
-    logger.debug("Rebuilding code-to-tag mapping from existing tags");
+    logger.debug(`Rebuilding code-to-tag mapping from existing tags for guild "${guildId}"`);
     const Database = require('better-sqlite3');
     const db = new Database(sqlitePath, { readonly: true });
     
@@ -657,15 +690,15 @@ async function rebuildCodeToTagMap() {
       }
     }
     
-    // Save the rebuilt mapping
+    // Save the rebuilt mapping for this guild
     if (Object.keys(codeToTagMap).length > 0) {
-      await setValue('invite_code_to_tag_map', codeToTagMap);
-      logger.info(`Rebuilt code-to-tag mapping with ${Object.keys(codeToTagMap).length} entries`);
+      await setInviteCodeToTagMap(guildId, codeToTagMap);
+      logger.info(`Rebuilt code-to-tag mapping for guild "${guildId}" with ${Object.keys(codeToTagMap).length} entries`);
     }
     
     return codeToTagMap;
   } catch (err) {
-    logger.error("Error rebuilding code-to-tag mapping:", { error: err });
+    logger.error(`Error rebuilding code-to-tag mapping for guild "${guildId}":`, { error: err });
     return {};
   }
 }
@@ -690,6 +723,8 @@ module.exports = {
   getInviteNotificationChannel,
   setInviteUsage,
   getInviteUsage,
+  setInviteCodeToTagMap,
+  getInviteCodeToTagMap,
   rebuildCodeToTagMap,
   getAllInviteTagsData
 };
