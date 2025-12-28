@@ -555,7 +555,37 @@ module.exports = {
     }
     
     try {
-      // Delete the invite tag
+      let inviteDeleted = false;
+      let inviteDeleteError = null;
+      
+      // Try to delete the invite from Discord if we have the code
+      if (inviteTag.code) {
+        try {
+          // Check if bot has permission to manage invites
+          if (!interaction.guild.members.me?.permissions.has('ManageGuild')) {
+            logger.debug("Bot doesn't have ManageGuild permission, cannot delete invite from server.");
+            inviteDeleteError = "Bot lacks ManageGuild permission";
+          } else {
+            // Fetch all invites to find the one matching the code
+            const invites = await interaction.guild.invites.fetch();
+            const invite = invites.find(inv => inv.code === inviteTag.code);
+            
+            if (invite) {
+              await invite.delete('Removed via /invite remove command');
+              inviteDeleted = true;
+              logger.debug(`Deleted invite ${inviteTag.code} from Discord server.`);
+            } else {
+              logger.debug(`Invite ${inviteTag.code} not found in server (may have already been deleted).`);
+              inviteDeleteError = "Invite not found in server";
+            }
+          }
+        } catch (deleteError) {
+          logger.warn(`Failed to delete invite ${inviteTag.code} from Discord:`, { error: deleteError.message });
+          inviteDeleteError = deleteError.message;
+        }
+      }
+      
+      // Delete the invite tag from database
       await deleteInviteTag(tagName);
       
       // Remove from code-to-tag mapping
@@ -566,6 +596,7 @@ module.exports = {
         logger.debug(`Removed code mapping: ${inviteTag.code.toLowerCase()} -> ${tagName}`);
       }
       
+      // Build response embed
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
         .setTitle('✅ Tagged Invite Removed')
@@ -577,13 +608,25 @@ module.exports = {
         )
         .setTimestamp();
       
+      // Add status about Discord invite deletion
+      if (inviteTag.code) {
+        if (inviteDeleted) {
+          embed.addFields({ name: 'Discord Invite', value: '✅ Deleted from server', inline: true });
+        } else if (inviteDeleteError) {
+          embed.addFields({ name: 'Discord Invite', value: `⚠️ ${inviteDeleteError}`, inline: true });
+        } else {
+          embed.addFields({ name: 'Discord Invite', value: '⚠️ Not found in server', inline: true });
+        }
+      }
+      
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("/invite remove command completed successfully:", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         tagName,
-        code: inviteTag.code
+        code: inviteTag.code,
+        inviteDeleted
       });
       
     } catch (error) {
