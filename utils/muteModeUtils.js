@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getAllMuteModeUsers, getValue } = require('./database');
+const { getAllMuteModeUsers, getValue, getUserJoinTime } = require('./database');
 const dayjs = require('dayjs');
 const config = require('../config');
 const utc = require('dayjs/plugin/utc');
@@ -44,6 +44,13 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   const delay = kickAt.getTime() - Date.now();
   if (delay <= 0) {
     try {
+      // Check if user is still in mute mode before kicking
+      const userJoinTime = await getUserJoinTime(userId);
+      if (!userJoinTime) {
+        logger.debug(`User ${userId} is no longer in mute mode, skipping immediate kick.`);
+        return;
+      }
+
       const guild = client.guilds.cache.get(guildId);
       if (guild) {
         const member = await guild.members.fetch(userId).catch(() => null);
@@ -78,12 +85,21 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   }
   const timeoutId = setTimeout(async () => {
     try {
+      // Check if user is still in mute mode before kicking
+      const userJoinTime = await getUserJoinTime(userId);
+      if (!userJoinTime) {
+        logger.debug(`User ${userId} is no longer in mute mode, skipping kick.`);
+        activeTimeouts.delete(userId);
+        return;
+      }
+
       const guild = client.guilds.cache.get(guildId);
       if (guild) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
           if (member.user.bot) {
             logger.debug(`Skipping mute kick for bot user ${userId}.`);
+            activeTimeouts.delete(userId);
             return;
           }
 
