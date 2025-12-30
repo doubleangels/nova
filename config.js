@@ -6,6 +6,11 @@ require('dotenv').config();
  * @property {boolean} rescheduleReminderOnStart - Whether to reschedule reminders on bot startup
  * @property {boolean} rescheduleAllMuteKicksOnStart - Whether to reschedule mute kicks on bot startup
  * @property {string[]} disabledCommands - Array of command names that are disabled
+ * 
+ * @example
+ * // To disable commands, add their names to the disabledCommands array:
+ * // disabledCommands: ['promote', 'invite', 'givemod']
+ * // Disabled commands will not be deployed/updated to Discord on bot startup
  */
 
 /**
@@ -49,7 +54,6 @@ module.exports = {
     // Remove # or 0x prefix if present
     const cleanColor = colorStr.replace(/^#/, '').replace(/^0x/i, '');
     const parsed = parseInt(cleanColor, 16);
-    // If parsing fails, return default
     return isNaN(parsed) ? 0xcd41ff : parsed;
   })(),
   clientId: "1280311987154456657",

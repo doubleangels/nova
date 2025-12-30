@@ -8,8 +8,9 @@ const config = require('./config');
  * Deploys slash commands to Discord's API
  * This function:
  * 1. Loads all command files from the commands directory
- * 2. Registers them with Discord's API
- * 3. Updates existing commands if they've changed
+ * 2. Filters out disabled commands (from config.settings.disabledCommands)
+ * 3. Registers them with Discord's API
+ * 4. Updates existing commands if they've changed
  * 
  * @returns {Promise<void>}
  * @throws {Error} If command deployment fails
@@ -23,6 +24,14 @@ async function deployCommands() {
   
   for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
+    const commandName = command.data.name;
+    
+    // Skip disabled commands - they will not be deployed/updated
+    if (config.settings.disabledCommands.includes(commandName)) {
+      logger.info(`Skipping disabled command: ${commandName}`);
+      continue;
+    }
+    
     commands.push(command.data.toJSON());
     logger.debug(`Loaded command: ${file}`);
   }
