@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
@@ -89,7 +89,7 @@ module.exports = {
             try {
                 await interaction.editReply({ 
                     content: errorMessage,
-                    ephemeral: true 
+                    flags: MessageFlags.Ephemeral 
                 });
             } catch (followUpError) {
                 logger.error("Failed to send error response for change color command:", {
@@ -105,7 +105,7 @@ module.exports = {
                 
                 await interaction.reply({ 
                     embeds: [errorEmbed],
-                    ephemeral: true 
+                    flags: MessageFlags.Ephemeral 
                 }).catch(() => {});
             }
         }

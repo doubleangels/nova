@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -42,7 +42,7 @@ module.exports = {
       if (!this.validateConfiguration()) {
         return await interaction.reply({ 
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -61,7 +61,7 @@ module.exports = {
       if (timeDiffResult.error) {
         return await interaction.editReply({
           content: timeDiffResult.message,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -243,7 +243,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for timediff command:", {
@@ -254,7 +254,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionsBitField, ChannelType, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -287,7 +287,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for reminder command:", {
@@ -298,7 +298,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

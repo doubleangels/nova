@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -59,7 +59,7 @@ module.exports = {
             if (!validationResult.success) {
                 return await interaction.editReply({
                     content: validationResult.message,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -79,7 +79,7 @@ module.exports = {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
                     content: "⚠️ The specified user could not be found in this server.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -87,7 +87,7 @@ module.exports = {
             if (!roleAssignmentResult.success) {
                 return await interaction.editReply({
                     content: roleAssignmentResult.message,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -201,7 +201,7 @@ module.exports = {
         }
 
         try {
-            await interaction.editReply({ content: errorMessage, ephemeral: true });
+            await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
         } catch (replyError) {
             logger.error('Failed to send error message:', {
                 error: replyError.message,

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const axios = require('axios');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -38,7 +38,7 @@ module.exports = {
       if (!Array.isArray(response.data) || response.data.length === 0) {
         await interaction.editReply({
           content: '⚠️ No country found with that name.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         logger.warn('/country no results:', { name });
         return;
@@ -104,7 +104,7 @@ module.exports = {
     try {
       await interaction.editReply({
         content: errorMessage,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
       logger.error('Failed to send error response for country command:', {
@@ -114,7 +114,7 @@ module.exports = {
       });
       await interaction.reply({
         content: errorMessage,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       }).catch(() => {});
     }
   }

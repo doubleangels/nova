@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -74,7 +74,7 @@ module.exports = {
       if (!results || results.length === 0) {
         return await interaction.editReply({
           content: "⚠️ No books found for your search.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -416,7 +416,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for book command:", {
@@ -427,7 +427,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

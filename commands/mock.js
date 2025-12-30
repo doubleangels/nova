@@ -1,4 +1,4 @@
-const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder } = require('discord.js');
+const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -24,7 +24,7 @@ module.exports = {
      */
     async execute(interaction) {
         try {
-            await interaction.deferReply({ ephemeral: false });
+            await interaction.deferReply();
             
             const targetMessage = interaction.targetMessage;
             const originalContent = targetMessage.content;
@@ -39,14 +39,14 @@ module.exports = {
             if (!originalContent || originalContent.trim().length === 0) {
                 return await interaction.editReply({
                     content: "⚠️ The selected message has no text content to convert.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
             if (originalContent.length > 2000) {
                 return await interaction.editReply({
                     content: "⚠️ The message is too long to convert. Please select a shorter message.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -126,7 +126,7 @@ module.exports = {
         try {
             await interaction.editReply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
             logger.error("Failed to send error response for mock command:", {
@@ -137,7 +137,7 @@ module.exports = {
             
             await interaction.reply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             }).catch(() => {});
         }
     }

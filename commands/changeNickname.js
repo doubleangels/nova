@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -55,7 +55,7 @@ module.exports = {
             if (!member) {
                 return await interaction.editReply({
                     content: "⚠️ The specified user could not be found in this server.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -131,7 +131,7 @@ module.exports = {
         try {
             await interaction.editReply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
             logger.error("Failed to send error response for change nickname command:", {
@@ -142,7 +142,7 @@ module.exports = {
             
             await interaction.reply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             }).catch(() => {
             });
         }

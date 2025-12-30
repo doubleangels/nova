@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue } = require('../utils/database');
@@ -56,7 +56,7 @@ module.exports = {
             if (!targetUser) {
                 return await interaction.editReply({
                     content: "⚠️ Please provide a valid user.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -69,7 +69,7 @@ module.exports = {
             if (!targetMember) {
                 return await interaction.editReply({
                     content: "⚠️ The specified user was not found in this server.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -82,14 +82,14 @@ module.exports = {
             if (!positionAboveRoleId) {
                 return await interaction.editReply({
                     content: "⚠️ The position reference role is not configured. Please set 'perms_position_above_role' in the database.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
             if (!helpRoleId) {
                 return await interaction.editReply({
                     content: "⚠️ The help role is not configured. Please set 'help_role' in the database.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -102,14 +102,14 @@ module.exports = {
             if (!positionRole) {
                 return await interaction.editReply({
                     content: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
             if (!helpRole) {
                 return await interaction.editReply({
                     content: `⚠️ The help role (ID: ${helpRoleId}) was not found in this server.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -122,14 +122,14 @@ module.exports = {
             if (!userRoleAbovePosition) {
                 return await interaction.editReply({
                     content: `⚠️ The user doesn't have a role positioned above the reference role (${positionRole.name}).`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
             if (!helpRole) {
                 return await interaction.editReply({
                     content: `⚠️ The help role (ID: ${helpRoleId}) was not found in this server.`,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -146,7 +146,7 @@ module.exports = {
             if (!roleUpdateResult.success) {
                 return await interaction.editReply({
                     content: roleUpdateResult.message,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             

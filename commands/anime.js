@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -41,7 +41,7 @@ module.exports = {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
           content: "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -71,7 +71,7 @@ module.exports = {
         logger.info("No anime results found for query:", { query: formattedTitle });
         await interaction.editReply({
           content: "⚠️ No anime found matching your search. Please try a different title.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
@@ -95,7 +95,7 @@ module.exports = {
       try {
         await interaction.editReply({ 
           content: errorMessage,
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
         logger.error("Failed to send error response for anime command:", {
@@ -106,7 +106,7 @@ module.exports = {
         
         await interaction.reply({ 
           content: errorMessage,
-          ephemeral: true 
+          flags: MessageFlags.Ephemeral 
         }).catch(() => {});
       }
     }

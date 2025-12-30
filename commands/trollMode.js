@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -273,7 +273,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for trollmode command:", {
@@ -284,7 +284,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

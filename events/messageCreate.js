@@ -139,8 +139,7 @@ module.exports = {
             messageId: message.id
           });
           return await message.channel.send({
-            content: "⚠️ Failed to process the message.",
-            ephemeral: true
+            content: "⚠️ Failed to process the message."
           });
         }
       }

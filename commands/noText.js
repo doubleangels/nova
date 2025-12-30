@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -58,7 +58,7 @@ module.exports = {
       if (!channel) {
         return await interaction.reply({
           content: "⚠️ Please select a text channel.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -66,7 +66,7 @@ module.exports = {
       if (!permissions.has(PermissionFlagsBits.ManageMessages)) {
         return await interaction.reply({
           content: "⚠️ I need permission to manage messages in the selected channel.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -75,7 +75,7 @@ module.exports = {
         if (currentChannel === channel.id) {
           return await interaction.reply({
             content: "⚠️ This channel is already configured as a no-text channel.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
         }
 
@@ -85,7 +85,7 @@ module.exports = {
           logger.error("Failed to save no-text channel configuration:", { error: error.message });
           return await interaction.reply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
         }
 
@@ -109,7 +109,7 @@ module.exports = {
         if (currentChannel !== channel.id) {
           return await interaction.reply({
             content: "⚠️ This channel is not configured as a no-text channel.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
         }
 
@@ -119,7 +119,7 @@ module.exports = {
           logger.error("Failed to remove no-text channel configuration:", { error: error.message });
           return await interaction.reply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
         }
 
@@ -143,7 +143,7 @@ module.exports = {
       logger.error("Error in notext command:", { error: error.message });
       await interaction.reply({
         content: "⚠️ An unexpected error occurred while configuring the channel.",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   }

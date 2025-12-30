@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const axios = require('axios');
 const logger = require('../logger')('urban.js');
 
@@ -46,7 +46,7 @@ module.exports = {
             if (!definitions || definitions.length === 0) {
                 await interaction.editReply({
                     content: "⚠️ No definitions found for that term.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
                 return;
             }
@@ -106,7 +106,7 @@ module.exports = {
         try {
             await interaction.editReply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
             logger.error("Failed to send error response for urban command:", {
@@ -117,7 +117,7 @@ module.exports = {
             
             await interaction.reply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             }).catch(() => {});
         }
     }

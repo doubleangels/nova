@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -84,7 +84,7 @@ module.exports = {
         try {
             await interaction.editReply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
             logger.error("Failed to send error response for coin flip command:", {
@@ -95,7 +95,7 @@ module.exports = {
             
             await interaction.reply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             }).catch(() => {
             });
         }

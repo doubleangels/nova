@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const axios = require('axios');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -40,7 +40,7 @@ module.exports = {
       if (!data) {
         await interaction.editReply({
           content: '⚠️ No definitions found for that word.',
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -96,7 +96,7 @@ module.exports = {
     try {
       await interaction.editReply({
         content: errorMessage,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
       logger.error('Failed to send error response for dictionary command:', {
@@ -106,7 +106,7 @@ module.exports = {
       });
       await interaction.reply({
         content: errorMessage,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       }).catch(() => {});
     }
   }

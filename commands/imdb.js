@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -49,7 +49,7 @@ module.exports = {
         logger.error("OMDb API key is not configured in the application.");
         await interaction.reply({
           content: "⚠️ OMDb API key is not configured. Please contact an administrator.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -85,7 +85,7 @@ module.exports = {
         logger.warn("No results found for query:", { query: formattedTitle, type: typeParam });
         await interaction.editReply({
           content: `⚠️ No results found for your search. Please try a different title.`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -167,7 +167,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for imdb command:", {
@@ -178,7 +178,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

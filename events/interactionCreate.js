@@ -59,12 +59,12 @@ module.exports = {
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp({ 
             content: 'There was an error executing this command!', 
-            flags: [MessageFlags.Ephemeral] 
+            flags: MessageFlags.Ephemeral 
           });
         } else {
           await interaction.reply({ 
             content: 'There was an error executing this command!', 
-            flags: [MessageFlags.Ephemeral] 
+            flags: MessageFlags.Ephemeral 
           });
         }
       } catch (replyError) {

@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -60,7 +60,7 @@ module.exports = {
         });
         return await interaction.editReply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -74,7 +74,7 @@ module.exports = {
         logger.warn("Invalid search parameters:", { reason: searchParams.error });
         return await interaction.editReply({
           content: "⚠️ Please provide a valid search query.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -90,7 +90,7 @@ module.exports = {
       if (searchResults.error) {
         return await interaction.editReply({
           content: searchResults.message,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -98,7 +98,7 @@ module.exports = {
         logger.warn("No image results found for query:", { query: searchParams.query });
         return await interaction.editReply({
           content: "⚠️ No images found for your search query.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -227,7 +227,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for googleimages command:", {
@@ -238,7 +238,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

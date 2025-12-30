@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
@@ -68,7 +68,7 @@ module.exports = {
             if (!validationResult.success) {
                 return await interaction.editReply({
                     content: validationResult.message,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -88,7 +88,7 @@ module.exports = {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
                     content: "⚠️ The specified user could not be found in this server.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -97,7 +97,7 @@ module.exports = {
                 logger.warn("Invalid color format provided:", { colorHex });
                 return await interaction.editReply({
                     content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
 
@@ -114,7 +114,7 @@ module.exports = {
             if (!rolesResult.success) {
                 return await interaction.editReply({
                     content: rolesResult.message,
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -316,7 +316,7 @@ module.exports = {
         try {
             await interaction.editReply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
             logger.error("Failed to send error response for giveperms command:", {
@@ -327,7 +327,7 @@ module.exports = {
             
             await interaction.reply({ 
                 content: errorMessage,
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             }).catch(() => {
             });
         }

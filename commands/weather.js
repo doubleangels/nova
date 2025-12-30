@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -87,7 +87,7 @@ module.exports = {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
           content: "⚠️ Weather API key is missing in configuration. Please contact the administrator.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -116,7 +116,7 @@ module.exports = {
         
         await interaction.editReply({ 
           content: "⚠️ Failed to get coordinates for the specified location. Please try a different place name.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -141,7 +141,7 @@ module.exports = {
         
         await interaction.editReply({ 
           content: "⚠️ Failed to fetch weather data. Please try again later.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       }
@@ -456,7 +456,7 @@ module.exports = {
     try {
       await interaction.editReply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for weather command:", {
@@ -467,7 +467,7 @@ module.exports = {
       
       await interaction.reply({ 
         content: errorMessage,
-        ephemeral: true 
+        flags: MessageFlags.Ephemeral 
       }).catch(() => {});
     }
   }

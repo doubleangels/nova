@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const snoowrap = require('snoowrap');
@@ -65,7 +65,7 @@ module.exports = {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -102,7 +102,7 @@ module.exports = {
         const minutes = totalMinutes % 60;
         return await interaction.editReply({
           content: `⏰ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
       }
     }
@@ -194,7 +194,7 @@ module.exports = {
       
       await interaction.editReply({
         content: `⚠️ Failed to post to r/findaserver: ${errorMessage}`,
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
     }
   },
