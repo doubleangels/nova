@@ -70,7 +70,11 @@ module.exports = {
                 targetUserTag: targetUser.tag 
             });
             
-            const targetMember = await interaction.guild.members.fetch(targetUser.id);
+            // Check cache before fetching member
+            let targetMember = interaction.guild.members.cache.get(targetUser.id);
+            if (!targetMember) {
+                targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+            }
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
@@ -142,7 +146,7 @@ module.exports = {
      * @returns {Promise<RoleAssignmentResult>} Object containing role assignment result
      */
     async assignRole(interaction, role, targetMember) {
-        const botMember = await interaction.guild.members.fetchMe();
+        const botMember = interaction.guild.members.me;
         if (botMember.roles.highest.position <= role.position) {
             logger.warn("Bot's highest role is not high enough to assign the specified role:", {
                 botHighestRolePosition: botMember.roles.highest.position,

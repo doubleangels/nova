@@ -45,7 +45,19 @@ module.exports = {
             
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
-            const member = await interaction.guild.members.fetch(targetUser.id);
+            
+            // Check cache before fetching member
+            let member = interaction.guild.members.cache.get(targetUser.id);
+            if (!member) {
+                member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+            }
+            
+            if (!member) {
+                return await interaction.editReply({
+                    content: "⚠️ The specified user could not be found in this server.",
+                    ephemeral: true
+                });
+            }
             
             logger.info("/changenickname command initiated:", {
                 userId: interaction.user.id,

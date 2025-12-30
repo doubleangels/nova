@@ -211,7 +211,6 @@ module.exports = {
     codeToTagMap[cleanCode.toLowerCase()] = tagName;
     await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
     logger.debug(`Updated code-to-tag mapping: ${cleanCode.toLowerCase()} -> ${tagName}`);
-    logger.debug(`Full code-to-tag map:`, JSON.stringify(codeToTagMap));
     
     const embed = new EmbedBuilder()
       .setColor(isUpdate ? 0xFFA500 : 0x00FF00)

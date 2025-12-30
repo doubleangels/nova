@@ -56,7 +56,8 @@ module.exports = {
         .setDescription(definition ? definition.definition : 'No definition found.')
         .addFields(
           { name: 'Phonetic', value: phonetic || 'N/A', inline: true },
-          { name: 'Part of Speech', value: partOfSpeech, inline: true }        )
+          { name: 'Part of Speech', value: partOfSpeech, inline: true }
+        )
         .setFooter({ text: 'Powered by Free Dictionary API' });
 
       await interaction.editReply({ embeds: [embed] });

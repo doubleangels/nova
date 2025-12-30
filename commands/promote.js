@@ -158,7 +158,7 @@ module.exports = {
       
       const submission = await reddit.getSubreddit('findaserver').submitLink(submissionOptions);
       const post = await submission.fetch();
-      const permalink = await post.permalink;
+      const permalink = post.permalink;
 
       logger.info("Successfully posted to r/findaserver:", {
         postUrl: `https://reddit.com${permalink}`,

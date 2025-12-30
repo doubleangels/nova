@@ -79,7 +79,11 @@ module.exports = {
                 targetUserTag: targetUser.tag 
             });
             
-            const targetMember = await interaction.guild.members.fetch(targetUser.id);
+            // Check cache before fetching member
+            let targetMember = interaction.guild.members.cache.get(targetUser.id);
+            if (!targetMember) {
+                targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+            }
             if (!targetMember) {
                 logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
                 return await interaction.editReply({
@@ -181,8 +185,11 @@ module.exports = {
      * @returns {Promise<RoleCreationResult>} Object containing role creation result
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        // Get the position above role ID from the database
-        const positionAboveRoleIdRaw = await getValue('perms_position_above_role');
+        // Parallelize database calls
+        const [positionAboveRoleIdRaw, frenRoleIdRaw] = await Promise.all([
+            getValue('perms_position_above_role'),
+            getValue('fren_role')
+        ]);
         
         // Check if position above role ID is valid (not null, not undefined, not empty string)
         if (!positionAboveRoleIdRaw || (typeof positionAboveRoleIdRaw === 'string' && positionAboveRoleIdRaw.trim().length === 0)) {
@@ -196,21 +203,6 @@ module.exports = {
                 message: "⚠️ The position reference role is not configured. Please set 'perms_position_above_role' in the database with a valid role ID."
             };
         }
-        
-        // Convert to string and trim whitespace
-        const positionAboveRoleId = String(positionAboveRoleIdRaw).trim();
-        
-        const positionRole = await interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null);
-        if (!positionRole) {
-            logger.error("Reference role not found:", { roleId: positionAboveRoleId });
-            return {
-                success: false,
-                message: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`
-            };
-        }
-        
-        // Get the fren role ID from the database
-        const frenRoleIdRaw = await getValue('fren_role');
         
         // Check if fren role ID is valid (not null, not undefined, not empty string)
         if (!frenRoleIdRaw || (typeof frenRoleIdRaw === 'string' && frenRoleIdRaw.trim().length === 0)) {
@@ -226,9 +218,23 @@ module.exports = {
         }
         
         // Convert to string and trim whitespace
+        const positionAboveRoleId = String(positionAboveRoleIdRaw).trim();
         const frenRoleId = String(frenRoleIdRaw).trim();
         
-        const additionalRole = await interaction.guild.roles.fetch(frenRoleId).catch(() => null);
+        // Parallelize role fetches
+        const [positionRole, additionalRole] = await Promise.all([
+            interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null),
+            interaction.guild.roles.fetch(frenRoleId).catch(() => null)
+        ]);
+        
+        if (!positionRole) {
+            logger.error("Reference role not found:", { roleId: positionAboveRoleId });
+            return {
+                success: false,
+                message: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`
+            };
+        }
+        
         if (!additionalRole) {
             logger.error("Additional role not found:", { roleId: frenRoleId });
             return {
@@ -237,7 +243,7 @@ module.exports = {
             };
         }
         
-        const botMember = await interaction.guild.members.fetchMe();
+        const botMember = interaction.guild.members.me;
         if (botMember.roles.highest.position <= positionRole.position) {
             logger.warn("Bot's highest role is not high enough to create a role above the reference role:", {
                 botHighestRolePosition: botMember.roles.highest.position,

@@ -60,8 +60,11 @@ module.exports = {
                 });
             }
             
-            // Fetch the target member
-            const targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+            // Fetch the target member (check cache first)
+            let targetMember = interaction.guild.members.cache.get(targetUser.id);
+            if (!targetMember) {
+                targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
+            }
             
             if (!targetMember) {
                 return await interaction.editReply({
@@ -70,8 +73,11 @@ module.exports = {
                 });
             }
             
-            // Get the position above role ID from the database
-            const positionAboveRoleId = await getValue('perms_position_above_role');
+            // Parallelize database calls
+            const [positionAboveRoleId, helpRoleId] = await Promise.all([
+                getValue('perms_position_above_role'),
+                getValue('help_role')
+            ]);
             
             if (!positionAboveRoleId) {
                 return await interaction.editReply({
@@ -80,10 +86,29 @@ module.exports = {
                 });
             }
             
-            const positionRole = await interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null);
+            if (!helpRoleId) {
+                return await interaction.editReply({
+                    content: "⚠️ The help role is not configured. Please set 'help_role' in the database.",
+                    ephemeral: true
+                });
+            }
+            
+            // Parallelize role fetches
+            const [positionRole, helpRole] = await Promise.all([
+                interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null),
+                interaction.guild.roles.fetch(helpRoleId).catch(() => null)
+            ]);
+            
             if (!positionRole) {
                 return await interaction.editReply({
                     content: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`,
+                    ephemeral: true
+                });
+            }
+            
+            if (!helpRole) {
+                return await interaction.editReply({
+                    content: `⚠️ The help role (ID: ${helpRoleId}) was not found in this server.`,
                     ephemeral: true
                 });
             }
@@ -100,19 +125,6 @@ module.exports = {
                     ephemeral: true
                 });
             }
-            
-            // Get the help role ID from the database
-            const helpRoleId = await getValue('help_role');
-            
-            if (!helpRoleId) {
-                return await interaction.editReply({
-                    content: "⚠️ The help role is not configured. Please set 'help_role' in the database.",
-                    ephemeral: true
-                });
-            }
-            
-            // Fetch the help role
-            const helpRole = await interaction.guild.roles.fetch(helpRoleId).catch(() => null);
             
             if (!helpRole) {
                 return await interaction.editReply({
@@ -183,7 +195,7 @@ module.exports = {
      * @returns {Promise<RoleUpdateResult>} Object containing role update result
      */
     async updateRolePermissions(interaction, role) {
-        const botMember = await interaction.guild.members.fetchMe();
+        const botMember = interaction.guild.members.me;
         
         // Check if bot can manage this role
         if (botMember.roles.highest.position <= role.position) {

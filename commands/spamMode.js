@@ -176,22 +176,19 @@ module.exports = {
    */
   async getCurrentSettings() {
     try {
-      const [enabled, threshold, window, warningChannelId] = await Promise.all([
+      // Fetch all values in parallel, including mute_mode_kick_time_hours for potential default
+      const [enabled, threshold, window, warningChannelId, muteKickTime] = await Promise.all([
         getValue('spam_mode_enabled'),
         getValue('spam_mode_threshold'),
         getValue('spam_mode_window_hours'),
-        getValue('spam_mode_channel_id')
+        getValue('spam_mode_channel_id'),
+        getValue('mute_mode_kick_time_hours')
       ]);
       
       // Default window to mute mode kick time if not set
       let defaultWindow = 4;
-      try {
-        const muteKickTime = await getValue('mute_mode_kick_time_hours');
-        if (muteKickTime) {
-          defaultWindow = parseInt(muteKickTime, 10) || 4;
-        }
-      } catch (e) {
-        // Use default if mute mode time not available
+      if (muteKickTime) {
+        defaultWindow = parseInt(muteKickTime, 10) || 4;
       }
       
       return {

@@ -68,21 +68,28 @@ module.exports = {
     },
 
     /**
-     * Converts text to mocking format (alternating case).
+     * Converts text to mocking format (alternating case by word).
      * 
      * @param {string} text - The text to convert
      * @returns {string} The converted text in alternating case
      */
     convertToMock(text) {
-        return text
-            .split('')
-            .map((char, index) => {
-                // Skip spaces and punctuation, but continue the pattern
-                if (!/[a-zA-Z]/.test(char)) {
-                    return char;
+        // Split by word boundaries, preserving delimiters (spaces, punctuation)
+        const parts = text.split(/(\W+)/);
+        let wordIndex = 0;
+        
+        return parts
+            .map((part) => {
+                // If this part contains letters, it's a word - alternate its case
+                if (/[a-zA-Z]/.test(part)) {
+                    const result = wordIndex % 2 === 0 
+                        ? part.toLowerCase() 
+                        : part.toUpperCase();
+                    wordIndex++;
+                    return result;
                 }
-                // Alternate between uppercase and lowercase
-                return index % 2 === 0 ? char.toLowerCase() : char.toUpperCase();
+                // Otherwise, it's whitespace/punctuation - return as-is
+                return part;
             })
             .join('');
     },
