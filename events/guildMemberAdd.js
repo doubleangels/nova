@@ -165,21 +165,39 @@ module.exports = {
       logger.debug(`Previous usage data:`, JSON.stringify(previousUsage));
       
       // Build current usage map and store invite objects for later use
+      // Store codes in their original case for Discord API compatibility
       const currentUsage = {};
       const inviteObjects = new Map();
       currentInvites.each(invite => {
-        currentUsage[invite.code] = invite.uses || 0;
-        inviteObjects.set(invite.code, invite);
+        const code = invite.code; // Keep original case
+        currentUsage[code] = invite.uses || 0;
+        // Store invite object with original code
+        inviteObjects.set(code, invite);
+        // Also store with lowercase for lookup
+        inviteObjects.set(code.toLowerCase(), invite);
       });
       logger.debug(`Current usage data:`, JSON.stringify(currentUsage));
+      
+      // If previous usage is empty (bot just started or first time), initialize it
+      const isFirstRun = Object.keys(previousUsage).length === 0;
+      if (isFirstRun) {
+        logger.debug("No previous invite usage data found - this may be the first join after bot restart");
+      }
 
       // Find which invite was used (usage count increased)
       let usedInviteCode = null;
       let maxIncrease = 0;
       const invitesWithIncrease = [];
       
+      // Normalize previous usage keys to lowercase for case-insensitive comparison
+      const normalizedPreviousUsage = {};
+      for (const [code, count] of Object.entries(previousUsage)) {
+        normalizedPreviousUsage[code.toLowerCase()] = count;
+      }
+      
       for (const [code, currentCount] of Object.entries(currentUsage)) {
-        const previousCount = previousUsage[code] || 0;
+        const normalizedCode = code.toLowerCase();
+        const previousCount = normalizedPreviousUsage[normalizedCode] || 0;
         const increase = currentCount - previousCount;
         logger.debug(`Invite ${code}: previous=${previousCount}, current=${currentCount}, increase=${increase}`);
         
@@ -187,7 +205,7 @@ module.exports = {
           invitesWithIncrease.push({ code, increase });
           if (increase > maxIncrease) {
             maxIncrease = increase;
-            usedInviteCode = code;
+            usedInviteCode = code; // Keep original case
           }
         }
       }
@@ -196,11 +214,32 @@ module.exports = {
       if (!usedInviteCode) {
         logger.debug("No invite found with increased usage, checking for new invites");
         for (const [code, currentCount] of Object.entries(currentUsage)) {
-          if (!previousUsage[code] && currentCount > 0) {
-            usedInviteCode = code;
+          const normalizedCode = code.toLowerCase();
+          // Check for new invites that weren't in previous usage
+          // Also check for invites with exactly 1 use (likely just used)
+          if (!normalizedPreviousUsage[normalizedCode] && currentCount >= 1) {
+            usedInviteCode = code; // Keep original case
             logger.debug(`Found new invite: ${code} with ${currentCount} uses`);
             break;
           }
+        }
+      }
+
+      // If still not found and this is first run, try to find the most recently used invite
+      // (one with lowest uses, as it's likely the newest)
+      if (!usedInviteCode && isFirstRun) {
+        logger.debug("First run after restart - checking for most recently used invite");
+        let minUses = Infinity;
+        let mostRecentInvite = null;
+        for (const [code, currentCount] of Object.entries(currentUsage)) {
+          if (currentCount > 0 && currentCount < minUses) {
+            minUses = currentCount;
+            mostRecentInvite = code;
+          }
+        }
+        if (mostRecentInvite) {
+          usedInviteCode = mostRecentInvite;
+          logger.debug(`Found most recently used invite after restart: ${mostRecentInvite} with ${minUses} uses`);
         }
       }
 
@@ -209,25 +248,28 @@ module.exports = {
         logger.warn(`Multiple invites increased usage: ${invitesWithIncrease.map(i => `${i.code} (+${i.increase})`).join(', ')}. Using ${usedInviteCode} with highest increase.`);
       }
 
-      logger.debug(`Detected used invite code: ${usedInviteCode}`);
+      logger.debug(`Detected used invite code: ${usedInviteCode || 'NONE'}`);
 
-      // Update stored usage counts
+      // Update stored usage counts BEFORE processing notification
+      // This ensures we have the latest state for next join
       await setInviteUsage(member.guild.id, currentUsage);
 
       // Check if the used invite code matches any tagged invite
       if (usedInviteCode) {
         // Check if we have a direct code match stored
+        // Normalize the code for lookup
+        const normalizedUsedCode = usedInviteCode.toLowerCase();
         let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
         logger.debug(`Code to tag map:`, JSON.stringify(codeToTagMap));
         
-        let tagName = codeToTagMap[usedInviteCode.toLowerCase()];
-        logger.debug(`Tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
+        let tagName = codeToTagMap[normalizedUsedCode];
+        logger.debug(`Tag name for code ${usedInviteCode} (normalized: ${normalizedUsedCode}): ${tagName || 'not found'}`);
         
         // Only rebuild once if tag not found (optimize to avoid double rebuilds)
         if (!tagName) {
           logger.debug("Tag not found in mapping, attempting to rebuild from existing tags");
           codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
-          tagName = codeToTagMap[usedInviteCode.toLowerCase()];
+          tagName = codeToTagMap[normalizedUsedCode];
           logger.debug(`After rebuild, tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
         }
         
@@ -237,10 +279,9 @@ module.exports = {
           
           if (!inviteTag) {
             logger.error(`Tag "${tagName}" found in mapping but tag data is null/undefined`);
-            return;
-          }
-          
-          if (inviteTag.code.toLowerCase() === usedInviteCode.toLowerCase()) {
+            // Fall through to untagged invite notification
+            tagName = null;
+          } else if (inviteTag.code.toLowerCase() === normalizedUsedCode) {
             // Send notification
             try {
               const embed = new EmbedBuilder()
@@ -260,6 +301,7 @@ module.exports = {
               
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
               logger.info(`✅ Sent invite notification for member ${member.user.tag} using tagged invite "${inviteTag.name}" (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              return; // Successfully sent notification, exit early
             } catch (sendError) {
               logger.error(`Failed to send notification to channel:`, { 
                 error: sendError.message,
@@ -268,15 +310,23 @@ module.exports = {
                 channelName: notificationChannel.name,
                 guildId: member.guild.id
               });
+              // Fall through to untagged invite notification as fallback
+              tagName = null;
             }
           } else {
             logger.warn(`Tag found but code mismatch: tag code=${inviteTag.code}, used code=${usedInviteCode}`);
+            // Fall through to untagged invite notification
+            tagName = null;
           }
-        } else {
+        }
+        
+        // If no tag found or tag lookup failed, send untagged notification
+        if (!tagName) {
           // No tag found - send notification with invite creator info
           logger.debug(`No tag found for invite code: ${usedInviteCode}. Sending notification with creator info.`);
           
-          const usedInvite = inviteObjects.get(usedInviteCode);
+          // Try to get invite object (check both normalized and original code)
+          let usedInvite = inviteObjects.get(usedInviteCode) || inviteObjects.get(usedInviteCode.toLowerCase());
           if (usedInvite) {
             try {
               let creatorMention = 'Unknown';
@@ -334,7 +384,34 @@ module.exports = {
           }
         }
       } else {
-        logger.debug("No invite code detected for this join");
+        // No invite code detected - send fallback notification
+        logger.warn(`No invite code detected for member ${member.user.tag} (${member.user.id}). Sending fallback notification.`);
+        try {
+          const embed = new EmbedBuilder()
+            .setColor(config.baseEmbedColor)
+            .setTitle('👤 New Member Joined')
+            .setDescription(`${member.user} joined the server, but the invite source could not be determined.`)
+            .addFields(
+              { name: 'Member', value: `${member.user}`, inline: true },
+              { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
+              { name: 'Note', value: 'Invite tracking may have failed due to bot restart or missing permissions.', inline: false }
+            )
+            .setThumbnail(member.user.displayAvatarURL())
+            .setTimestamp();
+
+          logger.debug(`Attempting to send fallback notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
+          
+          const sentMessage = await notificationChannel.send({ embeds: [embed] });
+          logger.info(`✅ Sent fallback invite notification for member ${member.user.tag}. Message ID: ${sentMessage.id}`);
+        } catch (sendError) {
+          logger.error(`Failed to send fallback notification:`, { 
+            error: sendError.message,
+            stack: sendError.stack,
+            channelId: notificationChannel.id,
+            channelName: notificationChannel.name,
+            guildId: member.guild.id
+          });
+        }
       }
     } catch (error) {
       logger.error('Error checking tagged invite:', {
