@@ -1,5 +1,4 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const { PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
