@@ -54,10 +54,9 @@ RUN mkdir -p /app/data && chown -R discordbot:nodejs /app/data && chmod 750 /app
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]
 
-# Document expected environment variables
+# Document expected environment variables (non-sensitive only)
 ENV NODE_ENV=production
 ENV LOG_LEVEL=info
-ENV DISCORD_BOT_TOKEN=
 ENV BASE_EMBED_COLOR=
 
 # Entrypoint runs as root to fix permissions, then switches to discordbot user
