@@ -44,7 +44,6 @@ services:
       - DISCORD_BOT_TOKEN=your_discord_bot_token_here
       - GOOGLE_API_KEY=your_google_api_key_here
       - IMAGE_SEARCH_ENGINE_ID=your_image_search_engine_id_here
-      - EXCHANGERATE_API_KEY=your_exchangerate_api_key_here
       - LOG_LEVEL=your_desired_log_level_here
       - MAL_CLIENT_ID=your_mal_client_id_here
       - OMDB_API_KEY=your_omdb_api_key_here
@@ -71,7 +70,6 @@ Here is a table of all available environment variables:
 | Variable                 | Description                                         | Required | Default | Example                          |
 | ------------------------ | --------------------------------------------------- | :------: | :-----: | -------------------------------- |
 | `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot           |    ✅    |    -    | -                                |
-| `EXCHANGERATE_API_KEY`   | API key for exchangerate.host (currency conversion) |    ✅    |    -    | -                                |
 | `GOOGLE_API_KEY`         | API key for Google services                         |    ✅    |    -    | -                                |
 | `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches   |    ✅    |    -    | -                                |
 | `LOG_LEVEL`              | Determines the verbosity of logs                    |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
@@ -92,9 +90,11 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 
 | Database Key                | Description                                               | Used By                                           |
 | --------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
+| `base_embed_color`         | Base embed color in hex format (e.g., CD41FF or #CD41FF) | All commands that create embeds                   |
 | `fren_role`                 | Discord role ID to assign alongside custom roles          | `/giveperms` command                              |
-| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms`, `/givemod`, and `/takemod` commands |
+| `guild_name`                | Name of the guild/server                                  | Various commands and utilities                    |
 | `help_role`                 | Discord role ID for the help role                         | `/givemod` and `/takemod` commands                |
+| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms`, `/givemod`, and `/takemod` commands |
 
 **Note:** All three commands (`/giveperms`, `/givemod`, and `/takemod`) use the `perms_position_above_role` database key for the position reference role.
 
@@ -102,21 +102,37 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 
 You can manage database values directly using the provided scripts. When running in Docker, use `docker exec` to run these scripts inside the container:
 
+**Key Format:** `[namespace:][section:]key`
+- **namespace**: `main` (default), `invites`
+- **section**: `config`, `tags`, `invite_usage`, `invite_code_to_tag_map`, etc.
+
 #### Reading/Listing Values
 
 ```bash
 docker exec nova node list-values.js [<key>]
 ```
 
-If no key is provided, lists all values in the database. If a key is provided, reads that specific value.
+If no key is provided, lists all values in the database across all namespaces. If a key is provided, reads that specific value.
 
 **Examples:**
 
 ```bash
-docker exec nova node list-values.js                    # List all values
-docker exec nova node list-values.js reminder_channel   # Read specific key
+# List all values in the database
+docker exec nova node list-values.js
+
+# Read a config value (defaults to main:config:)
+docker exec nova node list-values.js reminder_channel
 docker exec nova node list-values.js bot_status
 docker exec nova node list-values.js spam_mode_enabled
+
+# Explicit namespace and section
+docker exec nova node list-values.js main:config:reminder_channel
+
+# Read invite tag from invites namespace
+docker exec nova node list-values.js invites:tags:disboard
+
+# Read invite usage for a guild
+docker exec nova node list-values.js main:invite_usage:123456789
 ```
 
 #### Setting Values
@@ -128,11 +144,23 @@ docker exec nova node set-value.js <key> <value>
 **Examples:**
 
 ```bash
+# Set config values (defaults to main:config:)
+docker exec nova node set-value.js base_embed_color "CD41FF"
+docker exec nova node set-value.js guild_name "Your Guild Name"
 docker exec nova node set-value.js reminder_channel "123456789012345678"
 docker exec nova node set-value.js bot_status "Playing games"
 docker exec nova node set-value.js bot_status_type "playing"
 docker exec nova node set-value.js spam_mode_enabled true
 docker exec nova node set-value.js mute_mode_kick_time_hours 4
+
+# Explicit namespace and section
+docker exec nova node set-value.js main:config:reminder_channel "123456789012345678"
+
+# Set invite tag in invites namespace
+docker exec nova node set-value.js invites:tags:disboard '{"code":"abc123","name":"Disboard"}'
+
+# Set invite usage for a guild
+docker exec nova node set-value.js main:invite_usage:123456789 '{"abc123":5}'
 ```
 
 #### Deleting Values
@@ -144,8 +172,18 @@ docker exec nova node delete-value.js <key>
 **Examples:**
 
 ```bash
+# Delete config values (defaults to main:config:)
 docker exec nova node delete-value.js reminder_channel
 docker exec nova node delete-value.js spam_mode_enabled
+
+# Explicit namespace and section
+docker exec nova node delete-value.js main:config:reminder_channel
+
+# Delete invite tag from invites namespace
+docker exec nova node delete-value.js invites:tags:disboard
+
+# Delete invite usage for a guild
+docker exec nova node delete-value.js main:invite_usage:123456789
 ```
 
 **Note:** The database file is stored in `./data/database.sqlite` on the host (mounted as a volume), so changes persist across container restarts.

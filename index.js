@@ -5,7 +5,11 @@ const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
 
 // Log the base embed color on startup for debugging
-logger.info(`Base embed color loaded: 0x${config.baseEmbedColor.toString(16).toUpperCase()} (from ${process.env.BASE_EMBED_COLOR ? `BASE_EMBED_COLOR="${process.env.BASE_EMBED_COLOR}"` : 'default'})`);
+if (config.baseEmbedColor) {
+  logger.info(`Base embed color loaded: 0x${config.baseEmbedColor.toString(16).toUpperCase()} (from BASE_EMBED_COLOR="${process.env.BASE_EMBED_COLOR}")`);
+} else {
+  logger.warn('BASE_EMBED_COLOR not set. Embed colors will use Discord defaults.');
+}
 
 /** @type {GatewayIntentBits[]} Bot intents required for functionality */
 const BOT_INTENTS = [

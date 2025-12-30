@@ -16,7 +16,7 @@ require('dotenv').config();
 /**
  * @typedef {Object} BotConfig
  * @property {BotSettings} settings - Bot behavior settings
- * @property {string} baseEmbedColor - Base embed color (hex number, default: 0xcd41ff)
+ * @property {number} baseEmbedColor - Base embed color (hex number, from BASE_EMBED_COLOR env var)
  * @property {string} clientId - Discord application client ID
  * @property {string} exchangeRateApiKey - exchangerate.host API key for currency conversion
  * @property {string} givePermsFrenRoleId - Role ID for Fren role
@@ -48,13 +48,13 @@ module.exports = {
   },
   baseEmbedColor: (() => {
     if (!process.env.BASE_EMBED_COLOR) {
-      return 0xcd41ff;
+      return null;
     }
     const colorStr = process.env.BASE_EMBED_COLOR.trim();
     // Remove # or 0x prefix if present
     const cleanColor = colorStr.replace(/^#/, '').replace(/^0x/i, '');
     const parsed = parseInt(cleanColor, 16);
-    return isNaN(parsed) ? 0xcd41ff : parsed;
+    return isNaN(parsed) ? null : parsed;
   })(),
   clientId: "1280311987154456657",
   exchangeRateApiKey: process.env.EXCHANGERATE_API_KEY,
