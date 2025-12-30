@@ -30,6 +30,7 @@ require('dotenv').config();
  * @property {string} givePermsFrenRoleId - Role ID for Fren role
  * @property {string} exchangeRateApiKey - exchangerate.host API key for currency conversion
  * @property {number} baseEmbedColor - Base embed color (hex number, default: 0xcd41ff)
+ * @property {string} guildName - Guild name (default: 'Da Frens')
  */
 
 /** @type {BotConfig} */
@@ -69,4 +70,5 @@ module.exports = {
     // If parsing fails, return default
     return isNaN(parsed) ? 0xcd41ff : parsed;
   })(),
+  guildName: process.env.GUILD_NAME || 'Da Frens',
 };

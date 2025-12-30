@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getAllMuteModeUsers, getValue, getUserJoinTime } = require('./database');
+const { getAllMuteModeUsers, getValue, getUserJoinTime, getGuildName } = require('./database');
 const dayjs = require('dayjs');
 const config = require('../config');
 const utc = require('dayjs/plugin/utc');
@@ -62,10 +62,11 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
 
           try {
             const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
+            const guildName = await getGuildName();
             const embed = {
               color: config.baseEmbedColor,
               title: 'Kicked for Inactivity',
-              description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
+              description: `You have been kicked from ${guildName} because you did not send a message within the required time limit.`,
               fields: [
                 { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
               ]
@@ -105,10 +106,11 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
 
           try {
             const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
+            const guildName = await getGuildName();
             const embed = {
               color: config.baseEmbedColor,
               title: 'Kicked for Inactivity',
-              description: 'You have been kicked from Da Frens because you did not send a message within the required time limit.',
+              description: `You have been kicked from ${guildName} because you did not send a message within the required time limit.`,
               fields: [
                 { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
               ]

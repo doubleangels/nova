@@ -1,6 +1,6 @@
 const logger = require('../logger')('trollModeUtils.js');
 const dayjs = require('dayjs');
-const { getValue } = require('../utils/database');
+const { getValue, getGuildName } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
 const config = require('../config');
 
@@ -49,10 +49,11 @@ async function performKick(member) {
 
     try {
       const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
+      const guildName = await getGuildName();
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor)
         .setTitle('Account Age Requirement')
-        .setDescription(`You were kicked from Da Frens because your account is too new.`)
+        .setDescription(`You were kicked from ${guildName} because your account is too new.`)
         .addFields(
           { name: 'Your Account Age', value: `${accountAge} days` },
           { name: 'Required Age', value: `${requiredAge} days` },

@@ -704,6 +704,26 @@ async function rebuildCodeToTagMap(guildId) {
   }
 }
 
+/**
+ * Gets the guild name from the database, falling back to config default
+ * @returns {Promise<string>} The guild name
+ */
+async function getGuildName() {
+  try {
+    const dbGuildName = await getValue('guild_name');
+    if (dbGuildName && typeof dbGuildName === 'string') {
+      return dbGuildName;
+    }
+    // Fall back to config default
+    const config = require('../config');
+    return config.guildName || 'Da Frens';
+  } catch (err) {
+    logger.error('Error getting guild name:', { error: err });
+    // Ultimate fallback
+    return 'Da Frens';
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -727,5 +747,6 @@ module.exports = {
   setInviteCodeToTagMap,
   getInviteCodeToTagMap,
   rebuildCodeToTagMap,
-  getAllInviteTagsData
+  getAllInviteTagsData,
+  getGuildName
 };

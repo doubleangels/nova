@@ -34,8 +34,17 @@ const reddit = new snoowrap({
   password: config.redditPassword
 });
 
-const PROMOTION_TITLE = "[21+]🎉 Congrats! You've found Da Frens! ✨ A group of Frens with few restrictions... usually bantering or playing games, come join us!";
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+const { getGuildName } = require('../utils/database');
+
+/**
+ * Gets the promotion title with dynamic guild name
+ * @returns {Promise<string>} The promotion title
+ */
+async function getPromotionTitle() {
+  const guildName = await getGuildName();
+  return `[21+]🎉 Congrats! You've found ${guildName}! ✨ A group of Frens with few restrictions... usually bantering or playing games, come join us!`;
+}
 
 /**
  * Command module for promoting users to moderator status.
@@ -78,10 +87,11 @@ module.exports = {
 
   async handlePost(interaction) {
     await interaction.deferReply();
+    const promotionTitle = await getPromotionTitle();
     logger.info("/promote command initiated:", { 
       userId: interaction.user.id, 
       guildId: interaction.guildId,
-      promotionTitle: PROMOTION_TITLE,
+      promotionTitle: promotionTitle,
       promotionLink: PROMOTION_LINK
     });
 
@@ -108,9 +118,10 @@ module.exports = {
     }
 
     try {
+      const promotionTitle = await getPromotionTitle();
       logger.info("Attempting to post to r/findaserver:", {
         subreddit: 'findaserver',
-        title: PROMOTION_TITLE,
+        title: promotionTitle,
         link: PROMOTION_LINK,
         userId: interaction.user.id
       });
@@ -145,7 +156,7 @@ module.exports = {
       const validFlair = availableFlairs.find(flair => flair.id === targetFlairId);
       
       let submissionOptions = {
-        title: PROMOTION_TITLE,
+        title: promotionTitle,
         url: PROMOTION_LINK
       };
 
@@ -163,7 +174,7 @@ module.exports = {
       logger.info("Successfully posted to r/findaserver:", {
         postUrl: `https://reddit.com${permalink}`,
         postId: post.id,
-        title: PROMOTION_TITLE,
+        title: promotionTitle,
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
