@@ -25,8 +25,11 @@ module.exports = {
       }
       logger.info(`Member left: ${member.user.tag} (ID: ${member.id}).`);
       
-      await removeMuteModeUser(member.id);
-      await removeSpamModeJoinTime(member.id);
+      // Parallelize database writes
+      await Promise.all([
+        removeMuteModeUser(member.id),
+        removeSpamModeJoinTime(member.id)
+      ]);
 
       logger.info(`Successfully processed member departure: ${member.user.tag}.`);
     } catch (error) {

@@ -35,14 +35,20 @@ module.exports = {
         return;
       }
 
-      await addMuteModeUser(member.id, member.user.tag);
-      
-      // Store join time in spam mode tracking (for tracking even after user sends message)
-      await addSpamModeJoinTime(member.id, member.user.tag, member.joinedAt);
+      // Parallelize database writes
+      await Promise.all([
+        addMuteModeUser(member.id, member.user.tag),
+        addSpamModeJoinTime(member.id, member.user.tag, member.joinedAt)
+      ]);
 
-      const muteModeEnabled = await getValue('mute_mode_enabled');
+      // Parallelize config reads
+      const [muteModeEnabled, muteKickTimeValue] = await Promise.all([
+        getValue('mute_mode_enabled'),
+        getValue('mute_mode_kick_time_hours')
+      ]);
+      
       if (muteModeEnabled) {
-        const muteKickTime = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+        const muteKickTime = parseInt(muteKickTimeValue, 10) || 4;
         await scheduleMuteKick(
           member.id,
           member.joinedAt,
@@ -120,20 +126,26 @@ module.exports = {
       }
       logger.debug(`Found notification channel: ${notificationChannel.name} (${notificationChannel.id}), type: ${notificationChannel.type}`);
       
-      // Check if bot can send messages in this channel
-      if (!notificationChannel.permissionsFor(member.guild.members.me)?.has('SendMessages')) {
+      // Check permissions once and cache
+      const botMember = member.guild.members.me;
+      if (!botMember) {
+        logger.error(`Bot member not found in guild ${member.guild.id}`);
+        return;
+      }
+      
+      const channelPermissions = notificationChannel.permissionsFor(botMember);
+      if (!channelPermissions?.has('SendMessages')) {
         logger.error(`Bot does not have SendMessages permission in channel ${notificationChannel.name} (${notificationChannel.id})`);
         return;
       }
       
-      // Check if bot can embed links
-      if (!notificationChannel.permissionsFor(member.guild.members.me)?.has('EmbedLinks')) {
+      if (!channelPermissions.has('EmbedLinks')) {
         logger.error(`Bot does not have EmbedLinks permission in channel ${notificationChannel.name} (${notificationChannel.id})`);
         return;
       }
 
       // Check if bot has permission to view invites
-      if (!member.guild.members.me.permissions.has('ManageGuild')) {
+      if (!botMember.permissions.has('ManageGuild')) {
         logger.debug("Bot doesn't have ManageGuild permission, cannot check invites.");
         return;
       }
@@ -211,15 +223,7 @@ module.exports = {
         let tagName = codeToTagMap[usedInviteCode.toLowerCase()];
         logger.debug(`Tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
         
-        // If mapping is empty or doesn't have this code, try to rebuild it from existing tags
-        if (!tagName && Object.keys(codeToTagMap).length === 0) {
-          logger.debug("Code-to-tag map is empty, attempting to rebuild from existing tags");
-          codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
-          tagName = codeToTagMap[usedInviteCode.toLowerCase()];
-          logger.debug(`After rebuild, tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
-        }
-        
-        // If still not found, try rebuilding even if map wasn't empty (might be missing this specific code)
+        // Only rebuild once if tag not found (optimize to avoid double rebuilds)
         if (!tagName) {
           logger.debug("Tag not found in mapping, attempting to rebuild from existing tags");
           codeToTagMap = await rebuildCodeToTagMap(member.guild.id);

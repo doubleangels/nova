@@ -40,8 +40,13 @@ module.exports = {
       });
 
       // Track new user messages for spam mode if enabled (BEFORE removing from mute mode)
+      // Fetch config values in parallel
+      const [spamModeEnabled, noTextChannelId] = await Promise.all([
+        getValue('spam_mode_enabled'),
+        getValue('notext_channel')
+      ]);
+      
       try {
-        const spamModeEnabled = await getValue('spam_mode_enabled');
         if (spamModeEnabled === true) {
           await trackNewUserMessage(message);
         }
@@ -52,7 +57,12 @@ module.exports = {
         });
       }
 
-      await removeMuteModeUser(message.author.id);
+      // Only remove from mute mode if user was actually in mute mode (cancelMuteKick returns true)
+      // This avoids unnecessary database calls for users not in mute mode
+      if (cancelMuteKick(message.author.id)) {
+        await removeMuteModeUser(message.author.id);
+        logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message.`);
+      }
 
       if (message.content.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
@@ -73,7 +83,7 @@ module.exports = {
       const messageContentLower = message.content?.toLowerCase() || '';
       if (messageContentLower.includes('dubz') || messageContentLower.includes('dubzie')) {
         try {
-          // Get dubz emoji from database config
+          // Get dubz emoji from database config (already fetched above)
           const dubzEmoji = await getValue('dubz_emoji');
           if (dubzEmoji) {
             await message.react(dubzEmoji);
@@ -90,7 +100,6 @@ module.exports = {
       
       logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
 
-      const noTextChannelId = await getValue('notext_channel');
       if (message.channelId !== noTextChannelId) return;
 
       const hasGif = message.attachments.some(attachment => 
@@ -173,15 +182,9 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function processUserMessage(message) {
+  // This function is kept for potential future use
+  // Mute mode removal is now handled in execute() for better performance
   if (message.webhookId || !message.author || message.author.bot) return;
-  try {
-    if (cancelMuteKick(message.author.id)) {
-      await removeMuteModeUser(message.author.id);
-      logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message.`);
-    }
-  } catch (error) {
-    logger.error("Error processing user message:", { userId: message.author.id, error });
-  }
 }
 
 
@@ -210,37 +213,37 @@ async function checkForBumpMessages(message) {
   try {
     // Check for Disboard bump (has embed with "Bump done!")
     if (message.embeds && message.embeds.length > 0) {
-      // Always fetch message to ensure we have the latest embed data
-      // Discord.js sometimes doesn't populate embeds immediately
-      try {
-        const fetchedMessage = await message.fetch();
-        if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
-          message.embeds = fetchedMessage.embeds;
-          logger.debug("Fetched message embeds for Disboard check:", {
+      // Only fetch if embeds might be incomplete (partial message or missing descriptions)
+      let embedsToCheck = message.embeds;
+      if (message.partial || message.embeds.some(e => !e.description)) {
+        try {
+          const fetchedMessage = await message.fetch();
+          if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
+            embedsToCheck = fetchedMessage.embeds;
+            message.embeds = fetchedMessage.embeds;
+            logger.debug("Fetched message embeds for Disboard check:", {
+              label: "messageCreate.js",
+              embedCount: fetchedMessage.embeds.length,
+              messageId: message.id
+            });
+          }
+        } catch (fetchError) {
+          logger.debug("Could not fetch message for Disboard check:", {
             label: "messageCreate.js",
-            embedCount: fetchedMessage.embeds.length,
-            messageId: message.id,
-            originalEmbedCount: message.embeds?.length || 0,
-            isBot: message.author.bot
+            error: fetchError.message,
+            messageId: message.id
           });
         }
-      } catch (fetchError) {
-        logger.debug("Could not fetch message for Disboard check:", {
-          label: "messageCreate.js",
-          error: fetchError.message,
-          messageId: message.id,
-          hasWebhook: !!message.webhookId,
-          isInteraction: !!message.interaction
-        });
       }
       
-      const bumpEmbed = message.embeds.find(embed => {
-        logger.debug("Checking embed:", { 
-          description: embed.description?.replace(/\n/g, ' ') || "No Description", 
-          hasDescription: !!embed.description 
-        });
-        return embed.description && embed.description.includes("Bump done!");
-      });
+      // Check embeds without logging on every iteration
+      const bumpEmbed = embedsToCheck.find(embed => 
+        embed.description && embed.description.includes("Bump done!")
+      );
+      
+      if (bumpEmbed) {
+        logger.debug("Found Disboard bump embed");
+      }
       
       if (bumpEmbed) {
         logger.info("Disboard bump detected, scheduling reminder.");
@@ -261,27 +264,20 @@ async function checkForBumpMessages(message) {
     // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
     // Check independently of Disboard check to ensure it runs even if message has embeds
     if (!message.embeds || message.embeds.length === 0) {
-      // Always fetch message content to ensure we have the latest content
-      // Discord.js sometimes doesn't populate content immediately for interaction/webhook messages
-      try {
-        const fetchedMessage = await message.fetch();
-        messageContent = fetchedMessage.content;
-        logger.debug("Fetched message content for Discadia check:", {
-          label: "messageCreate.js",
-          content: messageContent?.substring(0, 100) || "No content after fetch",
-          messageId: message.id,
-          originalContent: message.content?.substring(0, 50) || "No original content",
-          isBot: message.author.bot
-        });
-      } catch (fetchError) {
-        logger.debug("Could not fetch message for Discadia check:", { 
-          error: fetchError.message,
-          messageId: message.id,
-          usingOriginalContent: !!messageContent
-        });
-        // Fall back to original content if fetch fails
-        if (!messageContent) {
-          messageContent = message.content;
+      // Only fetch if content is missing (partial message or webhook/interaction)
+      if (!messageContent && (message.partial || message.webhookId || message.interaction)) {
+        try {
+          const fetchedMessage = await message.fetch();
+          messageContent = fetchedMessage.content;
+          logger.debug("Fetched message content for Discadia check:", {
+            label: "messageCreate.js",
+            messageId: message.id
+          });
+        } catch (fetchError) {
+          logger.debug("Could not fetch message for Discadia check:", { 
+            error: fetchError.message,
+            messageId: message.id
+          });
         }
       }
       

@@ -30,11 +30,13 @@ module.exports = {
       await initializeDatabase();
       logger.info('Database connection initialized successfully.');
 
-      // Get bot status from database config
+      // Get bot status from database config (parallelize reads)
       let botActivity = DEFAULT_BOT_ACTIVITY;
       try {
-        const botStatus = await getValue('bot_status');
-        const botStatusType = await getValue('bot_status_type');
+        const [botStatus, botStatusType] = await Promise.all([
+          getValue('bot_status'),
+          getValue('bot_status_type')
+        ]);
         
         if (botStatus) {
           // Handle both old format (object) and new format (string)
@@ -76,11 +78,12 @@ module.exports = {
       client.user.setActivity(botActivity.name, { type: botActivity.type });
       logger.info(`Ready! Logged in as ${client.user.tag}.`);
 
-      await rescheduleAllMuteKicks(client);
-      logger.info('Mute kicks rescheduled successfully.');
-
-      await rescheduleReminder(client);
-      logger.info('Reminders rescheduled successfully.');
+      // Parallelize independent initialization tasks
+      await Promise.all([
+        rescheduleAllMuteKicks(client),
+        rescheduleReminder(client)
+      ]);
+      logger.info('Mute kicks and reminders rescheduled successfully.');
 
       // Run cleanup on startup
       try {
@@ -101,10 +104,10 @@ module.exports = {
       }, CLEANUP_INTERVAL_MS);
       logger.info(`Scheduled periodic cleanup every ${CLEANUP_INTERVAL_MS / 1000 / 60} minutes.`);
 
-      // Initialize invite usage tracking for all guilds
+      // Initialize invite usage tracking for the guild
       try {
         await initializeInviteUsage(client);
-        logger.info('Invite usage tracking initialized for all guilds.');
+        logger.info('Invite usage tracking initialized for the guild.');
       } catch (error) {
         logger.error('Failed to initialize invite usage tracking:', { error: error.message });
       }
@@ -142,30 +145,35 @@ module.exports = {
 };
 
 /**
- * Initializes invite usage tracking for all guilds
+ * Initializes invite usage tracking for the guild
  * @param {Client} client - The Discord client instance
  * @returns {Promise<void>}
  */
 async function initializeInviteUsage(client) {
-  for (const guild of client.guilds.cache.values()) {
-    try {
-      // Check if bot has permission to view invites
-      if (!guild.members.me?.permissions.has('ManageGuild')) {
-        logger.debug(`Bot doesn't have ManageGuild permission in ${guild.name}, skipping invite usage initialization.`);
-        continue;
-      }
+  // Bot is only in one guild, so get it directly
+  const guild = client.guilds.cache.first();
+  if (!guild) {
+    logger.warn('No guild found for invite usage initialization.');
+    return;
+  }
 
-      const invites = await guild.invites.fetch().catch(() => null);
-      if (invites) {
-        const usage = {};
-        invites.each(invite => {
-          usage[invite.code] = invite.uses || 0;
-        });
-        await setInviteUsage(guild.id, usage);
-        logger.debug(`Initialized invite usage tracking for guild ${guild.name} (${guild.id}).`);
-      }
-    } catch (error) {
-      logger.warn(`Failed to initialize invite usage for guild ${guild.name}:`, { error: error.message });
+  try {
+    // Check if bot has permission to view invites
+    if (!guild.members.me?.permissions.has('ManageGuild')) {
+      logger.debug(`Bot doesn't have ManageGuild permission in ${guild.name}, skipping invite usage initialization.`);
+      return;
     }
+
+    const invites = await guild.invites.fetch().catch(() => null);
+    if (invites) {
+      const usage = {};
+      invites.each(invite => {
+        usage[invite.code] = invite.uses || 0;
+      });
+      await setInviteUsage(guild.id, usage);
+      logger.debug(`Initialized invite usage tracking for guild ${guild.name} (${guild.id}).`);
+    }
+  } catch (error) {
+    logger.warn(`Failed to initialize invite usage for guild ${guild.name}:`, { error: error.message });
   }
 }

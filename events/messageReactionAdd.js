@@ -42,12 +42,6 @@ module.exports = {
 
       logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}.`);
 
-      if (reaction.message.guild) {
-        const member = reaction.message.guild.members.cache.get(user.id);
-        if (member) {
-        }
-      }
-
       const flagEmoji = reaction.emoji.name;
       if (isValidTranslationFlag(flagEmoji)) {
         await handleTranslationRequest(reaction, user);
@@ -155,6 +149,7 @@ async function handleTranslationRequest(reaction, user) {
             userId: user.id
         });
 
+        // Cache member lookup (already checked at line 45-48, but that was removed)
         let embedColor = 0x0099ff;
         if (message.guild) {
             const member = message.guild.members.cache.get(user.id);

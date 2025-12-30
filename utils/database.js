@@ -409,20 +409,21 @@ async function cleanupOldTrackingUsers(client = null) {
         let shouldRemove = joinTime < muteCutoffTime;
         
         // If client is provided, also check if user is still in guild
+        // Bot is only in one guild, so check that guild directly
         if (!shouldRemove && client) {
-          let userInGuild = false;
-          for (const guild of client.guilds.cache.values()) {
+          const guild = client.guilds.cache.first();
+          if (guild) {
             try {
               const member = await guild.members.fetch(userId).catch(() => null);
-              if (member) {
-                userInGuild = true;
-                break;
+              if (!member) {
+                shouldRemove = true;
               }
             } catch (error) {
               // If fetch fails, assume user is not in guild
+              shouldRemove = true;
             }
-          }
-          if (!userInGuild) {
+          } else {
+            // No guild found, remove user
             shouldRemove = true;
           }
         }
