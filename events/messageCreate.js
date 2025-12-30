@@ -259,8 +259,8 @@ async function checkForBumpMessages(message) {
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
-    // Only trigger from bot messages to prevent users from faking bumps
-    if ((!message.embeds || message.embeds.length === 0) && message.author.bot) {
+    // Check independently of Disboard check to ensure it runs even if message has embeds
+    if (!message.embeds || message.embeds.length === 0) {
       // Always fetch message content to ensure we have the latest content
       // Discord.js sometimes doesn't populate content immediately for interaction/webhook messages
       try {
