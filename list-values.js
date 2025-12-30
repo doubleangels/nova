@@ -4,14 +4,16 @@
  * Usage: 
  *   node list-values.js [<key>]
  * 
- * If no key is provided, lists all values in the database.
+ * Key format: [namespace:][section:]key
+ *   - namespace: main (default), invites
+ *   - section: config, tags, invite_usage, invite_code_to_tag_map, etc.
  * 
  * Examples:
  *   node list-values.js                    # List all values (all namespaces)
- *   node list-values.js reminder_channel   # Read specific config key
- *   node list-values.js spam_mode_enabled
- *   node list-values.js bot_status
- *   node list-values.js bot_status_type
+ *   node list-values.js reminder_channel   # Read config key (main:config:reminder_channel)
+ *   node list-values.js main:config:reminder_channel  # Explicit namespace and section
+ *   node list-values.js invites:tags:disboard  # Read invite tag
+ *   node list-values.js main:invite_usage:123456789  # Read invite usage for guild
  */
 
 require('dotenv').config();
@@ -30,19 +32,81 @@ if (!fs.existsSync(dataDir)) {
 
 // Initialize Keyv with SQLite
 const sqlitePath = path.join(dataDir, 'database.sqlite');
-const keyv = new Keyv({
-  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-    table: 'keyv',
-    busyTimeout: 10000
-  }),
-  namespace: 'main'
-});
+
+/**
+ * Parse a key into namespace, section, and actual key
+ * @param {string} key - The key to parse
+ * @returns {{namespace: string, section: string|null, actualKey: string, fullKey: string}}
+ */
+function parseKey(key) {
+  const parts = key.split(':');
+  
+  // Known namespaces
+  const namespaces = ['main', 'invites'];
+  
+  // Check if first part is a namespace
+  let namespace = 'main'; // default
+  let section = null;
+  let actualKey = key;
+  
+  if (namespaces.includes(parts[0])) {
+    namespace = parts[0];
+    const remaining = parts.slice(1).join(':');
+    
+    // Check if there's a section (second part after namespace)
+    if (remaining.includes(':')) {
+      const sectionParts = remaining.split(':');
+      section = sectionParts[0] + ':';
+      actualKey = sectionParts.slice(1).join(':');
+    } else {
+      // No section, entire remaining is the key
+      actualKey = remaining;
+    }
+  } else {
+    // No namespace specified, check if it starts with a known section
+    const knownSections = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:'];
+    for (const knownSection of knownSections) {
+      if (key.startsWith(knownSection)) {
+        section = knownSection;
+        actualKey = key.substring(knownSection.length);
+        break;
+      }
+    }
+  }
+  
+  // Build full key for Keyv
+  let fullKey = actualKey;
+  if (section) {
+    fullKey = section + fullKey;
+  }
+  
+  return { namespace, section, actualKey, fullKey };
+}
+
+/**
+ * Get Keyv instance for a namespace
+ * @param {string} namespace - The namespace
+ * @returns {Keyv}
+ */
+function getKeyvForNamespace(namespace) {
+  return new Keyv({
+    store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
+      table: 'keyv',
+      busyTimeout: 10000
+    }),
+    namespace: namespace
+  });
+}
 
 /**
  * Get all keys from the SQLite database, across all namespaces
  */
 async function getAllKeys() {
   try {
+    if (!fs.existsSync(sqlitePath)) {
+      return [];
+    }
+
     // Directly query SQLite to get all keys
     const db = new Database(sqlitePath, { readonly: true });
     
@@ -57,21 +121,35 @@ async function getAllKeys() {
     return rows.map(row => {
       let parsedValue = null;
       if (row.value) {
-        const parsed = JSON.parse(row.value);
-        // Keyv stores values wrapped in {value: ..., expires: null}
-        // Extract the actual value from the wrapper
-        if (parsed && typeof parsed === 'object' && 'value' in parsed) {
-          parsedValue = parsed.value;
-        } else {
-          parsedValue = parsed;
+        try {
+          const parsed = JSON.parse(row.value);
+          // Keyv stores values wrapped in {value: ..., expires: null}
+          // Extract the actual value from the wrapper
+          if (parsed && typeof parsed === 'object' && 'value' in parsed) {
+            parsedValue = parsed.value;
+          } else {
+            parsedValue = parsed;
+          }
+        } catch (parseError) {
+          parsedValue = row.value;
         }
       }
-      const [namespace, ...rest] = row.key.split(':');
-      const actualKey = rest.join(':');
+      
+      // Parse namespace from key (format: namespace:section:key or namespace:key)
+      const parts = row.key.split(':');
+      const namespace = parts[0] || '(default)';
+      const restOfKey = parts.slice(1).join(':');
+      
+      // Extract section if present (e.g., config:, tags:, invite_usage:, etc.)
+      const sectionMatch = restOfKey.match(/^([^:]+:)/);
+      const section = sectionMatch ? sectionMatch[1] : null;
+      const actualKey = section ? restOfKey.substring(section.length) : restOfKey;
+      
       return {
-        namespace: namespace || '(default)',
+        namespace: namespace,
+        section: section,
         rawKey: row.key,
-        key: actualKey || row.key,
+        key: actualKey || restOfKey,
         value: parsedValue
       };
     });
@@ -84,19 +162,28 @@ async function getAllKeys() {
   }
 }
 
-async function readValue(key) {
+async function readValue(keyString) {
   try {
-    // Get value with config: prefix to match the database.js implementation
-    const value = await keyv.get(`config:${key}`);
+    const { namespace, section, actualKey, fullKey } = parseKey(keyString);
+    const keyv = getKeyvForNamespace(namespace);
+    
+    const value = await keyv.get(fullKey);
     
     if (value === undefined) {
-      console.log(`Key "${key}" does not exist in the database.`);
+      console.log(`Key "${keyString}" does not exist in the database.`);
+      console.log(`   Searched: namespace="${namespace}", key="${fullKey}"`);
       process.exit(0);
     }
     
     // Display the value
-    console.log(`📖 Value for "${key}":`);
-    console.log(`   ${JSON.stringify(value)}`);
+    console.log(`📖 Value for "${keyString}":`);
+    console.log(`   Namespace: ${namespace}`);
+    if (section) {
+      console.log(`   Section: ${section.substring(0, section.length - 1)}`);
+    }
+    console.log(`   Key: ${actualKey}`);
+    console.log(`   Full Key: ${namespace}:${fullKey}`);
+    console.log(`   Value: ${JSON.stringify(value)}`);
     console.log(`   Type: ${typeof value}`);
     
     // If it's an object or array, show a pretty-printed version
@@ -105,11 +192,10 @@ async function readValue(key) {
       console.log(`   ${JSON.stringify(value, null, 2).split('\n').join('\n   ')}`);
     }
     
+    await keyv.disconnect();
   } catch (error) {
     console.error(`Error reading value:`, error.message);
     process.exit(1);
-  } finally {
-    await keyv.disconnect();
   }
 }
 
@@ -121,30 +207,30 @@ async function listAllValues() {
       console.log('No values found in the database.');
       return;
     }
-    
+
     console.log(`Found ${allData.length} value(s) in the database:\n`);
     
-    // Group by namespace, then by prefix (config:, reminders:, etc.)
+    // Group by namespace, then by section
     const grouped = {};
     for (const item of allData) {
-      const colonIndex = item.key.indexOf(':');
-      const prefix = colonIndex > 0 ? item.key.substring(0, colonIndex + 1) : '(root)';
-      const actualKey = colonIndex > 0 ? item.key.substring(colonIndex + 1) : item.key;
-      
       if (!grouped[item.namespace]) {
         grouped[item.namespace] = {};
       }
-      if (!grouped[item.namespace][prefix]) {
-        grouped[item.namespace][prefix] = [];
+      const sectionKey = item.section || '(root)';
+      if (!grouped[item.namespace][sectionKey]) {
+        grouped[item.namespace][sectionKey] = [];
       }
-      grouped[item.namespace][prefix].push({ key: actualKey, value: item.value });
+      grouped[item.namespace][sectionKey].push({
+        key: item.key,
+        value: item.value
+      });
     }
     
     // Display grouped by namespace
-    for (const [namespace, prefixes] of Object.entries(grouped).sort()) {
+    for (const [namespace, sections] of Object.entries(grouped).sort()) {
       console.log(`Namespace: ${namespace}`);
-      for (const [prefix, items] of Object.entries(prefixes).sort()) {
-        const label = prefix === '(root)' ? 'Root' : prefix.substring(0, prefix.length - 1);
+      for (const [section, items] of Object.entries(sections).sort()) {
+        const label = section === '(root)' ? 'Root' : section.substring(0, section.length - 1);
         console.log(` ${label}:`);
         for (const item of items.sort((a, b) => a.key.localeCompare(b.key))) {
           const valueStr = typeof item.value === 'object' && item.value !== null
@@ -162,8 +248,6 @@ async function listAllValues() {
   } catch (error) {
     console.error(`Error listing values:`, error.message);
     process.exit(1);
-  } finally {
-    await keyv.disconnect();
   }
 }
 
