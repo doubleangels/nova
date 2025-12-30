@@ -35,15 +35,13 @@ const reddit = new snoowrap({
 });
 
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
-const { getGuildName } = require('../utils/database');
 
 /**
- * Gets the promotion title with dynamic guild name
+ * Gets the promotion title
  * @returns {Promise<string>} The promotion title
  */
 async function getPromotionTitle() {
-  const guildName = await getGuildName();
-  return `[21+]🎉 Congrats! You've found ${guildName}! ✨ A group of Frens with few restrictions... usually bantering or playing games, come join us!`;
+  return "A 21+ chaos-friendly Discord for banter, games, and late-night oversharing. Be active, match the vibe, or don't stay long.";
 }
 
 /**

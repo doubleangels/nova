@@ -4,14 +4,14 @@ const config = require('./config');
 // Create base logger with configuration
 const baseLogger = pino({
   level: config.logLevel || 'info',
-  transport: process.env.NODE_ENV !== 'production' ? {
+  transport: {
     target: 'pino-pretty',
     options: {
       colorize: true,
       translateTime: 'SYS:standard',
       ignore: 'pid,hostname'
     }
-  } : undefined,
+  },
   formatters: {
     level: (label) => {
       return { level: label.toUpperCase() };
