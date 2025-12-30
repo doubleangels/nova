@@ -21,7 +21,6 @@ Before deploying Nova, ensure you have the following:
 - Database configuration keys set using bot commands:
   - `fren_role` - Discord role ID to assign alongside custom roles
   - `perms_position_above_role` - Discord role ID that new roles should be positioned above
-  - `help_role` - Discord role ID for the help role (used by /givemod and /takemod)
 - API keys for:
   - Google (with Search Engine ID and Image Search Engine ID)
   - OMDB
@@ -93,10 +92,9 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 | `base_embed_color`         | Base embed color in hex format (e.g., CD41FF or #CD41FF) | All commands that create embeds                   |
 | `fren_role`                 | Discord role ID to assign alongside custom roles          | `/giveperms` command                              |
 | `guild_name`                | Name of the guild/server                                  | Various commands and utilities                    |
-| `help_role`                 | Discord role ID for the help role                         | `/givemod` and `/takemod` commands                |
-| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms`, `/givemod`, and `/takemod` commands |
+| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms` command                              |
 
-**Note:** All three commands (`/giveperms`, `/givemod`, and `/takemod`) use the `perms_position_above_role` database key for the position reference role.
+**Note:** The `/giveperms` command uses the `perms_position_above_role` database key for the position reference role.
 
 ### Managing Database Values
 

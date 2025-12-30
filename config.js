@@ -9,7 +9,7 @@ require('dotenv').config();
  * 
  * @example
  * // To disable commands, add their names to the disabledCommands array:
- * // disabledCommands: ['promote', 'invite', 'givemod']
+ * // disabledCommands: ['promote', 'invite']
  * // Disabled commands will not be deployed/updated to Discord on bot startup
  */
 
