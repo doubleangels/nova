@@ -260,50 +260,99 @@ async function checkForBumpMessages(message) {
       });
     }
     
-    // Check for Discadia bump (text content with "has been successfully bumped!" and no embed)
-    // Check independently of Disboard check to ensure it runs even if message has embeds
-    if (!message.embeds || message.embeds.length === 0) {
-      // Only fetch if content is missing (partial message or webhook/interaction)
-      if (!messageContent && (message.partial || message.webhookId || message.interaction)) {
-        try {
-          const fetchedMessage = await message.fetch();
-          messageContent = fetchedMessage.content;
-          logger.debug("Fetched message content for Discadia check:", {
-            label: "messageCreate.js",
-            messageId: message.id
-          });
-        } catch (fetchError) {
-          logger.debug("Could not fetch message for Discadia check:", { 
-            error: fetchError.message,
-            messageId: message.id
-          });
+    // Check for Discadia bump (text content with "has been successfully bumped!")
+    // For interaction/webhook messages, content might be in embeds or need fetching
+    // Always fetch interaction/webhook messages to ensure we have full data
+    if (message.webhookId || message.interaction) {
+      try {
+        const fetchedMessage = await message.fetch();
+        // Update messageContent and embeds from fetched message
+        messageContent = fetchedMessage.content || messageContent;
+        if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
+          message.embeds = fetchedMessage.embeds;
         }
-      }
-      
-      if (messageContent) {
-        const discadiaBumpPattern = /has been successfully bumped!/i;
-        const patternMatch = discadiaBumpPattern.test(messageContent);
-        logger.debug("Discadia pattern check:", {
-          patternMatch,
-          content: messageContent.substring(0, 100),
-          contentLength: messageContent.length
-        });
-        
-        if (patternMatch) {
-          logger.info("Discadia bump detected, scheduling reminder.");
-          await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
-          logger.debug("Bump reminder scheduled for 24 hours.");
-          return;
-        }
-      } else {
-        logger.debug("No message content available for Discadia check:", {
+        logger.debug("Fetched message for Discadia check (webhook/interaction):", {
           label: "messageCreate.js",
           messageId: message.id,
-          author: message.author?.tag,
-          hasWebhook: !!message.webhookId,
-          isInteraction: !!message.interaction
+          hasContent: !!messageContent,
+          contentLength: messageContent?.length || 0,
+          embedCount: message.embeds?.length || 0
+        });
+      } catch (fetchError) {
+        logger.debug("Could not fetch message for Discadia check:", { 
+          error: fetchError.message,
+          messageId: message.id
         });
       }
+    }
+    
+    // Check content for Discadia pattern
+    const discadiaBumpPattern = /has been successfully bumped!/i;
+    let patternMatch = false;
+    let matchedContent = null;
+    
+    // Check message content first
+    if (messageContent && messageContent.trim().length > 0) {
+      patternMatch = discadiaBumpPattern.test(messageContent);
+      if (patternMatch) {
+        matchedContent = messageContent;
+      }
+    }
+    
+    // If not found in content, check embeds (Discadia might put text in embeds)
+    if (!patternMatch && message.embeds && message.embeds.length > 0) {
+      for (const embed of message.embeds) {
+        // Check embed description
+        if (embed.description && discadiaBumpPattern.test(embed.description)) {
+          patternMatch = true;
+          matchedContent = embed.description;
+          break;
+        }
+        // Check embed title
+        if (embed.title && discadiaBumpPattern.test(embed.title)) {
+          patternMatch = true;
+          matchedContent = embed.title;
+          break;
+        }
+        // Check embed footer
+        if (embed.footer?.text && discadiaBumpPattern.test(embed.footer.text)) {
+          patternMatch = true;
+          matchedContent = embed.footer.text;
+          break;
+        }
+        // Check all embed fields
+        if (embed.fields && embed.fields.length > 0) {
+          for (const field of embed.fields) {
+            if (field.value && discadiaBumpPattern.test(field.value)) {
+              patternMatch = true;
+              matchedContent = field.value;
+              break;
+            }
+            if (field.name && discadiaBumpPattern.test(field.name)) {
+              patternMatch = true;
+              matchedContent = field.name;
+              break;
+            }
+          }
+        }
+        if (patternMatch) break;
+      }
+    }
+    
+    logger.debug("Discadia pattern check:", {
+      patternMatch,
+      hasContent: !!messageContent,
+      contentLength: messageContent?.length || 0,
+      embedCount: message.embeds?.length || 0,
+      matchedIn: patternMatch ? (matchedContent === messageContent ? 'content' : 'embed') : 'none',
+      matchedContent: patternMatch ? matchedContent?.substring(0, 100) : null
+    });
+    
+    if (patternMatch) {
+      logger.info("Discadia bump detected, scheduling reminder.");
+      await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
+      logger.debug("Bump reminder scheduled for 24 hours.");
+      return;
     }
   } catch (error) {
     logger.error("Failed to process bump message:", { error, messageId: message.id, author: message.author?.tag });
