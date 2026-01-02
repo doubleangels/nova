@@ -263,7 +263,11 @@ async function checkForBumpMessages(message) {
     // Check for Discadia bump (text content with "has been successfully bumped!")
     // For interaction/webhook messages, content might be in embeds or need fetching
     // Always fetch interaction/webhook messages to ensure we have full data
-    if (message.webhookId || message.interaction) {
+    // Also fetch if content is missing - it might be populated after fetch
+    // For Discadia bot messages, also check if author name matches
+    const isDiscadiaBot = message.author?.username === 'Discadia' || message.author?.tag?.startsWith('Discadia#');
+    
+    if (message.webhookId || message.interaction || !messageContent || messageContent.trim().length === 0 || isDiscadiaBot) {
       try {
         const fetchedMessage = await message.fetch();
         // Update messageContent and embeds from fetched message
@@ -271,12 +275,15 @@ async function checkForBumpMessages(message) {
         if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
           message.embeds = fetchedMessage.embeds;
         }
-        logger.debug("Fetched message for Discadia check (webhook/interaction):", {
+        logger.debug("Fetched message for Discadia check (webhook/interaction/missing content/discadia bot):", {
           label: "messageCreate.js",
           messageId: message.id,
           hasContent: !!messageContent,
           contentLength: messageContent?.length || 0,
-          embedCount: message.embeds?.length || 0
+          embedCount: message.embeds?.length || 0,
+          author: message.author?.tag,
+          isDiscadiaBot,
+          reason: message.webhookId ? 'webhook' : message.interaction ? 'interaction' : isDiscadiaBot ? 'discadia bot' : 'missing content'
         });
       } catch (fetchError) {
         logger.debug("Could not fetch message for Discadia check:", { 
@@ -337,6 +344,18 @@ async function checkForBumpMessages(message) {
         }
         if (patternMatch) break;
       }
+    }
+    
+    // Additional check: If message is from Discadia bot and is an interaction response,
+    // check if we can infer it's a bump (some interaction responses don't have content)
+    // Note: This is a fallback - we still prefer pattern matching when possible
+    if (!patternMatch && isDiscadiaBot && message.interaction) {
+      logger.debug("Discadia bot interaction detected but pattern not found - may need different detection method:", {
+        messageId: message.id,
+        interactionType: message.interaction.type,
+        hasContent: !!messageContent,
+        embedCount: message.embeds?.length || 0
+      });
     }
     
     logger.debug("Discadia pattern check:", {
