@@ -413,8 +413,7 @@ module.exports = {
                 .addFields(
                   { name: 'Member', value: `${member.user}`, inline: true },
                   { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
-                  { name: 'Invite Code', value: usedInviteCode, inline: true },
-                  { name: 'Note', value: 'Invite may have been deleted or bot lacks permissions to view it.', inline: false }
+                  { name: 'Invite Code', value: usedInviteCode, inline: true }
                 )
                 .setThumbnail(member.user.displayAvatarURL())
                 .setTimestamp();
@@ -442,8 +441,7 @@ module.exports = {
             .setDescription(`${member.user} joined the server, but the invite source could not be determined.`)
             .addFields(
               { name: 'Member', value: `${member.user}`, inline: true },
-              { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
-              { name: 'Note', value: 'Invite tracking may have failed due to bot restart or missing permissions.', inline: false }
+              { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true }
             )
             .setThumbnail(member.user.displayAvatarURL())
             .setTimestamp();
