@@ -261,117 +261,48 @@ async function checkForBumpMessages(message) {
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!")
-    // For interaction/webhook messages, content might be in embeds or need fetching
-    // Always fetch interaction/webhook messages to ensure we have full data
-    // Also fetch if content is missing - it might be populated after fetch
-    // For Discadia bot messages, also check if author name matches
-    const isDiscadiaBot = message.author?.username === 'Discadia' || message.author?.tag?.startsWith('Discadia#');
-    
-    if (message.webhookId || message.interaction || !messageContent || messageContent.trim().length === 0 || isDiscadiaBot) {
-      try {
-        const fetchedMessage = await message.fetch();
-        // Update messageContent and embeds from fetched message
-        messageContent = fetchedMessage.content || messageContent;
-        if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
-          message.embeds = fetchedMessage.embeds;
-        }
-        logger.debug("Fetched message for Discadia check (webhook/interaction/missing content/discadia bot):", {
-          label: "messageCreate.js",
-          messageId: message.id,
-          hasContent: !!messageContent,
-          contentLength: messageContent?.length || 0,
-          embedCount: message.embeds?.length || 0,
-          author: message.author?.tag,
-          isDiscadiaBot,
-          reason: message.webhookId ? 'webhook' : message.interaction ? 'interaction' : isDiscadiaBot ? 'discadia bot' : 'missing content'
-        });
-      } catch (fetchError) {
-        logger.debug("Could not fetch message for Discadia check:", { 
-          error: fetchError.message,
-          messageId: message.id
-        });
-      }
-    }
-    
-    // Check content for Discadia pattern
-    const discadiaBumpPattern = /has been successfully bumped!/i;
-    let patternMatch = false;
-    let matchedContent = null;
-    
-    // Check message content first
-    if (messageContent && messageContent.trim().length > 0) {
-      patternMatch = discadiaBumpPattern.test(messageContent);
-      if (patternMatch) {
-        matchedContent = messageContent;
-      }
-    }
-    
-    // If not found in content, check embeds (Discadia might put text in embeds)
-    if (!patternMatch && message.embeds && message.embeds.length > 0) {
-      for (const embed of message.embeds) {
-        // Check embed description
-        if (embed.description && discadiaBumpPattern.test(embed.description)) {
-          patternMatch = true;
-          matchedContent = embed.description;
-          break;
-        }
-        // Check embed title
-        if (embed.title && discadiaBumpPattern.test(embed.title)) {
-          patternMatch = true;
-          matchedContent = embed.title;
-          break;
-        }
-        // Check embed footer
-        if (embed.footer?.text && discadiaBumpPattern.test(embed.footer.text)) {
-          patternMatch = true;
-          matchedContent = embed.footer.text;
-          break;
-        }
-        // Check all embed fields
-        if (embed.fields && embed.fields.length > 0) {
-          for (const field of embed.fields) {
-            if (field.value && discadiaBumpPattern.test(field.value)) {
-              patternMatch = true;
-              matchedContent = field.value;
-              break;
-            }
-            if (field.name && discadiaBumpPattern.test(field.name)) {
-              patternMatch = true;
-              matchedContent = field.name;
-              break;
-            }
+    // Similar structure to Disboard but checks content instead of embeds
+    // For webhook/interaction messages, content might need fetching
+    if (message.webhookId || message.interaction || (messageContent && messageContent.trim().length > 0)) {
+      // Only fetch if content might be incomplete (partial message, webhook, or interaction)
+      let contentToCheck = messageContent;
+      if (message.partial || message.webhookId || message.interaction || !messageContent || messageContent.trim().length === 0) {
+        try {
+          const fetchedMessage = await message.fetch();
+          if (fetchedMessage.content) {
+            contentToCheck = fetchedMessage.content;
+            messageContent = fetchedMessage.content;
+            logger.debug("Fetched message content for Discadia check:", {
+              label: "messageCreate.js",
+              messageId: message.id,
+              contentLength: contentToCheck.length
+            });
           }
+        } catch (fetchError) {
+          logger.debug("Could not fetch message for Discadia check:", {
+            label: "messageCreate.js",
+            error: fetchError.message,
+            messageId: message.id
+          });
         }
-        if (patternMatch) break;
       }
-    }
-    
-    // Additional check: If message is from Discadia bot and is an interaction response,
-    // check if we can infer it's a bump (some interaction responses don't have content)
-    // Note: This is a fallback - we still prefer pattern matching when possible
-    if (!patternMatch && isDiscadiaBot && message.interaction) {
-      logger.debug("Discadia bot interaction detected but pattern not found - may need different detection method:", {
+      
+      // Check content for Discadia pattern
+      const discadiaBumpPattern = /has been successfully bumped!/i;
+      if (contentToCheck && contentToCheck.trim().length > 0 && discadiaBumpPattern.test(contentToCheck)) {
+        logger.info("Discadia bump detected, scheduling reminder.");
+        await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
+        logger.debug("Bump reminder scheduled for 24 hours.");
+        return;
+      }
+    } else {
+      logger.debug("No message content available for Discadia check:", {
+        label: "messageCreate.js",
         messageId: message.id,
-        interactionType: message.interaction.type,
-        hasContent: !!messageContent,
-        embedCount: message.embeds?.length || 0
+        author: message.author?.tag,
+        hasWebhook: !!message.webhookId,
+        isInteraction: !!message.interaction
       });
-    }
-    
-    logger.debug("Discadia pattern check:", {
-      patternMatch,
-      hasContent: !!messageContent,
-      contentLength: messageContent?.length || 0,
-      embedCount: message.embeds?.length || 0,
-      matchedIn: patternMatch ? (matchedContent === messageContent ? 'content' : 'embed') : 'none',
-      matchedContent: patternMatch ? matchedContent?.substring(0, 100) : null
-    });
-    
-    if (patternMatch) {
-      logger.info("Discadia bump detected, scheduling reminder.");
-      await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
-      logger.debug("Bump reminder scheduled for 24 hours.");
-      return;
     }
   } catch (error) {
     logger.error("Failed to process bump message:", { error, messageId: message.id, author: message.author?.tag });
