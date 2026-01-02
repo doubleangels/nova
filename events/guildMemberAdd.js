@@ -327,6 +327,29 @@ module.exports = {
           
           // Try to get invite object (check both normalized and original code)
           let usedInvite = inviteObjects.get(usedInviteCode) || inviteObjects.get(usedInviteCode.toLowerCase());
+          
+          // If not in map, try to find it in the currentInvites collection
+          if (!usedInvite && currentInvites) {
+            usedInvite = currentInvites.find(inv => inv.code === usedInviteCode || inv.code.toLowerCase() === usedInviteCode.toLowerCase());
+            if (usedInvite) {
+              logger.debug(`Found invite ${usedInviteCode} in currentInvites collection`);
+            }
+          }
+          
+          // If still not found, try to fetch it directly from Discord
+          if (!usedInvite) {
+            try {
+              logger.debug(`Invite ${usedInviteCode} not in cache, attempting to fetch from Discord`);
+              usedInvite = await member.guild.invites.fetch(usedInviteCode);
+              if (usedInvite) {
+                logger.debug(`Successfully fetched invite ${usedInviteCode} from Discord`);
+              }
+            } catch (fetchError) {
+              logger.debug(`Could not fetch invite ${usedInviteCode} from Discord:`, { error: fetchError.message });
+            }
+          }
+          
+          // Send notification if we have invite info, or send fallback if we don't
           if (usedInvite) {
             try {
               let creatorMention = 'Unknown';
@@ -380,7 +403,33 @@ module.exports = {
               });
             }
           } else {
-            logger.warn(`Invite object not found for code ${usedInviteCode}`);
+            logger.warn(`Invite object not found for code ${usedInviteCode}, sending fallback notification`);
+            // Send fallback notification when invite can't be found
+            try {
+              const embed = new EmbedBuilder()
+                .setColor(config.baseEmbedColor)
+                .setTitle('👤 New Member Joined')
+                .setDescription(`${member.user} joined the server using invite code \`${usedInviteCode}\`, but invite details could not be retrieved.`)
+                .addFields(
+                  { name: 'Member', value: `${member.user}`, inline: true },
+                  { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
+                  { name: 'Invite Code', value: usedInviteCode, inline: true },
+                  { name: 'Note', value: 'Invite may have been deleted or bot lacks permissions to view it.', inline: false }
+                )
+                .setThumbnail(member.user.displayAvatarURL())
+                .setTimestamp();
+
+              const sentMessage = await notificationChannel.send({ embeds: [embed] });
+              logger.info(`✅ Sent fallback invite notification for member ${member.user.tag} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+            } catch (sendError) {
+              logger.error(`Failed to send fallback notification:`, { 
+                error: sendError.message,
+                stack: sendError.stack,
+                channelId: notificationChannel.id,
+                channelName: notificationChannel.name,
+                guildId: member.guild.id
+              });
+            }
           }
         }
       } else {
