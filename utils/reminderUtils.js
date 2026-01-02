@@ -384,7 +384,7 @@ async function rescheduleReminder(client) {
       if (reminder && reminder.remind_at) {
         const remindAt = dayjs(reminder.remind_at);
         
-        if (!remindAt.isValid() || remindAt.isSameOrBefore(now)) {
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
           // Expired reminder, mark for cleanup
           bumpIdsToRemove.push(id);
           expiredBumpCount++;
@@ -419,7 +419,7 @@ async function rescheduleReminder(client) {
       if (reminder && reminder.remind_at) {
         const remindAt = dayjs(reminder.remind_at);
         
-        if (!remindAt.isValid() || remindAt.isSameOrBefore(now)) {
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
           // Expired reminder, mark for cleanup
           discadiaIdsToRemove.push(id);
           expiredDiscadiaCount++;
@@ -454,7 +454,7 @@ async function rescheduleReminder(client) {
       if (reminder && reminder.remind_at) {
         const remindAt = dayjs(reminder.remind_at);
         
-        if (!remindAt.isValid() || remindAt.isSameOrBefore(now)) {
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
           // Expired reminder, mark for cleanup
           promoteIdsToRemove.push(id);
           expiredPromoteCount++;
