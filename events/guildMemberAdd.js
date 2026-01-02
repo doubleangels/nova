@@ -300,7 +300,7 @@ module.exports = {
               logger.debug(`Attempting to send notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
               
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`✅ Sent invite notification for member ${member.user.tag} using tagged invite "${inviteTag.name}" (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info(`Sent invite notification for member ${member.user.tag} using tagged invite "${inviteTag.name}" (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
               return; // Successfully sent notification, exit early
             } catch (sendError) {
               logger.error(`Failed to send notification to channel:`, { 
@@ -392,7 +392,7 @@ module.exports = {
               logger.debug(`Attempting to send notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
               
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`✅ Sent invite notification for member ${member.user.tag} using untagged invite (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info(`Sent invite notification for member ${member.user.tag} using untagged invite (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
             } catch (sendError) {
               logger.error(`Failed to send notification for untagged invite:`, { 
                 error: sendError.message,
@@ -420,7 +420,7 @@ module.exports = {
                 .setTimestamp();
 
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`✅ Sent fallback invite notification for member ${member.user.tag} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info(`Sent fallback invite notification for member ${member.user.tag} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
             } catch (sendError) {
               logger.error(`Failed to send fallback notification:`, { 
                 error: sendError.message,
@@ -451,7 +451,7 @@ module.exports = {
           logger.debug(`Attempting to send fallback notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
           
           const sentMessage = await notificationChannel.send({ embeds: [embed] });
-          logger.info(`✅ Sent fallback invite notification for member ${member.user.tag}. Message ID: ${sentMessage.id}`);
+          logger.info(`Sent fallback invite notification for member ${member.user.tag}. Message ID: ${sentMessage.id}`);
         } catch (sendError) {
           logger.error(`Failed to send fallback notification:`, { 
             error: sendError.message,
