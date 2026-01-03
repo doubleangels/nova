@@ -1,5 +1,5 @@
-# Security-hardened Dockerfile for Nova Bot
-# This is an enhanced version with additional security measures
+# Dockerfile for Nova Bot
+# Multi-stage build for optimized image size and security
 
 # Use specific Node.js version for reproducibility
 FROM node:24.1.0-alpine AS base
