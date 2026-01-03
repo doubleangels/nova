@@ -139,7 +139,7 @@ jobs:
 
       - name: Automerge Dependabot PR
         if: steps.check-mergeable.outputs.mergeable == 'true'
-        uses: peter-evans/enable-pull-request-automerge@v4
+        uses: peter-evans/enable-pull-request-automerge@v3
         continue-on-error: true
         id: automerge
         with:
