@@ -67,8 +67,9 @@ services:
     # Read-only root filesystem
     read_only: true
     # Temporary filesystem for SQLite (needed for database operations)
+    # This provides a writable /tmp directory for SQLite temporary files
     tmpfs:
-      - /tmp:rw,noexec,nosuid,size=100m
+      - /tmp
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
 

@@ -103,29 +103,63 @@ function getKeyvForNamespace(namespace) {
  */
 async function getAllKeys() {
   try {
+    // Diagnostic information
+    console.error(`Checking database at: ${sqlitePath}`);
+    console.error(`Data directory: ${dataDir}`);
+    console.error(`Data directory exists: ${fs.existsSync(dataDir)}`);
+    
+    if (!fs.existsSync(dataDir)) {
+      console.error(`Data directory does not exist: ${dataDir}`);
+      return [];
+    }
+    
+    // Check if data directory is writable (SQLite needs this for WAL files)
+    try {
+      fs.accessSync(dataDir, fs.constants.W_OK);
+      console.error(`Data directory is writable`);
+    } catch (wError) {
+      console.error(`Data directory is NOT writable: ${wError.message}`);
+      console.error(`This will cause SQLITE_CANTOPEN errors - SQLite needs to create WAL/journal files`);
+    }
+    
     if (!fs.existsSync(sqlitePath)) {
       console.error(`Database file not found: ${sqlitePath}`);
       return [];
     }
+    
+    // Check file permissions
+    try {
+      fs.accessSync(sqlitePath, fs.constants.R_OK);
+      const stats = fs.statSync(sqlitePath);
+      console.error(`Database file exists and is readable`);
+      console.error(`File size: ${stats.size} bytes, mode: ${stats.mode.toString(8)}, uid: ${stats.uid}, gid: ${stats.gid}`);
+    } catch (rError) {
+      console.error(`Database file exists but is NOT readable: ${rError.message}`);
+      return [];
+    }
 
     // Directly query SQLite to get all keys
-    // Use readonly mode and set temp directory to /tmp if available (for Docker read-only filesystem)
-    const options = { readonly: true };
+    // Use readonly mode and configure SQLite to use /tmp for temporary files
+    // This is needed for Docker read-only filesystem
+    const options = { 
+      readonly: true
+    };
     
-    // Try to set temp directory to /tmp if it exists and is writable (for Docker read-only root)
-    try {
-      if (fs.existsSync('/tmp') && fs.accessSync) {
-        try {
-          fs.accessSync('/tmp', fs.constants.W_OK);
-          // SQLite will use /tmp for temporary files if needed
-        } catch (tmpError) {
-          // /tmp might not be writable, that's OK
-        }
+    // Set SQLite temp directory environment variable if /tmp exists
+    if (fs.existsSync('/tmp')) {
+      try {
+        fs.accessSync('/tmp', fs.constants.W_OK);
+        // Set environment variable for SQLite to use /tmp
+        process.env.SQLITE_TMPDIR = '/tmp';
+        console.error(`Using /tmp for SQLite temporary files`);
+      } catch (tmpError) {
+        console.error(`Warning: /tmp is not writable: ${tmpError.message}`);
       }
-    } catch (tmpCheckError) {
-      // Ignore temp directory check errors
+    } else {
+      console.error(`Warning: /tmp does not exist - SQLite may fail with read-only root filesystem`);
     }
     
+    console.error(`Attempting to open database...`);
     const db = new Database(sqlitePath, options);
     
     // Check if table exists
