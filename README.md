@@ -36,8 +36,21 @@ services:
     image: ghcr.io/doubleangels/nova:latest
     container_name: nova
     restart: always
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
     environment:
+      - BOT_STATUS=your_bot_status_here
+      - BOT_STATUS_TYPE=watching
       - DISCORD_BOT_TOKEN=your_discord_bot_token_here
+      - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
+      - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
       - GOOGLE_API_KEY=your_google_api_key_here
       - IMAGE_SEARCH_ENGINE_ID=your_image_search_engine_id_here
       - LOG_LEVEL=your_desired_log_level_here
@@ -51,28 +64,10 @@ services:
       - SEARCH_ENGINE_ID=your_search_engine_id_here
       - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
-      - BOT_STATUS=your_bot_status_here
-      - BOT_STATUS_TYPE=watching
-      - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
-      - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
-    # Security options
-    security_opt:
-      - no-new-privileges:true
-    # Drop all capabilities, only add what's needed
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-      - SETUID
-    # Read-only root filesystem
-    read_only: true
-    # Temporary filesystem for SQLite (needed for database operations)
-    # This provides a writable /tmp directory for SQLite temporary files
-    tmpfs:
-      - /tmp
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
+    tmpfs:
+      - /tmp
 
 networks:
   default:
