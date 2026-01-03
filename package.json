@@ -4,10 +4,7 @@
   "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
   "scripts": {
-    "update": "npm outdated && npm update --save",
-    "set-value": "node set-value.js",
-    "delete-value": "node delete-value.js",
-    "list-values": "node list-values.js"
+    "update": "npm outdated && npm update --save"
   },
   "repository": {
     "type": "git",

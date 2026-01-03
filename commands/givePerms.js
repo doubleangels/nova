@@ -1,8 +1,8 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
-const { getValue } = require('../utils/database');
 
 /**
  * @typedef {Object} ValidationResult
@@ -184,35 +184,33 @@ module.exports = {
      * @returns {Promise<RoleCreationResult>} Object containing role creation result
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
-        // Parallelize database calls
-        const [positionAboveRoleIdRaw, frenRoleIdRaw] = await Promise.all([
-            getValue('perms_position_above_role'),
-            getValue('fren_role')
-        ]);
+        // Get role IDs from environment variables
+        const positionAboveRoleIdRaw = config.givePermsPositionAboveRoleId;
+        const frenRoleIdRaw = config.givePermsFrenRoleId;
         
         // Check if position above role ID is valid (not null, not undefined, not empty string)
         if (!positionAboveRoleIdRaw || (typeof positionAboveRoleIdRaw === 'string' && positionAboveRoleIdRaw.trim().length === 0)) {
-            logger.error("Position above role not configured in database:", { 
-                key: 'perms_position_above_role',
+            logger.error("Position above role not configured:", { 
+                envVar: 'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
                 value: positionAboveRoleIdRaw,
                 type: typeof positionAboveRoleIdRaw
             });
             return {
                 success: false,
-                message: "⚠️ The position reference role is not configured. Please set 'perms_position_above_role' in the database with a valid role ID."
+                message: "⚠️ The position reference role is not configured. Please set `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` environment variable with a valid role ID."
             };
         }
         
         // Check if fren role ID is valid (not null, not undefined, not empty string)
         if (!frenRoleIdRaw || (typeof frenRoleIdRaw === 'string' && frenRoleIdRaw.trim().length === 0)) {
-            logger.error("Fren role not configured in database:", { 
-                key: 'fren_role',
+            logger.error("Fren role not configured:", { 
+                envVar: 'GIVE_PERMS_FREN_ROLE_ID',
                 value: frenRoleIdRaw,
                 type: typeof frenRoleIdRaw
             });
             return {
                 success: false,
-                message: "⚠️ The fren role is not configured. Please set 'fren_role' in the database with a valid role ID."
+                message: "⚠️ The fren role is not configured. Please set `GIVE_PERMS_FREN_ROLE_ID` environment variable with a valid role ID."
             };
         }
         

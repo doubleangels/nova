@@ -1,9 +1,10 @@
 const { ActivityType, Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
-const { initializeDatabase, getValue, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
+const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 
 const DEFAULT_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
@@ -30,48 +31,33 @@ module.exports = {
       await initializeDatabase();
       logger.info('Database connection initialized successfully.');
 
-      // Get bot status from database config (parallelize reads)
+      // Get bot status from environment variables
       let botActivity = DEFAULT_BOT_ACTIVITY;
-      try {
-        const [botStatus, botStatusType] = await Promise.all([
-          getValue('bot_status'),
-          getValue('bot_status_type')
-        ]);
+      const botStatus = config.botStatus;
+      const botStatusType = config.botStatusType || 'watching';
+      
+      if (botStatus) {
+        const statusName = String(botStatus);
         
-        if (botStatus) {
-          // Handle both old format (object) and new format (string)
-          let statusName = botStatus;
-          if (typeof botStatus === 'object' && botStatus !== null) {
-            // Old format: extract name from object
-            statusName = botStatus.name || String(botStatus);
-            logger.warn('bot_status is stored as an object. Please update it to a string using: node set-value.js bot_status "your status text"');
-          } else {
-            // New format: use as string
-            statusName = String(botStatus);
-          }
-          
-          // Map activity type string to ActivityType enum (case-insensitive)
-          const activityTypeMap = {
-            'playing': ActivityType.Playing,
-            'streaming': ActivityType.Streaming,
-            'listening': ActivityType.Listening,
-            'watching': ActivityType.Watching,
-            'competing': ActivityType.Competing,
-            'custom': ActivityType.Custom
-          };
-          
-          const typeKey = (botStatusType || 'watching').toLowerCase().trim();
-          const activityType = activityTypeMap[typeKey] || ActivityType.Watching;
-          botActivity = {
-            name: statusName,
-            type: activityType
-          };
-          logger.info(`Loaded bot status from database: name="${statusName}", type="${botStatusType || 'watching'}"`);
-        } else {
-          logger.info('No bot_status config found in database, using default.');
-        }
-      } catch (error) {
-        logger.warn('Failed to load bot status from database, using default:', { error: error.message });
+        // Map activity type string to ActivityType enum (case-insensitive)
+        const activityTypeMap = {
+          'playing': ActivityType.Playing,
+          'streaming': ActivityType.Streaming,
+          'listening': ActivityType.Listening,
+          'watching': ActivityType.Watching,
+          'competing': ActivityType.Competing,
+          'custom': ActivityType.Custom
+        };
+        
+        const typeKey = botStatusType.toLowerCase().trim();
+        const activityType = activityTypeMap[typeKey] || ActivityType.Watching;
+        botActivity = {
+          name: statusName,
+          type: activityType
+        };
+        logger.info(`Loaded bot status from environment: name="${statusName}", type="${botStatusType}"`);
+      } else {
+        logger.info('No BOT_STATUS environment variable set, using default.');
       }
 
       logger.debug(`Setting bot activity:`, JSON.stringify(botActivity));

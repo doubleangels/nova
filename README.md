@@ -54,6 +54,10 @@ services:
       - SEARCH_ENGINE_ID=your_search_engine_id_here
       - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+      - BOT_STATUS=your_bot_status_here
+      - BOT_STATUS_TYPE=watching
+      - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
+      - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
     # Security options
     security_opt:
       - no-new-privileges:true
@@ -82,121 +86,38 @@ networks:
 
 Here is a table of all available environment variables:
 
-| Variable                 | Description                                       | Required | Default | Example                          |
-| ------------------------ | ------------------------------------------------- | :------: | :-----: | -------------------------------- |
-| `BASE_EMBED_COLOR`       | Base embed color in hex format (e.g., CD41FF or #CD41FF) |    ❌    | Discord default | `CD41FF`, `#CD41FF`, `0xCD41FF` |
-| `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot         |    ✅    |    -    | -                                |
-| `GOOGLE_API_KEY`         | API key for Google services                       |    ✅    |    -    | -                                |
-| `GUILD_NAME`             | Name of the guild/server                           |    ❌    | `Da Frens` | `My Server`                      |
-| `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches |    ✅    |    -    | -                                |
-| `LOG_LEVEL`              | Determines the verbosity of logs                  |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
-| `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                     |    ✅    |    -    | -                                |
-| `OMDB_API_KEY`           | API key for Open Movie Database                   |    ✅    |    -    | -                                |
-| `PIRATEWEATHER_API_KEY`  | API key for PirateWeather forecast service        |    ✅    |    -    | -                                |
-| `REDDIT_CLIENT_ID`       | Client ID for Reddit API                          |    ✅    |    -    | -                                |
-| `REDDIT_CLIENT_SECRET`   | Client Secret for Reddit API                      |    ✅    |    -    | -                                |
-| `REDDIT_PASSWORD`        | Reddit password for API authentication            |    ✅    |    -    | -                                |
-| `REDDIT_USERNAME`        | Reddit username for API authentication            |    ✅    |    -    | -                                |
-| `SEARCH_ENGINE_ID`       | Google Custom Search Engine ID for web searches   |    ✅    |    -    | -                                |
-| `SPOTIFY_CLIENT_ID`      | Client ID for Spotify API                         |    ✅    |    -    | -                                |
-| `SPOTIFY_CLIENT_SECRET`  | Client Secret for Spotify API                     |    ✅    |    -    | -                                |
+| Variable                            | Description                                               | Required |        Default         | Example                                                      |
+| ----------------------------------- | --------------------------------------------------------- | :------: | :--------------------: | ------------------------------------------------------------ |
+| `BASE_EMBED_COLOR`                  | Base embed color in hex format (e.g., CD41FF or #CD41FF)  |    ❌    |    Discord default     | `CD41FF`, `#CD41FF`, `0xCD41FF`                              |
+| `BOT_STATUS`                        | Bot activity status text                                  |    ❌    | `for ways to help! ❤️` | `Playing games`                                              |
+| `BOT_STATUS_TYPE`                   | Bot activity type                                         |    ❌    |       `watching`       | `playing`, `watching`, `listening`, `streaming`, `competing` |
+| `DISCORD_BOT_TOKEN`                 | Authentication token for your Discord bot                 |    ✅    |           -            | -                                                            |
+| `GOOGLE_API_KEY`                    | API key for Google services                               |    ✅    |           -            | -                                                            |
+| `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ❌    |           -            | `123456789012345678`                                         |
+| `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ❌    |           -            | `123456789012345678`                                         |
+| `GUILD_NAME`                        | Name of the guild/server                                  |    ❌    |       `Da Frens`       | `My Server`                                                  |
+| `IMAGE_SEARCH_ENGINE_ID`            | Google Custom Search Engine ID for image searches         |    ✅    |           -            | -                                                            |
+| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    |         `info`         | `error`, `warn`, `info`, `debug`                             |
+| `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |           -            | -                                                            |
+| `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |           -            | -                                                            |
+| `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |           -            | -                                                            |
+| `REDDIT_CLIENT_ID`                  | Client ID for Reddit API                                  |    ✅    |           -            | -                                                            |
+| `REDDIT_CLIENT_SECRET`              | Client Secret for Reddit API                              |    ✅    |           -            | -                                                            |
+| `REDDIT_PASSWORD`                   | Reddit password for API authentication                    |    ✅    |           -            | -                                                            |
+| `REDDIT_USERNAME`                   | Reddit username for API authentication                    |    ✅    |           -            | -                                                            |
+| `SEARCH_ENGINE_ID`                  | Google Custom Search Engine ID for web searches           |    ✅    |           -            | -                                                            |
+| `SPOTIFY_CLIENT_ID`                 | Client ID for Spotify API                                 |    ✅    |           -            | -                                                            |
+| `SPOTIFY_CLIENT_SECRET`             | Client Secret for Spotify API                             |    ✅    |           -            | -                                                            |
 
 ## Database Configuration
 
-Nova uses Keyv (a key-value storage system) to store configuration values. The following keys can be set using bot commands or directly via the database API:
+Nova uses Keyv (a key-value storage system) to store configuration values. Database values are managed through Discord bot commands. The following keys are used by the bot:
 
-| Database Key                | Description                                               | Used By                         |
-| --------------------------- | --------------------------------------------------------- | ------------------------------- |
-| `fren_role`                 | Discord role ID to assign alongside custom roles          | `/giveperms` command            |
-| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms` command            |
+| Database Key                 | Description                              | Used By                       |
+| ---------------------------- | ---------------------------------------- | ----------------------------- |
+| `reminder_channel`           | Channel ID for reminder notifications    | `/reminder setup` command     |
+| `reminder_role`              | Role ID to ping for reminders            | `/reminder setup` command     |
+| `server_invite_url`          | Server invite URL for kick messages      | Mute/Troll mode kick messages |
+| Various invite tracking keys | Invite tags, usage counts, code mappings | `/invite` commands            |
 
-**Note:** The `/giveperms` command uses the `perms_position_above_role` database key for the position reference role.
-
-### Managing Database Values
-
-You can manage database values directly using the provided scripts. When running in Docker, use `docker exec` to run these scripts inside the container:
-
-**Key Format:** `[namespace:][section:]key`
-
-- **namespace**: `main` (default), `invites`
-- **section**: `config`, `tags`, `invite_usage`, `invite_code_to_tag_map`, etc.
-
-#### Reading/Listing Values
-
-```bash
-docker exec nova node list-values.js [<key>]
-```
-
-If no key is provided, lists all values in the database across all namespaces. If a key is provided, reads that specific value.
-
-**Examples:**
-
-```bash
-# List all values in the database
-docker exec nova node list-values.js
-
-# Read a config value (defaults to main:config:)
-docker exec nova node list-values.js reminder_channel
-docker exec nova node list-values.js bot_status
-docker exec nova node list-values.js spam_mode_enabled
-
-# Explicit namespace and section
-docker exec nova node list-values.js main:config:reminder_channel
-
-# Read invite tag from invites namespace
-docker exec nova node list-values.js invites:tags:disboard
-
-# Read invite usage for a guild
-docker exec nova node list-values.js main:invite_usage:123456789
-```
-
-#### Setting Values
-
-```bash
-docker exec nova node set-value.js <key> <value>
-```
-
-**Examples:**
-
-```bash
-# Set config values (defaults to main:config:)
-docker exec nova node set-value.js reminder_channel "123456789012345678"
-docker exec nova node set-value.js bot_status "Playing games"
-docker exec nova node set-value.js bot_status_type "playing"
-docker exec nova node set-value.js spam_mode_enabled true
-docker exec nova node set-value.js mute_mode_kick_time_hours 4
-
-# Explicit namespace and section
-docker exec nova node set-value.js main:config:reminder_channel "123456789012345678"
-
-# Set invite tag in invites namespace
-docker exec nova node set-value.js invites:tags:disboard '{"code":"abc123","name":"Disboard"}'
-
-# Set invite usage for a guild
-docker exec nova node set-value.js main:invite_usage:123456789 '{"abc123":5}'
-```
-
-#### Deleting Values
-
-```bash
-docker exec nova node delete-value.js <key>
-```
-
-**Examples:**
-
-```bash
-# Delete config values (defaults to main:config:)
-docker exec nova node delete-value.js reminder_channel
-docker exec nova node delete-value.js spam_mode_enabled
-
-# Explicit namespace and section
-docker exec nova node delete-value.js main:config:reminder_channel
-
-# Delete invite tag from invites namespace
-docker exec nova node delete-value.js invites:tags:disboard
-
-# Delete invite usage for a guild
-docker exec nova node delete-value.js main:invite_usage:123456789
-```
-
-**Note:** The database file is stored in `./data/database.sqlite` on the host (mounted as a volume), so changes persist across container restarts.
+**Note:** The database file is stored in `./data/database.sqlite` on the host (mounted as a volume), so changes persist across container restarts. All database values are managed through Discord bot commands - there are no command-line scripts for database management.

@@ -19,6 +19,8 @@ require('dotenv').config();
  * @property {number} baseEmbedColor - Base embed color (hex number, from BASE_EMBED_COLOR env var)
  * @property {string} clientId - Discord application client ID
  * @property {string} exchangeRateApiKey - exchangerate.host API key for currency conversion
+ * @property {string} botStatus - Bot activity status text (from BOT_STATUS env var)
+ * @property {string} botStatusType - Bot activity type (from BOT_STATUS_TYPE env var)
  * @property {string} givePermsFrenRoleId - Role ID for Fren role
  * @property {string} givePermsPositionAboveRoleId - Role ID for permission management
  * @property {string} googleApiKey - Google API key for search functionality
@@ -56,6 +58,8 @@ module.exports = {
     const parsed = parseInt(cleanColor, 16);
     return isNaN(parsed) ? null : parsed;
   })(),
+  botStatus: process.env.BOT_STATUS,
+  botStatusType: process.env.BOT_STATUS_TYPE || 'watching',
   clientId: "1280311987154456657",
   exchangeRateApiKey: process.env.EXCHANGERATE_API_KEY,
   givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
