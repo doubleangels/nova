@@ -6,7 +6,6 @@ const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
 const { getValue, setValue } = require('../utils/database');
 const { getLatestReminderData } = require('../utils/reminderUtils');
-const config = require('../config');
 
 /**
  * Command module for configuring and managing reminders.
@@ -186,7 +185,7 @@ module.exports = {
       const configComplete = channelId && roleId;
       
       const embed = new EmbedBuilder()
-        .setColor(config.baseEmbedColor)
+        .setColor(0xc03728)
         .setTitle('⏰ Server Reminders Status')
         .addFields(
           { name: '📢 Channel', value: channelStr },
