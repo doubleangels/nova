@@ -140,7 +140,7 @@ async function initializeDatabase() {
         try {
           if (fs.existsSync(sqlitePath)) {
             fs.chmodSync(sqlitePath, 0o600);
-            logger.debug(`Set database file permissions to 600`);
+            logger.debug(`Set database file permissions to 600.`);
           }
         } catch (chmodError) {
           // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
