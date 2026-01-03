@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const snoowrap = require('snoowrap');
+const axios = require('axios');
 const config = require('../config');
 const dayjs = require('dayjs');
 const { handleReminder, getLatestReminderData } = require('../utils/reminderUtils');
@@ -26,15 +26,111 @@ const reminderKeyv = new Keyv({
   namespace: 'nova_reminders'
 });
 
-const reddit = new snoowrap({
-  userAgent: 'Discord Bot Server Promoter',
-  clientId: config.redditClientId,
-  clientSecret: config.redditClientSecret,
-  username: config.redditUsername,
-  password: config.redditPassword
-});
-
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+const REDDIT_API_BASE = 'https://oauth.reddit.com';
+const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
+
+// Cache for OAuth token
+let accessToken = null;
+let tokenExpiry = null;
+
+/**
+ * Gets an OAuth access token from Reddit
+ * Uses username/password authentication (script type)
+ * @returns {Promise<string>} The access token
+ */
+async function getRedditAccessToken() {
+  // Return cached token if still valid (with 5 minute buffer)
+  if (accessToken && tokenExpiry && Date.now() < tokenExpiry - 300000) {
+    return accessToken;
+  }
+
+  try {
+    const auth = Buffer.from(`${config.redditClientId}:${config.redditClientSecret}`).toString('base64');
+    
+    const response = await axios.post(
+      `${REDDIT_OAUTH_BASE}/access_token`,
+      new URLSearchParams({
+        grant_type: 'password',
+        username: config.redditUsername,
+        password: config.redditPassword
+      }),
+      {
+        headers: {
+          'Authorization': `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Discord Bot Server Promoter (Node.js)'
+        }
+      }
+    );
+
+    if (response.data && response.data.access_token) {
+      accessToken = response.data.access_token;
+      // Reddit tokens typically last 1 hour, cache for 55 minutes
+      tokenExpiry = Date.now() + (response.data.expires_in * 1000 || 3600000);
+      logger.debug('Successfully obtained Reddit OAuth token');
+      return accessToken;
+    } else {
+      throw new Error('No access token in Reddit OAuth response');
+    }
+  } catch (error) {
+    logger.error('Failed to get Reddit OAuth token:', {
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    throw new Error('Failed to authenticate with Reddit API');
+  }
+}
+
+/**
+ * Makes an authenticated request to Reddit API
+ * @param {string} method - HTTP method (GET, POST, etc.)
+ * @param {string} endpoint - API endpoint (e.g., '/r/findaserver/api/link_flair')
+ * @param {object} data - Request body data (for POST requests) - will be form-encoded
+ * @returns {Promise<object>} API response
+ */
+async function redditApiRequest(method, endpoint, data = null) {
+  const token = await getRedditAccessToken();
+  
+  const config = {
+    method,
+    url: `${REDDIT_API_BASE}${endpoint}`,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'User-Agent': 'Discord Bot Server Promoter (Node.js)'
+    }
+  };
+
+  if (data && (method === 'POST' || method === 'PUT')) {
+    // Reddit API expects form-encoded data, not JSON
+    config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    config.data = new URLSearchParams(data).toString();
+  }
+
+  try {
+    const response = await axios(config);
+    return response.data;
+  } catch (error) {
+    logger.error('Reddit API request failed:', {
+      method,
+      endpoint,
+      error: error.message,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    
+    // If token expired, clear cache and retry once
+    if (error.response?.status === 401 && accessToken) {
+      logger.debug('Token expired, clearing cache and retrying');
+      accessToken = null;
+      tokenExpiry = null;
+      return redditApiRequest(method, endpoint, data);
+    }
+    
+    throw error;
+  }
+}
 
 /**
  * Gets the promotion title
@@ -127,51 +223,78 @@ module.exports = {
       // Fetch and log all available flairs
       let availableFlairs = [];
       try {
-        const subreddit = reddit.getSubreddit('findaserver');
-        const flairs = await subreddit.getLinkFlairTemplates();
+        const flairData = await redditApiRequest('GET', '/r/findaserver/api/link_flair');
         
-        availableFlairs = flairs.map((flair, index) => {
-          const flairData = {
-            index: index,
-            id: flair.flair_template_id,
-            text: flair.flair_text,
-            css_class: flair.flair_css_class,
-            text_editable: flair.flair_text_editable
-          };
-          return flairData;
-        });
+        if (flairData && Array.isArray(flairData)) {
+          availableFlairs = flairData.map((flair, index) => {
+            const flairInfo = {
+              index: index,
+              id: flair.id || flair.flair_template_id,
+              text: flair.text || flair.flair_text,
+              css_class: flair.css_class || flair.flair_css_class,
+              text_editable: flair.text_editable || flair.flair_text_editable
+            };
+            return flairInfo;
+          });
+        }
         
         logger.info("Available flairs for r/findaserver:", {
           flairs: availableFlairs,
           totalCount: availableFlairs.length
         });
       } catch (flairError) {
-        logger.warn("Could not fetch flairs for r/findaserver:", flairError);
+        logger.warn("Could not fetch flairs for r/findaserver:", {
+          error: flairError.message,
+          status: flairError.response?.status
+        });
       }
 
       // Try to find a valid flair or post without one
       const targetFlairId = '2566b69c-2a68-11ec-a4f1-7a9ed949ab8e'; // 21+ Gaming Server
       const validFlair = availableFlairs.find(flair => flair.id === targetFlairId);
       
-      let submissionOptions = {
+      // Prepare submission data
+      const submissionData = {
         title: promotionTitle,
-        url: PROMOTION_LINK
+        url: PROMOTION_LINK,
+        sr: 'findaserver',
+        kind: 'link',
+        api_type: 'json'
       };
 
       if (validFlair) {
-        submissionOptions.flairId = targetFlairId;
+        submissionData.flair_id = targetFlairId;
         logger.info("Using flair:", { flair: validFlair });
       } else {
         logger.warn("Target flair not found, posting without flair.");
       }
       
-      const submission = await reddit.getSubreddit('findaserver').submitLink(submissionOptions);
-      const post = await submission.fetch();
-      const permalink = post.permalink;
+      // Submit the post
+      const submissionResponse = await redditApiRequest('POST', '/api/submit', submissionData);
+      
+      // Reddit API returns JSON with nested structure
+      let postId = null;
+      let permalink = null;
+      
+      if (submissionResponse && submissionResponse.json) {
+        if (submissionResponse.json.errors && submissionResponse.json.errors.length > 0) {
+          const errorMessages = submissionResponse.json.errors.map(e => e.join(': ')).join(', ');
+          throw new Error(`Reddit API error: ${errorMessages}`);
+        }
+        
+        if (submissionResponse.json.data && submissionResponse.json.data.id) {
+          postId = submissionResponse.json.data.id;
+          permalink = submissionResponse.json.data.permalink;
+        }
+      }
+      
+      if (!postId || !permalink) {
+        throw new Error('Failed to get post ID or permalink from Reddit response');
+      }
 
       logger.info("Successfully posted to r/findaserver:", {
         postUrl: `https://reddit.com${permalink}`,
-        postId: post.id,
+        postId: postId,
         title: promotionTitle,
         userId: interaction.user.id,
         guildId: interaction.guildId
@@ -191,7 +314,52 @@ module.exports = {
       logger.error("Error posting to r/findaserver:", error);
       let errorMessage = error.message || 'Unknown error';
       
-      if (errorMessage.includes('BAD_FLAIR_TEMPLATE_ID')) {
+      // Parse Reddit API error responses
+      if (error.response?.data) {
+        const redditError = error.response.data;
+        if (redditError.json?.errors) {
+          const errors = redditError.json.errors;
+          for (const errorArray of errors) {
+            if (errorArray.length >= 2) {
+              const errorType = errorArray[0];
+              const errorDetail = errorArray[1];
+              
+              if (errorType === 'BAD_FLAIR_TEMPLATE_ID') {
+                errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs. Check the logs for available flairs.';
+              } else if (errorType === 'RATELIMIT') {
+                errorMessage = `Rate limit exceeded: ${errorDetail}. Please try again later.`;
+              } else if (errorType === 'SUBREDDIT_NOEXIST') {
+                errorMessage = 'Subreddit does not exist or is private.';
+              } else if (errorType === 'SUBREDDIT_NOTALLOWED') {
+                errorMessage = 'You are not allowed to post to this subreddit.';
+              } else if (errorType === 'SUBMIT_VALIDATION_REPOST') {
+                // Extract time limit from error detail if available
+                const timeMatch = errorDetail.match(/within the past (\d+) (day|days|hour|hours)/i);
+                if (timeMatch) {
+                  const timeValue = timeMatch[1];
+                  const timeUnit = timeMatch[2].toLowerCase();
+                  errorMessage = `This link was already posted to r/findaserver within the past ${timeValue} ${timeUnit}. Please wait before posting again.`;
+                } else {
+                  errorMessage = 'This link was already posted recently. Please wait before posting again.';
+                }
+              } else {
+                errorMessage = `Reddit API error: ${errorType} - ${errorDetail}`;
+              }
+              break;
+            }
+          }
+        }
+      } else if (errorMessage.includes('SUBMIT_VALIDATION_REPOST')) {
+        // Handle repost error from thrown error message
+        const timeMatch = errorMessage.match(/within the past (\d+) (day|days|hour|hours)/i);
+        if (timeMatch) {
+          const timeValue = timeMatch[1];
+          const timeUnit = timeMatch[2].toLowerCase();
+          errorMessage = `This link was already posted to r/findaserver within the past ${timeValue} ${timeUnit}. Please wait before posting again.`;
+        } else {
+          errorMessage = 'This link was already posted recently. Please wait before posting again.';
+        }
+      } else if (errorMessage.includes('BAD_FLAIR_TEMPLATE_ID')) {
         errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs. Check the logs for available flairs.';
       } else if (errorMessage.includes('RATELIMIT')) {
         errorMessage = 'Rate limit exceeded. Please try again later.';
