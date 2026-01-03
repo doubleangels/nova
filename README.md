@@ -80,8 +80,10 @@ Here is a table of all available environment variables:
 
 | Variable                 | Description                                       | Required | Default | Example                          |
 | ------------------------ | ------------------------------------------------- | :------: | :-----: | -------------------------------- |
+| `BASE_EMBED_COLOR`       | Base embed color in hex format (e.g., CD41FF or #CD41FF) |    ❌    | Discord default | `CD41FF`, `#CD41FF`, `0xCD41FF` |
 | `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot         |    ✅    |    -    | -                                |
 | `GOOGLE_API_KEY`         | API key for Google services                       |    ✅    |    -    | -                                |
+| `GUILD_NAME`             | Name of the guild/server                           |    ❌    | `Da Frens` | `My Server`                      |
 | `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches |    ✅    |    -    | -                                |
 | `LOG_LEVEL`              | Determines the verbosity of logs                  |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
 | `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                     |    ✅    |    -    | -                                |
@@ -101,9 +103,7 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 
 | Database Key                | Description                                               | Used By                         |
 | --------------------------- | --------------------------------------------------------- | ------------------------------- |
-| `base_embed_color`          | Base embed color in hex format (e.g., CD41FF or #CD41FF)  | All commands that create embeds |
 | `fren_role`                 | Discord role ID to assign alongside custom roles          | `/giveperms` command            |
-| `guild_name`                | Name of the guild/server                                  | Various commands and utilities  |
 | `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms` command            |
 
 **Note:** The `/giveperms` command uses the `perms_position_above_role` database key for the position reference role.
@@ -156,8 +156,6 @@ docker exec nova node set-value.js <key> <value>
 
 ```bash
 # Set config values (defaults to main:config:)
-docker exec nova node set-value.js base_embed_color "CD41FF"
-docker exec nova node set-value.js guild_name "Your Guild Name"
 docker exec nova node set-value.js reminder_channel "123456789012345678"
 docker exec nova node set-value.js bot_status "Playing games"
 docker exec nova node set-value.js bot_status_type "playing"

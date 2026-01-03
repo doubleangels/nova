@@ -61,7 +61,7 @@ module.exports = {
   givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
   givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
   googleApiKey: process.env.GOOGLE_API_KEY,
-  guildName: process.env.GUILD_NAME,
+  guildName: process.env.GUILD_NAME || 'Da Frens',
   imageSearchEngineId: process.env.IMAGE_SEARCH_ENGINE_ID,
   logLevel: process.env.LOG_LEVEL || 'info',
   malClientId: process.env.MAL_CLIENT_ID,

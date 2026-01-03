@@ -766,19 +766,10 @@ async function rebuildCodeToTagMap(guildId) {
  * @returns {Promise<string>} The guild name
  */
 async function getGuildName() {
-  try {
-    const dbGuildName = await getValue('guild_name');
-    if (dbGuildName && typeof dbGuildName === 'string') {
-      return dbGuildName;
-    }
-    // Fall back to config default
-    const config = require('../config');
-    return config.guildName || 'Da Frens';
-  } catch (err) {
-    logger.error('Error getting guild name:', { error: err });
-    // Ultimate fallback
-    return 'Da Frens';
-  }
+  // Guild name is now read from environment variable only (GUILD_NAME)
+  // No longer stored in database
+  const config = require('../config');
+  return config.guildName || 'Da Frens';
 }
 
 module.exports = {
