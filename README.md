@@ -18,9 +18,6 @@ Nova is a custom, admin-level Discord bot designed to bring a range of advanced 
 Before deploying Nova, ensure you have the following:
 
 - A valid [Discord Bot Token](https://discord.com/developers/applications)
-- Database configuration keys set using bot commands:
-  - `fren_role` - Discord role ID to assign alongside custom roles
-  - `perms_position_above_role` - Discord role ID that new roles should be positioned above
 - API keys for:
   - Google (with Search Engine ID and Image Search Engine ID)
   - OMDB
