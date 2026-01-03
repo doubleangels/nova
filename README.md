@@ -81,33 +81,33 @@ networks:
 
 Here is a table of all available environment variables:
 
-| Variable                 | Description                                         | Required | Default | Example                          |
-| ------------------------ | --------------------------------------------------- | :------: | :-----: | -------------------------------- |
-| `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot           |    ✅    |    -    | -                                |
-| `GOOGLE_API_KEY`         | API key for Google services                         |    ✅    |    -    | -                                |
-| `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches   |    ✅    |    -    | -                                |
-| `LOG_LEVEL`              | Determines the verbosity of logs                    |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
-| `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                       |    ✅    |    -    | -                                |
-| `OMDB_API_KEY`           | API key for Open Movie Database                     |    ✅    |    -    | -                                |
-| `PIRATEWEATHER_API_KEY`  | API key for PirateWeather forecast service          |    ✅    |    -    | -                                |
-| `REDDIT_CLIENT_ID`       | Client ID for Reddit API                            |    ✅    |    -    | -                                |
-| `REDDIT_CLIENT_SECRET`   | Client Secret for Reddit API                        |    ✅    |    -    | -                                |
-| `REDDIT_PASSWORD`        | Reddit password for API authentication              |    ✅    |    -    | -                                |
-| `REDDIT_USERNAME`        | Reddit username for API authentication              |    ✅    |    -    | -                                |
-| `SEARCH_ENGINE_ID`       | Google Custom Search Engine ID for web searches     |    ✅    |    -    | -                                |
-| `SPOTIFY_CLIENT_ID`      | Client ID for Spotify API                           |    ✅    |    -    | -                                |
-| `SPOTIFY_CLIENT_SECRET`  | Client Secret for Spotify API                       |    ✅    |    -    | -                                |
+| Variable                 | Description                                       | Required | Default | Example                          |
+| ------------------------ | ------------------------------------------------- | :------: | :-----: | -------------------------------- |
+| `DISCORD_BOT_TOKEN`      | Authentication token for your Discord bot         |    ✅    |    -    | -                                |
+| `GOOGLE_API_KEY`         | API key for Google services                       |    ✅    |    -    | -                                |
+| `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image searches |    ✅    |    -    | -                                |
+| `LOG_LEVEL`              | Determines the verbosity of logs                  |    ❌    | `info`  | `error`, `warn`, `info`, `debug` |
+| `MAL_CLIENT_ID`          | Client ID for MyAnimeList API                     |    ✅    |    -    | -                                |
+| `OMDB_API_KEY`           | API key for Open Movie Database                   |    ✅    |    -    | -                                |
+| `PIRATEWEATHER_API_KEY`  | API key for PirateWeather forecast service        |    ✅    |    -    | -                                |
+| `REDDIT_CLIENT_ID`       | Client ID for Reddit API                          |    ✅    |    -    | -                                |
+| `REDDIT_CLIENT_SECRET`   | Client Secret for Reddit API                      |    ✅    |    -    | -                                |
+| `REDDIT_PASSWORD`        | Reddit password for API authentication            |    ✅    |    -    | -                                |
+| `REDDIT_USERNAME`        | Reddit username for API authentication            |    ✅    |    -    | -                                |
+| `SEARCH_ENGINE_ID`       | Google Custom Search Engine ID for web searches   |    ✅    |    -    | -                                |
+| `SPOTIFY_CLIENT_ID`      | Client ID for Spotify API                         |    ✅    |    -    | -                                |
+| `SPOTIFY_CLIENT_SECRET`  | Client Secret for Spotify API                     |    ✅    |    -    | -                                |
 
 ## Database Configuration
 
 Nova uses Keyv (a key-value storage system) to store configuration values. The following keys can be set using bot commands or directly via the database API:
 
-| Database Key                | Description                                               | Used By                                           |
-| --------------------------- | --------------------------------------------------------- | ------------------------------------------------- |
-| `base_embed_color`         | Base embed color in hex format (e.g., CD41FF or #CD41FF) | All commands that create embeds                   |
-| `fren_role`                 | Discord role ID to assign alongside custom roles          | `/giveperms` command                              |
-| `guild_name`                | Name of the guild/server                                  | Various commands and utilities                    |
-| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms` command                              |
+| Database Key                | Description                                               | Used By                         |
+| --------------------------- | --------------------------------------------------------- | ------------------------------- |
+| `base_embed_color`          | Base embed color in hex format (e.g., CD41FF or #CD41FF)  | All commands that create embeds |
+| `fren_role`                 | Discord role ID to assign alongside custom roles          | `/giveperms` command            |
+| `guild_name`                | Name of the guild/server                                  | Various commands and utilities  |
+| `perms_position_above_role` | Discord role ID that new roles should be positioned above | `/giveperms` command            |
 
 **Note:** The `/giveperms` command uses the `perms_position_above_role` database key for the position reference role.
 
@@ -116,6 +116,7 @@ Nova uses Keyv (a key-value storage system) to store configuration values. The f
 You can manage database values directly using the provided scripts. When running in Docker, use `docker exec` to run these scripts inside the container:
 
 **Key Format:** `[namespace:][section:]key`
+
 - **namespace**: `main` (default), `invites`
 - **section**: `config`, `tags`, `invite_usage`, `invite_code_to_tag_map`, etc.
 
