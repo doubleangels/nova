@@ -66,6 +66,9 @@ services:
       - SETUID
     # Read-only root filesystem
     read_only: true
+    # Temporary filesystem for SQLite (needed for database operations)
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100m
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
 

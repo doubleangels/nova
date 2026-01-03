@@ -104,11 +104,41 @@ function getKeyvForNamespace(namespace) {
 async function getAllKeys() {
   try {
     if (!fs.existsSync(sqlitePath)) {
+      console.error(`Database file not found: ${sqlitePath}`);
       return [];
     }
 
     // Directly query SQLite to get all keys
-    const db = new Database(sqlitePath, { readonly: true });
+    // Use readonly mode and set temp directory to /tmp if available (for Docker read-only filesystem)
+    const options = { readonly: true };
+    
+    // Try to set temp directory to /tmp if it exists and is writable (for Docker read-only root)
+    try {
+      if (fs.existsSync('/tmp') && fs.accessSync) {
+        try {
+          fs.accessSync('/tmp', fs.constants.W_OK);
+          // SQLite will use /tmp for temporary files if needed
+        } catch (tmpError) {
+          // /tmp might not be writable, that's OK
+        }
+      }
+    } catch (tmpCheckError) {
+      // Ignore temp directory check errors
+    }
+    
+    const db = new Database(sqlitePath, options);
+    
+    // Check if table exists
+    const tableExists = db.prepare(`
+      SELECT name FROM sqlite_master 
+      WHERE type='table' AND name='keyv'
+    `).get();
+    
+    if (!tableExists) {
+      console.error(`Table 'keyv' does not exist in database`);
+      db.close();
+      return [];
+    }
     
     const rows = db.prepare(`
       SELECT key, value 
@@ -154,8 +184,17 @@ async function getAllKeys() {
       };
     });
   } catch (error) {
+    // Log the error for debugging
+    console.error(`Error accessing database: ${error.message}`);
+    console.error(`Error code: ${error.code || 'N/A'}`);
+    console.error(`Database path: ${sqlitePath}`);
+    
     // If database doesn't exist or table doesn't exist, return empty array
-    if (error.code === 'SQLITE_CANTOPEN' || error.message.includes('no such table')) {
+    if (error.code === 'SQLITE_CANTOPEN' || 
+        error.code === 'SQLITE_READONLY' ||
+        error.message.includes('no such table') ||
+        error.message.includes('unable to open database')) {
+      console.error(`Database access issue. This might be due to Docker read-only filesystem restrictions.`);
       return [];
     }
     throw error;
@@ -164,6 +203,13 @@ async function getAllKeys() {
 
 async function readValue(keyString) {
   try {
+    // Check if database file exists first
+    if (!fs.existsSync(sqlitePath)) {
+      console.error(`Database file not found: ${sqlitePath}`);
+      console.error(`Make sure the database file exists and the volume is properly mounted.`);
+      process.exit(1);
+    }
+    
     const { namespace, section, actualKey, fullKey } = parseKey(keyString);
     const keyv = getKeyvForNamespace(namespace);
     
@@ -172,6 +218,7 @@ async function readValue(keyString) {
     if (value === undefined) {
       console.log(`Key "${keyString}" does not exist in the database.`);
       console.log(`   Searched: namespace="${namespace}", key="${fullKey}"`);
+      await keyv.disconnect();
       process.exit(0);
     }
     
@@ -194,7 +241,16 @@ async function readValue(keyString) {
     
     await keyv.disconnect();
   } catch (error) {
-    console.error(`Error reading value:`, error.message);
+    console.error(`Error reading value: ${error.message}`);
+    console.error(`Error code: ${error.code || 'N/A'}`);
+    console.error(`Database path: ${sqlitePath}`);
+    if (error.code === 'SQLITE_READONLY' || error.message.includes('readonly')) {
+      console.error(`\nThis might be due to Docker read-only filesystem restrictions.`);
+      console.error(`SQLite may need a writable /tmp directory for temporary files.`);
+      console.error(`Consider adding a tmpfs mount for /tmp in your docker-compose.yml:`);
+      console.error(`  tmpfs:`);
+      console.error(`    - /tmp:rw,noexec,nosuid,size=100m`);
+    }
     process.exit(1);
   }
 }
