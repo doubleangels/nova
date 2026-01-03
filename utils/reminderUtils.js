@@ -75,7 +75,7 @@ async function removeReminderId(type, reminderId) {
 async function getLatestReminderData(type) {
   try {
     const reminderIds = await getReminderIds(type);
-    const now = new Date();
+    const now = dayjs();
     let latestReminder = null;
     let latestTime = null;
     
@@ -84,24 +84,22 @@ async function getLatestReminderData(type) {
     for (const reminderId of reminderIds) {
       const reminder = await reminderKeyv.get(`reminder:${reminderId}`);
       if (reminder && reminder.remind_at) {
-        // Handle both Date objects and ISO strings
-        const remindAt = reminder.remind_at instanceof Date 
-          ? reminder.remind_at 
-          : new Date(reminder.remind_at);
+        // Parse remind_at using dayjs
+        const remindAt = dayjs(reminder.remind_at);
         
         // Check if the date is valid
-        if (isNaN(remindAt.getTime())) {
+        if (!remindAt.isValid()) {
           logger.warn(`Invalid date found for reminder ${reminderId}: ${reminder.remind_at}`);
           continue;
         }
         
-        logger.debug(`Reminder ${reminderId}: remind_at=${remindAt.toISOString()}, now=${now.toISOString()}, isFuture=${remindAt > now}`);
+        logger.debug(`Reminder ${reminderId}: remind_at=${remindAt.toISOString()}, now=${now.toISOString()}, isFuture=${remindAt.isAfter(now)}`);
         
-        if (remindAt > now && (!latestTime || remindAt < latestTime)) {
+        if (remindAt.isAfter(now) && (!latestTime || remindAt.isBefore(latestTime))) {
           latestTime = remindAt;
           latestReminder = {
             reminder_id: reminder.reminder_id,
-            remind_at: remindAt,
+            remind_at: remindAt.toISOString(),
             type: reminder.type
           };
           logger.debug(`Found new latest reminder: ${reminderId}, scheduled for ${remindAt.toISOString()}`);
@@ -112,7 +110,7 @@ async function getLatestReminderData(type) {
     }
     
     if (latestReminder) {
-      logger.debug(`Latest reminder found for type "${type}": ${latestReminder.reminder_id}, scheduled for ${latestReminder.remind_at.toISOString()}`);
+      logger.debug(`Latest reminder found for type "${type}": ${latestReminder.reminder_id}, scheduled for ${latestReminder.remind_at}`);
     } else {
       logger.debug(`No active reminders found for type "${type}".`);
     }
@@ -169,7 +167,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     // Clean up existing reminders first (both future and expired)
     // We only want one active reminder per type at a time
     const reminderIds = await getReminderIds(type);
-    const now = new Date();
+    const now = dayjs();
     let deletedCount = 0;
     let expiredCount = 0;
     
@@ -178,15 +176,13 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     for (const id of reminderIds) {
       const reminder = await reminderKeyv.get(`reminder:${id}`);
       if (reminder && reminder.remind_at) {
-        const remindAt = reminder.remind_at instanceof Date 
-          ? reminder.remind_at 
-          : new Date(reminder.remind_at);
+        const remindAt = dayjs(reminder.remind_at);
         
         // Delete the reminder data
         await reminderKeyv.delete(`reminder:${id}`);
         idsToRemove.push(id);
         
-        if (remindAt > now) {
+        if (remindAt.isValid() && remindAt.isAfter(now)) {
           deletedCount++; // Future reminder that was replaced
         } else {
           expiredCount++; // Expired reminder that was cleaned up
@@ -375,7 +371,7 @@ async function rescheduleReminder(client) {
     });
     
     // Clean up expired reminders
-    const now = new Date();
+    const now = dayjs();
     let expiredBumpCount = 0;
     let expiredDiscadiaCount = 0;
     let expiredPromoteCount = 0;
@@ -386,11 +382,9 @@ async function rescheduleReminder(client) {
     for (const id of bumpIds) {
       const reminder = await reminderKeyv.get(`reminder:${id}`);
       if (reminder && reminder.remind_at) {
-        const remindAt = reminder.remind_at instanceof Date 
-          ? reminder.remind_at 
-          : new Date(reminder.remind_at);
+        const remindAt = dayjs(reminder.remind_at);
         
-        if (remindAt <= now) {
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
           // Expired reminder, mark for cleanup
           bumpIdsToRemove.push(id);
           expiredBumpCount++;
@@ -423,11 +417,9 @@ async function rescheduleReminder(client) {
     for (const id of discadiaIds) {
       const reminder = await reminderKeyv.get(`reminder:${id}`);
       if (reminder && reminder.remind_at) {
-        const remindAt = reminder.remind_at instanceof Date 
-          ? reminder.remind_at 
-          : new Date(reminder.remind_at);
+        const remindAt = dayjs(reminder.remind_at);
         
-        if (remindAt <= now) {
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
           // Expired reminder, mark for cleanup
           discadiaIdsToRemove.push(id);
           expiredDiscadiaCount++;
@@ -460,11 +452,9 @@ async function rescheduleReminder(client) {
     for (const id of promoteIds) {
       const reminder = await reminderKeyv.get(`reminder:${id}`);
       if (reminder && reminder.remind_at) {
-        const remindAt = reminder.remind_at instanceof Date 
-          ? reminder.remind_at 
-          : new Date(reminder.remind_at);
+        const remindAt = dayjs(reminder.remind_at);
         
-        if (remindAt <= now) {
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
           // Expired reminder, mark for cleanup
           promoteIdsToRemove.push(id);
           expiredPromoteCount++;
@@ -562,7 +552,7 @@ async function rescheduleReminder(client) {
           reminder_id: bumpReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
-          scheduledFor: new Date(Date.now() + delay).toISOString()
+          scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
         });
       } else {
         logger.warn("Bump reminder is in the past, skipping reschedule:", {
@@ -607,7 +597,7 @@ async function rescheduleReminder(client) {
           reminder_id: discadiaReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
-          scheduledFor: new Date(Date.now() + delay).toISOString()
+          scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
         });
       } else {
         logger.warn("Discadia reminder is in the past, skipping reschedule:", {
@@ -652,7 +642,7 @@ async function rescheduleReminder(client) {
           reminder_id: promoteReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
-          scheduledFor: new Date(Date.now() + delay).toISOString()
+          scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
         });
       } else {
         logger.warn("Promote reminder is in the past, skipping reschedule:", {
