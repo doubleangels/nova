@@ -254,11 +254,18 @@ async function listAllValues() {
 // Parse command line arguments
 const args = process.argv.slice(2);
 
-if (args.length === 0) {
-  // No key provided, list all values
-  listAllValues();
-} else {
-  // Key provided, read specific value
-  const key = args[0];
-  readValue(key);
-}
+(async () => {
+  try {
+    if (args.length === 0) {
+      // No key provided, list all values
+      await listAllValues();
+    } else {
+      // Key provided, read specific value
+      const key = args[0];
+      await readValue(key);
+    }
+  } catch (error) {
+    console.error('Fatal error:', error.message);
+    process.exit(1);
+  }
+})();
