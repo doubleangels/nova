@@ -35,6 +35,7 @@ require('dotenv').config();
  * @property {string} redditPassword - Reddit password for API authentication
  * @property {string} redditUsername - Reddit username for API authentication
  * @property {string} searchEngineId - Google Custom Search Engine ID for web searches
+ * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
  * @property {string} spotifyClientId - Spotify API client ID
  * @property {string} spotifyClientSecret - Spotify API client secret
  * @property {string} token - Discord bot token
@@ -76,6 +77,7 @@ module.exports = {
   redditPassword: process.env.REDDIT_PASSWORD,
   redditUsername: process.env.REDDIT_USERNAME,
   searchEngineId: process.env.SEARCH_ENGINE_ID,
+  serverInviteUrl: process.env.SERVER_INVITE_URL,
   spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
   token: process.env.DISCORD_BOT_TOKEN,

@@ -48,7 +48,7 @@ async function performKick(member) {
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     try {
-      const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
+      const inviteUrl = config.serverInviteUrl;
       const guildName = await getGuildName();
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor)

@@ -62,6 +62,7 @@ services:
       - REDDIT_PASSWORD=your_reddit_password_here
       - REDDIT_USERNAME=your_reddit_username_here
       - SEARCH_ENGINE_ID=your_search_engine_id_here
+      - SERVER_INVITE_URL=https://discord.gg/your-invite-code
       - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
     volumes:
@@ -98,18 +99,6 @@ Here is a table of all available environment variables:
 | `REDDIT_PASSWORD`                   | Reddit password for API authentication                    |    ✅    |           -            | -                                                            |
 | `REDDIT_USERNAME`                   | Reddit username for API authentication                    |    ✅    |           -            | -                                                            |
 | `SEARCH_ENGINE_ID`                  | Google Custom Search Engine ID for web searches           |    ✅    |           -            | -                                                            |
+| `SERVER_INVITE_URL`                 | Server invite URL for kick messages                       |    ❌    |           -            | `https://discord.gg/xxxxx`                                   |
 | `SPOTIFY_CLIENT_ID`                 | Client ID for Spotify API                                 |    ✅    |           -            | -                                                            |
 | `SPOTIFY_CLIENT_SECRET`             | Client Secret for Spotify API                             |    ✅    |           -            | -                                                            |
-
-## Database Configuration
-
-Nova uses Keyv (a key-value storage system) to store configuration values. Database values are managed through Discord bot commands. The following keys are used by the bot:
-
-| Database Key                 | Description                              | Used By                       |
-| ---------------------------- | ---------------------------------------- | ----------------------------- |
-| `reminder_channel`           | Channel ID for reminder notifications    | `/reminder setup` command     |
-| `reminder_role`              | Role ID to ping for reminders            | `/reminder setup` command     |
-| `server_invite_url`          | Server invite URL for kick messages      | Mute/Troll mode kick messages |
-| Various invite tracking keys | Invite tags, usage counts, code mappings | `/invite` commands            |
-
-**Note:** The database file is stored in `./data/database.sqlite` on the host (mounted as a volume), so changes persist across container restarts. All database values are managed through Discord bot commands - there are no command-line scripts for database management.

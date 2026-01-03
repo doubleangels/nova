@@ -61,7 +61,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           }
 
           try {
-            const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
+            const inviteUrl = config.serverInviteUrl;
             const guildName = await getGuildName();
             const embed = {
               color: config.baseEmbedColor,
@@ -105,7 +105,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
           }
 
           try {
-            const inviteUrl = await getValue('server_invite_url') || 'https://discord.gg/cFwUCXM5st';
+            const inviteUrl = config.serverInviteUrl;
             const guildName = await getGuildName();
             const embed = {
               color: config.baseEmbedColor,
