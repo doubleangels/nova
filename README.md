@@ -54,8 +54,23 @@ services:
       - SEARCH_ENGINE_ID=your_search_engine_id_here
       - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
       - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Drop all capabilities, only add what's needed
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # Read-only root filesystem with tmpfs for writable directories
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+      - /app/data:rw,noexec,nosuid
     volumes:
-      - ./data:/app/data
+      - ./data:/app/data:rw,noexec,nosuid
 
 networks:
   default:

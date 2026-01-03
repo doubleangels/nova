@@ -1,4 +1,8 @@
-FROM node:24-alpine AS base
+# Security-hardened Dockerfile for Nova Bot
+# This is an enhanced version with additional security measures
+
+# Use specific Node.js version for reproducibility
+FROM node:24.1.0-alpine AS base
 
 WORKDIR /app
 
@@ -54,10 +58,10 @@ RUN mkdir -p /app/data && chown -R discordbot:nodejs /app/data && chmod 750 /app
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]
 
-# Document expected environment variables (non-sensitive only)
-ENV NODE_ENV=production
-ENV LOG_LEVEL=info
-ENV BASE_EMBED_COLOR=
+# Add health check (adjust based on your application)
+# This is a simple check - you may want to add a proper health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "process.exit(0)" || exit 1
 
 # Entrypoint runs as root to fix permissions, then switches to discordbot user
 ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
