@@ -9,6 +9,11 @@ const logger = require('../logger')(path.basename(__filename));
 const dataDir = path.resolve(process.cwd(), 'data');
 const sqlitePath = path.join(dataDir, 'database.sqlite');
 
+// Log database path for debugging
+logger.info(`Database path: ${sqlitePath}`);
+logger.info(`Working directory: ${process.cwd()}`);
+logger.info(`Data directory: ${dataDir}`);
+
 try {
   if (!fs.existsSync(dataDir)) {
     // 0o750 = rwxr-x--- (owner: read/write/execute, group: read/execute, others: no access)
@@ -18,9 +23,23 @@ try {
   // Ensure the directory is writable
   try {
     fs.accessSync(dataDir, fs.constants.W_OK);
+    logger.debug(`Data directory is writable: ${dataDir}`);
   } catch (accessError) {
     logger.error(`Data directory is not writable: ${dataDir}`, { error: accessError.message });
     logger.error('Please ensure the data directory has write permissions for the bot user.');
+  }
+  
+  // Check if database file exists and log its status
+  if (fs.existsSync(sqlitePath)) {
+    const stats = fs.statSync(sqlitePath);
+    logger.info(`Database file exists: ${sqlitePath}`, {
+      size: stats.size,
+      mode: stats.mode.toString(8),
+      uid: stats.uid,
+      gid: stats.gid
+    });
+  } else {
+    logger.info(`Database file does not exist yet: ${sqlitePath} (will be created on first write)`);
   }
 } catch (error) {
   logger.error(`Failed to create/access data directory: ${dataDir}`, { error: error.message });
@@ -74,23 +93,54 @@ async function initializeDatabase() {
   while (retryCount < MAX_RETRIES) {
     try {
       logger.info(`Testing database connection... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
+      logger.debug(`Database path: ${sqlitePath}`);
       
       const testKey = 'db_test_key';
       const testValue = 'test_value';
       
       await keyv.set(testKey, testValue);
+      logger.debug(`Test value written to database`);
+      
       const retrieved = await keyv.get(testKey);
+      logger.debug(`Test value retrieved from database: ${retrieved}`);
       
       if (retrieved === testValue) {
         logger.info("Database connection test successful.");
         await keyv.delete(testKey);
         logger.debug("Cleaned up database test data.");
         
+        // Verify database file exists and has data
+        if (fs.existsSync(sqlitePath)) {
+          const stats = fs.statSync(sqlitePath);
+          logger.info(`Database file verified: ${sqlitePath}`, {
+            size: stats.size,
+            exists: true
+          });
+          
+          // Try to query the database directly to see what's in it
+          try {
+            const Database = require('better-sqlite3');
+            const db = new Database(sqlitePath, { readonly: true });
+            const rows = db.prepare('SELECT COUNT(*) as count FROM keyv').get();
+            logger.info(`Database contains ${rows.count} key(s) in keyv table`);
+            if (rows.count > 0) {
+              const sampleRows = db.prepare('SELECT key FROM keyv LIMIT 5').all();
+              logger.debug(`Sample keys in database:`, { keys: sampleRows.map(r => r.key) });
+            }
+            db.close();
+          } catch (dbError) {
+            logger.debug(`Could not query database directly (this is OK): ${dbError.message}`);
+          }
+        } else {
+          logger.warn(`Database file not found at ${sqlitePath} after successful test`);
+        }
+        
         // Ensure database file has correct permissions after creation
         // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
         try {
           if (fs.existsSync(sqlitePath)) {
             fs.chmodSync(sqlitePath, 0o600);
+            logger.debug(`Set database file permissions to 600`);
           }
         } catch (chmodError) {
           // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
@@ -99,11 +149,18 @@ async function initializeDatabase() {
         
         return;
       } else {
-        throw new Error("Database read/write test failed.");
+        throw new Error(`Database read/write test failed. Expected: ${testValue}, Got: ${retrieved}`);
       }
       
     } catch (err) {
       lastError = err;
+      logger.error(`Database connection test failed (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, {
+        error: err.message,
+        stack: err.stack,
+        sqlitePath: sqlitePath,
+        dataDirExists: fs.existsSync(dataDir),
+        dbFileExists: fs.existsSync(sqlitePath)
+      });
       logger.error(`Error testing database connection (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, { error: err });
       
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
