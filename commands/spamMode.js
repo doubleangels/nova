@@ -69,7 +69,7 @@ module.exports = {
     try {
       const subcommand = interaction.options.getSubcommand();
       
-      logger.info(`/spammode command initiated:`, {
+      logger.info(`/spammode command initiated.`, {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -104,7 +104,7 @@ module.exports = {
     
     await interaction.editReply({ embeds: [embed] });
     
-    logger.info("/spammode command completed successfully:", {
+    logger.info("/spammode command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled: settings.enabled
@@ -158,7 +158,7 @@ module.exports = {
     
     await interaction.editReply({ embeds: [embed] });
     
-    logger.info("/spammode command completed successfully:", {
+    logger.info("/spammode command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled,
@@ -198,7 +198,7 @@ module.exports = {
         warningChannelId: warningChannelId || null
       };
     } catch (error) {
-      logger.error("Failed to retrieve spam mode settings", {
+      logger.error("Failed to retrieve spam mode settings.", {
         err: error
       });
       throw new Error("DATABASE_READ_ERROR");
@@ -239,7 +239,7 @@ module.exports = {
       
       await Promise.all(updates);
     } catch (error) {
-      logger.error("Failed to update spam mode settings", {
+      logger.error("Failed to update spam mode settings.", {
         err: error,
         settings
       });
@@ -338,7 +338,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in spammode command", {
+    logger.error("Error occurred in spammode command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -362,7 +362,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for spammode command", {
+      logger.error("Failed to send error response for spammode command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

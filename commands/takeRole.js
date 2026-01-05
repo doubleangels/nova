@@ -83,7 +83,7 @@ module.exports = {
     try {
       await interaction.editReply({ content: errorMessage });
     } catch (replyError) {
-      logger.error('Failed to send error message:', { err: replyError });
+      logger.error('Failed to send error message.', { err: replyError });
     }
   },
   

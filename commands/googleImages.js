@@ -47,14 +47,14 @@ module.exports = {
    */
   async execute(interaction) {
     await interaction.deferReply();
-    logger.info("/googleimages command initiated:", { 
+    logger.info("/googleimages command initiated.", { 
       userId: interaction.user.id, 
       guildId: interaction.guildId 
     });
     
     try {
       if (!config.googleApiKey || !config.imageSearchEngineId) {
-        logger.error("Missing Google API configuration:", {
+        logger.error("Missing Google API configuration.", {
           hasApiKey: !!config.googleApiKey,
           hasCseId: !!config.imageSearchEngineId
         });
@@ -71,7 +71,7 @@ module.exports = {
       );
           
       if (!searchParams.valid) {
-        logger.warn("Invalid search parameters:", { reason: searchParams.error });
+        logger.warn("Invalid search parameters provided.", { reason: searchParams.error });
         return await interaction.editReply({
           content: "⚠️ Please provide a valid search query.",
           flags: MessageFlags.Ephemeral
@@ -80,7 +80,7 @@ module.exports = {
       
       searchParams.query = titleCase(searchParams.query);
       
-      logger.debug("Formatted search parameters:", { 
+      logger.debug("Formatted search parameters.", { 
         query: searchParams.query, 
         count: searchParams.count 
       });
@@ -95,7 +95,7 @@ module.exports = {
       }
       
       if (searchResults.items.length === 0) {
-        logger.warn("No image results found for query:", { query: searchParams.query });
+        logger.warn("No image results found for query.", { query: searchParams.query });
         return await interaction.editReply({
           content: "⚠️ No images found for your search query.",
           flags: MessageFlags.Ephemeral
@@ -119,7 +119,7 @@ module.exports = {
         }
       );
 
-      logger.info("/googleimages command completed successfully:", {
+      logger.info("/googleimages command completed successfully.", {
         userId: interaction.user.id,
         query: searchParams.query,
         resultCount: searchResults.items.length
@@ -147,14 +147,14 @@ module.exports = {
       safe: "medium"
     });
     const requestUrl = `https://www.googleapis.com/customsearch/v1?${params.toString()}`;
-    logger.debug("Preparing Google Image API request:", { 
+    logger.debug("Preparing Google Image API request.", { 
       searchQuery: query,
       resultsRequested: resultsCount
     });
 
     try {
       const response = await axios.get(requestUrl, { timeout: 10000 });
-      logger.debug("Google Image API response received:", { 
+      logger.debug("Google Image API response received.", { 
         status: response.status,
         itemsReturned: response.data?.items?.length || 0
       });
@@ -163,7 +163,7 @@ module.exports = {
         items: response.data.items || []
       };
     } catch (apiError) {
-      logger.error("Google API request failed", { 
+      logger.error("Google API request failed.", { 
         err: apiError,
         status: apiError.response?.status,
         errorDetails: apiError.response?.data
@@ -206,7 +206,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in googleimages command", {
+    logger.error("Error occurred in googleimages command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
@@ -229,7 +229,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for googleimages command", {
+      logger.error("Failed to send error response for googleimages command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

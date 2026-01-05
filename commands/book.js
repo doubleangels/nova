@@ -53,7 +53,7 @@ module.exports = {
       await interaction.deferReply();
       const subcommand = interaction.options.getSubcommand();
       
-      logger.info(`/book ${subcommand} command initiated:`, {
+      logger.info('/book command initiated.', {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: subcommand
@@ -96,7 +96,7 @@ module.exports = {
         }
       );
 
-      logger.info(`/book ${subcommand} command completed successfully:`, {
+      logger.info('/book command completed successfully.', {
         userId: interaction.user.id,
         subcommand: subcommand,
         query: subcommand === 'search' ? interaction.options.getString('query') : interaction.options.getString('isbn'),
@@ -162,7 +162,7 @@ module.exports = {
 
       return books;
     } catch (error) {
-      logger.error("Failed to search for books", {
+      logger.error("Failed to search for books.", {
         err: error,
         query
       });
@@ -225,7 +225,7 @@ module.exports = {
 
       return [book];
     } catch (error) {
-      logger.error("Failed to search for book by ISBN", {
+      logger.error("Failed to search for book by ISBN.", {
         err: error,
         isbn
       });
@@ -418,7 +418,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for book command", {
+      logger.error("Failed to send error response for book command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

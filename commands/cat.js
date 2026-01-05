@@ -22,7 +22,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       
-      logger.info("/cat command initiated:", {
+      logger.info("/cat command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });
@@ -38,12 +38,12 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/cat command completed successfully:", {
+      logger.info("/cat command completed successfully.", {
         userId: interaction.user.id,
         imageUrl: catData.url
       });
     } catch (error) {
-      logger.error("Error in cat command", {
+      logger.error("Error occurred in cat command.", {
         err: error,
         userId: interaction.user?.id,
         guildId: interaction.guild?.id
@@ -65,7 +65,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for cat command", {
+        logger.error("Failed to send error response for cat command.", {
           err: followUpError,
           originalError: error.message,
           userId: interaction.user?.id

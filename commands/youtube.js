@@ -61,7 +61,7 @@ module.exports = {
       const searchResults = await this.searchYouTube(query, contentType, sortMethod, duration);
       
       if (!searchResults || searchResults.length === 0) {
-        logger.warn("No search results found for query:", { query });
+        logger.warn("No search results found for query.", { query });
         return await interaction.editReply({ 
           content: "⚠️ No results found for your search.",
           flags: MessageFlags.Ephemeral
@@ -85,7 +85,7 @@ module.exports = {
         }
       );
 
-      logger.info("/youtube command completed successfully:", {
+      logger.info("/youtube command completed successfully.", {
         userId: interaction.user.id,
         query,
         contentType,
@@ -105,7 +105,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in youtube command", {
+    logger.error("Error occurred in youtube command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -139,7 +139,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for youtube command", {
+      logger.error("Failed to send error response for youtube command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
@@ -184,7 +184,7 @@ module.exports = {
       });
       
       if (!response.data || !response.data.items || response.data.items.length === 0) {
-        logger.debug("YouTube API returned no results:", { query, contentType });
+        logger.debug("YouTube API returned no results.", { query, contentType });
         return [];
       }
       

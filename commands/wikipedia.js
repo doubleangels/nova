@@ -36,7 +36,7 @@ module.exports = {
       
       const query = interaction.options.getString('query');
       
-      logger.info("/wikipedia command initiated:", {
+      logger.info("/wikipedia command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id,
         query
@@ -99,7 +99,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/wikipedia command completed successfully:", {
+      logger.info("/wikipedia command completed successfully.", {
         userId: interaction.user.id,
         query,
         articleTitle: article.title
@@ -110,7 +110,7 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logger.error("Error in wikipedia command", {
+    logger.error("Error occurred in wikipedia command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -144,7 +144,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for wikipedia command", {
+      logger.error("Failed to send error response for wikipedia command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

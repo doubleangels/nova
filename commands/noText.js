@@ -82,7 +82,7 @@ module.exports = {
         try {
           await setValue('notext_channel', channel.id);
         } catch (error) {
-          logger.error("Failed to save no-text channel configuration:", error);
+          logger.error("Failed to save no-text channel configuration.", { err: error });
           return await interaction.reply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
@@ -97,7 +97,7 @@ module.exports = {
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("/notext command completed successfully:", { 
+        logger.info("/notext command completed successfully.", { 
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,
@@ -116,7 +116,7 @@ module.exports = {
         try {
           await setValue('notext_channel', null);
         } catch (error) {
-          logger.error("Failed to remove no-text channel configuration:", error);
+          logger.error("Failed to remove no-text channel configuration.", { err: error });
           return await interaction.reply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
@@ -131,7 +131,7 @@ module.exports = {
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("/notext command completed successfully:", { 
+        logger.info("/notext command completed successfully.", { 
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,
@@ -140,7 +140,7 @@ module.exports = {
       }
 
     } catch (error) {
-      logger.error("Error in notext command:", error);
+      logger.error("Error occurred in notext command.", { err: error });
       await interaction.reply({
         content: "⚠️ An unexpected error occurred while configuring the channel.",
         flags: MessageFlags.Ephemeral

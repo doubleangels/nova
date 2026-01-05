@@ -112,7 +112,7 @@ module.exports = {
       
       const subcommand = interaction.options.getSubcommand();
       
-      logger.info(`/invite command initiated:`, {
+      logger.info(`/invite command initiated.`, {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand
@@ -204,13 +204,19 @@ module.exports = {
     // Remove old code mapping if tag was updated with a new code
     if (isUpdate && existingTag.code && existingTag.code.toLowerCase() !== cleanCode.toLowerCase()) {
       delete codeToTagMap[existingTag.code.toLowerCase()];
-      logger.debug(`Removed old code mapping: ${existingTag.code.toLowerCase()} -> ${tagName}`);
+      logger.debug('Removed old code mapping.', {
+        oldCode: existingTag.code.toLowerCase(),
+        tagName: tagName
+      });
     }
     
     // Add new code mapping
     codeToTagMap[cleanCode.toLowerCase()] = tagName;
     await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
-    logger.debug(`Updated code-to-tag mapping: ${cleanCode.toLowerCase()} -> ${tagName}`);
+    logger.debug('Updated code-to-tag mapping.', {
+      code: cleanCode.toLowerCase(),
+      tagName: tagName
+    });
     
     const embed = new EmbedBuilder()
       .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
@@ -234,7 +240,7 @@ module.exports = {
     
     await interaction.editReply({ embeds: [embed] });
     
-    logger.info("/invite tag command completed successfully:", {
+    logger.info("/invite tag command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       tagName,
@@ -281,7 +287,7 @@ module.exports = {
     
     await interaction.editReply({ embeds: [embed] });
     
-    logger.info("/invite setup command completed successfully:", {
+    logger.info("/invite setup command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       channelId: channel.id
@@ -353,7 +359,7 @@ module.exports = {
     
     await interaction.editReply({ embeds: [embed] });
     
-    logger.info("/invite list command completed successfully:", {
+    logger.info("/invite list command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       tagCount: tags.length
@@ -454,13 +460,19 @@ module.exports = {
       // Remove old code mapping if tag was updated
       if (isUpdate && existingTag.code && existingTag.code.toLowerCase() !== inviteCode.toLowerCase()) {
         delete codeToTagMap[existingTag.code.toLowerCase()];
-        logger.debug(`Removed old code mapping: ${existingTag.code.toLowerCase()} -> ${tagName}`);
+        logger.debug('Removed old code mapping.', {
+          oldCode: existingTag.code.toLowerCase(),
+          tagName: tagName
+        });
       }
       
       // Add new code mapping
       codeToTagMap[inviteCode.toLowerCase()] = tagName;
       await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
-      logger.debug(`Updated code-to-tag mapping: ${inviteCode.toLowerCase()} -> ${tagName}`);
+      logger.debug('Updated code-to-tag mapping.', {
+        code: inviteCode.toLowerCase(),
+        tagName: tagName
+      });
       
       // Build embed
       const embed = new EmbedBuilder()
@@ -498,7 +510,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/invite create command completed successfully:", {
+      logger.info("/invite create command completed successfully.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         tagName,
@@ -509,7 +521,7 @@ module.exports = {
       });
       
     } catch (error) {
-      logger.error("Error creating invite", {
+      logger.error("Error occurred while creating invite.", {
         err: error,
         userId: interaction.user.id,
         guildId: interaction.guildId
@@ -571,14 +583,21 @@ module.exports = {
             if (invite) {
               await invite.delete('Removed via /invite remove command');
               inviteDeleted = true;
-              logger.debug(`Deleted invite ${inviteTag.code} from Discord server.`);
+              logger.debug('Deleted invite from Discord server.', {
+                inviteCode: inviteTag.code
+              });
             } else {
-              logger.debug(`Invite ${inviteTag.code} not found in server (may have already been deleted).`);
+              logger.debug('Invite not found in server, may have already been deleted.', {
+                inviteCode: inviteTag.code
+              });
               inviteDeleteError = "Invite not found in server";
             }
           }
         } catch (deleteError) {
-          logger.warn(`Failed to delete invite ${inviteTag.code} from Discord:`, deleteError);
+          logger.warn('Failed to delete invite from Discord.', {
+            err: deleteError,
+            inviteCode: inviteTag.code
+          });
           inviteDeleteError = deleteError.message;
         }
       }
@@ -591,7 +610,10 @@ module.exports = {
       if (inviteTag.code) {
         delete codeToTagMap[inviteTag.code.toLowerCase()];
         await setInviteCodeToTagMap(interaction.guildId, codeToTagMap);
-        logger.debug(`Removed code mapping: ${inviteTag.code.toLowerCase()} -> ${tagName}`);
+        logger.debug('Removed code mapping.', {
+          code: inviteTag.code.toLowerCase(),
+          tagName: tagName
+        });
       }
       
       // Build response embed
@@ -619,7 +641,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/invite remove command completed successfully:", {
+      logger.info("/invite remove command completed successfully.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         tagName,
@@ -628,7 +650,7 @@ module.exports = {
       });
       
     } catch (error) {
-      logger.error("Error removing invite tag", {
+      logger.error("Error occurred while removing invite tag.", {
         err: error,
         userId: interaction.user.id,
         guildId: interaction.guildId,
@@ -673,7 +695,9 @@ module.exports = {
         
         await interaction.respond(filtered);
       } catch (error) {
-        logger.error("Error in autocomplete:", error);
+        logger.error("Error occurred in autocomplete.", {
+          err: error
+        });
         await interaction.respond([]);
       }
     }
@@ -687,7 +711,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in invite command", {
+    logger.error("Error occurred in invite command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -706,7 +730,7 @@ module.exports = {
         content: errorMessage
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for invite command", {
+      logger.error("Failed to send error response for invite command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

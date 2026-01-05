@@ -26,7 +26,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       const name = interaction.options.getString('name');
-      logger.info('/country command initiated:', {
+      logger.info('/country command initiated.', {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         name
@@ -40,7 +40,7 @@ module.exports = {
           content: '⚠️ No country found with that name.',
           flags: MessageFlags.Ephemeral
         });
-        logger.warn('/country no results:', { name });
+        logger.warn('/country no results found.', { name });
         return;
       }
       const country = response.data[0];
@@ -74,7 +74,7 @@ module.exports = {
         embed.setThumbnail(flag);
       }
       await interaction.editReply({ embeds: [embed] });
-      logger.info('/country command completed:', { name: country.name.common, userId: interaction.user.id });
+      logger.info('/country command completed successfully.', { name: country.name.common, userId: interaction.user.id });
     } catch (error) {
       await this.handleError(interaction, error);
     }
@@ -106,7 +106,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
-      logger.error('Failed to send error response for country command', {
+      logger.error('Failed to send error response for country command.', {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

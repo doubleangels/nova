@@ -25,7 +25,7 @@ module.exports = {
         try {
             await interaction.deferReply();
             
-            logger.info("/coinflip command initiated:", {
+            logger.info("/coinflip command initiated.", {
                 userId: interaction.user.id,
                 guildId: interaction.guild?.id
             });
@@ -39,7 +39,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("/coinflip command completed successfully:", {
+            logger.info("/coinflip command completed successfully.", {
                 userId: interaction.user.id,
                 result
             });
@@ -66,7 +66,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in coinflip command", {
+        logger.error("Error occurred in coinflip command.", {
             err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
@@ -86,7 +86,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for coin flip command", {
+            logger.error("Failed to send error response for coin flip command.", {
                 err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id

@@ -48,13 +48,13 @@ module.exports = {
 
       await interaction.deferReply();
       
-      logger.info("/anime command initiated:", { 
+      logger.info("/anime command initiated.", { 
         userId: interaction.user.id, 
         userTag: interaction.user.tag 
       });
 
       const titleQuery = interaction.options.getString('title');
-      logger.debug("Processing search query:", { titleQuery });
+      logger.debug("Processing search query.", { titleQuery });
       const formattedTitle = titleQuery.trim();
 
       const animeData = await this.searchAndGetAnimeDetails(formattedTitle);
@@ -63,19 +63,19 @@ module.exports = {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
         
-        logger.info("/anime command completed successfully:", { 
+        logger.info("/anime command completed successfully.", { 
           animeTitle: animeData.title, 
           userId: interaction.user.id 
         });
       } else {
-        logger.info("No anime results found for query:", { query: formattedTitle });
+        logger.info("No anime results found for query.", { query: formattedTitle });
         await interaction.editReply({
           content: "⚠️ No anime found matching your search. Please try a different title.",
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
-      logger.error("Error in anime command", {
+      logger.error("Error occurred in anime command.", {
         err: error,
         userId: interaction.user?.id,
         guildId: interaction.guild?.id
@@ -97,7 +97,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for anime command", {
+        logger.error("Failed to send error response for anime command.", {
           err: followUpError,
           originalError: error.message,
           userId: interaction.user?.id
@@ -121,11 +121,11 @@ module.exports = {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
     const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1`;
     
-    logger.debug("Making MAL search request:", { searchUrl });
+    logger.debug("Making MAL search request.", { searchUrl });
     const searchResponse = await axios.get(searchUrl, { headers });
     
     if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
-      logger.warn("No anime results found:", { title });
+      logger.warn("No anime results found.", { title });
       return null;
     }
     
@@ -134,11 +134,11 @@ module.exports = {
     
     const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
     
-    logger.debug("Fetching anime details:", { animeId });
+    logger.debug("Fetching anime details.", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
     
     if (detailsResponse.status !== 200) {
-      logger.error("Failed to retrieve anime details:", { 
+      logger.error("Failed to retrieve anime details.", { 
         status: detailsResponse.status,
         animeId
       });

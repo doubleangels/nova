@@ -59,7 +59,7 @@ module.exports = {
                 });
             }
             
-            logger.info("/changenickname command initiated:", {
+            logger.info("/changenickname command initiated.", {
                 userId: interaction.user.id,
                 guildId: interaction.guild.id,
                 targetUserId: targetUser.id,
@@ -92,7 +92,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("/changenickname command completed successfully:", {
+            logger.info("/changenickname command completed successfully.", {
                 targetUserId: targetUser.id,
                 newNickname: newNickname || 'reset'
             });
@@ -110,7 +110,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in changenickname command", {
+        logger.error("Error occurred in changenickname command.", {
             err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
@@ -133,7 +133,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for change nickname command", {
+            logger.error("Failed to send error response for change nickname command.", {
                 err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id

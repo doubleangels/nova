@@ -36,7 +36,7 @@ module.exports = {
             const colorInput = interaction.options.getString('color');
             const oldColor = role.hexColor;
             
-            logger.info("/changecolor command initiated:", {
+            logger.info("/changecolor command initiated.", {
                 userId: interaction.user.id,
                 guildId: interaction.guild.id,
                 roleId: role.id,
@@ -62,13 +62,13 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("/changecolor command completed successfully:", {
+            logger.info("/changecolor command completed successfully.", {
                 roleId: role.id,
                 oldColor,
                 newColor: colorValidation.normalizedColor
             });
         } catch (error) {
-            logger.error("Error in change color command", {
+            logger.error("Error occurred in change color command.", {
                 err: error,
                 userId: interaction.user?.id,
                 guildId: interaction.guild?.id,
@@ -91,7 +91,7 @@ module.exports = {
                     flags: MessageFlags.Ephemeral 
                 });
             } catch (followUpError) {
-                logger.error("Failed to send error response for change color command", {
+                logger.error("Failed to send error response for change color command.", {
                     err: followUpError,
                     originalError: error.message,
                     userId: interaction.user?.id

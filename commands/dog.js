@@ -26,7 +26,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       
-      logger.info("/dog command initiated:", {
+      logger.info("/dog command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guild?.id
       });
@@ -46,7 +46,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/dog command completed successfully:", {
+      logger.info("/dog command completed successfully.", {
         userId: interaction.user.id,
         imageUrl: dogData.message
       });
@@ -64,7 +64,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in dog command", {
+    logger.error("Error occurred in dog command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -88,7 +88,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for dog command", {
+      logger.error("Failed to send error response for dog command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

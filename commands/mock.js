@@ -29,7 +29,7 @@ module.exports = {
             const targetMessage = interaction.targetMessage;
             const originalContent = targetMessage.content;
             
-            logger.info("/mock context menu command initiated:", {
+            logger.info("/mock context menu command initiated.", {
                 userId: interaction.user.id,
                 guildId: interaction.guild?.id,
                 targetMessageId: targetMessage.id,
@@ -56,7 +56,7 @@ module.exports = {
                 content: `"${mockedText}" - ${targetMessage.author}`
             });
             
-            logger.info("/mock context menu command completed successfully:", {
+            logger.info("/mock context menu command completed successfully.", {
                 userId: interaction.user.id,
                 originalLength: originalContent.length,
                 convertedLength: mockedText.length
@@ -103,7 +103,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in mock context menu command", {
+        logger.error("Error occurred in mock context menu command.", {
             err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
@@ -128,7 +128,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for mock command", {
+            logger.error("Failed to send error response for mock command.", {
                 err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id

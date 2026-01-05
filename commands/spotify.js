@@ -92,7 +92,7 @@ module.exports = {
       }
 
       await interaction.deferReply();
-      logger.info(`/spotify command initiated:`, {
+      logger.info('/spotify command initiated.', {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -152,7 +152,7 @@ module.exports = {
         }
       );
 
-      logger.info("/spotify command completed successfully:", {
+      logger.info("/spotify command completed successfully.", {
         userId: interaction.user.id,
         subcommand: subcommand,
         query: interaction.options.getString('query'),
@@ -171,7 +171,7 @@ module.exports = {
    */
   validateConfiguration() {
     if (!config.spotifyClientId || !config.spotifyClientSecret) {
-      logger.error("Spotify API configuration is missing:", {
+      logger.error("Spotify API configuration is missing.", {
         hasClientId: !!config.spotifyClientId,
         hasClientSecret: !!config.spotifyClientSecret
       });
@@ -205,7 +205,7 @@ module.exports = {
 
       return response.data.access_token;
     } catch (error) {
-      logger.error("Failed to get Spotify access token", {
+      logger.error("Failed to get Spotify access token.", {
         err: error
       });
       return null;
@@ -251,7 +251,7 @@ module.exports = {
 
       return tracks;
     } catch (error) {
-      logger.error("Failed to search for song", {
+      logger.error("Failed to search for song.", {
         err: error,
         query
       });
@@ -294,7 +294,7 @@ module.exports = {
 
       return albums;
     } catch (error) {
-      logger.error("Failed to search for album", {
+      logger.error("Failed to search for album.", {
         err: error,
         query
       });
@@ -337,7 +337,7 @@ module.exports = {
 
       return artists;
     } catch (error) {
-      logger.error("Failed to search for artist", {
+      logger.error("Failed to search for artist.", {
         err: error,
         query
       });
@@ -386,7 +386,7 @@ module.exports = {
 
       return playlists;
     } catch (error) {
-      logger.error("Failed to search for playlist", {
+      logger.error("Failed to search for playlist.", {
         err: error,
         query
       });
@@ -435,7 +435,7 @@ module.exports = {
 
       return shows;
     } catch (error) {
-      logger.error("Failed to search for podcast", {
+      logger.error("Failed to search for podcast.", {
         err: error,
         query
       });
@@ -583,7 +583,7 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logger.error("Error in spotify command", {
+    logger.error("Error occurred in spotify command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -611,7 +611,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for spotify command", {
+      logger.error("Failed to send error response for spotify command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

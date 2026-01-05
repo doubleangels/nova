@@ -51,7 +51,7 @@ module.exports = {
       const place1 = interaction.options.getString('place1');
       const place2 = interaction.options.getString('place2');
       
-      logger.info("/timedifference command initiated:", {
+      logger.info("/timedifference command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -66,7 +66,7 @@ module.exports = {
       }
       
       await interaction.editReply(timeDiffResult.message);
-      logger.info("/timedifference command completed successfully:", {
+      logger.info("/timedifference command completed successfully.", {
         userId: interaction.user.id,
         place1: timeDiffResult.formattedPlace1,
         place2: timeDiffResult.formattedPlace2,
@@ -87,7 +87,7 @@ module.exports = {
    */
   validateConfiguration() {
     if (!config.googleApiKey) {
-      logger.error("Google API key is not configured in the application:", {
+      logger.error("Google API key is not configured in the application.", {
         command: 'timedifference'
       });
       return false;
@@ -111,7 +111,7 @@ module.exports = {
       ]);
       
       if (offset1Result.error) {
-        logger.warn("Failed to retrieve timezone for the first location:", {
+        logger.warn("Failed to retrieve timezone for the first location.", {
           place: place1,
           errorType: offset1Result.errorType
         });
@@ -169,7 +169,7 @@ module.exports = {
         timeZone2: offset2Result.timeZoneName
       };
     } catch (error) {
-      logger.error("Error calculating time difference", {
+      logger.error("Error occurred while calculating time difference.", {
         err: error,
         place1,
         place2
@@ -219,7 +219,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in timedifference command", {
+    logger.error("Error occurred in timedifference command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -245,7 +245,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for timediff command", {
+      logger.error("Failed to send error response for timediff command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

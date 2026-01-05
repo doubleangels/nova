@@ -264,7 +264,7 @@ module.exports = {
 
       if (validFlair) {
         submissionData.flair_id = targetFlairId;
-        logger.info("Using flair:", { flair: validFlair });
+        logger.info("Using flair.", { flair: validFlair });
       } else {
         logger.warn("Target flair not found, posting without flair.");
       }
@@ -340,7 +340,7 @@ module.exports = {
               postId = parsedData.name.replace('t3_', '');
             }
           } catch (parseError) {
-            logger.debug("Could not parse json.data as JSON string:", parseError);
+            logger.debug("Could not parse json.data as JSON string.", { err: parseError });
           }
         }
       }
@@ -398,7 +398,7 @@ module.exports = {
       await handleReminder(mockMessage, 86400000, 'promote');
 
     } catch (error) {
-      logger.error("Error posting to r/findaserver:", error);
+      logger.error("Error occurred while posting to r/findaserver.", { err: error });
       let errorMessage = error.message || 'Unknown error';
       
       // Parse Reddit API error responses
@@ -495,7 +495,7 @@ module.exports = {
     try {
       await interaction.editReply({ content: errorMessage });
     } catch (replyError) {
-      logger.error('Failed to send error message:', { err: replyError });
+      logger.error('Failed to send error message.', { err: replyError });
     }
   },
 
@@ -547,7 +547,7 @@ module.exports = {
         }
         const remainingIds = reminderIds.filter(rid => !idsToRemove.includes(rid));
         await reminderKeyv.set('reminders:promote:list', remainingIds);
-        logger.debug(`Cleaned up ${idsToRemove.length} expired/invalid promote reminder(s).`);
+        logger.debug('Cleaned up expired/invalid promote reminders.', { count: idsToRemove.length });
       }
 
       // Get latest reminder
@@ -563,7 +563,7 @@ module.exports = {
 
       return null;
     } catch (error) {
-      logger.error("Error getting next promotion time:", error);
+      logger.error("Error occurred while getting next promotion time.", { err: error });
       return null;
     }
   }

@@ -53,7 +53,7 @@ module.exports = {
     try {
       const subcommand = interaction.options.getSubcommand();
       
-      logger.info(`/trollmode command initiated:`, {
+      logger.info('/trollmode command initiated.', {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -88,7 +88,7 @@ module.exports = {
     
     await interaction.reply({ embeds: [embed] });
     
-    logger.info("/trollmode command completed successfully:", {
+    logger.info("/trollmode command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled: settings.enabled
@@ -122,7 +122,7 @@ module.exports = {
     
     await interaction.reply({ embeds: [embed] });
     
-    logger.info("/trollmode command completed successfully:", {
+    logger.info("/trollmode command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled,
@@ -148,7 +148,7 @@ module.exports = {
         accountAge: accountAge ? Number(accountAge) : 30
       };
     } catch (error) {
-      logger.error("Failed to retrieve troll mode settings", {
+      logger.error("Failed to retrieve troll mode settings.", {
         err: error
       });
       throw new Error("DATABASE_READ_ERROR");
@@ -176,7 +176,7 @@ module.exports = {
       
       await Promise.all(updates);
     } catch (error) {
-      logger.error("Failed to update troll mode settings", {
+      logger.error("Failed to update troll mode settings.", {
         err: error,
         settings
       });
@@ -249,7 +249,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in trollmode command", {
+    logger.error("Error occurred in trollmode command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -273,7 +273,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for trollmode command", {
+      logger.error("Failed to send error response for trollmode command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

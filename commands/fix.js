@@ -47,7 +47,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {
-      logger.info("/fix command initiated:", {
+      logger.info("/fix command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -84,9 +84,10 @@ module.exports = {
    */
   async handleFixReminder(interaction, type, delayMs, displayName) {
     try {
-      logger.info(`/fix ${type} command initiated:`, {
+      logger.info('/fix command initiated.', {
         userId: interaction.user.id,
-        guildId: interaction.guild.id
+        guildId: interaction.guild.id,
+        type: type
       });
 
       const reminderChannelId = await getValue('reminder_channel');
@@ -105,7 +106,7 @@ module.exports = {
       
       await handleReminder(mockMessage, delayMs, type, true);
       
-      logger.info("Reminder saved via handleReminder:", {
+      logger.info("Reminder saved via handleReminder.", {
         type,
         delayMs,
         scheduledTime: scheduledTime.toISOString()
@@ -118,16 +119,18 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info(`/fix ${type} command completed successfully:`, {
+      logger.info('/fix command completed successfully.', {
         userId: interaction.user.id,
         guildId: interaction.guild.id,
+        type: type,
         scheduledTime: scheduledTime.toISOString()
       });
     } catch (error) {
-      logger.error(`Error in /fix ${type} command`, {
+      logger.error('Error occurred in /fix command.', {
         err: error,
         userId: interaction.user?.id,
-        guildId: interaction.guild?.id
+        guildId: interaction.guild?.id,
+        type: type
       });
       
       let errorMessage = `⚠️ An unexpected error occurred while fixing the ${displayName.toLowerCase()} reminder.`;
@@ -144,7 +147,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for fix command", {
+        logger.error("Failed to send error response for fix command.", {
           err: followUpError,
           originalError: error.message,
           userId: interaction.user?.id
@@ -168,7 +171,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in fix command", {
+    logger.error("Error occurred in fix command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -188,7 +191,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for fix command", {
+      logger.error("Failed to send error response for fix command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

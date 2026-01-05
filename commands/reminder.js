@@ -56,7 +56,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {      
-      logger.info("/reminder command initiated:", {
+      logger.info("/reminder command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -100,7 +100,7 @@ module.exports = {
         setValue('reminder_role', roleOption.id)
       ]);
     } catch (dbError) {
-      logger.error("Database operation failed during reminder setup", { 
+      logger.error("Database operation failed during reminder setup.", { 
         err: dbError,
         userId: interaction.user.id,
         guildId: interaction.guildId
@@ -109,7 +109,7 @@ module.exports = {
       throw new Error("DATABASE_WRITE_ERROR");
     }
     
-    logger.info("/reminder command completed successfully:", {
+    logger.info("/reminder command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       channelId: channelOption.id,
@@ -140,7 +140,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleReminderStatus(interaction) {
-    logger.debug("Processing reminder status check:", { 
+    logger.debug("Processing reminder status check.", { 
       userId: interaction.user.id,
       guildId: interaction.guildId
     });
@@ -157,7 +157,7 @@ module.exports = {
         this.getLatestReminderData(channelId, 'promote')
       ]);
       
-      logger.debug("Retrieved reminder configuration:", { 
+      logger.debug("Retrieved reminder configuration.", { 
         channelId, 
         roleId,
         hasBumpReminder: !!bumpReminder,
@@ -199,13 +199,13 @@ module.exports = {
       }
 
       await interaction.editReply({ embeds: [embed] });
-      logger.info("/reminder command completed successfully:", {
+      logger.info("/reminder command completed successfully.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         configComplete
       });
     } catch (dbError) {
-      logger.error("Database operation failed while retrieving reminder data", { 
+      logger.error("Database operation failed while retrieving reminder data.", { 
         err: dbError,
         userId: interaction.user.id,
         guildId: interaction.guildId
@@ -228,7 +228,7 @@ module.exports = {
     try {
       return await getLatestReminderData(type);
     } catch (err) {
-      logger.error("Error getting latest reminder data:", { error: err, type });
+      logger.error("Error occurred while getting latest reminder data.", { err: err, type });
       return null;
     }
   },
@@ -263,7 +263,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in reminder command", {
+    logger.error("Error occurred in reminder command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -287,7 +287,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for reminder command", {
+      logger.error("Failed to send error response for reminder command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

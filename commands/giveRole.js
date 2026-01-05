@@ -46,7 +46,7 @@ module.exports = {
      */
     async execute(interaction) {
         await interaction.deferReply();
-        logger.info("/giverole command initiated:", { 
+        logger.info("/giverole command initiated.", { 
             userId: interaction.user.id, 
             guildId: interaction.guildId 
         });
@@ -63,7 +63,7 @@ module.exports = {
                 });
             }
             
-            logger.debug("Processing command options:", { 
+            logger.debug("Processing command options.", { 
                 roleId: role.id, 
                 roleName: role.name,
                 targetUserId: targetUser.id,
@@ -76,7 +76,7 @@ module.exports = {
                 targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
             }
             if (!targetMember) {
-                logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
+                logger.warn("Target user not found in guild.", { targetUserId: targetUser.id });
                 return await interaction.editReply({
                     content: "⚠️ The specified user could not be found in this server.",
                     flags: MessageFlags.Ephemeral
@@ -148,7 +148,7 @@ module.exports = {
     async assignRole(interaction, role, targetMember) {
         const botMember = interaction.guild.members.me;
         if (botMember.roles.highest.position <= role.position) {
-            logger.warn("Bot's highest role is not high enough to assign the specified role:", {
+            logger.warn("Bot's highest role is not high enough to assign the specified role.", {
                 botHighestRolePosition: botMember.roles.highest.position,
                 rolePosition: role.position
             });
@@ -161,7 +161,7 @@ module.exports = {
         const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;
         await targetMember.roles.add(role.id, auditReason);
         
-        logger.info("/giverole command completed successfully:", { 
+        logger.info("/giverole command completed successfully.", { 
             userId: targetMember.id, 
             userTag: targetMember.user.tag,
             role: role.name,
@@ -180,7 +180,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(error, interaction) {
-        logger.error('Error in giveRole command', {
+        logger.error('Error occurred in giveRole command.', {
             err: error,
             userId: interaction.user.id,
             guildId: interaction.guildId,
@@ -202,7 +202,7 @@ module.exports = {
         try {
             await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
         } catch (replyError) {
-            logger.error('Failed to send error message:', { err: replyError });
+            logger.error('Failed to send error message.', { err: replyError });
         }
     }
 };

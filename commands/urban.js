@@ -33,7 +33,7 @@ module.exports = {
             
             const term = interaction.options.getString('term');
             
-            logger.info("/urban command initiated:", {
+            logger.info("/urban command initiated.", {
                 userId: interaction.user.id,
                 guildId: interaction.guildId
             });
@@ -65,7 +65,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("/urban command completed successfully:", {
+            logger.info("/urban command completed successfully.", {
                 userId: interaction.user.id,
                 term
             });
@@ -82,7 +82,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in urban command", {
+        logger.error("Error occurred in urban command.", {
             err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
@@ -108,7 +108,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for urban command", {
+            logger.error("Failed to send error response for urban command.", {
                 err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id

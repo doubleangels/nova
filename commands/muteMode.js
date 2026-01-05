@@ -63,7 +63,7 @@ module.exports = {
     await interaction.deferReply();
     
     try {      
-      logger.info("/mutemode command initiated:", {
+      logger.info("/mutemode command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         subcommand: interaction.options.getSubcommand()
@@ -96,7 +96,7 @@ module.exports = {
       const embed = this.formatStatusMessage(currentSettings, interaction);
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/mutemode command completed successfully:", {
+      logger.info("/mutemode command completed successfully.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         settings: currentSettings
@@ -124,7 +124,7 @@ module.exports = {
       let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
       
       if (timeLimit < 1 || timeLimit > 72) {
-        logger.warn("Invalid time limit specified:", {
+        logger.warn("Invalid time limit specified.", {
           userId: interaction.user.id,
           guildId: interaction.guildId,
           providedValue: timeLimit
@@ -133,7 +133,7 @@ module.exports = {
         timeLimit = 2;
       }
       
-      logger.debug("Processing mutemode update:", {
+      logger.debug("Processing mutemode update.", {
         currentEnabled: currentSettings.isEnabled,
         newEnabled: isEnabled,
         currentTimeLimit: currentSettings.timeLimit,
@@ -151,7 +151,7 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/mutemode command completed successfully:", {
+      logger.info("/mutemode command completed successfully.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         isEnabled,
@@ -180,7 +180,7 @@ module.exports = {
         timeLimit: timeLimit ? Number(timeLimit) : 2
       };
     } catch (error) {
-      logger.error("Failed to retrieve current mute mode settings", {
+      logger.error("Failed to retrieve current mute mode settings.", {
         err: error
       });
 
@@ -203,7 +203,7 @@ module.exports = {
         setValue("mute_mode_kick_time_hours", timeLimit)
       ]);
     } catch (error) {
-      logger.error("Database operation failed during mute mode update", { 
+      logger.error("Database operation failed during mute mode update.", { 
         err: error
       });
       
@@ -292,7 +292,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in mutemode command", {
+    logger.error("Error occurred in mutemode command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -314,7 +314,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for mutemode command", {
+      logger.error("Failed to send error response for mutemode command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

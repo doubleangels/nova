@@ -26,7 +26,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       const word = interaction.options.getString('word');
-      logger.info('/dictionary command initiated:', {
+      logger.info('/dictionary command initiated.', {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         word
@@ -61,7 +61,7 @@ module.exports = {
         .setFooter({ text: 'Powered by Free Dictionary API' });
 
       await interaction.editReply({ embeds: [embed] });
-      logger.info('/dictionary command completed successfully:', {
+      logger.info('/dictionary command completed successfully.', {
         userId: interaction.user.id,
         word
       });
@@ -98,7 +98,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
-      logger.error('Failed to send error response for dictionary command', {
+      logger.error('Failed to send error response for dictionary command.', {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id

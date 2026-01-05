@@ -84,7 +84,7 @@ module.exports = {
                 targetMember = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
             }
             if (!targetMember) {
-                logger.warn("Target user not found in guild:", { targetUserId: targetUser.id });
+                logger.warn("Target user not found in guild.", { targetUserId: targetUser.id });
                 return await interaction.editReply({
                     content: "⚠️ The specified user could not be found in this server.",
                     flags: MessageFlags.Ephemeral
@@ -93,7 +93,7 @@ module.exports = {
             
             const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
             if (!colorValidationResult.success) {
-                logger.warn("Invalid color format provided:", { colorHex });
+                logger.warn("Invalid color format provided.", { colorHex });
                 return await interaction.editReply({
                     content: "⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.",
                     flags: MessageFlags.Ephemeral
@@ -128,7 +128,7 @@ module.exports = {
             
             await interaction.editReply({ embeds: [embed] });
             
-            logger.info("/giveperms command completed successfully:", {
+            logger.info("/giveperms command completed successfully.", {
               userId: interaction.user.id,
               targetUserId: targetUser.id,
               roleName: roleName.trim(),
@@ -225,7 +225,7 @@ module.exports = {
         ]);
         
         if (!positionRole) {
-            logger.error("Reference role not found:", { roleId: positionAboveRoleId });
+            logger.error("Reference role not found.", { roleId: positionAboveRoleId });
             return {
                 success: false,
                 message: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`
@@ -233,7 +233,7 @@ module.exports = {
         }
         
         if (!additionalRole) {
-            logger.error("Additional role not found:", { roleId: frenRoleId });
+            logger.error("Additional role not found.", { roleId: frenRoleId });
             return {
                 success: false,
                 message: `⚠️ The fren role (ID: ${frenRoleId}) was not found in this server.`

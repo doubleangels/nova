@@ -57,7 +57,7 @@ module.exports = {
       await interaction.deferReply();
       const subcommand = interaction.options.getSubcommand();
       const titleQuery = interaction.options.getString('title');
-      logger.info(`/imdb ${subcommand} command initiated:`, {
+      logger.info('/imdb command initiated.', {
         userId: interaction.user.id,
         userTag: interaction.user.tag,
         subcommand
@@ -82,7 +82,7 @@ module.exports = {
         timeout: 5000
       });
       if (response.data.Error) {
-        logger.warn("No results found for query:", { query: formattedTitle, type: typeParam });
+        logger.warn("No results found for query.", { query: formattedTitle, type: typeParam });
         await interaction.editReply({
           content: `⚠️ No results found for your search. Please try a different title.`,
           flags: MessageFlags.Ephemeral
@@ -92,10 +92,11 @@ module.exports = {
       const data = response.data;
       const embed = this.createMediaEmbed(data, typeLabel);
       await interaction.editReply({ embeds: [embed] });
-      logger.info(`/imdb ${subcommand} command completed successfully:`, {
+      logger.info('/imdb command completed successfully.', {
         title: data.Title,
         userId: interaction.user.id,
         imdbId: data.imdbID,
+        subcommand: subcommand,
         type: typeParam
       });
     } catch (error) {
@@ -143,7 +144,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in imdb command", {
+    logger.error("Error occurred in imdb command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -169,7 +170,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for imdb command", {
+      logger.error("Failed to send error response for imdb command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
