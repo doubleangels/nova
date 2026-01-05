@@ -104,9 +104,6 @@ docker-compose.yml
 # Data directory (volume mount, should not be copied)
 data/
 
-# Development and deployment scripts
-deploy-commands.js
-
 # Image assets (not needed for bot runtime)
 *.png
 *.jpg
