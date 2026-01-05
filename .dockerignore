@@ -99,9 +99,21 @@ lib-cov
 # Docker
 Dockerfile
 .dockerignore
+docker-compose.yml
 
 # Data directory (volume mount, should not be copied)
 data/
+
+# Development and deployment scripts
+deploy-commands.js
+
+# Image assets (not needed for bot runtime)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
 
 # Documentation
 README.md
@@ -112,6 +124,17 @@ README.md
 .idea
 *.swp
 *.swo
+*.sublime-*
+
+# Test files
+*.test.js
+*.spec.js
+test/
+tests/
+__tests__/
+jest.config.*
+*.test.*
+*.spec.*
 
 # OS generated files
 .DS_Store
