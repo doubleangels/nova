@@ -2,16 +2,20 @@
 # Multi-stage build for optimized image size and security
 
 # Use specific Node.js version for reproducibility
-FROM node:24.1.0-alpine AS base
+FROM node:24.1.0 AS base
 
 WORKDIR /app
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init su-exec
+RUN apt-get update && \
+    apt-get install -y \
+    dumb-init \
+    gosu && \
+    rm -rf /var/lib/apt/lists/*
 
 # Create user and group in a single layer
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S discordbot -u 1001
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs -s /bin/bash -m discordbot
 
 # Copy package files for dependency installation
 COPY package*.json ./
@@ -20,12 +24,13 @@ COPY package*.json ./
 FROM base AS builder
 
 # Install build dependencies for native modules (better-sqlite3)
-RUN apk add --no-cache --virtual .build-deps \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     python3 \
-    py3-setuptools \
     make \
     g++ \
-    build-base
+    build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install dependencies with BuildKit cache mount for faster rebuilds
 RUN --mount=type=cache,target=/root/.npm \
@@ -33,34 +38,30 @@ RUN --mount=type=cache,target=/root/.npm \
     npm cache clean --force
 
 # Remove build dependencies to reduce image size
-RUN apk del .build-deps
+RUN apt-get purge -y --auto-remove \
+    python3 \
+    make \
+    g++ \
+    build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
 # Final runtime stage
 FROM base AS runtime
 
-# Install dependencies for Bitwarden Secrets Manager
-RUN apk add --no-cache \
+# Install dependencies
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && \
+  apt-get install -y \
   ca-certificates \
   curl \
   jq \
-  unzip
+  unzip && \
+  rm -rf /var/lib/apt/lists/*
 
-# Download bws (using musl for Alpine Linux)
-# Support both amd64 and arm64 architectures
-ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      BWS_ARCH="x86_64-unknown-linux-musl"; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      BWS_ARCH="aarch64-unknown-linux-musl"; \
-    else \
-      echo "Unsupported architecture: $TARGETARCH" && exit 1; \
-    fi && \
-    curl -LO https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-${BWS_ARCH}-1.0.0.zip && \
-    unzip bws-${BWS_ARCH}-1.0.0.zip -d /tmp && \
-    mv /tmp/bws /usr/local/bin/bws && \
-    rm -f bws-${BWS_ARCH}-1.0.0.zip && \
-    chmod +x /usr/local/bin/bws && \
-    bws --version
+# Download bws
+RUN curl -LO https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
+  unzip bws-x86_64-unknown-linux-gnu-1.0.0.zip -d /usr/local/bin/ && \
+  rm -f bws-x86_64-unknown-linux-gnu-1.0.0.zip
 
 # Copy node_modules from builder stage
 COPY --from=builder --chown=discordbot:nodejs /app/node_modules ./node_modules
@@ -90,4 +91,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Entrypoint runs as root to fix permissions, then switches to discordbot user
 ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
 
-CMD ["su-exec", "discordbot", "node", "index.js"]
+CMD ["gosu", "discordbot", "node", "index.js"]
