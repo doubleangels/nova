@@ -14,7 +14,8 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     dumb-init \
-    gosu && \
+    gosu \
+    procps && \
     groupadd -g 1001 nodejs && \
     useradd -u 1001 -g nodejs -s /bin/bash -m discordbot && \
     rm -rf /var/lib/apt/lists/*
@@ -82,9 +83,9 @@ RUN chmod +x /app/docker-entrypoint.sh && \
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]
 
-# Add health check
+# Add health check - verify the bot process is running
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "process.exit(0)" || exit 1
+  CMD pgrep -f "node.*index.js" > /dev/null || exit 1
 
 # Entrypoint runs as root to fix permissions, then switches to discordbot user
 ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
