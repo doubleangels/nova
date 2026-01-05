@@ -83,27 +83,6 @@ module.exports = {
       // Check for bump messages (both Disboard with embeds and Discadia without embeds)
       await checkForBumpMessages(message);
       
-      // Auto-react to "Dubz" or "Dubzie" mentions (case-insensitive)
-      const messageContentLower = message.content?.toLowerCase() || '';
-      if (messageContentLower.includes('dubz') || messageContentLower.includes('dubzie')) {
-        try {
-          // Get dubz emoji from database config (already fetched above)
-          const dubzEmoji = await getValue('dubz_emoji');
-          if (dubzEmoji) {
-            await message.react(dubzEmoji);
-            logger.debug('Reacted to "Dubz"/"Dubzie" mention in message from user.', {
-              userTag: message.author.tag
-            });
-          }
-        } catch (error) {
-          logger.error("Failed to react to Dubz/Dubzie mention.", {
-            err: error,
-            messageId: message.id,
-            channelId: message.channel.id
-          });
-        }
-      }
-      
       logger.debug('Processed message from user in channel.', {
         userTag: message.author.tag,
         channelName: message.channel.name
