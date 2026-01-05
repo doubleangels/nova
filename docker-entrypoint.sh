@@ -33,6 +33,9 @@ fix_permissions() {
 # Always fix permissions before executing
 fix_permissions
 
+# Configure bws to use /tmp for state directory (writable tmpfs)
+export BW_SECRETS_MANAGER_STATE_PATH=/tmp
+
 # Retrieve secrets from Bitwarden
 BASE_EMBED_COLOR=$(bws secret get bab2467f-507d-4355-8315-b3c300163de6 | jq '.value')
 BOT_STATUS=$(bws secret get b0ca2fbc-f474-49b9-8536-b3c9014533bf | jq '.value')
