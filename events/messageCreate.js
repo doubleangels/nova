@@ -261,23 +261,33 @@ async function checkForBumpMessages(message) {
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!")
-    // Similar structure to Disboard but checks content instead of embeds
-    // For webhook/interaction messages, content might need fetching
-    if (message.webhookId || message.interaction || (messageContent && messageContent.trim().length > 0)) {
-      // Only fetch if content might be incomplete (partial message, webhook, or interaction)
+    // Discadia messages are webhook/interaction messages, so we need to check author and fetch content
+    const isDiscadiaBot = message.author?.username?.toLowerCase().includes('discadia') || 
+                          message.author?.tag?.toLowerCase().includes('discadia');
+    
+    // Always check for Discadia if it's a webhook/interaction message or if author is Discadia
+    if (isDiscadiaBot || message.webhookId || message.interaction) {
+      // Always fetch for webhook/interaction messages to ensure we have the latest content
       let contentToCheck = messageContent;
-      if (message.partial || message.webhookId || message.interaction || !messageContent || messageContent.trim().length === 0) {
+      let embedsToCheck = message.embeds;
+      
+      if (message.partial || message.webhookId || message.interaction || isDiscadiaBot) {
         try {
           const fetchedMessage = await message.fetch();
           if (fetchedMessage.content) {
             contentToCheck = fetchedMessage.content;
             messageContent = fetchedMessage.content;
-            logger.debug("Fetched message content for Discadia check:", {
-              label: "messageCreate.js",
-              messageId: message.id,
-              contentLength: contentToCheck.length
-            });
           }
+          if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
+            embedsToCheck = fetchedMessage.embeds;
+          }
+          logger.debug("Fetched message for Discadia check:", {
+            label: "messageCreate.js",
+            messageId: message.id,
+            contentLength: contentToCheck?.length || 0,
+            embedCount: embedsToCheck?.length || 0,
+            author: message.author?.tag
+          });
         } catch (fetchError) {
           logger.debug("Could not fetch message for Discadia check:", {
             label: "messageCreate.js",
@@ -287,22 +297,42 @@ async function checkForBumpMessages(message) {
         }
       }
       
-      // Check content for Discadia pattern
+      // Check content for Discadia pattern (in both message content and embeds)
       const discadiaBumpPattern = /has been successfully bumped!/i;
+      
+      // Check message content
       if (contentToCheck && contentToCheck.trim().length > 0 && discadiaBumpPattern.test(contentToCheck)) {
-        logger.info("Discadia bump detected, scheduling reminder.");
+        logger.info("Discadia bump detected in content, scheduling reminder.");
         await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
         logger.debug("Bump reminder scheduled for 24 hours.");
         return;
       }
-    } else {
-      logger.debug("No message content available for Discadia check:", {
-        label: "messageCreate.js",
-        messageId: message.id,
-        author: message.author?.tag,
-        hasWebhook: !!message.webhookId,
-        isInteraction: !!message.interaction
-      });
+      
+      // Check embeds for Discadia pattern (some Discadia messages might have embeds)
+      if (embedsToCheck && embedsToCheck.length > 0) {
+        const discadiaEmbed = embedsToCheck.find(embed => 
+          (embed.description && discadiaBumpPattern.test(embed.description)) ||
+          (embed.title && discadiaBumpPattern.test(embed.title)) ||
+          (embed.footer?.text && discadiaBumpPattern.test(embed.footer.text))
+        );
+        
+        if (discadiaEmbed) {
+          logger.info("Discadia bump detected in embed, scheduling reminder.");
+          await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
+          logger.debug("Bump reminder scheduled for 24 hours.");
+          return;
+        }
+      }
+      
+      // If it's definitely Discadia bot but pattern didn't match, log for debugging
+      if (isDiscadiaBot) {
+        logger.debug("Discadia bot message detected but bump pattern not found:", {
+          label: "messageCreate.js",
+          messageId: message.id,
+          content: contentToCheck?.substring(0, 100) || "No content",
+          embedCount: embedsToCheck?.length || 0
+        });
+      }
     }
   } catch (error) {
     logger.error("Failed to process bump message:", { error, messageId: message.id, author: message.author?.tag });
