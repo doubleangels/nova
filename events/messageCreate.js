@@ -28,7 +28,7 @@ module.exports = {
         try {
           await message.fetch();
         } catch (fetchError) {
-          logger.error("Failed to fetch partial message:", { error: fetchError });
+          logger.error("Failed to fetch partial message:", fetchError);
           throw new Error("⚠️ Failed to fetch message content.");
         }
       }
@@ -51,8 +51,8 @@ module.exports = {
           await trackNewUserMessage(message);
         }
       } catch (error) {
-        logger.error("Error checking spam mode or tracking new user message:", {
-          error: error.message,
+        logger.error("Error checking spam mode or tracking new user message", {
+          err: error,
           messageId: message.id
         });
       }
@@ -90,8 +90,8 @@ module.exports = {
             logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}.`);
           }
         } catch (error) {
-          logger.error("Failed to react to Dubz/Dubzie mention:", {
-            error: error.message,
+          logger.error("Failed to react to Dubz/Dubzie mention", {
+            err: error,
             messageId: message.id,
             channelId: message.channel.id
           });
@@ -132,8 +132,8 @@ module.exports = {
             content: message.content
           });
         } catch (error) {
-          logger.error("Failed to delete message in no-text channel:", { 
-            error: error.message,
+          logger.error("Failed to delete message in no-text channel", {
+            err: error,
             channelId: message.channelId,
             userId: message.author.id,
             messageId: message.id
@@ -145,9 +145,8 @@ module.exports = {
       }
 
     } catch (error) {
-      logger.error('Error processing message:', {
-        error: error.stack,
-        message: error.message,
+      logger.error('Error processing message', {
+        err: error,
         userId: message.author.id,
         messageId: message.id
       });
@@ -320,6 +319,10 @@ async function checkForBumpMessages(message) {
       }
     }
   } catch (error) {
-    logger.error("Failed to process bump message:", { error, messageId: message.id, author: message.author?.tag });
+    logger.error("Failed to process bump message", {
+      err: error,
+      messageId: message.id,
+      author: message.author?.tag
+    });
   }
 }

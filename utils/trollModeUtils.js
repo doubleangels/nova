@@ -28,10 +28,7 @@ async function checkAccountAge(member) {
 
     return accountAge >= requiredAge;
   } catch (error) {
-    logger.error(`Error checking account age for ${member.user.tag}:`, {
-      error: error.message,
-      stack: error.stack
-    });
+    logger.error(`Error checking account age for ${member.user.tag}:`, error);
     return true;
   }
 }
@@ -61,7 +58,7 @@ async function performKick(member) {
         );
       await member.send({ embeds: [embed] });
     } catch (dmError) {
-      logger.warn(`Failed to send DM to member ${member.user.tag} before kick:`, { error: dmError.message });
+      logger.warn(`Failed to send DM to member ${member.user.tag} before kick:`, dmError);
     }
 
     await member.kick("Account age does not meet server requirements.");
@@ -70,10 +67,7 @@ async function performKick(member) {
       requiredAge
     });
   } catch (error) {
-    logger.error(`Failed to kick member ${member.user.tag}:`, {
-      error: error.message,
-      stack: error.stack
-    });
+    logger.error(`Failed to kick member ${member.user.tag}:`, error);
     throw error;
   }
 }

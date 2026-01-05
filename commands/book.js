@@ -162,8 +162,8 @@ module.exports = {
 
       return books;
     } catch (error) {
-      logger.error("Failed to search for books:", {
-        error: error.message,
+      logger.error("Failed to search for books", {
+        err: error,
         query
       });
       return null;
@@ -225,8 +225,8 @@ module.exports = {
 
       return [book];
     } catch (error) {
-      logger.error("Failed to search for book by ISBN:", {
-        error: error.message,
+      logger.error("Failed to search for book by ISBN", {
+        err: error,
         isbn
       });
       return null;
@@ -388,9 +388,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in book command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in book command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -419,8 +418,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for book command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for book command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

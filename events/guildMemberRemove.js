@@ -33,9 +33,8 @@ module.exports = {
 
       logger.info(`Successfully processed member departure: ${member.user.tag}.`);
     } catch (error) {
-      logger.error('Error processing member leave:', {
-        error: error.stack,
-        message: error.message,
+      logger.error('Error processing member leave', {
+        err: error,
         userId: member.user.id
       });
       

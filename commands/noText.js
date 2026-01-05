@@ -82,7 +82,7 @@ module.exports = {
         try {
           await setValue('notext_channel', channel.id);
         } catch (error) {
-          logger.error("Failed to save no-text channel configuration:", { error: error.message });
+          logger.error("Failed to save no-text channel configuration:", error);
           return await interaction.reply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
@@ -116,7 +116,7 @@ module.exports = {
         try {
           await setValue('notext_channel', null);
         } catch (error) {
-          logger.error("Failed to remove no-text channel configuration:", { error: error.message });
+          logger.error("Failed to remove no-text channel configuration:", error);
           return await interaction.reply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
@@ -140,7 +140,7 @@ module.exports = {
       }
 
     } catch (error) {
-      logger.error("Error in notext command:", { error: error.message });
+      logger.error("Error in notext command:", error);
       await interaction.reply({
         content: "⚠️ An unexpected error occurred while configuring the channel.",
         flags: MessageFlags.Ephemeral

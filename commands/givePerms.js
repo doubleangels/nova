@@ -288,9 +288,8 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in giveperms command:", {
-            error: error.message,
-            stack: error.stack,
+        logger.error("Error in giveperms command", {
+            err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             channelId: interaction.channel?.id
@@ -316,8 +315,8 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for giveperms command:", {
-                error: followUpError.message,
+            logger.error("Failed to send error response for giveperms command", {
+                err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id
             });

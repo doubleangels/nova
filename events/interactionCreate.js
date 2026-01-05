@@ -30,9 +30,8 @@ module.exports = {
           await command.autocomplete(interaction);
         }
       } catch (error) {
-        logger.error(`Error handling autocomplete for ${interaction.commandName}:`, {
-          error: error.stack,
-          message: error.message
+        logger.error(`Error handling autocomplete for ${interaction.commandName}`, {
+          err: error
         });
       }
       return;
@@ -49,9 +48,8 @@ module.exports = {
     try {
       await command.execute(interaction);
     } catch (error) {
-      logger.error(`Error executing ${interaction.commandName}:`, {
-        error: error.stack,
-        message: error.message,
+      logger.error(`Error executing ${interaction.commandName}`, {
+        err: error,
         user: interaction.user.tag
       });
 
@@ -68,9 +66,8 @@ module.exports = {
           });
         }
       } catch (replyError) {
-        logger.error('Error sending error response:', {
-          error: replyError.stack,
-          message: replyError.message,
+        logger.error('Error sending error response', {
+          err: replyError,
           originalError: error.message
         });
       }

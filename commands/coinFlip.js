@@ -66,9 +66,8 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in coinflip command:", {
-            error: error.message,
-            stack: error.stack,
+        logger.error("Error in coinflip command", {
+            err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
         });
@@ -87,8 +86,8 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for coin flip command:", {
-                error: followUpError.message,
+            logger.error("Failed to send error response for coin flip command", {
+                err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id
             });

@@ -25,7 +25,7 @@ try {
     fs.accessSync(dataDir, fs.constants.W_OK);
     logger.debug(`Data directory is writable: ${dataDir}`);
   } catch (accessError) {
-    logger.error(`Data directory is not writable: ${dataDir}`, { error: accessError.message });
+    logger.error(`Data directory is not writable: ${dataDir}`, accessError);
     logger.error('Please ensure the data directory has write permissions for the bot user.');
   }
   
@@ -42,7 +42,7 @@ try {
     logger.info(`Database file does not exist yet: ${sqlitePath} (will be created on first write)`);
   }
 } catch (error) {
-  logger.error(`Failed to create/access data directory: ${dataDir}`, { error: error.message });
+  logger.error(`Failed to create/access data directory: ${dataDir}`, error);
   logger.error('This is likely a permissions issue. Please check directory permissions.');
 }
 
@@ -66,8 +66,8 @@ const inviteKeyv = new Keyv({
 });
 
 // Handle connection errors
-keyv.on('error', err => logger.error('Keyv connection error:', { error: err }));
-inviteKeyv.on('error', err => logger.error('Invite Keyv connection error:', { error: err }));
+keyv.on('error', err => logger.error('Keyv connection error:', { err: err }));
+inviteKeyv.on('error', err => logger.error('Invite Keyv connection error:', { err: err }));
 
 // Ensure database file has correct permissions if it exists
 // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
@@ -75,9 +75,9 @@ try {
   if (fs.existsSync(sqlitePath)) {
     fs.chmodSync(sqlitePath, 0o600);
   }
-} catch (chmodError) {
-  logger.warn(`Could not set permissions on database file (this is OK if running as non-root): ${chmodError.message}`);
-}
+  } catch (chmodError) {
+    logger.warn(`Could not set permissions on database file (this is OK if running as non-root):`, chmodError);
+  }
 
 /**
  * Initializes the database connection and performs a test query
@@ -123,13 +123,9 @@ async function initializeDatabase() {
             const db = new Database(sqlitePath, { readonly: true });
             const rows = db.prepare('SELECT COUNT(*) as count FROM keyv').get();
             logger.info(`Database contains ${rows.count} key(s) in keyv table`);
-            if (rows.count > 0) {
-              const sampleRows = db.prepare('SELECT key FROM keyv LIMIT 5').all();
-              logger.debug(`Sample keys in database:`, { keys: sampleRows.map(r => r.key) });
-            }
             db.close();
           } catch (dbError) {
-            logger.debug(`Could not query database directly (this is OK): ${dbError.message}`);
+            logger.debug(`Could not query database directly (this is OK):`, dbError);
           }
         } else {
           logger.warn(`Database file not found at ${sqlitePath} after successful test`);
@@ -144,7 +140,7 @@ async function initializeDatabase() {
           }
         } catch (chmodError) {
           // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
-          logger.debug(`Could not set permissions on database file: ${chmodError.message}`);
+          logger.debug(`Could not set permissions on database file:`, chmodError);
         }
         
         return;
@@ -154,14 +150,12 @@ async function initializeDatabase() {
       
     } catch (err) {
       lastError = err;
-      logger.error(`Database connection test failed (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, {
-        error: err.message,
-        stack: err.stack,
+      logger.error(`Database connection test failed (Attempt ${retryCount + 1}/${MAX_RETRIES})`, {
+        err: err,
         sqlitePath: sqlitePath,
         dataDirExists: fs.existsSync(dataDir),
         dbFileExists: fs.existsSync(sqlitePath)
       });
-      logger.error(`Error testing database connection (Attempt ${retryCount + 1}/${MAX_RETRIES}):`, { error: err });
       
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
       retryCount++;
@@ -176,7 +170,7 @@ async function initializeDatabase() {
   logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
   
   if (lastError) {
-    logger.error("Final database error:", { error: lastError });
+    logger.error("Final database error:", { err: lastError });
   }
   
   process.exit(1);
@@ -193,7 +187,7 @@ async function getValue(key) {
     const value = await keyv.get(`config:${key}`);
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error(`Error getting key "${key}":`, { error: err });
+    logger.error(`Error getting key "${key}":`, { err: err });
     return null;
   }
 }
@@ -210,7 +204,7 @@ async function setValue(key, value) {
     await keyv.set(`config:${key}`, value);
     logger.debug(`Set config for key "${key}" successfully.`);
   } catch (err) {
-    logger.error(`Error setting key "${key}":`, { error: err });
+    logger.error(`Error setting key "${key}":`, { err: err });
   }
 }
 
@@ -225,7 +219,7 @@ async function deleteValue(key) {
     await keyv.delete(`config:${key}`);
     logger.debug(`Deleted config for key "${key}".`);
   } catch (err) {
-    logger.error(`Error deleting key "${key}":`, { error: err });
+    logger.error(`Error deleting key "${key}":`, { err: err });
   }
 }
 
@@ -244,7 +238,7 @@ async function addToUserList(listKey, userId) {
       await keyv.set(configKey, list);
     }
   } catch (error) {
-    logger.error(`Error adding to user list ${listKey}:`, { error: error.message });
+    logger.error(`Error adding to user list ${listKey}:`, error);
   }
 }
 
@@ -261,7 +255,7 @@ async function removeFromUserList(listKey, userId) {
     const filtered = list.filter(id => id !== userId);
     await keyv.set(configKey, filtered);
   } catch (error) {
-    logger.error(`Error removing from user list ${listKey}:`, { error: error.message });
+    logger.error(`Error removing from user list ${listKey}:`, error);
   }
 }
 
@@ -282,7 +276,7 @@ async function addMuteModeUser(userId, username) {
     await addToUserList('mute_mode_users', userId);
     logger.debug(`Added mute mode user ${userId} with join time ${userData.joinTime}.`);
   } catch (error) {
-    logger.error(`Error adding mute mode user ${userId}:`, { error: error.message });
+    logger.error(`Error adding mute mode user ${userId}:`, error);
   }
 }
 
@@ -300,7 +294,7 @@ async function removeMuteModeUser(userId) {
       logger.debug(`Removed user ${userId} from mute mode tracking.`);
     }
   } catch (error) {
-    logger.error(`Error removing mute mode user ${userId}:`, { error: error.message });
+    logger.error(`Error removing mute mode user ${userId}:`, error);
   }
 }
 
@@ -326,7 +320,7 @@ async function getAllMuteModeUsers() {
     
     return users;
   } catch (error) {
-    logger.error("Error getting all mute mode users:", { error: error.message });
+    logger.error("Error getting all mute mode users:", error);
     return [];
   }
 }
@@ -344,7 +338,7 @@ async function getUserJoinTime(userId) {
     }
     return null;
   } catch (error) {
-    logger.error(`Error getting user join time for ${userId}:`, { error: error.message });
+    logger.error(`Error getting user join time for ${userId}:`, error);
     return null;
   }
 }
@@ -370,7 +364,7 @@ async function addSpamModeJoinTime(userId, username, joinTime) {
     await addToUserList('spam_mode_users', userId);
     logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet}.`);
   } catch (error) {
-    logger.error(`Error adding spam mode join time for user ${userId}:`, { error: error.message });
+    logger.error(`Error adding spam mode join time for user ${userId}:`, error);
   }
 }
 
@@ -387,7 +381,7 @@ async function getSpamModeJoinTime(userId) {
     }
     return null;
   } catch (error) {
-    logger.error(`Error getting spam mode join time for user ${userId}:`, { error: error.message });
+    logger.error(`Error getting spam mode join time for user ${userId}:`, error);
     return null;
   }
 }
@@ -405,7 +399,7 @@ async function removeSpamModeJoinTime(userId) {
       logger.debug(`Removed user ${userId} from spam mode tracking.`);
     }
   } catch (error) {
-    logger.error(`Error removing spam mode join time for user ${userId}:`, { error: error.message });
+    logger.error(`Error removing spam mode join time for user ${userId}:`, error);
   }
 }
 
@@ -506,7 +500,7 @@ async function cleanupOldTrackingUsers(client = null) {
     
     return { spamModeRemoved, muteModeRemoved };
   } catch (error) {
-    logger.error('Error cleaning up old tracking users:', { error: error.message });
+    logger.error('Error cleaning up old tracking users:', error);
     throw error;
   }
 }
@@ -523,7 +517,7 @@ async function setInviteTag(tagName, inviteData) {
     await inviteKeyv.set(`tags:${tagName.toLowerCase()}`, inviteData);
     logger.debug(`Set invite tag "${tagName}" successfully.`);
   } catch (err) {
-    logger.error(`Error setting invite tag "${tagName}":`, { error: err });
+    logger.error(`Error setting invite tag "${tagName}":`, { err: err });
     throw new Error("DATABASE_WRITE_ERROR");
   }
 }
@@ -539,7 +533,7 @@ async function getInviteTag(tagName) {
     const value = await inviteKeyv.get(`tags:${tagName.toLowerCase()}`);
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error(`Error getting invite tag "${tagName}":`, { error: err });
+    logger.error(`Error getting invite tag "${tagName}":`, { err: err });
     return null;
   }
 }
@@ -555,7 +549,7 @@ async function deleteInviteTag(tagName) {
     await inviteKeyv.delete(`tags:${tagName.toLowerCase()}`);
     logger.debug(`Deleted invite tag "${tagName}".`);
   } catch (err) {
-    logger.error(`Error deleting invite tag "${tagName}":`, { error: err });
+    logger.error(`Error deleting invite tag "${tagName}":`, { err: err });
     throw new Error("DATABASE_DELETE_ERROR");
   }
 }
@@ -571,7 +565,7 @@ async function setInviteNotificationChannel(channelId) {
     await keyv.set('config:invite_notification_channel', channelId);
     logger.debug(`Set invite notification channel successfully.`);
   } catch (err) {
-    logger.error(`Error setting invite notification channel:`, { error: err });
+    logger.error(`Error setting invite notification channel:`, { err: err });
     throw new Error("DATABASE_WRITE_ERROR");
   }
 }
@@ -586,7 +580,7 @@ async function getInviteNotificationChannel() {
     const value = await keyv.get('config:invite_notification_channel');
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error("Error getting invite notification channel:", { error: err });
+    logger.error("Error getting invite notification channel:", { err: err });
     return null;
   }
 }
@@ -603,7 +597,7 @@ async function setInviteUsage(guildId, inviteUsage) {
     await keyv.set(`invite_usage:${guildId}`, inviteUsage);
     logger.debug(`Set invite usage for guild "${guildId}" successfully.`);
   } catch (err) {
-    logger.error(`Error setting invite usage for guild "${guildId}":`, { error: err });
+    logger.error(`Error setting invite usage for guild "${guildId}":`, { err: err });
   }
 }
 
@@ -618,7 +612,7 @@ async function getInviteUsage(guildId) {
     const value = await keyv.get(`invite_usage:${guildId}`);
     return value || {};
   } catch (err) {
-    logger.error(`Error getting invite usage for guild "${guildId}":`, { error: err });
+    logger.error(`Error getting invite usage for guild "${guildId}":`, { err: err });
     return {};
   }
 }
@@ -635,7 +629,7 @@ async function setInviteCodeToTagMap(guildId, codeToTagMap) {
     await keyv.set(`invite_code_to_tag_map:${guildId}`, codeToTagMap);
     logger.debug(`Set invite code-to-tag map for guild "${guildId}" successfully.`);
   } catch (err) {
-    logger.error(`Error setting invite code-to-tag map for guild "${guildId}":`, { error: err });
+    logger.error(`Error setting invite code-to-tag map for guild "${guildId}":`, { err: err });
   }
 }
 
@@ -650,7 +644,7 @@ async function getInviteCodeToTagMap(guildId) {
     const value = await keyv.get(`invite_code_to_tag_map:${guildId}`);
     return value || {};
   } catch (err) {
-    logger.error(`Error getting invite code-to-tag map for guild "${guildId}":`, { error: err });
+    logger.error(`Error getting invite code-to-tag map for guild "${guildId}":`, { err: err });
     return {};
   }
 }
@@ -697,13 +691,13 @@ async function getAllInviteTagsData() {
           });
         }
       } catch (parseError) {
-        logger.warn(`Failed to parse tag data for key ${row.key}:`, { error: parseError.message });
+        logger.warn(`Failed to parse tag data for key ${row.key}:`, parseError);
       }
     }
     
     return tags;
   } catch (err) {
-    logger.error("Error getting all invite tags:", { error: err });
+    logger.error("Error getting all invite tags:", { err: err });
     return [];
   }
 }
@@ -744,7 +738,7 @@ async function rebuildCodeToTagMap(guildId) {
           logger.debug(`Rebuilt mapping: ${tagData.code.toLowerCase()} -> ${tagName}`);
         }
       } catch (parseError) {
-        logger.warn(`Failed to parse tag data for key ${row.key}:`, { error: parseError.message });
+        logger.warn(`Failed to parse tag data for key ${row.key}:`, parseError);
       }
     }
     
@@ -756,7 +750,7 @@ async function rebuildCodeToTagMap(guildId) {
     
     return codeToTagMap;
   } catch (err) {
-    logger.error(`Error rebuilding code-to-tag mapping for guild "${guildId}":`, { error: err });
+    logger.error(`Error rebuilding code-to-tag mapping for guild "${guildId}":`, { err: err });
     return {};
   }
 }

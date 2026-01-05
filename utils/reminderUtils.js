@@ -27,7 +27,7 @@ const reminderKeyv = new Keyv({
   namespace: 'nova_reminders'
 });
 
-reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error:', { error: err }));
+reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error:', { err: err }));
 
 /**
  * Helper function to get all reminder IDs for a type
@@ -117,7 +117,7 @@ async function getLatestReminderData(type) {
     
     return latestReminder;
   } catch (err) {
-    logger.error("Error getting latest reminder data:", { error: err });
+    logger.error("Error getting latest reminder data:", { err: err });
     return null;
   }
 }
@@ -157,9 +157,9 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         channel = await message.client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
-      logger.error("Failed to fetch channel:", {
-        channelId: reminderChannelId,
-        error: channelError.message
+      logger.error("Failed to fetch channel", {
+        err: channelError,
+        channelId: reminderChannelId
       });
       return;
     }
@@ -289,8 +289,8 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         logger.debug("Sent confirmation message:", { type, unixTimestamp });
       } catch (sendError) {
         // Non-fatal: reminder is already saved, just log the error
-        logger.warn("Failed to send confirmation message (reminder was still saved):", {
-          error: sendError.message,
+        logger.warn("Failed to send confirmation message (reminder was still saved)", {
+          err: sendError,
           type,
           reminderId
         });
@@ -321,9 +321,8 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         await removeReminderId(type, reminderId);
         logger.debug("Cleaned up sent reminder from recovery table:", { reminderId });
       } catch (err) {
-        logger.error("Error while sending scheduled reminder:", {
-          error: err.message,
-          stack: err.stack,
+        logger.error("Error while sending scheduled reminder", {
+          err: err,
           type
         });
       }
@@ -512,9 +511,9 @@ async function rescheduleReminder(client) {
         channel = await client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
-      logger.error("Failed to fetch channel for rescheduled reminder:", {
-        channelId: reminderChannelId,
-        error: channelError.message
+      logger.error("Failed to fetch channel for rescheduled reminder", {
+        err: channelError,
+        channelId: reminderChannelId
       });
       return;
     }
@@ -541,9 +540,8 @@ async function rescheduleReminder(client) {
             await reminderKeyv.delete(`reminder:${bumpReminder.reminder_id}`);
             await removeReminderId('bump', bumpReminder.reminder_id);
           } catch (err) {
-            logger.error("Error while sending rescheduled bump reminder:", {
-              error: err.message,
-              stack: err.stack
+            logger.error("Error while sending rescheduled bump reminder", {
+              err: err
             });
           }
         }, delay);
@@ -586,9 +584,8 @@ async function rescheduleReminder(client) {
             await reminderKeyv.delete(`reminder:${discadiaReminder.reminder_id}`);
             await removeReminderId('discadia', discadiaReminder.reminder_id);
           } catch (err) {
-            logger.error("Error while sending rescheduled discadia reminder:", {
-              error: err.message,
-              stack: err.stack
+            logger.error("Error while sending rescheduled discadia reminder", {
+              err: err
             });
           }
         }, delay);
@@ -631,9 +628,8 @@ async function rescheduleReminder(client) {
             await reminderKeyv.delete(`reminder:${promoteReminder.reminder_id}`);
             await removeReminderId('promote', promoteReminder.reminder_id);
           } catch (err) {
-            logger.error("Error while sending rescheduled promotion reminder:", {
-              error: err.message,
-              stack: err.stack
+            logger.error("Error while sending rescheduled promotion reminder", {
+              err: err
             });
           }
         }, delay);
@@ -656,9 +652,8 @@ async function rescheduleReminder(client) {
     
     logger.info("Reminder rescheduling completed.");
   } catch (error) {
-    logger.error("Error in rescheduleReminder:", {
-      error: error.message,
-      stack: error.stack
+    logger.error("Error in rescheduleReminder", {
+      err: error
     });
     handleError(error, 'rescheduleReminder');
   }
@@ -671,9 +666,8 @@ async function rescheduleReminder(client) {
  * @throws {Error} A formatted error message based on the error type
  */
 async function handleError(error, context) {
-  logger.error(`Error in ${context}:`, {
-    error: error.message,
-    stack: error.stack
+  logger.error(`Error in ${context}`, {
+    err: error
   });
 
   if (error.message === "DATABASE_ERROR") {

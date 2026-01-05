@@ -180,9 +180,8 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(error, interaction) {
-        logger.error('Error in giveRole command:', {
-            error: error.message,
-            stack: error.stack,
+        logger.error('Error in giveRole command', {
+            err: error,
             userId: interaction.user.id,
             guildId: interaction.guildId,
             channelId: interaction.channelId
@@ -203,10 +202,7 @@ module.exports = {
         try {
             await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
         } catch (replyError) {
-            logger.error('Failed to send error message:', {
-                error: replyError.message,
-                stack: replyError.stack
-            });
+            logger.error('Failed to send error message:', { err: replyError });
         }
     }
 };

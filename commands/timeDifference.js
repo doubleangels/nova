@@ -169,8 +169,8 @@ module.exports = {
         timeZone2: offset2Result.timeZoneName
       };
     } catch (error) {
-      logger.error("Error calculating time difference:", {
-        error: error.message,
+      logger.error("Error calculating time difference", {
+        err: error,
         place1,
         place2
       });
@@ -219,9 +219,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in timedifference command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in timedifference command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -246,8 +245,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for timediff command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for timediff command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

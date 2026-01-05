@@ -45,7 +45,10 @@ async function getGeocodingInfo(location) {
         
         return result;
     } catch (error) {
-        logger.error("Error getting geocoding info:", { error: error.message, location });
+        logger.error("Error getting geocoding info", {
+            err: error,
+            location
+        });
         throw error;
     }
 }
@@ -98,7 +101,11 @@ async function getTimezoneInfo(lat, lng) {
         
         return result;
     } catch (error) {
-        logger.error("Error getting timezone info:", { error: error.message, lat, lng });
+        logger.error("Error getting timezone info", {
+            err: error,
+            lat,
+            lng
+        });
         throw error;
     }
 }
@@ -155,7 +162,10 @@ async function getUtcOffset(location) {
             error: false
         };
     } catch (error) {
-        logger.error("Error getting UTC offset:", { error: error.message, location });
+        logger.error("Error getting UTC offset", {
+            err: error,
+            location
+        });
         return {
             error: true,
             errorType: error.message
@@ -206,7 +216,10 @@ async function getGeocodingData(place) {
             formattedAddress: geocodingInfo.formatted_address
         };
     } catch (error) {
-        logger.error("Error getting geocoding data:", { error: error.message, place });
+        logger.error("Error getting geocoding data", {
+            err: error,
+            place
+        });
         return {
             error: true,
             type: error.message
@@ -227,7 +240,10 @@ async function getTimezoneData(location) {
             timezoneId: timezoneInfo.timeZoneId
         };
     } catch (error) {
-        logger.error("Error getting timezone data:", { error: error.message, location });
+        logger.error("Error getting timezone data", {
+            err: error,
+            location
+        });
         return {
             error: true,
             type: error.message

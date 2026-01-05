@@ -124,9 +124,8 @@ module.exports = {
         scheduledTime: scheduledTime.toISOString()
       });
     } catch (error) {
-      logger.error(`Error in /fix ${type} command:`, {
-        error: error.message,
-        stack: error.stack,
+      logger.error(`Error in /fix ${type} command`, {
+        err: error,
         userId: interaction.user?.id,
         guildId: interaction.guild?.id
       });
@@ -145,8 +144,8 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for fix command:", {
-          error: followUpError.message,
+        logger.error("Failed to send error response for fix command", {
+          err: followUpError,
           originalError: error.message,
           userId: interaction.user?.id
         });
@@ -169,9 +168,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in fix command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in fix command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -190,8 +188,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for fix command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for fix command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

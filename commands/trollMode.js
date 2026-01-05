@@ -148,9 +148,8 @@ module.exports = {
         accountAge: accountAge ? Number(accountAge) : 30
       };
     } catch (error) {
-      logger.error("Failed to retrieve troll mode settings:", {
-        error: error.message,
-        stack: error.stack
+      logger.error("Failed to retrieve troll mode settings", {
+        err: error
       });
       throw new Error("DATABASE_READ_ERROR");
     }
@@ -177,9 +176,8 @@ module.exports = {
       
       await Promise.all(updates);
     } catch (error) {
-      logger.error("Failed to update troll mode settings:", {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Failed to update troll mode settings", {
+        err: error,
         settings
       });
       throw new Error("DATABASE_WRITE_ERROR");
@@ -251,9 +249,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in trollmode command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in trollmode command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -276,8 +273,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for trollmode command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for trollmode command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

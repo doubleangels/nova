@@ -100,9 +100,8 @@ module.exports = {
         setValue('reminder_role', roleOption.id)
       ]);
     } catch (dbError) {
-      logger.error("Database operation failed during reminder setup:", { 
-        error: dbError.message, 
-        stack: dbError.stack,
+      logger.error("Database operation failed during reminder setup", { 
+        err: dbError,
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -206,9 +205,8 @@ module.exports = {
         configComplete
       });
     } catch (dbError) {
-      logger.error("Database operation failed while retrieving reminder data:", { 
-        error: dbError.message, 
-        stack: dbError.stack,
+      logger.error("Database operation failed while retrieving reminder data", { 
+        err: dbError,
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -265,9 +263,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in reminder command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in reminder command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -290,8 +287,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for reminder command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for reminder command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

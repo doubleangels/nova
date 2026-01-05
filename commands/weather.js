@@ -201,8 +201,8 @@ module.exports = {
         return null;
       }
     } catch (error) {
-      logger.error("Error fetching weather data from API:", { 
-        error: error.message,
+      logger.error("Error fetching weather data from API", { 
+        err: error,
         lat,
         lon
       });
@@ -262,10 +262,10 @@ module.exports = {
     try {
       timezoneResult = await getTimezoneData({ lat, lng: lon });
     } catch (error) {
-      logger.warn("Failed to get timezone for location, using UTC:", { 
+      logger.warn("Failed to get timezone for location, using UTC", { 
+        err: error,
         lat, 
-        lon, 
-        error: error.message 
+        lon
       });
       timezoneResult = { timezoneId: null, error: true };
     }
@@ -434,9 +434,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in weather command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in weather command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -459,8 +458,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for weather command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for weather command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

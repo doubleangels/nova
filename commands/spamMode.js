@@ -198,9 +198,8 @@ module.exports = {
         warningChannelId: warningChannelId || null
       };
     } catch (error) {
-      logger.error("Failed to retrieve spam mode settings:", {
-        error: error.message,
-        stack: error.stack
+      logger.error("Failed to retrieve spam mode settings", {
+        err: error
       });
       throw new Error("DATABASE_READ_ERROR");
     }
@@ -240,9 +239,8 @@ module.exports = {
       
       await Promise.all(updates);
     } catch (error) {
-      logger.error("Failed to update spam mode settings:", {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Failed to update spam mode settings", {
+        err: error,
         settings
       });
       throw new Error("DATABASE_WRITE_ERROR");
@@ -340,9 +338,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in spammode command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in spammode command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -365,8 +362,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for spammode command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for spammode command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

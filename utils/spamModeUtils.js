@@ -48,8 +48,8 @@ async function isNewUser(userId) {
       timeRemaining: timeRemaining > 0 ? timeRemaining : null
     };
   } catch (error) {
-    logger.error('Error checking if user is new:', {
-      error: error.message,
+    logger.error('Error checking if user is new', {
+      err: error,
       userId
     });
     return { isNew: false, timeRemaining: null };
@@ -243,8 +243,8 @@ async function trackNewUserMessage(message) {
             
             await mostRecentMessage.reply(notificationMessage);
           } catch (error) {
-            logger.warn('Failed to reply to spam message:', {
-              error: error.message,
+            logger.warn('Failed to reply to spam message', {
+              err: error,
               messageId: mostRecentMessage.id,
               userId: message.author.id
             });
@@ -262,9 +262,8 @@ async function trackNewUserMessage(message) {
       userMessages.set(normalizedContent, [messageOccurrence]);
     }
   } catch (error) {
-    logger.error('Error tracking new user message for spam mode:', {
-      error: error.message,
-      stack: error.stack,
+    logger.error('Error tracking new user message for spam mode', {
+      err: error,
       messageId: message?.id,
       userId: message?.author?.id
     });
@@ -321,8 +320,8 @@ async function deleteOffendingMessages(guild, occurrences) {
       deletedCount++;
       logger.debug(`Deleted spam message ${occurrence.messageId} from channel ${occurrence.channelName}.`);
     } catch (error) {
-      logger.warn(`Failed to delete message ${occurrence.messageId} from channel ${occurrence.channelName}:`, {
-        error: error.message,
+      logger.warn(`Failed to delete message ${occurrence.messageId} from channel ${occurrence.channelName}`, {
+        err: error,
         messageId: occurrence.messageId,
         channelId: occurrence.channelId
       });
@@ -337,8 +336,8 @@ async function deleteOffendingMessages(guild, occurrences) {
       mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
     }
   } catch (error) {
-    logger.warn(`Failed to fetch most recent message ${mostRecentOccurrence.messageId}:`, {
-      error: error.message,
+    logger.warn(`Failed to fetch most recent message ${mostRecentOccurrence.messageId}`, {
+      err: error,
       messageId: mostRecentOccurrence.messageId
     });
   }
@@ -404,9 +403,8 @@ async function postSpamWarning(guild, user, occurrences, content) {
     });
     logger.info(`Posted spam warning to channel ${warningChannel.name} for user ${user.tag}.`);
   } catch (error) {
-    logger.error('Error posting spam warning:', {
-      error: error.message,
-      stack: error.stack,
+    logger.error('Error posting spam warning', {
+      err: error,
       guildId: guild.id,
       userId: user.id
     });
@@ -453,9 +451,8 @@ async function timeoutUser(guild, user, durationSeconds) {
     
     logger.info(`Timed out user ${user.tag} (${user.id}) for ${durationSeconds} seconds due to spam detection.`);
   } catch (error) {
-    logger.error('Error timing out user:', {
-      error: error.message,
-      stack: error.stack,
+    logger.error('Error timing out user', {
+      err: error,
       userId: user.id,
       guildId: guild.id
     });

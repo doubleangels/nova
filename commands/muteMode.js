@@ -180,9 +180,8 @@ module.exports = {
         timeLimit: timeLimit ? Number(timeLimit) : 2
       };
     } catch (error) {
-      logger.error("Failed to retrieve current mute mode settings:", {
-        error: error.message,
-        stack: error.stack
+      logger.error("Failed to retrieve current mute mode settings", {
+        err: error
       });
 
       throw new Error("DATABASE_READ_ERROR");
@@ -204,9 +203,8 @@ module.exports = {
         setValue("mute_mode_kick_time_hours", timeLimit)
       ]);
     } catch (error) {
-      logger.error("Database operation failed during mute mode update:", { 
-        error: error.message, 
-        stack: error.stack
+      logger.error("Database operation failed during mute mode update", { 
+        err: error
       });
       
       throw new Error("DATABASE_WRITE_ERROR");
@@ -294,9 +292,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in mutemode command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in mutemode command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -317,8 +314,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for mutemode command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for mutemode command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

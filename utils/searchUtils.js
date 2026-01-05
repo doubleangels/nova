@@ -137,7 +137,7 @@ async function createPaginatedResults(
     
     await interaction.editReply({
       components: [disabledNavRow]
-    }).catch(err => logger.error("Failed to update timed out message:", { error: err.message }));
+    }).catch(err => logger.error("Failed to update timed out message:", { err: err }));
   });
 }
 

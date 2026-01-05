@@ -163,8 +163,8 @@ module.exports = {
         items: response.data.items || []
       };
     } catch (apiError) {
-      logger.error("Google API request failed:", { 
-        error: apiError.message,
+      logger.error("Google API request failed", { 
+        err: apiError,
         status: apiError.response?.status,
         errorDetails: apiError.response?.data
       });
@@ -206,9 +206,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in googleimages command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in googleimages command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
       channelId: interaction.channel?.id
@@ -230,8 +229,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for googleimages command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for googleimages command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

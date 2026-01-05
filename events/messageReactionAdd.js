@@ -30,9 +30,8 @@ module.exports = {
         try {
           await reaction.fetch();
         } catch (error) {
-          logger.error('Error fetching reaction:', {
-            error: error.stack,
-            message: error.message,
+          logger.error('Error fetching reaction', {
+            err: error,
             userId: user.id,
             messageId: reaction.message.id
           });
@@ -50,9 +49,8 @@ module.exports = {
 
       logger.info(`Successfully processed reaction from ${user.tag}.`);
     } catch (error) {
-      logger.error('Error processing reaction:', {
-        error: error.stack,
-        message: error.message,
+      logger.error('Error processing reaction', {
+        err: error,
         emoji: reaction.emoji.name,
         userId: user.id,
         messageId: reaction.message.id
@@ -185,20 +183,14 @@ async function handleTranslationRequest(reaction, user) {
             messageId: message.id
         });
     } catch (error) {
-        const errorInfo = {
-            message: error.message,
-            code: error.code,
+        logger.error('Error in translation request', {
+            err: error,
             status: error.response?.status,
             statusText: error.response?.statusText,
-            data: error.response?.data,
-            config: {
-                url: error.config?.url,
-                method: error.config?.method,
-                headers: error.config?.headers ? Object.keys(error.config.headers) : undefined
-            }
-        };
-
-        logger.error('Error in translation request:', errorInfo);
+            responseData: error.response?.data,
+            requestUrl: error.config?.url,
+            requestMethod: error.config?.method
+        });
         
         try {
             const errorMessage = error.response?.status === 403 
@@ -216,9 +208,8 @@ async function handleTranslationRequest(reaction, user) {
                 allowedMentions: { repliedUser: false }
             });
         } catch (replyError) {
-            logger.error('Failed to send error message:', {
-                error: replyError.stack,
-                message: replyError.message,
+            logger.error('Failed to send error message', {
+                err: replyError,
                 originalError: error.message
             });
         }

@@ -43,9 +43,8 @@ module.exports = {
         imageUrl: catData.url
       });
     } catch (error) {
-      logger.error("Error in cat command:", {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Error in cat command", {
+        err: error,
         userId: interaction.user?.id,
         guildId: interaction.guild?.id
       });
@@ -66,8 +65,8 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for cat command:", {
-          error: followUpError.message,
+        logger.error("Failed to send error response for cat command", {
+          err: followUpError,
           originalError: error.message,
           userId: interaction.user?.id
         });

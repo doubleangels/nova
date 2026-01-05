@@ -509,9 +509,8 @@ module.exports = {
       });
       
     } catch (error) {
-      logger.error("Error creating invite:", {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Error creating invite", {
+        err: error,
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -579,7 +578,7 @@ module.exports = {
             }
           }
         } catch (deleteError) {
-          logger.warn(`Failed to delete invite ${inviteTag.code} from Discord:`, { error: deleteError.message });
+          logger.warn(`Failed to delete invite ${inviteTag.code} from Discord:`, deleteError);
           inviteDeleteError = deleteError.message;
         }
       }
@@ -629,9 +628,8 @@ module.exports = {
       });
       
     } catch (error) {
-      logger.error("Error removing invite tag:", {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Error removing invite tag", {
+        err: error,
         userId: interaction.user.id,
         guildId: interaction.guildId,
         tagName
@@ -675,7 +673,7 @@ module.exports = {
         
         await interaction.respond(filtered);
       } catch (error) {
-        logger.error("Error in autocomplete:", { error: error.message });
+        logger.error("Error in autocomplete:", error);
         await interaction.respond([]);
       }
     }
@@ -689,9 +687,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in invite command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in invite command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -709,8 +706,8 @@ module.exports = {
         content: errorMessage
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for invite command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for invite command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

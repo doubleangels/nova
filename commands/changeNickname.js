@@ -110,9 +110,8 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in changenickname command:", {
-            error: error.message,
-            stack: error.stack,
+        logger.error("Error in changenickname command", {
+            err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             targetUserId: interaction.options?.getUser('user')?.id
@@ -134,8 +133,8 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for change nickname command:", {
-                error: followUpError.message,
+            logger.error("Failed to send error response for change nickname command", {
+                err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id
             });

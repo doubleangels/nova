@@ -76,7 +76,7 @@ module.exports = {
         await cleanupOldTrackingUsers(client);
         logger.info('Initial cleanup of old tracking users completed.');
       } catch (error) {
-        logger.error('Failed to run initial cleanup:', { error: error.message });
+        logger.error('Failed to run initial cleanup:', error);
       }
 
       // Schedule periodic cleanup every hour
@@ -85,7 +85,7 @@ module.exports = {
         try {
           await cleanupOldTrackingUsers(client);
         } catch (error) {
-          logger.error('Error in scheduled cleanup:', { error: error.message });
+          logger.error('Error in scheduled cleanup:', error);
         }
       }, CLEANUP_INTERVAL_MS);
       logger.info(`Scheduled periodic cleanup every ${CLEANUP_INTERVAL_MS / 1000 / 60} minutes.`);
@@ -95,14 +95,13 @@ module.exports = {
         await initializeInviteUsage(client);
         logger.info('Invite usage tracking initialized for the guild.');
       } catch (error) {
-        logger.error('Failed to initialize invite usage tracking:', { error: error.message });
+        logger.error('Failed to initialize invite usage tracking:', error);
       }
 
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {
-      logger.error('Error in ready event:', {
-        error: error.stack,
-        message: error.message,
+      logger.error('Error in ready event', {
+        err: error,
         clientId: client.user?.id,
         clientTag: client.user?.tag
       });
@@ -160,6 +159,6 @@ async function initializeInviteUsage(client) {
       logger.debug(`Initialized invite usage tracking for guild ${guild.name} (${guild.id}).`);
     }
   } catch (error) {
-    logger.warn(`Failed to initialize invite usage for guild ${guild.name}:`, { error: error.message });
+    logger.warn(`Failed to initialize invite usage for guild ${guild.name}:`, error);
   }
 }

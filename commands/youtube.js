@@ -105,9 +105,8 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in youtube command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in youtube command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -140,8 +139,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for youtube command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for youtube command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });
@@ -201,8 +200,8 @@ module.exports = {
       
       return results;
     } catch (error) {
-      logger.error("YouTube API search failed:", {
-        error: error.message,
+      logger.error("YouTube API search failed", {
+        err: error,
         query,
         contentType
       });
@@ -251,8 +250,8 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich video results:", {
-        error: error.message
+      logger.error("Failed to enrich video results", {
+        err: error
       });
       return videos;
     }
@@ -298,8 +297,8 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich channel results:", {
-        error: error.message
+      logger.error("Failed to enrich channel results", {
+        err: error
       });
       return channels;
     }
@@ -345,8 +344,8 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich playlist results:", {
-        error: error.message
+      logger.error("Failed to enrich playlist results", {
+        err: error
       });
       return playlists;
     }

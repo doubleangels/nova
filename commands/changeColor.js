@@ -68,9 +68,8 @@ module.exports = {
                 newColor: colorValidation.normalizedColor
             });
         } catch (error) {
-            logger.error("Error in change color command:", {
-                error: error.message,
-                stack: error.stack,
+            logger.error("Error in change color command", {
+                err: error,
                 userId: interaction.user?.id,
                 guildId: interaction.guild?.id,
                 roleId: interaction.options?.getRole('role')?.id
@@ -92,8 +91,8 @@ module.exports = {
                     flags: MessageFlags.Ephemeral 
                 });
             } catch (followUpError) {
-                logger.error("Failed to send error response for change color command:", {
-                    error: followUpError.message,
+                logger.error("Failed to send error response for change color command", {
+                    err: followUpError,
                     originalError: error.message,
                     userId: interaction.user?.id
                 });

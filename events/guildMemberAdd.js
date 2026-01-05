@@ -63,9 +63,8 @@ module.exports = {
 
       logger.info(`Successfully processed new member: ${member.user.tag}.`);
     } catch (error) {
-      logger.error('Error processing new member:', {
-        error: error.stack,
-        message: error.message,
+      logger.error('Error processing new member', {
+        err: error,
         userId: member.user.id
       });
 
@@ -115,7 +114,7 @@ module.exports = {
           notificationChannel = await member.guild.channels.fetch(notificationChannelId);
           logger.debug(`Fetched notification channel from API: ${notificationChannel.name} (${notificationChannel.id})`);
         } catch (fetchError) {
-          logger.error(`Failed to fetch notification channel ${notificationChannelId}:`, { error: fetchError.message });
+          logger.error(`Failed to fetch notification channel ${notificationChannelId}:`, fetchError);
           return;
         }
       }
@@ -156,7 +155,7 @@ module.exports = {
         currentInvites = await member.guild.invites.fetch();
         logger.debug(`Fetched ${currentInvites.size} invites`);
       } catch (error) {
-        logger.error("Failed to fetch invites:", { error: error.message });
+        logger.error("Failed to fetch invites:", error);
         return;
       }
 
@@ -303,9 +302,8 @@ module.exports = {
               logger.info(`Sent invite notification for member ${member.user.tag} using tagged invite "${inviteTag.name}" (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
               return; // Successfully sent notification, exit early
             } catch (sendError) {
-              logger.error(`Failed to send notification to channel:`, { 
-                error: sendError.message,
-                stack: sendError.stack,
+              logger.error(`Failed to send notification to channel`, {
+                err: sendError,
                 channelId: notificationChannel.id,
                 channelName: notificationChannel.name,
                 guildId: member.guild.id
@@ -394,9 +392,8 @@ module.exports = {
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
               logger.info(`Sent invite notification for member ${member.user.tag} using untagged invite (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
             } catch (sendError) {
-              logger.error(`Failed to send notification for untagged invite:`, { 
-                error: sendError.message,
-                stack: sendError.stack,
+              logger.error(`Failed to send notification for untagged invite`, {
+                err: sendError,
                 channelId: notificationChannel.id,
                 channelName: notificationChannel.name,
                 guildId: member.guild.id
@@ -421,9 +418,8 @@ module.exports = {
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
               logger.info(`Sent fallback invite notification for member ${member.user.tag} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
             } catch (sendError) {
-              logger.error(`Failed to send fallback notification:`, { 
-                error: sendError.message,
-                stack: sendError.stack,
+              logger.error(`Failed to send fallback notification`, {
+                err: sendError,
                 channelId: notificationChannel.id,
                 channelName: notificationChannel.name,
                 guildId: member.guild.id
@@ -451,9 +447,8 @@ module.exports = {
           const sentMessage = await notificationChannel.send({ embeds: [embed] });
           logger.info(`Sent fallback invite notification for member ${member.user.tag}. Message ID: ${sentMessage.id}`);
         } catch (sendError) {
-          logger.error(`Failed to send fallback notification:`, { 
-            error: sendError.message,
-            stack: sendError.stack,
+          logger.error(`Failed to send fallback notification`, {
+            err: sendError,
             channelId: notificationChannel.id,
             channelName: notificationChannel.name,
             guildId: member.guild.id
@@ -461,9 +456,8 @@ module.exports = {
         }
       }
     } catch (error) {
-      logger.error('Error checking tagged invite:', {
-        error: error.message,
-        stack: error.stack,
+      logger.error('Error checking tagged invite', {
+        err: error,
         userId: member.user.id,
         guildId: member.guild.id
       });

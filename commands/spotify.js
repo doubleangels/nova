@@ -205,8 +205,8 @@ module.exports = {
 
       return response.data.access_token;
     } catch (error) {
-      logger.error("Failed to get Spotify access token:", {
-        error: error.message
+      logger.error("Failed to get Spotify access token", {
+        err: error
       });
       return null;
     }
@@ -251,8 +251,8 @@ module.exports = {
 
       return tracks;
     } catch (error) {
-      logger.error("Failed to search for song:", {
-        error: error.message,
+      logger.error("Failed to search for song", {
+        err: error,
         query
       });
       return null;
@@ -294,8 +294,8 @@ module.exports = {
 
       return albums;
     } catch (error) {
-      logger.error("Failed to search for album:", {
-        error: error.message,
+      logger.error("Failed to search for album", {
+        err: error,
         query
       });
       return null;
@@ -337,8 +337,8 @@ module.exports = {
 
       return artists;
     } catch (error) {
-      logger.error("Failed to search for artist:", {
-        error: error.message,
+      logger.error("Failed to search for artist", {
+        err: error,
         query
       });
       return null;
@@ -386,8 +386,8 @@ module.exports = {
 
       return playlists;
     } catch (error) {
-      logger.error("Failed to search for playlist:", {
-        error: error.message,
+      logger.error("Failed to search for playlist", {
+        err: error,
         query
       });
       return null;
@@ -435,8 +435,8 @@ module.exports = {
 
       return shows;
     } catch (error) {
-      logger.error("Failed to search for podcast:", {
-        error: error.message,
+      logger.error("Failed to search for podcast", {
+        err: error,
         query
       });
       return null;
@@ -583,9 +583,8 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logger.error("Error in spotify command:", {
-      error: error.message,
-      stack: error.stack,
+    logger.error("Error in spotify command", {
+      err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -612,8 +611,8 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for spotify command:", {
-        error: followUpError.message,
+      logger.error("Failed to send error response for spotify command", {
+        err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
       });

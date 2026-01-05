@@ -73,14 +73,14 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             };
             await member.send({ embeds: [embed] });
           } catch (dmError) {
-            logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, { error: dmError.message });
+            logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, dmError);
           }
           await member.kick('User did not send a message in time.');
           logger.info(`Kicked user ${userId} immediately on reschedule.`);
         }
       }
     } catch (e) {
-      logger.error(`Failed to kick user ${userId} on reschedule:`, e);
+      logger.error(`Failed to kick user ${userId} on reschedule:`, { err: e });
     }
     return;
   }
@@ -117,14 +117,14 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             };
             await member.send({ embeds: [embed] });
           } catch (dmError) {
-            logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, { error: dmError.message });
+            logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, dmError);
           }
           await member.kick('User did not send a message in time.');
           logger.info(`Kicked user ${userId} after timeout.`);
         }
       }
     } catch (e) {
-      logger.error(`Failed to kick user ${userId} after timeout:`, e);
+      logger.error(`Failed to kick user ${userId} after timeout:`, { err: e });
     } finally {
       activeTimeouts.delete(userId);
     }
@@ -169,7 +169,9 @@ async function rescheduleAllMuteKicks(client) {
       );
     }
   } catch (e) {
-    logger.error(`Error rescheduling mute kicks on startup: ${e.message}`, { error: e, stack: e.stack });
+    logger.error(`Error rescheduling mute kicks on startup`, {
+      err: e
+    });
   }
 }
 

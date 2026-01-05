@@ -74,8 +74,8 @@ async function getRedditAccessToken() {
       throw new Error('No access token in Reddit OAuth response');
     }
   } catch (error) {
-    logger.error('Failed to get Reddit OAuth token:', {
-      error: error.message,
+    logger.error('Failed to get Reddit OAuth token', {
+      err: error,
       status: error.response?.status,
       data: error.response?.data
     });
@@ -112,10 +112,10 @@ async function redditApiRequest(method, endpoint, data = null) {
     const response = await axios(config);
     return response.data;
   } catch (error) {
-    logger.error('Reddit API request failed:', {
+    logger.error('Reddit API request failed', {
+      err: error,
       method,
       endpoint,
-      error: error.message,
       status: error.response?.status,
       data: error.response?.data
     });
@@ -243,8 +243,8 @@ module.exports = {
           totalCount: availableFlairs.length
         });
       } catch (flairError) {
-        logger.warn("Could not fetch flairs for r/findaserver:", {
-          error: flairError.message,
+        logger.warn("Could not fetch flairs for r/findaserver", {
+          err: flairError,
           status: flairError.response?.status
         });
       }
@@ -340,7 +340,7 @@ module.exports = {
               postId = parsedData.name.replace('t3_', '');
             }
           } catch (parseError) {
-            logger.debug("Could not parse json.data as JSON string:", { error: parseError.message });
+            logger.debug("Could not parse json.data as JSON string:", parseError);
           }
         }
       }
@@ -468,9 +468,8 @@ module.exports = {
   },
 
   async handleError(error, interaction) {
-    logger.error('Error in promote command:', {
-      error: error.message,
-      stack: error.stack,
+    logger.error('Error in promote command', {
+      err: error,
       userId: interaction.user.id,
       guildId: interaction.guildId
     });
@@ -496,10 +495,7 @@ module.exports = {
     try {
       await interaction.editReply({ content: errorMessage });
     } catch (replyError) {
-      logger.error('Failed to send error message:', {
-        error: replyError.message,
-        stack: replyError.stack
-      });
+      logger.error('Failed to send error message:', { err: replyError });
     }
   },
 
@@ -567,7 +563,7 @@ module.exports = {
 
       return null;
     } catch (error) {
-      logger.error("Error getting next promotion time:", { error: error.message });
+      logger.error("Error getting next promotion time:", error);
       return null;
     }
   }

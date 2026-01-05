@@ -75,9 +75,8 @@ module.exports = {
         });
       }
     } catch (error) {
-      logger.error("Error in anime command:", {
-        error: error.message,
-        stack: error.stack,
+      logger.error("Error in anime command", {
+        err: error,
         userId: interaction.user?.id,
         guildId: interaction.guild?.id
       });
@@ -98,8 +97,8 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for anime command:", {
-          error: followUpError.message,
+        logger.error("Failed to send error response for anime command", {
+          err: followUpError,
           originalError: error.message,
           userId: interaction.user?.id
         });
