@@ -141,6 +141,7 @@ docker-compose up -d
 Manage invite codes with custom tags and track member joins. Receive notifications when members join via specific invites.
 
 **Subcommands:**
+
 - **`tag`**: Tag an existing invite code with a custom name
   - `code` (required): The invite code (can be just the code or full URL like `discord.gg/xxxxx`)
   - `name` (required): The custom name/tag to associate with this invite code
@@ -160,6 +161,7 @@ Manage invite codes with custom tags and track member joins. Receive notificatio
 Configure and manage server reminders for Disboard, Discadia, and Reddit promotions.
 
 **Subcommands:**
+
 - **`setup`**: Set up the reminder channel and role
   - `channel` (required): The text channel where reminders will be sent
   - `role` (required): The role to ping when reminders are sent
@@ -178,11 +180,13 @@ Post server advertisements to Reddit (r/findaserver) with automatic cooldown man
 Create and assign custom roles to users with automatic permission management. Creates a new role with the specified name and color, positions it above a reference role, and assigns it along with a "fren" role.
 
 **Parameters:**
+
 - `role` (required): The name for the new role (max 100 characters)
 - `color` (required): The color in hex format (e.g., `#RRGGBB` or `RRGGBB`)
 - `user` (required): The user to receive the permissions
 
-**Requirements:** 
+**Requirements:**
+
 - `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` environment variable must be set
 - `GIVE_PERMS_FREN_ROLE_ID` environment variable must be set
 
@@ -191,6 +195,7 @@ Create and assign custom roles to users with automatic permission management. Cr
 Assign an existing role to a user.
 
 **Parameters:**
+
 - `role` (required): The role to assign
 - `user` (required): The user to give the role to
 
@@ -199,6 +204,7 @@ Assign an existing role to a user.
 Remove a role from a user.
 
 **Parameters:**
+
 - `role` (required): The role to remove
 - `user` (required): The user to remove the role from
 - `reason` (optional): Reason for removing the role
@@ -208,6 +214,7 @@ Remove a role from a user.
 Change the color of a role.
 
 **Parameters:**
+
 - `role` (required): The role to change the color of
 - `color` (required): The new color in hex format (e.g., `#RRGGBB` or `RRGGBB`)
 
@@ -216,6 +223,7 @@ Change the color of a role.
 Change a user's nickname in the server.
 
 **Parameters:**
+
 - `user` (required): The user whose nickname to change
 - `nickname` (optional): The new nickname (1-32 characters). If omitted, resets the nickname.
 
@@ -224,6 +232,7 @@ Change a user's nickname in the server.
 Configure a channel to only allow GIFs and stickers, preventing text messages.
 
 **Subcommands:**
+
 - **`set`**: Set a channel to only allow GIFs and stickers
   - `channel` (required): The text channel to configure
 - **`remove`**: Remove no-text configuration from a channel
@@ -234,6 +243,7 @@ Configure a channel to only allow GIFs and stickers, preventing text messages.
 Toggle automatic kicking of users who don't send a message within a time limit.
 
 **Subcommands:**
+
 - **`set`**: Configure mute mode settings
   - `enabled` (required): Enable or disable mute mode
   - `time` (optional): Hours a user must be silent before being kicked (1-72, default: 2)
@@ -246,6 +256,7 @@ Toggle automatic kicking of users who don't send a message within a time limit.
 Manage server-wide spam detection settings. Automatically deletes duplicate messages and posts warnings.
 
 **Subcommands:**
+
 - **`set`**: Configure spam mode settings
   - `enabled` (required): Enable or disable spam mode
   - `threshold` (optional): Minimum number of duplicate messages to trigger spam mode (2-10, default: 3)
@@ -260,6 +271,7 @@ Manage server-wide spam detection settings. Automatically deletes duplicate mess
 Manage automatic kicking of new members based on account age requirements.
 
 **Subcommands:**
+
 - **`set`**: Configure troll mode settings
   - `enabled` (required): Enable or disable troll mode
   - `age` (optional): Minimum account age in days required to join (1-365, default: 30)
@@ -272,6 +284,7 @@ Manage automatic kicking of new members based on account age requirements.
 Fix reminder data in the database for various reminder types.
 
 **Subcommands:**
+
 - **`disboard`**: Fix Disboard bump reminder data (reschedules for 2 hours from now)
 - **`reddit`**: Fix Reddit promotion reminder data (reschedules for 24 hours from now)
 - **`discadia`**: Fix Discadia bump reminder data (reschedules for 24 hours from now)
@@ -285,6 +298,7 @@ Fix reminder data in the database for various reminder types.
 Search the web using Google Custom Search API.
 
 **Parameters:**
+
 - `query` (required): The search query
 - `results` (optional): Number of results to return (1-10, default: 5)
 
@@ -295,6 +309,7 @@ Search the web using Google Custom Search API.
 Search for images using Google Custom Search API.
 
 **Parameters:**
+
 - `query` (required): The image search query
 - `results` (optional): Number of results to return (1-10, default: 5)
 
@@ -305,6 +320,7 @@ Search for images using Google Custom Search API.
 Search for movies and TV shows using IMDb data via OMDb API.
 
 **Subcommands:**
+
 - **`movie`**: Search for a movie
   - `title` (required): The movie title to search for
 - **`tv`**: Search for a TV show
@@ -317,6 +333,7 @@ Search for movies and TV shows using IMDb data via OMDb API.
 Search for anime information from MyAnimeList.
 
 **Parameters:**
+
 - `title` (required): The anime title to search for
 
 **Information displayed:** Synopsis, genres, MAL rating, release date, and link to MyAnimeList page.
@@ -326,6 +343,7 @@ Search for anime information from MyAnimeList.
 Search for music content on Spotify. Supports songs, albums, artists, playlists, and podcasts.
 
 **Subcommands:**
+
 - **`song`**: Search for a song
   - `query` (required): The song to search for
 - **`album`**: Search for an album
@@ -344,6 +362,7 @@ Search for music content on Spotify. Supports songs, albums, artists, playlists,
 Get weather information for any location using PirateWeather API.
 
 **Parameters:**
+
 - `place` (required): The location name (e.g., "New York", "Tokyo", "London")
 - `units` (optional): Unit system - `metric` (°C, m/s) or `imperial` (°F, mph), default: `metric`
 - `forecast_days` (optional): Number of days for forecast (1-7, default: 3)
@@ -355,6 +374,7 @@ Get weather information for any location using PirateWeather API.
 Fetch and display Wikipedia article summaries.
 
 **Parameters:**
+
 - `query` (required): The search query
 
 **Features:** Searches Wikipedia and displays the first result with a summary and link to the full article.
@@ -364,6 +384,7 @@ Fetch and display Wikipedia article summaries.
 Get word definitions from a free dictionary API.
 
 **Parameters:**
+
 - `word` (required): The word to look up
 
 **Information displayed:** Definition, phonetic pronunciation, and part of speech.
@@ -373,6 +394,7 @@ Get word definitions from a free dictionary API.
 Get definitions from Urban Dictionary.
 
 **Parameters:**
+
 - `term` (required): The term to search for
 
 **Information displayed:** Definition, example usage, author, and thumbs up/down counts.
@@ -382,6 +404,7 @@ Get definitions from Urban Dictionary.
 Search for YouTube content including videos, channels, and playlists.
 
 **Parameters:**
+
 - `query` (required): The search query
 - `type` (optional): Content type - `video`, `channel`, or `playlist` (default: `video`)
 
@@ -392,6 +415,7 @@ Search for YouTube content including videos, channels, and playlists.
 Search for books using Google Books API.
 
 **Subcommands:**
+
 - **`search`**: Search for books by title, author, or general query
   - `query` (required): The search query (title, author, etc.)
 - **`isbn`**: Search for a book by ISBN
@@ -406,6 +430,7 @@ Search for books using Google Books API.
 Get information about any country using the REST Countries API.
 
 **Parameters:**
+
 - `name` (required): The country name (e.g., "France", "Japan", "Brazil")
 
 **Information displayed:** Official name, flag, region, subregion, capital, population, currencies, area, and Google Maps link.
@@ -429,6 +454,7 @@ Fetch and display a random dog image from Dog CEO API.
 Calculate the time difference between two locations.
 
 **Parameters:**
+
 - `place1` (required): The first location (e.g., "Tokyo", "London", "New York")
 - `place2` (required): The second location
 
