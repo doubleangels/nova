@@ -41,27 +41,7 @@ services:
       - no-new-privileges:true
     read_only: true
     environment:
-      - BASE_EMBED_COLOR=your_base_embed_color_here
-      - BOT_STATUS=your_bot_status_here
-      - BOT_STATUS_TYPE=watching
-      - DISCORD_BOT_TOKEN=your_discord_bot_token_here
-      - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
-      - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
-      - GOOGLE_API_KEY=your_google_api_key_here
-      - GUILD_NAME=your_guild_name_here
-      - IMAGE_SEARCH_ENGINE_ID=your_image_search_engine_id_here
-      - LOG_LEVEL=info
-      - MAL_CLIENT_ID=your_mal_client_id_here
-      - OMDB_API_KEY=your_omdb_api_key_here
-      - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
-      - REDDIT_CLIENT_ID=your_reddit_client_id_here
-      - REDDIT_CLIENT_SECRET=your_reddit_client_secret_here
-      - REDDIT_PASSWORD=your_reddit_password_here
-      - REDDIT_USERNAME=your_reddit_username_here
-      - SEARCH_ENGINE_ID=your_search_engine_id_here
-      - SERVER_INVITE_URL=https://discord.gg/your-invite-code
-      - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
-      - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+      - BWS_ACCESS_TOKEN=your_bitwarden_secrets_manager_access_token_here
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
@@ -78,29 +58,36 @@ docker-compose up -d
 
 ### Environment Variables
 
-| Variable                            | Description                                               | Required |        Default         | Example                                                      |
-| ----------------------------------- | --------------------------------------------------------- | :------: | :--------------------: | ------------------------------------------------------------ |
-| `BASE_EMBED_COLOR`                  | Base embed color in hex format (e.g., CD41FF or #CD41FF)  |    ❌    |    Discord default     | `CD41FF`, `#CD41FF`, `0xCD41FF`                              |
-| `BOT_STATUS`                        | Bot activity status text                                  |    ❌    | `for ways to help! ❤️` | `Playing games`                                              |
-| `BOT_STATUS_TYPE`                   | Bot activity type                                         |    ❌    |       `watching`       | `playing`, `watching`, `listening`, `streaming`, `competing` |
-| `DISCORD_BOT_TOKEN`                 | Authentication token for your Discord bot                 |    ✅    |           -            | -                                                            |
-| `GIVE_PERMS_FREN_ROLE_ID`           | Discord role ID to assign alongside custom roles          |    ❌    |           -            | `123456789012345678`                                         |
-| `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` | Discord role ID that new roles should be positioned above |    ❌    |           -            | `123456789012345678`                                         |
-| `GOOGLE_API_KEY`                    | API key for Google services                               |    ✅    |           -            | -                                                            |
-| `GUILD_NAME`                        | Name of the guild/server                                  |    ❌    |       `Da Frens`       | `My Server`                                                  |
-| `IMAGE_SEARCH_ENGINE_ID`            | Google Custom Search Engine ID for image searches         |    ✅    |           -            | -                                                            |
-| `LOG_LEVEL`                         | Determines the verbosity of logs                          |    ❌    |         `info`         | `error`, `warn`, `info`, `debug`                             |
-| `MAL_CLIENT_ID`                     | Client ID for MyAnimeList API                             |    ✅    |           -            | -                                                            |
-| `OMDB_API_KEY`                      | API key for Open Movie Database                           |    ✅    |           -            | -                                                            |
-| `PIRATEWEATHER_API_KEY`             | API key for PirateWeather forecast service                |    ✅    |           -            | -                                                            |
-| `REDDIT_CLIENT_ID`                  | Client ID for Reddit API                                  |    ✅    |           -            | -                                                            |
-| `REDDIT_CLIENT_SECRET`              | Client Secret for Reddit API                              |    ✅    |           -            | -                                                            |
-| `REDDIT_PASSWORD`                   | Reddit password for API authentication                    |    ✅    |           -            | -                                                            |
-| `REDDIT_USERNAME`                   | Reddit username for API authentication                    |    ✅    |           -            | -                                                            |
-| `SEARCH_ENGINE_ID`                  | Google Custom Search Engine ID for web searches           |    ✅    |           -            | -                                                            |
-| `SERVER_INVITE_URL`                 | Server invite URL for kick messages                       |    ❌    |           -            | `https://discord.gg/xxxxx`                                   |
-| `SPOTIFY_CLIENT_ID`                 | Client ID for Spotify API                                 |    ✅    |           -            | -                                                            |
-| `SPOTIFY_CLIENT_SECRET`             | Client Secret for Spotify API                             |    ✅    |           -            | -                                                            |
+The following environment variables can be set in your `docker-compose.yml`:
+
+| Variable           | Description                                | Required | Default | Example |
+| ------------------ | ------------------------------------------ | :------: | :-----: | ------- |
+| `BWS_ACCESS_TOKEN` | Access token for Bitwarden Secrets Manager |    ✅    |    -    | -       |
+
+**Note:** Most secrets and API keys are automatically retrieved from Bitwarden Secrets Manager during container startup. You must provide `BWS_ACCESS_TOKEN` for the bot to access these secrets. The following secrets are retrieved from Bitwarden:
+- `BASE_EMBED_COLOR`
+- `BOT_STATUS`
+- `BOT_STATUS_TYPE`
+- `DISCORD_BOT_TOKEN`
+- `GIVE_PERMS_FREN_ROLE_ID`
+- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID`
+- `GOOGLE_API_KEY`
+- `GUILD_NAME`
+- `IMAGE_SEARCH_ENGINE_ID`
+- `LOG_LEVEL`
+- `MAL_CLIENT_ID`
+- `OMDB_API_KEY`
+- `PIRATEWEATHER_API_KEY`
+- `REDDIT_CLIENT_ID`
+- `REDDIT_CLIENT_SECRET`
+- `REDDIT_PASSWORD`
+- `REDDIT_USERNAME`
+- `SEARCH_ENGINE_ID`
+- `SERVER_INVITE_URL`
+- `SPOTIFY_CLIENT_ID`
+- `SPOTIFY_CLIENT_SECRET`
+
+Ensure your Bitwarden Secrets Manager access token is configured for the container to retrieve these secrets.
 
 ## 🎯 Features
 
@@ -187,8 +174,8 @@ Create and assign custom roles to users with automatic permission management. Cr
 
 **Requirements:**
 
-- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` environment variable must be set
-- `GIVE_PERMS_FREN_ROLE_ID` environment variable must be set
+- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` must be configured in Bitwarden Secrets Manager
+- `GIVE_PERMS_FREN_ROLE_ID` must be configured in Bitwarden Secrets Manager
 
 #### `/giverole` (Manage Roles Permission)
 
