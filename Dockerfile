@@ -4,20 +4,22 @@
 # Use specific Node.js version for reproducibility
 FROM node:24.1.0 AS base
 
+# Set environment variables early for better caching
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_ENV=production
+
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies and create user in a single layer
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
     dumb-init \
     gosu && \
+    groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs -s /bin/bash -m discordbot && \
     rm -rf /var/lib/apt/lists/*
 
-# Create user and group in a single layer
-RUN groupadd -g 1001 nodejs && \
-    useradd -u 1001 -g nodejs -s /bin/bash -m discordbot
-
-# Copy package files for dependency installation
+# Copy package files for dependency installation (better caching)
 COPY package*.json ./
 
 # Build stage for native modules
@@ -33,11 +35,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install dependencies with BuildKit cache mount for faster rebuilds
+# Using --omit=dev to exclude dev dependencies in production build
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev --prefer-offline && \
     npm cache clean --force
 
-# Remove build dependencies to reduce image size
+# Remove build dependencies in same layer to reduce image size
 RUN apt-get purge -y --auto-remove \
     python3 \
     make \
@@ -48,43 +51,38 @@ RUN apt-get purge -y --auto-remove \
 # Final runtime stage
 FROM base AS runtime
 
-# Install dependencies
-ENV DEBIAN_FRONTEND=noninteractive
+# Install runtime dependencies and bws in a single layer
+# jq is kept as it's needed by the entrypoint script
 RUN apt-get update && \
-  apt-get install -y \
-  ca-certificates \
-  curl \
-  jq \
-  unzip && \
-  rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    jq \
+    unzip && \
+    curl -fL -o /tmp/bws.zip https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
+    unzip -q /tmp/bws.zip -d /usr/local/bin/ && \
+    rm -f /tmp/bws.zip && \
+    chmod +x /usr/local/bin/bws && \
+    apt-get purge -y --auto-remove curl unzip && \
+    rm -rf /var/lib/apt/lists/*
 
-# Download bws
-RUN curl -LO https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
-  unzip bws-x86_64-unknown-linux-gnu-1.0.0.zip -d /usr/local/bin/ && \
-  rm -f bws-x86_64-unknown-linux-gnu-1.0.0.zip
-
-# Copy node_modules from builder stage
+# Copy node_modules from builder stage (before app files for better caching)
 COPY --from=builder --chown=discordbot:nodejs /app/node_modules ./node_modules
 
-# Copy application files
+# Copy application files and entrypoint script together
 COPY --chown=discordbot:nodejs . .
-
-# Copy and set up entrypoint script (as root so it can fix permissions)
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
 
-# Ensure WORKDIR ownership is correct
-RUN chown -R discordbot:nodejs /app
-
-# Create data directory for database persistence
-# 750 = rwxr-x--- (owner: read/write/execute, group: read/execute, others: no access)
-RUN mkdir -p /app/data && chown -R discordbot:nodejs /app/data && chmod 750 /app/data
+# Set permissions and create data directory in a single layer
+RUN chmod +x /app/docker-entrypoint.sh && \
+    mkdir -p /app/data && \
+    chown -R discordbot:nodejs /app && \
+    chmod 750 /app/data
 
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]
 
-# Add health check (adjust based on your application)
-# This is a simple check - you may want to add a proper health endpoint
+# Add health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "process.exit(0)" || exit 1
 
