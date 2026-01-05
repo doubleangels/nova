@@ -13,7 +13,8 @@ const NAMESPACES = ['main', 'invites'];
 const KNOWN_SECTIONS = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:'];
 
 // Ensure data directory exists
-const dataDir = path.resolve(process.cwd(), 'data');
+// Allow override via environment variable for container usage
+const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const sqlitePath = path.join(dataDir, 'database.sqlite');
 
 /**
@@ -23,6 +24,21 @@ function ensureDataDir() {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
+}
+
+/**
+ * Get debug information about the database path
+ * @returns {Object} Debug information
+ */
+function getDatabasePathInfo() {
+  return {
+    dataDir,
+    sqlitePath,
+    cwd: process.cwd(),
+    dataDirExists: fs.existsSync(dataDir),
+    databaseExists: fs.existsSync(sqlitePath),
+    envDataDir: process.env.DATA_DIR
+  };
 }
 
 /**
@@ -220,6 +236,7 @@ module.exports = {
   parseValue,
   withKeyv,
   formatSectionName,
+  getDatabasePathInfo,
   sqlitePath,
   NAMESPACES,
   KNOWN_SECTIONS

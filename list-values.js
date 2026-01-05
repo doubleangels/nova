@@ -95,7 +95,7 @@ async function readValue(keyString) {
       }
       
       // Display the value
-      console.log(`📖 Value for "${keyString}":`);
+      console.log(`Value for "${keyString}":`);
       console.log(`   Namespace: ${namespace}`);
       if (section) {
         console.log(`   Section: ${formatSectionName(section)}`);
@@ -122,6 +122,34 @@ async function readValue(keyString) {
 
 async function listAllValues() {
   try {
+    const { getDatabasePathInfo } = require('./utils/dbScriptUtils');
+    const pathInfo = getDatabasePathInfo();
+    
+    // Show debug info if database doesn't exist or DEBUG env var is set
+    if (!pathInfo.databaseExists || process.env.DEBUG) {
+      console.log('Database path information:');
+      console.log(`   Data directory: ${pathInfo.dataDir}`);
+      console.log(`   Database file: ${pathInfo.sqlitePath}`);
+      console.log(`   Working directory: ${pathInfo.cwd}`);
+      console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
+      console.log(`   Database exists: ${pathInfo.databaseExists}`);
+      if (pathInfo.envDataDir) {
+        console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
+      }
+      console.log('');
+    }
+    
+    if (!pathInfo.databaseExists) {
+      console.log('Database file does not exist.');
+      console.log(`   Expected location: ${pathInfo.sqlitePath}`);
+      console.log('');
+      console.log('If running in a container, ensure:');
+      console.log('  1. The data volume is properly mounted');
+      console.log('  2. The database file exists in the mounted volume');
+      console.log('  3. You can set DATA_DIR environment variable to override the path');
+      return;
+    }
+    
     const allData = await getAllKeys();
     
     if (allData.length === 0) {

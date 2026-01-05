@@ -20,6 +20,23 @@ const { parseKey, getKeyvForNamespace, parseValue, withKeyv, formatSectionName }
 
 async function setValue(keyString, value) {
   try {
+    const { getDatabasePathInfo } = require('./utils/dbScriptUtils');
+    const pathInfo = getDatabasePathInfo();
+    
+    // Show debug info if database doesn't exist or DEBUG env var is set
+    if (!pathInfo.databaseExists || process.env.DEBUG) {
+      console.log('Database path information:');
+      console.log(`   Data directory: ${pathInfo.dataDir}`);
+      console.log(`   Database file: ${pathInfo.sqlitePath}`);
+      console.log(`   Working directory: ${pathInfo.cwd}`);
+      console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
+      console.log(`   Database exists: ${pathInfo.databaseExists}`);
+      if (pathInfo.envDataDir) {
+        console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
+      }
+      console.log('');
+    }
+    
     const { namespace, section, actualKey, fullKey } = parseKey(keyString);
     const keyv = getKeyvForNamespace(namespace);
     
@@ -28,7 +45,7 @@ async function setValue(keyString, value) {
     await withKeyv(keyv, async (kv) => {
       await kv.set(fullKey, parsedValue);
       
-      console.log(`✅ Successfully set "${keyString}"`);
+      console.log(`Successfully set "${keyString}"`);
       console.log(`   Namespace: ${namespace}`);
       if (section) {
         console.log(`   Section: ${formatSectionName(section)}`);

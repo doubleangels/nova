@@ -19,6 +19,34 @@ const { parseKey, getKeyvForNamespace, withKeyv, formatSectionName } = require('
 
 async function deleteValue(keyString) {
   try {
+    const { getDatabasePathInfo } = require('./utils/dbScriptUtils');
+    const pathInfo = getDatabasePathInfo();
+    
+    // Show debug info if database doesn't exist or DEBUG env var is set
+    if (!pathInfo.databaseExists || process.env.DEBUG) {
+      console.log('Database path information:');
+      console.log(`   Data directory: ${pathInfo.dataDir}`);
+      console.log(`   Database file: ${pathInfo.sqlitePath}`);
+      console.log(`   Working directory: ${pathInfo.cwd}`);
+      console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
+      console.log(`   Database exists: ${pathInfo.databaseExists}`);
+      if (pathInfo.envDataDir) {
+        console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
+      }
+      console.log('');
+    }
+    
+    if (!pathInfo.databaseExists) {
+      console.error('Database file does not exist.');
+      console.error(`   Expected location: ${pathInfo.sqlitePath}`);
+      console.error('');
+      console.error('If running in a container, ensure:');
+      console.error('  1. The data volume is properly mounted');
+      console.error('  2. The database file exists in the mounted volume');
+      console.error('  3. You can set DATA_DIR environment variable to override the path');
+      process.exit(1);
+    }
+    
     const { namespace, section, actualKey, fullKey } = parseKey(keyString);
     const keyv = getKeyvForNamespace(namespace);
     
@@ -36,7 +64,7 @@ async function deleteValue(keyString) {
       const deleted = await kv.delete(fullKey);
       
       if (deleted) {
-        console.log(`✅ Successfully deleted "${keyString}"`);
+        console.log(`Successfully deleted "${keyString}"`);
         console.log(`   Namespace: ${namespace}`);
         if (section) {
           console.log(`   Section: ${formatSectionName(section)}`);
