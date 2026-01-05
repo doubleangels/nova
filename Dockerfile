@@ -38,6 +38,19 @@ RUN apk del .build-deps
 # Final runtime stage
 FROM base AS runtime
 
+# Install dependencies for Bitwarden Secrets Manager
+RUN apk add --no-cache \
+  ca-certificates \
+  curl \
+  jq \
+  unzip
+
+# Download bws
+RUN curl -LO https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
+  unzip bws-x86_64-unknown-linux-gnu-1.0.0.zip -d /usr/local/bin/ && \
+  rm -f bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
+  chmod +x /usr/local/bin/bws
+
 # Copy node_modules from builder stage
 COPY --from=builder --chown=discordbot:nodejs /app/node_modules ./node_modules
 
