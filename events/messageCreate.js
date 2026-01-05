@@ -211,6 +211,7 @@ async function checkForBumpMessages(message) {
   
   try {
     // Check for Disboard bump (has embed with "Bump done!")
+    // Check ALL messages for the pattern, regardless of sender
     if (message.embeds && message.embeds.length > 0) {
       // Only fetch if embeds might be incomplete (partial message or missing descriptions)
       let embedsToCheck = message.embeds;
@@ -261,77 +262,61 @@ async function checkForBumpMessages(message) {
     }
     
     // Check for Discadia bump (text content with "has been successfully bumped!")
-    // Discadia messages are webhook/interaction messages, so we need to check author and fetch content
-    const isDiscadiaBot = message.author?.username?.toLowerCase().includes('discadia') || 
-                          message.author?.tag?.toLowerCase().includes('discadia');
+    // Check ALL messages for the pattern, regardless of sender
+    const discadiaBumpPattern = /has been successfully bumped!/i;
     
-    // Always check for Discadia if it's a webhook/interaction message or if author is Discadia
-    if (isDiscadiaBot || message.webhookId || message.interaction) {
-      // Always fetch for webhook/interaction messages to ensure we have the latest content
-      let contentToCheck = messageContent;
-      let embedsToCheck = message.embeds;
-      
-      if (message.partial || message.webhookId || message.interaction || isDiscadiaBot) {
-        try {
-          const fetchedMessage = await message.fetch();
-          if (fetchedMessage.content) {
-            contentToCheck = fetchedMessage.content;
-            messageContent = fetchedMessage.content;
-          }
-          if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
-            embedsToCheck = fetchedMessage.embeds;
-          }
-          logger.debug("Fetched message for Discadia check:", {
-            label: "messageCreate.js",
-            messageId: message.id,
-            contentLength: contentToCheck?.length || 0,
-            embedCount: embedsToCheck?.length || 0,
-            author: message.author?.tag
-          });
-        } catch (fetchError) {
-          logger.debug("Could not fetch message for Discadia check:", {
-            label: "messageCreate.js",
-            error: fetchError.message,
-            messageId: message.id
-          });
+    // Always check message content for Discadia pattern
+    let contentToCheck = messageContent;
+    let embedsToCheck = message.embeds;
+    
+    // For webhook/interaction messages, fetch to ensure we have latest content
+    if (message.partial || message.webhookId || message.interaction) {
+      try {
+        const fetchedMessage = await message.fetch();
+        if (fetchedMessage.content) {
+          contentToCheck = fetchedMessage.content;
+          messageContent = fetchedMessage.content;
         }
+        if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
+          embedsToCheck = fetchedMessage.embeds;
+        }
+        logger.debug("Fetched message for Discadia check:", {
+          label: "messageCreate.js",
+          messageId: message.id,
+          contentLength: contentToCheck?.length || 0,
+          embedCount: embedsToCheck?.length || 0,
+          author: message.author?.tag
+        });
+      } catch (fetchError) {
+        logger.debug("Could not fetch message for Discadia check:", {
+          label: "messageCreate.js",
+          error: fetchError.message,
+          messageId: message.id
+        });
       }
+    }
+    
+    // Check message content for Discadia pattern
+    if (contentToCheck && contentToCheck.trim().length > 0 && discadiaBumpPattern.test(contentToCheck)) {
+      logger.info("Discadia bump detected in content, scheduling reminder.");
+      await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
+      logger.debug("Bump reminder scheduled for 24 hours.");
+      return;
+    }
+    
+    // Check embeds for Discadia pattern (some Discadia messages might have embeds)
+    if (embedsToCheck && embedsToCheck.length > 0) {
+      const discadiaEmbed = embedsToCheck.find(embed => 
+        (embed.description && discadiaBumpPattern.test(embed.description)) ||
+        (embed.title && discadiaBumpPattern.test(embed.title)) ||
+        (embed.footer?.text && discadiaBumpPattern.test(embed.footer.text))
+      );
       
-      // Check content for Discadia pattern (in both message content and embeds)
-      const discadiaBumpPattern = /has been successfully bumped!/i;
-      
-      // Check message content
-      if (contentToCheck && contentToCheck.trim().length > 0 && discadiaBumpPattern.test(contentToCheck)) {
-        logger.info("Discadia bump detected in content, scheduling reminder.");
+      if (discadiaEmbed) {
+        logger.info("Discadia bump detected in embed, scheduling reminder.");
         await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
         logger.debug("Bump reminder scheduled for 24 hours.");
         return;
-      }
-      
-      // Check embeds for Discadia pattern (some Discadia messages might have embeds)
-      if (embedsToCheck && embedsToCheck.length > 0) {
-        const discadiaEmbed = embedsToCheck.find(embed => 
-          (embed.description && discadiaBumpPattern.test(embed.description)) ||
-          (embed.title && discadiaBumpPattern.test(embed.title)) ||
-          (embed.footer?.text && discadiaBumpPattern.test(embed.footer.text))
-        );
-        
-        if (discadiaEmbed) {
-          logger.info("Discadia bump detected in embed, scheduling reminder.");
-          await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
-          logger.debug("Bump reminder scheduled for 24 hours.");
-          return;
-        }
-      }
-      
-      // If it's definitely Discadia bot but pattern didn't match, log for debugging
-      if (isDiscadiaBot) {
-        logger.debug("Discadia bot message detected but bump pattern not found:", {
-          label: "messageCreate.js",
-          messageId: message.id,
-          content: contentToCheck?.substring(0, 100) || "No content",
-          embedCount: embedsToCheck?.length || 0
-        });
       }
     }
   } catch (error) {

@@ -272,24 +272,111 @@ module.exports = {
       // Submit the post
       const submissionResponse = await redditApiRequest('POST', '/api/submit', submissionData);
       
+      // Log the full response for debugging
+      logger.debug("Reddit submission response:", {
+        response: JSON.stringify(submissionResponse, null, 2)
+      });
+      
       // Reddit API returns JSON with nested structure
       let postId = null;
       let permalink = null;
       
+      // Check for errors first
       if (submissionResponse && submissionResponse.json) {
         if (submissionResponse.json.errors && submissionResponse.json.errors.length > 0) {
-          const errorMessages = submissionResponse.json.errors.map(e => e.join(': ')).join(', ');
+          const errorMessages = submissionResponse.json.errors.map(e => Array.isArray(e) ? e.join(': ') : String(e)).join(', ');
           throw new Error(`Reddit API error: ${errorMessages}`);
         }
         
-        if (submissionResponse.json.data && submissionResponse.json.data.id) {
-          postId = submissionResponse.json.data.id;
-          permalink = submissionResponse.json.data.permalink;
+        // Try to extract post ID and permalink from various possible response structures
+        const jsonData = submissionResponse.json;
+        
+        // Standard structure: json.data.id and json.data.permalink
+        if (jsonData.data) {
+          if (jsonData.data.id) {
+            postId = jsonData.data.id;
+          }
+          if (jsonData.data.permalink) {
+            permalink = jsonData.data.permalink;
+          }
+          // Reddit API sometimes returns 'url' instead of 'permalink' (full URL)
+          if (!permalink && jsonData.data.url) {
+            // Extract permalink path from full URL
+            // e.g., "https://www.reddit.com/r/findaserver/comments/1q4b824/..." -> "/r/findaserver/comments/1q4b824/..."
+            const urlMatch = jsonData.data.url.match(/https?:\/\/[^\/]+(\/.*)/);
+            if (urlMatch && urlMatch[1]) {
+              permalink = urlMatch[1];
+            } else {
+              // Fallback: use the full URL as permalink
+              permalink = jsonData.data.url;
+            }
+          }
+          // Sometimes the name field contains the post ID (e.g., "t3_xxxxx")
+          if (!postId && jsonData.data.name) {
+            postId = jsonData.data.name.replace('t3_', '');
+          }
+        }
+        
+        // Alternative structure: json.data might be a string (JSON string)
+        if (!postId && typeof jsonData.data === 'string') {
+          try {
+            const parsedData = JSON.parse(jsonData.data);
+            if (parsedData.id) {
+              postId = parsedData.id;
+            }
+            if (parsedData.permalink) {
+              permalink = parsedData.permalink;
+            }
+            // Handle 'url' field if 'permalink' is not available
+            if (!permalink && parsedData.url) {
+              const urlMatch = parsedData.url.match(/https?:\/\/[^\/]+(\/.*)/);
+              if (urlMatch && urlMatch[1]) {
+                permalink = urlMatch[1];
+              } else {
+                permalink = parsedData.url;
+              }
+            }
+            if (!postId && parsedData.name) {
+              postId = parsedData.name.replace('t3_', '');
+            }
+          } catch (parseError) {
+            logger.debug("Could not parse json.data as JSON string:", { error: parseError.message });
+          }
+        }
+      }
+      
+      // If still no postId, check if response structure is different
+      if (!postId && submissionResponse) {
+        // Check if response is directly the data object
+        if (submissionResponse.id) {
+          postId = submissionResponse.id;
+        }
+        if (submissionResponse.permalink) {
+          permalink = submissionResponse.permalink;
+        }
+        // Handle 'url' field if 'permalink' is not available
+        if (!permalink && submissionResponse.url) {
+          const urlMatch = submissionResponse.url.match(/https?:\/\/[^\/]+(\/.*)/);
+          if (urlMatch && urlMatch[1]) {
+            permalink = urlMatch[1];
+          } else {
+            permalink = submissionResponse.url;
+          }
+        }
+        if (!postId && submissionResponse.name) {
+          postId = submissionResponse.name.replace('t3_', '');
         }
       }
       
       if (!postId || !permalink) {
-        throw new Error('Failed to get post ID or permalink from Reddit response');
+        logger.error("Failed to parse Reddit response:", {
+          response: JSON.stringify(submissionResponse, null, 2),
+          hasJson: !!submissionResponse?.json,
+          hasData: !!submissionResponse?.json?.data,
+          jsonDataKeys: submissionResponse?.json ? Object.keys(submissionResponse.json) : [],
+          dataKeys: submissionResponse?.json?.data ? Object.keys(submissionResponse.json.data) : []
+        });
+        throw new Error('Failed to get post ID or permalink from Reddit response. Check logs for response structure.');
       }
 
       logger.info("Successfully posted to r/findaserver:", {
