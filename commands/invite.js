@@ -198,8 +198,39 @@ module.exports = {
     
     await setInviteTag(tagName, inviteData);
     
+    // Validate that the invite exists in the server
+    try {
+      const invites = await interaction.guild.invites.fetch();
+      const inviteExists = invites.some(inv => inv.code.toLowerCase() === cleanCode.toLowerCase());
+      if (!inviteExists) {
+        const embed = new EmbedBuilder()
+          .setColor(0xFF0000)
+          .setTitle('❌ Invite Not Found')
+          .setDescription(`The invite code \`${cleanCode}\` does not exist in this server. Please verify the code is correct and the invite hasn't been deleted.`);
+        
+        await interaction.editReply({ embeds: [embed] });
+        return;
+      }
+    } catch (fetchError) {
+      logger.warn('Failed to validate invite existence, proceeding anyway.', {
+        err: fetchError,
+        code: cleanCode
+      });
+      // Continue if we can't validate (e.g., no permissions)
+    }
+    
     // Update code-to-tag mapping for quick lookups
     const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
+    
+    // Check if code is already mapped to a different tag
+    const existingMappedTag = codeToTagMap[cleanCode.toLowerCase()];
+    if (existingMappedTag && existingMappedTag !== tagName) {
+      logger.warn('Code already mapped to different tag, overwriting.', {
+        code: cleanCode,
+        existingTag: existingMappedTag,
+        newTag: tagName
+      });
+    }
     
     // Remove old code mapping if tag was updated with a new code
     if (isUpdate && existingTag.code && existingTag.code.toLowerCase() !== cleanCode.toLowerCase()) {
@@ -457,6 +488,16 @@ module.exports = {
       // Update code-to-tag mapping
       const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
       
+      // Check if code is already mapped to a different tag (shouldn't happen for newly created invites, but check anyway)
+      const existingMappedTag = codeToTagMap[inviteCode.toLowerCase()];
+      if (existingMappedTag && existingMappedTag !== tagName) {
+        logger.warn('Code already mapped to different tag, overwriting.', {
+          code: inviteCode,
+          existingTag: existingMappedTag,
+          newTag: tagName
+        });
+      }
+      
       // Remove old code mapping if tag was updated
       if (isUpdate && existingTag.code && existingTag.code.toLowerCase() !== inviteCode.toLowerCase()) {
         delete codeToTagMap[existingTag.code.toLowerCase()];
@@ -571,12 +612,33 @@ module.exports = {
       // Try to delete the invite from Discord if we have the code
       if (inviteTag.code) {
         try {
-          // Check if bot has permission to manage invites
-          if (!interaction.guild.members.me?.permissions.has('ManageGuild')) {
-            logger.debug("Bot doesn't have ManageGuild permission, cannot delete invite from server.");
-            inviteDeleteError = "Bot lacks ManageGuild permission";
+          // Check if bot has permission to manage invites OR if bot created the invite
+          const botMember = interaction.guild.members.me;
+          const hasManageGuild = botMember?.permissions.has('ManageGuild');
+          
+          if (!hasManageGuild) {
+            // Fetch invites to check if bot created this one
+            const invites = await interaction.guild.invites.fetch().catch(() => null);
+            if (invites) {
+              const invite = invites.find(inv => inv.code === inviteTag.code);
+              // Check if bot created the invite (inviter is the bot)
+              if (invite && invite.inviter && invite.inviter.id === botMember?.id) {
+                // Bot created it, can delete
+                await invite.delete('Removed via /invite remove command');
+                inviteDeleted = true;
+                logger.debug('Deleted invite from Discord server (bot created it).', {
+                  inviteCode: inviteTag.code
+                });
+              } else {
+                logger.debug("Bot doesn't have ManageGuild permission and didn't create invite, cannot delete.");
+                inviteDeleteError = "Bot lacks ManageGuild permission and didn't create this invite";
+              }
+            } else {
+              logger.debug("Bot doesn't have ManageGuild permission, cannot fetch invites to check creator.");
+              inviteDeleteError = "Bot lacks ManageGuild permission";
+            }
           } else {
-            // Fetch all invites to find the one matching the code
+            // Bot has ManageGuild permission, can delete any invite
             const invites = await interaction.guild.invites.fetch();
             const invite = invites.find(inv => inv.code === inviteTag.code);
             
@@ -681,6 +743,7 @@ module.exports = {
         const query = focusedOption.value.toLowerCase();
         
         // Filter tags that match the query
+        // Use both tagName and name for matching
         const filtered = tags
           .filter(tag => {
             const nameMatch = tag.name?.toLowerCase().includes(query);
@@ -689,8 +752,8 @@ module.exports = {
           })
           .slice(0, 25) // Discord autocomplete limit
           .map(tag => ({
-            name: tag.name || tag.tagName,
-            value: tag.tagName
+            name: tag.name || tag.tagName || 'Unknown',
+            value: tag.tagName || tag.name || 'Unknown'
           }));
         
         await interaction.respond(filtered);
