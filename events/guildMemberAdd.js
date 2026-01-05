@@ -22,10 +22,12 @@ module.exports = {
    */
   async execute(member) {
     try {
-      logger.info(`New member joined: ${member.user.tag}.`);
+      logger.info('New member joined the guild.', {
+        userTag: member.user.tag
+      });
 
       if (member.user.bot) {
-        logger.debug("Bot joined; skipping mute mode tracking:", { botTag: member.user.tag });
+        logger.debug('Bot joined the guild, skipping mute mode tracking.', { botTag: member.user.tag });
         return;
       }
 
@@ -61,9 +63,11 @@ module.exports = {
       // Check for tagged invite usage
       await this.checkTaggedInvite(member);
 
-      logger.info(`Successfully processed new member: ${member.user.tag}.`);
+      logger.info('Successfully processed new member.', {
+        userTag: member.user.tag
+      });
     } catch (error) {
-      logger.error('Error processing new member', {
+      logger.error('Error occurred while processing new member.', {
         err: error,
         userId: member.user.id
       });
@@ -97,55 +101,81 @@ module.exports = {
    */
   async checkTaggedInvite(member) {
     try {
-      logger.debug(`Checking tagged invite for member ${member.user.tag} (${member.user.id})`);
+      logger.debug('Checking tagged invite for member.', {
+        userTag: member.user.tag,
+        userId: member.user.id
+      });
       
       // Get notification channel
       const notificationChannelId = await getInviteNotificationChannel();
       if (!notificationChannelId) {
-        logger.debug("No invite notification channel configured, skipping invite check.");
+        logger.debug('No invite notification channel configured, skipping invite check.');
         return;
       }
-      logger.debug(`Notification channel ID: ${notificationChannelId}`);
+      logger.debug('Notification channel ID retrieved.', {
+        channelId: notificationChannelId
+      });
 
       // Try to get channel from cache first, then fetch if not found
       let notificationChannel = member.guild.channels.cache.get(notificationChannelId);
       if (!notificationChannel) {
         try {
           notificationChannel = await member.guild.channels.fetch(notificationChannelId);
-          logger.debug(`Fetched notification channel from API: ${notificationChannel.name} (${notificationChannel.id})`);
+          logger.debug('Fetched notification channel from API.', {
+            channelName: notificationChannel.name,
+            channelId: notificationChannel.id
+          });
         } catch (fetchError) {
-          logger.error(`Failed to fetch notification channel ${notificationChannelId}:`, fetchError);
+          logger.error('Failed to fetch notification channel from API.', {
+            err: fetchError,
+            channelId: notificationChannelId
+          });
           return;
         }
       }
       
       if (!notificationChannel) {
-        logger.warn(`Invite notification channel ${notificationChannelId} not found in guild ${member.guild.id}.`);
+        logger.warn('Invite notification channel not found in guild.', {
+          channelId: notificationChannelId,
+          guildId: member.guild.id
+        });
         return;
       }
-      logger.debug(`Found notification channel: ${notificationChannel.name} (${notificationChannel.id}), type: ${notificationChannel.type}`);
+      logger.debug('Found notification channel.', {
+        channelName: notificationChannel.name,
+        channelId: notificationChannel.id,
+        channelType: notificationChannel.type
+      });
       
       // Check permissions once and cache
       const botMember = member.guild.members.me;
       if (!botMember) {
-        logger.error(`Bot member not found in guild ${member.guild.id}`);
+        logger.error('Bot member not found in guild.', {
+          guildId: member.guild.id
+        });
         return;
       }
       
       const channelPermissions = notificationChannel.permissionsFor(botMember);
       if (!channelPermissions?.has('SendMessages')) {
-        logger.error(`Bot does not have SendMessages permission in channel ${notificationChannel.name} (${notificationChannel.id})`);
+        logger.error('Bot does not have SendMessages permission in notification channel.', {
+          channelName: notificationChannel.name,
+          channelId: notificationChannel.id
+        });
         return;
       }
       
       if (!channelPermissions.has('EmbedLinks')) {
-        logger.error(`Bot does not have EmbedLinks permission in channel ${notificationChannel.name} (${notificationChannel.id})`);
+        logger.error('Bot does not have EmbedLinks permission in notification channel.', {
+          channelName: notificationChannel.name,
+          channelId: notificationChannel.id
+        });
         return;
       }
 
       // Check if bot has permission to view invites
       if (!botMember.permissions.has('ManageGuild')) {
-        logger.debug("Bot doesn't have ManageGuild permission, cannot check invites.");
+        logger.debug('Bot does not have ManageGuild permission, cannot check invites.');
         return;
       }
 
@@ -153,15 +183,21 @@ module.exports = {
       let currentInvites;
       try {
         currentInvites = await member.guild.invites.fetch();
-        logger.debug(`Fetched ${currentInvites.size} invites`);
+        logger.debug('Fetched invites from guild.', {
+          inviteCount: currentInvites.size
+        });
       } catch (error) {
-        logger.error("Failed to fetch invites:", error);
+        logger.error('Failed to fetch invites from guild.', {
+          err: error
+        });
         return;
       }
 
       // Get previous invite usage counts
       const previousUsage = await getInviteUsage(member.guild.id);
-      logger.debug(`Previous usage data:`, JSON.stringify(previousUsage));
+      logger.debug('Retrieved previous invite usage data.', {
+        previousUsage: JSON.stringify(previousUsage)
+      });
       
       // Build current usage map and store invite objects for later use
       // Store codes in their original case for Discord API compatibility
@@ -175,12 +211,14 @@ module.exports = {
         // Also store with lowercase for lookup
         inviteObjects.set(code.toLowerCase(), invite);
       });
-      logger.debug(`Current usage data:`, JSON.stringify(currentUsage));
+      logger.debug('Built current invite usage data.', {
+        currentUsage: JSON.stringify(currentUsage)
+      });
       
       // If previous usage is empty (bot just started or first time), initialize it
       const isFirstRun = Object.keys(previousUsage).length === 0;
       if (isFirstRun) {
-        logger.debug("No previous invite usage data found - this may be the first join after bot restart");
+        logger.debug('No previous invite usage data found, this may be the first join after bot restart.');
       }
 
       // Find which invite was used (usage count increased)
@@ -198,7 +236,12 @@ module.exports = {
         const normalizedCode = code.toLowerCase();
         const previousCount = normalizedPreviousUsage[normalizedCode] || 0;
         const increase = currentCount - previousCount;
-        logger.debug(`Invite ${code}: previous=${previousCount}, current=${currentCount}, increase=${increase}`);
+        logger.debug('Comparing invite usage counts.', {
+          inviteCode: code,
+          previousCount: previousCount,
+          currentCount: currentCount,
+          increase: increase
+        });
         
         if (increase > 0) {
           invitesWithIncrease.push({ code, increase });
@@ -211,14 +254,17 @@ module.exports = {
 
       // If we couldn't find it by comparison, check if it's a new invite
       if (!usedInviteCode) {
-        logger.debug("No invite found with increased usage, checking for new invites");
+        logger.debug('No invite found with increased usage, checking for new invites.');
         for (const [code, currentCount] of Object.entries(currentUsage)) {
           const normalizedCode = code.toLowerCase();
           // Check for new invites that weren't in previous usage
           // Also check for invites with exactly 1 use (likely just used)
           if (!normalizedPreviousUsage[normalizedCode] && currentCount >= 1) {
             usedInviteCode = code; // Keep original case
-            logger.debug(`Found new invite: ${code} with ${currentCount} uses`);
+            logger.debug('Found new invite that was likely used.', {
+              inviteCode: code,
+              uses: currentCount
+            });
             break;
           }
         }
@@ -227,7 +273,7 @@ module.exports = {
       // If still not found and this is first run, try to find the most recently used invite
       // (one with lowest uses, as it's likely the newest)
       if (!usedInviteCode && isFirstRun) {
-        logger.debug("First run after restart - checking for most recently used invite");
+        logger.debug('First run after restart, checking for most recently used invite.');
         let minUses = Infinity;
         let mostRecentInvite = null;
         for (const [code, currentCount] of Object.entries(currentUsage)) {
@@ -238,16 +284,24 @@ module.exports = {
         }
         if (mostRecentInvite) {
           usedInviteCode = mostRecentInvite;
-          logger.debug(`Found most recently used invite after restart: ${mostRecentInvite} with ${minUses} uses`);
+          logger.debug('Found most recently used invite after restart.', {
+            inviteCode: mostRecentInvite,
+            uses: minUses
+          });
         }
       }
 
       // If multiple invites increased, log warning but use the one with highest increase
       if (invitesWithIncrease.length > 1) {
-        logger.warn(`Multiple invites increased usage: ${invitesWithIncrease.map(i => `${i.code} (+${i.increase})`).join(', ')}. Using ${usedInviteCode} with highest increase.`);
+        logger.warn('Multiple invites increased usage, using the one with highest increase.', {
+          invites: invitesWithIncrease.map(i => `${i.code} (+${i.increase})`).join(', '),
+          selectedInvite: usedInviteCode
+        });
       }
 
-      logger.debug(`Detected used invite code: ${usedInviteCode || 'NONE'}`);
+      logger.debug('Detected used invite code.', {
+        inviteCode: usedInviteCode || 'NONE'
+      });
 
       // Update stored usage counts BEFORE processing notification
       // This ensures we have the latest state for next join
@@ -259,25 +313,38 @@ module.exports = {
         // Normalize the code for lookup
         const normalizedUsedCode = usedInviteCode.toLowerCase();
         let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
-        logger.debug(`Code to tag map:`, JSON.stringify(codeToTagMap));
+        logger.debug('Retrieved code to tag mapping.', {
+          codeToTagMap: JSON.stringify(codeToTagMap)
+        });
         
         let tagName = codeToTagMap[normalizedUsedCode];
-        logger.debug(`Tag name for code ${usedInviteCode} (normalized: ${normalizedUsedCode}): ${tagName || 'not found'}`);
+        logger.debug('Looked up tag name for invite code.', {
+          inviteCode: usedInviteCode,
+          normalizedCode: normalizedUsedCode,
+          tagName: tagName || 'not found'
+        });
         
         // Only rebuild once if tag not found (optimize to avoid double rebuilds)
         if (!tagName) {
-          logger.debug("Tag not found in mapping, attempting to rebuild from existing tags");
+          logger.debug('Tag not found in mapping, attempting to rebuild from existing tags.');
           codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
           tagName = codeToTagMap[normalizedUsedCode];
-          logger.debug(`After rebuild, tag name for code ${usedInviteCode}: ${tagName || 'not found'}`);
+          logger.debug('Rebuilt code to tag mapping and looked up tag name again.', {
+            inviteCode: usedInviteCode,
+            tagName: tagName || 'not found'
+          });
         }
         
         if (tagName) {
           const inviteTag = await getInviteTag(tagName);
-          logger.debug(`Invite tag data:`, JSON.stringify(inviteTag));
+          logger.debug('Retrieved invite tag data.', {
+            inviteTag: JSON.stringify(inviteTag)
+          });
           
           if (!inviteTag) {
-            logger.error(`Tag "${tagName}" found in mapping but tag data is null/undefined`);
+            logger.error('Tag found in mapping but tag data is null or undefined.', {
+              tagName: tagName
+            });
             // Fall through to untagged invite notification
             tagName = null;
           } else if (inviteTag.code.toLowerCase() === normalizedUsedCode) {
@@ -296,13 +363,21 @@ module.exports = {
                 .setThumbnail(member.user.displayAvatarURL())
                 .setTimestamp();
 
-              logger.debug(`Attempting to send notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
+              logger.debug('Attempting to send notification to channel.', {
+                channelId: notificationChannel.id,
+                channelName: notificationChannel.name
+              });
               
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`Sent invite notification for member ${member.user.tag} using tagged invite "${inviteTag.name}" (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info('Sent invite notification for member using tagged invite.', {
+                userTag: member.user.tag,
+                inviteTagName: inviteTag.name,
+                inviteCode: usedInviteCode,
+                messageId: sentMessage.id
+              });
               return; // Successfully sent notification, exit early
             } catch (sendError) {
-              logger.error(`Failed to send notification to channel`, {
+              logger.error('Failed to send notification to channel.', {
                 err: sendError,
                 channelId: notificationChannel.id,
                 channelName: notificationChannel.name,
@@ -312,7 +387,10 @@ module.exports = {
               tagName = null;
             }
           } else {
-            logger.warn(`Tag found but code mismatch: tag code=${inviteTag.code}, used code=${usedInviteCode}`);
+            logger.warn('Tag found but code mismatch detected.', {
+              tagCode: inviteTag.code,
+              usedCode: usedInviteCode
+            });
             // Fall through to untagged invite notification
             tagName = null;
           }
@@ -321,7 +399,9 @@ module.exports = {
         // If no tag found or tag lookup failed, send untagged notification
         if (!tagName) {
           // No tag found - send notification with invite creator info
-          logger.debug(`No tag found for invite code: ${usedInviteCode}. Sending notification with creator info.`);
+          logger.debug('No tag found for invite code, sending notification with creator info.', {
+            inviteCode: usedInviteCode
+          });
           
           // Try to get invite object (check both normalized and original code)
           let usedInvite = inviteObjects.get(usedInviteCode) || inviteObjects.get(usedInviteCode.toLowerCase());
@@ -330,20 +410,29 @@ module.exports = {
           if (!usedInvite && currentInvites) {
             usedInvite = currentInvites.find(inv => inv.code === usedInviteCode || inv.code.toLowerCase() === usedInviteCode.toLowerCase());
             if (usedInvite) {
-              logger.debug(`Found invite ${usedInviteCode} in currentInvites collection`);
+              logger.debug('Found invite in currentInvites collection.', {
+                inviteCode: usedInviteCode
+              });
             }
           }
           
           // If still not found, try to fetch it directly from Discord
           if (!usedInvite) {
             try {
-              logger.debug(`Invite ${usedInviteCode} not in cache, attempting to fetch from Discord`);
+              logger.debug('Invite not in cache, attempting to fetch from Discord.', {
+                inviteCode: usedInviteCode
+              });
               usedInvite = await member.guild.invites.fetch(usedInviteCode);
               if (usedInvite) {
-                logger.debug(`Successfully fetched invite ${usedInviteCode} from Discord`);
+                logger.debug('Successfully fetched invite from Discord.', {
+                  inviteCode: usedInviteCode
+                });
               }
             } catch (fetchError) {
-              logger.debug(`Could not fetch invite ${usedInviteCode} from Discord:`, { error: fetchError.message });
+              logger.debug('Could not fetch invite from Discord.', {
+                inviteCode: usedInviteCode,
+                error: fetchError.message
+              });
             }
           }
           
@@ -387,12 +476,19 @@ module.exports = {
                 });
               }
               
-              logger.debug(`Attempting to send notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
+              logger.debug('Attempting to send notification to channel.', {
+                channelId: notificationChannel.id,
+                channelName: notificationChannel.name
+              });
               
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`Sent invite notification for member ${member.user.tag} using untagged invite (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info('Sent invite notification for member using untagged invite.', {
+                userTag: member.user.tag,
+                inviteCode: usedInviteCode,
+                messageId: sentMessage.id
+              });
             } catch (sendError) {
-              logger.error(`Failed to send notification for untagged invite`, {
+              logger.error('Failed to send notification for untagged invite.', {
                 err: sendError,
                 channelId: notificationChannel.id,
                 channelName: notificationChannel.name,
@@ -400,7 +496,9 @@ module.exports = {
               });
             }
           } else {
-            logger.warn(`Invite object not found for code ${usedInviteCode}, sending fallback notification`);
+            logger.warn('Invite object not found for code, sending fallback notification.', {
+              inviteCode: usedInviteCode
+            });
             // Send fallback notification when invite can't be found
             try {
               const embed = new EmbedBuilder()
@@ -416,9 +514,13 @@ module.exports = {
                 .setTimestamp();
 
               const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info(`Sent fallback invite notification for member ${member.user.tag} (code: ${usedInviteCode}). Message ID: ${sentMessage.id}`);
+              logger.info('Sent fallback invite notification for member.', {
+                userTag: member.user.tag,
+                inviteCode: usedInviteCode,
+                messageId: sentMessage.id
+              });
             } catch (sendError) {
-              logger.error(`Failed to send fallback notification`, {
+              logger.error('Failed to send fallback notification.', {
                 err: sendError,
                 channelId: notificationChannel.id,
                 channelName: notificationChannel.name,
@@ -429,7 +531,10 @@ module.exports = {
         }
       } else {
         // No invite code detected - send fallback notification
-        logger.warn(`No invite code detected for member ${member.user.tag} (${member.user.id}). Sending fallback notification.`);
+        logger.warn('No invite code detected for member, sending fallback notification.', {
+          userTag: member.user.tag,
+          userId: member.user.id
+        });
         try {
           const embed = new EmbedBuilder()
             .setColor(config.baseEmbedColor)
@@ -442,12 +547,18 @@ module.exports = {
             .setThumbnail(member.user.displayAvatarURL())
             .setTimestamp();
 
-          logger.debug(`Attempting to send fallback notification to channel ${notificationChannel.id} (${notificationChannel.name})`);
+          logger.debug('Attempting to send fallback notification to channel.', {
+            channelId: notificationChannel.id,
+            channelName: notificationChannel.name
+          });
           
           const sentMessage = await notificationChannel.send({ embeds: [embed] });
-          logger.info(`Sent fallback invite notification for member ${member.user.tag}. Message ID: ${sentMessage.id}`);
+          logger.info('Sent fallback invite notification for member.', {
+            userTag: member.user.tag,
+            messageId: sentMessage.id
+          });
         } catch (sendError) {
-          logger.error(`Failed to send fallback notification`, {
+          logger.error('Failed to send fallback notification.', {
             err: sendError,
             channelId: notificationChannel.id,
             channelName: notificationChannel.name,
@@ -456,7 +567,7 @@ module.exports = {
         }
       }
     } catch (error) {
-      logger.error('Error checking tagged invite', {
+      logger.error('Error occurred while checking tagged invite.', {
         err: error,
         userId: member.user.id,
         guildId: member.guild.id

@@ -55,14 +55,21 @@ module.exports = {
           name: statusName,
           type: activityType
         };
-        logger.info(`Loaded bot status from environment: name="${statusName}", type="${botStatusType}"`);
+        logger.info('Loaded bot status from environment.', {
+          statusName: statusName,
+          statusType: botStatusType
+        });
       } else {
         logger.info('No BOT_STATUS environment variable set, using default.');
       }
 
-      logger.debug(`Setting bot activity:`, JSON.stringify(botActivity));
+      logger.debug('Setting bot activity.', {
+        activity: JSON.stringify(botActivity)
+      });
       client.user.setActivity(botActivity.name, { type: botActivity.type });
-      logger.info(`Ready! Logged in as ${client.user.tag}.`);
+      logger.info('Bot is ready and logged in.', {
+        botTag: client.user.tag
+      });
 
       // Parallelize independent initialization tasks
       await Promise.all([
@@ -76,7 +83,9 @@ module.exports = {
         await cleanupOldTrackingUsers(client);
         logger.info('Initial cleanup of old tracking users completed.');
       } catch (error) {
-        logger.error('Failed to run initial cleanup:', error);
+        logger.error('Failed to run initial cleanup.', {
+          err: error
+        });
       }
 
       // Schedule periodic cleanup every hour
@@ -85,22 +94,28 @@ module.exports = {
         try {
           await cleanupOldTrackingUsers(client);
         } catch (error) {
-          logger.error('Error in scheduled cleanup:', error);
+          logger.error('Error occurred during scheduled cleanup.', {
+            err: error
+          });
         }
       }, CLEANUP_INTERVAL_MS);
-      logger.info(`Scheduled periodic cleanup every ${CLEANUP_INTERVAL_MS / 1000 / 60} minutes.`);
+      logger.info('Scheduled periodic cleanup task.', {
+        intervalMinutes: CLEANUP_INTERVAL_MS / 1000 / 60
+      });
 
       // Initialize invite usage tracking for the guild
       try {
         await initializeInviteUsage(client);
         logger.info('Invite usage tracking initialized for the guild.');
       } catch (error) {
-        logger.error('Failed to initialize invite usage tracking:', error);
+        logger.error('Failed to initialize invite usage tracking.', {
+          err: error
+        });
       }
 
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {
-      logger.error('Error in ready event', {
+      logger.error('Error occurred in ready event.', {
         err: error,
         clientId: client.user?.id,
         clientTag: client.user?.tag
@@ -145,7 +160,9 @@ async function initializeInviteUsage(client) {
   try {
     // Check if bot has permission to view invites
     if (!guild.members.me?.permissions.has('ManageGuild')) {
-      logger.debug(`Bot doesn't have ManageGuild permission in ${guild.name}, skipping invite usage initialization.`);
+      logger.debug('Bot does not have ManageGuild permission, skipping invite usage initialization.', {
+        guildName: guild.name
+      });
       return;
     }
 
@@ -156,9 +173,15 @@ async function initializeInviteUsage(client) {
         usage[invite.code] = invite.uses || 0;
       });
       await setInviteUsage(guild.id, usage);
-      logger.debug(`Initialized invite usage tracking for guild ${guild.name} (${guild.id}).`);
+      logger.debug('Initialized invite usage tracking for guild.', {
+        guildName: guild.name,
+        guildId: guild.id
+      });
     }
   } catch (error) {
-    logger.warn(`Failed to initialize invite usage for guild ${guild.name}:`, error);
+    logger.warn('Failed to initialize invite usage for guild.', {
+      err: error,
+      guildName: guild.name
+    });
   }
 }

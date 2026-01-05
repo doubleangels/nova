@@ -47,8 +47,6 @@ fix_permissions() {
 fix_permissions
 
 # Retrieve secrets from Bitwarden and export them
-# Redirect stderr to suppress read-only filesystem warnings (bws works fine without state file)
-# Using jq -r to get raw values (without quotes)
 export BASE_EMBED_COLOR=$(bws secret get bab2467f-507d-4355-8315-b3c300163de6 2>/dev/null | jq -r '.value')
 export BOT_STATUS=$(bws secret get b0ca2fbc-f474-49b9-8536-b3c9014533bf 2>/dev/null | jq -r '.value')
 export BOT_STATUS_TYPE=$(bws secret get 1c0589ac-7718-401e-ac59-b3c90145475b 2>/dev/null | jq -r '.value')
@@ -73,3 +71,4 @@ export SPOTIFY_CLIENT_SECRET=$(bws secret get 81b6d889-fafb-4680-b0b8-b3c300180a
 
 # Execute the main command (gosu will switch to discordbot user)
 exec "$@"
+

@@ -100,14 +100,16 @@ async function trackNewUserMessage(message) {
     const { isNew, timeRemaining } = await isNewUser(userId);
     if (!isNew) {
       // User is not new, skip tracking and remove from database
-      logger.debug(`Spam mode: User ${userId} is not new, removing from tracking.`);
+      logger.debug('Spam mode: User is not new, removing from tracking.', {
+        userId: userId
+      });
       await removeSpamModeJoinTime(userId);
       return;
     }
 
     // Skip if message is a slash command (starts with "/")
     if (message.content && message.content.trim().startsWith('/')) {
-      logger.debug(`Spam mode: Message is a slash command, skipping tracking.`);
+      logger.debug('Spam mode: Message is a slash command, skipping tracking.');
       // Check if user is no longer new before returning
       const { isNew: stillNew } = await isNewUser(userId);
       if (!stillNew) {
@@ -122,7 +124,7 @@ async function trackNewUserMessage(message) {
     
     // Skip if message only contains stickers (has stickers but no text content after removing emotes)
     if (message.stickers && message.stickers.size > 0 && contentWithoutEmotes.length === 0) {
-      logger.debug(`Spam mode: Message only contains stickers, skipping tracking.`);
+      logger.debug('Spam mode: Message only contains stickers, skipping tracking.');
       // Check if user is no longer new before returning
       const { isNew: stillNew } = await isNewUser(userId);
       if (!stillNew) {
@@ -133,7 +135,7 @@ async function trackNewUserMessage(message) {
 
     // Skip if message only contains emotes (no stickers, no text content after removing emotes)
     if ((!message.stickers || message.stickers.size === 0) && contentWithoutEmotes.length === 0) {
-      logger.debug(`Spam mode: Message only contains emotes, skipping tracking.`);
+      logger.debug('Spam mode: Message only contains emotes, skipping tracking.');
       // Check if user is no longer new before returning
       const { isNew: stillNew } = await isNewUser(userId);
       if (!stillNew) {
@@ -145,7 +147,7 @@ async function trackNewUserMessage(message) {
     // Skip if message is too short (less than 3 characters after normalization and emote removal)
     const normalizedContent = normalizeContent(contentWithoutEmotes);
     if (normalizedContent.length < 3) {
-      logger.debug(`Spam mode: Message too short, skipping tracking.`);
+      logger.debug('Spam mode: Message too short, skipping tracking.');
       // Check if user is no longer new before returning
       const { isNew: stillNew } = await isNewUser(userId);
       if (!stillNew) {
@@ -157,11 +159,16 @@ async function trackNewUserMessage(message) {
     // Get the cutoff time (when user joined + spam mode window)
     const joinTime = await getSpamModeJoinTime(userId);
     if (!joinTime) {
-      logger.debug(`Spam mode: User ${userId} not found in spam mode tracking, skipping.`);
+      logger.debug('Spam mode: User not found in spam mode tracking, skipping.', {
+        userId: userId
+      });
       return;
     }
     
-    logger.debug(`Spam mode: Tracking message for new user ${userId}, content: "${normalizedContent.substring(0, 50)}"`);
+    logger.debug('Spam mode: Tracking message for new user.', {
+      userId: userId,
+      contentPreview: normalizedContent.substring(0, 50)
+    });
 
     // Get spam mode window, default to mute mode kick time if not set
     let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
@@ -210,7 +217,11 @@ async function trackNewUserMessage(message) {
       }
       
       // Log if there are threshold or more occurrences (same or different channels)
-      logger.debug(`Spam mode: Found ${existingOccurrences.length} occurrences of message for user ${userId} (threshold: ${threshold}).`);
+      logger.debug('Spam mode: Found occurrences of message for user.', {
+        occurrenceCount: existingOccurrences.length,
+        userId: userId,
+        threshold: threshold
+      });
       if (existingOccurrences.length >= threshold) {
         const uniqueChannels = [...new Set(existingOccurrences.map(occ => occ.channelName))];
         const isMultipleChannels = uniqueChannels.length > 1;
@@ -243,7 +254,7 @@ async function trackNewUserMessage(message) {
             
             await mostRecentMessage.reply(notificationMessage);
           } catch (error) {
-            logger.warn('Failed to reply to spam message', {
+            logger.warn('Failed to reply to spam message.', {
               err: error,
               messageId: mostRecentMessage.id,
               userId: message.author.id
@@ -262,7 +273,7 @@ async function trackNewUserMessage(message) {
       userMessages.set(normalizedContent, [messageOccurrence]);
     }
   } catch (error) {
-    logger.error('Error tracking new user message for spam mode', {
+    logger.error('Error occurred while tracking new user message for spam mode.', {
       err: error,
       messageId: message?.id,
       userId: message?.author?.id
@@ -304,26 +315,34 @@ async function deleteOffendingMessages(guild, occurrences) {
     try {
       const channel = await guild.channels.fetch(occurrence.channelId).catch(() => null);
       if (!channel) {
-        logger.debug(`Channel ${occurrence.channelId} not found, skipping message deletion.`);
+        logger.debug('Channel not found, skipping message deletion.', {
+          channelId: occurrence.channelId
+        });
         failedCount++;
         continue;
       }
       
       const messageToDelete = await channel.messages.fetch(occurrence.messageId).catch(() => null);
       if (!messageToDelete) {
-        logger.debug(`Message ${occurrence.messageId} not found, may have been already deleted.`);
+        logger.debug('Message not found, may have been already deleted.', {
+          messageId: occurrence.messageId
+        });
         failedCount++;
         continue;
       }
       
       await messageToDelete.delete();
       deletedCount++;
-      logger.debug(`Deleted spam message ${occurrence.messageId} from channel ${occurrence.channelName}.`);
+      logger.debug('Deleted spam message from channel.', {
+        messageId: occurrence.messageId,
+        channelName: occurrence.channelName
+      });
     } catch (error) {
-      logger.warn(`Failed to delete message ${occurrence.messageId} from channel ${occurrence.channelName}`, {
+      logger.warn('Failed to delete message from channel.', {
         err: error,
         messageId: occurrence.messageId,
-        channelId: occurrence.channelId
+        channelId: occurrence.channelId,
+        channelName: occurrence.channelName
       });
       failedCount++;
     }
@@ -336,13 +355,13 @@ async function deleteOffendingMessages(guild, occurrences) {
       mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
     }
   } catch (error) {
-    logger.warn(`Failed to fetch most recent message ${mostRecentOccurrence.messageId}`, {
+    logger.warn('Failed to fetch most recent message.', {
       err: error,
       messageId: mostRecentOccurrence.messageId
     });
   }
   
-  logger.info(`Deleted ${deletedCount} spam messages (${failedCount} failed), kept most recent message:`, {
+  logger.info('Deleted spam messages, kept most recent message.', {
     totalOccurrences: occurrences.length,
     deletedCount,
     failedCount,
@@ -374,13 +393,18 @@ async function postSpamWarning(guild, user, occurrences, content) {
     
     const warningChannel = await guild.channels.fetch(warningChannelId).catch(() => null);
     if (!warningChannel) {
-      logger.warn(`Warning channel ${warningChannelId} not found in guild ${guild.id}.`);
+      logger.warn('Warning channel not found in guild.', {
+        warningChannelId: warningChannelId,
+        guildId: guild.id
+      });
       return;
     }
     
     // Check if bot can send messages in this channel
     if (!warningChannel.permissionsFor(guild.members.me)?.has(['SendMessages', 'EmbedLinks'])) {
-      logger.warn(`Bot lacks permissions to send messages in warning channel ${warningChannelId}.`);
+      logger.warn('Bot lacks permissions to send messages in warning channel.', {
+        warningChannelId: warningChannelId
+      });
       return;
     }
     
@@ -401,9 +425,12 @@ async function postSpamWarning(guild, user, occurrences, content) {
     await warningChannel.send({ 
       embeds: [embed] 
     });
-    logger.info(`Posted spam warning to channel ${warningChannel.name} for user ${user.tag}.`);
+    logger.info('Posted spam warning to channel for user.', {
+      channelName: warningChannel.name,
+      userTag: user.tag
+    });
   } catch (error) {
-    logger.error('Error posting spam warning', {
+    logger.error('Error occurred while posting spam warning.', {
       err: error,
       guildId: guild.id,
       userId: user.id
@@ -427,20 +454,26 @@ async function timeoutUser(guild, user, durationSeconds) {
   try {
     const member = await guild.members.fetch(user.id).catch(() => null);
     if (!member) {
-      logger.warn(`Cannot timeout user ${user.id}: member not found in guild.`);
+      logger.warn('Cannot timeout user, member not found in guild.', {
+        userId: user.id
+      });
       return;
     }
     
     // Check if bot has permission to timeout members
     const botMember = guild.members.me;
     if (!botMember.permissions.has('ModerateMembers')) {
-      logger.warn(`Cannot timeout user ${user.id}: bot lacks ModerateMembers permission.`);
+      logger.warn('Cannot timeout user, bot lacks ModerateMembers permission.', {
+        userId: user.id
+      });
       return;
     }
     
     // Check if the user's highest role is higher than bot's highest role
     if (member.roles.highest.position >= botMember.roles.highest.position) {
-      logger.warn(`Cannot timeout user ${user.id}: user's role is higher than or equal to bot's role.`);
+      logger.warn('Cannot timeout user, user\'s role is higher than or equal to bot\'s role.', {
+        userId: user.id
+      });
       return;
     }
     
@@ -449,9 +482,13 @@ async function timeoutUser(guild, user, durationSeconds) {
     
     await member.timeout(timeoutUntil, 'Spam detected - automatic timeout');
     
-    logger.info(`Timed out user ${user.tag} (${user.id}) for ${durationSeconds} seconds due to spam detection.`);
+    logger.info('Timed out user due to spam detection.', {
+      userTag: user.tag,
+      userId: user.id,
+      durationSeconds: durationSeconds
+    });
   } catch (error) {
-    logger.error('Error timing out user', {
+    logger.error('Error occurred while timing out user.', {
       err: error,
       userId: user.id,
       guildId: guild.id

@@ -22,7 +22,7 @@ async function getGeocodingInfo(location) {
         const cachedResult = LOC_CACHE.get(cacheKey);
         
         if (cachedResult) {
-            logger.debug("Using cached geocoding result:", { location });
+            logger.debug("Using cached geocoding result.", { location });
             return cachedResult;
         }
 
@@ -45,7 +45,7 @@ async function getGeocodingInfo(location) {
         
         return result;
     } catch (error) {
-        logger.error("Error getting geocoding info", {
+        logger.error("Error occurred while getting geocoding info.", {
             err: error,
             location
         });
@@ -70,7 +70,7 @@ async function getTimezoneInfo(lat, lng) {
         const cachedResult = LOC_CACHE.get(cacheKey);
         
         if (cachedResult) {
-            logger.debug("Using cached timezone result:", { lat, lng });
+            logger.debug("Using cached timezone result.", { lat, lng });
             return cachedResult;
         }
 
@@ -101,7 +101,7 @@ async function getTimezoneInfo(lat, lng) {
         
         return result;
     } catch (error) {
-        logger.error("Error getting timezone info", {
+        logger.error("Error occurred while getting timezone info.", {
             err: error,
             lat,
             lng
@@ -162,7 +162,7 @@ async function getUtcOffset(location) {
             error: false
         };
     } catch (error) {
-        logger.error("Error getting UTC offset", {
+        logger.error("Error occurred while getting UTC offset.", {
             err: error,
             location
         });
@@ -216,7 +216,7 @@ async function getGeocodingData(place) {
             formattedAddress: geocodingInfo.formatted_address
         };
     } catch (error) {
-        logger.error("Error getting geocoding data", {
+        logger.error("Error occurred while getting geocoding data.", {
             err: error,
             place
         });
@@ -240,7 +240,7 @@ async function getTimezoneData(location) {
             timezoneId: timezoneInfo.timeZoneId
         };
     } catch (error) {
-        logger.error("Error getting timezone data", {
+        logger.error("Error occurred while getting timezone data.", {
             err: error,
             location
         });

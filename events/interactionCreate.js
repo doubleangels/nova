@@ -18,10 +18,12 @@ module.exports = {
    */
   async execute(interaction) {
     // Handle autocomplete interactions
-    if (interaction.isAutocomplete()) {
+      if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);
       if (!command) {
-        logger.warn(`No command matching ${interaction.commandName} was found for autocomplete.`);
+        logger.warn('No command matching the requested command name was found for autocomplete.', {
+          commandName: interaction.commandName
+        });
         return;
       }
 
@@ -30,8 +32,9 @@ module.exports = {
           await command.autocomplete(interaction);
         }
       } catch (error) {
-        logger.error(`Error handling autocomplete for ${interaction.commandName}`, {
-          err: error
+        logger.error('Error occurred while handling autocomplete request.', {
+          err: error,
+          commandName: interaction.commandName
         });
       }
       return;
@@ -41,15 +44,18 @@ module.exports = {
 
     const command = interaction.client.commands.get(interaction.commandName);
     if (!command) {
-      logger.warn(`No command matching ${interaction.commandName} was found.`);
+      logger.warn('No command matching the requested command name was found.', {
+        commandName: interaction.commandName
+      });
       return;
     }
 
     try {
       await command.execute(interaction);
     } catch (error) {
-      logger.error(`Error executing ${interaction.commandName}`, {
+      logger.error('Error occurred while executing command.', {
         err: error,
+        commandName: interaction.commandName,
         user: interaction.user.tag
       });
 

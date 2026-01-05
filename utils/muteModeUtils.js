@@ -21,7 +21,9 @@ function cancelMuteKick(userId) {
   if (activeTimeouts.has(userId)) {
     clearTimeout(activeTimeouts.get(userId));
     activeTimeouts.delete(userId);
-    logger.debug(`Cancelled mute kick timeout for user ${userId}.`);
+    logger.debug('Cancelled mute kick timeout for user.', {
+      userId: userId
+    });
     return true;
   }
   return false;
@@ -47,7 +49,9 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
       // Check if user is still in mute mode before kicking
       const userJoinTime = await getUserJoinTime(userId);
       if (!userJoinTime) {
-        logger.debug(`User ${userId} is no longer in mute mode, skipping immediate kick.`);
+        logger.debug('User is no longer in mute mode, skipping immediate kick.', {
+          userId: userId
+        });
         return;
       }
 
@@ -56,7 +60,9 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
           if (member.user.bot) {
-            logger.debug(`Skipping mute kick for bot user ${userId}.`);
+            logger.debug('Skipping mute kick for bot user.', {
+              userId: userId
+            });
             return;
           }
 
@@ -73,14 +79,22 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             };
             await member.send({ embeds: [embed] });
           } catch (dmError) {
-            logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, dmError);
+            logger.warn('Failed to send DM to member before mute kick.', {
+              err: dmError,
+              userTag: member.user.tag
+            });
           }
           await member.kick('User did not send a message in time.');
-          logger.info(`Kicked user ${userId} immediately on reschedule.`);
+          logger.info('Kicked user immediately on reschedule.', {
+            userId: userId
+          });
         }
       }
     } catch (e) {
-      logger.error(`Failed to kick user ${userId} on reschedule:`, { err: e });
+      logger.error('Failed to kick user on reschedule.', {
+        err: e,
+        userId: userId
+      });
     }
     return;
   }
@@ -89,7 +103,9 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
       // Check if user is still in mute mode before kicking
       const userJoinTime = await getUserJoinTime(userId);
       if (!userJoinTime) {
-        logger.debug(`User ${userId} is no longer in mute mode, skipping kick.`);
+        logger.debug('User is no longer in mute mode, skipping kick.', {
+          userId: userId
+        });
         activeTimeouts.delete(userId);
         return;
       }
@@ -99,7 +115,9 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
           if (member.user.bot) {
-            logger.debug(`Skipping mute kick for bot user ${userId}.`);
+            logger.debug('Skipping mute kick for bot user.', {
+              userId: userId
+            });
             activeTimeouts.delete(userId);
             return;
           }
@@ -117,21 +135,32 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             };
             await member.send({ embeds: [embed] });
           } catch (dmError) {
-            logger.warn(`Failed to send DM to member ${member.user.tag} before mute kick:`, dmError);
+            logger.warn('Failed to send DM to member before mute kick.', {
+              err: dmError,
+              userTag: member.user.tag
+            });
           }
           await member.kick('User did not send a message in time.');
-          logger.info(`Kicked user ${userId} after timeout.`);
+          logger.info('Kicked user after timeout.', {
+            userId: userId
+          });
         }
       }
     } catch (e) {
-      logger.error(`Failed to kick user ${userId} after timeout:`, { err: e });
+      logger.error('Failed to kick user after timeout.', {
+        err: e,
+        userId: userId
+      });
     } finally {
       activeTimeouts.delete(userId);
     }
   }, delay);
   
   activeTimeouts.set(userId, timeoutId);
-  logger.debug(`Scheduled mute kick for user ${userId} in ${Math.round(delay/1000/60)} minutes.`);
+  logger.debug('Scheduled mute kick for user.', {
+    userId: userId,
+    delayMinutes: Math.round(delay/1000/60)
+  });
 }
 
 /**
@@ -158,8 +187,12 @@ async function rescheduleAllMuteKicks(client) {
     }
     const guildId = client.guilds.cache.first().id;
     for (const userData of muteModeUsers) {
-      logger.debug(`Rescheduling mute kick for user: ${JSON.stringify(userData)}.`);
-      logger.debug(`Using muteKickTime: ${muteKickTime}.`);
+      logger.debug('Rescheduling mute kick for user.', {
+        userData: JSON.stringify(userData)
+      });
+      logger.debug('Using mute kick time.', {
+        muteKickTime: muteKickTime
+      });
       await scheduleMuteKick(
         userData.user_id,
         userData.join_time,
@@ -169,7 +202,7 @@ async function rescheduleAllMuteKicks(client) {
       );
     }
   } catch (e) {
-    logger.error(`Error rescheduling mute kicks on startup`, {
+    logger.error('Error occurred while rescheduling mute kicks on startup.', {
       err: e
     });
   }

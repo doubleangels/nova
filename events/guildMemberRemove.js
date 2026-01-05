@@ -20,10 +20,13 @@ module.exports = {
   async execute(member) {
     try {
       if (member.user.bot) {
-        logger.debug("Bot member left; skipping tracking removal:", { botTag: member.user.tag });
+        logger.debug('Bot member left the guild, skipping tracking removal.', { botTag: member.user.tag });
         return;
       }
-      logger.info(`Member left: ${member.user.tag} (ID: ${member.id}).`);
+      logger.info('Member left the guild.', {
+        userTag: member.user.tag,
+        userId: member.id
+      });
       
       // Parallelize database writes
       await Promise.all([
@@ -31,7 +34,9 @@ module.exports = {
         removeSpamModeJoinTime(member.id)
       ]);
 
-      logger.info(`Successfully processed member departure: ${member.user.tag}.`);
+      logger.info('Successfully processed member departure.', {
+        userTag: member.user.tag
+      });
     } catch (error) {
       logger.error('Error processing member leave', {
         err: error,

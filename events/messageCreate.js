@@ -28,12 +28,14 @@ module.exports = {
         try {
           await message.fetch();
         } catch (fetchError) {
-          logger.error("Failed to fetch partial message:", fetchError);
+          logger.error("Failed to fetch partial message.", {
+            err: fetchError
+          });
           throw new Error("⚠️ Failed to fetch message content.");
         }
       }
 
-      logger.debug("Message received:", {
+      logger.debug("Message received from user.", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
         content: message.content?.replace(/\n/g, ' ') || "No Content"
@@ -51,7 +53,7 @@ module.exports = {
           await trackNewUserMessage(message);
         }
       } catch (error) {
-        logger.error("Error checking spam mode or tracking new user message", {
+        logger.error("Error occurred while checking spam mode or tracking new user message.", {
           err: error,
           messageId: message.id
         });
@@ -61,7 +63,9 @@ module.exports = {
       // This avoids unnecessary database calls for users not in mute mode
       if (cancelMuteKick(message.author.id)) {
         await removeMuteModeUser(message.author.id);
-        logger.debug(`Removed mute mode tracking for user ${message.author.tag} after message.`);
+        logger.debug('Removed mute mode tracking for user after message.', {
+          userTag: message.author.tag
+        });
       }
 
       if (message.content.startsWith('!')) {
@@ -87,10 +91,12 @@ module.exports = {
           const dubzEmoji = await getValue('dubz_emoji');
           if (dubzEmoji) {
             await message.react(dubzEmoji);
-            logger.debug(`Reacted to "Dubz"/"Dubzie" mention in message from ${message.author.tag}.`);
+            logger.debug('Reacted to "Dubz"/"Dubzie" mention in message from user.', {
+              userTag: message.author.tag
+            });
           }
         } catch (error) {
-          logger.error("Failed to react to Dubz/Dubzie mention", {
+          logger.error("Failed to react to Dubz/Dubzie mention.", {
             err: error,
             messageId: message.id,
             channelId: message.channel.id
@@ -98,7 +104,10 @@ module.exports = {
         }
       }
       
-      logger.debug(`Processed message from ${message.author.tag} in channel: ${message.channel.name}`);
+      logger.debug('Processed message from user in channel.', {
+        userTag: message.author.tag,
+        channelName: message.channel.name
+      });
 
       if (message.channelId !== noTextChannelId) return;
 
@@ -119,7 +128,7 @@ module.exports = {
       if (!hasGif && !hasImage && !hasSticker && !hasEmote && !hasTag) {
         try {
           await message.delete();
-          logger.debug("Deleted message with no allowed content in no-text channel:", {
+          logger.debug("Deleted message with no allowed content in no-text channel.", {
             channelId: message.channelId,
             userId: message.author.id,
             messageId: message.id,
@@ -132,7 +141,7 @@ module.exports = {
             content: message.content
           });
         } catch (error) {
-          logger.error("Failed to delete message in no-text channel", {
+          logger.error("Failed to delete message in no-text channel.", {
             err: error,
             channelId: message.channelId,
             userId: message.author.id,
@@ -145,7 +154,7 @@ module.exports = {
       }
 
     } catch (error) {
-      logger.error('Error processing message', {
+      logger.error('Error occurred while processing message.', {
         err: error,
         userId: message.author.id,
         messageId: message.id
@@ -198,7 +207,7 @@ async function checkForBumpMessages(message) {
   // Sometimes Discord.js doesn't populate content immediately for interaction/webhook messages
   let messageContent = message.content;
   
-  logger.debug("Checking message for bump:", {
+      logger.debug("Checking message for bump pattern.", {
     author: message.author?.tag,
     hasEmbeds: message.embeds?.length > 0,
     embedCount: message.embeds?.length || 0,
@@ -220,14 +229,14 @@ async function checkForBumpMessages(message) {
           if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
             embedsToCheck = fetchedMessage.embeds;
             message.embeds = fetchedMessage.embeds;
-            logger.debug("Fetched message embeds for Disboard check:", {
+            logger.debug("Fetched message embeds for Disboard check.", {
               label: "messageCreate.js",
               embedCount: fetchedMessage.embeds.length,
               messageId: message.id
             });
           }
         } catch (fetchError) {
-          logger.debug("Could not fetch message for Disboard check:", {
+          logger.debug("Could not fetch message for Disboard check.", {
             label: "messageCreate.js",
             error: fetchError.message,
             messageId: message.id
@@ -241,7 +250,7 @@ async function checkForBumpMessages(message) {
       );
       
       if (bumpEmbed) {
-        logger.debug("Found Disboard bump embed");
+        logger.debug("Found Disboard bump embed in message.");
       }
       
       if (bumpEmbed) {
@@ -251,7 +260,7 @@ async function checkForBumpMessages(message) {
         return;
       }
     } else {
-      logger.debug("No message embeds available for Disboard check:", {
+      logger.debug("No message embeds available for Disboard check.", {
         label: "messageCreate.js",
         messageId: message.id,
         author: message.author?.tag,
@@ -279,7 +288,7 @@ async function checkForBumpMessages(message) {
         if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
           embedsToCheck = fetchedMessage.embeds;
         }
-        logger.debug("Fetched message for Discadia check:", {
+        logger.debug("Fetched message for Discadia check.", {
           label: "messageCreate.js",
           messageId: message.id,
           contentLength: contentToCheck?.length || 0,
@@ -287,7 +296,7 @@ async function checkForBumpMessages(message) {
           author: message.author?.tag
         });
       } catch (fetchError) {
-        logger.debug("Could not fetch message for Discadia check:", {
+        logger.debug("Could not fetch message for Discadia check.", {
           label: "messageCreate.js",
           error: fetchError.message,
           messageId: message.id
@@ -319,7 +328,7 @@ async function checkForBumpMessages(message) {
       }
     }
   } catch (error) {
-    logger.error("Failed to process bump message", {
+    logger.error("Failed to process bump message.", {
       err: error,
       messageId: message.id,
       author: message.author?.tag

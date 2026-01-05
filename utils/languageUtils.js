@@ -208,15 +208,15 @@ const LANG_FLAG_TO_LANGUAGE = {
  * @returns {{code: string, name: string}|null} Language information or null if not found
  */
 function getLanguageInfo(flagEmoji) {
-    logger.debug("Getting language info for flag:", { flagEmoji });
+    logger.debug("Getting language info for flag.", { flagEmoji });
     
     if (!flagEmoji || typeof flagEmoji !== 'string') {
-        logger.warn("Invalid flag emoji provided:", { flagEmoji });
+        logger.warn("Invalid flag emoji provided.", { flagEmoji });
         throw new Error("⚠️ Invalid flag emoji provided for translation.");
     }
     
     const languageInfo = LANG_FLAG_TO_LANGUAGE[flagEmoji] || null;
-    logger.debug("Language info retrieved:", { 
+    logger.debug("Language info retrieved.", { 
         flagEmoji,
         languageInfo: languageInfo ? {
             code: languageInfo.code,
@@ -234,15 +234,15 @@ function getLanguageInfo(flagEmoji) {
  * @returns {boolean} True if the emoji is a valid translation flag
  */
 function isValidTranslationFlag(emoji) {
-    logger.debug("Validating translation flag:", { emoji });
+    logger.debug("Validating translation flag.", { emoji });
     
     if (!emoji || typeof emoji !== 'string') {
-        logger.warn("Invalid emoji provided for validation:", { emoji });
+        logger.warn("Invalid emoji provided for validation.", { emoji });
         throw new Error("⚠️ Invalid flag emoji provided for translation.");
     }
     
     const isValid = emoji in LANG_FLAG_TO_LANGUAGE;
-    logger.debug("Translation flag validation result:", { 
+    logger.debug("Translation flag validation result.", { 
         emoji,
         isValid
     });

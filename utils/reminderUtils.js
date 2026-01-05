@@ -27,7 +27,7 @@ const reminderKeyv = new Keyv({
   namespace: 'nova_reminders'
 });
 
-reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error:', { err: err }));
+reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error occurred.', { err: err }));
 
 /**
  * Helper function to get all reminder IDs for a type
@@ -79,7 +79,11 @@ async function getLatestReminderData(type) {
     let latestReminder = null;
     let latestTime = null;
     
-    logger.debug(`Checking ${reminderIds.length} reminder(s) of type "${type}" for latest active reminder. Current time: ${now.toISOString()}`);
+    logger.debug('Checking reminders for latest active reminder.', {
+      reminderCount: reminderIds.length,
+      type: type,
+      currentTime: now.toISOString()
+    });
     
     for (const reminderId of reminderIds) {
       const reminder = await reminderKeyv.get(`reminder:${reminderId}`);
@@ -89,11 +93,19 @@ async function getLatestReminderData(type) {
         
         // Check if the date is valid
         if (!remindAt.isValid()) {
-          logger.warn(`Invalid date found for reminder ${reminderId}: ${reminder.remind_at}`);
+          logger.warn('Invalid date found for reminder.', {
+            reminderId: reminderId,
+            remindAt: reminder.remind_at
+          });
           continue;
         }
         
-        logger.debug(`Reminder ${reminderId}: remind_at=${remindAt.toISOString()}, now=${now.toISOString()}, isFuture=${remindAt.isAfter(now)}`);
+        logger.debug('Checking reminder status.', {
+          reminderId: reminderId,
+          remindAt: remindAt.toISOString(),
+          now: now.toISOString(),
+          isFuture: remindAt.isAfter(now)
+        });
         
         if (remindAt.isAfter(now) && (!latestTime || remindAt.isBefore(latestTime))) {
           latestTime = remindAt;
@@ -102,22 +114,36 @@ async function getLatestReminderData(type) {
             remind_at: remindAt.toISOString(),
             type: reminder.type
           };
-          logger.debug(`Found new latest reminder: ${reminderId}, scheduled for ${remindAt.toISOString()}`);
+          logger.debug('Found new latest reminder.', {
+            reminderId: reminderId,
+            scheduledFor: remindAt.toISOString()
+          });
         }
       } else {
-        logger.debug(`Reminder ${reminderId} is missing or has no remind_at field:`, { reminder });
+        logger.debug('Reminder is missing or has no remind_at field.', {
+          reminderId: reminderId,
+          reminder: reminder
+        });
       }
     }
     
     if (latestReminder) {
-      logger.debug(`Latest reminder found for type "${type}": ${latestReminder.reminder_id}, scheduled for ${latestReminder.remind_at}`);
+      logger.debug('Latest reminder found for type.', {
+        type: type,
+        reminderId: latestReminder.reminder_id,
+        scheduledFor: latestReminder.remind_at
+      });
     } else {
-      logger.debug(`No active reminders found for type "${type}".`);
+      logger.debug('No active reminders found for type.', {
+        type: type
+      });
     }
     
     return latestReminder;
   } catch (err) {
-    logger.error("Error getting latest reminder data:", { err: err });
+    logger.error("Error occurred while getting latest reminder data.", {
+      err: err
+    });
     return null;
   }
 }
@@ -200,7 +226,11 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
       const listKey = `reminders:${type}:list`;
       const updatedList = reminderIds.filter(id => !idsToRemove.includes(id));
       await reminderKeyv.set(listKey, updatedList);
-      logger.debug(`Updated reminder list for type "${type}": removed ${idsToRemove.length} ID(s), ${updatedList.length} remaining`);
+      logger.debug('Updated reminder list for type.', {
+        type: type,
+        removedCount: idsToRemove.length,
+        remainingCount: updatedList.length
+      });
     }
     
     if (deletedCount > 0 || expiredCount > 0) {
@@ -221,7 +251,9 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     
     // Save reminder data - SQLite provides ACID guarantees for immediate persistence
     await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
-    logger.debug(`Saved reminder data for ${reminderId}.`);
+    logger.debug('Saved reminder data.', {
+      reminderId: reminderId
+    });
     
     // Verify the reminder was saved by reading it back
     const savedReminder = await reminderKeyv.get(`reminder:${reminderId}`);
@@ -239,14 +271,18 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     const listKey = `reminders:${type}:list`;
     const newList = [reminderId];
     await reminderKeyv.set(listKey, newList);
-    logger.debug(`Set reminder list for type "${type}" to contain only new reminder. List now contains ${newList.length} reminder(s):`, { list: newList });
+    logger.debug('Set reminder list for type to contain only new reminder.', {
+      type: type,
+      reminderCount: newList.length,
+      list: newList
+    });
     
     // Verify the reminder is in the list
     const verifyList = await reminderKeyv.get(listKey) || [];
     if (!verifyList.includes(reminderId)) {
-      logger.warn(`Reminder ${reminderId} was not found in list after setting! Attempting to fix...`, { 
-        list: verifyList,
-        expectedId: reminderId
+      logger.warn('Reminder was not found in list after setting, attempting to fix.', {
+        reminderId: reminderId,
+        list: verifyList
       });
       // Try to set it again
       await reminderKeyv.set(listKey, [reminderId]);
@@ -254,13 +290,15 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
       // Verify again
       const verifyList2 = await reminderKeyv.get(listKey) || [];
       if (!verifyList2.includes(reminderId)) {
-        logger.error(`CRITICAL: Failed to persist reminder ${reminderId} to list after multiple attempts!`, {
-          list: verifyList2,
-          expectedId: reminderId
+        logger.error('CRITICAL: Failed to persist reminder to list after multiple attempts.', {
+          reminderId: reminderId,
+          list: verifyList2
         });
         throw new Error(`Failed to persist reminder ${reminderId} to list`);
       } else {
-        logger.info(`Successfully set reminder ${reminderId} in list after retry.`);
+        logger.info('Successfully set reminder in list after retry.', {
+          reminderId: reminderId
+        });
       }
     }
     
@@ -286,17 +324,23 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         }
         
         await channel.send(`❤️ ${confirmationMessage}`);
-        logger.debug("Sent confirmation message:", { type, unixTimestamp });
+        logger.debug("Sent confirmation message.", {
+          type: type,
+          unixTimestamp: unixTimestamp
+        });
       } catch (sendError) {
         // Non-fatal: reminder is already saved, just log the error
-        logger.warn("Failed to send confirmation message (reminder was still saved)", {
+        logger.warn("Failed to send confirmation message, reminder was still saved.", {
           err: sendError,
-          type,
-          reminderId
+          type: type,
+          reminderId: reminderId
         });
       }
     } else {
-      logger.debug("Skipping confirmation message as requested:", { type, reminderId });
+      logger.debug("Skipping confirmation message as requested.", {
+        type: type,
+        reminderId: reminderId
+      });
     }
 
     setTimeout(async () => {
@@ -319,7 +363,9 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
 
         await reminderKeyv.delete(`reminder:${reminderId}`);
         await removeReminderId(type, reminderId);
-        logger.debug("Cleaned up sent reminder from recovery table:", { reminderId });
+        logger.debug("Cleaned up sent reminder from recovery table.", {
+          reminderId: reminderId
+        });
       } catch (err) {
         logger.error("Error while sending scheduled reminder", {
           err: err,
@@ -363,7 +409,10 @@ async function rescheduleReminder(client) {
     const discadiaIds = await getReminderIds('discadia');
     const promoteIds = await getReminderIds('promote');
     
-    logger.info(`Found ${bumpIds.length} bump reminder ID(s), ${discadiaIds.length} discadia reminder ID(s), and ${promoteIds.length} promote reminder ID(s) in database.`, {
+    logger.info('Found reminder IDs in database.', {
+      bumpCount: bumpIds.length,
+      discadiaCount: discadiaIds.length,
+      promoteCount: promoteIds.length,
       bumpIds: bumpIds,
       discadiaIds: discadiaIds,
       promoteIds: promoteIds
@@ -387,9 +436,13 @@ async function rescheduleReminder(client) {
           // Expired reminder, mark for cleanup
           bumpIdsToRemove.push(id);
           expiredBumpCount++;
-          logger.debug(`Marked expired bump reminder for cleanup: ${id} (was scheduled for ${remindAt.toISOString()})`);
+          logger.debug('Marked expired bump reminder for cleanup.', {
+            reminderId: id,
+            scheduledFor: remindAt.toISOString()
+          });
         } else {
-          logger.debug(`Bump reminder ${id} is active:`, { 
+          logger.debug('Bump reminder is active.', {
+            reminderId: id, 
             reminder_id: reminder.reminder_id,
             remind_at: remindAt.toISOString(),
             type: reminder.type
@@ -399,7 +452,10 @@ async function rescheduleReminder(client) {
         // Invalid reminder data, mark for cleanup
         bumpIdsToRemove.push(id);
         expiredBumpCount++;
-        logger.debug(`Marked invalid bump reminder for cleanup: ${id}`, { reminder });
+        logger.debug('Marked invalid bump reminder for cleanup.', {
+          reminderId: id,
+          reminder: reminder
+        });
       }
     }
     
@@ -407,7 +463,9 @@ async function rescheduleReminder(client) {
     for (const id of bumpIdsToRemove) {
       await reminderKeyv.delete(`reminder:${id}`);
       await removeReminderId('bump', id);
-      logger.debug(`Cleaned up bump reminder: ${id}`);
+      logger.debug('Cleaned up bump reminder.', {
+        reminderId: id
+      });
     }
     
     // Clean up expired discadia reminders
@@ -422,9 +480,13 @@ async function rescheduleReminder(client) {
           // Expired reminder, mark for cleanup
           discadiaIdsToRemove.push(id);
           expiredDiscadiaCount++;
-          logger.debug(`Marked expired discadia reminder for cleanup: ${id} (was scheduled for ${remindAt.toISOString()})`);
+          logger.debug('Marked expired discadia reminder for cleanup.', {
+            reminderId: id,
+            scheduledFor: remindAt.toISOString()
+          });
         } else {
-          logger.debug(`Discadia reminder ${id} is active:`, { 
+          logger.debug('Discadia reminder is active.', {
+            reminderId: id, 
             reminder_id: reminder.reminder_id,
             remind_at: remindAt.toISOString(),
             type: reminder.type
@@ -434,7 +496,10 @@ async function rescheduleReminder(client) {
         // Invalid reminder data, mark for cleanup
         discadiaIdsToRemove.push(id);
         expiredDiscadiaCount++;
-        logger.debug(`Marked invalid discadia reminder for cleanup: ${id}`, { reminder });
+        logger.debug('Marked invalid discadia reminder for cleanup.', {
+          reminderId: id,
+          reminder: reminder
+        });
       }
     }
     
@@ -442,7 +507,9 @@ async function rescheduleReminder(client) {
     for (const id of discadiaIdsToRemove) {
       await reminderKeyv.delete(`reminder:${id}`);
       await removeReminderId('discadia', id);
-      logger.debug(`Cleaned up discadia reminder: ${id}`);
+      logger.debug('Cleaned up discadia reminder.', {
+        reminderId: id
+      });
     }
     
     // Clean up expired promote reminders
@@ -457,9 +524,13 @@ async function rescheduleReminder(client) {
           // Expired reminder, mark for cleanup
           promoteIdsToRemove.push(id);
           expiredPromoteCount++;
-          logger.debug(`Marked expired promote reminder for cleanup: ${id} (was scheduled for ${remindAt.toISOString()})`);
+          logger.debug('Marked expired promote reminder for cleanup.', {
+            reminderId: id,
+            scheduledFor: remindAt.toISOString()
+          });
         } else {
-          logger.debug(`Promote reminder ${id} is active:`, { 
+          logger.debug('Promote reminder is active.', {
+            reminderId: id, 
             reminder_id: reminder.reminder_id,
             remind_at: remindAt.toISOString(),
             type: reminder.type
@@ -469,7 +540,10 @@ async function rescheduleReminder(client) {
         // Invalid reminder data, mark for cleanup
         promoteIdsToRemove.push(id);
         expiredPromoteCount++;
-        logger.debug(`Marked invalid promote reminder for cleanup: ${id}`, { reminder });
+        logger.debug('Marked invalid promote reminder for cleanup.', {
+          reminderId: id,
+          reminder: reminder
+        });
       }
     }
     
@@ -477,11 +551,17 @@ async function rescheduleReminder(client) {
     for (const id of promoteIdsToRemove) {
       await reminderKeyv.delete(`reminder:${id}`);
       await removeReminderId('promote', id);
-      logger.debug(`Cleaned up promote reminder: ${id}`);
+      logger.debug('Cleaned up promote reminder.', {
+        reminderId: id
+      });
     }
     
     if (expiredBumpCount > 0 || expiredDiscadiaCount > 0 || expiredPromoteCount > 0) {
-      logger.info(`Cleaned up ${expiredBumpCount} expired bump reminder(s), ${expiredDiscadiaCount} expired discadia reminder(s), and ${expiredPromoteCount} expired promote reminder(s).`);
+      logger.info('Cleaned up expired reminders.', {
+        expiredBumpCount: expiredBumpCount,
+        expiredDiscadiaCount: expiredDiscadiaCount,
+        expiredPromoteCount: expiredPromoteCount
+      });
     }
 
     const [bumpReminder, discadiaReminder, promoteReminder] = await Promise.all([
@@ -535,7 +615,9 @@ async function rescheduleReminder(client) {
         setTimeout(async () => {
           try {
             await channel.send(`🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`);
-            logger.info("Sent rescheduled bump reminder:", { reminder_id: bumpReminder.reminder_id });
+            logger.info("Sent rescheduled bump reminder.", {
+              reminder_id: bumpReminder.reminder_id
+            });
 
             await reminderKeyv.delete(`reminder:${bumpReminder.reminder_id}`);
             await removeReminderId('bump', bumpReminder.reminder_id);
@@ -579,7 +661,9 @@ async function rescheduleReminder(client) {
         setTimeout(async () => {
           try {
             await channel.send(`🔔 <@&${reminderRole}> Time to bump the server with Discadia! Use \`/bump\` to help us grow!`);
-            logger.info("Sent rescheduled discadia reminder:", { reminder_id: discadiaReminder.reminder_id });
+            logger.info("Sent rescheduled discadia reminder.", {
+              reminder_id: discadiaReminder.reminder_id
+            });
 
             await reminderKeyv.delete(`reminder:${discadiaReminder.reminder_id}`);
             await removeReminderId('discadia', discadiaReminder.reminder_id);
@@ -623,7 +707,9 @@ async function rescheduleReminder(client) {
         setTimeout(async () => {
           try {
             await channel.send(`🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`);
-            logger.info("Sent rescheduled promotion reminder:", { reminder_id: promoteReminder.reminder_id });
+            logger.info("Sent rescheduled promotion reminder.", {
+              reminder_id: promoteReminder.reminder_id
+            });
 
             await reminderKeyv.delete(`reminder:${promoteReminder.reminder_id}`);
             await removeReminderId('promote', promoteReminder.reminder_id);
@@ -666,8 +752,9 @@ async function rescheduleReminder(client) {
  * @throws {Error} A formatted error message based on the error type
  */
 async function handleError(error, context) {
-  logger.error(`Error in ${context}`, {
-    err: error
+  logger.error('Error occurred in context.', {
+    err: error,
+    context: context
   });
 
   if (error.message === "DATABASE_ERROR") {

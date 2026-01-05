@@ -39,7 +39,10 @@ module.exports = {
         }
       }
 
-      logger.info(`Processing reaction ${reaction.emoji.name} from user ${user.tag}.`);
+      logger.info('Processing reaction from user.', {
+        emoji: reaction.emoji.name,
+        userTag: user.tag
+      });
 
       const flagEmoji = reaction.emoji.name;
       if (isValidTranslationFlag(flagEmoji)) {
@@ -47,7 +50,9 @@ module.exports = {
         return;
       }
 
-      logger.info(`Successfully processed reaction from ${user.tag}.`);
+      logger.info('Successfully processed reaction from user.', {
+        userTag: user.tag
+      });
     } catch (error) {
       logger.error('Error processing reaction', {
         err: error,
@@ -93,7 +98,7 @@ module.exports = {
  */
 async function handleTranslationRequest(reaction, user) {
     try {
-        logger.debug('Handling translation request:', {
+        logger.debug('Handling translation request.', {
             flagEmoji: reaction.emoji.name,
             userId: user.id,
             userTag: user.tag,
@@ -103,13 +108,13 @@ async function handleTranslationRequest(reaction, user) {
         const flagEmoji = reaction.emoji.name;
         const languageInfo = getLanguageInfo(flagEmoji);
         if (!languageInfo) {
-            logger.warn('Invalid translation flag:', { flagEmoji });
+            logger.warn('Invalid translation flag provided.', { flagEmoji });
             throw new Error("⚠️ Invalid translation flag provided.");
         }
 
         const message = reaction.message;
         if (!message) {
-            logger.warn('Message not found for translation:', {
+            logger.warn('Message not found for translation.', {
                 messageId: reaction.message?.id,
                 userId: user.id
             });
@@ -118,14 +123,14 @@ async function handleTranslationRequest(reaction, user) {
 
         const originalText = message.content;
         if (!originalText) {
-            logger.warn('Empty message content for translation:', {
+            logger.warn('Empty message content found for translation.', {
                 messageId: message.id,
                 userId: user.id
             });
             throw new Error("⚠️ No text to translate found in the message.");
         }
 
-        logger.debug('Making translation API request:', {
+        logger.debug('Making translation API request.', {
             targetLanguage: languageInfo.code,
             textLength: originalText.length,
             userId: user.id
@@ -141,7 +146,7 @@ async function handleTranslationRequest(reaction, user) {
         );
 
         const translatedText = response.data.data.translations[0].translatedText;
-        logger.debug('Translation API response received:', {
+        logger.debug('Translation API response received successfully.', {
             targetLanguage: languageInfo.code,
             translatedLength: translatedText.length,
             userId: user.id
@@ -169,7 +174,7 @@ async function handleTranslationRequest(reaction, user) {
             timestamp: new Date()
         };
 
-        logger.debug('Sending translation response:', {
+        logger.debug('Sending translation response to user.', {
             targetLanguage: languageInfo.name,
             userId: user.id,
             messageId: message.id
@@ -177,7 +182,7 @@ async function handleTranslationRequest(reaction, user) {
 
         await message.reply({ embeds: [embed] });
         
-        logger.info('Translation completed successfully:', {
+        logger.info('Translation completed successfully.', {
             targetLanguage: languageInfo.name,
             userId: user.id,
             messageId: message.id
@@ -197,7 +202,7 @@ async function handleTranslationRequest(reaction, user) {
                 ? "⚠️ Translation API error occurred."
                 : "⚠️ Failed to translate the message.";
             
-            logger.debug('Sending translation error response:', {
+            logger.debug('Sending translation error response to user.', {
                 errorType: error.response?.status === 403 ? 'API_ERROR' : 'GENERAL_ERROR',
                 userId: user.id,
                 messageId: reaction.message?.id

@@ -10,39 +10,58 @@ const dataDir = path.resolve(process.cwd(), 'data');
 const sqlitePath = path.join(dataDir, 'database.sqlite');
 
 // Log database path for debugging
-logger.info(`Database path: ${sqlitePath}`);
-logger.info(`Working directory: ${process.cwd()}`);
-logger.info(`Data directory: ${dataDir}`);
+logger.info('Database path initialized.', {
+  sqlitePath: sqlitePath
+});
+logger.info('Working directory retrieved.', {
+  workingDirectory: process.cwd()
+});
+logger.info('Data directory path retrieved.', {
+  dataDir: dataDir
+});
 
 try {
   if (!fs.existsSync(dataDir)) {
     // 0o750 = rwxr-x--- (owner: read/write/execute, group: read/execute, others: no access)
     fs.mkdirSync(dataDir, { recursive: true, mode: 0o750 });
-    logger.info(`Created data directory: ${dataDir}.`);
+    logger.info('Created data directory.', {
+      dataDir: dataDir
+    });
   }
   // Ensure the directory is writable
   try {
     fs.accessSync(dataDir, fs.constants.W_OK);
-    logger.debug(`Data directory is writable: ${dataDir}`);
+    logger.debug('Data directory is writable.', {
+      dataDir: dataDir
+    });
   } catch (accessError) {
-    logger.error(`Data directory is not writable: ${dataDir}`, accessError);
+    logger.error('Data directory is not writable.', {
+      err: accessError,
+      dataDir: dataDir
+    });
     logger.error('Please ensure the data directory has write permissions for the bot user.');
   }
   
   // Check if database file exists and log its status
   if (fs.existsSync(sqlitePath)) {
     const stats = fs.statSync(sqlitePath);
-    logger.info(`Database file exists: ${sqlitePath}`, {
+    logger.info('Database file exists.', {
+      sqlitePath: sqlitePath,
       size: stats.size,
       mode: stats.mode.toString(8),
       uid: stats.uid,
       gid: stats.gid
     });
   } else {
-    logger.info(`Database file does not exist yet: ${sqlitePath} (will be created on first write)`);
+    logger.info('Database file does not exist yet, will be created on first write.', {
+      sqlitePath: sqlitePath
+    });
   }
 } catch (error) {
-  logger.error(`Failed to create/access data directory: ${dataDir}`, error);
+  logger.error('Failed to create or access data directory.', {
+    err: error,
+    dataDir: dataDir
+  });
   logger.error('This is likely a permissions issue. Please check directory permissions.');
 }
 
@@ -66,8 +85,8 @@ const inviteKeyv = new Keyv({
 });
 
 // Handle connection errors
-keyv.on('error', err => logger.error('Keyv connection error:', { err: err }));
-inviteKeyv.on('error', err => logger.error('Invite Keyv connection error:', { err: err }));
+keyv.on('error', err => logger.error('Keyv connection error occurred.', { err: err }));
+inviteKeyv.on('error', err => logger.error('Invite Keyv connection error occurred.', { err: err }));
 
 // Ensure database file has correct permissions if it exists
 // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
@@ -76,7 +95,9 @@ try {
     fs.chmodSync(sqlitePath, 0o600);
   }
   } catch (chmodError) {
-    logger.warn(`Could not set permissions on database file (this is OK if running as non-root):`, chmodError);
+    logger.warn('Could not set permissions on database file, this is OK if running as non-root.', {
+      err: chmodError
+    });
   }
 
 /**
@@ -92,17 +113,24 @@ async function initializeDatabase() {
 
   while (retryCount < MAX_RETRIES) {
     try {
-      logger.info(`Testing database connection... (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
-      logger.debug(`Database path: ${sqlitePath}`);
+      logger.info('Testing database connection.', {
+        attempt: retryCount + 1,
+        maxRetries: MAX_RETRIES
+      });
+      logger.debug('Database path retrieved.', {
+        sqlitePath: sqlitePath
+      });
       
       const testKey = 'db_test_key';
       const testValue = 'test_value';
       
       await keyv.set(testKey, testValue);
-      logger.debug(`Test value written to database`);
+      logger.debug('Test value written to database.');
       
       const retrieved = await keyv.get(testKey);
-      logger.debug(`Test value retrieved from database: ${retrieved}`);
+      logger.debug('Test value retrieved from database.', {
+        retrieved: retrieved
+      });
       
       if (retrieved === testValue) {
         logger.info("Database connection test successful.");
@@ -112,7 +140,8 @@ async function initializeDatabase() {
         // Verify database file exists and has data
         if (fs.existsSync(sqlitePath)) {
           const stats = fs.statSync(sqlitePath);
-          logger.info(`Database file verified: ${sqlitePath}`, {
+          logger.info('Database file verified.', {
+            sqlitePath: sqlitePath,
             size: stats.size,
             exists: true
           });
@@ -122,13 +151,19 @@ async function initializeDatabase() {
             const Database = require('better-sqlite3');
             const db = new Database(sqlitePath, { readonly: true });
             const rows = db.prepare('SELECT COUNT(*) as count FROM keyv').get();
-            logger.info(`Database contains ${rows.count} key(s) in keyv table`);
+            logger.info('Database contains keys in keyv table.', {
+              keyCount: rows.count
+            });
             db.close();
           } catch (dbError) {
-            logger.debug(`Could not query database directly (this is OK):`, dbError);
+            logger.debug('Could not query database directly, this is OK.', {
+              err: dbError
+            });
           }
         } else {
-          logger.warn(`Database file not found at ${sqlitePath} after successful test`);
+          logger.warn('Database file not found after successful test.', {
+            sqlitePath: sqlitePath
+          });
         }
         
         // Ensure database file has correct permissions after creation
@@ -136,11 +171,13 @@ async function initializeDatabase() {
         try {
           if (fs.existsSync(sqlitePath)) {
             fs.chmodSync(sqlitePath, 0o600);
-            logger.debug(`Set database file permissions to 600.`);
+            logger.debug('Set database file permissions to 600.');
           }
         } catch (chmodError) {
           // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
-          logger.debug(`Could not set permissions on database file:`, chmodError);
+          logger.debug('Could not set permissions on database file.', {
+            err: chmodError
+          });
         }
         
         return;
@@ -150,8 +187,10 @@ async function initializeDatabase() {
       
     } catch (err) {
       lastError = err;
-      logger.error(`Database connection test failed (Attempt ${retryCount + 1}/${MAX_RETRIES})`, {
+      logger.error('Database connection test failed.', {
         err: err,
+        attempt: retryCount + 1,
+        maxRetries: MAX_RETRIES,
         sqlitePath: sqlitePath,
         dataDirExists: fs.existsSync(dataDir),
         dbFileExists: fs.existsSync(sqlitePath)
@@ -161,7 +200,9 @@ async function initializeDatabase() {
       retryCount++;
       
       if (retryCount < MAX_RETRIES) {
-        logger.info(`Retrying in ${delay}ms...`);
+        logger.info('Retrying database connection.', {
+          delayMs: delay
+        });
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
@@ -170,7 +211,7 @@ async function initializeDatabase() {
   logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
   
   if (lastError) {
-    logger.error("Final database error:", { err: lastError });
+    logger.error("Final database error occurred.", { err: lastError });
   }
   
   process.exit(1);
@@ -183,11 +224,16 @@ async function initializeDatabase() {
  */
 async function getValue(key) {
   try {
-    logger.debug(`Getting config value for key "${key}".`);
+    logger.debug('Getting config value for key.', {
+      key: key
+    });
     const value = await keyv.get(`config:${key}`);
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error(`Error getting key "${key}":`, { err: err });
+    logger.error('Error occurred while getting key.', {
+      err: err,
+      key: key
+    });
     return null;
   }
 }
@@ -200,11 +246,18 @@ async function getValue(key) {
  */
 async function setValue(key, value) {
   try {
-    logger.debug(`Setting config value for key "${key}".`);
+    logger.debug('Setting config value for key.', {
+      key: key
+    });
     await keyv.set(`config:${key}`, value);
-    logger.debug(`Set config for key "${key}" successfully.`);
+    logger.debug('Set config for key successfully.', {
+      key: key
+    });
   } catch (err) {
-    logger.error(`Error setting key "${key}":`, { err: err });
+    logger.error('Error occurred while setting key.', {
+      err: err,
+      key: key
+    });
   }
 }
 
@@ -215,11 +268,18 @@ async function setValue(key, value) {
  */
 async function deleteValue(key) {
   try {
-    logger.debug(`Deleting config for key "${key}".`);
+    logger.debug('Deleting config for key.', {
+      key: key
+    });
     await keyv.delete(`config:${key}`);
-    logger.debug(`Deleted config for key "${key}".`);
+    logger.debug('Deleted config for key successfully.', {
+      key: key
+    });
   } catch (err) {
-    logger.error(`Error deleting key "${key}":`, { err: err });
+    logger.error('Error occurred while deleting key.', {
+      err: err,
+      key: key
+    });
   }
 }
 
@@ -238,7 +298,10 @@ async function addToUserList(listKey, userId) {
       await keyv.set(configKey, list);
     }
   } catch (error) {
-    logger.error(`Error adding to user list ${listKey}:`, error);
+    logger.error('Error occurred while adding to user list.', {
+      err: error,
+      listKey: listKey
+    });
   }
 }
 
@@ -255,7 +318,10 @@ async function removeFromUserList(listKey, userId) {
     const filtered = list.filter(id => id !== userId);
     await keyv.set(configKey, filtered);
   } catch (error) {
-    logger.error(`Error removing from user list ${listKey}:`, error);
+    logger.error('Error occurred while removing from user list.', {
+      err: error,
+      listKey: listKey
+    });
   }
 }
 
@@ -274,9 +340,15 @@ async function addMuteModeUser(userId, username) {
     };
     await keyv.set(`mute_mode:${userId}`, userData);
     await addToUserList('mute_mode_users', userId);
-    logger.debug(`Added mute mode user ${userId} with join time ${userData.joinTime}.`);
+    logger.debug('Added mute mode user with join time.', {
+      userId: userId,
+      joinTime: userData.joinTime
+    });
   } catch (error) {
-    logger.error(`Error adding mute mode user ${userId}:`, error);
+    logger.error('Error occurred while adding mute mode user.', {
+      err: error,
+      userId: userId
+    });
   }
 }
 
@@ -291,10 +363,15 @@ async function removeMuteModeUser(userId) {
     const deleted = await keyv.delete(`mute_mode:${userId}`);
     await removeFromUserList('mute_mode_users', userId);
     if (deleted) {
-      logger.debug(`Removed user ${userId} from mute mode tracking.`);
+      logger.debug('Removed user from mute mode tracking.', {
+        userId: userId
+      });
     }
   } catch (error) {
-    logger.error(`Error removing mute mode user ${userId}:`, error);
+    logger.error('Error occurred while removing mute mode user.', {
+      err: error,
+      userId: userId
+    });
   }
 }
 
@@ -320,7 +397,9 @@ async function getAllMuteModeUsers() {
     
     return users;
   } catch (error) {
-    logger.error("Error getting all mute mode users:", error);
+    logger.error("Error occurred while getting all mute mode users.", {
+      err: error
+    });
     return [];
   }
 }
@@ -338,7 +417,10 @@ async function getUserJoinTime(userId) {
     }
     return null;
   } catch (error) {
-    logger.error(`Error getting user join time for ${userId}:`, error);
+    logger.error('Error occurred while getting user join time.', {
+      err: error,
+      userId: userId
+    });
     return null;
   }
 }
@@ -362,9 +444,15 @@ async function addSpamModeJoinTime(userId, username, joinTime) {
     
     await keyv.set(`spam_mode:${userId}`, userData);
     await addToUserList('spam_mode_users', userId);
-    logger.debug(`Added spam mode join time for user ${userId} to ${timeToSet}.`);
+    logger.debug('Added spam mode join time for user.', {
+      userId: userId,
+      joinTime: timeToSet
+    });
   } catch (error) {
-    logger.error(`Error adding spam mode join time for user ${userId}:`, error);
+    logger.error('Error occurred while adding spam mode join time for user.', {
+      err: error,
+      userId: userId
+    });
   }
 }
 
@@ -381,7 +469,10 @@ async function getSpamModeJoinTime(userId) {
     }
     return null;
   } catch (error) {
-    logger.error(`Error getting spam mode join time for user ${userId}:`, error);
+    logger.error('Error occurred while getting spam mode join time for user.', {
+      err: error,
+      userId: userId
+    });
     return null;
   }
 }
@@ -396,10 +487,15 @@ async function removeSpamModeJoinTime(userId) {
     const deleted = await keyv.delete(`spam_mode:${userId}`);
     await removeFromUserList('spam_mode_users', userId);
     if (deleted) {
-      logger.debug(`Removed user ${userId} from spam mode tracking.`);
+      logger.debug('Removed user from spam mode tracking.', {
+        userId: userId
+      });
     }
   } catch (error) {
-    logger.error(`Error removing spam mode join time for user ${userId}:`, error);
+    logger.error('Error occurred while removing spam mode join time for user.', {
+      err: error,
+      userId: userId
+    });
   }
 }
 
@@ -493,14 +589,19 @@ async function cleanupOldTrackingUsers(client = null) {
     await keyv.set('config:mute_mode_users', remainingMuteUsers);
     
     if (spamModeRemoved > 0 || muteModeRemoved > 0) {
-      logger.info(`Cleaned up old tracking users: ${spamModeRemoved} users were removed from spam mode and ${muteModeRemoved} users were removed from mute mode.`);
+      logger.info('Cleaned up old tracking users.', {
+        spamModeRemoved: spamModeRemoved,
+        muteModeRemoved: muteModeRemoved
+      });
     } else {
-      logger.debug(`Cleanup completed: no old users found to remove.`);
+      logger.debug('Cleanup completed, no old users found to remove.');
     }
     
     return { spamModeRemoved, muteModeRemoved };
   } catch (error) {
-    logger.error('Error cleaning up old tracking users:', error);
+    logger.error('Error occurred while cleaning up old tracking users.', {
+      err: error
+    });
     throw error;
   }
 }
@@ -513,11 +614,18 @@ async function cleanupOldTrackingUsers(client = null) {
  */
 async function setInviteTag(tagName, inviteData) {
   try {
-    logger.debug(`Setting invite tag "${tagName}".`);
+    logger.debug('Setting invite tag.', {
+      tagName: tagName
+    });
     await inviteKeyv.set(`tags:${tagName.toLowerCase()}`, inviteData);
-    logger.debug(`Set invite tag "${tagName}" successfully.`);
+    logger.debug('Set invite tag successfully.', {
+      tagName: tagName
+    });
   } catch (err) {
-    logger.error(`Error setting invite tag "${tagName}":`, { err: err });
+    logger.error('Error occurred while setting invite tag.', {
+      err: err,
+      tagName: tagName
+    });
     throw new Error("DATABASE_WRITE_ERROR");
   }
 }
@@ -529,11 +637,16 @@ async function setInviteTag(tagName, inviteData) {
  */
 async function getInviteTag(tagName) {
   try {
-    logger.debug(`Getting invite tag "${tagName}".`);
+    logger.debug('Getting invite tag.', {
+      tagName: tagName
+    });
     const value = await inviteKeyv.get(`tags:${tagName.toLowerCase()}`);
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error(`Error getting invite tag "${tagName}":`, { err: err });
+    logger.error('Error occurred while getting invite tag.', {
+      err: err,
+      tagName: tagName
+    });
     return null;
   }
 }
@@ -545,11 +658,18 @@ async function getInviteTag(tagName) {
  */
 async function deleteInviteTag(tagName) {
   try {
-    logger.debug(`Deleting invite tag "${tagName}".`);
+    logger.debug('Deleting invite tag.', {
+      tagName: tagName
+    });
     await inviteKeyv.delete(`tags:${tagName.toLowerCase()}`);
-    logger.debug(`Deleted invite tag "${tagName}".`);
+    logger.debug('Deleted invite tag successfully.', {
+      tagName: tagName
+    });
   } catch (err) {
-    logger.error(`Error deleting invite tag "${tagName}":`, { err: err });
+    logger.error('Error occurred while deleting invite tag.', {
+      err: err,
+      tagName: tagName
+    });
     throw new Error("DATABASE_DELETE_ERROR");
   }
 }
@@ -561,11 +681,15 @@ async function deleteInviteTag(tagName) {
  */
 async function setInviteNotificationChannel(channelId) {
   try {
-    logger.debug(`Setting invite notification channel to "${channelId}".`);
+    logger.debug('Setting invite notification channel.', {
+      channelId: channelId
+    });
     await keyv.set('config:invite_notification_channel', channelId);
-    logger.debug(`Set invite notification channel successfully.`);
+    logger.debug('Set invite notification channel successfully.');
   } catch (err) {
-    logger.error(`Error setting invite notification channel:`, { err: err });
+    logger.error('Error occurred while setting invite notification channel.', {
+      err: err
+    });
     throw new Error("DATABASE_WRITE_ERROR");
   }
 }
@@ -580,7 +704,9 @@ async function getInviteNotificationChannel() {
     const value = await keyv.get('config:invite_notification_channel');
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error("Error getting invite notification channel:", { err: err });
+    logger.error("Error occurred while getting invite notification channel.", {
+      err: err
+    });
     return null;
   }
 }
@@ -593,11 +719,18 @@ async function getInviteNotificationChannel() {
  */
 async function setInviteUsage(guildId, inviteUsage) {
   try {
-    logger.debug(`Setting invite usage for guild "${guildId}".`);
+    logger.debug('Setting invite usage for guild.', {
+      guildId: guildId
+    });
     await keyv.set(`invite_usage:${guildId}`, inviteUsage);
-    logger.debug(`Set invite usage for guild "${guildId}" successfully.`);
+    logger.debug('Set invite usage for guild successfully.', {
+      guildId: guildId
+    });
   } catch (err) {
-    logger.error(`Error setting invite usage for guild "${guildId}":`, { err: err });
+    logger.error('Error occurred while setting invite usage for guild.', {
+      err: err,
+      guildId: guildId
+    });
   }
 }
 
@@ -608,11 +741,16 @@ async function setInviteUsage(guildId, inviteUsage) {
  */
 async function getInviteUsage(guildId) {
   try {
-    logger.debug(`Getting invite usage for guild "${guildId}".`);
+    logger.debug('Getting invite usage for guild.', {
+      guildId: guildId
+    });
     const value = await keyv.get(`invite_usage:${guildId}`);
     return value || {};
   } catch (err) {
-    logger.error(`Error getting invite usage for guild "${guildId}":`, { err: err });
+    logger.error('Error occurred while getting invite usage for guild.', {
+      err: err,
+      guildId: guildId
+    });
     return {};
   }
 }
@@ -625,11 +763,18 @@ async function getInviteUsage(guildId) {
  */
 async function setInviteCodeToTagMap(guildId, codeToTagMap) {
   try {
-    logger.debug(`Setting invite code-to-tag map for guild "${guildId}".`);
+    logger.debug('Setting invite code-to-tag map for guild.', {
+      guildId: guildId
+    });
     await keyv.set(`invite_code_to_tag_map:${guildId}`, codeToTagMap);
-    logger.debug(`Set invite code-to-tag map for guild "${guildId}" successfully.`);
+    logger.debug('Set invite code-to-tag map for guild successfully.', {
+      guildId: guildId
+    });
   } catch (err) {
-    logger.error(`Error setting invite code-to-tag map for guild "${guildId}":`, { err: err });
+    logger.error('Error occurred while setting invite code-to-tag map for guild.', {
+      err: err,
+      guildId: guildId
+    });
   }
 }
 
@@ -640,11 +785,16 @@ async function setInviteCodeToTagMap(guildId, codeToTagMap) {
  */
 async function getInviteCodeToTagMap(guildId) {
   try {
-    logger.debug(`Getting invite code-to-tag map for guild "${guildId}".`);
+    logger.debug('Getting invite code-to-tag map for guild.', {
+      guildId: guildId
+    });
     const value = await keyv.get(`invite_code_to_tag_map:${guildId}`);
     return value || {};
   } catch (err) {
-    logger.error(`Error getting invite code-to-tag map for guild "${guildId}":`, { err: err });
+    logger.error('Error occurred while getting invite code-to-tag map for guild.', {
+      err: err,
+      guildId: guildId
+    });
     return {};
   }
 }
@@ -656,7 +806,7 @@ async function getInviteCodeToTagMap(guildId) {
  */
 async function getAllInviteTagsData() {
   try {
-    logger.debug("Getting all invite tags");
+    logger.debug("Getting all invite tags.");
     const Database = require('better-sqlite3');
     const db = new Database(sqlitePath, { readonly: true });
     
@@ -691,13 +841,18 @@ async function getAllInviteTagsData() {
           });
         }
       } catch (parseError) {
-        logger.warn(`Failed to parse tag data for key ${row.key}:`, parseError);
+        logger.warn('Failed to parse tag data for key.', {
+          err: parseError,
+          key: row.key
+        });
       }
     }
     
     return tags;
   } catch (err) {
-    logger.error("Error getting all invite tags:", { err: err });
+    logger.error("Error occurred while getting all invite tags.", {
+      err: err
+    });
     return [];
   }
 }
@@ -710,7 +865,9 @@ async function getAllInviteTagsData() {
  */
 async function rebuildCodeToTagMap(guildId) {
   try {
-    logger.debug(`Rebuilding code-to-tag mapping from existing tags for guild "${guildId}"`);
+    logger.debug('Rebuilding code-to-tag mapping from existing tags for guild.', {
+      guildId: guildId
+    });
     const Database = require('better-sqlite3');
     const db = new Database(sqlitePath, { readonly: true });
     
@@ -735,22 +892,34 @@ async function rebuildCodeToTagMap(guildId) {
           // Extract tag name from key (invites:tags:disboard -> disboard)
           const tagName = row.key.replace('invites:tags:', '');
           codeToTagMap[tagData.code.toLowerCase()] = tagName;
-          logger.debug(`Rebuilt mapping: ${tagData.code.toLowerCase()} -> ${tagName}`);
+          logger.debug('Rebuilt mapping for code to tag.', {
+            code: tagData.code.toLowerCase(),
+            tagName: tagName
+          });
         }
       } catch (parseError) {
-        logger.warn(`Failed to parse tag data for key ${row.key}:`, parseError);
+        logger.warn('Failed to parse tag data for key.', {
+          err: parseError,
+          key: row.key
+        });
       }
     }
     
     // Save the rebuilt mapping for this guild
     if (Object.keys(codeToTagMap).length > 0) {
       await setInviteCodeToTagMap(guildId, codeToTagMap);
-      logger.info(`Rebuilt code-to-tag mapping for guild "${guildId}" with ${Object.keys(codeToTagMap).length} entries`);
+      logger.info('Rebuilt code-to-tag mapping for guild.', {
+        guildId: guildId,
+        entryCount: Object.keys(codeToTagMap).length
+      });
     }
     
     return codeToTagMap;
   } catch (err) {
-    logger.error(`Error rebuilding code-to-tag mapping for guild "${guildId}":`, { err: err });
+    logger.error('Error occurred while rebuilding code-to-tag mapping for guild.', {
+      err: err,
+      guildId: guildId
+    });
     return {};
   }
 }

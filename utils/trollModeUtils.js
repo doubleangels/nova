@@ -20,7 +20,8 @@ async function checkAccountAge(member) {
     const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
-    logger.debug(`Checking account age for ${member.user.tag}:`, {
+    logger.debug('Checking account age for user.', {
+      userTag: member.user.tag,
       accountAge,
       requiredAge,
       createdAt: member.user.createdAt
@@ -28,7 +29,10 @@ async function checkAccountAge(member) {
 
     return accountAge >= requiredAge;
   } catch (error) {
-    logger.error(`Error checking account age for ${member.user.tag}:`, error);
+    logger.error('Error occurred while checking account age for user.', {
+      err: error,
+      userTag: member.user.tag
+    });
     return true;
   }
 }
@@ -58,16 +62,23 @@ async function performKick(member) {
         );
       await member.send({ embeds: [embed] });
     } catch (dmError) {
-      logger.warn(`Failed to send DM to member ${member.user.tag} before kick:`, dmError);
+      logger.warn('Failed to send DM to member before kick.', {
+        err: dmError,
+        userTag: member.user.tag
+      });
     }
 
     await member.kick("Account age does not meet server requirements.");
-    logger.info(`Member ${member.user.tag} kicked due to insufficient account age.`, {
+    logger.info('Member kicked due to insufficient account age.', {
+      userTag: member.user.tag,
       accountAge,
       requiredAge
     });
   } catch (error) {
-    logger.error(`Failed to kick member ${member.user.tag}:`, error);
+    logger.error('Failed to kick member.', {
+      err: error,
+      userTag: member.user.tag
+    });
     throw error;
   }
 }
