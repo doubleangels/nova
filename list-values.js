@@ -34,6 +34,33 @@ async function getAllKeys() {
     // Directly query SQLite to get all keys
     const db = new Database(sqlitePath, { readonly: true });
     
+    // First, check if the table exists and get row count
+    let tableExists = false;
+    let rowCount = 0;
+    try {
+      const tableInfo = db.prepare(`
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='keyv'
+      `).get();
+      tableExists = !!tableInfo;
+      
+      if (tableExists) {
+        const countResult = db.prepare(`SELECT COUNT(*) as count FROM keyv`).get();
+        rowCount = countResult.count;
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    
+    if (process.env.DEBUG) {
+      console.log(`Debug: Table exists: ${tableExists}, Row count: ${rowCount}`);
+    }
+    
+    if (!tableExists) {
+      db.close();
+      return [];
+    }
+    
     const rows = db.prepare(`
       SELECT key, value 
       FROM keyv 
@@ -41,6 +68,13 @@ async function getAllKeys() {
     `).all();
     
     db.close();
+    
+    if (process.env.DEBUG) {
+      console.log(`Debug: Retrieved ${rows.length} rows from database`);
+      if (rows.length > 0) {
+        console.log(`Debug: First few keys: ${rows.slice(0, 3).map(r => r.key).join(', ')}`);
+      }
+    }
     
     return rows.map(row => {
       let parsedValue = null;
@@ -125,19 +159,26 @@ async function listAllValues() {
     const { getDatabasePathInfo } = require('./utils/dbScriptUtils');
     const pathInfo = getDatabasePathInfo();
     
-    // Show debug info if database doesn't exist or DEBUG env var is set
-    if (!pathInfo.databaseExists || process.env.DEBUG) {
-      console.log('Database path information:');
-      console.log(`   Data directory: ${pathInfo.dataDir}`);
-      console.log(`   Database file: ${pathInfo.sqlitePath}`);
-      console.log(`   Working directory: ${pathInfo.cwd}`);
-      console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
-      console.log(`   Database exists: ${pathInfo.databaseExists}`);
-      if (pathInfo.envDataDir) {
-        console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
-      }
-      console.log('');
+    // Always show path info to help diagnose issues
+    console.log('Database path information:');
+    console.log(`   Data directory: ${pathInfo.dataDir}`);
+    console.log(`   Database file: ${pathInfo.sqlitePath}`);
+    console.log(`   Working directory: ${pathInfo.cwd}`);
+    console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
+    console.log(`   Database exists: ${pathInfo.databaseExists}`);
+    if (pathInfo.envDataDir) {
+      console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
     }
+    
+    if (pathInfo.databaseExists) {
+      try {
+        const stats = require('fs').statSync(pathInfo.sqlitePath);
+        console.log(`   Database file size: ${stats.size} bytes`);
+      } catch (e) {
+        // Ignore stat errors
+      }
+    }
+    console.log('');
     
     if (!pathInfo.databaseExists) {
       console.log('Database file does not exist.');
@@ -154,6 +195,14 @@ async function listAllValues() {
     
     if (allData.length === 0) {
       console.log('No values found in the database.');
+      console.log('');
+      console.log('This could mean:');
+      console.log('  1. The database is empty');
+      console.log('  2. The database file is different from your local one');
+      console.log('  3. Check if the volume mount is pointing to the correct location');
+      console.log('');
+      console.log('To verify, check the database file directly:');
+      console.log(`   sqlite3 ${pathInfo.sqlitePath} "SELECT COUNT(*) FROM keyv;"`);
       return;
     }
 
