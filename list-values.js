@@ -156,29 +156,51 @@ async function readValue(keyString) {
 
 async function listAllValues() {
   try {
-    const { getDatabasePathInfo } = require('./utils/dbScriptUtils');
+    const { getDatabasePathInfo, checkDatabaseAccess } = require('./utils/dbScriptUtils');
     const pathInfo = getDatabasePathInfo();
     
-    // Always show path info to help diagnose issues
-    console.log('Database path information:');
-    console.log(`   Data directory: ${pathInfo.dataDir}`);
-    console.log(`   Database file: ${pathInfo.sqlitePath}`);
-    console.log(`   Working directory: ${pathInfo.cwd}`);
-    console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
-    console.log(`   Database exists: ${pathInfo.databaseExists}`);
-    if (pathInfo.envDataDir) {
-      console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
+    // Check database access permissions first
+    const accessCheck = checkDatabaseAccess();
+    
+    if (!accessCheck.accessible && accessCheck.fileExists) {
+      // If running as root and gosu is available, try to re-execute automatically
+      if (accessCheck.currentUser?.isRoot) {
+        const { spawn } = require('child_process');
+        try {
+          // Check if gosu is available
+          require('child_process').execSync('which gosu', { stdio: 'ignore' });
+          // Re-execute with gosu
+          const scriptPath = __filename;
+          const args = ['discordbot', 'node', scriptPath, ...process.argv.slice(2)];
+          const child = spawn('gosu', args, {
+            stdio: 'inherit',
+            cwd: process.cwd()
+          });
+          child.on('exit', (code) => {
+            process.exit(code || 0);
+          });
+          return; // Exit after re-execution
+        } catch (e) {
+          // gosu not available or re-execution failed, show error
+        }
+      }
+      
+      console.error('Permission error: Cannot access database file.');
+      console.error('');
+      if (accessCheck.recommendation) {
+        console.error(accessCheck.recommendation);
+        console.error('');
+      }
+      console.error('Database file information:');
+      console.error(`   File: ${pathInfo.sqlitePath}`);
+      console.error(`   Owner: uid ${accessCheck.fileOwner?.uid}, gid ${accessCheck.fileOwner?.gid}`);
+      console.error(`   Current user: uid ${accessCheck.currentUser?.uid}, gid ${accessCheck.currentUser?.gid}`);
+      if (accessCheck.currentUser?.isRoot) {
+        console.error('   Running as root - switch to the file owner user');
+      }
+      process.exit(1);
     }
     
-    if (pathInfo.databaseExists) {
-      try {
-        const stats = require('fs').statSync(pathInfo.sqlitePath);
-        console.log(`   Database file size: ${stats.size} bytes`);
-      } catch (e) {
-        // Ignore stat errors
-      }
-    }
-    console.log('');
     
     if (!pathInfo.databaseExists) {
       console.log('Database file does not exist.');
@@ -195,6 +217,17 @@ async function listAllValues() {
     let tableInfo = null;
     let rowCount = 0;
     try {
+      // Check file permissions first
+      const stats = fs.statSync(pathInfo.sqlitePath);
+      const fileMode = (stats.mode & parseInt('777', 8)).toString(8);
+      const fileOwner = stats.uid;
+      const fileGroup = stats.gid;
+      
+      if (process.env.DEBUG) {
+        console.log(`Database file permissions: ${fileMode} (uid: ${fileOwner}, gid: ${fileGroup})`);
+        console.log(`Current process uid: ${process.getuid()}, gid: ${process.getgid()}`);
+      }
+      
       const db = new Database(pathInfo.sqlitePath, { readonly: true });
       const tableCheck = db.prepare(`
         SELECT name FROM sqlite_master 
@@ -233,6 +266,17 @@ async function listAllValues() {
       db.close();
     } catch (e) {
       console.error(`Error checking database structure: ${e.message}`);
+      console.error('');
+      console.error('This is likely a permissions issue. The database file exists but cannot be opened.');
+      console.error('');
+      console.error('Solutions:');
+      console.error('  1. Run the script as the discordbot user:');
+      console.error('     gosu discordbot node list-values.js');
+      console.error('  2. Or temporarily fix permissions (not recommended for production):');
+      console.error(`     chmod 644 ${pathInfo.sqlitePath}`);
+      console.error('');
+      console.error('The database file is owned by discordbot:nodejs with restrictive permissions');
+      console.error('for security. Scripts should be run as the discordbot user.');
     }
     
     const allData = await getAllKeys();

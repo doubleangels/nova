@@ -20,22 +20,44 @@ const { parseKey, getKeyvForNamespace, parseValue, withKeyv, formatSectionName }
 
 async function setValue(keyString, value) {
   try {
-    const { getDatabasePathInfo } = require('./utils/dbScriptUtils');
+    const { getDatabasePathInfo, checkDatabaseAccess } = require('./utils/dbScriptUtils');
     const pathInfo = getDatabasePathInfo();
     
-    // Show debug info if database doesn't exist or DEBUG env var is set
-    if (!pathInfo.databaseExists || process.env.DEBUG) {
-      console.log('Database path information:');
-      console.log(`   Data directory: ${pathInfo.dataDir}`);
-      console.log(`   Database file: ${pathInfo.sqlitePath}`);
-      console.log(`   Working directory: ${pathInfo.cwd}`);
-      console.log(`   Data dir exists: ${pathInfo.dataDirExists}`);
-      console.log(`   Database exists: ${pathInfo.databaseExists}`);
-      if (pathInfo.envDataDir) {
-        console.log(`   DATA_DIR env var: ${pathInfo.envDataDir}`);
+    // Check database access permissions first
+    const accessCheck = checkDatabaseAccess();
+    
+    if (!accessCheck.accessible && accessCheck.fileExists) {
+      // If running as root and gosu is available, try to re-execute automatically
+      if (accessCheck.currentUser?.isRoot) {
+        const { spawn } = require('child_process');
+        try {
+          // Check if gosu is available
+          require('child_process').execSync('which gosu', { stdio: 'ignore' });
+          // Re-execute with gosu
+          const scriptPath = __filename;
+          const args = ['discordbot', 'node', scriptPath, ...process.argv.slice(2)];
+          const child = spawn('gosu', args, {
+            stdio: 'inherit',
+            cwd: process.cwd()
+          });
+          child.on('exit', (code) => {
+            process.exit(code || 0);
+          });
+          return; // Exit after re-execution
+        } catch (e) {
+          // gosu not available or re-execution failed, show error
+        }
       }
-      console.log('');
+      
+      console.error('Permission error: Cannot access database file.');
+      console.error('');
+      if (accessCheck.recommendation) {
+        console.error(accessCheck.recommendation);
+        console.error('');
+      }
+      process.exit(1);
     }
+    
     
     const { namespace, section, actualKey, fullKey } = parseKey(keyString);
     const keyv = getKeyvForNamespace(namespace);

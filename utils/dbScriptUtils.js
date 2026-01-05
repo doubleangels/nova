@@ -27,6 +27,68 @@ function ensureDataDir() {
 }
 
 /**
+ * Check if we can access the database file and provide helpful error messages
+ * @returns {Object} Access information and recommendations
+ */
+function checkDatabaseAccess() {
+  const result = {
+    accessible: false,
+    error: null,
+    recommendation: null,
+    fileExists: false,
+    fileOwner: null,
+    currentUser: null
+  };
+  
+  try {
+    result.fileExists = fs.existsSync(sqlitePath);
+    
+    if (!result.fileExists) {
+      return result;
+    }
+    
+    // Get current process user info
+    result.currentUser = {
+      uid: process.getuid ? process.getuid() : null,
+      gid: process.getgid ? process.getgid() : null,
+      isRoot: process.getuid ? process.getuid() === 0 : false
+    };
+    
+    // Get file stats
+    const stats = fs.statSync(sqlitePath);
+    result.fileOwner = {
+      uid: stats.uid,
+      gid: stats.gid
+    };
+    
+    // Try to open the file to check permissions
+    try {
+      fs.accessSync(sqlitePath, fs.constants.R_OK);
+      result.accessible = true;
+    } catch (accessError) {
+      result.error = accessError.message;
+      
+      // If running as root and file is owned by another user, provide specific guidance
+      if (result.currentUser.isRoot && stats.uid !== 0) {
+        result.recommendation = `Run the script as the file owner (uid ${stats.uid}):\n` +
+          `  gosu discordbot node ${process.argv[1]}\n` +
+          `Or switch to the discordbot user first:\n` +
+          `  su - discordbot -s /bin/bash`;
+      } else if (!result.currentUser.isRoot && stats.uid !== result.currentUser.uid) {
+        result.recommendation = `The database file is owned by a different user. ` +
+          `Contact your administrator or run as the file owner.`;
+      } else {
+        result.recommendation = `Check file permissions: ls -l ${sqlitePath}`;
+      }
+    }
+  } catch (error) {
+    result.error = error.message;
+  }
+  
+  return result;
+}
+
+/**
  * Get debug information about the database path
  * @returns {Object} Debug information
  */
@@ -237,6 +299,7 @@ module.exports = {
   withKeyv,
   formatSectionName,
   getDatabasePathInfo,
+  checkDatabaseAccess,
   sqlitePath,
   NAMESPACES,
   KNOWN_SECTIONS
