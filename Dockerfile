@@ -45,11 +45,22 @@ RUN apk add --no-cache \
   jq \
   unzip
 
-# Download bws
-RUN curl -LO https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
-  unzip bws-x86_64-unknown-linux-gnu-1.0.0.zip -d /usr/local/bin/ && \
-  rm -f bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
-  chmod +x /usr/local/bin/bws
+# Download bws (using musl for Alpine Linux)
+# Support both amd64 and arm64 architectures
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      BWS_ARCH="x86_64-unknown-linux-musl"; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+      BWS_ARCH="aarch64-unknown-linux-musl"; \
+    else \
+      echo "Unsupported architecture: $TARGETARCH" && exit 1; \
+    fi && \
+    curl -LO https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-${BWS_ARCH}-1.0.0.zip && \
+    unzip bws-${BWS_ARCH}-1.0.0.zip -d /tmp && \
+    mv /tmp/bws /usr/local/bin/bws && \
+    rm -f bws-${BWS_ARCH}-1.0.0.zip && \
+    chmod +x /usr/local/bin/bws && \
+    bws --version
 
 # Copy node_modules from builder stage
 COPY --from=builder --chown=discordbot:nodejs /app/node_modules ./node_modules

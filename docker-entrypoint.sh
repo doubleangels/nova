@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+# Ensure /usr/local/bin is in PATH for bws command
+export PATH=$PATH:/usr/local/bin
+
 # Ensure data directory exists and has correct permissions
 # This script runs as root to fix permissions, then executes the command as the specified user
 
