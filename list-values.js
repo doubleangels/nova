@@ -191,10 +191,79 @@ async function listAllValues() {
       return;
     }
     
+    // Check database structure before querying
+    let tableInfo = null;
+    let rowCount = 0;
+    try {
+      const db = new Database(pathInfo.sqlitePath, { readonly: true });
+      const tableCheck = db.prepare(`
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='keyv'
+      `).get();
+      
+      if (tableCheck) {
+        const countResult = db.prepare(`SELECT COUNT(*) as count FROM keyv`).get();
+        rowCount = countResult.count;
+        
+        // Get sample keys if any exist
+        if (rowCount > 0) {
+          const sampleKeys = db.prepare(`SELECT key FROM keyv LIMIT 5`).all();
+          tableInfo = {
+            exists: true,
+            rowCount: rowCount,
+            sampleKeys: sampleKeys.map(r => r.key)
+          };
+        } else {
+          tableInfo = {
+            exists: true,
+            rowCount: 0
+          };
+        }
+      } else {
+        // Check what tables do exist
+        const allTables = db.prepare(`
+          SELECT name FROM sqlite_master 
+          WHERE type='table'
+        `).all();
+        tableInfo = {
+          exists: false,
+          otherTables: allTables.map(t => t.name)
+        };
+      }
+      db.close();
+    } catch (e) {
+      console.error(`Error checking database structure: ${e.message}`);
+    }
+    
     const allData = await getAllKeys();
     
     if (allData.length === 0) {
       console.log('No values found in the database.');
+      console.log('');
+      
+      if (tableInfo) {
+        if (tableInfo.exists) {
+          console.log(`Database table 'keyv' exists with ${tableInfo.rowCount} row(s).`);
+          if (tableInfo.rowCount > 0 && tableInfo.sampleKeys) {
+            console.log('Sample keys found in database:');
+            tableInfo.sampleKeys.forEach(key => {
+              console.log(`   - ${key}`);
+            });
+            console.log('');
+            console.log('The keys exist but could not be parsed. This might indicate:');
+            console.log('  1. A namespace/section parsing issue');
+            console.log('  2. The keys are in an unexpected format');
+          } else if (tableInfo.rowCount === 0) {
+            console.log('The table is empty.');
+          }
+        } else {
+          console.log(`Database table 'keyv' does not exist.`);
+          if (tableInfo.otherTables && tableInfo.otherTables.length > 0) {
+            console.log(`Other tables found: ${tableInfo.otherTables.join(', ')}`);
+          }
+        }
+      }
+      
       console.log('');
       console.log('This could mean:');
       console.log('  1. The database is empty');
@@ -203,6 +272,7 @@ async function listAllValues() {
       console.log('');
       console.log('To verify, check the database file directly:');
       console.log(`   sqlite3 ${pathInfo.sqlitePath} "SELECT COUNT(*) FROM keyv;"`);
+      console.log(`   sqlite3 ${pathInfo.sqlitePath} "SELECT key FROM keyv LIMIT 10;"`);
       return;
     }
 
