@@ -278,10 +278,6 @@ Fix reminder data in the database for various reminder types.
 
 **Note:** Reminder configuration must be set up using `/reminder setup` before using this command.
 
-#### `/setinvite` (Administrator Only)
-
-Display the current server invite URL configured via the `SERVER_INVITE_URL` environment variable.
-
 ### Information Commands
 
 #### `/google`
