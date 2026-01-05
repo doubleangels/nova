@@ -13,27 +13,7 @@ services:
       - no-new-privileges:true
     read_only: true
     environment:
-      - BASE_EMBED_COLOR=your_base_embed_color_here
-      - BOT_STATUS=your_bot_status_here
-      - BOT_STATUS_TYPE=watching
-      - DISCORD_BOT_TOKEN=your_discord_bot_token_here
-      - GIVE_PERMS_FREN_ROLE_ID=your_fren_role_id_here
-      - GIVE_PERMS_POSITION_ABOVE_ROLE_ID=your_position_above_role_id_here
-      - GOOGLE_API_KEY=your_google_api_key_here
-      - GUILD_NAME=your_guild_name_here
-      - IMAGE_SEARCH_ENGINE_ID=your_image_search_engine_id_here
-      - LOG_LEVEL=info
-      - MAL_CLIENT_ID=your_mal_client_id_here
-      - OMDB_API_KEY=your_omdb_api_key_here
-      - PIRATEWEATHER_API_KEY=your_pirateweather_api_key_here
-      - REDDIT_CLIENT_ID=your_reddit_client_id_here
-      - REDDIT_CLIENT_SECRET=your_reddit_client_secret_here
-      - REDDIT_PASSWORD=your_reddit_password_here
-      - REDDIT_USERNAME=your_reddit_username_here
-      - SEARCH_ENGINE_ID=your_search_engine_id_here
-      - SERVER_INVITE_URL=https://discord.gg/your-invite-code
-      - SPOTIFY_CLIENT_ID=your_spotify_client_id_here
-      - SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+      - BWS_ACCESS_TOKEN=your_bitwarden_secrets_manager_access_token_here
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
