@@ -1,7 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap } = require('../utils/database');
+const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, getInviteMetadata, setInviteMetadata } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const config = require('../config');
@@ -252,6 +252,9 @@ module.exports = {
         // Re-read previous usage after acquiring lock to get latest state
         const lockedPreviousUsage = await getInviteUsage(guildId);
         
+        // Get invite metadata for checking recently created/deleted invites
+        const inviteMetadata = await getInviteMetadata(guildId);
+        
         // Find which invite was used (usage count increased)
         let usedInviteCode = null;
         let maxIncrease = 0;
@@ -300,6 +303,38 @@ module.exports = {
             }
           }
         }
+        
+        // If still not found, check for invites that were in previous tracking but are now missing (deleted)
+        // This handles the case where an invite was created, used, and deleted quickly
+        if (!usedInviteCode) {
+          logger.debug('No invite found in current invites, checking for recently deleted invites.');
+          const now = Date.now();
+          const RECENT_THRESHOLD = 5 * 60 * 1000; // 5 minutes
+          
+          // Check all invites that were in previous tracking but are now missing
+          for (const [code, previousCount] of Object.entries(lockedPreviousUsage)) {
+            const normalizedCode = code.toLowerCase();
+            // If invite was in previous tracking but not in current invites, it was deleted
+            if (!currentUsage[code] && !currentUsage[code.toLowerCase()]) {
+              const metadata = inviteMetadata[code] || inviteMetadata[code.toLowerCase()];
+              if (metadata) {
+                const createdAt = new Date(metadata.createdAt).getTime();
+                const age = now - createdAt;
+                
+                // If invite was recently created (within 5 minutes) and had 0 uses initially, it was likely used
+                if (age < RECENT_THRESHOLD && metadata.initialUses === 0) {
+                  usedInviteCode = code; // Keep original case
+                  logger.debug('Found recently created and deleted invite that was likely used.', {
+                    inviteCode: code,
+                    ageMinutes: (age / 1000 / 60).toFixed(2),
+                    initialUses: metadata.initialUses
+                  });
+                  break;
+                }
+              }
+            }
+          }
+        }
 
         // If multiple invites increased, log warning but use the one with highest increase
         if (invitesWithIncrease.length > 1) {
@@ -313,6 +348,72 @@ module.exports = {
           inviteCode: usedInviteCode || 'NONE'
         });
 
+        // Clean up old metadata entries (async, don't block)
+        const now = Date.now();
+        const CLEANUP_THRESHOLD = 10 * 60 * 1000; // 10 minutes
+        let metadataUpdated = false;
+        
+        // Remove old metadata entries
+        for (const [code, metadata] of Object.entries(inviteMetadata)) {
+          if (metadata.deletedAt) {
+            const deletedAt = new Date(metadata.deletedAt).getTime();
+            const age = now - deletedAt;
+            
+            // If invite was deleted more than 10 minutes ago, clean it up
+            if (age > CLEANUP_THRESHOLD) {
+              delete inviteMetadata[code];
+              metadataUpdated = true;
+              
+              // Also remove from current usage tracking if it's still there (shouldn't be, but just in case)
+              if (currentUsage[code] !== undefined) {
+                delete currentUsage[code];
+              }
+              
+              logger.debug('Cleaned up old deleted invite metadata.', {
+                inviteCode: code,
+                ageMinutes: (age / 1000 / 60).toFixed(2)
+              });
+            }
+          } else if (metadata.createdAt) {
+            // Clean up very old metadata entries (older than 1 hour) that weren't deleted
+            const createdAt = new Date(metadata.createdAt).getTime();
+            const age = now - createdAt;
+            if (age > 60 * 60 * 1000) { // 1 hour
+              delete inviteMetadata[code];
+              metadataUpdated = true;
+              logger.debug('Cleaned up old invite metadata.', {
+                inviteCode: code,
+                ageMinutes: (age / 1000 / 60).toFixed(2)
+              });
+            }
+          }
+        }
+        
+        if (metadataUpdated) {
+          await setInviteMetadata(guildId, inviteMetadata).catch(err => {
+            logger.error('Failed to update invite metadata during cleanup.', {
+              err: err,
+              guildId: guildId
+            });
+          });
+        }
+        
+        // If we detected a deleted invite was used, ensure it's not in currentUsage
+        // (it shouldn't be since it was deleted, but clean up just in case)
+        if (usedInviteCode && !currentUsage[usedInviteCode] && !currentUsage[usedInviteCode.toLowerCase()]) {
+          // Invite was deleted, make sure it's not in currentUsage
+          const normalizedUsedCode = usedInviteCode.toLowerCase();
+          for (const code in currentUsage) {
+            if (code.toLowerCase() === normalizedUsedCode) {
+              delete currentUsage[code];
+              break;
+            }
+          }
+          logger.debug('Ensured deleted invite is not in current usage tracking.', {
+            inviteCode: usedInviteCode
+          });
+        }
+        
         // Update stored usage counts BEFORE processing notification
         // This ensures we have the latest state for next join
         await setInviteUsage(member.guild.id, currentUsage).catch(err => {
@@ -530,15 +631,60 @@ module.exports = {
                 });
               }
             } else {
-              logger.warn('Invite object not found for code, sending fallback notification.', {
+              logger.warn('Invite object not found for code, checking metadata for deleted invite info.', {
                 inviteCode: usedInviteCode
               });
+              
+              // Check if we have metadata for this invite (it might have been deleted)
+              const inviteMetadata = await getInviteMetadata(guildId);
+              const metadata = inviteMetadata[usedInviteCode] || inviteMetadata[usedInviteCode.toLowerCase()];
+              
+              // Try to get creator info from audit logs or metadata if available
+              let creatorName = 'Unknown';
+              let channelInfo = null;
+              
+              // If invite was recently deleted, try to get info from audit logs
+              if (metadata && metadata.deletedAt) {
+                try {
+                  // Try to fetch recent audit logs to find who created the invite
+                  const auditLogs = await member.guild.fetchAuditLogs({
+                    limit: 10,
+                    type: 20 // INVITE_CREATE
+                  }).catch(() => null);
+                  
+                  if (auditLogs) {
+                    const inviteCreateLog = auditLogs.entries.find(entry => 
+                      entry.target && entry.target.code === usedInviteCode
+                    );
+                    
+                    if (inviteCreateLog && inviteCreateLog.executor) {
+                      const executorMember = await member.guild.members.fetch(inviteCreateLog.executor.id).catch(() => null);
+                      if (executorMember) {
+                        creatorName = `${executorMember.displayName} (${executorMember.user.username})`;
+                      } else {
+                        creatorName = inviteCreateLog.executor.username;
+                      }
+                      
+                      // Try to get channel info from audit log
+                      if (inviteCreateLog.extra && inviteCreateLog.extra.channel) {
+                        channelInfo = inviteCreateLog.extra.channel.name;
+                      }
+                    }
+                  }
+                } catch (auditError) {
+                  logger.debug('Could not fetch audit logs for deleted invite.', {
+                    inviteCode: usedInviteCode,
+                    error: auditError.message
+                  });
+                }
+              }
+              
               // Send fallback notification when invite can't be found
               try {
                 const embed = new EmbedBuilder()
                   .setColor(config.baseEmbedColor)
                   .setTitle('👤 New Member Joined')
-                  .setDescription(`${member.displayName} (${member.user.username}) joined the server using invite code \`${usedInviteCode}\`, but invite details could not be retrieved.`)
+                  .setDescription(`${member.displayName} (${member.user.username}) joined the server using invite code \`${usedInviteCode}\`.${metadata && metadata.deletedAt ? ' (Invite was deleted after use)' : ' (Invite details could not be retrieved)'}`)
                   .addFields(
                     { name: 'Member', value: `${member.displayName} (${member.user.username})`, inline: true },
                     { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
@@ -546,12 +692,23 @@ module.exports = {
                   )
                   .setThumbnail(member.user.displayAvatarURL())
                   .setTimestamp();
+                
+                // Add creator info if we found it
+                if (creatorName !== 'Unknown') {
+                  embed.addFields({ name: 'Invite Creator', value: creatorName, inline: true });
+                }
+                
+                // Add channel info if we found it
+                if (channelInfo) {
+                  embed.addFields({ name: 'Channel', value: channelInfo, inline: true });
+                }
 
                 const sentMessage = await notificationChannel.send({ embeds: [embed] });
                 logger.info('Sent fallback invite notification for member.', {
                   userTag: member.user.tag,
                   inviteCode: usedInviteCode,
-                  messageId: sentMessage.id
+                  messageId: sentMessage.id,
+                  wasDeleted: metadata && metadata.deletedAt ? true : false
                 });
               } catch (sendError) {
                 logger.error('Failed to send fallback notification.', {

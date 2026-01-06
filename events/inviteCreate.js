@@ -1,7 +1,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getInviteUsage, setInviteUsage } = require('../utils/database');
+const { getInviteUsage, setInviteUsage, getInviteMetadata, setInviteMetadata } = require('../utils/database');
 
 module.exports = {
   name: Events.InviteCreate,
@@ -39,6 +39,14 @@ module.exports = {
       
       // Update the invite usage tracking
       await setInviteUsage(invite.guild.id, currentUsage);
+      
+      // Track invite metadata (creation time and initial uses) for detecting recently created/used invites
+      const inviteMetadata = await getInviteMetadata(invite.guild.id);
+      inviteMetadata[invite.code] = {
+        createdAt: new Date().toISOString(),
+        initialUses: invite.uses || 0
+      };
+      await setInviteMetadata(invite.guild.id, inviteMetadata);
       
       logger.debug('Updated invite usage tracking with new invite.', {
         inviteCode: invite.code,

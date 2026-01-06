@@ -1,7 +1,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getInviteUsage, setInviteUsage } = require('../utils/database');
+const { getInviteUsage, setInviteUsage, getInviteMetadata, setInviteMetadata } = require('../utils/database');
 
 module.exports = {
   name: Events.InviteDelete,
@@ -30,23 +30,27 @@ module.exports = {
       // Get current invite usage tracking
       const currentUsage = await getInviteUsage(invite.guild.id);
       
-      // Remove the deleted invite from tracking
-      if (currentUsage[invite.code] !== undefined) {
-        delete currentUsage[invite.code];
-        
-        // Update the invite usage tracking
-        await setInviteUsage(invite.guild.id, currentUsage);
-        
-        logger.debug('Removed deleted invite from usage tracking.', {
-          inviteCode: invite.code,
-          guildId: invite.guild.id
-        });
-      } else {
-        logger.debug('Deleted invite was not in usage tracking (may have been created before bot started).', {
+      // Mark invite as deleted in metadata instead of immediately removing from usage tracking
+      // This allows us to detect if a recently created invite was used and then deleted
+      const inviteMetadata = await getInviteMetadata(invite.guild.id);
+      if (inviteMetadata[invite.code]) {
+        inviteMetadata[invite.code].deletedAt = new Date().toISOString();
+        await setInviteMetadata(invite.guild.id, inviteMetadata);
+        logger.debug('Marked invite as deleted in metadata.', {
           inviteCode: invite.code,
           guildId: invite.guild.id
         });
       }
+      
+      // Remove the deleted invite from usage tracking after a short delay
+      // We'll clean it up in guildMemberAdd when checking for used invites
+      // For now, keep it in tracking so we can detect if it was used
+      // The cleanup will happen when we detect it was used or after 5 minutes
+      
+      logger.debug('Deleted invite tracking updated (kept in usage tracking for detection).', {
+        inviteCode: invite.code,
+        guildId: invite.guild.id
+      });
     } catch (error) {
       logger.error('Error occurred while cleaning up deleted invite from tracking.', {
         err: error,
