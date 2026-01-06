@@ -1,7 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, getInviteMetadata, setInviteMetadata } = require('../utils/database');
+const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const config = require('../config');
@@ -202,17 +202,12 @@ module.exports = {
         previousUsage: JSON.stringify(previousUsage)
       });
       
-      // Build current usage map and store invite objects for later use
+      // Build current usage map
       // Store codes in their original case for Discord API compatibility
       const currentUsage = {};
-      const inviteObjects = new Map();
       currentInvites.each(invite => {
         const code = invite.code; // Keep original case
         currentUsage[code] = invite.uses || 0;
-        // Store invite object with original code
-        inviteObjects.set(code, invite);
-        // Also store with lowercase for lookup
-        inviteObjects.set(code.toLowerCase(), invite);
       });
       logger.debug('Built current invite usage data.', {
         currentUsage: JSON.stringify(currentUsage)
@@ -252,13 +247,16 @@ module.exports = {
         // Re-read previous usage after acquiring lock to get latest state
         const lockedPreviousUsage = await getInviteUsage(guildId);
         
-        // Get invite metadata for checking recently created/deleted invites
-        const inviteMetadata = await getInviteMetadata(guildId);
+        // Get tagged invite code mapping
+        let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
+        if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
+          // Try rebuilding the map
+          codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
+        }
         
-        // Find which invite was used (usage count increased)
+        // Find which tagged invite was used (usage count increased)
         let usedInviteCode = null;
         let maxIncrease = 0;
-        const invitesWithIncrease = [];
         
         // Normalize previous usage keys to lowercase for case-insensitive comparison
         const normalizedPreviousUsage = {};
@@ -266,11 +264,18 @@ module.exports = {
           normalizedPreviousUsage[code.toLowerCase()] = count;
         }
         
+        // Only check tagged invites
         for (const [code, currentCount] of Object.entries(currentUsage)) {
           const normalizedCode = code.toLowerCase();
+          
+          // Skip if not a tagged invite
+          if (!codeToTagMap[normalizedCode]) {
+            continue;
+          }
+          
           const previousCount = normalizedPreviousUsage[normalizedCode] || 0;
           const increase = currentCount - previousCount;
-          logger.debug('Comparing invite usage counts.', {
+          logger.debug('Comparing tagged invite usage counts.', {
             inviteCode: code,
             previousCount: previousCount,
             currentCount: currentCount,
@@ -278,7 +283,6 @@ module.exports = {
           });
           
           if (increase > 0) {
-            invitesWithIncrease.push({ code, increase });
             if (increase > maxIncrease) {
               maxIncrease = increase;
               usedInviteCode = code; // Keep original case
@@ -286,16 +290,15 @@ module.exports = {
           }
         }
 
-        // If we couldn't find it by comparison, check if it's a new invite
+        // If we couldn't find it by comparison, check if it's a new tagged invite
         if (!usedInviteCode) {
-          logger.debug('No invite found with increased usage, checking for new invites.');
+          logger.debug('No tagged invite found with increased usage, checking for new tagged invites.');
           for (const [code, currentCount] of Object.entries(currentUsage)) {
             const normalizedCode = code.toLowerCase();
-            // Check for new invites that weren't in previous usage
-            // Also check for invites with exactly 1 use (likely just used)
-            if (!normalizedPreviousUsage[normalizedCode] && currentCount >= 1) {
+            // Check for new tagged invites that weren't in previous usage
+            if (!normalizedPreviousUsage[normalizedCode] && currentCount >= 1 && codeToTagMap[normalizedCode]) {
               usedInviteCode = code; // Keep original case
-              logger.debug('Found new invite that was likely used.', {
+              logger.debug('Found new tagged invite that was likely used.', {
                 inviteCode: code,
                 uses: currentCount
               });
@@ -304,115 +307,9 @@ module.exports = {
           }
         }
         
-        // If still not found, check for invites that were in previous tracking but are now missing (deleted)
-        // This handles the case where an invite was created, used, and deleted quickly
-        if (!usedInviteCode) {
-          logger.debug('No invite found in current invites, checking for recently deleted invites.');
-          const now = Date.now();
-          const RECENT_THRESHOLD = 5 * 60 * 1000; // 5 minutes
-          
-          // Check all invites that were in previous tracking but are now missing
-          for (const [code, previousCount] of Object.entries(lockedPreviousUsage)) {
-            const normalizedCode = code.toLowerCase();
-            // If invite was in previous tracking but not in current invites, it was deleted
-            if (!currentUsage[code] && !currentUsage[code.toLowerCase()]) {
-              const metadata = inviteMetadata[code] || inviteMetadata[code.toLowerCase()];
-              if (metadata) {
-                const createdAt = new Date(metadata.createdAt).getTime();
-                const age = now - createdAt;
-                
-                // If invite was recently created (within 5 minutes) and had 0 uses initially, it was likely used
-                if (age < RECENT_THRESHOLD && metadata.initialUses === 0) {
-                  usedInviteCode = code; // Keep original case
-                  logger.debug('Found recently created and deleted invite that was likely used.', {
-                    inviteCode: code,
-                    ageMinutes: (age / 1000 / 60).toFixed(2),
-                    initialUses: metadata.initialUses
-                  });
-                  break;
-                }
-              }
-            }
-          }
-        }
-
-        // If multiple invites increased, log warning but use the one with highest increase
-        if (invitesWithIncrease.length > 1) {
-          logger.warn('Multiple invites increased usage, using the one with highest increase.', {
-            invites: invitesWithIncrease.map(i => `${i.code} (+${i.increase})`).join(', '),
-            selectedInvite: usedInviteCode
-          });
-        }
-
         logger.debug('Detected used invite code.', {
           inviteCode: usedInviteCode || 'NONE'
         });
-
-        // Clean up old metadata entries (async, don't block)
-        const now = Date.now();
-        const CLEANUP_THRESHOLD = 10 * 60 * 1000; // 10 minutes
-        let metadataUpdated = false;
-        
-        // Remove old metadata entries
-        for (const [code, metadata] of Object.entries(inviteMetadata)) {
-          if (metadata.deletedAt) {
-            const deletedAt = new Date(metadata.deletedAt).getTime();
-            const age = now - deletedAt;
-            
-            // If invite was deleted more than 10 minutes ago, clean it up
-            if (age > CLEANUP_THRESHOLD) {
-              delete inviteMetadata[code];
-              metadataUpdated = true;
-              
-              // Also remove from current usage tracking if it's still there (shouldn't be, but just in case)
-              if (currentUsage[code] !== undefined) {
-                delete currentUsage[code];
-              }
-              
-              logger.debug('Cleaned up old deleted invite metadata.', {
-                inviteCode: code,
-                ageMinutes: (age / 1000 / 60).toFixed(2)
-              });
-            }
-          } else if (metadata.createdAt) {
-            // Clean up very old metadata entries (older than 1 hour) that weren't deleted
-            const createdAt = new Date(metadata.createdAt).getTime();
-            const age = now - createdAt;
-            if (age > 60 * 60 * 1000) { // 1 hour
-              delete inviteMetadata[code];
-              metadataUpdated = true;
-              logger.debug('Cleaned up old invite metadata.', {
-                inviteCode: code,
-                ageMinutes: (age / 1000 / 60).toFixed(2)
-              });
-            }
-          }
-        }
-        
-        if (metadataUpdated) {
-          await setInviteMetadata(guildId, inviteMetadata).catch(err => {
-            logger.error('Failed to update invite metadata during cleanup.', {
-              err: err,
-              guildId: guildId
-            });
-          });
-        }
-        
-        // If we detected a deleted invite was used, ensure it's not in currentUsage
-        // (it shouldn't be since it was deleted, but clean up just in case)
-        if (usedInviteCode && !currentUsage[usedInviteCode] && !currentUsage[usedInviteCode.toLowerCase()]) {
-          // Invite was deleted, make sure it's not in currentUsage
-          const normalizedUsedCode = usedInviteCode.toLowerCase();
-          for (const code in currentUsage) {
-            if (code.toLowerCase() === normalizedUsedCode) {
-              delete currentUsage[code];
-              break;
-            }
-          }
-          logger.debug('Ensured deleted invite is not in current usage tracking.', {
-            inviteCode: usedInviteCode
-          });
-        }
         
         // Update stored usage counts BEFORE processing notification
         // This ensures we have the latest state for next join
@@ -423,295 +320,54 @@ module.exports = {
           });
         });
 
-        // Check if the used invite code matches any tagged invite
+        // Only send notification for tagged invites
         if (usedInviteCode) {
-          // Check if we have a direct code match stored
           // Normalize the code for lookup
           const normalizedUsedCode = usedInviteCode.toLowerCase();
-          let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
-          logger.debug('Retrieved code to tag mapping.', {
-            codeToTagMap: JSON.stringify(codeToTagMap)
-          });
+          const tagName = codeToTagMap[normalizedUsedCode];
           
-          let tagName = codeToTagMap[normalizedUsedCode];
           logger.debug('Looked up tag name for invite code.', {
             inviteCode: usedInviteCode,
             normalizedCode: normalizedUsedCode,
             tagName: tagName || 'not found'
           });
           
-          // Only rebuild once if tag not found (optimize to avoid double rebuilds)
-          if (!tagName) {
-            logger.debug('Tag not found in mapping, attempting to rebuild from existing tags.');
-            codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
-            tagName = codeToTagMap[normalizedUsedCode];
-            logger.debug('Rebuilt code to tag mapping and looked up tag name again.', {
-              inviteCode: usedInviteCode,
-              tagName: tagName || 'not found'
-            });
-          }
-          
           if (tagName) {
-          const inviteTag = await getInviteTag(tagName);
-          logger.debug('Retrieved invite tag data.', {
-            inviteTag: JSON.stringify(inviteTag)
-          });
-          
-          if (!inviteTag) {
-            logger.error('Tag found in mapping but tag data is null or undefined.', {
-              tagName: tagName
-            });
-            // Fall through to untagged invite notification
-            tagName = null;
-          } else if (!inviteTag.code) {
-            logger.error('Tag found but code is null or undefined.', {
-              tagName: tagName
-            });
-            // Fall through to untagged invite notification
-            tagName = null;
-          } else if (inviteTag.code.toLowerCase() === normalizedUsedCode) {
-            // Send notification
-            try {
-              const embed = new EmbedBuilder()
-                .setColor(config.baseEmbedColor)
-                .setTitle('🎉 New Member Joined via Tagged Invite')
-                .setDescription(`${member.displayName} (${member.user.username}) joined the server using a tagged invite.`)
-                .addFields(
-                  { name: 'Member', value: `${member.displayName} (${member.user.username})`, inline: true },
-                  { name: 'Invite Tag', value: inviteTag.name || tagName, inline: true },
-                  { name: 'Invite Code', value: usedInviteCode, inline: true },
-                  { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }
-                )
-                .setThumbnail(member.user.displayAvatarURL())
-                .setTimestamp();
-
-              logger.debug('Attempting to send notification to channel.', {
-                channelId: notificationChannel.id,
-                channelName: notificationChannel.name
-              });
-              
-              const sentMessage = await notificationChannel.send({ embeds: [embed] });
-              logger.info('Sent invite notification for member using tagged invite.', {
-                userTag: member.user.tag,
-                inviteTagName: inviteTag.name,
-                inviteCode: usedInviteCode,
-                messageId: sentMessage.id
-              });
-              return; // Successfully sent notification, exit early
-            } catch (sendError) {
-              logger.error('Failed to send notification to channel.', {
-                err: sendError,
-                channelId: notificationChannel.id,
-                channelName: notificationChannel.name,
-                guildId: member.guild.id
-              });
-              // Fall through to untagged invite notification as fallback
-              tagName = null;
-            }
-          } else {
-            logger.warn('Tag found but code mismatch detected.', {
-              tagCode: inviteTag.code,
-              usedCode: usedInviteCode
-            });
-            // Fall through to untagged invite notification
-            tagName = null;
-          }
-        }
-        
-          // If no tag found or tag lookup failed, send untagged notification
-          if (!tagName) {
-            // No tag found - send notification with invite creator info
-            logger.debug('No tag found for invite code, sending notification with creator info.', {
-              inviteCode: usedInviteCode
+            const inviteTag = await getInviteTag(tagName);
+            logger.debug('Retrieved invite tag data.', {
+              inviteTag: JSON.stringify(inviteTag)
             });
             
-            // Try to get invite object (check both normalized and original code)
-            let usedInvite = inviteObjects.get(usedInviteCode) || inviteObjects.get(usedInviteCode.toLowerCase());
-            
-            // If not in map, try to find it in the currentInvites collection
-            if (!usedInvite && currentInvites) {
-              usedInvite = currentInvites.find(inv => inv.code === usedInviteCode || inv.code.toLowerCase() === usedInviteCode.toLowerCase());
-              if (usedInvite) {
-                logger.debug('Found invite in currentInvites collection.', {
-                  inviteCode: usedInviteCode
-                });
-              }
-            }
-            
-            // If still not found, try to fetch it directly from Discord
-            if (!usedInvite) {
+            if (inviteTag && inviteTag.code && inviteTag.code.toLowerCase() === normalizedUsedCode) {
+              // Send tagged invite notification
               try {
-                logger.debug('Invite not in cache, attempting to fetch from Discord.', {
-                  inviteCode: usedInviteCode
-                });
-                usedInvite = await member.guild.invites.fetch(usedInviteCode);
-                if (usedInvite) {
-                  logger.debug('Successfully fetched invite from Discord.', {
-                    inviteCode: usedInviteCode
-                  });
-                }
-              } catch (fetchError) {
-                logger.debug('Could not fetch invite from Discord.', {
-                  inviteCode: usedInviteCode,
-                  error: fetchError.message
-                });
-              }
-            }
-            
-            // Send notification if we have invite info, or send fallback if we don't
-            if (usedInvite) {
-              try {
-                let creatorName = 'Unknown';
-                
-                // Get invite creator display name and username
-                if (usedInvite.inviter) {
-                  // Try to get display name from guild member, fallback to username
-                  const inviterMember = await member.guild.members.fetch(usedInvite.inviter.id).catch(() => null);
-                  if (inviterMember) {
-                    creatorName = `${inviterMember.displayName} (${inviterMember.user.username})`;
-                  } else {
-                    creatorName = usedInvite.inviter.username;
-                  }
-                } else if (usedInvite.inviterId) {
-                  // Try to fetch member to get display name
-                  const inviterMember = await member.guild.members.fetch(usedInvite.inviterId).catch(() => null);
-                  if (inviterMember) {
-                    creatorName = `${inviterMember.displayName} (${inviterMember.user.username})`;
-                  } else {
-                    // Fallback: try to fetch user
-                    const inviterUser = await member.client.users.fetch(usedInvite.inviterId).catch(() => null);
-                    creatorName = inviterUser ? inviterUser.username : 'Unknown';
-                  }
-                }
-                
                 const embed = new EmbedBuilder()
                   .setColor(config.baseEmbedColor)
-                  .setTitle('👤 New Member Joined via Invite')
-                  .setDescription(`${member.displayName} (${member.user.username}) joined the server using an invite.`)
+                  .setTitle('🎉 New Member Joined via Tagged Invite')
+                  .setDescription(`${member.displayName} (${member.user.username}) joined the server using a tagged invite.`)
                   .addFields(
                     { name: 'Member', value: `${member.displayName} (${member.user.username})`, inline: true },
-                    { name: 'Invite Creator', value: creatorName, inline: true },
+                    { name: 'Invite Tag', value: inviteTag.name || tagName, inline: true },
                     { name: 'Invite Code', value: usedInviteCode, inline: true },
                     { name: 'Full URL', value: `https://discord.gg/${usedInviteCode}`, inline: false }
                   )
                   .setThumbnail(member.user.displayAvatarURL())
                   .setTimestamp();
-                
-                // Add channel info if available
-                if (usedInvite.channel) {
-                  embed.addFields({ name: 'Channel', value: `${usedInvite.channel}`, inline: true });
-                }
-                
-                // Add uses info if available
-                if (usedInvite.uses !== null && usedInvite.maxUses !== null) {
-                  embed.addFields({ 
-                    name: 'Uses', 
-                    value: `${usedInvite.uses}${usedInvite.maxUses > 0 ? `/${usedInvite.maxUses}` : ''}`, 
-                    inline: true 
-                  });
-                }
-                
+
                 logger.debug('Attempting to send notification to channel.', {
                   channelId: notificationChannel.id,
                   channelName: notificationChannel.name
                 });
                 
                 const sentMessage = await notificationChannel.send({ embeds: [embed] });
-                logger.info('Sent invite notification for member using untagged invite.', {
+                logger.info('Sent invite notification for member using tagged invite.', {
                   userTag: member.user.tag,
+                  inviteTagName: inviteTag.name,
                   inviteCode: usedInviteCode,
                   messageId: sentMessage.id
                 });
               } catch (sendError) {
-                logger.error('Failed to send notification for untagged invite.', {
-                  err: sendError,
-                  channelId: notificationChannel.id,
-                  channelName: notificationChannel.name,
-                  guildId: member.guild.id
-                });
-              }
-            } else {
-              logger.warn('Invite object not found for code, checking metadata for deleted invite info.', {
-                inviteCode: usedInviteCode
-              });
-              
-              // Check if we have metadata for this invite (it might have been deleted)
-              const inviteMetadata = await getInviteMetadata(guildId);
-              const metadata = inviteMetadata[usedInviteCode] || inviteMetadata[usedInviteCode.toLowerCase()];
-              
-              // Try to get creator info from audit logs or metadata if available
-              let creatorName = 'Unknown';
-              let channelInfo = null;
-              
-              // If invite was recently deleted, try to get info from audit logs
-              if (metadata && metadata.deletedAt) {
-                try {
-                  // Try to fetch recent audit logs to find who created the invite
-                  const auditLogs = await member.guild.fetchAuditLogs({
-                    limit: 10,
-                    type: 20 // INVITE_CREATE
-                  }).catch(() => null);
-                  
-                  if (auditLogs) {
-                    const inviteCreateLog = auditLogs.entries.find(entry => 
-                      entry.target && entry.target.code === usedInviteCode
-                    );
-                    
-                    if (inviteCreateLog && inviteCreateLog.executor) {
-                      const executorMember = await member.guild.members.fetch(inviteCreateLog.executor.id).catch(() => null);
-                      if (executorMember) {
-                        creatorName = `${executorMember.displayName} (${executorMember.user.username})`;
-                      } else {
-                        creatorName = inviteCreateLog.executor.username;
-                      }
-                      
-                      // Try to get channel info from audit log
-                      if (inviteCreateLog.extra && inviteCreateLog.extra.channel) {
-                        channelInfo = inviteCreateLog.extra.channel.name;
-                      }
-                    }
-                  }
-                } catch (auditError) {
-                  logger.debug('Could not fetch audit logs for deleted invite.', {
-                    inviteCode: usedInviteCode,
-                    error: auditError.message
-                  });
-                }
-              }
-              
-              // Send fallback notification when invite can't be found
-              try {
-                const embed = new EmbedBuilder()
-                  .setColor(config.baseEmbedColor)
-                  .setTitle('👤 New Member Joined')
-                  .setDescription(`${member.displayName} (${member.user.username}) joined the server using invite code \`${usedInviteCode}\`.${metadata && metadata.deletedAt ? ' (Invite was deleted after use)' : ' (Invite details could not be retrieved)'}`)
-                  .addFields(
-                    { name: 'Member', value: `${member.displayName} (${member.user.username})`, inline: true },
-                    { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
-                    { name: 'Invite Code', value: usedInviteCode, inline: true }
-                  )
-                  .setThumbnail(member.user.displayAvatarURL())
-                  .setTimestamp();
-                
-                // Add creator info if we found it
-                if (creatorName !== 'Unknown') {
-                  embed.addFields({ name: 'Invite Creator', value: creatorName, inline: true });
-                }
-                
-                // Add channel info if we found it
-                if (channelInfo) {
-                  embed.addFields({ name: 'Channel', value: channelInfo, inline: true });
-                }
-
-                const sentMessage = await notificationChannel.send({ embeds: [embed] });
-                logger.info('Sent fallback invite notification for member.', {
-                  userTag: member.user.tag,
-                  inviteCode: usedInviteCode,
-                  messageId: sentMessage.id,
-                  wasDeleted: metadata && metadata.deletedAt ? true : false
-                });
-              } catch (sendError) {
-                logger.error('Failed to send fallback notification.', {
+                logger.error('Failed to send notification to channel.', {
                   err: sendError,
                   channelId: notificationChannel.id,
                   channelName: notificationChannel.name,
@@ -721,42 +377,13 @@ module.exports = {
             }
           }
         } else {
-          // No invite code detected - send fallback notification
-          logger.warn('No invite code detected for member, sending fallback notification.', {
+          // No tagged invite detected - don't send notification
+          logger.debug('No tagged invite detected for member, skipping notification.', {
             userTag: member.user.tag,
             userId: member.user.id
           });
-          try {
-            const embed = new EmbedBuilder()
-              .setColor(config.baseEmbedColor)
-              .setTitle('👤 New Member Joined')
-              .setDescription(`${member.displayName} (${member.user.username}) joined the server, but the invite source could not be determined.`)
-              .addFields(
-                { name: 'Member', value: `${member.displayName} (${member.user.username})`, inline: true },
-                { name: 'Account Created', value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true }
-              )
-              .setThumbnail(member.user.displayAvatarURL())
-              .setTimestamp();
-
-            logger.debug('Attempting to send fallback notification to channel.', {
-              channelId: notificationChannel.id,
-              channelName: notificationChannel.name
-            });
-            
-            const sentMessage = await notificationChannel.send({ embeds: [embed] });
-            logger.info('Sent fallback invite notification for member.', {
-              userTag: member.user.tag,
-              messageId: sentMessage.id
-            });
-          } catch (sendError) {
-            logger.error('Failed to send fallback notification.', {
-              err: sendError,
-              channelId: notificationChannel.id,
-              channelName: notificationChannel.name,
-              guildId: member.guild.id
-            });
-          }
         }
+        
       } finally {
         // Release the lock
         resolveLock();
