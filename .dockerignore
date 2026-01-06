@@ -141,3 +141,15 @@ jest.config.*
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Build artifacts
+*.map
+*.min.js
+build/
+dist/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/

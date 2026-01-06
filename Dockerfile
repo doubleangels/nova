@@ -1,8 +1,8 @@
 # Dockerfile for Nova Bot
 # Multi-stage build for optimized image size and security
 
-# Use specific Node.js version for reproducibility
-FROM node:24.1.0 AS base
+# Use specific Node.js slim version for smaller image size
+FROM node:24.1.0-slim AS base
 
 # Set environment variables early for better caching
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -70,9 +70,11 @@ RUN apt-get update && \
 # Copy node_modules from builder stage (before app files for better caching)
 COPY --from=builder --chown=discordbot:nodejs /app/node_modules ./node_modules
 
-# Copy application files and entrypoint script together
+# Copy entrypoint script first (changes less frequently than app code)
+COPY --chown=discordbot:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh
+
+# Copy application files (this layer changes most frequently)
 COPY --chown=discordbot:nodejs . .
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Set permissions and create data directory in a single layer
 RUN chmod +x /app/docker-entrypoint.sh && \
