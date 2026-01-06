@@ -13,9 +13,6 @@
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs');
-const requireDefault = (m) => (require(m).default || require(m));
-const Keyv = requireDefault('keyv');
-const KeyvSqlite = requireDefault('@keyv/sqlite');
 const Database = require('better-sqlite3');
 
 // Ensure data directory exists
@@ -37,93 +34,134 @@ if (!fs.existsSync(sqlitePath)) {
   process.exit(1);
 }
 
-// Initialize Keyv for reminder storage (same namespace as reminderUtils.js)
-const reminderKeyv = new Keyv({
-  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-    table: 'keyv',
-    busyTimeout: 10000
-  }),
-  namespace: 'nova_reminders'
-});
+// Check database access permissions
+function checkDatabaseAccess() {
+  try {
+    const stats = fs.statSync(sqlitePath);
+    const currentUid = process.getuid ? process.getuid() : null;
+    const currentGid = process.getgid ? process.getgid() : null;
+    const isRoot = currentUid === 0;
+    
+    if (isRoot && stats.uid !== 0) {
+      console.error('⚠️  Running as root, but database is owned by another user.');
+      console.error(`   Database owner: uid ${stats.uid}, gid ${stats.gid}`);
+      console.error('');
+      console.error('Please run this script as the discordbot user:');
+      console.error('   gosu discordbot node remove-discadia-reminders.js');
+      console.error('');
+      process.exit(1);
+    }
+    
+    // Try to access the file
+    fs.accessSync(sqlitePath, fs.constants.R_OK | fs.constants.W_OK);
+    return true;
+  } catch (error) {
+    console.error(`❌ Cannot access database file: ${error.message}`);
+    console.error(`   File: ${sqlitePath}`);
+    console.error('');
+    console.error('Please check file permissions and ownership.');
+    process.exit(1);
+  }
+}
 
 async function removeDiscadiaReminders() {
   try {
     console.log('Starting Discadia reminder cleanup...\n');
-
-    // Get all Discadia reminder IDs from the list
-    const discadiaListKey = 'reminders:discadia:list';
-    const discadiaIds = await reminderKeyv.get(discadiaListKey) || [];
     
-    console.log(`Found ${discadiaIds.length} Discadia reminder ID(s) in list.`);
-
-    let deletedReminderCount = 0;
-    let deletedListCount = 0;
-
-    // Delete all individual reminder entries
-    for (const reminderId of discadiaIds) {
-      const reminderKey = `reminder:${reminderId}`;
-      const reminder = await reminderKeyv.get(reminderKey);
-      
-      if (reminder) {
-        const deleted = await reminderKeyv.delete(reminderKey);
-        if (deleted) {
-          deletedReminderCount++;
-          console.log(`  Deleted reminder: ${reminderId}`);
-        }
-      }
-    }
-
-    // Delete the list itself
-    const listDeleted = await reminderKeyv.delete(discadiaListKey);
-    if (listDeleted) {
-      deletedListCount++;
-      console.log(`\nDeleted reminders:discadia:list`);
-    }
-
-    // Also check for any orphaned reminders with type 'discadia' that might not be in the list
-    // Use direct SQL query for this to be thorough
-    const db = new Database(sqlitePath, { readonly: false });
+    // Check database access
+    checkDatabaseAccess();
     
-    // Get all keys in nova_reminders namespace
+    // Use direct SQL queries to find and delete all Discadia-related entries
+    // This works regardless of namespace (main or nova_reminders)
+    let db;
+    try {
+      db = new Database(sqlitePath, { readonly: false });
+    } catch (error) {
+      console.error(`❌ Failed to open database: ${error.message}`);
+      console.error('');
+      console.error('If running in Docker, try:');
+      console.error('   gosu discordbot node remove-discadia-reminders.js');
+      process.exit(1);
+    }
+    
+    let deletedCount = 0;
+    let deletedKeys = [];
+    
+    // Find all keys that contain 'discadia' (case-insensitive)
+    const allKeys = db.prepare(`
+      SELECT key, value 
+      FROM keyv 
+      WHERE LOWER(key) LIKE '%discadia%'
+    `).all();
+    
+    console.log(`Found ${allKeys.length} key(s) containing 'discadia'.\n`);
+    
+    // Also check for reminder entries with type 'discadia' in their value
     const allReminderKeys = db.prepare(`
       SELECT key, value 
       FROM keyv 
-      WHERE key LIKE 'nova_reminders:reminder:%'
+      WHERE key LIKE '%:reminder:%' 
+         OR key LIKE '%reminders:%'
     `).all();
-
-    let orphanedCount = 0;
+    
+    let discadiaReminders = [];
     for (const row of allReminderKeys) {
       try {
         const parsed = JSON.parse(row.value);
         const value = parsed?.value || parsed;
         
         if (value && typeof value === 'object' && value.type === 'discadia') {
-          const deleted = await reminderKeyv.delete(row.key.replace('nova_reminders:', ''));
-          if (deleted) {
-            orphanedCount++;
-            console.log(`  Deleted orphaned reminder: ${row.key}`);
-          }
+          discadiaReminders.push(row.key);
         }
       } catch (e) {
         // Skip if value can't be parsed
       }
     }
     
+    if (discadiaReminders.length > 0) {
+      console.log(`Found ${discadiaReminders.length} reminder entry/entries with type 'discadia'.\n`);
+    }
+    
+    // Delete all keys containing 'discadia' in the key name
+    for (const row of allKeys) {
+      const deleteStmt = db.prepare('DELETE FROM keyv WHERE key = ?');
+      const result = deleteStmt.run(row.key);
+      if (result.changes > 0) {
+        deletedCount++;
+        deletedKeys.push(row.key);
+        console.log(`  ✓ Deleted: ${row.key}`);
+      }
+    }
+    
+    // Delete reminder entries with type 'discadia' in the value
+    for (const key of discadiaReminders) {
+      // Check if we already deleted it
+      if (!deletedKeys.includes(key)) {
+        const deleteStmt = db.prepare('DELETE FROM keyv WHERE key = ?');
+        const result = deleteStmt.run(key);
+        if (result.changes > 0) {
+          deletedCount++;
+          deletedKeys.push(key);
+          console.log(`  ✓ Deleted: ${key} (type: discadia)`);
+        }
+      }
+    }
+    
     db.close();
-
-    // Disconnect Keyv
-    await reminderKeyv.disconnect();
 
     console.log('\n' + '='.repeat(50));
     console.log('Cleanup Summary:');
-    console.log(`  Reminder entries deleted: ${deletedReminderCount}`);
-    console.log(`  Orphaned reminders deleted: ${orphanedCount}`);
-    console.log(`  List entry deleted: ${deletedListCount > 0 ? 'Yes' : 'No'}`);
-    console.log(`  Total items removed: ${deletedReminderCount + orphanedCount + deletedListCount}`);
+    console.log(`  Total keys deleted: ${deletedCount}`);
+    if (deletedKeys.length > 0) {
+      console.log(`  Deleted keys:`);
+      deletedKeys.forEach(key => {
+        console.log(`    - ${key}`);
+      });
+    }
     console.log('='.repeat(50));
     
-    if (deletedReminderCount === 0 && orphanedCount === 0 && deletedListCount === 0) {
-      console.log('\nNo Discadia reminders found in the database.');
+    if (deletedCount === 0) {
+      console.log('\n⚠️  No Discadia reminders found in the database.');
     } else {
       console.log('\n✅ Discadia reminder cleanup completed successfully!');
     }
