@@ -105,7 +105,7 @@ Ensure your Bitwarden Secrets Manager access token is configured for the contain
 
 - **Invite Tracking**: Monitor and tag invite codes with custom names, receive notifications when members join via specific invites
 - **Role Management**: Assign custom roles with automatic permission management
-- **Reminder System**: Automated reminders for Disboard, Discadia, and Reddit promotions
+- **Reminder System**: Automated reminders for Disboard and Reddit promotions
 - **Mute Mode**: Automatically kick inactive users
 - **Troll Mode**: Kick new accounts that don't meet age requirements
 - **Spam Mode**: Enhanced spam detection and moderation
@@ -145,7 +145,7 @@ Manage invite codes with custom tags and track member joins. Receive notificatio
 
 #### `/reminder` (Administrator Only)
 
-Configure and manage server reminders for Disboard, Discadia, and Reddit promotions.
+Configure and manage server reminders for Disboard and Reddit promotions.
 
 **Subcommands:**
 
@@ -153,7 +153,7 @@ Configure and manage server reminders for Disboard, Discadia, and Reddit promoti
   - `channel` (required): The text channel where reminders will be sent
   - `role` (required): The role to ping when reminders are sent
 - **`status`**: Check the current reminder configuration and status
-  - Shows next scheduled bump times for Disboard and Discadia
+  - Shows next scheduled bump time for Disboard
   - Shows next scheduled promotion time for Reddit
 
 #### `/promote` (Administrator Only)
@@ -274,7 +274,6 @@ Fix reminder data in the database for various reminder types.
 
 - **`disboard`**: Fix Disboard bump reminder data (reschedules for 2 hours from now)
 - **`reddit`**: Fix Reddit promotion reminder data (reschedules for 24 hours from now)
-- **`discadia`**: Fix Discadia bump reminder data (reschedules for 24 hours from now)
 
 **Note:** Reminder configuration must be set up using `/reminder setup` before using this command.
 

@@ -80,7 +80,7 @@ module.exports = {
 
       await processUserMessage(message);
       
-      // Check for bump messages (both Disboard with embeds and Discadia without embeds)
+      // Check for bump messages (Disboard with embeds)
       await checkForBumpMessages(message);
       
       logger.debug('Processed message from user in channel.', {
@@ -177,20 +177,16 @@ async function processUserMessage(message) {
 
 /**
  * Checks for bump messages and schedules reminders
- * Supports both Disboard (embed) and Discadia (text, no embed) bump messages
+ * Supports Disboard (embed) bump messages
  * @param {Message} message - The message to check
  * @returns {Promise<void>}
  */
 async function checkForBumpMessages(message) {
-  // Get message content - always try to fetch for bot messages if content is missing
-  // Sometimes Discord.js doesn't populate content immediately for interaction/webhook messages
-  let messageContent = message.content;
-  
-      logger.debug("Checking message for bump pattern.", {
+  logger.debug("Checking message for bump pattern.", {
     author: message.author?.tag,
     hasEmbeds: message.embeds?.length > 0,
     embedCount: message.embeds?.length || 0,
-    content: messageContent?.replace(/\n/g, ' ') || "No Content",
+    content: message.content?.replace(/\n/g, ' ') || "No Content",
     hasWebhook: !!message.webhookId,
     isInteraction: !!message.interaction,
     isPartial: message.partial
@@ -246,65 +242,6 @@ async function checkForBumpMessages(message) {
         hasWebhook: !!message.webhookId,
         isInteraction: !!message.interaction
       });
-    }
-    
-    // Check for Discadia bump (text content with "has been successfully bumped!")
-    // Check ALL messages for the pattern, regardless of sender
-    const discadiaBumpPattern = /has been successfully bumped!/i;
-    
-    // Always check message content for Discadia pattern
-    let contentToCheck = messageContent;
-    let embedsToCheck = message.embeds;
-    
-    // For webhook/interaction messages, fetch to ensure we have latest content
-    if (message.partial || message.webhookId || message.interaction) {
-      try {
-        const fetchedMessage = await message.fetch();
-        if (fetchedMessage.content) {
-          contentToCheck = fetchedMessage.content;
-          messageContent = fetchedMessage.content;
-        }
-        if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
-          embedsToCheck = fetchedMessage.embeds;
-        }
-        logger.debug("Fetched message for Discadia check.", {
-          label: "messageCreate.js",
-          messageId: message.id,
-          contentLength: contentToCheck?.length || 0,
-          embedCount: embedsToCheck?.length || 0,
-          author: message.author?.tag
-        });
-      } catch (fetchError) {
-        logger.debug("Could not fetch message for Discadia check.", {
-          label: "messageCreate.js",
-          error: fetchError.message,
-          messageId: message.id
-        });
-      }
-    }
-    
-    // Check message content for Discadia pattern
-    if (contentToCheck && contentToCheck.trim().length > 0 && discadiaBumpPattern.test(contentToCheck)) {
-      logger.info("Discadia bump detected in content, scheduling reminder.");
-      await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
-      logger.debug("Bump reminder scheduled for 24 hours.");
-      return;
-    }
-    
-    // Check embeds for Discadia pattern (some Discadia messages might have embeds)
-    if (embedsToCheck && embedsToCheck.length > 0) {
-      const discadiaEmbed = embedsToCheck.find(embed => 
-        (embed.description && discadiaBumpPattern.test(embed.description)) ||
-        (embed.title && discadiaBumpPattern.test(embed.title)) ||
-        (embed.footer?.text && discadiaBumpPattern.test(embed.footer.text))
-      );
-      
-      if (discadiaEmbed) {
-        logger.info("Discadia bump detected in embed, scheduling reminder.");
-        await handleReminder(message, 86400000, 'discadia'); // 24 hours in milliseconds
-        logger.debug("Bump reminder scheduled for 24 hours.");
-        return;
-      }
     }
   } catch (error) {
     logger.error("Failed to process bump message.", {

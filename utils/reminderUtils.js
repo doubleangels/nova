@@ -69,7 +69,7 @@ async function removeReminderId(type, reminderId) {
 
 /**
  * Retrieves the latest reminder data for a specific type
- * @param {string} type - The type of reminder ('bump', 'discadia', or 'promote')
+ * @param {string} type - The type of reminder ('bump' or 'promote')
  * @returns {Promise<{reminder_id: string, remind_at: Date, type: string}|null>} The latest reminder data or null if none found
  */
 async function getLatestReminderData(type) {
@@ -152,7 +152,7 @@ async function getLatestReminderData(type) {
  * Handles the creation and scheduling of a reminder
  * @param {Message|Object} message - The Discord message that triggered the reminder, or an object with a client property
  * @param {number} delay - The delay in milliseconds before the reminder
- * @param {string} [type='bump'] - The type of reminder ('bump', 'discadia', or 'promote')
+ * @param {string} [type='bump'] - The type of reminder ('bump' or 'promote')
  * @param {boolean} [skipConfirmation=false] - If true, skip sending the confirmation message to the channel
  * @returns {Promise<void>}
  * @throws {Error} If reminder creation fails or configuration is missing
@@ -317,8 +317,6 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         let confirmationMessage;
         if (type === 'promote') {
           confirmationMessage = `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`;
-        } else if (type === 'discadia') {
-          confirmationMessage = `Thanks for bumping with Discadia! I'll remind you again <t:${unixTimestamp}:R>.`;
         } else {
           confirmationMessage = `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
         }
@@ -348,8 +346,6 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         let reminderMessage;
         if (type === 'promote') {
           reminderMessage = `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`;
-        } else if (type === 'discadia') {
-          reminderMessage = `🔔 <@&${reminderRole}> Time to bump the server with Discadia! Use \`/bump\` to help us grow!`;
         } else {
           reminderMessage = `🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`;
         }
@@ -406,22 +402,18 @@ async function rescheduleReminder(client) {
     
     // Get all reminder IDs to check what's in the database
     const bumpIds = await getReminderIds('bump');
-    const discadiaIds = await getReminderIds('discadia');
     const promoteIds = await getReminderIds('promote');
     
     logger.info('Found reminder IDs in database.', {
       bumpCount: bumpIds.length,
-      discadiaCount: discadiaIds.length,
       promoteCount: promoteIds.length,
       bumpIds: bumpIds,
-      discadiaIds: discadiaIds,
       promoteIds: promoteIds
     });
     
     // Clean up expired reminders
     const now = dayjs();
     let expiredBumpCount = 0;
-    let expiredDiscadiaCount = 0;
     let expiredPromoteCount = 0;
     
     // Clean up expired bump reminders
@@ -464,50 +456,6 @@ async function rescheduleReminder(client) {
       await reminderKeyv.delete(`reminder:${id}`);
       await removeReminderId('bump', id);
       logger.debug('Cleaned up bump reminder.', {
-        reminderId: id
-      });
-    }
-    
-    // Clean up expired discadia reminders
-    // Collect IDs to remove first, then remove them all at once to avoid modifying list while iterating
-    const discadiaIdsToRemove = [];
-    for (const id of discadiaIds) {
-      const reminder = await reminderKeyv.get(`reminder:${id}`);
-      if (reminder && reminder.remind_at) {
-        const remindAt = dayjs(reminder.remind_at);
-        
-        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
-          // Expired reminder, mark for cleanup
-          discadiaIdsToRemove.push(id);
-          expiredDiscadiaCount++;
-          logger.debug('Marked expired discadia reminder for cleanup.', {
-            reminderId: id,
-            scheduledFor: remindAt.toISOString()
-          });
-        } else {
-          logger.debug('Discadia reminder is active.', {
-            reminderId: id, 
-            reminder_id: reminder.reminder_id,
-            remind_at: remindAt.toISOString(),
-            type: reminder.type
-          });
-        }
-      } else {
-        // Invalid reminder data, mark for cleanup
-        discadiaIdsToRemove.push(id);
-        expiredDiscadiaCount++;
-        logger.debug('Marked invalid discadia reminder for cleanup.', {
-          reminderId: id,
-          reminder: reminder
-        });
-      }
-    }
-    
-    // Remove all expired/invalid discadia reminders at once
-    for (const id of discadiaIdsToRemove) {
-      await reminderKeyv.delete(`reminder:${id}`);
-      await removeReminderId('discadia', id);
-      logger.debug('Cleaned up discadia reminder.', {
         reminderId: id
       });
     }
@@ -556,30 +504,26 @@ async function rescheduleReminder(client) {
       });
     }
     
-    if (expiredBumpCount > 0 || expiredDiscadiaCount > 0 || expiredPromoteCount > 0) {
+    if (expiredBumpCount > 0 || expiredPromoteCount > 0) {
       logger.info('Cleaned up expired reminders.', {
         expiredBumpCount: expiredBumpCount,
-        expiredDiscadiaCount: expiredDiscadiaCount,
         expiredPromoteCount: expiredPromoteCount
       });
     }
 
-    const [bumpReminder, discadiaReminder, promoteReminder] = await Promise.all([
+    const [bumpReminder, promoteReminder] = await Promise.all([
       getLatestReminderData('bump'),
-      getLatestReminderData('discadia'),
       getLatestReminderData('promote')
     ]);
 
     logger.info("Latest reminder data retrieved:", {
       hasBumpReminder: !!bumpReminder,
-      hasDiscadiaReminder: !!discadiaReminder,
       hasPromoteReminder: !!promoteReminder,
       bumpReminder: bumpReminder ? { id: bumpReminder.reminder_id, remind_at: bumpReminder.remind_at } : null,
-      discadiaReminder: discadiaReminder ? { id: discadiaReminder.reminder_id, remind_at: discadiaReminder.remind_at } : null,
       promoteReminder: promoteReminder ? { id: promoteReminder.reminder_id, remind_at: promoteReminder.remind_at } : null
     });
 
-    if (!bumpReminder && !discadiaReminder && !promoteReminder) {
+    if (!bumpReminder && !promoteReminder) {
       logger.warn("No active reminders found for rescheduling. All reminders may have expired or none were stored.");
       return;
     }
@@ -637,52 +581,6 @@ async function rescheduleReminder(client) {
       } else {
         logger.warn("Bump reminder is in the past, skipping reschedule:", {
           reminder_id: bumpReminder.reminder_id,
-          scheduledTime: scheduledTime.toISOString(),
-          now: now.toISOString(),
-          delayMs: delay
-        });
-      }
-    }
-
-    if (discadiaReminder) {
-      const scheduledTime = dayjs(discadiaReminder.remind_at);
-      const now = dayjs();
-      const delay = scheduledTime.diff(now, 'millisecond');
-      
-      logger.info("Processing discadia reminder for rescheduling:", {
-        reminder_id: discadiaReminder.reminder_id,
-        scheduledTime: scheduledTime.toISOString(),
-        now: now.toISOString(),
-        delayMs: delay,
-        delayMinutes: Math.round(delay / 1000 / 60)
-      });
-      
-      if (delay > 0) {
-        setTimeout(async () => {
-          try {
-            await channel.send(`🔔 <@&${reminderRole}> Time to bump the server with Discadia! Use \`/bump\` to help us grow!`);
-            logger.info("Sent rescheduled discadia reminder.", {
-              reminder_id: discadiaReminder.reminder_id
-            });
-
-            await reminderKeyv.delete(`reminder:${discadiaReminder.reminder_id}`);
-            await removeReminderId('discadia', discadiaReminder.reminder_id);
-          } catch (err) {
-            logger.error("Error while sending rescheduled discadia reminder", {
-              err: err
-            });
-          }
-        }, delay);
-        
-        logger.info("Successfully rescheduled discadia reminder:", {
-          reminder_id: discadiaReminder.reminder_id,
-          delayMs: delay,
-          delayMinutes: Math.round(delay / 1000 / 60),
-          scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
-        });
-      } else {
-        logger.warn("Discadia reminder is in the past, skipping reschedule:", {
-          reminder_id: discadiaReminder.reminder_id,
           scheduledTime: scheduledTime.toISOString(),
           now: now.toISOString(),
           delayMs: delay
