@@ -799,49 +799,6 @@ async function getInviteCodeToTagMap(guildId) {
   }
 }
 
-/**
- * Stores invite metadata (creation time, initial uses) for a guild
- * @param {string} guildId - The guild ID
- * @param {Object} inviteMetadata - Object mapping invite codes to their metadata {createdAt, initialUses}
- * @returns {Promise<void>}
- */
-async function setInviteMetadata(guildId, inviteMetadata) {
-  try {
-    logger.debug('Setting invite metadata for guild.', {
-      guildId: guildId
-    });
-    await keyv.set(`invite_metadata:${guildId}`, inviteMetadata);
-    logger.debug('Set invite metadata for guild successfully.', {
-      guildId: guildId
-    });
-  } catch (err) {
-    logger.error('Error occurred while setting invite metadata for guild.', {
-      err: err,
-      guildId: guildId
-    });
-  }
-}
-
-/**
- * Gets invite metadata (creation time, initial uses) for a guild
- * @param {string} guildId - The guild ID
- * @returns {Promise<Object>} Object mapping invite codes to their metadata {createdAt, initialUses}
- */
-async function getInviteMetadata(guildId) {
-  try {
-    logger.debug('Getting invite metadata for guild.', {
-      guildId: guildId
-    });
-    const value = await keyv.get(`invite_metadata:${guildId}`);
-    return value || {};
-  } catch (err) {
-    logger.error('Error occurred while getting invite metadata for guild.', {
-      err: err,
-      guildId: guildId
-    });
-    return {};
-  }
-}
 
 /**
  * Gets all invite tags from the invites namespace
@@ -1003,7 +960,5 @@ module.exports = {
   getInviteCodeToTagMap,
   rebuildCodeToTagMap,
   getAllInviteTagsData,
-  getGuildName,
-  setInviteMetadata,
-  getInviteMetadata
+  getGuildName
 };

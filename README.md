@@ -103,7 +103,7 @@ Ensure your Bitwarden Secrets Manager access token is configured for the contain
 
 ### Administrative Tools
 
-- **Invite Tracking**: Monitor and tag invite codes with custom names, receive notifications when members join via specific invites
+- **Invite Tracking**: Monitor and tag invite codes with custom names, receive notifications when members join via tagged invites (only tagged invites are tracked)
 - **Role Management**: Assign custom roles with automatic permission management
 - **Reminder System**: Automated reminders for Disboard and Reddit promotions
 - **Mute Mode**: Automatically kick inactive users
@@ -125,7 +125,7 @@ Ensure your Bitwarden Secrets Manager access token is configured for the contain
 
 #### `/invite` (Administrator Only)
 
-Manage invite codes with custom tags and track member joins. Receive notifications when members join via specific invites.
+Manage invite codes with custom tags and track member joins. Receive notifications when members join via tagged invites. **Note:** Only tagged invites are tracked and will trigger notifications.
 
 **Subcommands:**
 
