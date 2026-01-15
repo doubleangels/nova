@@ -199,25 +199,32 @@ module.exports = {
     
     await setInviteTag(tagName, inviteData);
     
-    // Validate that the invite exists in the server
-    try {
-      const invites = await interaction.guild.invites.fetch();
-      const inviteExists = invites.some(inv => inv.code.toLowerCase() === cleanCode.toLowerCase());
-      if (!inviteExists) {
-        const embed = new EmbedBuilder()
-          .setColor(0xFF0000)
-          .setTitle('❌ Invite Not Found')
-          .setDescription(`The invite code \`${cleanCode}\` does not exist in this server. Please verify the code is correct and the invite hasn't been deleted.`);
-        
-        await interaction.editReply({ embeds: [embed] });
-        return;
+    // Validate that the invite exists in the server (skip check for "Vanity" tag since vanity invites may not appear in the invite list)
+    if (tagName.toLowerCase() !== 'vanity') {
+      try {
+        const invites = await interaction.guild.invites.fetch();
+        const inviteExists = invites.some(inv => inv.code.toLowerCase() === cleanCode.toLowerCase());
+        if (!inviteExists) {
+          const embed = new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle('❌ Invite Not Found')
+            .setDescription(`The invite code \`${cleanCode}\` does not exist in this server. Please verify the code is correct and the invite hasn't been deleted.`);
+          
+          await interaction.editReply({ embeds: [embed] });
+          return;
+        }
+      } catch (fetchError) {
+        logger.warn('Failed to validate invite existence, proceeding anyway.', {
+          err: fetchError,
+          code: cleanCode
+        });
+        // Continue if we can't validate (e.g., no permissions)
       }
-    } catch (fetchError) {
-      logger.warn('Failed to validate invite existence, proceeding anyway.', {
-        err: fetchError,
-        code: cleanCode
+    } else {
+      logger.debug('Skipping invite existence check for Vanity tag.', {
+        code: cleanCode,
+        tagName: tagName
       });
-      // Continue if we can't validate (e.g., no permissions)
     }
     
     // Update code-to-tag mapping for quick lookups
