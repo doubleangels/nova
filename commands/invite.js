@@ -160,23 +160,24 @@ module.exports = {
     const inviteCode = interaction.options.getString('code');
     const tagName = interaction.options.getString('name');
     
-    // Validate invite code format (should be alphanumeric, typically 5-10 characters)
+    // Validate invite code format (should be alphanumeric, typically 5-10 characters, but vanity invites can be longer)
     // Remove any URL parts if user pasted full URL
     let cleanCode = inviteCode.trim();
     
     // Extract code from URL if full URL was provided
-    const urlMatch = cleanCode.match(/(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([a-zA-Z0-9]+)/i);
+    // Updated regex to handle vanity invites like discord.gg/dafrens
+    const urlMatch = cleanCode.match(/(?:discord\.(?:gg|com\/invite)|discordapp\.com\/invite)\/([a-zA-Z0-9_-]+)/i);
     if (urlMatch) {
       cleanCode = urlMatch[1];
     }
     
-    // Validate code format (alphanumeric, 5-10 characters typically)
-    const codePattern = /^[a-zA-Z0-9]{5,10}$/;
+    // Validate code format (alphanumeric, underscores, hyphens allowed; 5-25 characters to support vanity invites)
+    const codePattern = /^[a-zA-Z0-9_-]{5,25}$/;
     if (!codePattern.test(cleanCode)) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setTitle('❌ Invalid Invite Code')
-        .setDescription('Please provide a valid Discord invite code.\n\n**Examples:**\n- `xxxxx` (from discord.gg/xxxxx)\n- `https://discord.gg/xxxxx`\n- `discord.gg/xxxxx`');
+        .setDescription('Please provide a valid Discord invite code.\n\n**Examples:**\n- `xxxxx` (from discord.gg/xxxxx)\n- `https://discord.gg/xxxxx`\n- `discord.gg/xxxxx`\n- `discord.gg/dafrens` (vanity invite)');
       
       await interaction.editReply({ embeds: [embed] });
       return;
