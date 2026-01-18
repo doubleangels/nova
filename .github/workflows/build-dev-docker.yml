@@ -27,7 +27,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          fetch-depth: 0 # Full history for better cache hashing
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -63,8 +63,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=nova-dev
+          cache-from: |
+            type=gha,scope=nova-dev
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/nova:dev
           cache-to: type=gha,mode=max,scope=nova-dev
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
           provenance: false
           sbom: false
 
@@ -124,17 +128,17 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number
             });
-            
+
             if (pr.mergeable === false) {
               core.setFailed(`PR #${context.issue.number} is not mergeable. State: ${pr.mergeable_state}`);
               return;
             }
-            
+
             if (pr.mergeable_state === 'dirty' || pr.mergeable_state === 'blocked') {
               core.setFailed(`PR #${context.issue.number} cannot be merged. State: ${pr.mergeable_state}`);
               return;
             }
-            
+
             core.info(`PR #${context.issue.number} is mergeable. State: ${pr.mergeable_state}`);
             core.setOutput('mergeable', 'true');
 

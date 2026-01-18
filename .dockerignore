@@ -153,3 +153,17 @@ dist/
 .gitlab-ci.yml
 .travis.yml
 .circleci/
+
+# Additional optimization - exclude more unnecessary files
+*.md
+LICENSE
+.editorconfig
+.eslintrc*
+.prettierrc*
+tsconfig.json
+*.config.js
+*.config.ts
+
+# Exclude package-lock.json from build (dependencies are installed from it, but we don't need it in image)
+# Actually, keep it - it's needed for npm ci
+# package-lock.json

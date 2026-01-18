@@ -20,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          fetch-depth: 1
+          fetch-depth: 0 # Full history for better cache hashing
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -56,8 +56,12 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=nova
+          cache-from: |
+            type=gha,scope=nova
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/nova:latest
           cache-to: type=gha,mode=max,scope=nova
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
           provenance: false
           sbom: false
 
