@@ -2,6 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const NodeCache = require('node-cache');
+const dayjs = require('dayjs');
 const config = require('../config');
 
 /** @type {NodeCache} Cache for storing geocoding and timezone results */
@@ -20,14 +21,14 @@ async function getGeocodingInfo(location) {
     try {
         const cacheKey = `geocode_${location}`;
         const cachedResult = LOC_CACHE.get(cacheKey);
-        
+
         if (cachedResult) {
             logger.debug("Using cached geocoding result.", { location });
             return cachedResult;
         }
 
         await checkRateLimit('geocoding');
-        
+
         const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
             params: {
                 address: location,
@@ -42,7 +43,7 @@ async function getGeocodingInfo(location) {
 
         const result = response.data.results[0];
         LOC_CACHE.set(cacheKey, result);
-        
+
         return result;
     } catch (error) {
         logger.error("Error occurred while getting geocoding info.", {
@@ -68,15 +69,15 @@ async function getTimezoneInfo(lat, lng) {
 
         const cacheKey = `timezone_${lat}_${lng}`;
         const cachedResult = LOC_CACHE.get(cacheKey);
-        
+
         if (cachedResult) {
             logger.debug("Using cached timezone result.", { lat, lng });
             return cachedResult;
         }
 
         await checkRateLimit('timezone');
-        
-        const timestamp = Math.floor(Date.now() / 1000);
+
+        const timestamp = Math.floor(dayjs().valueOf() / 1000);
         const response = await axios.get('https://maps.googleapis.com/maps/api/timezone/json', {
             params: {
                 location: `${lat},${lng}`,
@@ -98,7 +99,7 @@ async function getTimezoneInfo(lat, lng) {
         };
 
         LOC_CACHE.set(cacheKey, result);
-        
+
         return result;
     } catch (error) {
         logger.error("Error occurred while getting timezone info.", {
@@ -117,20 +118,20 @@ async function getTimezoneInfo(lat, lng) {
  * @returns {Promise<void>}
  */
 async function checkRateLimit(type) {
-    const now = Date.now();
+    const now = dayjs().valueOf();
     const windowStart = now - 60000;
-    
+
     if (!LOC_RATE_LIMIT_COUNTS.has(type)) {
         LOC_RATE_LIMIT_COUNTS.set(type, []);
     }
-    
+
     const timestamps = LOC_RATE_LIMIT_COUNTS.get(type);
     const recentRequests = timestamps.filter(timestamp => timestamp > windowStart);
-    
+
     if (recentRequests.length >= 50) {
         throw new Error("Rate limit exceeded. Please try again later.");
     }
-    
+
     timestamps.push(now);
 }
 
@@ -153,9 +154,9 @@ async function getUtcOffset(location) {
         const geocodingInfo = await getGeocodingInfo(location);
         const { lat, lng } = geocodingInfo.geometry.location;
         const timezoneInfo = await getTimezoneInfo(lat, lng);
-        
+
         const totalOffset = secondsToHours(timezoneInfo.rawOffset + timezoneInfo.dstOffset);
-        
+
         return {
             offset: totalOffset,
             timeZoneName: timezoneInfo.timeZoneName,

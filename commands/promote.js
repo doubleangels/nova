@@ -41,13 +41,13 @@ let tokenExpiry = null;
  */
 async function getRedditAccessToken() {
   // Return cached token if still valid (with 5 minute buffer)
-  if (accessToken && tokenExpiry && Date.now() < tokenExpiry - 300000) {
+  if (accessToken && tokenExpiry && dayjs().valueOf() < tokenExpiry - 300000) {
     return accessToken;
   }
 
   try {
     const auth = Buffer.from(`${config.redditClientId}:${config.redditClientSecret}`).toString('base64');
-    
+
     const response = await axios.post(
       `${REDDIT_OAUTH_BASE}/access_token`,
       new URLSearchParams({
@@ -67,7 +67,7 @@ async function getRedditAccessToken() {
     if (response.data && response.data.access_token) {
       accessToken = response.data.access_token;
       // Reddit tokens typically last 1 hour, cache for 55 minutes
-      tokenExpiry = Date.now() + (response.data.expires_in * 1000 || 3600000);
+      tokenExpiry = dayjs().valueOf() + (response.data.expires_in * 1000 || 3600000);
       logger.debug('Successfully obtained Reddit OAuth token');
       return accessToken;
     } else {
@@ -92,7 +92,7 @@ async function getRedditAccessToken() {
  */
 async function redditApiRequest(method, endpoint, data = null) {
   const token = await getRedditAccessToken();
-  
+
   const config = {
     method,
     url: `${REDDIT_API_BASE}${endpoint}`,
@@ -119,7 +119,7 @@ async function redditApiRequest(method, endpoint, data = null) {
       status: error.response?.status,
       data: error.response?.data
     });
-    
+
     // If token expired, clear cache and retry once
     if (error.response?.status === 401 && accessToken) {
       logger.debug('Token expired, clearing cache and retrying');
@@ -127,7 +127,7 @@ async function redditApiRequest(method, endpoint, data = null) {
       tokenExpiry = null;
       return redditApiRequest(method, endpoint, data);
     }
-    
+
     throw error;
   }
 }
@@ -182,8 +182,8 @@ module.exports = {
   async handlePost(interaction) {
     await interaction.deferReply();
     const promotionTitle = await getPromotionTitle();
-    logger.info("/promote command initiated:", { 
-      userId: interaction.user.id, 
+    logger.info("/promote command initiated:", {
+      userId: interaction.user.id,
       guildId: interaction.guildId,
       promotionTitle: promotionTitle,
       promotionLink: PROMOTION_LINK
@@ -193,13 +193,13 @@ module.exports = {
     if (nextPromotionTime) {
       const now = dayjs();
       const nextTime = dayjs(nextPromotionTime);
-      
-      logger.debug("Cooldown check:", { 
+
+      logger.debug("Cooldown check:", {
         now: now.toISOString(),
         nextTime: nextTime.toISOString(),
         diffHours: nextTime.diff(now, 'hour', true)
       });
-      
+
       if (now.isBefore(nextTime)) {
         const totalMinutes = nextTime.diff(now, 'minute');
         const hours = Math.floor(totalMinutes / 60);
@@ -224,7 +224,7 @@ module.exports = {
       let availableFlairs = [];
       try {
         const flairData = await redditApiRequest('GET', '/r/findaserver/api/link_flair');
-        
+
         if (flairData && Array.isArray(flairData)) {
           availableFlairs = flairData.map((flair, index) => {
             const flairInfo = {
@@ -237,7 +237,7 @@ module.exports = {
             return flairInfo;
           });
         }
-        
+
         logger.info("Available flairs for r/findaserver:", {
           flairs: availableFlairs,
           totalCount: availableFlairs.length
@@ -252,7 +252,7 @@ module.exports = {
       // Try to find a valid flair or post without one
       const targetFlairId = '2566b69c-2a68-11ec-a4f1-7a9ed949ab8e'; // 21+ Gaming Server
       const validFlair = availableFlairs.find(flair => flair.id === targetFlairId);
-      
+
       // Prepare submission data
       const submissionData = {
         title: promotionTitle,
@@ -268,29 +268,29 @@ module.exports = {
       } else {
         logger.warn("Target flair not found, posting without flair.");
       }
-      
+
       // Submit the post
       const submissionResponse = await redditApiRequest('POST', '/api/submit', submissionData);
-      
+
       // Log the full response for debugging
       logger.debug("Reddit submission response:", {
         response: JSON.stringify(submissionResponse, null, 2)
       });
-      
+
       // Reddit API returns JSON with nested structure
       let postId = null;
       let permalink = null;
-      
+
       // Check for errors first
       if (submissionResponse && submissionResponse.json) {
         if (submissionResponse.json.errors && submissionResponse.json.errors.length > 0) {
           const errorMessages = submissionResponse.json.errors.map(e => Array.isArray(e) ? e.join(': ') : String(e)).join(', ');
           throw new Error(`Reddit API error: ${errorMessages}`);
         }
-        
+
         // Try to extract post ID and permalink from various possible response structures
         const jsonData = submissionResponse.json;
-        
+
         // Standard structure: json.data.id and json.data.permalink
         if (jsonData.data) {
           if (jsonData.data.id) {
@@ -316,7 +316,7 @@ module.exports = {
             postId = jsonData.data.name.replace('t3_', '');
           }
         }
-        
+
         // Alternative structure: json.data might be a string (JSON string)
         if (!postId && typeof jsonData.data === 'string') {
           try {
@@ -344,7 +344,7 @@ module.exports = {
           }
         }
       }
-      
+
       // If still no postId, check if response structure is different
       if (!postId && submissionResponse) {
         // Check if response is directly the data object
@@ -367,7 +367,7 @@ module.exports = {
           postId = submissionResponse.name.replace('t3_', '');
         }
       }
-      
+
       if (!postId || !permalink) {
         logger.error("Failed to parse Reddit response:", {
           response: JSON.stringify(submissionResponse, null, 2),
@@ -386,7 +386,7 @@ module.exports = {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
-      
+
       const embed = new EmbedBuilder()
         .setColor(0xFF4500)
         .setTitle('🎉 Server Promotion Successful!')
@@ -400,7 +400,7 @@ module.exports = {
     } catch (error) {
       logger.error("Error occurred while posting to r/findaserver.", { err: error });
       let errorMessage = error.message || 'Unknown error';
-      
+
       // Parse Reddit API error responses
       if (error.response?.data) {
         const redditError = error.response.data;
@@ -410,7 +410,7 @@ module.exports = {
             if (errorArray.length >= 2) {
               const errorType = errorArray[0];
               const errorDetail = errorArray[1];
-              
+
               if (errorType === 'BAD_FLAIR_TEMPLATE_ID') {
                 errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs. Check the logs for available flairs.';
               } else if (errorType === 'RATELIMIT') {
@@ -455,7 +455,7 @@ module.exports = {
       } else if (errorMessage.includes('SUBREDDIT_NOTALLOWED')) {
         errorMessage = 'You are not allowed to post to this subreddit.';
       }
-      
+
       await interaction.editReply({
         content: `⚠️ Failed to post to r/findaserver: ${errorMessage}`,
         flags: MessageFlags.Ephemeral
@@ -475,7 +475,7 @@ module.exports = {
     });
 
     let errorMessage = "⚠️ An unexpected error occurred while promoting the post.";
-    
+
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to communicate with Reddit API.";
     } else if (error.message === "API_RATE_LIMIT") {
@@ -503,43 +503,41 @@ module.exports = {
     try {
       // Clean up expired and invalid reminders
       const reminderIds = await reminderKeyv.get('reminders:promote:list') || [];
-      const now = new Date();
+      const now = dayjs();
       const idsToRemove = [];
-      
+
       // Collect all expired and invalid reminder IDs first
       for (const id of reminderIds) {
         const reminder = await reminderKeyv.get(`reminder:${id}`);
-        
+
         if (!reminder) {
           // Reminder data missing, mark for cleanup
           idsToRemove.push(id);
           continue;
         }
-        
+
         if (!reminder.remind_at) {
           // Invalid reminder data (missing remind_at), mark for cleanup
           idsToRemove.push(id);
           continue;
         }
-        
+
         // Handle both Date objects and ISO strings
-        const remindAt = reminder.remind_at instanceof Date 
-          ? reminder.remind_at 
-          : new Date(reminder.remind_at);
-        
+        const remindAt = dayjs(reminder.remind_at);
+
         // Check if the date is valid
-        if (isNaN(remindAt.getTime())) {
+        if (!remindAt.isValid()) {
           // Invalid date, mark for cleanup
           idsToRemove.push(id);
           continue;
         }
-        
+
         // Mark expired reminders for cleanup
         if (remindAt <= now) {
           idsToRemove.push(id);
         }
       }
-      
+
       // Remove all expired/invalid reminders and update the list once
       if (idsToRemove.length > 0) {
         for (const id of idsToRemove) {
@@ -552,7 +550,7 @@ module.exports = {
 
       // Get latest reminder
       const latestReminder = await getLatestReminderData('promote');
-      
+
       if (latestReminder && latestReminder.remind_at) {
         logger.debug("Found next promotion time:", {
           remind_at: latestReminder.remind_at,

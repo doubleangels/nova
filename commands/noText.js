@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
 const path = require('path');
+const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 const config = require('../config');
@@ -93,11 +94,11 @@ module.exports = {
           color: config.baseEmbedColor,
           title: '🚫 No Text Channel Configuration',
           description: `Channel ${channel} has been configured to only allow GIFs and stickers.`,
-          timestamp: new Date().toISOString()
+          timestamp: dayjs().toISOString()
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("/notext command completed successfully.", { 
+        logger.info("/notext command completed successfully.", {
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,
@@ -127,11 +128,11 @@ module.exports = {
           color: config.baseEmbedColor,
           title: '🚫 No Text Channel Configuration',
           description: `Channel ${channel} is no longer restricted to GIFs and stickers.`,
-          timestamp: new Date().toISOString()
+          timestamp: dayjs().toISOString()
         };
 
         await interaction.reply({ embeds: [embed] });
-        logger.info("/notext command completed successfully.", { 
+        logger.info("/notext command completed successfully.", {
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,

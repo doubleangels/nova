@@ -3,6 +3,7 @@ const Keyv = requireDefault('keyv');
 const KeyvSqlite = requireDefault('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
+const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 
 // Ensure data directory exists with proper permissions
@@ -336,7 +337,7 @@ async function addMuteModeUser(userId, username) {
     const userData = {
       userId,
       username,
-      joinTime: new Date().toISOString()
+      joinTime: dayjs().toISOString()
     };
     await keyv.set(`mute_mode:${userId}`, userData);
     await addToUserList('mute_mode_users', userId);
@@ -413,7 +414,7 @@ async function getUserJoinTime(userId) {
   try {
     const userData = await keyv.get(`mute_mode:${userId}`);
     if (userData && userData.joinTime) {
-      return new Date(userData.joinTime);
+      return dayjs(userData.joinTime).toDate();
     }
     return null;
   } catch (error) {
@@ -434,7 +435,7 @@ async function getUserJoinTime(userId) {
  */
 async function addSpamModeJoinTime(userId, username, joinTime) {
   try {
-    const timeToSet = joinTime instanceof Date ? joinTime.toISOString() : new Date(joinTime).toISOString();
+    const timeToSet = dayjs(joinTime).toISOString();
     
     const userData = {
       userId,
@@ -465,7 +466,7 @@ async function getSpamModeJoinTime(userId) {
   try {
     const userData = await keyv.get(`spam_mode:${userId}`);
     if (userData && userData.joinTime) {
-      return new Date(userData.joinTime);
+      return dayjs(userData.joinTime).toDate();
     }
     return null;
   } catch (error) {
@@ -517,9 +518,9 @@ async function cleanupOldTrackingUsers(client = null) {
     
     const spamWindowMs = spamWindowHours * 60 * 60 * 1000;
     const muteWindowMs = muteWindowHours * 60 * 60 * 1000;
-    const now = Date.now();
-    const spamCutoffTime = new Date(now - spamWindowMs);
-    const muteCutoffTime = new Date(now - muteWindowMs);
+    const now = dayjs();
+    const spamCutoffTime = now.subtract(spamWindowMs, 'millisecond').toDate();
+    const muteCutoffTime = now.subtract(muteWindowMs, 'millisecond').toDate();
     
     let spamModeRemoved = 0;
     let muteModeRemoved = 0;
@@ -531,7 +532,7 @@ async function cleanupOldTrackingUsers(client = null) {
     for (const userId of spamUserIds) {
       const userData = await keyv.get(`spam_mode:${userId}`);
       if (userData && userData.joinTime) {
-        const joinTime = new Date(userData.joinTime);
+        const joinTime = dayjs(userData.joinTime).toDate();
         if (joinTime < spamCutoffTime) {
           await keyv.delete(`spam_mode:${userId}`);
           spamModeRemoved++;
@@ -552,7 +553,7 @@ async function cleanupOldTrackingUsers(client = null) {
     for (const userId of muteUserIds) {
       const userData = await keyv.get(`mute_mode:${userId}`);
       if (userData && userData.joinTime) {
-        const joinTime = new Date(userData.joinTime);
+        const joinTime = dayjs(userData.joinTime).toDate();
         let shouldRemove = joinTime < muteCutoffTime;
         
         // If client is provided, also check if user is still in guild

@@ -1,4 +1,5 @@
 const path = require('path');
+const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');
 const { Events } = require('discord.js');
@@ -62,7 +63,7 @@ module.exports = {
       });
 
       let errorMessage = "⚠️ An unexpected error occurred while processing the reaction.";
-      
+
       if (error.message === "⚠️ Failed to fetch reaction data.") {
         errorMessage = "⚠️ Failed to fetch reaction data.";
       } else if (error.message === "⚠️ Invalid translation flag provided.") {
@@ -82,7 +83,7 @@ module.exports = {
       } else if (error.message === "⚠️ Failed to send temporary message.") {
         errorMessage = "⚠️ Failed to send temporary message.";
       }
-      
+
       throw new Error(errorMessage);
     }
   }
@@ -97,126 +98,126 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function handleTranslationRequest(reaction, user) {
-    try {
-        logger.debug('Handling translation request.', {
-            flagEmoji: reaction.emoji.name,
-            userId: user.id,
-            userTag: user.tag,
-            messageId: reaction.message.id
-        });
+  try {
+    logger.debug('Handling translation request.', {
+      flagEmoji: reaction.emoji.name,
+      userId: user.id,
+      userTag: user.tag,
+      messageId: reaction.message.id
+    });
 
-        const flagEmoji = reaction.emoji.name;
-        const languageInfo = getLanguageInfo(flagEmoji);
-        if (!languageInfo) {
-            logger.warn('Invalid translation flag provided.', { flagEmoji });
-            throw new Error("⚠️ Invalid translation flag provided.");
-        }
-
-        const message = reaction.message;
-        if (!message) {
-            logger.warn('Message not found for translation.', {
-                messageId: reaction.message?.id,
-                userId: user.id
-            });
-            throw new Error("⚠️ Message not found for translation.");
-        }
-
-        const originalText = message.content;
-        if (!originalText) {
-            logger.warn('Empty message content found for translation.', {
-                messageId: message.id,
-                userId: user.id
-            });
-            throw new Error("⚠️ No text to translate found in the message.");
-        }
-
-        logger.debug('Making translation API request.', {
-            targetLanguage: languageInfo.code,
-            textLength: originalText.length,
-            userId: user.id
-        });
-
-        const response = await axios.post(
-            `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
-            {
-                q: originalText,
-                target: languageInfo.code,
-                format: 'text'
-            }
-        );
-
-        const translatedText = response.data.data.translations[0].translatedText;
-        logger.debug('Translation API response received successfully.', {
-            targetLanguage: languageInfo.code,
-            translatedLength: translatedText.length,
-            userId: user.id
-        });
-
-        // Cache member lookup (already checked at line 45-48, but that was removed)
-        let embedColor = 0x0099ff;
-        if (message.guild) {
-            const member = message.guild.members.cache.get(user.id);
-            if (member) {
-                const highestRole = member.roles.highest;
-                if (highestRole && highestRole.color !== 0) {
-                    embedColor = highestRole.color;
-                }
-            }
-        }
-
-        const embed = {
-            color: embedColor,
-            title: `Translation to ${languageInfo.name} ${flagEmoji}`,
-            description: translatedText,
-            footer: {
-                text: `Translation requested by: ${user.tag}`
-            },
-            timestamp: new Date()
-        };
-
-        logger.debug('Sending translation response to user.', {
-            targetLanguage: languageInfo.name,
-            userId: user.id,
-            messageId: message.id
-        });
-
-        await message.reply({ embeds: [embed] });
-        
-        logger.info('Translation completed successfully.', {
-            targetLanguage: languageInfo.name,
-            userId: user.id,
-            messageId: message.id
-        });
-    } catch (error) {
-        logger.error('Error in translation request', {
-            err: error,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            responseData: error.response?.data,
-            requestUrl: error.config?.url,
-            requestMethod: error.config?.method
-        });
-        
-        try {
-            const errorMessage = error.response?.status === 403 
-                ? "⚠️ Translation API error occurred."
-                : "⚠️ Failed to translate the message.";
-            
-            logger.debug('Sending translation error response to user.', {
-                errorType: error.response?.status === 403 ? 'API_ERROR' : 'GENERAL_ERROR',
-                userId: user.id,
-                messageId: reaction.message?.id
-            });
-
-            await reaction.message.reply({
-                content: `⚠️ ${errorMessage}`,
-                allowedMentions: { repliedUser: false }
-            });
-        } catch (replyError) {
-            logger.error('Failed to send error message', {
-                err: replyError,
-                originalError: error.message
-            });
-        }
+    const flagEmoji = reaction.emoji.name;
+    const languageInfo = getLanguageInfo(flagEmoji);
+    if (!languageInfo) {
+      logger.warn('Invalid translation flag provided.', { flagEmoji });
+      throw new Error("⚠️ Invalid translation flag provided.");
     }
+
+    const message = reaction.message;
+    if (!message) {
+      logger.warn('Message not found for translation.', {
+        messageId: reaction.message?.id,
+        userId: user.id
+      });
+      throw new Error("⚠️ Message not found for translation.");
+    }
+
+    const originalText = message.content;
+    if (!originalText) {
+      logger.warn('Empty message content found for translation.', {
+        messageId: message.id,
+        userId: user.id
+      });
+      throw new Error("⚠️ No text to translate found in the message.");
+    }
+
+    logger.debug('Making translation API request.', {
+      targetLanguage: languageInfo.code,
+      textLength: originalText.length,
+      userId: user.id
+    });
+
+    const response = await axios.post(
+      `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
+      {
+        q: originalText,
+        target: languageInfo.code,
+        format: 'text'
+      }
+    );
+
+    const translatedText = response.data.data.translations[0].translatedText;
+    logger.debug('Translation API response received successfully.', {
+      targetLanguage: languageInfo.code,
+      translatedLength: translatedText.length,
+      userId: user.id
+    });
+
+    // Cache member lookup (already checked at line 45-48, but that was removed)
+    let embedColor = 0x0099ff;
+    if (message.guild) {
+      const member = message.guild.members.cache.get(user.id);
+      if (member) {
+        const highestRole = member.roles.highest;
+        if (highestRole && highestRole.color !== 0) {
+          embedColor = highestRole.color;
+        }
+      }
+    }
+
+    const embed = {
+      color: embedColor,
+      title: `Translation to ${languageInfo.name} ${flagEmoji}`,
+      description: translatedText,
+      footer: {
+        text: `Translation requested by: ${user.tag}`
+      },
+      timestamp: dayjs().toDate()
+    };
+
+    logger.debug('Sending translation response to user.', {
+      targetLanguage: languageInfo.name,
+      userId: user.id,
+      messageId: message.id
+    });
+
+    await message.reply({ embeds: [embed] });
+
+    logger.info('Translation completed successfully.', {
+      targetLanguage: languageInfo.name,
+      userId: user.id,
+      messageId: message.id
+    });
+  } catch (error) {
+    logger.error('Error in translation request', {
+      err: error,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      responseData: error.response?.data,
+      requestUrl: error.config?.url,
+      requestMethod: error.config?.method
+    });
+
+    try {
+      const errorMessage = error.response?.status === 403
+        ? "⚠️ Translation API error occurred."
+        : "⚠️ Failed to translate the message.";
+
+      logger.debug('Sending translation error response to user.', {
+        errorType: error.response?.status === 403 ? 'API_ERROR' : 'GENERAL_ERROR',
+        userId: user.id,
+        messageId: reaction.message?.id
+      });
+
+      await reaction.message.reply({
+        content: `⚠️ ${errorMessage}`,
+        allowedMentions: { repliedUser: false }
+      });
+    } catch (replyError) {
+      logger.error('Failed to send error message', {
+        err: replyError,
+        originalError: error.message
+      });
+    }
+  }
 }

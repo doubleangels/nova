@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
+const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
@@ -28,7 +29,7 @@ module.exports = {
         .setDescription('What anime do you want to search for?')
         .setRequired(true)
     ),
-  
+
   /**
    * Executes the anime search command
    * @param {CommandInteraction} interaction - The interaction that triggered the command
@@ -47,10 +48,10 @@ module.exports = {
       }
 
       await interaction.deferReply();
-      
-      logger.info("/anime command initiated.", { 
-        userId: interaction.user.id, 
-        userTag: interaction.user.tag 
+
+      logger.info("/anime command initiated.", {
+        userId: interaction.user.id,
+        userTag: interaction.user.tag
       });
 
       const titleQuery = interaction.options.getString('title');
@@ -58,14 +59,14 @@ module.exports = {
       const formattedTitle = titleQuery.trim();
 
       const animeData = await this.searchAndGetAnimeDetails(formattedTitle);
-      
+
       if (animeData) {
         const embed = this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
-        
-        logger.info("/anime command completed successfully.", { 
-          animeTitle: animeData.title, 
-          userId: interaction.user.id 
+
+        logger.info("/anime command completed successfully.", {
+          animeTitle: animeData.title,
+          userId: interaction.user.id
         });
       } else {
         logger.info("No anime results found for query.", { query: formattedTitle });
@@ -82,7 +83,7 @@ module.exports = {
       });
 
       let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
-      
+
       if (error.message === "API_ERROR") {
         errorMessage = "⚠️ Failed to communicate with MyAnimeList API. Please try again later.";
       } else if (error.message === "API_RATE_LIMIT") {
@@ -90,11 +91,11 @@ module.exports = {
       } else if (error.message === "API_NETWORK_ERROR") {
         errorMessage = "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.";
       }
-      
+
       try {
-        await interaction.editReply({ 
+        await interaction.editReply({
           content: errorMessage,
-          flags: MessageFlags.Ephemeral 
+          flags: MessageFlags.Ephemeral
         });
       } catch (followUpError) {
         logger.error("Failed to send error response for anime command.", {
@@ -102,11 +103,11 @@ module.exports = {
           originalError: error.message,
           userId: interaction.user?.id
         });
-        
-        await interaction.reply({ 
+
+        await interaction.reply({
           content: errorMessage,
-          flags: MessageFlags.Ephemeral 
-        }).catch(() => {});
+          flags: MessageFlags.Ephemeral
+        }).catch(() => { });
       }
     }
   },
@@ -120,31 +121,31 @@ module.exports = {
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
     const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1`;
-    
+
     logger.debug("Making MAL search request.", { searchUrl });
     const searchResponse = await axios.get(searchUrl, { headers });
-    
+
     if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
       logger.warn("No anime results found.", { title });
       return null;
     }
-    
+
     const animeNode = searchResponse.data.data[0].node;
     const animeId = animeNode.id;
-    
+
     const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-    
+
     logger.debug("Fetching anime details.", { animeId });
     const detailsResponse = await axios.get(detailsUrl, { headers });
-    
+
     if (detailsResponse.status !== 200) {
-      logger.error("Failed to retrieve anime details.", { 
+      logger.error("Failed to retrieve anime details.", {
         status: detailsResponse.status,
         animeId
       });
       throw new Error("API_ERROR");
     }
-    
+
     const detailsData = detailsResponse.data;
     return {
       id: animeId,
@@ -164,11 +165,11 @@ module.exports = {
    */
   createAnimeEmbed(animeData) {
     const malLink = `https://myanimelist.net/anime/${animeData.id}`;
-    const genres = animeData.genres.length > 0 
-      ? animeData.genres.map(g => g.name).join(", ") 
+    const genres = animeData.genres.length > 0
+      ? animeData.genres.map(g => g.name).join(", ")
       : "Unknown";
     const releaseDate = this.formatReleaseDate(animeData.releaseDate);
-    
+
     const embed = new EmbedBuilder()
       .setTitle(`📺 **${animeData.title}**`)
       .setDescription(`📜 **Synopsis:** ${animeData.synopsis}`)
@@ -180,11 +181,11 @@ module.exports = {
         { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
       )
       .setFooter({ text: "Powered by MyAnimeList API" });
-    
+
     if (animeData.imageUrl) {
       embed.setThumbnail(animeData.imageUrl);
     }
-    
+
     return embed;
   },
 
@@ -197,7 +198,7 @@ module.exports = {
     if (!releaseDate || releaseDate === 'Unknown') {
       return 'Unknown';
     }
-    
+
     try {
       // MyAnimeList API can return YYYY-MM-DD, YYYY-MM, or YYYY
       if (releaseDate.length === 4) {
@@ -205,18 +206,18 @@ module.exports = {
         return releaseDate;
       } else if (releaseDate.length === 7) {
         // Year-Month - format as "Month YYYY"
-        const date = new Date(`${releaseDate}-01`);
-        if (isNaN(date.getTime())) {
+        const date = dayjs(`${releaseDate}-01`);
+        if (!date.isValid()) {
           return releaseDate;
         }
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        return date.format('MMMM YYYY');
       } else if (releaseDate.length === 10) {
         // Full date - format as readable date
-        const date = new Date(releaseDate);
-        if (isNaN(date.getTime())) {
+        const date = dayjs(releaseDate);
+        if (!date.isValid()) {
           return releaseDate;
         }
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        return date.format('MMMM D, YYYY');
       } else {
         return releaseDate;
       }

@@ -41,9 +41,9 @@ function cancelMuteKick(userId) {
 async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   cancelMuteKick(userId);
 
-  const joinDate = (joinTime instanceof Date) ? joinTime : new Date(joinTime);
-  const kickAt = new Date(joinDate.getTime() + hours * 60 * 60 * 1000);
-  const delay = kickAt.getTime() - Date.now();
+  const joinDate = dayjs(joinTime);
+  const kickAt = joinDate.add(hours, 'hour');
+  const delay = kickAt.valueOf() - dayjs().valueOf();
   if (delay <= 0) {
     try {
       // Check if user is still in mute mode before kicking
@@ -155,11 +155,11 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
       activeTimeouts.delete(userId);
     }
   }, delay);
-  
+
   activeTimeouts.set(userId, timeoutId);
   logger.debug('Scheduled mute kick for user.', {
     userId: userId,
-    delayMinutes: Math.round(delay/1000/60)
+    delayMinutes: Math.round(delay / 1000 / 60)
   });
 }
 
@@ -209,7 +209,7 @@ async function rescheduleAllMuteKicks(client) {
 }
 
 module.exports = {
-    scheduleMuteKick,
-    rescheduleAllMuteKicks,
-    cancelMuteKick
+  scheduleMuteKick,
+  rescheduleAllMuteKicks,
+  cancelMuteKick
 };

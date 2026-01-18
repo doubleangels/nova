@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
+const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
@@ -374,11 +375,7 @@ module.exports = {
         tracks: playlist.tracks.total,
         description: playlist.description,
         followers: playlist.followers.total,
-        lastUpdated: new Date(playlist.modified_at).toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }),
+        lastUpdated: dayjs(playlist.modified_at).format('MMMM D, YYYY'),
         collaborative: playlist.collaborative,
         public: playlist.public,
         snapshotId: playlist.snapshot_id
@@ -445,7 +442,7 @@ module.exports = {
 
   createEmbed(results, type, index = 0) {
     const item = results[index];
-    
+
     if (!item) {
       throw new Error("No result data available");
     }
@@ -455,7 +452,7 @@ module.exports = {
       .setTitle(item.name)
       .setURL(item.url)
       .setThumbnail(item.imageUrl)
-      .setFooter({ 
+      .setFooter({
         text: `Powered by Spotify • Result ${index + 1} of ${results.length}`
       });
 
@@ -522,12 +519,12 @@ module.exports = {
             { name: '🔞 Explicit', value: item.explicit ? 'Yes' : 'No', inline: true },
             { name: '©️ Copyright', value: item.copyrights?.map(c => c.text).join('\n') || 'Unknown', inline: false },
             { name: '🌍 Available Markets', value: item.availableMarkets?.length ? `${item.availableMarkets.length} markets` : 'Unknown', inline: true },
-            { 
-              name: '🎧 Latest Episodes', 
-              value: item.episodes.slice(0, 5).map(episode => 
+            {
+              name: '🎧 Latest Episodes',
+              value: item.episodes.slice(0, 5).map(episode =>
                 `[${episode.name}](${episode.url}) - ${episode.duration} (${this.formatReleaseDate(episode.releaseDate)})`
               ).join('\n'),
-              inline: false 
+              inline: false
             }
           );
         break;
@@ -555,7 +552,7 @@ module.exports = {
     if (!releaseDate || releaseDate === 'Unknown') {
       return 'Unknown';
     }
-    
+
     try {
       // Handle different date formats from Spotify API
       let date;
@@ -564,18 +561,18 @@ module.exports = {
         return releaseDate;
       } else if (releaseDate.length === 7) {
         // Year-Month - format as "Month YYYY"
-        date = new Date(`${releaseDate}-01`);
-        if (isNaN(date.getTime())) {
+        const date = dayjs(`${releaseDate}-01`);
+        if (!date.isValid()) {
           return releaseDate;
         }
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        return date.format('MMMM YYYY');
       } else {
         // Full date - format as readable date
-        date = new Date(releaseDate);
-        if (isNaN(date.getTime())) {
+        const date = dayjs(releaseDate);
+        if (!date.isValid()) {
           return releaseDate;
         }
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        return date.format('MMMM D, YYYY');
       }
     } catch (error) {
       return releaseDate;
@@ -588,9 +585,9 @@ module.exports = {
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
-    
+
     let errorMessage = "⚠️ An unexpected error occurred while searching Spotify.";
-    
+
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to search Spotify. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
@@ -604,11 +601,11 @@ module.exports = {
     } else if (error.message === "AUTH_ERROR") {
       errorMessage = "⚠️ Failed to authenticate with Spotify.";
     }
-    
+
     try {
-      await interaction.editReply({ 
+      await interaction.editReply({
         content: errorMessage,
-        flags: MessageFlags.Ephemeral 
+        flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for spotify command.", {
@@ -616,11 +613,11 @@ module.exports = {
         originalError: error.message,
         userId: interaction.user?.id
       });
-      
-      await interaction.reply({ 
+
+      await interaction.reply({
         content: errorMessage,
-        flags: MessageFlags.Ephemeral 
-      }).catch(() => {});
+        flags: MessageFlags.Ephemeral
+      }).catch(() => { });
     }
   }
 }; 

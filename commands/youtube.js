@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const path = require('path');
+const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
@@ -48,7 +49,7 @@ module.exports = {
       }
 
       await interaction.deferReply();
-      logger.info("/youtube command initiated:", { 
+      logger.info("/youtube command initiated:", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -59,10 +60,10 @@ module.exports = {
       const duration = interaction.options.getString('duration') || 'any';
 
       const searchResults = await this.searchYouTube(query, contentType, sortMethod, duration);
-      
+
       if (!searchResults || searchResults.length === 0) {
         logger.warn("No search results found for query.", { query });
-        return await interaction.editReply({ 
+        return await interaction.editReply({
           content: "⚠️ No results found for your search.",
           flags: MessageFlags.Ephemeral
         });
@@ -110,9 +111,9 @@ module.exports = {
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
-    
+
     let errorMessage = "⚠️ An unexpected error occurred while searching YouTube.";
-    
+
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to search YouTube. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
@@ -132,11 +133,11 @@ module.exports = {
     } else if (error.message === "CONFIG_MISSING") {
       errorMessage = "⚠️ YouTube API key is missing. Please contact an administrator.";
     }
-    
+
     try {
-      await interaction.editReply({ 
+      await interaction.editReply({
         content: errorMessage,
-        flags: MessageFlags.Ephemeral 
+        flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for youtube command.", {
@@ -144,14 +145,14 @@ module.exports = {
         originalError: error.message,
         userId: interaction.user?.id
       });
-      
-      await interaction.reply({ 
+
+      await interaction.reply({
         content: errorMessage,
-        flags: MessageFlags.Ephemeral 
-      }).catch(() => {});
+        flags: MessageFlags.Ephemeral
+      }).catch(() => { });
     }
   },
-  
+
   /**
    * Searches YouTube for content matching the query.
    * 
@@ -173,23 +174,23 @@ module.exports = {
         order: sortMethod,
         safeSearch: 'moderate'
       };
-      
+
       if (contentType === 'video' && duration !== 'any') {
         params.videoDuration = duration;
       }
-      
+
       const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
         params,
         timeout: 5000
       });
-      
+
       if (!response.data || !response.data.items || response.data.items.length === 0) {
         logger.debug("YouTube API returned no results.", { query, contentType });
         return [];
       }
-      
+
       let results = response.data.items;
-      
+
       if (contentType === 'video') {
         results = await this.enrichVideoResults(results);
       } else if (contentType === 'channel') {
@@ -197,7 +198,7 @@ module.exports = {
       } else if (contentType === 'playlist') {
         results = await this.enrichPlaylistResults(results);
       }
-      
+
       return results;
     } catch (error) {
       logger.error("YouTube API search failed", {
@@ -208,7 +209,7 @@ module.exports = {
       throw error;
     }
   },
-  
+
   /**
    * Enriches video search results with additional details.
    * 
@@ -217,10 +218,10 @@ module.exports = {
    */
   async enrichVideoResults(videos) {
     if (!videos || videos.length === 0) return [];
-    
+
     try {
       const videoIds = videos.map(video => video.id.videoId).join(',');
-      
+
       const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
         params: {
           part: 'snippet,statistics,contentDetails',
@@ -229,20 +230,20 @@ module.exports = {
         },
         timeout: 5000
       });
-      
+
       if (!response.data || !response.data.items) {
         return videos;
       }
-      
+
       const detailedVideos = response.data.items;
-      
+
       return videos.map(searchResult => {
         const detailedInfo = detailedVideos.find(
           video => video.id === searchResult.id.videoId
         );
-        
+
         if (!detailedInfo) return searchResult;
-        
+
         return {
           ...searchResult,
           statistics: detailedInfo.statistics,
@@ -265,10 +266,10 @@ module.exports = {
    */
   async enrichChannelResults(channels) {
     if (!channels || channels.length === 0) return [];
-    
+
     try {
       const channelIds = channels.map(channel => channel.id.channelId).join(',');
-      
+
       const response = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
         params: {
           part: 'snippet,statistics',
@@ -277,20 +278,20 @@ module.exports = {
         },
         timeout: 5000
       });
-      
+
       if (!response.data || !response.data.items) {
         return channels;
       }
-      
+
       const detailedChannels = response.data.items;
-      
+
       return channels.map(searchResult => {
         const detailedInfo = detailedChannels.find(
           channel => channel.id === searchResult.id.channelId
         );
-        
+
         if (!detailedInfo) return searchResult;
-        
+
         return {
           ...searchResult,
           statistics: detailedInfo.statistics
@@ -303,7 +304,7 @@ module.exports = {
       return channels;
     }
   },
-  
+
   /**
    * Enriches playlist search results with additional details.
    * 
@@ -312,10 +313,10 @@ module.exports = {
    */
   async enrichPlaylistResults(playlists) {
     if (!playlists || playlists.length === 0) return [];
-    
+
     try {
       const playlistIds = playlists.map(playlist => playlist.id.playlistId).join(',');
-      
+
       const response = await axios.get('https://www.googleapis.com/youtube/v3/playlists', {
         params: {
           part: 'snippet,contentDetails',
@@ -324,20 +325,20 @@ module.exports = {
         },
         timeout: 5000
       });
-      
+
       if (!response.data || !response.data.items) {
         return playlists;
       }
-      
+
       const detailedPlaylists = response.data.items;
-      
+
       return playlists.map(searchResult => {
         const detailedInfo = detailedPlaylists.find(
           playlist => playlist.id === searchResult.id.playlistId
         );
-        
+
         if (!detailedInfo) return searchResult;
-        
+
         return {
           ...searchResult,
           contentDetails: detailedInfo.contentDetails
@@ -350,7 +351,7 @@ module.exports = {
       return playlists;
     }
   },
-  
+
   /**
    * Creates a Discord embed for search results.
    * 
@@ -363,10 +364,10 @@ module.exports = {
   createContentEmbed(item, contentType, index, totalItems) {
     const embed = new EmbedBuilder()
       .setColor(0xFF0000)
-      .setFooter({ 
+      .setFooter({
         text: `Powered by YouTube • Result ${index + 1} of ${totalItems}`
       });
-    
+
     switch (contentType) {
       case 'video':
         return this.createVideoEmbed(item, embed, index, totalItems);
@@ -378,7 +379,7 @@ module.exports = {
         return embed.setDescription('Unknown content type');
     }
   },
-  
+
   /**
    * Creates a Discord embed for video results.
    * 
@@ -394,21 +395,21 @@ module.exports = {
     const videoId = video.id.videoId;
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
-    
-    const viewCount = statistics.viewCount ? 
+
+    const viewCount = statistics.viewCount ?
       `👁️ ${parseInt(statistics.viewCount).toLocaleString()} views` : '';
-    const likeCount = statistics.likeCount ? 
+    const likeCount = statistics.likeCount ?
       `👍 ${parseInt(statistics.likeCount).toLocaleString()} likes` : '';
     const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
-    
+
     let description = snippet.description || 'No description available';
     if (description.length > 1024) {
       description = description.substring(0, 1021) + '...';
     }
-    
-    const uploadDate = snippet.publishedAt ? 
-      `📅 ${new Date(snippet.publishedAt).toLocaleDateString()}` : '';
-    
+
+    const uploadDate = snippet.publishedAt ?
+      `📅 ${dayjs(snippet.publishedAt).format('MM/DD/YYYY')}` : '';
+
     return embed
       .setTitle(`🎬 ${snippet.title}`)
       .setURL(videoUrl)
@@ -419,7 +420,7 @@ module.exports = {
         url: `https://www.youtube.com/channel/${snippet.channelId}`
       });
   },
-  
+
   /**
    * Creates a Discord embed for channel results.
    * 
@@ -435,18 +436,18 @@ module.exports = {
     const channelId = channel.id.channelId;
     const channelUrl = `https://www.youtube.com/channel/${channelId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
-    
-    const subscriberCount = statistics.subscriberCount ? 
+
+    const subscriberCount = statistics.subscriberCount ?
       `👥 ${parseInt(statistics.subscriberCount).toLocaleString()} subscribers` : '';
-    const videoCount = statistics.videoCount ? 
+    const videoCount = statistics.videoCount ?
       `🎬 ${parseInt(statistics.videoCount).toLocaleString()} videos` : '';
     const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
-    
+
     let description = snippet.description || 'No description available';
     if (description.length > 1024) {
       description = description.substring(0, 1021) + '...';
     }
-    
+
     return embed
       .setTitle(`📺 ${snippet.title}`)
       .setURL(channelUrl)
@@ -469,15 +470,15 @@ module.exports = {
     const playlistId = playlist.id.playlistId;
     const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
-    
-    const itemCount = contentDetails.itemCount ? 
+
+    const itemCount = contentDetails.itemCount ?
       `🎬 ${contentDetails.itemCount} videos` : '';
-    
+
     let description = snippet.description || 'No description available';
     if (description.length > 1024) {
       description = description.substring(0, 1021) + '...';
     }
-    
+
     return embed
       .setTitle(`📋 ${snippet.title}`)
       .setURL(playlistUrl)

@@ -1,6 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { EmbedBuilder } = require('discord.js');
+const dayjs = require('dayjs');
 const { getValue, getSpamModeJoinTime, removeSpamModeJoinTime } = require('./database');
 
 /** @type {Map<string, Map<string, Array>>} Map of userId -> normalized content -> message occurrences */
@@ -38,9 +39,9 @@ async function isNewUser(userId) {
     }
 
     const windowMs = windowHours * 60 * 60 * 1000;
-    const now = Date.now();
-    const joinTimestamp = joinTime.getTime();
-    const timeSinceJoin = now - joinTimestamp;
+    const now = dayjs();
+    const joinTimestamp = dayjs(joinTime);
+    const timeSinceJoin = now.diff(joinTimestamp);
     const timeRemaining = windowMs - timeSinceJoin;
 
     return {
@@ -156,6 +157,24 @@ async function trackNewUserMessage(message) {
       return;
     }
 
+    // Only track messages that are sentence-length or longer (not just a few words)
+    // Check for at least 5 words OR at least 30 characters
+    const wordCount = normalizedContent.split(/\s+/).filter(word => word.length > 0).length;
+    const minWords = 5;
+    const minChars = 30;
+    if (wordCount < minWords && normalizedContent.length < minChars) {
+      logger.debug('Spam mode: Message too short (not sentence-length), skipping tracking.', {
+        wordCount,
+        charCount: normalizedContent.length
+      });
+      // Check if user is no longer new before returning
+      const { isNew: stillNew } = await isNewUser(userId);
+      if (!stillNew) {
+        await removeSpamModeJoinTime(userId);
+      }
+      return;
+    }
+
     // Get the cutoff time (when user joined + spam mode window)
     const joinTime = await getSpamModeJoinTime(userId);
     if (!joinTime) {
@@ -178,11 +197,11 @@ async function trackNewUserMessage(message) {
     }
 
     const windowMs = windowHours * 60 * 60 * 1000;
-    const cutoffTime = joinTime.getTime() + windowMs;
-    const now = Date.now();
+    const cutoffTime = dayjs(joinTime).add(windowMs, 'millisecond').valueOf();
+    const now = dayjs();
 
     // Clean up old entries for this user
-    cleanupUserEntries(userId, now - windowMs);
+    cleanupUserEntries(userId, now.subtract(windowMs, 'millisecond').valueOf());
 
     // Initialize user tracker if needed
     if (!userMessageTracker.has(userId)) {
@@ -194,7 +213,7 @@ async function trackNewUserMessage(message) {
     const messageOccurrence = {
       channelId: message.channel.id,
       channelName: message.channel.name,
-      timestamp: message.createdTimestamp || Date.now(),
+      timestamp: message.createdTimestamp || dayjs().valueOf(),
       messageId: message.id
     };
 
@@ -234,7 +253,7 @@ async function trackNewUserMessage(message) {
           channelIds: [...new Set(existingOccurrences.map(occ => occ.channelId))],
           occurrenceCount: existingOccurrences.length,
           isMultipleChannels: isMultipleChannels,
-          timestamps: existingOccurrences.map(occ => new Date(occ.timestamp).toISOString()),
+          timestamps: existingOccurrences.map(occ => dayjs(occ.timestamp).toISOString()),
           messageIds: existingOccurrences.map(occ => occ.messageId),
           timeRemaining: timeRemaining ? `${Math.round(timeRemaining / 1000 / 60)} minutes` : null
         });
@@ -492,6 +511,17 @@ async function timeoutUser(guild, user, durationSeconds) {
     // Discord max timeout is 28 days
     const maxMs = 28 * 24 * 60 * 60 * 1000;
     const clampedMs = Math.min(durationMs, maxMs);
+
+    // Validate that the calculated end date will be valid
+    const endDate = dayjs().add(clampedMs, 'millisecond');
+    if (!endDate.isValid()) {
+      logger.warn('Cannot timeout user: invalid calculated end date', {
+        userId: user.id,
+        durationSeconds,
+        clampedMs
+      });
+      return;
+    }
 
     await member.timeout(clampedMs, 'Spam detected - automatic timeout');
 
