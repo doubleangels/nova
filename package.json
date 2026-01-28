@@ -20,7 +20,7 @@
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "axios": "^1.13.3",
+    "axios": "^1.13.4",
     "better-sqlite3": "^12.6.2",
     "dayjs": "^1.11.19",
     "discord.js": "^14.25.1",
