@@ -1,6 +1,7 @@
 name: Build Testing
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -15,10 +16,32 @@ permissions:
   packages: write
 
 jobs:
+  prebuild:
+    name: install-and-audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit
+
   build:
     name: build-and-push-image
+    needs: [prebuild]
     runs-on: ubuntu-latest
-    concurrency: build-main
+    concurrency:
+      group: build-main
+      cancel-in-progress: true
     permissions:
       contents: read
       packages: write
@@ -68,8 +91,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=nova
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          provenance: false
-          sbom: false
+          provenance: ${{ github.event_name != 'pull_request' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
 
       - name: Build summary
         if: always()
@@ -91,7 +114,7 @@ jobs:
           fi
 
   delete-workflow-runs:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       actions: write

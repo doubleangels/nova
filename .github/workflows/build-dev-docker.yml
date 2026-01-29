@@ -16,10 +16,32 @@ permissions:
   packages: write
 
 jobs:
+  prebuild:
+    name: install-and-audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit
+
   build:
     name: build-and-push-image
+    needs: [prebuild]
     runs-on: ubuntu-latest
-    concurrency: build-dev
+    concurrency:
+      group: build-dev
+      cancel-in-progress: true
     permissions:
       contents: read
       packages: write
@@ -69,8 +91,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=nova-dev
           build-args: |
             BUILDKIT_INLINE_CACHE=1
-          provenance: false
-          sbom: false
+          provenance: ${{ github.event_name != 'pull_request' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
 
       - name: Build summary
         if: always()
