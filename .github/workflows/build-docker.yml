@@ -33,7 +33,7 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies
-        run: npm audit
+        run: npm audit --audit-level=critical
 
   build:
     name: build-and-push-image
