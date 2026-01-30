@@ -19,7 +19,8 @@
   },
   "homepage": "https://github.com/doubleangels/nova#readme",
   "overrides": {
-    "tar": ">=7.5.4"
+    "tar": ">=7.5.4",
+    "undici": ">=6.23.0"
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
