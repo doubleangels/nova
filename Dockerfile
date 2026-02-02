@@ -52,11 +52,13 @@ RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
 FROM base AS runtime
 
 # Install runtime dependencies and bws in a single layer with BuildKit cache
+# bws is a glibc binary; gcompat provides glibc compatibility on Alpine (musl)
 # jq is kept as it's needed by the entrypoint script
 RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
     apk add --no-cache \
     ca-certificates \
     curl \
+    gcompat \
     jq \
     unzip && \
     curl -fL -o /tmp/bws.zip https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
