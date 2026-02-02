@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, setValue } = require('../utils/database');
+const { getValue, setValue, addSpamModeJoinTime, removeSpamModeJoinTime } = require('../utils/database');
+const { clearUserFromSpamTracker } = require('../utils/spamModeUtils');
 
 /**
  * Command module for managing server-wide spam mode settings.
@@ -50,8 +51,30 @@ module.exports = {
             .setRequired(false)
         )
     )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('add')
+        .setDescription('Add a member to the spam mode watch list (they will be monitored for duplicate messages).')
+        .addUserOption(option =>
+          option
+            .setName('member')
+            .setDescription('The member to add to the spam mode watch list.')
+            .setRequired(true)
+        )
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('remove')
+        .setDescription('Remove a member from the spam mode watch list (they will no longer be monitored).')
+        .addUserOption(option =>
+          option
+            .setName('member')
+            .setDescription('The member to remove from the spam mode watch list.')
+            .setRequired(true)
+        )
+    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    
+
   /**
    * Executes the spammode command.
    * This function:
@@ -65,10 +88,10 @@ module.exports = {
    */
   async execute(interaction) {
     await interaction.deferReply();
-    
+
     try {
       const subcommand = interaction.options.getSubcommand();
-      
+
       logger.info(`/spammode command initiated.`, {
         userId: interaction.user.id,
         guildId: interaction.guildId
@@ -81,13 +104,19 @@ module.exports = {
         case 'set':
           await this.handleSetSubcommand(interaction);
           break;
+        case 'add':
+          await this.handleAddSubcommand(interaction);
+          break;
+        case 'remove':
+          await this.handleRemoveSubcommand(interaction);
+          break;
       }
-      
+
     } catch (error) {
       await this.handleError(interaction, error);
     }
   },
-  
+
   /**
    * Handles the status subcommand.
    * This function:
@@ -101,16 +130,16 @@ module.exports = {
   async handleStatusSubcommand(interaction) {
     const settings = await this.getCurrentSettings();
     const embed = this.formatStatusMessage(settings, interaction);
-    
+
     await interaction.editReply({ embeds: [embed] });
-    
+
     logger.info("/spammode command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       enabled: settings.enabled
     });
   },
-  
+
   /**
    * Handles the set subcommand.
    * This function:
@@ -127,7 +156,7 @@ module.exports = {
     const threshold = interaction.options.getInteger('threshold');
     const window = interaction.options.getInteger('window');
     const warningChannel = interaction.options.getChannel('channel');
-    
+
     const currentSettings = await this.getCurrentSettings();
     const settings = { enabled };
     if (threshold !== null) {
@@ -139,25 +168,25 @@ module.exports = {
     if (warningChannel !== null) {
       settings.warningChannelId = warningChannel.id;
     }
-    
+
     await this.updateSettings(settings);
-    
+
     // Get the warning channel for display
     let displayWarningChannel = warningChannel;
     if (!displayWarningChannel && currentSettings.warningChannelId) {
       displayWarningChannel = interaction.guild?.channels.cache.get(currentSettings.warningChannelId);
     }
-    
+
     const embed = this.formatUpdateMessage(
-      enabled, 
+      enabled,
       threshold ?? currentSettings.threshold,
       window ?? currentSettings.window,
       displayWarningChannel,
       interaction
     );
-    
+
     await interaction.editReply({ embeds: [embed] });
-    
+
     logger.info("/spammode command completed successfully.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
@@ -167,7 +196,65 @@ module.exports = {
       warningChannelId: warningChannel?.id ?? currentSettings.warningChannelId
     });
   },
-  
+
+  /**
+   * Handles the add subcommand: adds a member to the spam mode watch list.
+   *
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   */
+  async handleAddSubcommand(interaction) {
+    const user = interaction.options.getUser('member');
+    if (user.bot) {
+      await interaction.editReply({
+        content: '⚠️ Bot accounts cannot be added to the spam mode watch list.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    await addSpamModeJoinTime(user.id, user.tag, new Date());
+
+    const embed = new EmbedBuilder()
+      .setColor(0x00FF00)
+      .setTitle('🔤 Spam Mode Watch List')
+      .setDescription(`${user} has been **added** to the spam mode watch list and will be monitored for duplicate messages for the configured tracking window.`);
+
+    await interaction.editReply({ embeds: [embed] });
+
+    logger.info('/spammode add completed successfully.', {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      addedUserId: user.id
+    });
+  },
+
+  /**
+   * Handles the remove subcommand: removes a member from the spam mode watch list.
+   *
+   * @param {CommandInteraction} interaction - The interaction that triggered the command
+   * @returns {Promise<void>}
+   */
+  async handleRemoveSubcommand(interaction) {
+    const user = interaction.options.getUser('member');
+
+    await removeSpamModeJoinTime(user.id);
+    clearUserFromSpamTracker(user.id);
+
+    const embed = new EmbedBuilder()
+      .setColor(0x00FF00)
+      .setTitle('🔤 Spam Mode Watch List')
+      .setDescription(`${user} has been **removed** from the spam mode watch list and will no longer be monitored for duplicate messages.`);
+
+    await interaction.editReply({ embeds: [embed] });
+
+    logger.info('/spammode remove completed successfully.', {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      removedUserId: user.id
+    });
+  },
+
   /**
    * Retrieves current spam mode settings from the database.
    * 
@@ -184,13 +271,13 @@ module.exports = {
         getValue('spam_mode_channel_id'),
         getValue('mute_mode_kick_time_hours')
       ]);
-      
+
       // Default window to mute mode kick time if not set
       let defaultWindow = 4;
       if (muteKickTime) {
         defaultWindow = parseInt(muteKickTime, 10) || 4;
       }
-      
+
       return {
         enabled: enabled === true,
         threshold: threshold ? parseInt(threshold, 10) : 3,
@@ -204,7 +291,7 @@ module.exports = {
       throw new Error("DATABASE_READ_ERROR");
     }
   },
-  
+
   /**
    * Updates spam mode settings in the database.
    * 
@@ -215,19 +302,19 @@ module.exports = {
   async updateSettings(settings) {
     try {
       const updates = [];
-      
+
       if (settings.enabled !== undefined) {
         updates.push(setValue('spam_mode_enabled', settings.enabled));
       }
-      
+
       if (settings.threshold !== undefined) {
         updates.push(setValue('spam_mode_threshold', settings.threshold));
       }
-      
+
       if (settings.window !== undefined) {
         updates.push(setValue('spam_mode_window_hours', settings.window));
       }
-      
+
       if (settings.warningChannelId !== undefined) {
         if (settings.warningChannelId) {
           updates.push(setValue('spam_mode_channel_id', settings.warningChannelId));
@@ -236,7 +323,7 @@ module.exports = {
           updates.push(setValue('spam_mode_channel_id', null));
         }
       }
-      
+
       await Promise.all(updates);
     } catch (error) {
       logger.error("Failed to update spam mode settings.", {
@@ -246,7 +333,7 @@ module.exports = {
       throw new Error("DATABASE_WRITE_ERROR");
     }
   },
-  
+
   /**
    * Creates an embed message showing current spam mode status.
    * 
@@ -261,13 +348,13 @@ module.exports = {
 
     const statusEmoji = settings.enabled ? "✅" : "❌";
     const statusText = settings.enabled ? "Enabled" : "Disabled";
-    
+
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Message Threshold', value: `${settings.threshold} duplicate messages` },
       { name: 'Tracking Window', value: `${settings.window} ${settings.window === 1 ? 'hour' : 'hours'}` }
     );
-    
+
     if (settings.warningChannelId) {
       const warningChannel = interaction.guild?.channels.cache.get(settings.warningChannelId);
       embed.addFields({
@@ -280,7 +367,7 @@ module.exports = {
         value: 'Not configured'
       });
     }
-    
+
     if (settings.enabled) {
       const hourText = settings.window === 1 ? 'hour' : 'hours';
       embed.setDescription(`New users sending **${settings.threshold}** or more duplicate messages within **${settings.window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -288,7 +375,7 @@ module.exports = {
 
     return embed;
   },
-  
+
   /**
    * Creates an embed message confirming settings update.
    * 
@@ -303,13 +390,13 @@ module.exports = {
 
     const statusEmoji = enabled ? "✅" : "❌";
     const statusText = enabled ? "Enabled" : "Disabled";
-    
+
     embed.addFields(
       { name: 'Status', value: `${statusEmoji} **${statusText}**` },
       { name: 'Message Threshold', value: `${threshold} duplicate messages` },
       { name: 'Tracking Window', value: `${window} ${window === 1 ? 'hour' : 'hours'}` }
     );
-    
+
     if (warningChannel) {
       embed.addFields({
         name: 'Warning Channel',
@@ -321,7 +408,7 @@ module.exports = {
         value: 'Not configured'
       });
     }
-    
+
     if (enabled) {
       const hourText = window === 1 ? 'hour' : 'hours';
       embed.setDescription(`New users sending **${threshold}** or more duplicate messages within **${window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -343,9 +430,9 @@ module.exports = {
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
-    
+
     let errorMessage = "⚠️ An unexpected error occurred while managing spam mode settings.";
-    
+
     if (error.message === "DATABASE_READ_ERROR") {
       errorMessage = "⚠️ Failed to retrieve spam mode settings. Please try again later.";
     } else if (error.message === "DATABASE_WRITE_ERROR") {
@@ -355,11 +442,11 @@ module.exports = {
     } else if (error.message === "INVALID_SETTINGS") {
       errorMessage = "⚠️ Invalid spam mode settings provided.";
     }
-    
+
     try {
-      await interaction.editReply({ 
+      await interaction.editReply({
         content: errorMessage,
-        flags: MessageFlags.Ephemeral 
+        flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for spammode command.", {
@@ -367,11 +454,11 @@ module.exports = {
         originalError: error.message,
         userId: interaction.user?.id
       });
-      
-      await interaction.reply({ 
+
+      await interaction.reply({
         content: errorMessage,
-        flags: MessageFlags.Ephemeral 
-      }).catch(() => {});
+        flags: MessageFlags.Ephemeral
+      }).catch(() => { });
     }
   }
 };

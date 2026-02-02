@@ -20,6 +20,46 @@ function normalizeContent(content) {
 }
 
 /**
+ * Checks if a message contains a GIF (attachment, embed, or gif URL in content)
+ * @param {Message} message - The Discord message to check
+ * @returns {boolean} True if the message contains a GIF
+ */
+function messageHasGif(message) {
+  // Check attachments for GIF (contentType image/gif or filename/url ends with .gif)
+  if (message.attachments && message.attachments.size > 0) {
+    for (const attachment of message.attachments.values()) {
+      const contentType = (attachment.contentType || '').toLowerCase();
+      const name = (attachment.name || '').toLowerCase();
+      const url = (attachment.url || '').toLowerCase();
+      if (contentType.includes('gif') || name.endsWith('.gif') || url.includes('.gif')) {
+        return true;
+      }
+    }
+  }
+
+  // Check embeds for GIF type (Tenor/Giphy etc. show as type 'gif')
+  if (message.embeds && message.embeds.size > 0) {
+    for (const embed of message.embeds.values()) {
+      if (embed.type === 'gif' || (embed.video && embed.video.url && embed.video.url.toLowerCase().includes('.gif'))) {
+        return true;
+      }
+      const url = (embed.url || '').toLowerCase();
+      if (url && (url.includes('tenor.com') || url.includes('giphy.com') || url.includes('.gif'))) {
+        return true;
+      }
+    }
+  }
+
+  // Check content for common gif link patterns
+  const content = (message.content || '').toLowerCase();
+  if (content && (content.includes('tenor.com') || content.includes('giphy.com') || /\bhttps?:\/\/[^\s]+\.gif\b/.test(content))) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Checks if a user is considered "new" (within the spam mode tracking window)
  * @param {string} userId - The user ID to check
  * @returns {Promise<{isNew: boolean, timeRemaining: number|null}>} Object indicating if user is new and time remaining in ms
@@ -112,6 +152,16 @@ async function trackNewUserMessage(message) {
     if (message.content && message.content.trim().startsWith('/')) {
       logger.debug('Spam mode: Message is a slash command, skipping tracking.');
       // Check if user is no longer new before returning
+      const { isNew: stillNew } = await isNewUser(userId);
+      if (!stillNew) {
+        await removeSpamModeJoinTime(userId);
+      }
+      return;
+    }
+
+    // Skip if message contains a GIF (attachment, embed, or gif link in content)
+    if (messageHasGif(message)) {
+      logger.debug('Spam mode: Message contains GIF, skipping tracking.');
       const { isNew: stillNew } = await isNewUser(userId);
       if (!stillNew) {
         await removeSpamModeJoinTime(userId);
@@ -258,24 +308,27 @@ async function trackNewUserMessage(message) {
           timeRemaining: timeRemaining ? `${Math.round(timeRemaining / 1000 / 60)} minutes` : null
         });
 
-        // Delete all offending messages except the most recent one
-        const mostRecentMessage = await deleteOffendingMessages(message.guild, existingOccurrences);
+        // Delete all offending messages (including the most recent one)
+        const mostRecentChannel = await deleteOffendingMessages(message.guild, existingOccurrences);
 
-        // Reply to the most recent message telling the user they are spamming
-        if (mostRecentMessage) {
+        // Send the warning in the channel where the most recent message was
+        if (mostRecentChannel) {
           try {
-            const windowText = windowHours === 1 ? '1 hour' : `${windowHours} hours`;
-            const notificationMessage = `⚠️ **Spam Detected**\n\n` +
-              `As a new member, you are subject to spam monitoring for your first **${windowText}** on the server. ` +
-              `Spam tracking is **server-wide**, meaning duplicate messages sent across any channel are monitored. ` +
-              `Your duplicate messages have been removed. Please avoid sending the same message multiple times.\n\n` +
-              `Thank you for your understanding!`;
+            const channel = await message.guild.channels.fetch(mostRecentChannel.channelId).catch(() => null);
+            if (channel) {
+              const windowText = windowHours === 1 ? '1 hour' : `${windowHours} hours`;
+              const notificationMessage = `⚠️ **Spam Detected**\n\n` +
+                `${message.author}, as a new member you are subject to spam monitoring for your first **${windowText}** on the server. ` +
+                `Spam tracking is **server-wide**, meaning duplicate messages sent across any channel are monitored. ` +
+                `Your duplicate messages have been removed. Please avoid sending the same message multiple times.\n\n` +
+                `Thank you for your understanding!`;
 
-            await mostRecentMessage.reply(notificationMessage);
+              await channel.send(notificationMessage);
+            }
           } catch (error) {
-            logger.warn('Failed to reply to spam message.', {
+            logger.warn('Failed to send spam warning to channel.', {
               err: error,
-              messageId: mostRecentMessage.id,
+              channelId: mostRecentChannel.channelId,
               userId: message.author.id
             });
           }
@@ -301,10 +354,10 @@ async function trackNewUserMessage(message) {
 }
 
 /**
- * Deletes all offending duplicate messages except the most recent one
+ * Deletes all offending duplicate messages (including the most recent one).
  * @param {Guild} guild - The Discord guild
  * @param {Array} occurrences - Array of message occurrences to delete
- * @returns {Promise<Message|null>} The most recent message that was kept, or null if not found
+ * @returns {Promise<{channelId: string, channelName: string}|null>} The channel of the most recent message (for sending the warning), or null
  */
 async function deleteOffendingMessages(guild, occurrences) {
   if (!guild) {
@@ -318,19 +371,13 @@ async function deleteOffendingMessages(guild, occurrences) {
 
   // Sort occurrences by timestamp (most recent last)
   const sortedOccurrences = [...occurrences].sort((a, b) => a.timestamp - b.timestamp);
-
-  // Get the most recent occurrence (last in sorted array)
   const mostRecentOccurrence = sortedOccurrences[sortedOccurrences.length - 1];
-
-  // Get all occurrences except the most recent one
-  const occurrencesToDelete = sortedOccurrences.slice(0, -1);
 
   let deletedCount = 0;
   let failedCount = 0;
-  let mostRecentMessage = null;
 
-  // Delete all messages except the most recent one
-  for (const occurrence of occurrencesToDelete) {
+  // Delete all messages including the most recent one
+  for (const occurrence of sortedOccurrences) {
     try {
       const channel = await guild.channels.fetch(occurrence.channelId).catch(() => null);
       if (!channel) {
@@ -367,27 +414,16 @@ async function deleteOffendingMessages(guild, occurrences) {
     }
   }
 
-  // Fetch the most recent message to return it
-  try {
-    const channel = await guild.channels.fetch(mostRecentOccurrence.channelId).catch(() => null);
-    if (channel) {
-      mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
-    }
-  } catch (error) {
-    logger.warn('Failed to fetch most recent message.', {
-      err: error,
-      messageId: mostRecentOccurrence.messageId
-    });
-  }
-
-  logger.info('Deleted spam messages, kept most recent message.', {
+  logger.info('Deleted spam messages.', {
     totalOccurrences: occurrences.length,
     deletedCount,
-    failedCount,
-    mostRecentMessageId: mostRecentOccurrence.messageId
+    failedCount
   });
 
-  return mostRecentMessage;
+  return {
+    channelId: mostRecentOccurrence.channelId,
+    channelName: mostRecentOccurrence.channelName
+  };
 }
 
 /**
@@ -479,6 +515,14 @@ async function timeoutUser(guild, user, durationSeconds) {
       return;
     }
 
+    // Cannot timeout the guild owner (Discord returns Missing Permissions)
+    if (guild.ownerId === user.id) {
+      logger.warn('Cannot timeout user: user is the server owner.', {
+        userId: user.id
+      });
+      return;
+    }
+
     // Check if bot has permission to timeout members
     const botMember = guild.members.me;
     if (!botMember.permissions.has('ModerateMembers')) {
@@ -531,14 +575,33 @@ async function timeoutUser(guild, user, durationSeconds) {
       durationSeconds: durationSeconds
     });
   } catch (error) {
-    logger.error('Error occurred while timing out user.', {
-      err: error,
-      userId: user.id,
-      guildId: guild.id
-    });
+    if (error.code === 50013) {
+      logger.warn('Could not timeout user: Missing Permissions. Ensure the bot has Moderate Members and that its role is above the user\'s highest role. Server owners cannot be timed out.', {
+        userId: user.id,
+        guildId: guild.id
+      });
+    } else {
+      logger.error('Error occurred while timing out user.', {
+        err: error,
+        userId: user.id,
+        guildId: guild.id
+      });
+    }
+  }
+}
+
+/**
+ * Clears a user from the in-memory message tracker (e.g. when removed from watch list).
+ * @param {string} userId - The user ID to clear
+ */
+function clearUserFromSpamTracker(userId) {
+  if (userMessageTracker.has(userId)) {
+    userMessageTracker.delete(userId);
+    logger.debug('Cleared user from spam mode message tracker.', { userId });
   }
 }
 
 module.exports = {
-  trackNewUserMessage
+  trackNewUserMessage,
+  clearUserFromSpamTracker
 };
