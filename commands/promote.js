@@ -30,6 +30,9 @@ const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
 const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 
+/** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
+const PROMOTION_SUBREDDITS = ['discordservers_', 'Discord_Servers_List'];
+
 // Cache for OAuth token
 let accessToken = null;
 let tokenExpiry = null;
@@ -141,6 +144,113 @@ async function getPromotionTitle() {
 }
 
 /**
+ * Parse Reddit submit API response to extract post id and permalink
+ * @param {object} submissionResponse - Response from /api/submit
+ * @returns {{ postId: string, permalink: string } | null}
+ */
+function parseSubmissionResponse(submissionResponse) {
+  if (!submissionResponse?.json) return null;
+  const jsonData = submissionResponse.json;
+  if (jsonData.errors?.length) return null;
+  let postId = null;
+  let permalink = null;
+  const data = jsonData.data;
+  if (data) {
+    postId = data.id || (data.name ? data.name.replace('t3_', '') : null);
+    permalink = data.permalink || null;
+    if (!permalink && data.url) {
+      const urlMatch = data.url.match(/https?:\/\/[^/]+(\/.*)/);
+      permalink = urlMatch ? urlMatch[1] : data.url;
+    }
+  }
+  if (typeof jsonData.data === 'string') {
+    try {
+      const parsed = JSON.parse(jsonData.data);
+      postId = parsed.id || (parsed.name ? parsed.name.replace('t3_', '') : null);
+      permalink = parsed.permalink || (parsed.url ? (parsed.url.match(/https?:\/\/[^/]+(\/.*)/)?.[1] || parsed.url) : null);
+    } catch (_) { /* ignore */ }
+  }
+  if (!postId || !permalink) return null;
+  return { postId, permalink };
+}
+
+/**
+ * Get a user-friendly error message from Reddit API error response or thrown error
+ * @param {object} err - Error or response
+ * @param {string} subreddit - Subreddit display name (e.g. 'findaserver')
+ * @returns {string}
+ */
+function getRedditErrorMessage(err, subreddit) {
+  const sr = subreddit ? `r/${subreddit}` : 'Reddit';
+  if (err.response?.data?.json?.errors?.length) {
+    const arr = err.response.data.json.errors[0];
+    if (Array.isArray(arr) && arr.length >= 2) {
+      const code = arr[0];
+      const detail = arr[1];
+      if (code === 'SUBREDDIT_NOTALLOWED') return `${sr}: ${detail}`;
+      if (code === 'SUBREDDIT_NOEXIST') return `${sr}: Subreddit does not exist or is private.`;
+      if (code === 'RATELIMIT') return `Rate limit: ${detail}`;
+      if (code === 'SUBMIT_VALIDATION_REPOST') return `${sr}: Already posted recently.`;
+      return `${sr}: ${code} - ${detail}`;
+    }
+  }
+  const msg = err.message || '';
+  if (msg.includes('SUBREDDIT_NOTALLOWED')) return `${sr}: Only trusted members can post.`;
+  if (msg.includes('SUBREDDIT_NOEXIST')) return `${sr}: Subreddit does not exist or is private.`;
+  if (msg.includes('RATELIMIT')) return 'Rate limit exceeded.';
+  return msg ? `${sr}: ${msg}` : `${sr}: Unknown error.`;
+}
+
+/**
+ * Post promotion to a single subreddit
+ * @param {string} subredditName - Subreddit name (e.g. 'discordservers_')
+ * @param {string} promotionTitle - Post title
+ * @returns {Promise<{ success: boolean, permalink?: string, error?: string }>}
+ */
+async function postToSubreddit(subredditName, promotionTitle) {
+  let flairId = null;
+  try {
+    const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
+    if (flairData && Array.isArray(flairData) && flairData.length > 0) {
+      const preferred = flairData.find(f => (f.text || f.flair_text || '').toLowerCase().includes('gaming') || (f.text || f.flair_text || '').toLowerCase().includes('21'));
+      const first = flairData[0];
+      const flair = preferred || first;
+      flairId = flair.id || flair.flair_template_id;
+    }
+  } catch (flairErr) {
+    if (flairErr.response?.status === 404 && flairErr.response?.data?.reason === 'banned') {
+      return { success: false, error: `r/${subredditName} is banned or restricted.` };
+    }
+    logger.warn(`Could not fetch flairs for r/${subredditName}`, { status: flairErr.response?.status });
+  }
+
+  const submissionData = {
+    title: promotionTitle,
+    url: PROMOTION_LINK,
+    sr: subredditName,
+    kind: 'link',
+    api_type: 'json'
+  };
+  if (flairId) submissionData.flair_id = flairId;
+
+  try {
+    const response = await redditApiRequest('POST', '/api/submit', submissionData);
+    const parsed = parseSubmissionResponse(response);
+    if (parsed) {
+      logger.info(`Successfully posted to r/${subredditName}`, { postId: parsed.postId, permalink: parsed.permalink });
+      return { success: true, permalink: parsed.permalink };
+    }
+    if (response?.json?.errors?.length) {
+      const errMsg = response.json.errors.map(e => Array.isArray(e) ? e.join(': ') : String(e)).join(', ');
+      return { success: false, error: getRedditErrorMessage({ message: errMsg }, subredditName) };
+    }
+    return { success: false, error: `r/${subredditName}: Could not parse response.` };
+  } catch (err) {
+    return { success: false, error: getRedditErrorMessage(err, subredditName) };
+  }
+}
+
+/**
  * Command module for promoting users to moderator status.
  * Manages moderator role assignment and permissions.
  * @type {Object}
@@ -213,251 +323,49 @@ module.exports = {
 
     try {
       const promotionTitle = await getPromotionTitle();
-      logger.info("Attempting to post to r/findaserver:", {
-        subreddit: 'findaserver',
+      logger.info("Attempting to post to Reddit:", {
+        subreddits: PROMOTION_SUBREDDITS,
         title: promotionTitle,
         link: PROMOTION_LINK,
         userId: interaction.user.id
       });
 
-      // Fetch and log all available flairs
-      let availableFlairs = [];
-      try {
-        const flairData = await redditApiRequest('GET', '/r/findaserver/api/link_flair');
-
-        if (flairData && Array.isArray(flairData)) {
-          availableFlairs = flairData.map((flair, index) => {
-            const flairInfo = {
-              index: index,
-              id: flair.id || flair.flair_template_id,
-              text: flair.text || flair.flair_text,
-              css_class: flair.css_class || flair.flair_css_class,
-              text_editable: flair.text_editable || flair.flair_text_editable
-            };
-            return flairInfo;
-          });
-        }
-
-        logger.info("Available flairs for r/findaserver:", {
-          flairs: availableFlairs,
-          totalCount: availableFlairs.length
-        });
-      } catch (flairError) {
-        logger.warn("Could not fetch flairs for r/findaserver", {
-          err: flairError,
-          status: flairError.response?.status
-        });
+      const results = [];
+      for (const subredditName of PROMOTION_SUBREDDITS) {
+        const result = await postToSubreddit(subredditName, promotionTitle);
+        results.push({ subreddit: subredditName, ...result });
       }
 
-      // Try to find a valid flair or post without one
-      const targetFlairId = '2566b69c-2a68-11ec-a4f1-7a9ed949ab8e'; // 21+ Gaming Server
-      const validFlair = availableFlairs.find(flair => flair.id === targetFlairId);
+      const succeeded = results.filter(r => r.success);
+      const failed = results.filter(r => !r.success);
 
-      // Prepare submission data
-      const submissionData = {
-        title: promotionTitle,
-        url: PROMOTION_LINK,
-        sr: 'findaserver',
-        kind: 'link',
-        api_type: 'json'
-      };
+      if (succeeded.length > 0) {
+        const linkLines = succeeded.map(r => `**r/${r.subreddit}:** [View post](https://reddit.com${r.permalink})`);
+        let description = `Your server has been promoted on ${succeeded.map(r => `r/${r.subreddit}`).join(' and ')}.\n\n${linkLines.join('\n')}`;
+        if (failed.length > 0) {
+          description += `\n\n_Could not post to:_ ${failed.map(f => `r/${f.subreddit} (${f.error})`).join('; ')}`;
+        }
 
-      if (validFlair) {
-        submissionData.flair_id = targetFlairId;
-        logger.info("Using flair.", { flair: validFlair });
+        const embed = new EmbedBuilder()
+          .setColor(0xFF4500)
+          .setTitle('🎉 Server Promotion Successful!')
+          .setDescription(description);
+
+        await interaction.editReply({ embeds: [embed] });
+
+        const mockMessage = { client: interaction.client };
+        await handleReminder(mockMessage, 86400000, 'promote');
       } else {
-        logger.warn("Target flair not found, posting without flair.");
-      }
-
-      // Submit the post
-      const submissionResponse = await redditApiRequest('POST', '/api/submit', submissionData);
-
-      // Log the full response for debugging
-      logger.debug("Reddit submission response:", {
-        response: JSON.stringify(submissionResponse, null, 2)
-      });
-
-      // Reddit API returns JSON with nested structure
-      let postId = null;
-      let permalink = null;
-
-      // Check for errors first
-      if (submissionResponse && submissionResponse.json) {
-        if (submissionResponse.json.errors && submissionResponse.json.errors.length > 0) {
-          const errorMessages = submissionResponse.json.errors.map(e => Array.isArray(e) ? e.join(': ') : String(e)).join(', ');
-          throw new Error(`Reddit API error: ${errorMessages}`);
-        }
-
-        // Try to extract post ID and permalink from various possible response structures
-        const jsonData = submissionResponse.json;
-
-        // Standard structure: json.data.id and json.data.permalink
-        if (jsonData.data) {
-          if (jsonData.data.id) {
-            postId = jsonData.data.id;
-          }
-          if (jsonData.data.permalink) {
-            permalink = jsonData.data.permalink;
-          }
-          // Reddit API sometimes returns 'url' instead of 'permalink' (full URL)
-          if (!permalink && jsonData.data.url) {
-            // Extract permalink path from full URL
-            // e.g., "https://www.reddit.com/r/findaserver/comments/1q4b824/..." -> "/r/findaserver/comments/1q4b824/..."
-            const urlMatch = jsonData.data.url.match(/https?:\/\/[^\/]+(\/.*)/);
-            if (urlMatch && urlMatch[1]) {
-              permalink = urlMatch[1];
-            } else {
-              // Fallback: use the full URL as permalink
-              permalink = jsonData.data.url;
-            }
-          }
-          // Sometimes the name field contains the post ID (e.g., "t3_xxxxx")
-          if (!postId && jsonData.data.name) {
-            postId = jsonData.data.name.replace('t3_', '');
-          }
-        }
-
-        // Alternative structure: json.data might be a string (JSON string)
-        if (!postId && typeof jsonData.data === 'string') {
-          try {
-            const parsedData = JSON.parse(jsonData.data);
-            if (parsedData.id) {
-              postId = parsedData.id;
-            }
-            if (parsedData.permalink) {
-              permalink = parsedData.permalink;
-            }
-            // Handle 'url' field if 'permalink' is not available
-            if (!permalink && parsedData.url) {
-              const urlMatch = parsedData.url.match(/https?:\/\/[^\/]+(\/.*)/);
-              if (urlMatch && urlMatch[1]) {
-                permalink = urlMatch[1];
-              } else {
-                permalink = parsedData.url;
-              }
-            }
-            if (!postId && parsedData.name) {
-              postId = parsedData.name.replace('t3_', '');
-            }
-          } catch (parseError) {
-            logger.debug("Could not parse json.data as JSON string.", { err: parseError });
-          }
-        }
-      }
-
-      // If still no postId, check if response structure is different
-      if (!postId && submissionResponse) {
-        // Check if response is directly the data object
-        if (submissionResponse.id) {
-          postId = submissionResponse.id;
-        }
-        if (submissionResponse.permalink) {
-          permalink = submissionResponse.permalink;
-        }
-        // Handle 'url' field if 'permalink' is not available
-        if (!permalink && submissionResponse.url) {
-          const urlMatch = submissionResponse.url.match(/https?:\/\/[^\/]+(\/.*)/);
-          if (urlMatch && urlMatch[1]) {
-            permalink = urlMatch[1];
-          } else {
-            permalink = submissionResponse.url;
-          }
-        }
-        if (!postId && submissionResponse.name) {
-          postId = submissionResponse.name.replace('t3_', '');
-        }
-      }
-
-      if (!postId || !permalink) {
-        logger.error("Failed to parse Reddit response:", {
-          response: JSON.stringify(submissionResponse, null, 2),
-          hasJson: !!submissionResponse?.json,
-          hasData: !!submissionResponse?.json?.data,
-          jsonDataKeys: submissionResponse?.json ? Object.keys(submissionResponse.json) : [],
-          dataKeys: submissionResponse?.json?.data ? Object.keys(submissionResponse.json.data) : []
+        const errorList = failed.map(f => `r/${f.subreddit}: ${f.error}`).join('\n');
+        await interaction.editReply({
+          content: `⚠️ Failed to post to any subreddit:\n${errorList}`,
+          flags: MessageFlags.Ephemeral
         });
-        throw new Error('Failed to get post ID or permalink from Reddit response. Check logs for response structure.');
       }
-
-      logger.info("Successfully posted to r/findaserver:", {
-        postUrl: `https://reddit.com${permalink}`,
-        postId: postId,
-        title: promotionTitle,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-
-      const embed = new EmbedBuilder()
-        .setColor(0xFF4500)
-        .setTitle('🎉 Server Promotion Successful!')
-        .setDescription(`Your server has been promoted on r/findaserver.\n\n**View your post:** [View on Reddit](${`https://reddit.com${permalink}`})`);
-
-      await interaction.editReply({ embeds: [embed] });
-
-      const mockMessage = { client: interaction.client };
-      await handleReminder(mockMessage, 86400000, 'promote');
-
     } catch (error) {
-      logger.error("Error occurred while posting to r/findaserver.", { err: error });
-      let errorMessage = error.message || 'Unknown error';
-
-      // Parse Reddit API error responses
-      if (error.response?.data) {
-        const redditError = error.response.data;
-        if (redditError.json?.errors) {
-          const errors = redditError.json.errors;
-          for (const errorArray of errors) {
-            if (errorArray.length >= 2) {
-              const errorType = errorArray[0];
-              const errorDetail = errorArray[1];
-
-              if (errorType === 'BAD_FLAIR_TEMPLATE_ID') {
-                errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs. Check the logs for available flairs.';
-              } else if (errorType === 'RATELIMIT') {
-                errorMessage = `Rate limit exceeded: ${errorDetail}. Please try again later.`;
-              } else if (errorType === 'SUBREDDIT_NOEXIST') {
-                errorMessage = 'Subreddit does not exist or is private.';
-              } else if (errorType === 'SUBREDDIT_NOTALLOWED') {
-                errorMessage = 'You are not allowed to post to this subreddit.';
-              } else if (errorType === 'SUBMIT_VALIDATION_REPOST') {
-                // Extract time limit from error detail if available
-                const timeMatch = errorDetail.match(/within the past (\d+) (day|days|hour|hours)/i);
-                if (timeMatch) {
-                  const timeValue = timeMatch[1];
-                  const timeUnit = timeMatch[2].toLowerCase();
-                  errorMessage = `This link was already posted to r/findaserver within the past ${timeValue} ${timeUnit}. Please wait before posting again.`;
-                } else {
-                  errorMessage = 'This link was already posted recently. Please wait before posting again.';
-                }
-              } else {
-                errorMessage = `Reddit API error: ${errorType} - ${errorDetail}`;
-              }
-              break;
-            }
-          }
-        }
-      } else if (errorMessage.includes('SUBMIT_VALIDATION_REPOST')) {
-        // Handle repost error from thrown error message
-        const timeMatch = errorMessage.match(/within the past (\d+) (day|days|hour|hours)/i);
-        if (timeMatch) {
-          const timeValue = timeMatch[1];
-          const timeUnit = timeMatch[2].toLowerCase();
-          errorMessage = `This link was already posted to r/findaserver within the past ${timeValue} ${timeUnit}. Please wait before posting again.`;
-        } else {
-          errorMessage = 'This link was already posted recently. Please wait before posting again.';
-        }
-      } else if (errorMessage.includes('BAD_FLAIR_TEMPLATE_ID')) {
-        errorMessage = 'Invalid flair ID. The subreddit may have updated their flairs. Check the logs for available flairs.';
-      } else if (errorMessage.includes('RATELIMIT')) {
-        errorMessage = 'Rate limit exceeded. Please try again later.';
-      } else if (errorMessage.includes('SUBREDDIT_NOEXIST')) {
-        errorMessage = 'Subreddit does not exist or is private.';
-      } else if (errorMessage.includes('SUBREDDIT_NOTALLOWED')) {
-        errorMessage = 'You are not allowed to post to this subreddit.';
-      }
-
+      logger.error("Error occurred while posting to Reddit.", { err: error });
       await interaction.editReply({
-        content: `⚠️ Failed to post to r/findaserver: ${errorMessage}`,
+        content: `⚠️ An unexpected error occurred: ${error.message || 'Unknown error'}`,
         flags: MessageFlags.Ephemeral
       });
     }
