@@ -161,13 +161,13 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
   try {
     const reminderRole = await getValue('reminder_role');
     if (!reminderRole) {
-      logger.error("Configuration error: 'reminder_role' value not found.");
+      logger.warn("Reminder not scheduled: 'reminder_role' not set. Use /reminder to configure.");
       return;
     }
 
     const reminderChannelId = await getValue('reminder_channel');
     if (!reminderChannelId) {
-      logger.error("Configuration error: 'reminder_channel' value not found.");
+      logger.warn("Reminder not scheduled: 'reminder_channel' not set. Use /reminder to configure.");
       return;
     }
 

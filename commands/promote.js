@@ -212,10 +212,24 @@ async function postToSubreddit(subredditName, promotionTitle) {
   try {
     const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
     if (flairData && Array.isArray(flairData) && flairData.length > 0) {
+      const availableFlairs = flairData.map((f, i) => {
+        const id = f.id ?? f.flair_template_id ?? f.flair_identifier;
+        return {
+          index: i,
+          id,
+          flair_template_id: f.flair_template_id,
+          text: f.text ?? f.flair_text
+        };
+      });
+      logger.info(`Available flairs for r/${subredditName}:`, {
+        flairs: availableFlairs,
+        totalCount: availableFlairs.length
+      });
       const preferred = flairData.find(f => (f.text || f.flair_text || '').toLowerCase().includes('gaming') || (f.text || f.flair_text || '').toLowerCase().includes('21'));
       const first = flairData[0];
       const flair = preferred || first;
-      flairId = flair.id || flair.flair_template_id;
+      flairId = flair.id ?? flair.flair_template_id ?? flair.flair_identifier;
+      logger.debug(`Using flair for r/${subredditName}:`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text });
     }
   } catch (flairErr) {
     if (flairErr.response?.status === 404 && flairErr.response?.data?.reason === 'banned') {
@@ -340,10 +354,11 @@ module.exports = {
       const failed = results.filter(r => !r.success);
 
       if (succeeded.length > 0) {
-        const linkLines = succeeded.map(r => `**r/${r.subreddit}:** [View post](https://reddit.com${r.permalink})`);
-        let description = `Your server has been promoted on ${succeeded.map(r => `r/${r.subreddit}`).join(' and ')}.\n\n${linkLines.join('\n')}`;
+        const subList = succeeded.map(r => `\`r/${r.subreddit}\``).join(' and ');
+        const linkLines = succeeded.map(r => `• \`r/${r.subreddit}\`: [View post](https://reddit.com${r.permalink})`);
+        let description = `Your server has been promoted on ${subList}.\n\n${linkLines.join('\n')}`;
         if (failed.length > 0) {
-          description += `\n\n_Could not post to:_ ${failed.map(f => `r/${f.subreddit} (${f.error})`).join('; ')}`;
+          description += `\n\n_Could not post to:_ ${failed.map(f => `\`r/${f.subreddit}\` (${f.error})`).join('; ')}`;
         }
 
         const embed = new EmbedBuilder()
