@@ -64,7 +64,6 @@ module.exports = {
           name: member.displayName ?? targetUser.username,
           iconURL: member.displayAvatarURL()
         })
-        .setDescription(`Join date for ${member}`)
         .addFields(
           {
             name: 'Joined server',
