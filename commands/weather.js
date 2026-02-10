@@ -86,7 +86,7 @@ module.exports = {
       if (!config.pirateWeatherApiKey) {
         logger.error("Weather API key is missing in configuration.");
         await interaction.editReply({ 
-          content: "⚠️ Weather API key is missing in configuration. Please contact the administrator.",
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           flags: MessageFlags.Ephemeral
         });
         return;
@@ -440,7 +440,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while fetching weather information.";
+    let errorMessage = "⚠️ An unexpected error occurred while fetching weather information. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to fetch weather data. Please try again later.";

@@ -253,7 +253,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while managing troll mode settings.";
+    let errorMessage = "⚠️ An unexpected error occurred while managing troll mode settings. Please try again later.";
     
     if (error.message === "DATABASE_READ_ERROR") {
       errorMessage = "⚠️ Failed to retrieve troll mode settings. Please try again later.";

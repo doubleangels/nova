@@ -118,7 +118,7 @@ module.exports = {
             targetUserId: interaction.options?.getUser('user')?.id
         });
         
-        let errorMessage = "⚠️ An unexpected error occurred while changing the nickname.";
+        let errorMessage = "⚠️ An unexpected error occurred while changing the nickname. Please try again later.";
         
         if (error.message === "BOT_PERMISSION_DENIED") {
             errorMessage = "⚠️ I don't have permission to manage nicknames in this server.";

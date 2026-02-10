@@ -41,7 +41,7 @@ module.exports = {
       if (!config.malClientId) {
         logger.error("MyAnimeList API client ID is not configured.");
         await interaction.reply({
-          content: "⚠️ MyAnimeList API client ID is not configured. Please contact an administrator.",
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           flags: MessageFlags.Ephemeral
         });
         return;
@@ -82,12 +82,12 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      let errorMessage = "⚠️ An unexpected error occurred. Please try again later.";
+      let errorMessage = "⚠️ An unexpected error occurred while searching. Please try again later.";
 
       if (error.message === "API_ERROR") {
         errorMessage = "⚠️ Failed to communicate with MyAnimeList API. Please try again later.";
       } else if (error.message === "API_RATE_LIMIT") {
-        errorMessage = "⚠️ MyAnimeList API rate limit reached. Please try again in a few moments.";
+        errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
       } else if (error.message === "API_NETWORK_ERROR") {
         errorMessage = "⚠️ Network error: Could not connect to MyAnimeList. Please check your internet connection.";
       }

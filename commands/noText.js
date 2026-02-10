@@ -140,7 +140,7 @@ module.exports = {
     } catch (error) {
       logger.error("Error occurred in notext command.", { err: error });
       await interaction.reply({
-        content: "⚠️ An unexpected error occurred while configuring the channel.",
+        content: "⚠️ An unexpected error occurred while configuring the channel. Please try again later.",
         flags: MessageFlags.Ephemeral
       });
     }

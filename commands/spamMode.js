@@ -350,7 +350,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while managing spam mode settings.";
+    let errorMessage = "⚠️ An unexpected error occurred while managing spam mode settings. Please try again later.";
     
     if (error.message === "DATABASE_READ_ERROR") {
       errorMessage = "⚠️ Failed to retrieve spam mode settings. Please try again later.";

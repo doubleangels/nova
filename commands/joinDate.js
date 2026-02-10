@@ -41,7 +41,7 @@ module.exports = {
 
       if (!member) {
         return await interaction.editReply({
-          content: "That user isn't in this server or couldn't be found.",
+          content: "⚠️ The specified user could not be found in this server.",
           flags: MessageFlags.Ephemeral
         });
       }
@@ -51,7 +51,7 @@ module.exports = {
 
       if (!joinedAt) {
         return await interaction.editReply({
-          content: "Join date for this member isn't available.",
+          content: "⚠️ Join date for this member isn't available.",
           flags: MessageFlags.Ephemeral
         });
       }
@@ -90,7 +90,7 @@ module.exports = {
       });
       try {
         await interaction.editReply({
-          content: 'Something went wrong while fetching that member.',
+          content: '⚠️ An unexpected error occurred. Please try again later.',
           flags: MessageFlags.Ephemeral
         });
       } catch (e) {

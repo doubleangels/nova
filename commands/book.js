@@ -393,12 +393,12 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while searching for books.";
+    let errorMessage = "⚠️ An unexpected error occurred while searching for books. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to search Google Books. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = "⚠️ Google Books API rate limit reached. Please try again in a few moments.";
+      errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
     } else if (error.message === "API_NETWORK_ERROR") {
       errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message === "NO_RESULTS") {
@@ -408,7 +408,7 @@ module.exports = {
     } else if (error.message === "INVALID_QUERY") {
       errorMessage = "⚠️ Please provide a valid search query.";
     } else if (error.message === "API_KEY_MISSING") {
-      errorMessage = "⚠️ Google Books API is not properly configured. Please contact an administrator.";
+      errorMessage = "⚠️ This command is not properly configured. Please contact an administrator.";
     }
     
     try {

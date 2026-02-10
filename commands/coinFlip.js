@@ -72,7 +72,7 @@ module.exports = {
             guildId: interaction.guild?.id
         });
         
-        let errorMessage = "⚠️ An unexpected error occurred while flipping the coin.";
+        let errorMessage = "⚠️ An unexpected error occurred while flipping the coin. Please try again later.";
         
         if (error.message === "RESULT_FAILED") {
             errorMessage = "⚠️ Failed to generate coin flip result.";

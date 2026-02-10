@@ -138,12 +138,12 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while searching.";
+    let errorMessage = "⚠️ An unexpected error occurred while searching. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to fetch search results. Please try again later.";
     } else if (error.message === "API_RATE_LIMIT") {
-      errorMessage = "⚠️ API rate limit reached. Please try again in a few moments.";
+      errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
     } else if (error.message === "API_NETWORK_ERROR") {
       errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     }

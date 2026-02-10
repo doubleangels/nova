@@ -47,28 +47,28 @@ module.exports = {
       const botMember = interaction.guild.members.me;
       if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
         return await interaction.editReply({
-          content: "I don't have permission to manage roles.",
+          content: "⚠️ I don't have permission to manage roles.",
           flags: MessageFlags.Ephemeral
         });
       }
 
       if (botMember.roles.highest.position <= role.position) {
         return await interaction.editReply({
-          content: "I can't edit that role. It is above or equal to my highest role.",
+          content: "⚠️ I can't edit that role. It is above or equal to my highest role.",
           flags: MessageFlags.Ephemeral
         });
       }
 
       if (role.managed) {
         return await interaction.editReply({
-          content: "That role is managed by an integration (e.g. bot or Booster) and can't be renamed.",
+          content: "⚠️ That role is managed by an integration (e.g. bot or Booster) and can't be renamed.",
           flags: MessageFlags.Ephemeral
         });
       }
 
       if (newName.length < 1 || newName.length > 100) {
         return await interaction.editReply({
-          content: 'Role name must be between 1 and 100 characters.',
+          content: '⚠️ Role name must be between 1 and 100 characters.',
           flags: MessageFlags.Ephemeral
         });
       }
@@ -112,11 +112,11 @@ module.exports = {
       channelId: interaction.channel?.id
     });
 
-    let message = "An unexpected error occurred while renaming the role.";
+    let message = "⚠️ An unexpected error occurred while renaming the role. Please try again later.";
     if (error.code === 50013) {
-      message = "I don't have permission to edit that role, or it's above my highest role.";
+      message = "⚠️ I don't have permission to edit that role, or it's above my highest role.";
     } else if (error.code === 50035 && error.rawError?.errors?.name) {
-      message = 'Invalid role name. It must be 1–100 characters and follow Discord\'s rules.';
+      message = '⚠️ Invalid role name. It must be 1–100 characters and follow Discord\'s rules.';
     }
 
     try {

@@ -296,7 +296,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while managing mute mode.";
+    let errorMessage = "⚠️ An unexpected error occurred while managing mute mode. Please try again later.";
     
     if (error.message === "DATABASE_READ_ERROR") {
       errorMessage = "⚠️ Failed to retrieve mute mode settings. Please try again later.";

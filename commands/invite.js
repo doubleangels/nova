@@ -177,8 +177,8 @@ module.exports = {
     if (!codePattern.test(cleanCode)) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Invalid Invite Code')
-        .setDescription('Please provide a valid Discord invite code.\n\n**Examples:**\n- `xxxxx` (from discord.gg/xxxxx)\n- `https://discord.gg/xxxxx`\n- `discord.gg/xxxxx`\n- `discord.gg/dafrens` (vanity invite)');
+        .setTitle('Invalid Invite Code')
+        .setDescription('⚠️ Please provide a valid Discord invite code.\n\n**Examples:**\n- `xxxxx` (from discord.gg/xxxxx)\n- `https://discord.gg/xxxxx`\n- `discord.gg/xxxxx`\n- `discord.gg/dafrens` (vanity invite)');
 
       await interaction.editReply({ embeds: [embed] });
       return;
@@ -208,8 +208,8 @@ module.exports = {
         if (!inviteExists) {
           const embed = new EmbedBuilder()
             .setColor(0xFF0000)
-            .setTitle('❌ Invite Not Found')
-            .setDescription(`The invite code \`${cleanCode}\` does not exist in this server. Please verify the code is correct and the invite hasn't been deleted.`);
+            .setTitle('Invite Not Found')
+            .setDescription(`⚠️ The invite code \`${cleanCode}\` does not exist in this server. Please verify the code is correct and the invite hasn't been deleted.`);
 
           await interaction.editReply({ embeds: [embed] });
           return;
@@ -309,8 +309,8 @@ module.exports = {
     if (channel.type !== ChannelType.GuildText) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Invalid Channel Type')
-        .setDescription('Please select a text channel for invite notifications.');
+        .setTitle('Invalid Channel Type')
+        .setDescription('⚠️ Please select a text channel for invite notifications.');
 
       await interaction.editReply({ embeds: [embed] });
       return;
@@ -430,8 +430,8 @@ module.exports = {
     if (!interaction.guild.members.me.permissions.has('CreateInstantInvite')) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Missing Permissions')
-        .setDescription('The bot does not have permission to create invites. Please grant the "Create Instant Invite" permission.');
+        .setTitle('Missing Permissions')
+        .setDescription('⚠️ The bot does not have permission to create invites. Please grant the "Create Instant Invite" permission.');
 
       await interaction.editReply({ embeds: [embed] });
       return;
@@ -449,8 +449,8 @@ module.exports = {
       if (!targetChannel) {
         const embed = new EmbedBuilder()
           .setColor(0xFF0000)
-          .setTitle('❌ No Channel Available')
-          .setDescription('No text channel found where the bot can create invites. Please specify a channel or grant permissions.');
+          .setTitle('No Channel Available')
+          .setDescription('⚠️ No text channel found where the bot can create invites. Please specify a channel or grant permissions.');
 
         await interaction.editReply({ embeds: [embed] });
         return;
@@ -461,8 +461,8 @@ module.exports = {
     if (!targetChannel.permissionsFor(interaction.guild.members.me)?.has('CreateInstantInvite')) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Missing Permissions')
-        .setDescription(`The bot does not have permission to create invites in ${targetChannel}.`);
+        .setTitle('Missing Permissions')
+        .setDescription(`⚠️ The bot does not have permission to create invites in ${targetChannel}.`);
 
       await interaction.editReply({ embeds: [embed] });
       return;
@@ -585,8 +585,8 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Failed to Create Invite')
-        .setDescription(`An error occurred while creating the invite: ${error.message}`);
+        .setTitle('Failed to Create Invite')
+        .setDescription(`⚠️ An error occurred while creating the invite: ${error.message}`);
 
       await interaction.editReply({ embeds: [embed] });
     }
@@ -613,8 +613,8 @@ module.exports = {
     if (!inviteTag) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Tag Not Found')
-        .setDescription(`No tagged invite found with the name "${tagName}".\n\nUse \`/invite list\` to see all tagged invites.`);
+        .setTitle('Tag Not Found')
+        .setDescription(`⚠️ No tagged invite found with the name "${tagName}".\n\nUse \`/invite list\` to see all tagged invites.`);
 
       await interaction.editReply({ embeds: [embed] });
       return;
@@ -725,8 +725,8 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
-        .setTitle('❌ Failed to Remove Tag')
-        .setDescription(`An error occurred while removing the tag: ${error.message}`);
+        .setTitle('Failed to Remove Tag')
+        .setDescription(`⚠️ An error occurred while removing the tag: ${error.message}`);
 
       await interaction.editReply({ embeds: [embed] });
     }
@@ -784,7 +784,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
 
-    let errorMessage = "⚠️ An unexpected error occurred while processing the invite command.";
+    let errorMessage = "⚠️ An unexpected error occurred while processing the invite command. Please try again later.";
 
     if (error.message === "DATABASE_WRITE_ERROR") {
       errorMessage = "⚠️ Failed to save the invite tag. Please try again later.";
@@ -794,7 +794,8 @@ module.exports = {
 
     try {
       await interaction.editReply({
-        content: errorMessage
+        content: errorMessage,
+        flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
       logger.error("Failed to send error response for invite command.", {
@@ -804,7 +805,8 @@ module.exports = {
       });
 
       await interaction.reply({
-        content: errorMessage
+        content: errorMessage,
+        flags: MessageFlags.Ephemeral
       }).catch(() => { });
     }
   }

@@ -88,7 +88,7 @@ module.exports = {
             guildId: interaction.guild?.id
         });
         
-        let errorMessage = "⚠️ An unexpected error occurred while searching Urban Dictionary.";
+        let errorMessage = "⚠️ An unexpected error occurred while searching Urban Dictionary. Please try again later.";
         
         if (error.message === "API_ERROR") {
             errorMessage = "⚠️ Failed to search Urban Dictionary. Please try again later.";

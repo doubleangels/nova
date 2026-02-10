@@ -329,7 +329,7 @@ module.exports = {
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
         return await interaction.editReply({
-          content: `⏰ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
+          content: `⚠️ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
           flags: MessageFlags.Ephemeral
         });
       }
@@ -380,7 +380,7 @@ module.exports = {
     } catch (error) {
       logger.error("Error occurred while posting to Reddit.", { err: error });
       await interaction.editReply({
-        content: `⚠️ An unexpected error occurred: ${error.message || 'Unknown error'}`,
+        content: "⚠️ An unexpected error occurred. Please try again later.",
         flags: MessageFlags.Ephemeral
       });
     }
@@ -397,7 +397,7 @@ module.exports = {
       guildId: interaction.guildId
     });
 
-    let errorMessage = "⚠️ An unexpected error occurred while promoting the post.";
+    let errorMessage = "⚠️ An unexpected error occurred while promoting the post. Please try again later.";
 
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to communicate with Reddit API.";
@@ -416,7 +416,7 @@ module.exports = {
     }
 
     try {
-      await interaction.editReply({ content: errorMessage });
+      await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
     } catch (replyError) {
       logger.error('Failed to send error message.', { err: replyError });
     }

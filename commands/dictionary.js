@@ -83,7 +83,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
 
-    let errorMessage = '⚠️ An unexpected error occurred while searching the dictionary.';
+    let errorMessage = '⚠️ An unexpected error occurred while searching the dictionary. Please try again later.';
     if (error.response && error.response.status === 404) {
       errorMessage = '⚠️ No definitions found for your search word.';
     } else if (error.code === 'ECONNABORTED') {

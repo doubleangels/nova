@@ -68,20 +68,20 @@ module.exports = {
       channelId: interaction.channelId
     });
 
-    let errorMessage = "⚠️ An unexpected error occurred while taking the role.";
+    let errorMessage = "⚠️ An unexpected error occurred while taking the role. Please try again later.";
     
     if (error.message === "INSUFFICIENT_PERMISSIONS") {
       errorMessage = "⚠️ I don't have permission to manage roles.";
     } else if (error.message === "MANAGED_ROLE") {
       errorMessage = "⚠️ This role is managed by an integration and cannot be removed.";
     } else if (error.message === "USER_NOT_FOUND") {
-      errorMessage = "⚠️ Could not find the specified user.";
+      errorMessage = "⚠️ The specified user could not be found in this server.";
     } else if (error.message === "ROLE_NOT_ASSIGNED") {
       errorMessage = "⚠️ The user doesn't have this role.";
     }
 
     try {
-      await interaction.editReply({ content: errorMessage });
+      await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
     } catch (replyError) {
       logger.error('Failed to send error message.', { err: replyError });
     }

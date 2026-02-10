@@ -48,7 +48,7 @@ module.exports = {
       if (!config.omdbApiKey) {
         logger.error("OMDb API key is not configured in the application.");
         await interaction.reply({
-          content: "⚠️ OMDb API key is not configured. Please contact an administrator.",
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           flags: MessageFlags.Ephemeral
         });
         return;
@@ -150,7 +150,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while searching IMDb.";
+    let errorMessage = "⚠️ An unexpected error occurred while searching IMDb. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to search IMDb. Please try again later.";

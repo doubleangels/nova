@@ -70,7 +70,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while fetching the dog image.";
+    let errorMessage = "⚠️ An unexpected error occurred while fetching the dog image. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Couldn't fetch a dog picture due to an API error. Try again later.";

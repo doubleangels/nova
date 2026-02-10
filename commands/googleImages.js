@@ -213,14 +213,14 @@ module.exports = {
       channelId: interaction.channel?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while searching for images.";
+    let errorMessage = "⚠️ An unexpected error occurred while searching for images. Please try again later.";
     
     if (error.message.includes('API')) {
       errorMessage = "⚠️ Failed to fetch search results. Please try again later.";
     } else if (error.message.includes('network')) {
       errorMessage = "⚠️ Network error occurred. Please check your internet connection.";
     } else if (error.message.includes('rate limit')) {
-      errorMessage = "⚠️ API rate limit reached. Please try again in a few moments.";
+      errorMessage = "⚠️ Rate limit exceeded. Please try again in a few minutes.";
     }
     
     try {

@@ -126,7 +126,7 @@ module.exports = {
         type: type
       });
       
-      let errorMessage = `⚠️ An unexpected error occurred while fixing the ${displayName.toLowerCase()} reminder.`;
+      let errorMessage = `⚠️ An unexpected error occurred while fixing the ${displayName.toLowerCase()} reminder. Please try again later.`;
       
       if (error.message === "DATABASE_ERROR") {
         errorMessage = "⚠️ Failed to save reminder data to the database. Please try again later.";
@@ -170,7 +170,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while fixing the reminder.";
+    let errorMessage = "⚠️ An unexpected error occurred while fixing the reminder. Please try again later.";
     
     if (error.message === "DATABASE_ERROR") {
       errorMessage = "⚠️ Failed to save reminder data to the database. Please try again later.";

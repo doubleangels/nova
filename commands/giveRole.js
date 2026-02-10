@@ -190,7 +190,7 @@ module.exports = {
             channelId: interaction.channelId
         });
 
-        let errorMessage = "⚠️ An unexpected error occurred while giving the role.";
+        let errorMessage = "⚠️ An unexpected error occurred while giving the role. Please try again later.";
         
         if (error.message === "INSUFFICIENT_PERMISSIONS") {
             errorMessage = "⚠️ I don't have permission to manage roles.";

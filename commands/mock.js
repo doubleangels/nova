@@ -110,7 +110,7 @@ module.exports = {
             targetMessageId: interaction.targetMessage?.id
         });
         
-        let errorMessage = "⚠️ An unexpected error occurred while converting the message.";
+        let errorMessage = "⚠️ An unexpected error occurred while converting the message. Please try again later.";
         
         if (error.message === "MESSAGE_NOT_FOUND") {
             errorMessage = "⚠️ The selected message could not be found.";

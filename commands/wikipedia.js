@@ -116,7 +116,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while searching Wikipedia.";
+    let errorMessage = "⚠️ An unexpected error occurred while searching Wikipedia. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to search Wikipedia. Please try again later.";

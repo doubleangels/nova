@@ -225,7 +225,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while calculating time difference.";
+    let errorMessage = "⚠️ An unexpected error occurred while calculating time difference. Please try again later.";
     
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to retrieve timezone information. Please try again later.";

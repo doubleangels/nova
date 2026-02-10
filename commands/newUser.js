@@ -89,7 +89,7 @@ module.exports = {
       });
       try {
         await interaction.editReply({
-          content: "Something went wrong while fetching that user's profile.",
+          content: "⚠️ An unexpected error occurred. Please try again later.",
           flags: MessageFlags.Ephemeral
         });
       } catch (e) {

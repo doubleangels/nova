@@ -43,7 +43,7 @@ module.exports = {
     try {
       if (!this.validateConfiguration()) {
         return await interaction.reply({
-          content: "⚠️ YouTube API configuration is missing. Please contact an administrator.",
+          content: "⚠️ This command is not properly configured. Please contact an administrator.",
           flags: MessageFlags.Ephemeral
         });
       }
@@ -112,7 +112,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
 
-    let errorMessage = "⚠️ An unexpected error occurred while searching YouTube.";
+    let errorMessage = "⚠️ An unexpected error occurred while searching YouTube. Please try again later.";
 
     if (error.message === "API_ERROR") {
       errorMessage = "⚠️ Failed to search YouTube. Please try again later.";
@@ -131,7 +131,7 @@ module.exports = {
     } else if (error.message === "INVALID_DURATION") {
       errorMessage = "⚠️ Invalid duration specified.";
     } else if (error.message === "CONFIG_MISSING") {
-      errorMessage = "⚠️ YouTube API key is missing. Please contact an administrator.";
+      errorMessage = "⚠️ This command is not properly configured. Please contact an administrator.";
     }
 
     try {

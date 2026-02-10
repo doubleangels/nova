@@ -92,7 +92,7 @@ module.exports = {
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
-    let errorMessage = '⚠️ An unexpected error occurred while searching for the country.';
+    let errorMessage = '⚠️ An unexpected error occurred while searching for the country. Please try again later.';
     if (error.response && error.response.status === 404) {
       errorMessage = '⚠️ No country found with that name.';
     } else if (error.code === 'ECONNABORTED') {

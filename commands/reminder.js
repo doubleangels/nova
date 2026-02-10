@@ -265,7 +265,7 @@ module.exports = {
       guildId: interaction.guild?.id
     });
     
-    let errorMessage = "⚠️ An unexpected error occurred while managing reminders.";
+    let errorMessage = "⚠️ An unexpected error occurred while managing reminders. Please try again later.";
     
     if (error.message === "DATABASE_READ_ERROR") {
       errorMessage = "⚠️ Failed to retrieve reminder settings. Please try again later.";

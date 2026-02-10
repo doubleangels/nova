@@ -295,7 +295,7 @@ module.exports = {
             channelId: interaction.channel?.id
         });
         
-        let errorMessage = "⚠️ An unexpected error occurred while granting permissions.";
+        let errorMessage = "⚠️ An unexpected error occurred while granting permissions. Please try again later.";
         
         if (error.message === "CONFIG_MISSING") {
             errorMessage = "⚠️ This command is not properly configured. Please contact an administrator.";
