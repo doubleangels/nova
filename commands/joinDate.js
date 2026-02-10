@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 
 /**
  * Command module for showing when a user joined the server.
@@ -59,7 +60,7 @@ module.exports = {
       const createdTimestamp = Math.floor(createdAt.getTime() / 1000);
 
       const embed = new EmbedBuilder()
-        .setColor(member.displayColor || 0)
+        .setColor(config.baseEmbedColor ?? 0)
         .setAuthor({
           name: member.displayName ?? targetUser.username,
           iconURL: member.displayAvatarURL()
