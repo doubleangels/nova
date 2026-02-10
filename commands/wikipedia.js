@@ -92,7 +92,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(0xFFFFFF)
-        .setTitle(`📚 ${article.title}`)
+        .setTitle(article.title)
         .setDescription(summary)
         .setURL(`https://en.wikipedia.org/wiki/${encodeURIComponent(article.title)}`)
         .setFooter({ text: 'Powered by Wikipedia' });

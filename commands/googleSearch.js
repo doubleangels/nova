@@ -227,8 +227,8 @@ module.exports = {
     const snippet = item.snippet || "No Description Found";
     
     return new EmbedBuilder()
-      .setTitle(`🔍 ${title}`)
-      .setDescription(`📜 **Summary:** ${snippet}\n🔗 [Read More](${link})`)
+      .setTitle(title)
+      .setDescription(`**Summary:** ${snippet}\n[Read More](${link})`)
       .setColor(0x4285F4)
       .setFooter({ text: `Powered by Google Search • Result ${index + 1} of ${items.length}` });
   }

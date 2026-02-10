@@ -118,10 +118,10 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0xc03728)
-      .setTitle('⏰ Reminder Setup Complete')
+      .setTitle('Reminder Setup Complete')
       .addFields(
-        { name: '📢 Channel', value: `<#${channelOption.id}>` },
-        { name: '🎭 Role', value: `<@&${roleOption.id}>` }
+        { name: 'Channel', value: `<#${channelOption.id}>` },
+        { name: 'Role', value: `<@&${roleOption.id}>` }
       )
       .setDescription(`Reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`);
 
@@ -164,16 +164,16 @@ module.exports = {
         guildId: interaction.guildId
       });
       
-      let channelStr = '⚠️ Not set!';
+      let channelStr = 'Not set';
       if (channelId) {
         const channelObj = interaction.guild.channels.cache.get(channelId);
-        channelStr = channelObj ? `<#${channelId}>` : '⚠️ Invalid channel!';
+        channelStr = channelObj ? `<#${channelId}>` : 'Invalid channel';
       }
   
-      let roleStr = '⚠️ Not set!';
+      let roleStr = 'Not set';
       if (roleId) {
         const roleObj = interaction.guild.roles.cache.get(roleId);
-        roleStr = roleObj ? `<@&${roleId}>` : '⚠️ Invalid role!';
+        roleStr = roleObj ? `<@&${roleId}>` : 'Invalid role';
       }
       
       const bumpTimeStr = this.calculateRemainingTime(bumpReminder);
@@ -182,16 +182,16 @@ module.exports = {
       
       const embed = new EmbedBuilder()
         .setColor(0xc03728)
-        .setTitle('⏰ Server Reminders Status')
+        .setTitle('Server Reminders Status')
         .addFields(
-          { name: '📢 Channel', value: channelStr },
-          { name: '🎭 Role', value: roleStr },
-          { name: '⏰ Next Bump (Disboard)', value: bumpTimeStr },
-          { name: '🎯 Next Promotion', value: promoteTimeStr }
+          { name: 'Channel', value: channelStr },
+          { name: 'Role', value: roleStr },
+          { name: 'Next Bump (Disboard)', value: bumpTimeStr },
+          { name: 'Next Promotion', value: promoteTimeStr }
         );
 
       if (!configComplete) {
-        embed.setDescription('⚠️ **Warning:** Reminder configuration is incomplete.');
+        embed.setDescription('**Warning:** Reminder configuration is incomplete.');
       }
 
       await interaction.editReply({ embeds: [embed] });

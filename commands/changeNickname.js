@@ -85,10 +85,10 @@ module.exports = {
             
             const embed = new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle('👤 Nickname Updated')
+                .setTitle('Nickname Updated')
                 .setDescription(newNickname 
-                    ? `Successfully changed ${targetUser}'s nickname to "${newNickname}"!`
-                    : `Successfully reset ${targetUser}'s nickname!`);
+                    ? `Successfully changed ${targetUser}'s nickname to **${newNickname}**.`
+                    : `Successfully reset ${targetUser}'s nickname.`);
             
             await interaction.editReply({ embeds: [embed] });
             

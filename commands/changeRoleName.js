@@ -108,7 +108,8 @@ module.exports = {
     logger.error('Error in changeRoleName command.', {
       err: error,
       userId: interaction.user?.id,
-      guildId: interaction.guildId
+      guildId: interaction.guild?.id,
+      channelId: interaction.channel?.id
     });
 
     let message = "An unexpected error occurred while renaming the role.";
@@ -121,7 +122,11 @@ module.exports = {
     try {
       await interaction.editReply({ content: message, flags: MessageFlags.Ephemeral });
     } catch (e) {
-      logger.error('Failed to send error reply.', { err: e });
+      logger.error('Failed to send error reply.', {
+        err: e,
+        originalError: error.message,
+        userId: interaction.user?.id
+      });
     }
   }
 };

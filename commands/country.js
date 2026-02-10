@@ -62,12 +62,12 @@ module.exports = {
         .setTitle(`${country.name.common} ${country.flag || ''}`)
         .setDescription(country.name.official || country.name.common)
         .addFields(
-          { name: '🌍 Region', value: `${region} (${subregion})`, inline: true },
-          { name: '🏙️ Capital', value: capital, inline: true },
-          { name: '👥 Population', value: population, inline: true },
-          { name: '💵 Currencies', value: currencies, inline: true },
-          { name: '🗺️ Area', value: area, inline: true },
-          { name: '📍 Google Maps', value: `[View on Google Maps](${mapsUrl})`, inline: false }
+          { name: 'Region', value: `${region} (${subregion})`, inline: true },
+          { name: 'Capital', value: capital, inline: true },
+          { name: 'Population', value: population, inline: true },
+          { name: 'Currencies', value: currencies, inline: true },
+          { name: 'Area', value: area, inline: true },
+          { name: 'Google Maps', value: `[View on Google Maps](${mapsUrl})`, inline: false }
         )
         .setFooter({ text: 'Powered by restcountries.com' });
       if (flag) {

@@ -257,13 +257,12 @@ module.exports = {
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔤 Spam Mode Status');
+      .setTitle('Spam Mode Status');
 
-    const statusEmoji = settings.enabled ? "✅" : "❌";
     const statusText = settings.enabled ? "Enabled" : "Disabled";
     
     embed.addFields(
-      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Status', value: `**${statusText}**` },
       { name: 'Message Threshold', value: `${settings.threshold} duplicate messages` },
       { name: 'Tracking Window', value: `${settings.window} ${settings.window === 1 ? 'hour' : 'hours'}` }
     );
@@ -299,13 +298,12 @@ module.exports = {
   formatUpdateMessage(enabled, threshold, window, warningChannel, interaction) {
     const embed = new EmbedBuilder()
       .setColor(enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle(`🔤 Spam Mode ${enabled ? 'Enabled' : 'Disabled'}`);
+      .setTitle(`Spam Mode ${enabled ? 'Enabled' : 'Disabled'}`);
 
-    const statusEmoji = enabled ? "✅" : "❌";
     const statusText = enabled ? "Enabled" : "Disabled";
     
     embed.addFields(
-      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Status', value: `**${statusText}**` },
       { name: 'Message Threshold', value: `${threshold} duplicate messages` },
       { name: 'Tracking Window', value: `${window} ${window === 1 ? 'hour' : 'hours'}` }
     );

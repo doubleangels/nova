@@ -52,7 +52,7 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor(0x820627)
-        .setTitle(`📚 Dictionary: ${data.word}`)
+        .setTitle(`Dictionary: ${data.word}`)
         .setDescription(definition ? definition.definition : 'No definition found.')
         .addFields(
           { name: 'Phonetic', value: phonetic || 'N/A', inline: true },

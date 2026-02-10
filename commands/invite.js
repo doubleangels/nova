@@ -260,10 +260,10 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
-      .setTitle(isUpdate ? '✅ Invite Tag Updated' : '✅ Invite Code Tagged')
+      .setTitle(isUpdate ? 'Invite Tag Updated' : 'Invite Code Tagged')
       .setDescription(isUpdate
-        ? `The tag "${tagName}" has been updated with a new invite code.`
-        : `The invite code has been successfully tagged.`)
+        ? `The tag **${tagName}** has been updated with a new invite code.`
+        : `The invite code has been successfully tagged as **${tagName}**.`)
       .addFields(
         { name: 'Tag Name', value: tagName, inline: true },
         { name: 'Invite Code', value: cleanCode, inline: true },
@@ -318,7 +318,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
-      .setTitle('✅ Invite Notifications Configured')
+      .setTitle('Invite Notifications Configured')
       .setDescription('The notification channel has been successfully set up.')
       .addFields(
         { name: 'Notification Channel', value: `${channel}`, inline: false }
@@ -350,7 +350,7 @@ module.exports = {
     if (tags.length === 0) {
       const embed = new EmbedBuilder()
         .setColor(0xFFA500)
-        .setTitle('📋 Tagged Invites')
+        .setTitle('Tagged Invites')
         .setDescription('No tagged invites found. Use `/invite tag` to create one.');
 
       await interaction.editReply({ embeds: [embed] });
@@ -362,8 +362,8 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
-      .setTitle('📋 Tagged Invites')
-      .setDescription(`Found ${tags.length} tagged invite${tags.length === 1 ? '' : 's'}:`)
+      .setTitle('Tagged Invites')
+      .setDescription(`Found **${tags.length}** tagged invite${tags.length === 1 ? '' : 's'}:`)
       .setTimestamp();
 
     // Discord embeds have a limit of 25 fields and 6000 characters total
@@ -527,10 +527,10 @@ module.exports = {
       // Build embed
       const embed = new EmbedBuilder()
         .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
-        .setTitle(isUpdate ? '✅ Invite Created and Tag Updated' : '✅ Invite Created and Tagged')
+        .setTitle(isUpdate ? 'Invite Created and Tag Updated' : 'Invite Created and Tagged')
         .setDescription(isUpdate
-          ? `A new invite has been created and the tag "${tagName}" has been updated.`
-          : `A new invite has been created and tagged.`)
+          ? `A new invite has been created and the tag **${tagName}** has been updated.`
+          : `A new invite has been created and tagged as **${tagName}**.`)
         .addFields(
           { name: 'Tag Name', value: tagName, inline: true },
           { name: 'Invite Code', value: inviteCode, inline: true },
@@ -690,25 +690,14 @@ module.exports = {
       // Build response embed
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
-        .setTitle('✅ Tagged Invite Removed')
-        .setDescription(`The tagged invite "${tagName}" has been successfully removed.`)
+        .setTitle('Tagged Invite Removed')
+        .setDescription(`The tagged invite **${tagName}** has been successfully removed.`)
         .addFields(
           { name: 'Tag Name', value: tagName, inline: true },
           { name: 'Invite Code', value: inviteTag.code || 'N/A', inline: true },
           { name: 'Full URL', value: inviteTag.code ? `https://discord.gg/${inviteTag.code}` : 'N/A', inline: false }
         )
         .setTimestamp();
-
-      // Add status about Discord invite deletion
-      if (inviteTag.code) {
-        if (inviteDeleted) {
-          embed.addFields({ name: 'Discord Invite', value: '✅ Deleted from server', inline: true });
-        } else if (inviteDeleteError) {
-          embed.addFields({ name: 'Discord Invite', value: `⚠️ ${inviteDeleteError}`, inline: true });
-        } else {
-          embed.addFields({ name: 'Discord Invite', value: '⚠️ Not found in server', inline: true });
-        }
-      }
 
       await interaction.editReply({ embeds: [embed] });
 

@@ -194,13 +194,12 @@ module.exports = {
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🎭 Troll Mode Status');
+      .setTitle('Troll Mode Status');
 
-    const statusEmoji = settings.enabled ? "✅" : "❌";
     const statusText = settings.enabled ? "Enabled" : "Disabled";
     
     embed.addFields(
-      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Status', value: `**${statusText}**` },
       { name: 'Minimum Account Age', value: `${settings.accountAge} ${settings.accountAge === 1 ? 'day' : 'days'}` }
     );
     
@@ -223,13 +222,12 @@ module.exports = {
   formatUpdateMessage(enabled, accountAge, interaction) {
     const embed = new EmbedBuilder()
       .setColor(enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle(`🎭 Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`);
+      .setTitle(`Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`);
 
-    const statusEmoji = enabled ? "✅" : "❌";
     const statusText = enabled ? "Enabled" : "Disabled";
     
     embed.addFields(
-      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Status', value: `**${statusText}**` },
       { name: 'Minimum Account Age', value: `${accountAge} ${accountAge === 1 ? 'day' : 'days'}` }
     );
     

@@ -32,7 +32,7 @@ module.exports = {
       
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)
-        .setTitle('🐱 Random Cat')
+        .setTitle('Random Cat')
         .setImage(catData.url)
         .setFooter({ text: 'Powered by The Cat API' });
       

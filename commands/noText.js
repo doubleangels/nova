@@ -1,6 +1,5 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, EmbedBuilder } = require('discord.js');
 const path = require('path');
-const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
 const config = require('../config');
@@ -90,12 +89,11 @@ module.exports = {
           });
         }
 
-        const embed = {
-          color: config.baseEmbedColor,
-          title: '🚫 No Text Channel Configuration',
-          description: `Channel ${channel} has been configured to only allow GIFs and stickers.`,
-          timestamp: dayjs().toISOString()
-        };
+        const embed = new EmbedBuilder()
+          .setColor(config.baseEmbedColor ?? 0)
+          .setTitle('No Text Channel Set')
+          .setDescription(`Channel ${channel} has been configured to only allow GIFs and stickers.`)
+          .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
         logger.info("/notext command completed successfully.", {
@@ -124,12 +122,11 @@ module.exports = {
           });
         }
 
-        const embed = {
-          color: config.baseEmbedColor,
-          title: '🚫 No Text Channel Configuration',
-          description: `Channel ${channel} is no longer restricted to GIFs and stickers.`,
-          timestamp: dayjs().toISOString()
-        };
+        const embed = new EmbedBuilder()
+          .setColor(config.baseEmbedColor ?? 0)
+          .setTitle('No Text Channel Removed')
+          .setDescription(`Channel ${channel} is no longer restricted to GIFs and stickers.`)
+          .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
         logger.info("/notext command completed successfully.", {

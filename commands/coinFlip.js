@@ -35,7 +35,7 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(0xFFD700)
                 .setTitle('Coin Flip')
-                .setDescription(`🪙 The coin landed on: **${result}**`);
+                .setDescription(`The coin landed on **${result}**.`);
             
             await interaction.editReply({ embeds: [embed] });
             

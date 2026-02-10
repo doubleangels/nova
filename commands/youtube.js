@@ -397,9 +397,9 @@ module.exports = {
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
 
     const viewCount = statistics.viewCount ?
-      `👁️ ${parseInt(statistics.viewCount).toLocaleString()} views` : '';
+      `${parseInt(statistics.viewCount).toLocaleString()} views` : '';
     const likeCount = statistics.likeCount ?
-      `👍 ${parseInt(statistics.likeCount).toLocaleString()} likes` : '';
+      `${parseInt(statistics.likeCount).toLocaleString()} likes` : '';
     const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
 
     let description = snippet.description || 'No description available';
@@ -408,10 +408,10 @@ module.exports = {
     }
 
     const uploadDate = snippet.publishedAt ?
-      `📅 ${dayjs(snippet.publishedAt).format('MM/DD/YYYY')}` : '';
+      dayjs(snippet.publishedAt).format('MM/DD/YYYY') : '';
 
     return embed
-      .setTitle(`🎬 ${snippet.title}`)
+      .setTitle(snippet.title)
       .setURL(videoUrl)
       .setDescription(`${description}\n\n${stats}\n${uploadDate}`)
       .setImage(thumbnailUrl)
@@ -438,9 +438,9 @@ module.exports = {
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
 
     const subscriberCount = statistics.subscriberCount ?
-      `👥 ${parseInt(statistics.subscriberCount).toLocaleString()} subscribers` : '';
+      `${parseInt(statistics.subscriberCount).toLocaleString()} subscribers` : '';
     const videoCount = statistics.videoCount ?
-      `🎬 ${parseInt(statistics.videoCount).toLocaleString()} videos` : '';
+      `${parseInt(statistics.videoCount).toLocaleString()} videos` : '';
     const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
 
     let description = snippet.description || 'No description available';
@@ -449,7 +449,7 @@ module.exports = {
     }
 
     return embed
-      .setTitle(`📺 ${snippet.title}`)
+      .setTitle(snippet.title)
       .setURL(channelUrl)
       .setDescription(`${description}\n\n${stats}`)
       .setThumbnail(thumbnailUrl);
@@ -472,7 +472,7 @@ module.exports = {
     const thumbnailUrl = snippet.thumbnails.high?.url || snippet.thumbnails.medium?.url || snippet.thumbnails.default?.url;
 
     const itemCount = contentDetails.itemCount ?
-      `🎬 ${contentDetails.itemCount} videos` : '';
+      `${contentDetails.itemCount} videos` : '';
 
     let description = snippet.description || 'No description available';
     if (description.length > 1024) {
@@ -480,7 +480,7 @@ module.exports = {
     }
 
     return embed
-      .setTitle(`📋 ${snippet.title}`)
+      .setTitle(snippet.title)
       .setURL(playlistUrl)
       .setDescription(`${description}\n\n${itemCount}`)
       .setThumbnail(thumbnailUrl)

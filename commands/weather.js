@@ -282,72 +282,72 @@ module.exports = {
     }
     
     const embed = new EmbedBuilder()
-      .setTitle(`${weatherIcon} Weather in ${place}`)
+      .setTitle(`Weather in ${place}`)
       .setDescription(`**${weatherInfo.summary}**`)
       .setColor(0xFF6E42)
       .addFields(
         { 
-          name: '🌍 Location', 
-          value: `📍 ${place}\n📍 Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, 
+          name: 'Location', 
+          value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, 
           inline: false 
         },
         { 
-          name: '🌡 Temperature', 
+          name: 'Temperature', 
           value: `${weatherInfo.temperature.toFixed(1)}${tempUnit}`, 
           inline: true 
         },
         { 
-          name: '🤔 Feels Like', 
+          name: 'Feels Like', 
           value: `${(currently.apparentTemperature || 0).toFixed(1)}${tempUnit}`, 
           inline: true 
         },
         { 
-          name: '💧 Humidity', 
+          name: 'Humidity', 
           value: `${weatherInfo.humidity.toFixed(0)}%`, 
           inline: true 
         },
         { 
-          name: '💨 Wind Speed', 
+          name: 'Wind Speed', 
           value: `${weatherInfo.windSpeed.toFixed(1)} ${windUnit} ${windDirection}`, 
           inline: true 
         },
         { 
-          name: '🌞 UV Index', 
+          name: 'UV Index', 
           value: `${weatherInfo.uvIndex}`, 
           inline: true 
         },
         { 
-          name: '👀 Visibility', 
+          name: 'Visibility', 
           value: `${weatherInfo.visibility} ${visibilityUnit}`, 
           inline: true 
         },
         { 
-          name: '🛰 Pressure', 
+          name: 'Pressure', 
           value: `${weatherInfo.pressure} ${pressureUnit}`, 
           inline: true 
         },
         { 
-          name: '🌫 Dew Point', 
+          name: 'Dew Point', 
           value: `${typeof weatherInfo.dewPoint === 'number' ? weatherInfo.dewPoint.toFixed(1) : weatherInfo.dewPoint}${tempUnit}`, 
           inline: true 
         },
         { 
-          name: '☁ Cloud Cover', 
+          name: 'Cloud Cover', 
           value: `${weatherInfo.cloudCover.toFixed(0)}%`, 
           inline: true 
         },
         { 
-          name: '🌧 Precipitation', 
+          name: 'Precipitation', 
           value: `${weatherInfo.precipIntensity} ${precipUnit}`, 
           inline: true 
         },
         { 
-          name: '🌧 Precip. Probability', 
+          name: 'Precip. Probability', 
           value: `${weatherInfo.precipProbability.toFixed(0)}%`, 
           inline: true 
         },
         { 
-          name: `📅 ${forecastDays}-Day Forecast`, 
+          name: `${forecastDays}-Day Forecast`, 
           value: forecastText, 
           inline: false 
         }

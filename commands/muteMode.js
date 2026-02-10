@@ -221,13 +221,12 @@ module.exports = {
   formatStatusMessage(settings, interaction) {
     const embed = new EmbedBuilder()
       .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔇 Mute Mode Status');
+      .setTitle('Mute Mode Status');
 
-    const statusEmoji = settings.isEnabled ? "✅" : "❌";
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
     
     embed.addFields(
-      { name: 'Status', value: `${statusEmoji} **${statusText}**` },
+      { name: 'Status', value: `**${statusText}**` },
       { name: 'Time Limit', value: `${settings.timeLimit} ${settings.timeLimit === 1 ? 'hour' : 'hours'}` }
     );
     
@@ -252,13 +251,12 @@ module.exports = {
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit, interaction) {
     const embed = new EmbedBuilder()
       .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('🔇 Mute Mode Updated');
+      .setTitle('Mute Mode Updated');
 
-    const statusEmoji = newEnabled ? "✅" : "❌";
     const statusText = newEnabled ? "Enabled" : "Disabled";
     
     embed.addFields(
-      { name: 'Status', value: `${statusEmoji} **${statusText}**` }
+      { name: 'Status', value: `**${statusText}**` }
     );
     
     if (oldTimeLimit !== newTimeLimit) {

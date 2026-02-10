@@ -59,12 +59,14 @@ module.exports = {
       const joinTimestamp = Math.floor(joinedAt.getTime() / 1000);
       const createdTimestamp = Math.floor(createdAt.getTime() / 1000);
 
+      const displayName = member.displayName ?? targetUser.username;
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor ?? 0)
         .setAuthor({
-          name: member.displayName ?? targetUser.username,
+          name: displayName,
           iconURL: member.displayAvatarURL()
         })
+        .setDescription(`Join date for **${displayName}**.`)
         .addFields(
           {
             name: 'Joined server',

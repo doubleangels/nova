@@ -40,7 +40,7 @@ module.exports = {
       
       const embed = new EmbedBuilder()
         .setColor(0xA0522D)
-        .setTitle('🐕 Random Dog')
+        .setTitle('Random Dog')
         .setImage(dogData.message)
         .setFooter({ text: 'Powered by Dog CEO API' });
       

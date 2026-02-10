@@ -190,8 +190,8 @@ module.exports = {
     const pageLink = item.image?.contextLink || imageLink;
     
     return new EmbedBuilder()
-      .setTitle(`🖼️ ${title}`)
-      .setDescription(`🔗 **[View Original Source](${pageLink})**`)
+      .setTitle(title)
+      .setDescription(`**[View Original Source](${pageLink})**`)
       .setColor(0x4285F4)
       .setImage(imageLink)
       .setFooter({ text: `Powered by Google Image Search • Result ${index + 1} of ${items.length}` });

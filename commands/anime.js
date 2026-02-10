@@ -169,16 +169,19 @@ module.exports = {
       ? animeData.genres.map(g => g.name).join(", ")
       : "Unknown";
     const releaseDate = this.formatReleaseDate(animeData.releaseDate);
+    const rating = animeData.rating != null && animeData.rating !== "" ? String(animeData.rating) : "N/A";
+    const synopsis = (animeData.synopsis || "No synopsis available.").slice(0, 4090);
+    const title = (animeData.title || "Unknown").slice(0, 256);
 
     const embed = new EmbedBuilder()
-      .setTitle(`📺 **${animeData.title}**`)
-      .setDescription(`📜 **Synopsis:** ${animeData.synopsis}`)
+      .setTitle(title)
+      .setDescription(`**Synopsis:** ${synopsis}`)
       .setColor(0x2E51A2)
       .addFields(
-        { name: "🎭 Genre", value: `🎞 ${genres}`, inline: true },
-        { name: "⭐ MAL Rating", value: `🌟 ${animeData.rating}`, inline: true },
-        { name: "📅 Release Date", value: releaseDate, inline: true },
-        { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
+        { name: "Genre", value: genres.slice(0, 1024), inline: true },
+        { name: "MAL Rating", value: rating, inline: true },
+        { name: "Release Date", value: releaseDate.slice(0, 1024), inline: true },
+        { name: "MAL Link", value: `[Click Here](${malLink})`, inline: false }
       )
       .setFooter({ text: "Powered by MyAnimeList API" });
 

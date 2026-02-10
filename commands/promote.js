@@ -363,7 +363,7 @@ module.exports = {
 
         const embed = new EmbedBuilder()
           .setColor(0xFF4500)
-          .setTitle('🎉 Server Promotion Successful!')
+          .setTitle('Server Promotion Successful')
           .setDescription(description);
 
         await interaction.editReply({ embeds: [embed] });

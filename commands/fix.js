@@ -107,8 +107,8 @@ module.exports = {
       
       const embed = new EmbedBuilder()
           .setColor(config.baseEmbedColor)
-          .setTitle(`🔧 ${displayName} Reminder Fixed`)
-          .setDescription(`${displayName} reminder successfully fixed! Next reminder scheduled <t:${unixTimestamp}:R>.`);
+          .setTitle(`${displayName} Reminder Fixed`)
+          .setDescription(`**${displayName}** reminder successfully fixed. Next reminder scheduled <t:${unixTimestamp}:R>.`);
       
       await interaction.editReply({ embeds: [embed] });
       
