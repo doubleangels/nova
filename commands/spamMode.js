@@ -276,7 +276,7 @@ module.exports = {
     } else {
       embed.addFields({
         name: 'Warning Channel',
-        value: '⚠️ Not configured'
+        value: '⚠️ Not set'
       });
     }
     
@@ -320,7 +320,7 @@ module.exports = {
     } else {
       embed.addFields({
         name: 'Warning Channel',
-        value: '⚠️ Not configured'
+        value: '⚠️ Not set'
       });
     }
     
