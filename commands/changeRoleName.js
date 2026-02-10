@@ -13,12 +13,12 @@ module.exports = {
     .addRoleOption(option =>
       option
         .setName('role')
-        .setDescription('The role to rename.')
+        .setDescription('What role do you want to change the name of?')
         .setRequired(true))
     .addStringOption(option =>
       option
         .setName('name')
-        .setDescription('The new name for the role (1–100 characters).')
+        .setDescription('What name do you want to change the role to?')
         .setRequired(true)
         .setMinLength(1)
         .setMaxLength(100))
