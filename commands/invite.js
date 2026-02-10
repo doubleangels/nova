@@ -258,12 +258,15 @@ module.exports = {
       tagName: tagName
     });
 
+    const tagDescription = isUpdate
+      ? (existingTag.code !== cleanCode
+        ? `The tag **${tagName}** has been updated from **${existingTag.code}** to **${cleanCode}**.`
+        : `The tag **${tagName}** has been updated with the new invite code **${cleanCode}**.`)
+      : `The invite code has been successfully tagged as **${tagName}**.`;
     const embed = new EmbedBuilder()
       .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
       .setTitle(isUpdate ? 'Invite Tag Updated' : 'Invite Code Tagged')
-      .setDescription(isUpdate
-        ? `The tag **${tagName}** has been updated with a new invite code.`
-        : `The invite code has been successfully tagged as **${tagName}**.`)
+      .setDescription(tagDescription)
       .addFields(
         { name: 'Tag Name', value: tagName, inline: true },
         { name: 'Invite Code', value: cleanCode, inline: true },
@@ -525,12 +528,15 @@ module.exports = {
       });
 
       // Build embed
+      const createDescription = isUpdate
+        ? (existingTag.code && existingTag.code !== inviteCode
+          ? `A new invite has been created and the tag **${tagName}** has been updated from **${existingTag.code}** to **${inviteCode}**.`
+          : `A new invite has been created and the tag **${tagName}** has been updated to **${inviteCode}**.`)
+        : `A new invite has been created and tagged as **${tagName}**.`;
       const embed = new EmbedBuilder()
         .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
         .setTitle(isUpdate ? 'Invite Created and Tag Updated' : 'Invite Created and Tagged')
-        .setDescription(isUpdate
-          ? `A new invite has been created and the tag **${tagName}** has been updated.`
-          : `A new invite has been created and tagged as **${tagName}**.`)
+        .setDescription(createDescription)
         .addFields(
           { name: 'Tag Name', value: tagName, inline: true },
           { name: 'Invite Code', value: inviteCode, inline: true },

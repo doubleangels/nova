@@ -78,17 +78,18 @@ module.exports = {
                 throw new Error("INVALID_NICKNAME_LENGTH");
             }
 
+            const oldNickname = member.nickname ?? targetUser.username;
             await member.setNickname(newNickname || null);
-            
+
             const userHighestRole = member.roles.highest;
             const embedColor = userHighestRole.color === 0 ? config.baseEmbedColor : userHighestRole.color;
-            
+
             const embed = new EmbedBuilder()
                 .setColor(embedColor)
                 .setTitle('Nickname Updated')
-                .setDescription(newNickname 
-                    ? `Successfully changed ${targetUser}'s nickname to **${newNickname}**.`
-                    : `Successfully reset ${targetUser}'s nickname.`);
+                .setDescription(newNickname
+                    ? `Successfully changed ${targetUser}'s nickname from **${oldNickname}** to **${newNickname}**.`
+                    : `Successfully reset ${targetUser}'s nickname from **${oldNickname}**.`);
             
             await interaction.editReply({ embeds: [embed] });
             

@@ -164,13 +164,13 @@ module.exports = {
         guildId: interaction.guildId
       });
       
-      let channelStr = 'Not set';
+      let channelStr = '⚠️ Not set';
       if (channelId) {
         const channelObj = interaction.guild.channels.cache.get(channelId);
         channelStr = channelObj ? `<#${channelId}>` : 'Invalid channel';
       }
-  
-      let roleStr = 'Not set';
+
+      let roleStr = '⚠️ Not set';
       if (roleId) {
         const roleObj = interaction.guild.roles.cache.get(roleId);
         roleStr = roleObj ? `<@&${roleId}>` : 'Invalid role';
@@ -191,7 +191,7 @@ module.exports = {
         );
 
       if (!configComplete) {
-        embed.setDescription('**Warning:** Reminder configuration is incomplete.');
+        embed.setDescription('⚠️ Reminder configuration is incomplete.');
       }
 
       await interaction.editReply({ embeds: [embed] });
