@@ -276,13 +276,13 @@ module.exports = {
     } else {
       embed.addFields({
         name: 'Warning Channel',
-        value: '⚠️ Not set'
+        value: '⚠️ Not set!'
       });
     }
     
     if (settings.enabled) {
       if (!settings.warningChannelId) {
-        embed.setDescription('⚠️ Spam configuration is incomplete. ');
+        embed.setDescription('Spam configuration is incomplete.');
       } else {
         const hourText = settings.window === 1 ? 'hour' : 'hours';
         embed.setDescription(`New users sending **${settings.threshold}** or more duplicate messages within **${settings.window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -320,13 +320,13 @@ module.exports = {
     } else {
       embed.addFields({
         name: 'Warning Channel',
-        value: '⚠️ Not set'
+        value: '⚠️ Not set!'
       });
     }
     
     if (enabled) {
       if (!warningChannel) {
-        embed.setDescription('⚠️ Spam configuration is incomplete. ');
+        embed.setDescription('Spam configuration is incomplete.');
       } else {
         const hourText = window === 1 ? 'hour' : 'hours';
         embed.setDescription(`New users sending **${threshold}** or more duplicate messages within **${window}** ${hourText} will have their messages deleted and a warning posted.\n\n*Note: Bot accounts are exempt from this tracking.*`);

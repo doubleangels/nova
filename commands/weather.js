@@ -13,19 +13,19 @@ const config = require('../config');
 const { getGeocodingData, getTimezoneData } = require('../utils/locationUtils');
 
 const WEATHER_ICONS = {
-  'clear-day': '☀️',
-  'clear-night': '🌙',
-  'rain': '🌧️',
-  'snow': '❄️',
-  'sleet': '🌨️',
-  'wind': '💨',
-  'fog': '🌫️',
-  'cloudy': '☁️',
-  'partly-cloudy-day': '⛅',
-  'partly-cloudy-night': '☁️🌙',
-  'thunderstorm': '⛈️',
-  'tornado': '🌪️',
-  'default': '🌤️'
+  'clear-day': 'Clear',
+  'clear-night': 'Clear',
+  'rain': 'Rain',
+  'snow': 'Snow',
+  'sleet': 'Sleet',
+  'wind': 'Wind',
+  'fog': 'Fog',
+  'cloudy': 'Cloudy',
+  'partly-cloudy-day': 'Partly cloudy',
+  'partly-cloudy-night': 'Partly cloudy',
+  'thunderstorm': 'Thunderstorm',
+  'tornado': 'Tornado',
+  'default': ''
 };
 
 /**
@@ -403,10 +403,10 @@ module.exports = {
         (day.precipProbability * 100).toFixed(0) : 
         "0";
       
-      forecastText += `**${forecastDate}** ${weatherIcon}\n`;
+      forecastText += `**${forecastDate}**${weatherIcon ? ` ${weatherIcon}` : ''}\n`;
       forecastText += `${daySummary}\n`;
-      forecastText += `🌡 High: ${highTemp}${tempUnit}, Low: ${lowTemp}${tempUnit}\n`;
-      forecastText += `🌧 Precipitation: ${precipProb}%\n\n`;
+      forecastText += `High: ${highTemp}${tempUnit}, Low: ${lowTemp}${tempUnit}\n`;
+      forecastText += `Precipitation: ${precipProb}%\n\n`;
     }
     
     return forecastText || "No forecast data available.";
