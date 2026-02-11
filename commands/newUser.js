@@ -47,10 +47,10 @@ module.exports = {
       const avatarURL = serverAvatarURL ?? globalAvatarURL;
       const fields = [
         { name: 'Username', value: targetUser.username, inline: true },
-        { name: 'Display name', value: displayName, inline: true },
+        { name: 'Name', value: displayName, inline: true },
         { name: 'Bot', value: targetUser.bot ? 'Yes' : 'No', inline: true },
         {
-          name: 'Account created',
+          name: 'Created',
           value: `<t:${createdTimestamp}:F>\n(<t:${createdTimestamp}:R>)`,
           inline: false
         }
@@ -58,7 +58,7 @@ module.exports = {
       if (member?.joinedAt) {
         const joinedTimestamp = Math.floor(member.joinedAt.getTime() / 1000);
         fields.push({
-          name: 'Joined server',
+          name: 'Joined',
           value: `<t:${joinedTimestamp}:F>\n(<t:${joinedTimestamp}:R>)`,
           inline: false
         });
