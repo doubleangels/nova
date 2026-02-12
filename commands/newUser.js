@@ -189,7 +189,7 @@ module.exports = {
         .addFields(fields)
         .setFooter({ text: `User ID: ${targetUser.id}` });
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
       logger.info('/newuser command completed successfully.', {
         userId: interaction.user.id,
