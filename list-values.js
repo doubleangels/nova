@@ -117,35 +117,71 @@ async function getAllKeys() {
 
 async function readValue(keyString) {
   try {
-    const { namespace, section, actualKey, fullKey } = parseKey(keyString);
-    const keyv = getKeyvForNamespace(namespace);
-    
-    await withKeyv(keyv, async (kv) => {
-      const value = await kv.get(fullKey);
-      
-      if (value === undefined) {
-        console.log(`Key "${keyString}" does not exist in the database.`);
-        console.log(`   Searched: namespace="${namespace}", key="${fullKey}"`);
-        process.exit(0);
-      }
-      
-      // Display the value
-      console.log(`Value for "${keyString}":`);
-      console.log(`   Namespace: ${namespace}`);
-      if (section) {
-        console.log(`   Section: ${formatSectionName(section)}`);
-      }
-      console.log(`   Key: ${actualKey}`);
-      console.log(`   Full Key: ${namespace}:${fullKey}`);
-      console.log(`   Value: ${JSON.stringify(value)}`);
-      console.log(`   Type: ${typeof value}`);
-      
-      // If it's an object or array, show a pretty-printed version
-      if (typeof value === 'object' && value !== null) {
-        console.log(`\n   Pretty-printed:`);
-        console.log(`   ${JSON.stringify(value, null, 2).split('\n').join('\n   ')}`);
-      }
-    });
+    // Parse the requested key using the same rules as set-value.js
+    const { namespace, section, actualKey } = parseKey(keyString);
+
+    // To avoid any discrepancies between how Keyv stores keys and how we
+    // display them in the full dump, reuse the same direct-SQLite path that
+    // listAllValues() uses and filter in memory.
+    const allData = await getAllKeys();
+
+    const match = allData.find(item =>
+      item.namespace === namespace &&
+      // section can be null in both the parsed key and the stored item
+      (item.section || null) === (section || null) &&
+      item.key === actualKey
+    );
+
+    if (!match) {
+      // Fall back to the old Keyv-based lookup for maximum compatibility,
+      // so existing invocations that relied on it for config:* still work.
+      const { fullKey } = parseKey(keyString);
+      const keyv = getKeyvForNamespace(namespace);
+
+      await withKeyv(keyv, async (kv) => {
+        const value = await kv.get(fullKey);
+
+        if (value === undefined) {
+          console.log(`Key "${keyString}" does not exist in the database.`);
+          console.log(`   Searched: namespace="${namespace}", key="${fullKey}"`);
+          process.exit(0);
+        }
+
+        console.log(`Value for "${keyString}":`);
+        console.log(`   Namespace: ${namespace}`);
+        if (section) {
+          console.log(`   Section: ${formatSectionName(section)}`);
+        }
+        console.log(`   Key: ${actualKey}`);
+        console.log(`   Full Key: ${namespace}:${fullKey}`);
+        console.log(`   Value: ${JSON.stringify(value)}`);
+        console.log(`   Type: ${typeof value}`);
+
+        if (typeof value === 'object' && value !== null) {
+          console.log(`\n   Pretty-printed:`);
+          console.log(`   ${JSON.stringify(value, null, 2).split('\n').join('\n   ')}`);
+        }
+      });
+      return;
+    }
+
+    // We found the key using the same direct-SQLite path as the full dump.
+    const value = match.value;
+
+    console.log(`Value for "${keyString}":`);
+    console.log(`   Namespace: ${match.namespace}`);
+    if (match.section) {
+      console.log(`   Section: ${formatSectionName(match.section)}`);
+    }
+    console.log(`   Key: ${match.key}`);
+    console.log(`   Full Key: ${match.namespace}:${match.section ? match.section + match.key : match.key}`);
+    console.log(`   Value: ${JSON.stringify(value)}`);
+    console.log(`   Type: ${typeof value}`);
+
+    if (typeof value === 'object' && value !== null) {
+      console.log(`\n   Pretty-printed:`);
+      console.log(`   ${JSON.stringify(value, null, 2).split('\n').join('\n   ')}`);
+    }
   } catch (error) {
     console.error(`Error reading value: ${error.message}`);
     if (error.stack && process.env.DEBUG) {
