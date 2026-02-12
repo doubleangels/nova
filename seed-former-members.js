@@ -3,20 +3,35 @@
  * So when they leave and re-join, they get the "been in server before" role.
  * Bots are always skipped for this feature.
  *
- * Usage: node seed-former-members.js
+ * Usage: node seed-former-members.js [--token=TOKEN]
  *
- * Requires: DISCORD_BOT_TOKEN (and optionally GUILD_ID if bot is in multiple guilds).
- * Ensure the database is accessible (e.g. run from project root with .env, or set DATA_DIR).
+ * Token: from DISCORD_BOT_TOKEN in .env, or pass with --token=TOKEN (e.g. in Docker).
+ * Optional: GUILD_ID if bot is in multiple guilds.
  */
 
 require('dotenv').config();
+
+// Allow token via CLI so it can be passed when running inside a container
+const args = process.argv.slice(2);
+for (const arg of args) {
+  if (arg === '--token' || arg === '-t') {
+    const i = args.indexOf(arg);
+    if (args[i + 1]) process.env.DISCORD_BOT_TOKEN = args[i + 1];
+    break;
+  }
+  if (arg.startsWith('--token=')) {
+    process.env.DISCORD_BOT_TOKEN = arg.slice(8);
+    break;
+  }
+}
+
 const { Client, GatewayIntentBits } = require('discord.js');
 const { initializeDatabase, setFormerMember } = require('./utils/database');
 const config = require('./config');
 
 async function main() {
   if (!config.token) {
-    console.error('DISCORD_BOT_TOKEN is not set.');
+    console.error('DISCORD_BOT_TOKEN is not set. Set it in .env or pass with --token=TOKEN');
     process.exit(1);
   }
 
