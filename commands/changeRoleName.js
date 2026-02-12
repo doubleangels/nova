@@ -76,14 +76,15 @@ module.exports = {
       const oldName = role.name;
       await role.setName(newName, `Renamed by ${interaction.user.tag} (ID: ${interaction.user.id}) via /changerolename`);
 
+      const fields = [
+        { name: 'Role', value: newName, inline: true },
+        { name: 'Color', value: role.hexColor, inline: true }
+      ];
       const embed = new EmbedBuilder()
         .setColor(role.color || 0)
         .setTitle('Role renamed')
         .setDescription(`Renamed role from **${oldName}** to **${newName}**.`)
-        .addFields(
-          { name: 'Role', value: newName, inline: true },
-          { name: 'Color', value: role.hexColor, inline: true }
-        );
+        .addFields(fields);
 
       await interaction.editReply({ embeds: [embed] });
 

@@ -260,86 +260,48 @@ module.exports = {
       throw new Error("No book data available");
     }
 
+    const fields = [];
+    if (book.authors && book.authors.length > 0) {
+      fields.push({ name: 'Authors', value: book.authors.join(', '), inline: false });
+    }
+    if (book.publishedDate !== 'Unknown') {
+      fields.push({ name: 'Published', value: book.publishedDate, inline: true });
+    }
+    if (book.pageCount !== 'Unknown') {
+      fields.push({ name: 'Pages', value: book.pageCount.toString(), inline: true });
+    }
+    if (book.language !== 'Unknown') {
+      fields.push({ name: 'Language', value: book.language.toUpperCase(), inline: true });
+    }
+    if (book.publisher !== 'Unknown') {
+      fields.push({ name: 'Publisher', value: book.publisher, inline: true });
+    }
+    if (book.averageRating) {
+      fields.push({ name: 'Rating', value: `**${book.averageRating}**/5 (${this.formatNumber(book.ratingsCount)} ratings)`, inline: true });
+    }
+    if (book.categories && book.categories.length > 0) {
+      fields.push({ name: 'Categories', value: book.categories.join(', '), inline: false });
+    }
+    if (book.isbn10) {
+      fields.push({ name: 'ISBN-10', value: book.isbn10, inline: true });
+    }
+    if (book.isbn13) {
+      fields.push({ name: 'ISBN-13', value: book.isbn13, inline: true });
+    }
+    const linkParts = [];
+    if (book.previewLink) linkParts.push(`[Preview](${book.previewLink})`);
+    if (book.infoLink) linkParts.push(`[More Info](${book.infoLink})`);
+    if (linkParts.length > 0) {
+      fields.push({ name: 'Links', value: linkParts.join(' • '), inline: false });
+    }
+
     const embed = new EmbedBuilder()
       .setColor(0xBA93FA)
       .setTitle(book.title)
       .setDescription(this.truncateDescription(book.description))
-      .setFooter({ 
-        text: `Powered by Google Books • Book ${index + 1} of ${books.length}`
-      });
-
-    // Add authors
-    if (book.authors && book.authors.length > 0) {
-      embed.addFields({
-        name: 'Authors',
-        value: book.authors.join(', '),
-        inline: false
-      });
-    }
-
-    // Add basic info
-    const basicFields = [];
-    if (book.publishedDate !== 'Unknown') {
-      basicFields.push({ name: 'Published', value: book.publishedDate, inline: true });
-    }
-    if (book.pageCount !== 'Unknown') {
-      basicFields.push({ name: 'Pages', value: book.pageCount.toString(), inline: true });
-    }
-    if (book.language !== 'Unknown') {
-      basicFields.push({ name: 'Language', value: book.language.toUpperCase(), inline: true });
-    }
-    if (book.publisher !== 'Unknown') {
-      basicFields.push({ name: 'Publisher', value: book.publisher, inline: true });
-    }
-
-    if (basicFields.length > 0) {
-      embed.addFields(basicFields);
-    }
-
-    // Add rating if available
-    if (book.averageRating) {
-      embed.addFields({
-        name: 'Rating',
-        value: `**${book.averageRating}**/5 (${this.formatNumber(book.ratingsCount)} ratings)`,
-        inline: true
-      });
-    }
-
-    // Add categories if available
-    if (book.categories && book.categories.length > 0) {
-      embed.addFields({
-        name: 'Categories',
-        value: book.categories.join(', '),
-        inline: false
-      });
-    }
-
-    // Add ISBNs if available
-    const isbnFields = [];
-    if (book.isbn10) {
-      isbnFields.push({ name: 'ISBN-10', value: book.isbn10, inline: true });
-    }
-    if (book.isbn13) {
-      isbnFields.push({ name: 'ISBN-13', value: book.isbn13, inline: true });
-    }
-    if (isbnFields.length > 0) {
-      embed.addFields(isbnFields);
-    }
-
-    // Add links if available
-    const links = [];
-    if (book.previewLink) {
-      links.push(`[Preview](${book.previewLink})`);
-    }
-    if (book.infoLink) {
-      links.push(`[More Info](${book.infoLink})`);
-    }
-    if (links.length > 0) {
-      embed.addFields({
-        name: 'Links',
-        value: links.join(' • '),
-        inline: false
-      });
+      .setFooter({ text: `Powered by Google Books • Book ${index + 1} of ${books.length}` });
+    if (fields.length > 0) {
+      embed.addFields(fields);
     }
 
     // Set thumbnail if available

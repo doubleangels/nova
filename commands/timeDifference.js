@@ -145,13 +145,14 @@ module.exports = {
       
       const formattedTimeDiff = this.formatTimeDifference(timeDiff);
       
+      const fields = [
+        { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },
+        { name: formattedPlace2, value: this.formatTimeZone(offset2Result) }
+      ];
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor)
         .setTitle('Time Difference Information')
-        .addFields(
-          { name: formattedPlace1, value: this.formatTimeZone(offset1Result) },
-          { name: formattedPlace2, value: this.formatTimeZone(offset2Result) }
-        );
+        .addFields(fields);
 
       if (rawTimeDiff === 0) {
         embed.setDescription(`**${formattedPlace1}** and **${formattedPlace2}** are in the same time zone.`);

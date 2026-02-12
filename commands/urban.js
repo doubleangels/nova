@@ -52,16 +52,17 @@ module.exports = {
             }
 
             const definition = definitions[0];
+            const fields = [
+                { name: 'Example', value: definition.example || 'No example provided.' },
+                { name: 'Author', value: definition.author },
+                { name: '👍', value: definition.thumbs_up.toString(), inline: true },
+                { name: '👎', value: definition.thumbs_down.toString(), inline: true }
+            ];
             const embed = new EmbedBuilder()
                 .setColor(0x202C34)
                 .setTitle(`Urban Dictionary: ${definition.word}`)
                 .setDescription(definition.definition)
-                .addFields(
-                    { name: 'Example', value: definition.example || 'No example provided.' },
-                    { name: 'Author', value: definition.author },
-                    { name: '👍', value: definition.thumbs_up.toString(), inline: true },
-                    { name: '👎', value: definition.thumbs_down.toString(), inline: true }
-                );
+                .addFields(fields);
             
             await interaction.editReply({ embeds: [embed] });
             

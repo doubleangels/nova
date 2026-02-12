@@ -116,13 +116,14 @@ module.exports = {
       roleId: roleOption.id
     });
 
+    const fields = [
+      { name: 'Channel', value: `<#${channelOption.id}>` },
+      { name: 'Role', value: `<@&${roleOption.id}>` }
+    ];
     const embed = new EmbedBuilder()
       .setColor(0xc03728)
       .setTitle('Reminder Setup Complete')
-      .addFields(
-        { name: 'Channel', value: `<#${channelOption.id}>` },
-        { name: 'Role', value: `<@&${roleOption.id}>` }
-      )
+      .addFields(fields)
       .setDescription(`Reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`);
 
     await interaction.editReply({ embeds: [embed] });
@@ -180,15 +181,16 @@ module.exports = {
       const promoteTimeStr = this.calculateRemainingTime(promoteReminder);
       const configComplete = channelId && roleId;
       
+      const fields = [
+        { name: 'Channel', value: channelStr },
+        { name: 'Role', value: roleStr },
+        { name: 'Next Bump (Disboard)', value: bumpTimeStr },
+        { name: 'Next Promotion', value: promoteTimeStr }
+      ];
       const embed = new EmbedBuilder()
         .setColor(0xc03728)
         .setTitle('Server Reminders Status')
-        .addFields(
-          { name: 'Channel', value: channelStr },
-          { name: 'Role', value: roleStr },
-          { name: 'Next Bump (Disboard)', value: bumpTimeStr },
-          { name: 'Next Promotion', value: promoteTimeStr }
-        );
+        .addFields(fields);
 
       if (!configComplete) {
         embed.setDescription('Reminder configuration is incomplete.');

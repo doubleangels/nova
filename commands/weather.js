@@ -281,77 +281,27 @@ module.exports = {
       formattedTime = dayjs().utc().format('MMM D, YYYY h:mm A UTC');
     }
     
+    const fields = [
+      { name: 'Location', value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, inline: false },
+      { name: 'Temperature', value: `${weatherInfo.temperature.toFixed(1)}${tempUnit}`, inline: true },
+      { name: 'Feels Like', value: `${(currently.apparentTemperature || 0).toFixed(1)}${tempUnit}`, inline: true },
+      { name: 'Humidity', value: `${weatherInfo.humidity.toFixed(0)}%`, inline: true },
+      { name: 'Wind Speed', value: `${weatherInfo.windSpeed.toFixed(1)} ${windUnit} ${windDirection}`, inline: true },
+      { name: 'UV Index', value: `${weatherInfo.uvIndex}`, inline: true },
+      { name: 'Visibility', value: `${weatherInfo.visibility} ${visibilityUnit}`, inline: true },
+      { name: 'Pressure', value: `${weatherInfo.pressure} ${pressureUnit}`, inline: true },
+      { name: 'Dew Point', value: `${typeof weatherInfo.dewPoint === 'number' ? weatherInfo.dewPoint.toFixed(1) : weatherInfo.dewPoint}${tempUnit}`, inline: true },
+      { name: 'Cloud Cover', value: `${weatherInfo.cloudCover.toFixed(0)}%`, inline: true },
+      { name: 'Precipitation', value: `${weatherInfo.precipIntensity} ${precipUnit}`, inline: true },
+      { name: 'Precip. Probability', value: `${weatherInfo.precipProbability.toFixed(0)}%`, inline: true },
+      { name: `${forecastDays}-Day Forecast`, value: forecastText, inline: false }
+    ];
+
     const embed = new EmbedBuilder()
       .setTitle(`Weather in ${place}`)
       .setDescription(`**${weatherInfo.summary}**`)
       .setColor(0xFF6E42)
-      .addFields(
-        { 
-          name: 'Location', 
-          value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, 
-          inline: false 
-        },
-        { 
-          name: 'Temperature', 
-          value: `${weatherInfo.temperature.toFixed(1)}${tempUnit}`, 
-          inline: true 
-        },
-        { 
-          name: 'Feels Like', 
-          value: `${(currently.apparentTemperature || 0).toFixed(1)}${tempUnit}`, 
-          inline: true 
-        },
-        { 
-          name: 'Humidity', 
-          value: `${weatherInfo.humidity.toFixed(0)}%`, 
-          inline: true 
-        },
-        { 
-          name: 'Wind Speed', 
-          value: `${weatherInfo.windSpeed.toFixed(1)} ${windUnit} ${windDirection}`, 
-          inline: true 
-        },
-        { 
-          name: 'UV Index', 
-          value: `${weatherInfo.uvIndex}`, 
-          inline: true 
-        },
-        { 
-          name: 'Visibility', 
-          value: `${weatherInfo.visibility} ${visibilityUnit}`, 
-          inline: true 
-        },
-        { 
-          name: 'Pressure', 
-          value: `${weatherInfo.pressure} ${pressureUnit}`, 
-          inline: true 
-        },
-        { 
-          name: 'Dew Point', 
-          value: `${typeof weatherInfo.dewPoint === 'number' ? weatherInfo.dewPoint.toFixed(1) : weatherInfo.dewPoint}${tempUnit}`, 
-          inline: true 
-        },
-        { 
-          name: 'Cloud Cover', 
-          value: `${weatherInfo.cloudCover.toFixed(0)}%`, 
-          inline: true 
-        },
-        { 
-          name: 'Precipitation', 
-          value: `${weatherInfo.precipIntensity} ${precipUnit}`, 
-          inline: true 
-        },
-        { 
-          name: 'Precip. Probability', 
-          value: `${weatherInfo.precipProbability.toFixed(0)}%`, 
-          inline: true 
-        },
-        { 
-          name: `${forecastDays}-Day Forecast`, 
-          value: forecastText, 
-          inline: false 
-        }
-      )
+      .addFields(fields)
       .setFooter({ text: 'Powered by PirateWeather' });
     
     return embed;

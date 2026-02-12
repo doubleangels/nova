@@ -117,14 +117,15 @@ module.exports = {
                 });
             }
             
+            const fields = [
+                { name: 'New Role', value: `<@&${rolesResult.newRole.id}>`, inline: true },
+                { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }
+            ];
             const embed = new EmbedBuilder()
                 .setColor(colorDecimal)
                 .setTitle('Permissions Granted')
                 .setDescription(`Successfully gave <@${targetUser.id}> **permissions** in the server.`)
-                .addFields(
-                    { name: 'New Role', value: `<@&${rolesResult.newRole.id}>`, inline: true },
-                    { name: 'Role Color', value: `\`${normalizedColorHex}\``, inline: true }
-                );
+                .addFields(fields);
             
             await interaction.editReply({ embeds: [embed] });
             

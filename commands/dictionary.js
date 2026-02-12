@@ -50,14 +50,15 @@ module.exports = {
       const phonetic = data.phonetic || (data.phonetics && data.phonetics[0] && data.phonetics[0].text) || '';
       const partOfSpeech = meanings ? meanings.partOfSpeech : 'Unknown';
 
+      const fields = [
+        { name: 'Phonetic', value: phonetic || 'N/A', inline: true },
+        { name: 'Part of Speech', value: partOfSpeech, inline: true }
+      ];
       const embed = new EmbedBuilder()
         .setColor(0x820627)
         .setTitle(`Dictionary: ${data.word}`)
         .setDescription(definition ? definition.definition : 'No definition found.')
-        .addFields(
-          { name: 'Phonetic', value: phonetic || 'N/A', inline: true },
-          { name: 'Part of Speech', value: partOfSpeech, inline: true }
-        )
+        .addFields(fields)
         .setFooter({ text: 'Powered by Free Dictionary API' });
 
       await interaction.editReply({ embeds: [embed] });

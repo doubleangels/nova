@@ -255,31 +255,24 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed message
    */
   formatStatusMessage(settings, interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('Spam Mode Status');
-
     const statusText = settings.enabled ? "Enabled" : "Disabled";
-    
-    embed.addFields(
+    const fields = [
       { name: 'Status', value: `**${statusText}**` },
       { name: 'Message Threshold', value: `${settings.threshold} duplicate messages` },
       { name: 'Tracking Window', value: `${settings.window} ${settings.window === 1 ? 'hour' : 'hours'}` }
-    );
-    
+    ];
     if (settings.warningChannelId) {
       const warningChannel = interaction.guild?.channels.cache.get(settings.warningChannelId);
-      embed.addFields({
-        name: 'Warning Channel',
-        value: warningChannel ? `${warningChannel}` : `<#${settings.warningChannelId}>`
-      });
+      fields.push({ name: 'Warning Channel', value: warningChannel ? `${warningChannel}` : `<#${settings.warningChannelId}>` });
     } else {
-      embed.addFields({
-        name: 'Warning Channel',
-        value: '⚠️ Not set!'
-      });
+      fields.push({ name: 'Warning Channel', value: '⚠️ Not set!' });
     }
-    
+
+    const embed = new EmbedBuilder()
+      .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
+      .setTitle('Spam Mode Status')
+      .addFields(fields);
+
     if (settings.enabled) {
       if (!settings.warningChannelId) {
         embed.setDescription('Spam configuration is incomplete.');
@@ -300,30 +293,23 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed message
    */
   formatUpdateMessage(enabled, threshold, window, warningChannel, interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle(`Spam Mode ${enabled ? 'Enabled' : 'Disabled'}`);
-
     const statusText = enabled ? "Enabled" : "Disabled";
-    
-    embed.addFields(
+    const fields = [
       { name: 'Status', value: `**${statusText}**` },
       { name: 'Message Threshold', value: `${threshold} duplicate messages` },
       { name: 'Tracking Window', value: `${window} ${window === 1 ? 'hour' : 'hours'}` }
-    );
-    
+    ];
     if (warningChannel) {
-      embed.addFields({
-        name: 'Warning Channel',
-        value: `${warningChannel}`
-      });
+      fields.push({ name: 'Warning Channel', value: `${warningChannel}` });
     } else {
-      embed.addFields({
-        name: 'Warning Channel',
-        value: '⚠️ Not set!'
-      });
+      fields.push({ name: 'Warning Channel', value: '⚠️ Not set!' });
     }
-    
+
+    const embed = new EmbedBuilder()
+      .setColor(enabled ? 0x00FF00 : 0xFF0000)
+      .setTitle(`Spam Mode ${enabled ? 'Enabled' : 'Disabled'}`)
+      .addFields(fields);
+
     if (enabled) {
       if (!warningChannel) {
         embed.setDescription('Spam configuration is incomplete.');

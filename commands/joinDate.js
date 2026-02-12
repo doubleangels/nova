@@ -60,6 +60,10 @@ module.exports = {
       const createdTimestamp = Math.floor(createdAt.getTime() / 1000);
 
       const displayName = member.displayName ?? targetUser.username;
+      const fields = [
+        { name: 'Joined server', value: `<t:${joinTimestamp}:F>\n(<t:${joinTimestamp}:R>)`, inline: false },
+        { name: 'Account created', value: `<t:${createdTimestamp}:F>\n(<t:${createdTimestamp}:R>)`, inline: false }
+      ];
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor ?? 0)
         .setAuthor({
@@ -67,18 +71,7 @@ module.exports = {
           iconURL: member.displayAvatarURL()
         })
         .setDescription(`Join date for **${displayName}**.`)
-        .addFields(
-          {
-            name: 'Joined server',
-            value: `<t:${joinTimestamp}:F>\n(<t:${joinTimestamp}:R>)`,
-            inline: false
-          },
-          {
-            name: 'Account created',
-            value: `<t:${createdTimestamp}:F>\n(<t:${createdTimestamp}:R>)`,
-            inline: false
-          }
-        )
+        .addFields(fields)
         .setFooter({ text: `User ID: ${targetUser.id}` });
 
       await interaction.editReply({ embeds: [embed] });

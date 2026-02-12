@@ -219,17 +219,16 @@ module.exports = {
    * @returns {EmbedBuilder} Discord embed with status information
    */
   formatStatusMessage(settings, interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('Mute Mode Status');
-
     const statusText = settings.isEnabled ? "Enabled" : "Disabled";
-    
-    embed.addFields(
+    const fields = [
       { name: 'Status', value: `**${statusText}**` },
       { name: 'Time Limit', value: `${settings.timeLimit} ${settings.timeLimit === 1 ? 'hour' : 'hours'}` }
-    );
-    
+    ];
+    const embed = new EmbedBuilder()
+      .setColor(settings.isEnabled ? 0x00FF00 : 0xFF0000)
+      .setTitle('Mute Mode Status')
+      .addFields(fields);
+
     if (settings.isEnabled) {
       const hourText = settings.timeLimit === 1 ? 'hour' : 'hours';
       embed.setDescription(`New users must send a message within **${settings.timeLimit}** ${hourText} or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -249,30 +248,20 @@ module.exports = {
    * @returns {EmbedBuilder} Discord embed with update information
    */
   formatUpdateMessage(oldEnabled, newEnabled, oldTimeLimit, newTimeLimit, interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('Mute Mode Updated');
-
     const statusText = newEnabled ? "Enabled" : "Disabled";
-    
-    embed.addFields(
-      { name: 'Status', value: `**${statusText}**` }
-    );
-    
+    const fields = [{ name: 'Status', value: `**${statusText}**` }];
     if (oldTimeLimit !== newTimeLimit) {
       const oldHourText = oldTimeLimit === 1 ? 'hour' : 'hours';
       const newHourText = newTimeLimit === 1 ? 'hour' : 'hours';
-      embed.addFields({ 
-        name: 'Time Limit', 
-        value: `${oldTimeLimit} ${oldHourText} → ${newTimeLimit} ${newHourText}` 
-      });
+      fields.push({ name: 'Time Limit', value: `${oldTimeLimit} ${oldHourText} → ${newTimeLimit} ${newHourText}` });
     } else {
-      embed.addFields({ 
-        name: 'Time Limit', 
-        value: `${newTimeLimit} ${newTimeLimit === 1 ? 'hour' : 'hours'}` 
-      });
+      fields.push({ name: 'Time Limit', value: `${newTimeLimit} ${newTimeLimit === 1 ? 'hour' : 'hours'}` });
     }
-    
+    const embed = new EmbedBuilder()
+      .setColor(newEnabled ? 0x00FF00 : 0xFF0000)
+      .setTitle('Mute Mode Updated')
+      .addFields(fields);
+
     if (newEnabled) {
       const hourText = newTimeLimit === 1 ? 'hour' : 'hours';
       embed.setDescription(`New users must send a message within **${newTimeLimit}** ${hourText} or they will be kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);

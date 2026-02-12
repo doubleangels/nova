@@ -108,18 +108,18 @@ module.exports = {
 
     await targetMember.roles.remove(role, reason);
 
+    const fields = [
+      { name: 'Role', value: `<@&${role.id}>`, inline: true },
+      { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
+    ];
+    if (reason) {
+      fields.push({ name: 'Reason', value: reason });
+    }
     const embed = new EmbedBuilder()
       .setColor(role.color)
       .setTitle('Role Removed')
       .setDescription(`Successfully removed the <@&${role.id}> role from <@${targetMember.id}>.`)
-      .addFields(
-        { name: 'Role', value: `<@&${role.id}>`, inline: true },
-        { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
-      );
-
-    if (reason) {
-      embed.addFields({ name: 'Reason', value: reason });
-    }
+      .addFields(fields);
     
     await interaction.editReply({
       content: `<@&${role.id}>`,

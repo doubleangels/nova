@@ -91,14 +91,15 @@ module.exports = {
                 });
             }
             
+            const fields = [
+                { name: 'Role', value: `<@&${role.id}>`, inline: true },
+                { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
+            ];
             const embed = new EmbedBuilder()
                 .setColor(role.color)
                 .setTitle('Role Assigned')
                 .setDescription(`Successfully gave <@${targetUser.id}> the <@&${role.id}> role.`)
-                .addFields(
-                    { name: 'Role', value: `<@&${role.id}>`, inline: true },
-                    { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
-                );
+                .addFields(fields);
             
             await interaction.editReply({
                 content: `<@&${role.id}>`,

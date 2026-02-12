@@ -192,17 +192,16 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed message
    */
   formatStatusMessage(settings, interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle('Troll Mode Status');
-
     const statusText = settings.enabled ? "Enabled" : "Disabled";
-    
-    embed.addFields(
+    const fields = [
       { name: 'Status', value: `**${statusText}**` },
       { name: 'Minimum Account Age', value: `${settings.accountAge} ${settings.accountAge === 1 ? 'day' : 'days'}` }
-    );
-    
+    ];
+    const embed = new EmbedBuilder()
+      .setColor(settings.enabled ? 0x00FF00 : 0xFF0000)
+      .setTitle('Troll Mode Status')
+      .addFields(fields);
+
     if (settings.enabled) {
       const dayText = settings.accountAge === 1 ? 'day' : 'days';
       embed.setDescription(`New members with accounts younger than **${settings.accountAge}** ${dayText} will be automatically kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);
@@ -220,17 +219,16 @@ module.exports = {
    * @returns {EmbedBuilder} The formatted embed message
    */
   formatUpdateMessage(enabled, accountAge, interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(enabled ? 0x00FF00 : 0xFF0000)
-      .setTitle(`Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`);
-
     const statusText = enabled ? "Enabled" : "Disabled";
-    
-    embed.addFields(
+    const fields = [
       { name: 'Status', value: `**${statusText}**` },
       { name: 'Minimum Account Age', value: `${accountAge} ${accountAge === 1 ? 'day' : 'days'}` }
-    );
-    
+    ];
+    const embed = new EmbedBuilder()
+      .setColor(enabled ? 0x00FF00 : 0xFF0000)
+      .setTitle(`Troll Mode ${enabled ? 'Enabled' : 'Disabled'}`)
+      .addFields(fields);
+
     if (enabled) {
       const dayText = accountAge === 1 ? 'day' : 'days';
       embed.setDescription(`New members with accounts younger than **${accountAge}** ${dayText} will be automatically kicked.\n\n*Note: Bot accounts are exempt from this tracking.*`);

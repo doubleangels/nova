@@ -173,16 +173,17 @@ module.exports = {
     const synopsis = (animeData.synopsis || "No synopsis available.").slice(0, 4090);
     const title = (animeData.title || "Unknown").slice(0, 256);
 
+    const fields = [
+      { name: "Genre", value: genres.slice(0, 1024), inline: true },
+      { name: "MAL Rating", value: rating, inline: true },
+      { name: "Release Date", value: releaseDate.slice(0, 1024), inline: true },
+      { name: "MAL Link", value: `[Click Here](${malLink})`, inline: false }
+    ];
     const embed = new EmbedBuilder()
       .setTitle(title)
       .setDescription(`**Synopsis:** ${synopsis}`)
       .setColor(0x2E51A2)
-      .addFields(
-        { name: "Genre", value: genres.slice(0, 1024), inline: true },
-        { name: "MAL Rating", value: rating, inline: true },
-        { name: "Release Date", value: releaseDate.slice(0, 1024), inline: true },
-        { name: "MAL Link", value: `[Click Here](${malLink})`, inline: false }
-      )
+      .addFields(fields)
       .setFooter({ text: "Powered by MyAnimeList API" });
 
     if (animeData.imageUrl) {

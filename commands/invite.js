@@ -263,23 +263,20 @@ module.exports = {
         ? `The tag **${tagName}** has been updated from **${existingTag.code}** to **${cleanCode}**.`
         : `The tag **${tagName}** has been updated with the new invite code **${cleanCode}**.`)
       : `The invite code has been successfully tagged as **${tagName}**.`;
+    const fields = [
+      { name: 'Tag Name', value: tagName, inline: true },
+      { name: 'Invite Code', value: cleanCode, inline: true },
+      { name: 'Full URL', value: `https://discord.gg/${cleanCode}`, inline: false }
+    ];
+    if (isUpdate && existingTag.code !== cleanCode) {
+      fields.push({ name: 'Previous Code', value: existingTag.code, inline: true });
+    }
     const embed = new EmbedBuilder()
       .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
       .setTitle(isUpdate ? 'Invite Tag Updated' : 'Invite Code Tagged')
       .setDescription(tagDescription)
-      .addFields(
-        { name: 'Tag Name', value: tagName, inline: true },
-        { name: 'Invite Code', value: cleanCode, inline: true },
-        { name: 'Full URL', value: `https://discord.gg/${cleanCode}`, inline: false }
-      );
-
-    if (isUpdate && existingTag.code !== cleanCode) {
-      embed.addFields(
-        { name: 'Previous Code', value: existingTag.code, inline: true }
-      );
-    }
-
-    embed.setTimestamp();
+      .addFields(fields)
+      .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
 
@@ -319,13 +316,12 @@ module.exports = {
     // Store the notification channel in the invites namespace
     await setInviteNotificationChannel(channel.id);
 
+    const fields = [{ name: 'Notification Channel', value: `${channel}`, inline: false }];
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
       .setTitle('Invite Notifications Configured')
       .setDescription('The notification channel has been successfully set up.')
-      .addFields(
-        { name: 'Notification Channel', value: `${channel}`, inline: false }
-      )
+      .addFields(fields)
       .setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
@@ -392,9 +388,8 @@ module.exports = {
     }
 
     // Add fields to embed (max 25 fields)
-    for (let i = 0; i < Math.min(fields.length, 25); i++) {
-      embed.addFields(fields[i]);
-    }
+    const fieldsToAdd = fields.slice(0, 25);
+    embed.addFields(fieldsToAdd);
 
     if (fields.length > 25) {
       embed.setFooter({ text: `Showing first 25 of ${tags.length} tags` });
@@ -533,36 +528,30 @@ module.exports = {
           ? `A new invite has been created and the tag **${tagName}** has been updated from **${existingTag.code}** to **${inviteCode}**.`
           : `A new invite has been created and the tag **${tagName}** has been updated to **${inviteCode}**.`)
         : `A new invite has been created and tagged as **${tagName}**.`;
-      const embed = new EmbedBuilder()
-        .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
-        .setTitle(isUpdate ? 'Invite Created and Tag Updated' : 'Invite Created and Tagged')
-        .setDescription(createDescription)
-        .addFields(
-          { name: 'Tag Name', value: tagName, inline: true },
-          { name: 'Invite Code', value: inviteCode, inline: true },
-          { name: 'Channel', value: `${targetChannel}`, inline: true },
-          { name: 'Full URL', value: `https://discord.gg/${inviteCode}`, inline: false }
-        );
-
-      // Add invite options if set
+      const fields = [
+        { name: 'Tag Name', value: tagName, inline: true },
+        { name: 'Invite Code', value: inviteCode, inline: true },
+        { name: 'Channel', value: `${targetChannel}`, inline: true },
+        { name: 'Full URL', value: `https://discord.gg/${inviteCode}`, inline: false }
+      ];
       if (maxUses && maxUses > 0) {
-        embed.addFields({ name: 'Max Uses', value: maxUses.toString(), inline: true });
+        fields.push({ name: 'Max Uses', value: maxUses.toString(), inline: true });
       }
-
       if (maxAge && maxAge > 0) {
         const days = Math.floor(maxAge / 86400);
         const hours = Math.floor((maxAge % 86400) / 3600);
         const ageText = days > 0 ? `${days} day${days !== 1 ? 's' : ''}` : `${hours} hour${hours !== 1 ? 's' : ''}`;
-        embed.addFields({ name: 'Expires After', value: ageText, inline: true });
+        fields.push({ name: 'Expires After', value: ageText, inline: true });
       }
-
       if (isUpdate && existingTag.code !== inviteCode) {
-        embed.addFields(
-          { name: 'Previous Code', value: existingTag.code, inline: true }
-        );
+        fields.push({ name: 'Previous Code', value: existingTag.code, inline: true });
       }
-
-      embed.setTimestamp();
+      const embed = new EmbedBuilder()
+        .setColor(isUpdate ? 0xFFA500 : 0x00FF00)
+        .setTitle(isUpdate ? 'Invite Created and Tag Updated' : 'Invite Created and Tagged')
+        .setDescription(createDescription)
+        .addFields(fields)
+        .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
 
@@ -693,16 +682,16 @@ module.exports = {
         });
       }
 
-      // Build response embed
+      const fields = [
+        { name: 'Tag Name', value: tagName, inline: true },
+        { name: 'Invite Code', value: inviteTag.code || 'N/A', inline: true },
+        { name: 'Full URL', value: inviteTag.code ? `https://discord.gg/${inviteTag.code}` : 'N/A', inline: false }
+      ];
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
         .setTitle('Tagged Invite Removed')
         .setDescription(`The tagged invite **${tagName}** has been successfully removed.`)
-        .addFields(
-          { name: 'Tag Name', value: tagName, inline: true },
-          { name: 'Invite Code', value: inviteTag.code || 'N/A', inline: true },
-          { name: 'Full URL', value: inviteTag.code ? `https://discord.gg/${inviteTag.code}` : 'N/A', inline: false }
-        )
+        .addFields(fields)
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
