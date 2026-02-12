@@ -1,82 +1,21 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 
-/** Permission bits that count as "moderator" (kick, ban, manage messages, timeout, manage threads). */
-const MODERATOR_PERMISSIONS = [
-  PermissionFlagsBits.KickMembers,
-  PermissionFlagsBits.BanMembers,
-  PermissionFlagsBits.ManageMessages,
-  PermissionFlagsBits.ModerateMembers,
-  PermissionFlagsBits.ManageThreads
-];
-
 /** Role ID used to indicate the member has been in the server before (e.g. returning member role). */
 const BEEN_IN_SERVER_BEFORE_ROLE_ID = '1471298047265734929';
 
-/** Human-readable labels for user flag keys (public badges). All flags included so every badge is shown. */
-const USER_FLAG_LABELS = {
-  Staff: 'Discord Staff',
-  Partner: 'Partnered Server Owner',
-  Hypesquad: 'HypeSquad Events',
-  BugHunterLevel1: 'Bug Hunter Level 1',
-  MFASMS: 'MFA SMS',
-  PremiumPromoDismissed: 'Premium Promo Dismissed',
-  HypeSquadOnlineHouse1: 'HypeSquad Bravery',
-  HypeSquadOnlineHouse2: 'HypeSquad Brilliance',
-  HypeSquadOnlineHouse3: 'HypeSquad Balance',
-  PremiumEarlySupporter: 'Early Nitro Supporter',
-  TeamPseudoUser: 'Team User',
-  HasUnreadUrgentMessages: 'Has Unread Urgent Messages',
-  BugHunterLevel2: 'Bug Hunter Level 2',
-  VerifiedBot: 'Verified Bot',
-  VerifiedDeveloper: 'Verified Bot Developer',
-  CertifiedModerator: 'Certified Moderator',
-  BotHTTPInteractions: 'Bot HTTP Interactions',
-  Spammer: 'Spammer',
-  DisablePremium: 'Disable Premium',
-  ActiveDeveloper: 'Active Developer',
-  Quarantined: 'Quarantined',
-  Collaborator: 'Collaborator',
-  RestrictedCollaborator: 'Restricted Collaborator'
-};
-
-/** Max length for each badges field value (Discord embed limit 1024). */
-const BADGES_FIELD_MAX_LENGTH = 1020;
+/** Role ID to compare member permissions against (shows diff in embed). */
+const PERMISSION_DIFF_ROLE_ID = '742683051607326720';
 
 /**
- * Turns a camelCase or PascalCase key into a readable label (e.g. "SomeKey" -> "Some Key").
- * @param {string} key - Flag key
+ * Formats a permission key for display (e.g. "KickMembers" -> "Kick Members").
+ * @param {string} key - Permission key from PermissionFlagsBits
  * @returns {string}
  */
-function flagKeyToLabel(key) {
-  return USER_FLAG_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
-}
-
-/**
- * Returns all user badge names for display, split into chunks if needed to fit embed fields.
- * @param {User} user - Discord user (flags may be null if not fetched)
- * @returns {string[]} One or more strings (e.g. [] for no badges, or ['Badge1, Badge2', 'Badge3'] for continuation)
- */
-function formatUserBadgesChunks(user) {
-  if (!user?.flags?.bitfield) return [];
-  const keys = user.flags.toArray();
-  if (keys.length === 0) return [];
-  const display = keys.map(k => flagKeyToLabel(k));
-  const chunks = [];
-  let current = '';
-  for (const label of display) {
-    const next = current ? `${current}, ${label}` : label;
-    if (next.length <= BADGES_FIELD_MAX_LENGTH) {
-      current = next;
-    } else {
-      if (current) chunks.push(current);
-      current = label;
-    }
-  }
-  if (current) chunks.push(current);
-  return chunks;
+function formatPermissionName(key) {
+  return key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
 }
 
 module.exports = {
@@ -95,7 +34,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const targetUser = interaction.options.getUser('user');
 
@@ -110,6 +49,22 @@ module.exports = {
       if (interaction.guild && !member) {
         member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
       }
+      let extraPermissions = [];
+      let returningValue = '—';
+      if (member) {
+        const beenInServerBefore = member.roles.cache.has(BEEN_IN_SERVER_BEFORE_ROLE_ID);
+        if (!beenInServerBefore) {
+          await member.roles.add(BEEN_IN_SERVER_BEFORE_ROLE_ID).catch(err => {
+            logger.warn('Could not add been-in-server-before role in newuser.', {
+              err: err.message,
+              guildId: member.guild.id,
+              userId: member.id,
+              roleId: BEEN_IN_SERVER_BEFORE_ROLE_ID
+            });
+          });
+        }
+        returningValue = beenInServerBefore ? 'Yes' : 'No';
+      }
 
       const displayName = member?.displayName ?? targetUser.globalName ?? targetUser.username;
       const globalAvatarURL = targetUser.displayAvatarURL({ size: 1024 });
@@ -119,8 +74,10 @@ module.exports = {
       const avatarURL = serverAvatarURL ?? globalAvatarURL;
       const fields = [
         { name: 'Username', value: targetUser.username, inline: true },
-        { name: 'Display Name', value: displayName, inline: true },
+        { name: 'Display Name', value: `<@${targetUser.id}>`, inline: true },
         { name: 'Bot', value: targetUser.bot ? 'Yes' : 'No', inline: true },
+        { name: 'Returning', value: returningValue, inline: true },
+        { name: 'ID', value: targetUser.id, inline: true },
         {
           name: 'Created',
           value: `<t:${createdTimestamp}:F>\n(<t:${createdTimestamp}:R>)`,
@@ -152,33 +109,19 @@ module.exports = {
             inline: true
           });
         }
-        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
-        const isModerator = isAdmin || member.permissions.any(MODERATOR_PERMISSIONS);
-        const beenInServerBefore = member.roles.cache.has(BEEN_IN_SERVER_BEFORE_ROLE_ID);
-        if (!beenInServerBefore) {
-          await member.roles.add(BEEN_IN_SERVER_BEFORE_ROLE_ID).catch(err => {
-            logger.warn('Could not add been-in-server-before role in newuser.', {
-              err: err.message,
-              guildId: member.guild.id,
-              userId: member.id,
-              roleId: BEEN_IN_SERVER_BEFORE_ROLE_ID
+        const diffRole = member.guild.roles.cache.get(PERMISSION_DIFF_ROLE_ID);
+        if (diffRole) {
+          const memberPerms = member.permissions.toArray();
+          extraPermissions = memberPerms.filter(p => !diffRole.permissions.has(p)).map(formatPermissionName).sort();
+          if (extraPermissions.length > 0) {
+            fields.push({
+              name: 'Permissions',
+              value: `**Extra:** ${extraPermissions.join(', ')}`,
+              inline: false
             });
-          });
+          }
         }
-        fields.push(
-          { name: 'Administrator', value: isAdmin ? 'Yes' : 'No', inline: true },
-          { name: 'Moderator', value: isModerator ? 'Yes' : 'No', inline: true },
-          { name: 'Returning', value: beenInServerBefore ? 'Yes' : 'No', inline: true }
-        );
       }
-      const badgesChunks = formatUserBadgesChunks(targetUser);
-      badgesChunks.forEach((value, i) => {
-        fields.push({
-          name: badgesChunks.length === 1 ? 'Badges' : `Badges (${i + 1})`,
-          value,
-          inline: false
-        });
-      });
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor ?? 0)
         .setAuthor({
@@ -186,16 +129,34 @@ module.exports = {
           iconURL: avatarURL
         })
         .setImage(avatarURL)
-        .addFields(fields)
-        .setFooter({ text: `User ID: ${targetUser.id}` });
+        .addFields(fields);
 
       await interaction.editReply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
-      logger.info('/newuser command completed successfully.', {
+      const logUser = {
         userId: interaction.user.id,
-        targetUserId: targetUser.id,
-        guildId: interaction.guildId
-      });
+        guildId: interaction.guildId,
+        target: {
+          id: targetUser.id,
+          username: targetUser.username,
+          globalName: targetUser.globalName ?? null,
+          displayName,
+          bot: targetUser.bot,
+          createdAt: targetUser.createdAt.toISOString()
+        }
+      };
+      if (member) {
+        logUser.target.joinedAt = member.joinedAt?.toISOString() ?? null;
+        logUser.target.timeoutUntil = member.communicationDisabledUntilTimestamp != null && member.communicationDisabledUntilTimestamp > Date.now()
+          ? new Date(member.communicationDisabledUntilTimestamp).toISOString()
+          : null;
+        logUser.target.boosterSince = member.premiumSince ? member.premiumSince.toISOString() : null;
+        logUser.target.returning = member.roles.cache.has(BEEN_IN_SERVER_BEFORE_ROLE_ID);
+        logUser.target.extraPermissions = extraPermissions?.length > 0 ? extraPermissions : null;
+      } else {
+        logUser.target.inGuild = false;
+      }
+      logger.info('/newuser command completed successfully.', logUser);
     } catch (error) {
       logger.error('Error in newuser command.', {
         err: error,
