@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
+const { isFormerMember } = require('../utils/database');
 
 /**
  * Formats a permission key for display (e.g. "KickMembers" -> "Kick Members").
@@ -46,9 +47,17 @@ module.exports = {
       }
       let extraPermissions = [];
       let returningValue = '—';
-      if (member && config.newUserBeenInServerBeforeRoleId) {
-        const beenInServerBefore = member.roles.cache.has(config.newUserBeenInServerBeforeRoleId);
-        returningValue = beenInServerBefore ? 'Yes' : 'No';
+      let isReturning = null;
+      try {
+        isReturning = await isFormerMember(targetUser.id);
+        if (isReturning === true || isReturning === false) {
+          returningValue = isReturning ? 'Yes' : 'No';
+        }
+      } catch (error) {
+        logger.warn('Failed to check returning status from database in /newuser.', {
+          err: error,
+          targetUserId: targetUser.id
+        });
       }
 
       const displayName = member?.displayName ?? targetUser.globalName ?? targetUser.username;
@@ -138,9 +147,7 @@ module.exports = {
           ? new Date(member.communicationDisabledUntilTimestamp).toISOString()
           : null;
         logUser.target.boosterSince = member.premiumSince ? member.premiumSince.toISOString() : null;
-        logUser.target.returning = config.newUserBeenInServerBeforeRoleId
-          ? member.roles.cache.has(config.newUserBeenInServerBeforeRoleId)
-          : null;
+        logUser.target.returning = isReturning;
         logUser.target.extraPermissions = extraPermissions?.length > 0 ? extraPermissions : null;
       } else {
         logUser.target.inGuild = false;
