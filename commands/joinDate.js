@@ -11,6 +11,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('joindate')
     .setDescription('See when a user joined this server.')
+    .setDefaultMemberPermissions(null)
     .addUserOption(option =>
       option
         .setName('user')

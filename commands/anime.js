@@ -24,6 +24,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('anime')
     .setDescription('Search for anime on MyAnimeList and display detailed information.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option.setName('title')
         .setDescription('What anime do you want to search for?')

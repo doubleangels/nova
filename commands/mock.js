@@ -9,7 +9,8 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
     data: new ContextMenuCommandBuilder()
         .setName('Mock')
-        .setType(ApplicationCommandType.Message),
+        .setType(ApplicationCommandType.Message)
+        .setDefaultMemberPermissions(null),
 
     /**
      * Executes the mocking command.

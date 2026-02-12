@@ -14,6 +14,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('book')
     .setDescription('Search for books using Google Books API.')
+    .setDefaultMemberPermissions(null)
     .addSubcommand(subcommand =>
       subcommand
         .setName('search')

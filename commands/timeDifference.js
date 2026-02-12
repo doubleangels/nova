@@ -13,6 +13,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('timedifference')
     .setDescription('Get the time difference between two places.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option
         .setName('place1')

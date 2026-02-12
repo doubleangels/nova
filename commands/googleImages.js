@@ -20,6 +20,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('googleimages')
     .setDescription('Search Google for images and return the top results.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option
         .setName('query')

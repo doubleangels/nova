@@ -10,7 +10,8 @@ const axios = require('axios');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('dog')
-    .setDescription('Fetch and display a random dog image.'),
+    .setDescription('Fetch and display a random dog image.')
+    .setDefaultMemberPermissions(null),
 
   /**
    * Executes the dog image command.

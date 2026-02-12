@@ -12,6 +12,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('dictionary')
     .setDescription('Fetch and display definitions from a free dictionary.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option.setName('word')
         .setDescription('What word do you want to look up?')

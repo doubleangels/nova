@@ -14,6 +14,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('wikipedia')
     .setDescription('Fetch and display Wikipedia article summaries.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option.setName('query')
         .setDescription('What do you want to search for?')

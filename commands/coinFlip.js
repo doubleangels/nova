@@ -9,7 +9,8 @@ const logger = require('../logger')(path.basename(__filename));
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('coinflip')
-        .setDescription('Flip a coin and get heads or tails'),
+        .setDescription('Flip a coin and get heads or tails')
+        .setDefaultMemberPermissions(null),
 
     /**
      * Executes the coin flip command.

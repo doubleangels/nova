@@ -22,6 +22,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('newuser')
     .setDescription("View a user's profile picture, username, display name, and when they created their account.")
+    .setDefaultMemberPermissions(null)
     .addUserOption(option =>
       option
         .setName('user')

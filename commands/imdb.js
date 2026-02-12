@@ -13,6 +13,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('imdb')
     .setDescription('Search for movies and TV shows using IMDb.')
+    .setDefaultMemberPermissions(null)
     .addSubcommand(sub =>
       sub.setName('movie')
         .setDescription('Search for a movie on IMDb.')

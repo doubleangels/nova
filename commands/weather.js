@@ -37,6 +37,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('weather')
     .setDescription('Get weather information for a location.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option
         .setName('place')

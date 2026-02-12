@@ -15,6 +15,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('youtube')
     .setDescription('Search for a video on YouTube.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option.setName('query')
         .setDescription('What do you want to search for?')

@@ -11,6 +11,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('urban')
         .setDescription('Fetch and display definitions from Urban Dictionary.')
+        .setDefaultMemberPermissions(null)
         .addStringOption(option =>
             option.setName('term')
                 .setDescription('What do you want to search for?')

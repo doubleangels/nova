@@ -15,6 +15,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('spotify')
     .setDescription('Search for music on Spotify.')
+    .setDefaultMemberPermissions(null)
     .addSubcommand(subcommand =>
       subcommand
         .setName('song')

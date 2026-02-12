@@ -11,6 +11,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('country')
     .setDescription('Get information about a country.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option.setName('name')
         .setDescription('Enter the country name (e.g., France, Japan, Brazil)')

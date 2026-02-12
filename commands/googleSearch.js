@@ -14,6 +14,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('google')
     .setDescription('Search Google and return the top results.')
+    .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option
         .setName('query')
