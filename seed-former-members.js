@@ -25,6 +25,27 @@ for (const arg of args) {
   }
 }
 
+// If running as root in Docker and DB not accessible, re-exec as discordbot (same as list-values.js).
+// Child inherits env (e.g. DISCORD_BOT_TOKEN from `export` + bws), so "export TOKEN=...; node seed-former-members.js" works.
+const { checkDatabaseAccess } = require('./utils/dbScriptUtils');
+const accessCheck = checkDatabaseAccess();
+if (!accessCheck.accessible && accessCheck.fileExists && accessCheck.currentUser?.isRoot) {
+  try {
+    require('child_process').execSync('which gosu', { stdio: 'ignore' });
+    const { spawn } = require('child_process');
+    const child = spawn('gosu', ['discordbot', 'node', __filename, ...process.argv.slice(2)], {
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+    child.on('exit', code => process.exit(code ?? 0));
+    return;
+  } catch (_) {
+    console.error('Permission error: Cannot access database file.');
+    if (accessCheck.recommendation) console.error(accessCheck.recommendation);
+    process.exit(1);
+  }
+}
+
 const { Client, GatewayIntentBits } = require('discord.js');
 const { initializeDatabase, setFormerMember } = require('./utils/database');
 const config = require('./config');
