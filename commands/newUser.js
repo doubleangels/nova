@@ -1,12 +1,84 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 
+/** Permission bits that count as "moderator" (kick, ban, manage messages, timeout, manage threads). */
+const MODERATOR_PERMISSIONS = [
+  PermissionFlagsBits.KickMembers,
+  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.ManageMessages,
+  PermissionFlagsBits.ModerateMembers,
+  PermissionFlagsBits.ManageThreads
+];
+
+/** Role ID used to indicate the member has been in the server before (e.g. returning member role). */
+const BEEN_IN_SERVER_BEFORE_ROLE_ID = '1471298047265734929';
+
+/** Human-readable labels for user flag keys (public badges). All flags included so every badge is shown. */
+const USER_FLAG_LABELS = {
+  Staff: 'Discord Staff',
+  Partner: 'Partnered Server Owner',
+  Hypesquad: 'HypeSquad Events',
+  BugHunterLevel1: 'Bug Hunter Level 1',
+  MFASMS: 'MFA SMS',
+  PremiumPromoDismissed: 'Premium Promo Dismissed',
+  HypeSquadOnlineHouse1: 'HypeSquad Bravery',
+  HypeSquadOnlineHouse2: 'HypeSquad Brilliance',
+  HypeSquadOnlineHouse3: 'HypeSquad Balance',
+  PremiumEarlySupporter: 'Early Nitro Supporter',
+  TeamPseudoUser: 'Team User',
+  HasUnreadUrgentMessages: 'Has Unread Urgent Messages',
+  BugHunterLevel2: 'Bug Hunter Level 2',
+  VerifiedBot: 'Verified Bot',
+  VerifiedDeveloper: 'Verified Bot Developer',
+  CertifiedModerator: 'Certified Moderator',
+  BotHTTPInteractions: 'Bot HTTP Interactions',
+  Spammer: 'Spammer',
+  DisablePremium: 'Disable Premium',
+  ActiveDeveloper: 'Active Developer',
+  Quarantined: 'Quarantined',
+  Collaborator: 'Collaborator',
+  RestrictedCollaborator: 'Restricted Collaborator'
+};
+
+/** Max length for each badges field value (Discord embed limit 1024). */
+const BADGES_FIELD_MAX_LENGTH = 1020;
+
 /**
- * Command module for showing a user's profile (avatar, username, display name, account creation).
- * @type {Object}
+ * Turns a camelCase or PascalCase key into a readable label (e.g. "SomeKey" -> "Some Key").
+ * @param {string} key - Flag key
+ * @returns {string}
  */
+function flagKeyToLabel(key) {
+  return USER_FLAG_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+}
+
+/**
+ * Returns all user badge names for display, split into chunks if needed to fit embed fields.
+ * @param {User} user - Discord user (flags may be null if not fetched)
+ * @returns {string[]} One or more strings (e.g. [] for no badges, or ['Badge1, Badge2', 'Badge3'] for continuation)
+ */
+function formatUserBadgesChunks(user) {
+  if (!user?.flags?.bitfield) return [];
+  const keys = user.flags.toArray();
+  if (keys.length === 0) return [];
+  const display = keys.map(k => flagKeyToLabel(k));
+  const chunks = [];
+  let current = '';
+  for (const label of display) {
+    const next = current ? `${current}, ${label}` : label;
+    if (next.length <= BADGES_FIELD_MAX_LENGTH) {
+      current = next;
+    } else {
+      if (current) chunks.push(current);
+      current = label;
+    }
+  }
+  if (current) chunks.push(current);
+  return chunks;
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('newuser')
@@ -47,7 +119,7 @@ module.exports = {
       const avatarURL = serverAvatarURL ?? globalAvatarURL;
       const fields = [
         { name: 'Username', value: targetUser.username, inline: true },
-        { name: 'Name', value: displayName, inline: true },
+        { name: 'Display Name', value: displayName, inline: true },
         { name: 'Bot', value: targetUser.bot ? 'Yes' : 'No', inline: true },
         {
           name: 'Created',
@@ -63,6 +135,50 @@ module.exports = {
           inline: false
         });
       }
+      if (member) {
+        if (member.communicationDisabledUntilTimestamp != null && member.communicationDisabledUntilTimestamp > Date.now()) {
+          const untilTimestamp = Math.floor(member.communicationDisabledUntilTimestamp / 1000);
+          fields.push({
+            name: 'Timeout',
+            value: `Until <t:${untilTimestamp}:F>\n(<t:${untilTimestamp}:R>)`,
+            inline: true
+          });
+        }
+        if (member.premiumSince) {
+          const boostTimestamp = Math.floor(member.premiumSince.getTime() / 1000);
+          fields.push({
+            name: 'Booster',
+            value: `Since <t:${boostTimestamp}:F>\n(<t:${boostTimestamp}:R>)`,
+            inline: true
+          });
+        }
+        const isAdmin = member.permissions.has(PermissionFlagsBits.Administrator);
+        const isModerator = isAdmin || member.permissions.any(MODERATOR_PERMISSIONS);
+        const beenInServerBefore = member.roles.cache.has(BEEN_IN_SERVER_BEFORE_ROLE_ID);
+        if (!beenInServerBefore) {
+          await member.roles.add(BEEN_IN_SERVER_BEFORE_ROLE_ID).catch(err => {
+            logger.warn('Could not add been-in-server-before role in newuser.', {
+              err: err.message,
+              guildId: member.guild.id,
+              userId: member.id,
+              roleId: BEEN_IN_SERVER_BEFORE_ROLE_ID
+            });
+          });
+        }
+        fields.push(
+          { name: 'Administrator', value: isAdmin ? 'Yes' : 'No', inline: true },
+          { name: 'Moderator', value: isModerator ? 'Yes' : 'No', inline: true },
+          { name: 'Returning', value: beenInServerBefore ? 'Yes' : 'No', inline: true }
+        );
+      }
+      const badgesChunks = formatUserBadgesChunks(targetUser);
+      badgesChunks.forEach((value, i) => {
+        fields.push({
+          name: badgesChunks.length === 1 ? 'Badges' : `Badges (${i + 1})`,
+          value,
+          inline: false
+        });
+      });
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor ?? 0)
         .setAuthor({
