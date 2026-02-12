@@ -403,17 +403,12 @@ async function listAllValues() {
 // Parse command line arguments
 const args = process.argv.slice(2);
 
-if (args.length === 0) {
-  // No key provided, list all values
-  listAllValues();
-} else {
-  // Key provided, read specific value
-  const key = args[0];
-  
-  if (!key || key.trim() === '') {
-    console.error('Error: Key cannot be empty');
-    process.exit(1);
-  }
-  
-  readValue(key);
+// Single-key lookups caused confusion and are no longer supported.
+// Always list all values, regardless of any arguments.
+if (args.length > 0) {
+  console.error('Reading a single key with list-values.js is no longer supported.');
+  console.error('Run `node list-values.js` with no arguments to see all values.');
+  process.exit(1);
 }
+
+listAllValues();
