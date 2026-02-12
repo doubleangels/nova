@@ -3,12 +3,6 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 
-/** Role ID used to indicate the member has been in the server before (e.g. returning member role). */
-const BEEN_IN_SERVER_BEFORE_ROLE_ID = '1471298047265734929';
-
-/** Role ID to compare member permissions against (shows diff in embed). */
-const PERMISSION_DIFF_ROLE_ID = '742683051607326720';
-
 /**
  * Formats a permission key for display (e.g. "KickMembers" -> "Kick Members").
  * @param {string} key - Permission key from PermissionFlagsBits
@@ -52,15 +46,15 @@ module.exports = {
       }
       let extraPermissions = [];
       let returningValue = '—';
-      if (member) {
-        const beenInServerBefore = member.roles.cache.has(BEEN_IN_SERVER_BEFORE_ROLE_ID);
+      if (member && config.newUserBeenInServerBeforeRoleId) {
+        const beenInServerBefore = member.roles.cache.has(config.newUserBeenInServerBeforeRoleId);
         if (!beenInServerBefore) {
-          await member.roles.add(BEEN_IN_SERVER_BEFORE_ROLE_ID).catch(err => {
+          await member.roles.add(config.newUserBeenInServerBeforeRoleId).catch(err => {
             logger.warn('Could not add been-in-server-before role in newuser.', {
               err: err.message,
               guildId: member.guild.id,
               userId: member.id,
-              roleId: BEEN_IN_SERVER_BEFORE_ROLE_ID
+              roleId: config.newUserBeenInServerBeforeRoleId
             });
           });
         }
@@ -110,7 +104,9 @@ module.exports = {
             inline: true
           });
         }
-        const diffRole = member.guild.roles.cache.get(PERMISSION_DIFF_ROLE_ID);
+        const diffRole = config.newUserPermissionDiffRoleId
+          ? member.guild.roles.cache.get(config.newUserPermissionDiffRoleId)
+          : null;
         if (diffRole) {
           const memberPerms = member.permissions.toArray();
           extraPermissions = memberPerms.filter(p => !diffRole.permissions.has(p)).map(formatPermissionName).sort();
@@ -152,7 +148,9 @@ module.exports = {
           ? new Date(member.communicationDisabledUntilTimestamp).toISOString()
           : null;
         logUser.target.boosterSince = member.premiumSince ? member.premiumSince.toISOString() : null;
-        logUser.target.returning = member.roles.cache.has(BEEN_IN_SERVER_BEFORE_ROLE_ID);
+        logUser.target.returning = config.newUserBeenInServerBeforeRoleId
+          ? member.roles.cache.has(config.newUserBeenInServerBeforeRoleId)
+          : null;
         logUser.target.extraPermissions = extraPermissions?.length > 0 ? extraPermissions : null;
       } else {
         logUser.target.inGuild = false;

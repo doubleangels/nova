@@ -29,6 +29,8 @@ require('dotenv').config();
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images (from IMAGE_SEARCH_ENGINE_ID env var)
  * @property {string} logLevel - Logging level (from LOG_LEVEL env var, default: 'info')
  * @property {string} malClientId - MyAnimeList API client ID (from MAL_CLIENT_ID env var)
+ * @property {string} newUserBeenInServerBeforeRoleId - Role ID for "been in server before" in /newuser (from NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID env var)
+ * @property {string} newUserPermissionDiffRoleId - Role ID to compare permissions against in /newuser (from NEWUSER_PERMISSION_DIFF_ROLE_ID env var)
  * @property {string} omdbApiKey - OMDB API key for movie information (from OMDB_API_KEY env var)
  * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information (from PIRATEWEATHER_API_KEY env var)
  * @property {string} redditClientId - Reddit API client ID (from REDDIT_CLIENT_ID env var)
@@ -83,6 +85,10 @@ module.exports = {
   logLevel: process.env.LOG_LEVEL || 'info',
   // Client ID for MyAnimeList API
   malClientId: process.env.MAL_CLIENT_ID,
+  // Role ID for "been in server before" (returning member) in /newuser
+  newUserBeenInServerBeforeRoleId: process.env.NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID,
+  // Role ID to compare member permissions against in /newuser embed
+  newUserPermissionDiffRoleId: process.env.NEWUSER_PERMISSION_DIFF_ROLE_ID,
   // API key for Open Movie Database
   omdbApiKey: process.env.OMDB_API_KEY,
   // API key for PirateWeather forecast service

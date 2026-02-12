@@ -71,6 +71,8 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `DISCORD_BOT_TOKEN`
 - `GIVE_PERMS_FREN_ROLE_ID`
 - `GIVE_PERMS_POSITION_ABOVE_ROLE_ID`
+- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID`
+- `NEWUSER_PERMISSION_DIFF_ROLE_ID`
 - `GOOGLE_API_KEY`
 - `GUILD_NAME`
 - `IMAGE_SEARCH_ENGINE_ID`
@@ -176,6 +178,7 @@ Create and assign custom roles to users with automatic permission management. Cr
 
 - `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` must be configured in Bitwarden Secrets Manager
 - `GIVE_PERMS_FREN_ROLE_ID` must be configured in Bitwarden Secrets Manager
+- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID` and `NEWUSER_PERMISSION_DIFF_ROLE_ID` (for `/newuser`) must be configured in Bitwarden Secrets Manager
 
 #### `/giverole` (Manage Roles Permission)
 
