@@ -48,16 +48,6 @@ module.exports = {
       let returningValue = '—';
       if (member && config.newUserBeenInServerBeforeRoleId) {
         const beenInServerBefore = member.roles.cache.has(config.newUserBeenInServerBeforeRoleId);
-        if (!beenInServerBefore) {
-          await member.roles.add(config.newUserBeenInServerBeforeRoleId).catch(err => {
-            logger.warn('Could not add been-in-server-before role in newuser.', {
-              err: err.message,
-              guildId: member.guild.id,
-              userId: member.id,
-              roleId: config.newUserBeenInServerBeforeRoleId
-            });
-          });
-        }
         returningValue = beenInServerBefore ? 'Yes' : 'No';
       }
 

@@ -5,7 +5,7 @@
  * 
  * Key format: [namespace:][section:]key
  *   - namespace: main (default), invites
- *   - section: config, tags, invite_usage, invite_code_to_tag_map, etc.
+ *   - section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.
  * 
  * Examples:
  *   node set-value.js reminder_channel "123456789012345678"
@@ -13,6 +13,7 @@
  *   node set-value.js spam_mode_enabled true
  *   node set-value.js invites:tags:disboard '{"code":"abc123","name":"Disboard"}'
  *   node set-value.js main:invite_usage:123456789 '{"abc123":5}'
+ *   node set-value.js former_member:123456789 1   # Mark user as former member (returning tracking)
  */
 
 require('dotenv').config();
@@ -94,7 +95,7 @@ if (args.length < 2) {
   console.error('');
   console.error('Key format: [namespace:][section:]key');
   console.error('  namespace: main (default), invites');
-  console.error('  section: config, tags, invite_usage, invite_code_to_tag_map, etc.');
+  console.error('  section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.');
   console.error('');
   console.error('Examples:');
   console.error('  node set-value.js reminder_channel "123456789012345678"');

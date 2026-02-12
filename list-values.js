@@ -6,7 +6,7 @@
  * 
  * Key format: [namespace:][section:]key
  *   - namespace: main (default), invites
- *   - section: config, tags, invite_usage, invite_code_to_tag_map, etc.
+ *   - section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.
  * 
  * Examples:
  *   node list-values.js                    # List all values (all namespaces)
@@ -14,6 +14,7 @@
  *   node list-values.js main:config:reminder_channel  # Explicit namespace and section
  *   node list-values.js invites:tags:disboard  # Read invite tag
  *   node list-values.js main:invite_usage:123456789  # Read invite usage for guild
+ *   node list-values.js former_member:123456789  # Read former member (returning-user tracking)
  */
 
 require('dotenv').config();

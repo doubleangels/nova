@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { removeMuteModeUser, removeSpamModeJoinTime } = require('../utils/database');
+const { removeMuteModeUser, removeSpamModeJoinTime, setFormerMember } = require('../utils/database');
 const { Events } = require('discord.js');
 
 module.exports = {
@@ -28,10 +28,11 @@ module.exports = {
         userId: member.id
       });
       
-      // Parallelize database writes
+      // Parallelize database writes (record as former member so on re-join they get "been in server before" role)
       await Promise.all([
         removeMuteModeUser(member.id),
-        removeSpamModeJoinTime(member.id)
+        removeSpamModeJoinTime(member.id),
+        setFormerMember(member.id)
       ]);
 
       logger.info('Successfully processed member departure.', {

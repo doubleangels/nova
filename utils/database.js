@@ -937,6 +937,36 @@ async function getGuildName() {
   return config.guildName || 'Da Frens';
 }
 
+const FORMER_MEMBER_KEY_PREFIX = 'former_member:';
+
+/**
+ * Records that a user left the guild (so on re-join they can get the "been in server before" role).
+ * @param {string} userId - User ID
+ * @returns {Promise<void>}
+ */
+async function setFormerMember(userId) {
+  try {
+    await keyv.set(`${FORMER_MEMBER_KEY_PREFIX}${userId}`, 1);
+  } catch (err) {
+    logger.error('Error recording former member.', { err: err, userId });
+  }
+}
+
+/**
+ * Returns whether the user has left the guild before (returning member).
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>}
+ */
+async function isFormerMember(userId) {
+  try {
+    const value = await keyv.get(`${FORMER_MEMBER_KEY_PREFIX}${userId}`);
+    return value !== undefined && value !== null;
+  } catch (err) {
+    logger.error('Error checking former member.', { err: err, userId });
+    return false;
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -961,5 +991,7 @@ module.exports = {
   getInviteCodeToTagMap,
   rebuildCodeToTagMap,
   getAllInviteTagsData,
-  getGuildName
+  getGuildName,
+  setFormerMember,
+  isFormerMember
 };

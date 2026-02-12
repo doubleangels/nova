@@ -10,7 +10,7 @@ const fs = require('fs');
 
 // Configuration constants
 const NAMESPACES = ['main', 'invites'];
-const KNOWN_SECTIONS = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:'];
+const KNOWN_SECTIONS = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:', 'former_member:'];
 
 // Ensure data directory exists
 // Allow override via environment variable for container usage

@@ -1,7 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap } = require('../utils/database');
+const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, isFormerMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const config = require('../config');
@@ -61,6 +61,21 @@ module.exports = {
           member.client,
           member.guild.id
         );
+      }
+
+      // Assign "been in server before" role only to returning members (if they have the role, they're not new)
+      if (config.newUserBeenInServerBeforeRoleId) {
+        const returning = await isFormerMember(member.id);
+        if (returning) {
+          await member.roles.add(config.newUserBeenInServerBeforeRoleId).catch(err => {
+            logger.warn('Could not add been-in-server-before role on re-join.', {
+              err: err.message,
+              guildId: member.guild.id,
+              userId: member.id,
+              roleId: config.newUserBeenInServerBeforeRoleId
+            });
+          });
+        }
       }
 
       // Check for tagged invite usage

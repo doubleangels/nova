@@ -5,13 +5,14 @@
  * 
  * Key format: [namespace:][section:]key
  *   - namespace: main (default), invites
- *   - section: config, tags, invite_usage, invite_code_to_tag_map, etc.
+ *   - section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.
  * 
  * Examples:
  *   node remove-value.js reminder_channel
  *   node remove-value.js main:config:reminder_channel
  *   node remove-value.js invites:tags:disboard
  *   node remove-value.js main:invite_usage:123456789
+ *   node remove-value.js former_member:123456789   # Remove former member (returning tracking)
  */
 
 require('dotenv').config();
@@ -116,7 +117,7 @@ if (args.length < 1) {
   console.error('');
   console.error('Key format: [namespace:][section:]key');
   console.error('  namespace: main (default), invites');
-  console.error('  section: config, tags, invite_usage, invite_code_to_tag_map, etc.');
+  console.error('  section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.');
   console.error('');
   console.error('Examples:');
   console.error('  node remove-value.js reminder_channel');
