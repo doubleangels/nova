@@ -277,7 +277,7 @@ module.exports = {
             roleIds: [newRole.id, additionalRole.id]
         });
         
-        return { success: true };
+        return { success: true, newRole };
     },
     
     /**
