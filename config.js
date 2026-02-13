@@ -21,7 +21,6 @@ require('dotenv').config();
  * @property {string} botStatusType - Bot activity type (from BOT_STATUS_TYPE env var)
  * @property {string} clientId - Discord application client ID
  * @property {string} token - Discord bot token (from DISCORD_BOT_TOKEN env var)
- * @property {string} exchangeRateApiKey - exchangerate.host API key for currency conversion (from EXCHANGERATE_API_KEY env var)
  * @property {string} givePermsFrenRoleId - Role ID for Fren role (from GIVE_PERMS_FREN_ROLE_ID env var)
  * @property {string} givePermsPositionAboveRoleId - Role ID for permission management (from GIVE_PERMS_POSITION_ABOVE_ROLE_ID env var)
  * @property {string} googleApiKey - Google API key for search functionality (from GOOGLE_API_KEY env var)
@@ -66,8 +65,6 @@ module.exports = {
   clientId: "1280311987154456657",
   // Authentication token for your Discord bot
   token: process.env.DISCORD_BOT_TOKEN,
-  // exchangerate.host API key for currency conversion
-  exchangeRateApiKey: process.env.EXCHANGERATE_API_KEY,
   // Discord role ID to assign alongside custom roles
   givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
   // Discord role ID that new roles should be positioned above
@@ -112,7 +109,6 @@ module.exports = {
 const REQUIRED_ENV_VARS = [
   'DISCORD_BOT_TOKEN',
   'BOT_STATUS',
-  'EXCHANGERATE_API_KEY',
   'GIVE_PERMS_FREN_ROLE_ID',
   'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
   'GOOGLE_API_KEY',
