@@ -40,7 +40,7 @@ module.exports = {
       return;
     }
 
-    if (!interaction.isChatInputCommand() && !interaction.isMessageContextMenuCommand()) return;
+    if (!interaction.isChatInputCommand() && !interaction.isMessageContextMenuCommand() && !interaction.isUserContextMenuCommand()) return;
 
     const command = interaction.client.commands.get(interaction.commandName);
     if (!command) {
