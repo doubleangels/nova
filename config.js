@@ -51,16 +51,13 @@ module.exports = {
     rescheduleAllMuteKicksOnStart: true,
     disabledCommands: [],
   },
-  // Base embed color in hex format (e.g., CD41FF or #CD41FF)
+  // Base embed color in hex format (e.g., CD41FF or #CD41FF); default #999999
   baseEmbedColor: (() => {
-    if (!process.env.BASE_EMBED_COLOR) {
-      return null;
-    }
-    const colorStr = process.env.BASE_EMBED_COLOR.trim();
+    const colorStr = (process.env.BASE_EMBED_COLOR || '#999999').trim();
     // Remove # or 0x prefix if present
     const cleanColor = colorStr.replace(/^#/, '').replace(/^0x/i, '');
     const parsed = parseInt(cleanColor, 16);
-    return isNaN(parsed) ? null : parsed;
+    return isNaN(parsed) ? 0x999999 : parsed;
   })(),
   // Bot activity status text
   botStatus: process.env.BOT_STATUS,
@@ -110,3 +107,39 @@ module.exports = {
   // Client Secret for Spotify API
   spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
 };
+
+// Required env vars (no default); bot fails to start if any are missing
+const REQUIRED_ENV_VARS = [
+  'DISCORD_BOT_TOKEN',
+  'BOT_STATUS',
+  'EXCHANGERATE_API_KEY',
+  'GIVE_PERMS_FREN_ROLE_ID',
+  'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
+  'GOOGLE_API_KEY',
+  'IMAGE_SEARCH_ENGINE_ID',
+  'MAL_CLIENT_ID',
+  'NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID',
+  'NEWUSER_PERMISSION_DIFF_ROLE_ID',
+  'OMDB_API_KEY',
+  'PIRATEWEATHER_API_KEY',
+  'REDDIT_CLIENT_ID',
+  'REDDIT_CLIENT_SECRET',
+  'REDDIT_PASSWORD',
+  'REDDIT_USERNAME',
+  'SEARCH_ENGINE_ID',
+  'SERVER_INVITE_URL',
+  'SPOTIFY_CLIENT_ID',
+  'SPOTIFY_CLIENT_SECRET',
+];
+
+function isSet(value) {
+  return value != null && String(value).trim() !== '';
+}
+
+const missing = REQUIRED_ENV_VARS.filter(name => !isSet(process.env[name]));
+if (missing.length > 0) {
+  console.error('Missing required environment variable(s). Bot cannot start.');
+  console.error('Set the following in your .env or environment:');
+  missing.forEach(name => console.error(`  - ${name}`));
+  process.exit(1);
+}
