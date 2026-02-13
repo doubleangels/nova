@@ -106,6 +106,15 @@ module.exports = {
       throw new Error("MANAGED_ROLE");
     }
 
+    const botMember = interaction.guild.members.me;
+    if (botMember.roles.highest.position <= role.position) {
+      logger.warn("Bot's highest role is not high enough to remove the specified role.", {
+        botHighestRolePosition: botMember.roles.highest.position,
+        rolePosition: role.position
+      });
+      throw new Error("INSUFFICIENT_PERMISSIONS");
+    }
+
     await targetMember.roles.remove(role, reason);
 
     const fields = [

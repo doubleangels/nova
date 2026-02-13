@@ -357,7 +357,7 @@ module.exports = {
               // Send tagged invite notification
               try {
                 const embed = new EmbedBuilder()
-                  .setColor(config.baseEmbedColor)
+                  .setColor(config.baseEmbedColor ?? 0)
                   .setTitle('🎉 New Member Joined via Tagged Invite')
                   .setDescription(`${member.displayName} (${member.user.username}) joined the server using a tagged invite.`)
                   .addFields(
@@ -400,8 +400,10 @@ module.exports = {
         }
         
       } finally {
-        // Release the lock
-        resolveLock();
+        // Release the lock (guard in case resolveLock was never assigned)
+        if (typeof resolveLock === 'function') {
+          resolveLock();
+        }
         if (inviteCheckLocks.get(guildId) === newLockPromise) {
           inviteCheckLocks.delete(guildId);
         }

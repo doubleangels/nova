@@ -7,7 +7,8 @@ const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 
 // Ensure data directory exists with proper permissions
-const dataDir = path.resolve(process.cwd(), 'data');
+// Allow override via DATA_DIR so bot and helper scripts use the same DB path
+const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const sqlitePath = path.join(dataDir, 'database.sqlite');
 
 // Log database path for debugging
@@ -95,11 +96,11 @@ try {
   if (fs.existsSync(sqlitePath)) {
     fs.chmodSync(sqlitePath, 0o600);
   }
-  } catch (chmodError) {
-    logger.warn('Could not set permissions on database file, this is OK if running as non-root.', {
-      err: chmodError
-    });
-  }
+} catch (chmodError) {
+  logger.warn('Could not set permissions on database file, this is OK if running as non-root.', {
+    err: chmodError
+  });
+}
 
 /**
  * Initializes the database connection and performs a test query
@@ -540,7 +541,8 @@ async function cleanupOldTrackingUsers(client = null) {
           remainingSpamUsers.push(userId);
         }
       } else {
-        // User data missing, remove from list
+        // User data missing or corrupted; remove from list and delete any orphan key
+        await keyv.delete(`spam_mode:${userId}`);
         spamModeRemoved++;
       }
     }
@@ -583,7 +585,8 @@ async function cleanupOldTrackingUsers(client = null) {
           remainingMuteUsers.push(userId);
         }
       } else {
-        // User data missing, remove from list
+        // User data missing or corrupted; remove from list and delete any orphan key
+        await keyv.delete(`mute_mode:${userId}`);
         muteModeRemoved++;
       }
     }

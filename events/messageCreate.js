@@ -68,7 +68,7 @@ module.exports = {
         });
       }
 
-      if (message.content.startsWith('!')) {
+      if (message.content?.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
         const command = args.shift().toLowerCase();
         switch (command) {
@@ -88,12 +88,13 @@ module.exports = {
         channelName: message.channel.name
       });
 
-      if (message.channelId !== noTextChannelId) return;
+      if (String(message.channelId) !== String(noTextChannelId)) return;
 
+      const content = message.content ?? '';
       const hasGif = message.attachments.some(attachment => 
         attachment.url.toLowerCase().endsWith('.gif') || 
         attachment.contentType?.toLowerCase() === 'image/gif'
-      ) || message.content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
+      ) || content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
       
       const hasImage = message.attachments.some(attachment => 
         attachment.contentType?.toLowerCase().startsWith('image/')
@@ -101,8 +102,8 @@ module.exports = {
       
       const hasSticker = message.stickers.size > 0;
 
-      const hasEmote = message.content.match(/<a?:\w+:\d+>/g);
-      const hasTag = message.content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g);
+      const hasEmote = content.match(/<a?:\w+:\d+>/g);
+      const hasTag = content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g);
 
       if (!hasGif && !hasImage && !hasSticker && !hasEmote && !hasTag) {
         try {

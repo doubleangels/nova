@@ -41,24 +41,9 @@ module.exports = {
     } catch (error) {
       logger.error('Error processing member leave', {
         err: error,
-        userId: member.user.id
+        userId: member.user?.id
       });
-      
-      let errorMessage = "⚠️ An unexpected error occurred while processing member departure.";
-      
-      if (error.message === "⚠️ Failed to remove member tracking data.") {
-        errorMessage = "⚠️ Failed to remove member tracking data.";
-      } else if (error.message === "⚠️ Database error occurred while processing member departure.") {
-        errorMessage = "⚠️ Database error occurred while processing member departure.";
-      } else if (error.message === "⚠️ Insufficient permissions to process member departure.") {
-        errorMessage = "⚠️ Insufficient permissions to process member departure.";
-      } else if (error.message === "⚠️ Invalid member data received.") {
-        errorMessage = "⚠️ Invalid member data received.";
-      } else if (error.message === "⚠️ Cannot process bot member departure.") {
-        errorMessage = "⚠️ Cannot process bot member departure.";
-      }
-      
-      throw new Error(errorMessage);
+      // Log only; do not rethrow so the event handler does not propagate the error
     }
   }
 };

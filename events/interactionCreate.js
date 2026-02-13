@@ -59,16 +59,19 @@ module.exports = {
         user: interaction.user.tag
       });
 
+      // Only send generic error if the command hasn't already replied (e.g. with its own error message)
+      if (interaction.replied) return;
+
       try {
-        if (interaction.replied || interaction.deferred) {
-          await interaction.followUp({ 
-            content: 'There was an error executing this command!', 
-            flags: MessageFlags.Ephemeral 
+        if (interaction.deferred) {
+          await interaction.followUp({
+            content: 'There was an error executing this command!',
+            flags: MessageFlags.Ephemeral
           });
         } else {
-          await interaction.reply({ 
-            content: 'There was an error executing this command!', 
-            flags: MessageFlags.Ephemeral 
+          await interaction.reply({
+            content: 'There was an error executing this command!',
+            flags: MessageFlags.Ephemeral
           });
         }
       } catch (replyError) {

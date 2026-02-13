@@ -207,6 +207,15 @@ module.exports = {
             await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
         } catch (replyError) {
             logger.error('Failed to send error message.', { err: replyError });
+            try {
+                if (interaction.replied || interaction.deferred) {
+                    await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                } else {
+                    await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+                }
+            } catch (followUpError) {
+                logger.error('Failed to send error follow-up.', { err: followUpError });
+            }
         }
     }
 };

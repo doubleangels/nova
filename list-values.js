@@ -381,7 +381,7 @@ async function listAllValues() {
       for (const [section, items] of Object.entries(sections).sort()) {
         const label = section === '(root)' ? 'Root' : formatSectionName(section);
         console.log(` ${label}:`);
-        for (const item of items.sort((a, b) => a.key.localeCompare(b.key))) {
+        for (const item of [...items].sort((a, b) => a.key.localeCompare(b.key))) {
           const valueStr = typeof item.value === 'object' && item.value !== null
             ? JSON.stringify(item.value).substring(0, 80) + (JSON.stringify(item.value).length > 80 ? '...' : '')
             : String(item.value);
