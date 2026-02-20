@@ -36,12 +36,8 @@ services:
     cap_add:
       - CHOWN
       - SETGID
-      - SETUID
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
     environment:
-      - BWS_ACCESS_TOKEN=your_bitwarden_secrets_manager_access_token_here
+      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
@@ -60,11 +56,11 @@ docker-compose up -d
 
 The following environment variables can be set in your `docker-compose.yml`:
 
-| Variable           | Description                                | Required | Default | Example |
-| ------------------ | ------------------------------------------ | :------: | :-----: | ------- |
-| `BWS_ACCESS_TOKEN` | Access token for Bitwarden Secrets Manager |    ✅    |    -    | -       |
+| Variable        | Description                                      | Required | Default | Example |
+| --------------- | ------------------------------------------------ | :------: | :-----: | ------- |
+| `DOPPLER_TOKEN` | Doppler service token (injects secrets as env vars) |    ✅    |    -    | -       |
 
-**Note:** Most secrets and API keys are automatically retrieved from Bitwarden Secrets Manager during container startup. You must provide `BWS_ACCESS_TOKEN` for the bot to access these secrets. The following secrets are retrieved from Bitwarden:
+**Note:** Secrets and API keys are injected at runtime by [Doppler](https://www.doppler.com/). Pass `DOPPLER_TOKEN` when running the container so the bot receives the following (configure them in your Doppler project):
 - `BASE_EMBED_COLOR`
 - `BOT_STATUS`
 - `BOT_STATUS_TYPE`
@@ -89,7 +85,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `SPOTIFY_CLIENT_ID`
 - `SPOTIFY_CLIENT_SECRET`
 
-Ensure your Bitwarden Secrets Manager access token is configured for the container to retrieve these secrets.
+Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
 
 ## 🎯 Features
 
@@ -176,9 +172,9 @@ Create and assign custom roles to users with automatic permission management. Cr
 
 **Requirements:**
 
-- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` must be configured in Bitwarden Secrets Manager
-- `GIVE_PERMS_FREN_ROLE_ID` must be configured in Bitwarden Secrets Manager
-- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID` and `NEWUSER_PERMISSION_DIFF_ROLE_ID` (for `/newuser`) must be configured in Bitwarden Secrets Manager
+- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` must be configured in Doppler (or env)
+- `GIVE_PERMS_FREN_ROLE_ID` must be configured in Doppler (or env)
+- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID` and `NEWUSER_PERMISSION_DIFF_ROLE_ID` (for `/newuser`) must be configured in Doppler (or env)
 
 #### `/giverole` (Manage Roles Permission)
 

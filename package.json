@@ -4,6 +4,7 @@
   "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
   "scripts": {
+    "start": "doppler run -- node index.js",
     "update": "npm outdated && npm update --save",
     "set-value": "node set-value.js",
     "remove-value": "node remove-value.js",

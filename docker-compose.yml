@@ -8,12 +8,8 @@ services:
     cap_add:
       - CHOWN
       - SETGID
-      - SETUID
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
     environment:
-      - BWS_ACCESS_TOKEN=your_bitwarden_secrets_manager_access_token_here
+      - DOPPLER_TOKEN=your_doppler_service_token_here
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:

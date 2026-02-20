@@ -1,27 +1,17 @@
 # syntax=docker/dockerfile:1.4
 # Dockerfile for Nova Bot
-# Multi-stage build for optimized image size and security
+# Multi-stage build for smaller image and security. Alpine base for Doppler CLI (apk) and minimal footprint.
 
-# Use specific Node.js slim version for smaller image size (Debian for bws compatibility)
-FROM node:24.13.0-trixie-slim AS base
+FROM node:24-alpine AS base
 
-# Set environment variables early for better caching
-ENV DEBIAN_FRONTEND=noninteractive \
-    NODE_ENV=production
+ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Install runtime dependencies and create user in a single layer with BuildKit cache
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    dumb-init \
-    gosu \
-    procps && \
-    groupadd -g 1001 nodejs && \
-    useradd -u 1001 -g nodejs -s /bin/bash -m discordbot && \
-    rm -rf /var/lib/apt/lists/*
+# Runtime deps: dumb-init, su-exec (drop root for node), procps (healthcheck pgrep)
+RUN apk add --no-cache dumb-init su-exec procps && \
+    addgroup -g 1001 nodejs && \
+    adduser -u 1001 -G nodejs -s /bin/sh -D discordbot
 
 # Copy package files for dependency installation (better caching)
 COPY package*.json ./
@@ -29,54 +19,30 @@ COPY package*.json ./
 # Build stage for native modules
 FROM base AS builder
 
-# Install build deps, install dependencies, then purge build deps in a single layer
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    --mount=type=cache,target=/root/.npm \
-    --mount=type=cache,target=/app/.npm \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    python3 \
-    make \
-    g++ \
-    build-essential && \
+RUN --mount=type=cache,target=/root/.npm \
+    apk add --no-cache python3 make g++ && \
     npm ci --omit=dev && \
     npm cache clean --force && \
-    apt-get purge -y --auto-remove \
-    python3 \
-    make \
-    g++ \
-    build-essential && \
-    rm -rf /var/lib/apt/lists/*
+    apk del python3 make g++
 
 # Final runtime stage
 FROM base AS runtime
 
-# Install runtime dependencies and bws in a single layer with BuildKit cache
-# jq is kept as it's needed by the entrypoint script (bws requires glibc/Debian)
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    jq \
-    unzip && \
-    curl -fL -o /tmp/bws.zip https://github.com/bitwarden/sdk/releases/download/bws-v1.0.0/bws-x86_64-unknown-linux-gnu-1.0.0.zip && \
-    unzip -q /tmp/bws.zip -d /usr/local/bin/ && \
-    rm -f /tmp/bws.zip && \
-    chmod +x /usr/local/bin/bws && \
-    apt-get purge -y --auto-remove curl unzip && \
-    rm -rf /var/lib/apt/lists/*
+# Install Doppler CLI for runtime secrets (apk repo)
+RUN apk add --no-cache ca-certificates wget && \
+    wget -q -t3 'https://packages.doppler.com/public/cli/rsa.8004D9FF50437357.key' -O /etc/apk/keys/cli@doppler-8004D9FF50437357.rsa.pub && \
+    echo 'https://packages.doppler.com/public/cli/alpine/any-version/main' >> /etc/apk/repositories && \
+    apk add --no-cache doppler && \
+    apk del wget
 
 # Copy node_modules from builder stage (before app files for better caching)
 COPY --from=builder --chown=discordbot:nodejs /app/node_modules ./node_modules
 
-# Copy entrypoint script first (changes less frequently than app code)
+# Copy entrypoint script first (fixes /app/data permissions, then runs CMD)
 COPY --chown=discordbot:nodejs docker-entrypoint.sh /app/docker-entrypoint.sh
 
-# Copy application files (this layer changes most frequently)
-# Use .dockerignore to exclude unnecessary files from build context
+# Copy application files (this layer changes most frequently).
+# Use a .dockerignore to exclude node_modules, .git, and other unneeded files from the build context.
 COPY --chown=discordbot:nodejs . .
 
 # Set permissions and create data directory in a single layer
@@ -93,7 +59,7 @@ VOLUME ["/app/data"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD pgrep -f "node.*index.js" > /dev/null || exit 1
 
-# Entrypoint runs as root to fix permissions, then switches to discordbot user
+# Entrypoint fixes data-dir permissions, then runs Doppler (inject secrets) + app. Pass DOPPLER_TOKEN when running.
 ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
 
-CMD ["gosu", "discordbot", "node", "index.js"]
+CMD ["doppler", "run", "--", "su-exec", "discordbot", "node", "index.js"]
