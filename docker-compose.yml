@@ -8,6 +8,7 @@ services:
     cap_add:
       - CHOWN
       - SETGID
+    read_only: true
     environment:
       - DOPPLER_TOKEN=your_doppler_service_token_here
     volumes:

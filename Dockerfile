@@ -29,6 +29,8 @@ RUN --mount=type=cache,target=/root/.npm \
 FROM base AS runtime
 
 # Install Doppler CLI for runtime secrets (apk repo)
+# Doppler config/cache dir; use /tmp so it works when root FS is read-only (compose tmpfs: /tmp)
+ENV DOPPLER_CONFIG_DIR=/tmp
 RUN apk add --no-cache ca-certificates wget && \
     wget -q -t3 'https://packages.doppler.com/public/cli/rsa.8004D9FF50437357.key' -O /etc/apk/keys/cli@doppler-8004D9FF50437357.rsa.pub && \
     echo 'https://packages.doppler.com/public/cli/alpine/any-version/main' >> /etc/apk/repositories && \
