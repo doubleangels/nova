@@ -21,7 +21,8 @@
   "homepage": "https://github.com/doubleangels/nova#readme",
   "overrides": {
     "tar": ">=7.5.4",
-    "undici": ">=6.23.0"
+    "undici": ">=6.23.0",
+    "minimatch": ">=10.2.1"
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
