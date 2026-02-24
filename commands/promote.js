@@ -31,7 +31,7 @@ const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 
 /** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
-const PROMOTION_SUBREDDITS = ['discordservers_', 'Discord_Servers_List'];
+const PROMOTION_SUBREDDITS = ['discordservers_', 'Discord_Servers_List', 'DiscordAdults'];
 
 // Cache for OAuth token
 let accessToken = null;
