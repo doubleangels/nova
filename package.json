@@ -22,7 +22,8 @@
   "overrides": {
     "tar": ">=7.5.8",
     "undici": ">=6.23.0",
-    "minimatch": ">=10.2.1"
+    "minimatch": ">=10.2.1",
+    "@isaacs/brace-expansion": ">=5.0.1"
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
