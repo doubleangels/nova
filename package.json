@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/doubleangels/nova#readme",
   "overrides": {
-    "tar": ">=7.5.4",
+    "tar": ">=7.5.8",
     "undici": ">=6.23.0",
     "minimatch": ">=10.2.1"
   },
