@@ -25,14 +25,15 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6.2.0
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
           cache: 'npm'
@@ -43,8 +44,23 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
+      - name: Run Trivy vulnerability scanner on repository
+        uses: aquasecurity/trivy-action@0.34.1
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'trivy-fs'
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3.12.0
+        uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
             image=moby/buildkit:latest
@@ -52,7 +68,7 @@ jobs:
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3.7.0
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -60,7 +76,7 @@ jobs:
 
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5.10.0
+        uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository_owner }}/nova
           tags: |
@@ -70,40 +86,41 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker Image
-        uses: docker/build-push-action@v6.19.2
+        id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: |
-            type=gha,scope=nova
-            type=registry,ref=ghcr.io/${{ github.repository_owner }}/nova:latest
+          cache-from: type=gha,scope=nova
           cache-to: type=gha,mode=max,scope=nova
-          build-args: |
-            BUILDKIT_INLINE_CACHE=1
           provenance: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
 
-      - name: Build summary
-        if: always()
+      - name: Run Trivy vulnerability scanner on container image
+        uses: aquasecurity/trivy-action@0.34.1
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/nova:${{ github.event_name == ''pull_request'' && format(''pr-{0}'', github.event.pull_request.number) || ''latest'' }}'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy image scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-image-results.sarif'
+          category: 'trivy-image'
+
+      - name: Output image info
+        if: github.event_name != 'pull_request'
         run: |
-          echo "### Docker Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "**Built and pushed images:**" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Labels:**" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "${{ steps.meta.outputs.labels }}" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Build completed for PR** (images not pushed)" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Built and pushed images:"
+          echo "${{ steps.meta.outputs.tags }}"
+          echo "Labels: ${{ steps.meta.outputs.labels }}"
 
   delete-workflow-runs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'dependabot[bot]'
@@ -113,12 +130,14 @@ jobs:
       contents: read
     steps:
       - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@v2.1.0
+        uses: Mattraks/delete-workflow-runs@v2
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
           retain_days: 14
           keep_minimum_runs: 10
+          delete_workflow_pattern: build-docker
+          check_pullrequest_exist: true
 
   automerge:
     needs: [build]
@@ -134,7 +153,7 @@ jobs:
     steps:
       - name: Check PR mergeability
         id: check-mergeable
-        uses: actions/github-script@v8.0.0
+        uses: actions/github-script@v8
         with:
           script: |
             const { data: pr } = await github.rest.pulls.get({
@@ -164,7 +183,7 @@ jobs:
 
       - name: Comment on PR
         if: steps.check-mergeable.outputs.mergeable == 'true'
-        uses: actions/github-script@v8.0.0
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           script: |
@@ -187,7 +206,7 @@ jobs:
 
       - name: Comment on automerge success
         if: steps.automerge.outcome == 'success'
-        uses: actions/github-script@v8.0.0
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           script: |
@@ -200,7 +219,7 @@ jobs:
 
       - name: Comment on automerge failure
         if: steps.automerge.outcome == 'failure'
-        uses: actions/github-script@v8.0.0
+        uses: actions/github-script@v8
         continue-on-error: true
         with:
           script: |
