@@ -16,13 +16,13 @@ module.exports = {
     .setDefaultMemberPermissions(null)
     .addStringOption(option =>
       option
-        .setName('place1')
+        .setName('first-place')
         .setDescription('What is the first place? (e.g., Tokyo, London, New York)')
         .setRequired(true)
     )
     .addStringOption(option =>
       option
-        .setName('place2')
+        .setName('second-place')
         .setDescription('What is the second place? (e.g., Tokyo, London, New York)')
         .setRequired(true)
     ),
@@ -49,15 +49,15 @@ module.exports = {
       
       await interaction.deferReply();
       
-      const place1 = interaction.options.getString('place1');
-      const place2 = interaction.options.getString('place2');
+      const firstPlace = interaction.options.getString('first-place');
+      const secondPlace = interaction.options.getString('second-place');
       
       logger.info("/timedifference command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
 
-      const timeDiffResult = await this.calculateTimeDifference(place1, place2, interaction);
+      const timeDiffResult = await this.calculateTimeDifference(firstPlace, secondPlace, interaction);
       
       if (timeDiffResult.error) {
         return await interaction.editReply({

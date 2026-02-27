@@ -24,14 +24,14 @@ module.exports = {
     .setDescription('Compare two roles and see which permissions they share.')
     .addRoleOption(option =>
       option
-        .setName('first_role')
-        .setDescription('What is the first role you want to compare?')
+        .setName('base-role')
+        .setDescription('What is the base role you want to compare from?')
         .setRequired(true)
     )
     .addRoleOption(option =>
       option
-        .setName('second_role')
-        .setDescription('What is the second role you want to compare?')
+        .setName('comparison-role')
+        .setDescription('What is the role you want to compare against the base?')
         .setRequired(true)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
@@ -44,8 +44,8 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
 
-    const roleOne = interaction.options.getRole('first_role');
-    const roleTwo = interaction.options.getRole('second_role');
+    const roleOne = interaction.options.getRole('base-role');
+    const roleTwo = interaction.options.getRole('comparison-role');
 
     logger.info('/compareroles command initiated.', {
       userId: interaction.user.id,
@@ -82,12 +82,12 @@ module.exports = {
 
       const embedFields = [
         {
-          name: 'Role 1',
+          name: 'Base role',
           value: `${roleOne} (\`${permsOne.length}\` permissions)`,
           inline: true
         },
         {
-          name: 'Role 2',
+          name: 'Comparison role',
           value: `${roleTwo} (\`${permsTwo.length}\` permissions)`,
           inline: true
         },
@@ -99,14 +99,14 @@ module.exports = {
           inline: false
         },
         {
-          name: 'Only in Role 1',
+          name: 'Only in base role',
           value: onlyOneFormatted.length > 0
             ? onlyOneFormatted.join(', ')
             : 'None',
           inline: false
         },
         {
-          name: 'Only in Role 2',
+          name: 'Only in comparison role',
           value: onlyTwoFormatted.length > 0
             ? onlyTwoFormatted.join(', ')
             : 'None',

@@ -56,7 +56,7 @@ module.exports = {
     )
     .addIntegerOption(option =>
       option
-        .setName('forecast_days')
+        .setName('forecast-days')
         .setDescription('What number of days do you want forecast data for? (1-7)')
         .setRequired(false)
         .setMinValue(1)
@@ -95,7 +95,7 @@ module.exports = {
 
       const place = interaction.options.getString('place');
       const unitsOption = interaction.options.getString('units') || 'metric';
-      const forecastDays = interaction.options.getInteger('forecast_days') || 3;
+      const forecastDays = interaction.options.getInteger('forecast-days') || 3;
       
       const units = unitsOption === 'imperial' ? 'us' : 'si';
       

@@ -66,7 +66,7 @@ module.exports = {
         )
         .addIntegerOption(option =>
           option
-            .setName('max_uses')
+            .setName('max-uses')
             .setDescription('What is the maximum number of uses for this invite? (0 = unlimited)')
             .setMinValue(0)
             .setMaxValue(100)
@@ -74,7 +74,7 @@ module.exports = {
         )
         .addIntegerOption(option =>
           option
-            .setName('max_age')
+            .setName('max-age')
             .setDescription('What is the maximum age in seconds for this invite? (0 = never expires)')
             .setMinValue(0)
             .setMaxValue(604800)
@@ -418,8 +418,8 @@ module.exports = {
   async handleCreateSubcommand(interaction) {
     const tagName = interaction.options.getString('name');
     const channelOption = interaction.options.getChannel('channel');
-    const maxUses = interaction.options.getInteger('max_uses');
-    const maxAge = interaction.options.getInteger('max_age');
+    const maxUses = interaction.options.getInteger('max-uses');
+    const maxAge = interaction.options.getInteger('max-age');
 
     // Check if bot has permission to create invites
     if (!interaction.guild.members.me.permissions.has('CreateInstantInvite')) {
