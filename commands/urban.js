@@ -13,7 +13,7 @@ module.exports = {
         .setDescription('Fetch and display definitions from Urban Dictionary.')
         .setDefaultMemberPermissions(null)
         .addStringOption(option =>
-            option.setName('term')
+            option.setName('query')
                 .setDescription('What do you want to search for?')
                 .setRequired(true)),
 
@@ -32,7 +32,7 @@ module.exports = {
         try {
             await interaction.deferReply();
             
-            const term = interaction.options.getString('term');
+            const term = interaction.options.getString('query');
             
             logger.info("/urban command initiated.", {
                 userId: interaction.user.id,

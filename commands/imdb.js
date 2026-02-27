@@ -18,7 +18,7 @@ module.exports = {
       sub.setName('movie')
         .setDescription('Search for a movie on IMDb.')
         .addStringOption(option =>
-          option.setName('title')
+          option.setName('query')
             .setDescription('What movie do you want to search for?')
             .setRequired(true)
         )
@@ -27,7 +27,7 @@ module.exports = {
       sub.setName('tv')
         .setDescription('Search for a TV show on IMDb.')
         .addStringOption(option =>
-          option.setName('title')
+          option.setName('query')
             .setDescription('What TV show do you want to search for?')
             .setRequired(true)
         )
@@ -57,7 +57,7 @@ module.exports = {
 
       await interaction.deferReply();
       const subcommand = interaction.options.getSubcommand();
-      const titleQuery = interaction.options.getString('title');
+      const titleQuery = interaction.options.getString('query');
       logger.info('/imdb command initiated.', {
         userId: interaction.user.id,
         userTag: interaction.user.tag,

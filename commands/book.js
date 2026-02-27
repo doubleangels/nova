@@ -25,6 +25,14 @@ module.exports = {
             .setDescription('What book do you want to search for? (title, author, etc.)')
             .setRequired(true)
         )
+        .addIntegerOption(option =>
+          option
+            .setName('results')
+            .setDescription('How many results do you want? (1-10)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(10)
+        )
     )
     .addSubcommand(subcommand =>
       subcommand
@@ -62,14 +70,18 @@ module.exports = {
 
       let results;
       switch (subcommand) {
-        case 'search':
+        case 'search': {
           const query = interaction.options.getString('query');
-          results = await this.searchBooks(query, 5);
+          const resultsCount = interaction.options.getInteger('results');
+          const limit = resultsCount ?? 5;
+          results = await this.searchBooks(query, limit);
           break;
-        case 'isbn':
+        }
+        case 'isbn': {
           const isbn = interaction.options.getString('isbn');
           results = await this.searchByISBN(isbn);
           break;
+        }
       }
 
       if (!results || results.length === 0) {

@@ -30,8 +30,10 @@ module.exports = {
     .addIntegerOption(option =>
       option
         .setName('results')
-        .setDescription('How many results do you want? (1-10, Default: 5)')
+        .setDescription('How many results do you want? (1-10)')
         .setRequired(false)
+        .setMinValue(1)
+        .setMaxValue(10)
     ),
 
   /**

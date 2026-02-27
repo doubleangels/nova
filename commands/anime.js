@@ -26,7 +26,7 @@ module.exports = {
     .setDescription('Search for anime on MyAnimeList and display detailed information.')
     .setDefaultMemberPermissions(null)
     .addStringOption(option =>
-      option.setName('title')
+      option.setName('query')
         .setDescription('What anime do you want to search for?')
         .setRequired(true)
     ),
@@ -55,7 +55,7 @@ module.exports = {
         userTag: interaction.user.tag
       });
 
-      const titleQuery = interaction.options.getString('title');
+      const titleQuery = interaction.options.getString('query');
       logger.debug("Processing search query.", { titleQuery });
       const formattedTitle = titleQuery.trim();
 

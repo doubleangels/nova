@@ -22,20 +22,16 @@ module.exports = {
       subcommand
         .setName('set')
         .setDescription('Configure mute mode settings.')
-        .addStringOption(option =>
+        .addBooleanOption(option =>
           option
             .setName('enabled')
-            .setDescription('Do you want to enable or disable mute mode?')
+            .setDescription('Should mute mode be enabled?')
             .setRequired(true)
-            .addChoices(
-              { name: 'Enabled', value: 'enabled' },
-              { name: 'Disabled', value: 'disabled' }
-            )
         )
         .addIntegerOption(option =>
           option
             .setName('time')
-            .setDescription('How many hours a user must be silent before they are kicked? (1-72)')
+            .setDescription('How many hours of silence before a user is kicked? (1-72)')
             .setRequired(false)
             .setMinValue(1)
             .setMaxValue(72)
@@ -118,8 +114,7 @@ module.exports = {
     try {
       const currentSettings = await this.getCurrentSettings();
       
-      const enabledInput = interaction.options.getString('enabled');
-      const isEnabled = enabledInput === 'enabled';
+      const isEnabled = interaction.options.getBoolean('enabled');
       
       let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
       

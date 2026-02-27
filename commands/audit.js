@@ -22,7 +22,7 @@ module.exports = {
         .addBooleanOption(option =>
           option
             .setName('include-bots')
-            .setDescription('Would you like to include bot accounts in the audit? (default: no)')
+            .setDescription('Would you like to include bot accounts in the audit?')
             .setRequired(false)
         )
     )
@@ -33,7 +33,7 @@ module.exports = {
         .addBooleanOption(option =>
           option
             .setName('include-bots')
-            .setDescription('Would you like to include bot accounts in the audit? (default: no)')
+            .setDescription('Would you like to include bot accounts in the audit?')
             .setRequired(false)
         )
     )
@@ -44,7 +44,7 @@ module.exports = {
         .addBooleanOption(option =>
           option
             .setName('include-bots')
-            .setDescription('Would you like to include bot accounts in the audit? (default: no)')
+            .setDescription('Would you like to include bot accounts in the audit?')
             .setRequired(false)
         )
     )
@@ -55,7 +55,7 @@ module.exports = {
         .addBooleanOption(option =>
           option
             .setName('include-bots')
-            .setDescription('Would you like to include bot accounts in the audit? (default: no)')
+            .setDescription('Would you like to include bot accounts in the audit?')
             .setRequired(false)
         )
     ),

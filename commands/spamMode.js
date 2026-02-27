@@ -30,7 +30,7 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('threshold')
-            .setDescription('What is the minimum number of duplicate messages required to trigger spam mode? (2-10)')
+            .setDescription('How many duplicate messages trigger spam mode? (2-10)')
             .setMinValue(2)
             .setMaxValue(10)
             .setRequired(false)

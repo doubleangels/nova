@@ -30,7 +30,7 @@ module.exports = {
         .addIntegerOption(option =>
           option
             .setName('age')
-            .setDescription('What is the minimum account age allowed to join the server? (1-365)')
+            .setDescription('What is the minimum account age allowed to join the server? (1-365 days)')
             .setMinValue(1)
             .setMaxValue(365)
             .setRequired(false)
