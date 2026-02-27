@@ -57,10 +57,8 @@ module.exports = {
 
       const query = interaction.options.getString('query');
       const contentType = interaction.options.getString('type') || 'video';
-      const sortMethod = interaction.options.getString('sort') || 'relevance';
-      const duration = interaction.options.getString('duration') || 'any';
 
-      const searchResults = await this.searchYouTube(query, contentType, sortMethod, duration);
+      const searchResults = await this.searchYouTube(query, contentType);
 
       if (!searchResults || searchResults.length === 0) {
         logger.warn("No search results found for query.", { query });
@@ -164,7 +162,7 @@ module.exports = {
    * @returns {Promise<Array>} Array of search results
    * @throws {Error} If there's an error searching YouTube
    */
-  async searchYouTube(query, contentType, sortMethod, duration) {
+  async searchYouTube(query, contentType) {
     try {
       const params = {
         part: 'snippet',
@@ -172,13 +170,9 @@ module.exports = {
         type: contentType,
         maxResults: 20,
         key: config.googleApiKey,
-        order: sortMethod,
+        order: 'relevance',
         safeSearch: 'moderate'
       };
-
-      if (contentType === 'video' && duration !== 'any') {
-        params.videoDuration = duration;
-      }
 
       const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
         params,

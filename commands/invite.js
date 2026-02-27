@@ -422,7 +422,7 @@ module.exports = {
     const maxAge = interaction.options.getInteger('max-age');
 
     // Check if bot has permission to create invites
-    if (!interaction.guild.members.me.permissions.has('CreateInstantInvite')) {
+    if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.CreateInstantInvite)) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setTitle('Missing Permissions')
@@ -438,7 +438,7 @@ module.exports = {
     if (!targetChannel) {
       // Find first available text channel
       targetChannel = interaction.guild.channels.cache
-        .filter(ch => ch.type === ChannelType.GuildText && ch.permissionsFor(interaction.guild.members.me)?.has('CreateInstantInvite'))
+        .filter(ch => ch.type === ChannelType.GuildText && ch.permissionsFor(interaction.guild.members.me)?.has(PermissionFlagsBits.CreateInstantInvite))
         .first();
 
       if (!targetChannel) {
@@ -453,7 +453,7 @@ module.exports = {
     }
 
     // Check if bot can create invites in the target channel
-    if (!targetChannel.permissionsFor(interaction.guild.members.me)?.has('CreateInstantInvite')) {
+    if (!targetChannel.permissionsFor(interaction.guild.members.me)?.has(PermissionFlagsBits.CreateInstantInvite)) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setTitle('Missing Permissions')

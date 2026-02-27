@@ -23,7 +23,7 @@ module.exports = {
       option.setName('reason')
         .setDescription('Reason for removing the role'))
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
-  
+
   /**
    * Executes the takeRole command.
    * This function:
@@ -58,7 +58,7 @@ module.exports = {
 
       await this.removeRoleFromMember(interaction, targetMember, role, reason);
     } catch (error) {
-      await this.handleError(error, interaction);
+      await this.handleError(interaction, error);
     }
   },
 
@@ -69,7 +69,7 @@ module.exports = {
    * @param {CommandInteraction} interaction - The interaction that triggered the command
    * @returns {Promise<void>}
    */
-  async handleError(error, interaction) {
+  async handleError(interaction, error) {
     logger.error('Error in takeRole command', {
       err: error,
       userId: interaction.user.id,
@@ -78,7 +78,7 @@ module.exports = {
     });
 
     let errorMessage = "⚠️ An unexpected error occurred while taking the role. Please try again later.";
-    
+
     if (error.message === "INSUFFICIENT_PERMISSIONS") {
       errorMessage = "⚠️ I don't have permission to manage roles.";
     } else if (error.message === "MANAGED_ROLE") {
@@ -95,7 +95,7 @@ module.exports = {
       logger.error('Failed to send error message.', { err: replyError });
     }
   },
-  
+
   /**
    * Removes a role from a guild member.
    * 
@@ -138,7 +138,7 @@ module.exports = {
       .setTitle('Role Removed')
       .setDescription(`Successfully removed the <@&${role.id}> role from <@${targetMember.id}>.`)
       .addFields(fields);
-    
+
     await interaction.editReply({
       content: `<@&${role.id}>`,
       embeds: [embed]
@@ -154,7 +154,7 @@ module.exports = {
       reason: reason ?? null
     });
   },
-  
+
   /**
    * Fetches a guild member by their user ID.
    * 

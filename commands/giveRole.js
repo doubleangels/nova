@@ -31,7 +31,7 @@ module.exports = {
                 .setDescription('The user to give the role to.')
                 .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
-    
+
     /**
      * Executes the give role command.
      * This function:
@@ -46,15 +46,15 @@ module.exports = {
      */
     async execute(interaction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        logger.info("/giverole command initiated.", { 
-            userId: interaction.user.id, 
-            guildId: interaction.guildId 
+        logger.info("/giverole command initiated.", {
+            userId: interaction.user.id,
+            guildId: interaction.guildId
         });
-        
+
         try {
             const role = interaction.options.getRole('role');
             const targetUser = interaction.options.getUser('user');
-            
+
             const validationResult = this.validateInputs(interaction, role, targetUser);
             if (!validationResult.success) {
                 return await interaction.editReply({
@@ -62,14 +62,14 @@ module.exports = {
                     flags: MessageFlags.Ephemeral
                 });
             }
-            
-            logger.debug("Processing command options.", { 
-                roleId: role.id, 
+
+            logger.debug("Processing command options.", {
+                roleId: role.id,
                 roleName: role.name,
                 targetUserId: targetUser.id,
-                targetUserTag: targetUser.tag 
+                targetUserTag: targetUser.tag
             });
-            
+
             // Check cache before fetching member
             let targetMember = interaction.guild.members.cache.get(targetUser.id);
             if (!targetMember) {
@@ -82,7 +82,7 @@ module.exports = {
                     flags: MessageFlags.Ephemeral
                 });
             }
-            
+
             const roleAssignmentResult = await this.assignRole(interaction, role, targetMember);
             if (!roleAssignmentResult.success) {
                 return await interaction.editReply({
@@ -90,7 +90,7 @@ module.exports = {
                     flags: MessageFlags.Ephemeral
                 });
             }
-            
+
             const fields = [
                 { name: 'Role', value: `<@&${role.id}>`, inline: true },
                 { name: 'Role Color', value: `\`${role.hexColor}\``, inline: true }
@@ -100,17 +100,17 @@ module.exports = {
                 .setTitle('Role Assigned')
                 .setDescription(`Successfully gave <@${targetUser.id}> the <@&${role.id}> role.`)
                 .addFields(fields);
-            
+
             await interaction.editReply({
                 content: `<@&${role.id}>`,
                 embeds: [embed]
             });
-                        
+
         } catch (error) {
-            await this.handleError(error, interaction);
+            await this.handleError(interaction, error);
         }
     },
-    
+
     /**
      * Validates the command inputs.
      * Checks if role and user are provided and valid.
@@ -128,7 +128,7 @@ module.exports = {
                 message: "⚠️ Please provide a valid role."
             };
         }
-        
+
         if (!targetUser) {
             logger.warn("Invalid user provided.");
             return {
@@ -136,10 +136,10 @@ module.exports = {
                 message: "⚠️ Please provide a valid user."
             };
         }
-        
+
         return { success: true };
     },
-    
+
     /**
      * Assigns the role to the target member.
      * Checks bot permissions and role hierarchy before assignment.
@@ -161,20 +161,20 @@ module.exports = {
                 message: "⚠️ I don't have permission to assign this role."
             };
         }
-        
+
         const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;
         await targetMember.roles.add(role.id, auditReason);
-        
-        logger.info("/giverole command completed successfully.", { 
-            userId: targetMember.id, 
+
+        logger.info("/giverole command completed successfully.", {
+            userId: targetMember.id,
             userTag: targetMember.user.tag,
             role: role.name,
             roleId: role.id
         });
-        
+
         return { success: true };
     },
-    
+
     /**
      * Handles errors that occur during command execution.
      * Logs the error and sends an appropriate error message to the user.
@@ -183,7 +183,7 @@ module.exports = {
      * @param {CommandInteraction} interaction - The interaction that triggered the command
      * @returns {Promise<void>}
      */
-    async handleError(error, interaction) {
+    async handleError(interaction, error) {
         logger.error('Error occurred in giveRole command.', {
             err: error,
             userId: interaction.user.id,
@@ -192,7 +192,7 @@ module.exports = {
         });
 
         let errorMessage = "⚠️ An unexpected error occurred while giving the role. Please try again later.";
-        
+
         if (error.message === "INSUFFICIENT_PERMISSIONS") {
             errorMessage = "⚠️ I don't have permission to manage roles.";
         } else if (error.message === "INVALID_ROLE") {

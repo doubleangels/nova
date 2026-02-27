@@ -52,11 +52,13 @@ module.exports = {
    */
   async execute(interaction) {
     try {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
       const subcommand = interaction.options.getSubcommand();
       const channel = interaction.options.getChannel('channel');
 
       if (!channel) {
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "⚠️ Please select a text channel.",
           flags: MessageFlags.Ephemeral
         });
@@ -64,7 +66,7 @@ module.exports = {
 
       const permissions = channel.permissionsFor(interaction.client.user);
       if (!permissions.has(PermissionFlagsBits.ManageMessages)) {
-        return await interaction.reply({
+        return await interaction.editReply({
           content: "⚠️ I need permission to manage messages in the selected channel.",
           flags: MessageFlags.Ephemeral
         });
@@ -73,7 +75,7 @@ module.exports = {
       if (subcommand === 'set') {
         const currentChannel = await getValue('notext_channel');
         if (currentChannel === channel.id) {
-          return await interaction.reply({
+          return await interaction.editReply({
             content: "⚠️ This channel is already configured as a no-text channel.",
             flags: MessageFlags.Ephemeral
           });
@@ -83,7 +85,7 @@ module.exports = {
           await setValue('notext_channel', channel.id);
         } catch (error) {
           logger.error("Failed to save no-text channel configuration.", { err: error });
-          return await interaction.reply({
+          return await interaction.editReply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
           });
@@ -95,9 +97,9 @@ module.exports = {
           .setDescription(`Channel ${channel} has been configured to only allow GIFs and stickers.`)
           .setTimestamp();
 
-        await interaction.reply({ 
+        await interaction.editReply({
           embeds: [embed],
-          flags: MessageFlags.Ephemeral 
+          flags: MessageFlags.Ephemeral
         });
         logger.info("/notext command completed successfully.", {
           channelId: channel.id,
@@ -109,7 +111,7 @@ module.exports = {
       } else if (subcommand === 'remove') {
         const currentChannel = await getValue('notext_channel');
         if (currentChannel !== channel.id) {
-          return await interaction.reply({
+          return await interaction.editReply({
             content: "⚠️ This channel is not configured as a no-text channel.",
             flags: MessageFlags.Ephemeral
           });
@@ -119,7 +121,7 @@ module.exports = {
           await setValue('notext_channel', null);
         } catch (error) {
           logger.error("Failed to remove no-text channel configuration.", { err: error });
-          return await interaction.reply({
+          return await interaction.editReply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
           });
@@ -131,9 +133,9 @@ module.exports = {
           .setDescription(`Channel ${channel} is no longer restricted to GIFs and stickers.`)
           .setTimestamp();
 
-        await interaction.reply({ 
+        await interaction.editReply({
           embeds: [embed],
-          flags: MessageFlags.Ephemeral 
+          flags: MessageFlags.Ephemeral
         });
         logger.info("/notext command completed successfully.", {
           channelId: channel.id,
@@ -145,7 +147,7 @@ module.exports = {
 
     } catch (error) {
       logger.error("Error occurred in notext command.", { err: error });
-      await interaction.reply({
+      await interaction.editReply({
         content: "⚠️ An unexpected error occurred while configuring the channel. Please try again later.",
         flags: MessageFlags.Ephemeral
       });
