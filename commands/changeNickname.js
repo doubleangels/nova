@@ -41,7 +41,7 @@ module.exports = {
      */
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             
             const targetUser = interaction.options.getUser('user');
             const newNickname = interaction.options.getString('nickname');
@@ -91,7 +91,10 @@ module.exports = {
                     ? `Successfully changed ${targetUser}'s nickname from **${oldNickname}** to **${newNickname}**.`
                     : `Successfully reset ${targetUser}'s nickname from **${oldNickname}**.`);
             
-            await interaction.editReply({ embeds: [embed] });
+            await interaction.editReply({ 
+                embeds: [embed],
+                flags: MessageFlags.Ephemeral 
+            });
             
             logger.info("/changenickname command completed successfully.", {
                 targetUserId: targetUser.id,
