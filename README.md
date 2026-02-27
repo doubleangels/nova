@@ -5,7 +5,7 @@
 </div>
 <br>
 
-A feature-rich Discord bot designed to bring advanced functionalities to your Discord server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Spotify, Reddit, and more, Nova offers a dynamic and customizable experience with robust administrative tools.
+A feature-rich Discord bot designed to bring advanced functionalities to your Discord server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Reddit, and more, Nova offers a dynamic and customizable experience with robust administrative tools.
 
 ## 🚀 Quick Start
 
@@ -17,7 +17,6 @@ A feature-rich Discord bot designed to bring advanced functionalities to your Di
   - [OMDB API](http://www.omdbapi.com/apikey.aspx) - For movie information
   - [PirateWeather](https://pirateweather.net/) - For weather forecasts
   - [MyAnimeList](https://myanimelist.net/apiconfig) - Client ID for anime information
-  - [Spotify](https://developer.spotify.com/) - Client ID and Client Secret
   - [Reddit](https://www.reddit.com/prefs/apps) - Client ID and Client Secret
 - Docker and Docker Compose
 
@@ -82,8 +81,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `REDDIT_USERNAME`
 - `SEARCH_ENGINE_ID`
 - `SERVER_INVITE_URL`
-- `SPOTIFY_CLIENT_ID`
-- `SPOTIFY_CLIENT_SECRET`
+<!-- Spotify env vars removed -->
 
 Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
 
@@ -95,7 +93,6 @@ Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` w
 - **OMDB**: Movie and TV show information
 - **PirateWeather**: Weather forecasts and conditions
 - **MyAnimeList**: Anime and manga information
-- **Spotify**: Music track information and search
 - **Reddit**: Server promotion and content sharing
 - **Wikipedia**: Article summaries and information
 
@@ -111,7 +108,7 @@ Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` w
 ### Information & Entertainment
 
 - **Search Commands**: Google web search and image search
-- **Media Information**: Movies (IMDB/OMDB), anime (MAL), music (Spotify), books
+- **Media Information**: Movies (IMDB/OMDB), anime (MAL), books
 - **Weather**: Current conditions and forecasts
 - **Dictionary & Urban Dictionary**: Word definitions and slang
 - **Random Content**: Cat and dog images, coin flips, country information
@@ -325,7 +322,7 @@ Search for anime information from MyAnimeList.
 
 #### `/spotify`
 
-Search for music content on Spotify. Supports songs, albums, artists, playlists, and podcasts.
+<!-- Spotify command removed -->
 
 **Subcommands:**
 

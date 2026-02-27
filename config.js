@@ -38,8 +38,7 @@ require('dotenv').config();
  * @property {string} redditUsername - Reddit username for API authentication (from REDDIT_USERNAME env var)
  * @property {string} searchEngineId - Google Custom Search Engine ID for web searches (from SEARCH_ENGINE_ID env var)
  * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
- * @property {string} spotifyClientId - Spotify API client ID (from SPOTIFY_CLIENT_ID env var)
- * @property {string} spotifyClientSecret - Spotify API client secret (from SPOTIFY_CLIENT_SECRET env var)
+ * // Spotify integration removed
  */
 
 /** @type {BotConfig} */
@@ -99,10 +98,7 @@ module.exports = {
   searchEngineId: process.env.SEARCH_ENGINE_ID,
   // Server invite URL for kick messages
   serverInviteUrl: process.env.SERVER_INVITE_URL,
-  // Client ID for Spotify API
-  spotifyClientId: process.env.SPOTIFY_CLIENT_ID,
-  // Client Secret for Spotify API
-  spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  // Spotify integration removed
 };
 
 // Required env vars (no default); bot fails to start if any are missing
@@ -124,8 +120,7 @@ const REQUIRED_ENV_VARS = [
   'REDDIT_USERNAME',
   'SEARCH_ENGINE_ID',
   'SERVER_INVITE_URL',
-  'SPOTIFY_CLIENT_ID',
-  'SPOTIFY_CLIENT_SECRET',
+  // Spotify env vars removed
 ];
 
 function isSet(value) {
