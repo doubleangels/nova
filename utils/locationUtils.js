@@ -147,7 +147,7 @@ function secondsToHours(seconds) {
 /**
  * Gets UTC offset for a location
  * @param {string} location - The location to get UTC offset for
- * @returns {Promise<{offset: number, timeZoneName: string, error: boolean}|{error: boolean, errorType: string}>}
+ * @returns {Promise<{offset: number, timeZoneName: string, placeName?: string, error: boolean}|{error: boolean, errorType: string}>}
  */
 async function getUtcOffset(location) {
     try {
@@ -157,9 +157,13 @@ async function getUtcOffset(location) {
 
         const totalOffset = secondsToHours(timezoneInfo.rawOffset + timezoneInfo.dstOffset);
 
+        const formattedAddress = geocodingInfo.formatted_address || location;
+        const placeName = formatPlaceName(formattedAddress);
+
         return {
             offset: totalOffset,
             timeZoneName: timezoneInfo.timeZoneName,
+            placeName,
             error: false
         };
     } catch (error) {

@@ -44,6 +44,12 @@ module.exports = {
         .setDescription('What place do you want weather data for?')
         .setRequired(true)
     )
+    .addBooleanOption(option =>
+      option
+        .setName('privacy-mode')
+        .setDescription('Hide the requested location in the response (recommended).')
+        .setRequired(false)
+    )
     .addStringOption(option =>
       option
         .setName('units')
@@ -94,13 +100,15 @@ module.exports = {
       }
 
       const place = interaction.options.getString('place');
+      const privacyMode = interaction.options.getBoolean('privacy-mode');
+      const hideLocation = privacyMode !== false; // default: true when option is omitted or true
       const unitsOption = interaction.options.getString('units') || 'metric';
       const forecastDays = interaction.options.getInteger('forecast-days') || 3;
       
       const units = unitsOption === 'imperial' ? 'us' : 'si';
       
       logger.debug("Processing weather request:", { 
-        place, 
+        place: hideLocation ? '[hidden]' : place, 
         units: unitsOption,
         forecastDays,
         userId: interaction.user.id 
@@ -153,13 +161,14 @@ module.exports = {
         lon, 
         weatherData, 
         unitsOption, 
-        forecastDays
+        forecastDays,
+        hideLocation
       );
       
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("/weather command completed successfully:", { 
-        place: formattedAddress, 
+        place: hideLocation ? '[hidden]' : formattedAddress, 
         userId: interaction.user.id,
         units: unitsOption,
         forecastDays
@@ -220,9 +229,10 @@ module.exports = {
    * @param {Object} data - Weather data from API
    * @param {string} unitsOption - Unit system option ('metric' or 'imperial')
    * @param {number} forecastDays - Number of forecast days to display
+   * @param {boolean} hideLocation - Whether to hide the location details in the response
    * @returns {Promise<EmbedBuilder>} Discord embed with weather information
    */
-  async createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays) {
+  async createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays, hideLocation = false) {
     const currently = data.currently || {};
     const daily = data.daily?.data || [];
     
@@ -283,7 +293,7 @@ module.exports = {
     }
     
     const fields = [
-      { name: 'Location', value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, inline: false },
+      ...(hideLocation ? [] : [{ name: 'Location', value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, inline: false }]),
       { name: 'Temperature', value: `${weatherInfo.temperature.toFixed(1)}${tempUnit}`, inline: true },
       { name: 'Feels Like', value: `${(currently.apparentTemperature || 0).toFixed(1)}${tempUnit}`, inline: true },
       { name: 'Humidity', value: `${weatherInfo.humidity.toFixed(0)}%`, inline: true },
@@ -299,7 +309,7 @@ module.exports = {
     ];
 
     const embed = new EmbedBuilder()
-      .setTitle(`Weather in ${place}`)
+      .setTitle(hideLocation ? 'Weather' : `Weather in ${place}`)
       .setDescription(`**${weatherInfo.summary}**`)
       .setColor(0xFF6E42)
       .addFields(fields)

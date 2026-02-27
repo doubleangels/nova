@@ -30,7 +30,7 @@ module.exports = {
      */
     async execute(interaction) {
         try {
-            await interaction.deferReply();
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
             
             const role = interaction.options.getRole('role');
             const colorInput = interaction.options.getString('color');

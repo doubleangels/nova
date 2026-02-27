@@ -1,6 +1,7 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 
 /**
  * Command module for quoting a message (reply with embed).
@@ -45,6 +46,7 @@ module.exports = {
       }
 
       const embed = new EmbedBuilder()
+        .setColor(config.baseEmbedColor ?? 0)
         .setDescription(content)
         .setAuthor({
           name: targetMessage.author.tag,

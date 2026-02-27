@@ -30,7 +30,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const role = interaction.options.getRole('role');
     const newName = interaction.options.getString('name').trim();

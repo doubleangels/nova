@@ -52,7 +52,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async execute(interaction) {
-        await interaction.deferReply();
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         logger.info("/giveperms command initiated:", { 
             userId: interaction.user.id, 
             guildId: interaction.guildId 

@@ -320,25 +320,6 @@ Search for anime information from MyAnimeList.
 
 **Information displayed:** Synopsis, genres, MAL rating, release date, and link to MyAnimeList page.
 
-#### `/spotify`
-
-<!-- Spotify command removed -->
-
-**Subcommands:**
-
-- **`song`**: Search for a song
-  - `query` (required): The song to search for
-- **`album`**: Search for an album
-  - `query` (required): The album to search for
-- **`artist`**: Search for an artist
-  - `query` (required): The artist to search for
-- **`playlist`**: Search for a playlist
-  - `query` (required): The playlist to search for
-- **`podcast`**: Search for a podcast
-  - `query` (required): The podcast to search for
-
-**Features:** Paginated results with detailed information including links, images, and metadata.
-
 #### `/weather`
 
 Get weather information for any location using PirateWeather API.
@@ -346,6 +327,7 @@ Get weather information for any location using PirateWeather API.
 **Parameters:**
 
 - `place` (required): The location name (e.g., "New York", "Tokyo", "London")
+- `privacy_mode` (optional): When enabled (default), hides the requested location in the response
 - `units` (optional): Unit system - `metric` (°C, m/s) or `imperial` (°F, mph), default: `metric`
 - `forecast_days` (optional): Number of days for forecast (1-7, default: 3)
 
@@ -431,6 +413,10 @@ Fetch and display a random cat image from The Cat API.
 
 Fetch and display a random dog image from Dog CEO API.
 
+**Parameters:**
+
+- `breed` (optional): Specific breed to fetch (e.g., Golden Retriever, Shiba). If omitted, a random breed is used.
+
 #### `/timedifference`
 
 Calculate the time difference between two locations.
@@ -446,6 +432,7 @@ Calculate the time difference between two locations.
 
 #### `/mock` (Context Menu Command)
 
-Convert a message to mocking text format (alternating case by word). Right-click on a message and select "Mock" from the context menu.
+Convert a message to mocking text format (alternating case by character, e.g., `lIkE tHiS`) and append a mocking emoji. Right-click on a message and select "Mock" from the context menu.
 
-**Note:** Works on messages with text content. Messages longer than 2000 characters cannot be converted.
+**Note:** Works on messages with text content. Messages longer than 2000 characters cannot be converted.*** End Patch```}}/>
+{"tool_uses":[{"recipient_name":"functions.ApplyPatch","parameters":{"FREEFORM":"*** Begin Patch\n*** Update File: /home/doubleangels/Github/nova/README.md\n@@\n-#### `/timedifference`\n-\n-Calculate the time difference between two locations.\n-\n-**Parameters:**\n-\n-- `place1` (required): The first location (e.g., \"Tokyo\", \"London\", \"New York\")\n-- `place2` (required): The second location\n+#### `/timedifference`\n+\n+Calculate the time difference between two locations.\n+\n+**Parameters:**\n+\n+- `place1` (required): The first location (e.g., \"Tokyo\", \"London\", \"New York\")\n+- `place2` (required): The second location\n*** End Patch"}]}]}}} ***!

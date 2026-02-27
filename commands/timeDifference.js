@@ -135,8 +135,8 @@ module.exports = {
         };
       }
 
-      const formattedPlace1 = formatPlaceName(place1);
-      const formattedPlace2 = formatPlaceName(place2);
+      const formattedPlace1 = formatPlaceName(offset1Result.placeName || place1);
+      const formattedPlace2 = formatPlaceName(offset2Result.placeName || place2);
       
       const rawTimeDiff = offset1Result.offset - offset2Result.offset;
       const timeDiff = Math.abs(rawTimeDiff);

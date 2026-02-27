@@ -95,7 +95,10 @@ module.exports = {
           .setDescription(`Channel ${channel} has been configured to only allow GIFs and stickers.`)
           .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ 
+          embeds: [embed],
+          flags: MessageFlags.Ephemeral 
+        });
         logger.info("/notext command completed successfully.", {
           channelId: channel.id,
           guildId: interaction.guildId,
@@ -128,7 +131,10 @@ module.exports = {
           .setDescription(`Channel ${channel} is no longer restricted to GIFs and stickers.`)
           .setTimestamp();
 
-        await interaction.reply({ embeds: [embed] });
+        await interaction.reply({ 
+          embeds: [embed],
+          flags: MessageFlags.Ephemeral 
+        });
         logger.info("/notext command completed successfully.", {
           channelId: channel.id,
           guildId: interaction.guildId,

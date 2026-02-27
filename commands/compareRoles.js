@@ -42,7 +42,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const roleOne = interaction.options.getRole('base-role');
     const roleTwo = interaction.options.getRole('comparison-role');
@@ -82,12 +82,12 @@ module.exports = {
 
       const embedFields = [
         {
-          name: 'Base role',
+          name: 'Role 1',
           value: `${roleOne} (\`${permsOne.length}\` permissions)`,
           inline: true
         },
         {
-          name: 'Comparison role',
+          name: 'Role 2',
           value: `${roleTwo} (\`${permsTwo.length}\` permissions)`,
           inline: true
         },
@@ -99,14 +99,14 @@ module.exports = {
           inline: false
         },
         {
-          name: 'Only in base role',
+          name: 'Only in Role 1',
           value: onlyOneFormatted.length > 0
             ? onlyOneFormatted.join(', ')
             : 'None',
           inline: false
         },
         {
-          name: 'Only in comparison role',
+          name: 'Only in Role 2',
           value: onlyTwoFormatted.length > 0
             ? onlyTwoFormatted.join(', ')
             : 'None',

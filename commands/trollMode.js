@@ -51,6 +51,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const subcommand = interaction.options.getSubcommand();
       
       logger.info('/trollmode command initiated.', {
@@ -86,7 +87,7 @@ module.exports = {
     const settings = await this.getCurrentSettings();
     const embed = this.formatStatusMessage(settings, interaction);
     
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
     
     logger.info("/trollmode command completed successfully.", {
       userId: interaction.user.id,
@@ -120,7 +121,7 @@ module.exports = {
     const finalAccountAge = accountAge !== null ? accountAge : currentSettings.accountAge;
     const embed = this.formatUpdateMessage(enabled, finalAccountAge, interaction);
     
-    await interaction.reply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
     
     logger.info("/trollmode command completed successfully.", {
       userId: interaction.user.id,

@@ -45,7 +45,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async execute(interaction) {
-        await interaction.deferReply();
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         logger.info("/giverole command initiated.", { 
             userId: interaction.user.id, 
             guildId: interaction.guildId 

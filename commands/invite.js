@@ -109,7 +109,7 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      await interaction.deferReply();
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
       const subcommand = interaction.options.getSubcommand();
 

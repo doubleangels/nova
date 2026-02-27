@@ -1,6 +1,7 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 
 /**
  * Command module for converting messages to mocking text format.
@@ -52,9 +53,16 @@ module.exports = {
             }
 
             const mockedText = this.convertToMock(originalContent);
+            const suffix = ' <a:spongebobmock:1291527476564066387>';
+
+            const embed = new EmbedBuilder()
+                .setColor(config.baseEmbedColor ?? 0)
+                .setDescription(`${mockedText}${suffix}`)
+                .setFooter({ text: `Mocked from ${targetMessage.author.tag}` })
+                .setTimestamp(targetMessage.createdAt);
             
             await interaction.followUp({
-                content: `"${mockedText}" - ${targetMessage.author}`
+                embeds: [embed]
             });
             
             logger.info("/mock context menu command completed successfully.", {
@@ -69,30 +77,23 @@ module.exports = {
     },
 
     /**
-     * Converts text to mocking format (alternating case by word).
+     * Converts text to mocking format (alternating case by character).
+     * Example: "Like this" -> "lIkE tHiS"
      * 
      * @param {string} text - The text to convert
      * @returns {string} The converted text in alternating case
      */
     convertToMock(text) {
-        // Split by word boundaries, preserving delimiters (spaces, punctuation)
-        const parts = text.split(/(\W+)/);
-        let wordIndex = 0;
-        
-        return parts
-            .map((part) => {
-                // If this part contains letters, it's a word - alternate its case
-                if (/[a-zA-Z]/.test(part)) {
-                    const result = wordIndex % 2 === 0 
-                        ? part.toLowerCase() 
-                        : part.toUpperCase();
-                    wordIndex++;
-                    return result;
-                }
-                // Otherwise, it's whitespace/punctuation - return as-is
-                return part;
-            })
-            .join('');
+        let upper = false;
+
+        return Array.from(text).map((ch) => {
+            if (/[a-zA-Z]/.test(ch)) {
+                const out = upper ? ch.toUpperCase() : ch.toLowerCase();
+                upper = !upper;
+                return out;
+            }
+            return ch;
+        }).join('');
     },
 
     /**

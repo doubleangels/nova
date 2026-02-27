@@ -64,7 +64,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
     try {
       const subcommand = interaction.options.getSubcommand();
