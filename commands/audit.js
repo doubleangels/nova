@@ -163,11 +163,23 @@ module.exports = {
       };
 
       const buildPages = (membersList, showPerms, excludePowerPerms = false) => {
-        if (membersList.length === 0) {
+        let effectiveMembers = membersList;
+
+        if (showPerms && excludePowerPerms) {
+          // For moderators, only keep members who still have at least one
+          // non-admin / non-kick / non-ban moderation permission.
+          effectiveMembers = membersList.filter(member =>
+            PERMISSION_LABELS.some(p =>
+              member.permissions.has(p.bit) && !EXCLUDED_FOR_MODERATOR_LIST.has(p.bit)
+            )
+          );
+        }
+
+        if (effectiveMembers.length === 0) {
           return ['None'];
         }
 
-        const lines = membersList
+        const lines = effectiveMembers
           .map(member => formatLine(member, showPerms, excludePowerPerms))
           .sort((a, b) => a.localeCompare(b));
 
