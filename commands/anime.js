@@ -175,10 +175,10 @@ module.exports = {
     const title = (animeData.title || "Unknown").slice(0, 256);
 
     const fields = [
-      { name: "Genre", value: genres.slice(0, 1024), inline: true },
-      { name: "MAL Rating", value: rating, inline: true },
-      { name: "Release Date", value: releaseDate.slice(0, 1024), inline: true },
-      { name: "MAL Link", value: `[Click Here](${malLink})`, inline: false }
+      { name: "🎭 Genre", value: genres.slice(0, 1024), inline: true },
+      { name: "⭐ MAL Rating", value: rating, inline: true },
+      { name: "📅 Release Date", value: releaseDate.slice(0, 1024), inline: true },
+      { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
     ];
     const embed = new EmbedBuilder()
       .setTitle(title)

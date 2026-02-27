@@ -59,16 +59,16 @@ module.exports = {
         mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(country.name.common)}`;
       }
       const fields = [
-        { name: 'Region', value: `${region} (${subregion})`, inline: true },
-        { name: 'Capital', value: capital, inline: true },
-        { name: 'Population', value: population, inline: true },
-        { name: 'Currencies', value: currencies, inline: true },
-        { name: 'Area', value: area, inline: true },
-        { name: 'Google Maps', value: `[View on Google Maps](${mapsUrl})`, inline: false }
+        { name: '🌍 Region', value: `${region} (${subregion})`, inline: true },
+        { name: '🏛️ Capital', value: capital, inline: true },
+        { name: '👥 Population', value: population, inline: true },
+        { name: '💱 Currencies', value: currencies, inline: true },
+        { name: '📐 Area', value: area, inline: true },
+        { name: '🗺️ Google Maps', value: `[View on Google Maps](${mapsUrl})`, inline: false }
       ];
       const embed = new EmbedBuilder()
         .setColor(0x24f2dc)
-        .setTitle(`${country.name.common} ${country.flag || ''}`)
+        .setTitle(country.name.common)
         .setDescription(country.name.official || country.name.common)
         .addFields(fields)
         .setFooter({ text: 'Powered by restcountries.com' });

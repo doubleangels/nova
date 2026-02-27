@@ -114,13 +114,13 @@ module.exports = {
   createMediaEmbed(data, typeLabel) {
     const imdbUrl = data.imdbID ? `https://www.imdb.com/title/${data.imdbID}/` : null;
     const fields = [
-      { name: 'Year', value: data.Year, inline: true },
-      { name: 'Rating', value: data.imdbRating || 'N/A', inline: true },
-      { name: 'Genre', value: data.Genre || 'N/A', inline: true },
-      { name: 'Director', value: data.Director || 'N/A', inline: true },
-      { name: 'Actors', value: data.Actors || 'N/A', inline: true },
-      { name: 'Awards', value: data.Awards || 'N/A', inline: true },
-      imdbUrl ? { name: 'IMDb', value: `[View on IMDb](${imdbUrl})`, inline: false } : null
+      { name: '📅 Year', value: data.Year, inline: true },
+      { name: '⭐ Rating', value: data.imdbRating || 'N/A', inline: true },
+      { name: '🎭 Genre', value: data.Genre || 'N/A', inline: true },
+      { name: '🎬 Director', value: data.Director || 'N/A', inline: true },
+      { name: '👥 Actors', value: data.Actors || 'N/A', inline: true },
+      { name: '🏆 Awards', value: data.Awards || 'N/A', inline: true },
+      imdbUrl ? { name: '🔗 IMDb', value: `[View on IMDb](${imdbUrl})`, inline: false } : null
     ].filter(field => field !== null);
     
     const embed = new EmbedBuilder()

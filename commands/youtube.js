@@ -412,7 +412,7 @@ module.exports = {
       ? `📅 ${dayjs(snippet.publishedAt).format('MM/DD/YYYY')}` : '';
 
     return embed
-      .setTitle(snippet.title)
+      .setTitle(`📺 ${snippet.title}`)
       .setURL(videoUrl)
       .setDescription(`${description}\n\n${stats}\n${uploadDate}`)
       .setImage(thumbnailUrl)
@@ -450,7 +450,7 @@ module.exports = {
     }
 
     return embed
-      .setTitle(snippet.title)
+      .setTitle(`📺 ${snippet.title}`)
       .setURL(channelUrl)
       .setDescription(`${description}\n\n${stats}`)
       .setThumbnail(thumbnailUrl);
@@ -481,7 +481,7 @@ module.exports = {
     }
 
     return embed
-      .setTitle(snippet.title)
+      .setTitle(`📺 ${snippet.title}`)
       .setURL(playlistUrl)
       .setDescription(`${description}\n\n${itemCount}`)
       .setThumbnail(thumbnailUrl)
