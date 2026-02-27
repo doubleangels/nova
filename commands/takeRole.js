@@ -42,6 +42,15 @@ module.exports = {
       const role = interaction.options.getRole('role');
       const reason = interaction.options.getString('reason');
 
+      logger.info('/takerole command initiated.', {
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        targetUserId: targetUser.id,
+        roleId: role.id,
+        roleName: role.name,
+        reason: reason ?? null
+      });
+
       const targetMember = await this.fetchGuildMember(interaction, targetUser.id);
       if (!targetMember) {
         throw new Error("USER_NOT_FOUND");
@@ -133,6 +142,16 @@ module.exports = {
     await interaction.editReply({
       content: `<@&${role.id}>`,
       embeds: [embed]
+    });
+
+    logger.info('/takerole command completed successfully.', {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      targetUserId: targetMember.id,
+      targetUserTag: targetMember.user.tag,
+      roleId: role.id,
+      roleName: role.name,
+      reason: reason ?? null
     });
   },
   
