@@ -33,6 +33,9 @@ const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 /** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
 const PROMOTION_SUBREDDITS = ['discordservers_', 'Discord_Servers_List', 'DiscordAdults'];
 
+/** Flair template ID overrides per subreddit (e.g. DiscordAdults requires a specific flair) */
+const SUBREDDIT_FLAIR_OVERRIDES = { DiscordAdults: 'c535d438-4639-11ef-9ddd-aa882aff8604' };
+
 // Cache for OAuth token
 let accessToken = null;
 let tokenExpiry = null;
@@ -208,7 +211,8 @@ function getRedditErrorMessage(err, subreddit) {
  * @returns {Promise<{ success: boolean, permalink?: string, error?: string }>}
  */
 async function postToSubreddit(subredditName, promotionTitle) {
-  let flairId = null;
+  let flairId = SUBREDDIT_FLAIR_OVERRIDES[subredditName] ?? null;
+  if (!flairId) {
   try {
     const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
     if (flairData && Array.isArray(flairData) && flairData.length > 0) {
@@ -236,6 +240,7 @@ async function postToSubreddit(subredditName, promotionTitle) {
       return { success: false, error: `r/${subredditName} is banned or restricted.` };
     }
     logger.warn(`Could not fetch flairs for r/${subredditName}`, { status: flairErr.response?.status });
+  }
   }
 
   const submissionData = {
@@ -354,9 +359,8 @@ module.exports = {
       const failed = results.filter(r => !r.success);
 
       if (succeeded.length > 0) {
-        const subList = succeeded.map(r => `\`r/${r.subreddit}\``).join(' and ');
-        const linkLines = succeeded.map(r => `• \`r/${r.subreddit}\`: [View post](https://reddit.com${r.permalink})`);
-        let description = `Your server has been promoted on ${subList}.\n\n${linkLines.join('\n')}`;
+        const linkLines = succeeded.map(r => `• [View post (r/${r.subreddit})](https://reddit.com${r.permalink})`);
+        let description = `Your server has been promoted on Reddit!\n\n${linkLines.join('\n')}`;
         if (failed.length > 0) {
           description += `\n\n_Could not post to:_ ${failed.map(f => `\`r/${f.subreddit}\` (${f.error})`).join('; ')}`;
         }
