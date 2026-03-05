@@ -25,7 +25,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('giveperms')
         .setDescription('Give a user permissions in the server.')
-        .addRoleOption(option =>
+        .addStringOption(option =>
             option.setName('role')
                 .setDescription("Which role name do you want to use for the user's role?")
                 .setRequired(true))
@@ -59,8 +59,7 @@ module.exports = {
         });
         
         try {
-            const roleOption = interaction.options.getRole('role');
-            const roleName = roleOption?.name || '';
+            const roleName = interaction.options.getString('role');
             const colorHex = interaction.options.getString('color');
             const targetUser = interaction.options.getUser('user');
             
