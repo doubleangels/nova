@@ -33,7 +33,7 @@ const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 /** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
 const PROMOTION_SUBREDDITS = ['discordservers_', 'Discord_Servers_List', 'DiscordAdults'];
 
-/** Flair template ID overrides per subreddit (e.g. DiscordAdults requires a specific flair) */
+/** Flair template ID overrides per subreddit (e.g. Discord_Adults requires a specific flair) */
 const SUBREDDIT_FLAIR_OVERRIDES = { DiscordAdults: 'c535d438-4639-11ef-9ddd-aa882aff8604' };
 
 // Cache for OAuth token
