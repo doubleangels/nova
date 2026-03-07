@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionsBitField, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
@@ -42,7 +42,7 @@ module.exports = {
         .setName('status')
         .setDescription('Check the current mute mode status.')
     )
-    .setDefaultMemberPermissions(PermissionsBitField.Flags.Administrator),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   /**
    * Executes the mute mode command.

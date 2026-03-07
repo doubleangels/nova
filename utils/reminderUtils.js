@@ -8,8 +8,8 @@ const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
 const KeyvSqlite = requireDefault('@keyv/sqlite');
 
-// Ensure data directory exists
-const dataDir = path.resolve(process.cwd(), 'data');
+// Ensure data directory exists; use same DATA_DIR as main database for consistency (e.g. Docker)
+const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }

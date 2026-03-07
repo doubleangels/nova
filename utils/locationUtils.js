@@ -132,7 +132,8 @@ async function checkRateLimit(type) {
         throw new Error("Rate limit exceeded. Please try again later.");
     }
 
-    timestamps.push(now);
+    recentRequests.push(now);
+    LOC_RATE_LIMIT_COUNTS.set(type, recentRequests);
 }
 
 /**

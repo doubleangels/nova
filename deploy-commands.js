@@ -23,7 +23,16 @@ async function deployCommands() {
   const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
   
   for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
+    let command;
+    try {
+      command = require(`./commands/${file}`);
+    } catch (error) {
+      logger.error(`Error loading command file: ${file}`, {
+        error: error.stack,
+        message: error.message
+      });
+      continue;
+    }
     const commandName = command.data.name;
     
     // Skip disabled commands - they will not be deployed/updated
