@@ -242,22 +242,25 @@ module.exports = {
         }
         
         const botMember = interaction.guild.members.me;
-        if (botMember.roles.highest.position <= positionRole.position) {
-            logger.warn("Bot's highest role is not high enough to create a role above the reference role:", {
+        const newRolePosition = positionRole.position + 1;
+        // Bot can only assign roles that are below its highest role; new role must be strictly below bot.
+        if (botMember.roles.highest.position <= newRolePosition) {
+            logger.warn("Bot's highest role is not high enough to create and assign a role above the reference role:", {
                 botHighestRolePosition: botMember.roles.highest.position,
-                referenceRolePosition: positionRole.position
+                referenceRolePosition: positionRole.position,
+                requiredNewRolePosition: newRolePosition
             });
             return {
                 success: false,
-                message: "⚠️ I don't have permission to create or assign roles."
+                message: "⚠️ I don't have permission to create or assign roles. My highest role must be above the reference role so I can assign the new role."
             };
         }
-        
+
         const auditReason = `Role created by ${interaction.user.tag} (ID: ${interaction.user.id}) using giveperms command.`;
         const newRole = await interaction.guild.roles.create({
             name: roleName,
             color: colorDecimal,
-            position: positionRole.position + 1,
+            position: newRolePosition,
             reason: auditReason
         });
         
@@ -268,7 +271,20 @@ module.exports = {
             createdBy: interaction.user.tag
         });
         
-        await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
+        try {
+            await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
+        } catch (assignError) {
+            logger.error("Failed to assign roles to member; deleting created role.", {
+                err: assignError,
+                newRoleId: newRole.id,
+                targetUserId: targetMember.id
+            });
+            await newRole.delete("Role assignment failed; cleaning up.").catch(() => {});
+            return {
+                success: false,
+                message: "⚠️ Role was created but I couldn't assign it (or the fren role). Check that my highest role is above both the new role and the fren role."
+            };
+        }
         
         logger.info("Permissions successfully granted to user:", { 
             userId: targetMember.id, 
