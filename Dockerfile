@@ -1,15 +1,15 @@
 # syntax=docker/dockerfile:1.4
 # Dockerfile for Nova Bot
-# Multi-stage build for smaller image and security. Alpine base for Doppler CLI (apk) and minimal footprint.
+# Multi-stage build for smaller image and security. Alpine edge base (current packages, e.g. zlib 1.3.2 for CVE-2026-22184, CVE-2026-27171).
 
-FROM node:24-alpine AS base
+FROM alpine:edge AS base
 
 ENV NODE_ENV=production
 
 WORKDIR /app
 
-# Runtime deps: dumb-init, su-exec (drop root for node), procps (healthcheck pgrep)
-RUN apk add --no-cache dumb-init su-exec procps && \
+# Node.js 24 + runtime deps (Alpine edge provides Node 24 and zlib 1.3.2)
+RUN apk add --no-cache nodejs npm dumb-init su-exec procps && \
     addgroup -g 1001 nodejs && \
     adduser -u 1001 -G nodejs -s /bin/sh -D discordbot
 
