@@ -11,7 +11,7 @@ const KeyvSqlite = requireDefault('@keyv/sqlite');
 const fs = require('fs');
 
 // Ensure data directory exists
-const dataDir = path.resolve(process.cwd(), 'data');
+const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
@@ -96,7 +96,7 @@ async function getRedditAccessToken() {
 async function redditApiRequest(method, endpoint, data = null) {
   const token = await getRedditAccessToken();
 
-  const config = {
+  const requestConfig = {
     method,
     url: `${REDDIT_API_BASE}${endpoint}`,
     headers: {
@@ -107,12 +107,12 @@ async function redditApiRequest(method, endpoint, data = null) {
 
   if (data && (method === 'POST' || method === 'PUT')) {
     // Reddit API expects form-encoded data, not JSON
-    config.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    config.data = new URLSearchParams(data).toString();
+    requestConfig.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+    requestConfig.data = new URLSearchParams(data).toString();
   }
 
   try {
-    const response = await axios(config);
+    const response = await axios(requestConfig);
     return response.data;
   } catch (error) {
     logger.error('Reddit API request failed', {
@@ -336,7 +336,6 @@ module.exports = {
     }
 
     try {
-      const promotionTitle = await getPromotionTitle();
       logger.info("Attempting to post to Reddit:", {
         subreddits: PROMOTION_SUBREDDITS,
         title: promotionTitle,

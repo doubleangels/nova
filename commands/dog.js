@@ -244,7 +244,7 @@ module.exports = {
       let apiUrl = "https://dog.ceo/api/breeds/image/random";
 
       if (breed) {
-        const breedPath = breed.replace('-', '/');
+        const breedPath = breed.replaceAll('-', '/');
         apiUrl = `https://dog.ceo/api/breed/${breedPath}/images/random`;
       }
 

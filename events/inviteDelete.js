@@ -41,9 +41,12 @@ module.exports = {
       // Get current invite usage tracking
       const currentUsage = await getInviteUsage(invite.guild.id);
       
-      // Remove the deleted tagged invite from tracking
-      if (currentUsage[invite.code] !== undefined) {
-        delete currentUsage[invite.code];
+      // Remove the deleted tagged invite from tracking (case-insensitive)
+      const usageKey = Object.keys(currentUsage).find(
+        key => key.toLowerCase() === normalizedCode
+      );
+      if (usageKey !== undefined) {
+        delete currentUsage[usageKey];
         
         // Update the invite usage tracking
         await setInviteUsage(invite.guild.id, currentUsage);
