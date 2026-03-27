@@ -27,20 +27,22 @@ for (const arg of args) {
 
 const { Client, GatewayIntentBits } = require('discord.js');
 const config = require('./config');
+const path = require('path');
+const logger = require('./logger')(path.basename(__filename));
 
 async function main() {
   if (!config.token) {
-    console.error('DISCORD_BOT_TOKEN is not set. Set it in .env or pass with --token=TOKEN');
+    logger.error('DISCORD_BOT_TOKEN is not set. Set it in .env or pass with --token=TOKEN');
     process.exit(1);
   }
 
   if (!config.noobiesRoleId) {
-    console.error('NOOBIES_ROLE_ID is not set in config/env. Cannot assign Noobies role.');
+    logger.error('NOOBIES_ROLE_ID is not set in config/env. Cannot assign Noobies role.');
     process.exit(1);
   }
 
   if (!config.givePermsFrenRoleId) {
-    console.error('GIVE_PERMS_FREN_ROLE_ID is not set in config/env. Cannot determine Fren role.');
+    logger.error('GIVE_PERMS_FREN_ROLE_ID is not set in config/env. Cannot determine Fren role.');
     process.exit(1);
   }
 
@@ -58,27 +60,27 @@ async function main() {
           : client.guilds.cache.first();
 
         if (!guild) {
-          console.error(guildId ? `Guild ${guildId} not found.` : 'Bot is not in any guild.');
+          logger.error(guildId ? `Guild ${guildId} not found.` : 'Bot is not in any guild.');
           client.destroy();
           process.exit(1);
         }
 
-        console.log(`Working on guild: ${guild.name} (${guild.id})`);
+        logger.info(`Working on guild.`, { guildName: guild.name, guildId: guild.id });
 
         // Find creatures role if not specifically provided
         if (!creaturesRoleId) {
           const role = guild.roles.cache.find(r => r.name.toLowerCase() === 'creatures');
           if (role) {
             creaturesRoleId = role.id;
-            console.log(`Found 'creatures' role by name: ID ${creaturesRoleId}`);
+            logger.info(`Found creatures role by name.`, { roleId: creaturesRoleId });
           } else {
-            console.error('Could not automatically find a role named "creatures". Please pass --creatures=ROLE_ID');
+            logger.error('Could not automatically find a role named "creatures". Please pass --creatures=ROLE_ID');
             client.destroy();
             process.exit(1);
           }
         }
 
-        console.log(`Fetching all members...`);
+        logger.info(`Fetching all members...`);
         await guild.members.fetch({ force: true });
 
         const members = guild.members.cache.filter(m => !m.user.bot);
@@ -93,7 +95,10 @@ async function main() {
 
           if (hasCreatures && !hasFren) {
             if (!hasNoobies) {
-              console.log(`Assigning Noobies role to ${member.user.tag} (${member.id})`);
+              logger.debug(`Assigning Noobies role.`, {
+                userTag: member.user.tag,
+                userId: member.id
+              });
               await member.roles.add(config.noobiesRoleId, 'Assigned by temporary script (has creatures, lacks fren)');
               assignedCount++;
               
@@ -103,18 +108,21 @@ async function main() {
           }
         }
 
-        console.log(`Checked ${checkedCount} non-bot members. Assigned Noobies role to ${assignedCount} members.`);
+        logger.info(`Migration complete.`, { 
+          checkedCount: checkedCount, 
+          assignedCount: assignedCount 
+        });
         client.destroy();
         resolve();
       } catch (err) {
-        console.error('Error:', err.message);
+        logger.error('Error migrating noobie roles.', { error: err.message });
         client.destroy();
         reject(err);
       }
     });
 
     client.login(config.token).catch(err => {
-      console.error('Login failed:', err.message);
+      logger.error('Login failed.', { error: err.message });
       reject(err);
     });
   });

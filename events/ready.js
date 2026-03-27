@@ -113,6 +113,17 @@ module.exports = {
         });
       }
 
+      // Check and log NOOBIES tracking status
+      const config = require('../config');
+      if (config.noobiesRoleId && config.givePermsFrenRoleId) {
+        logger.info('Noobie message tracking initialized.', {
+          noobiesRoleId: config.noobiesRoleId,
+          frenRoleId: config.givePermsFrenRoleId
+        });
+      } else {
+        logger.warn('Noobie message tracking is disabled (missing role IDs in config).');
+      }
+
       logger.info('Bot is ready and all systems are initialized.');
     } catch (error) {
       logger.error('Error occurred in ready event.', {

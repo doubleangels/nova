@@ -955,10 +955,15 @@ async function setFormerMember(userId) {
  */
 async function incrementMessageCount(userId) {
   try {
+    logger.debug('Incrementing message count for user.', { userId: userId });
     const key = `message_count:${userId}`;
     let count = await keyv.get(key) || 0;
     count++;
     await keyv.set(key, count);
+    logger.debug('Incremented message count for user successfully.', { 
+      userId: userId, 
+      count: count 
+    });
     return count;
   } catch (error) {
     logger.error('Error incrementing message count.', { err: error, userId });
@@ -988,8 +993,10 @@ async function getMessageCount(userId) {
  */
 async function deleteMessageCount(userId) {
   try {
+    logger.debug('Deleting message count for user.', { userId: userId });
     const key = `message_count:${userId}`;
     await keyv.delete(key);
+    logger.debug('Deleted message count for user successfully.', { userId: userId });
   } catch (error) {
     logger.error('Error deleting message count.', { err: error, userId });
   }
