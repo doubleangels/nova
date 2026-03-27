@@ -1,6 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, removeMuteModeUser } = require('../utils/database');
+const config = require('../config');
+const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
@@ -169,9 +170,47 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function processUserMessage(message) {
-  // This function is kept for potential future use
-  // Mute mode removal is now handled in execute() for better performance
   if (message.webhookId || !message.author || message.author.bot) return;
+
+  try {
+    const { noobiesRoleId, givePermsFrenRoleId: frenRoleId } = config;
+
+    // Check if roles are configured
+    if (!noobiesRoleId || !frenRoleId) return;
+
+    if (!message.member) return; // Happens sometimes in DM or uncached members
+
+    const hasFrenRole = message.member.roles.cache.has(frenRoleId);
+    const hasNoobiesRole = message.member.roles.cache.has(noobiesRoleId);
+
+    if (hasFrenRole) {
+      if (hasNoobiesRole) {
+        await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (has Fren role)');
+        logger.debug('Removed Noobies role.', { userId: message.author.id });
+      }
+      // Delete message count from database since it's no longer needed
+      await deleteMessageCount(message.author.id);
+      return; // Stop processing further
+    }
+
+    const messageCount = await incrementMessageCount(message.author.id);
+    const shouldHaveNoobiesRole = messageCount < 100;
+
+    if (shouldHaveNoobiesRole && !hasNoobiesRole) {
+      await message.member.roles.add(noobiesRoleId, 'Assigned Noobies role automatically (< 100 messages)');
+      logger.debug('Assigned Noobies role.', { userId: message.author.id, messageCount });
+    } else if (!shouldHaveNoobiesRole && hasNoobiesRole) {
+      await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (>= 100 messages)');
+      logger.debug('Removed Noobies role.', { userId: message.author.id, messageCount });
+      // Delete message count from database since they passed the threshold
+      await deleteMessageCount(message.author.id);
+    }
+  } catch (error) {
+    logger.error('Error handling role assignment in processUserMessage.', { 
+      err: error, 
+      userId: message.author.id 
+    });
+  }
 }
 
 

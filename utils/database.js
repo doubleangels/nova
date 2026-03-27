@@ -956,6 +956,53 @@ async function setFormerMember(userId) {
 }
 
 /**
+ * Increments and returns the user's total message count
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<number>} The updated message count
+ */
+async function incrementMessageCount(userId) {
+  try {
+    const key = `message_count:${userId}`;
+    let count = await keyv.get(key) || 0;
+    count++;
+    await keyv.set(key, count);
+    return count;
+  } catch (error) {
+    logger.error('Error incrementing message count.', { err: error, userId });
+    return 0; // return 0 on error so it doesn't crash
+  }
+}
+
+/**
+ * Gets the user's total message count
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<number>} The message count
+ */
+async function getMessageCount(userId) {
+  try {
+    const key = `message_count:${userId}`;
+    return await keyv.get(key) || 0;
+  } catch (error) {
+    logger.error('Error getting message count.', { err: error, userId });
+    return 0;
+  }
+}
+
+/**
+ * Deletes the user's total message count from the database
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<void>}
+ */
+async function deleteMessageCount(userId) {
+  try {
+    const key = `message_count:${userId}`;
+    await keyv.delete(key);
+  } catch (error) {
+    logger.error('Error deleting message count.', { err: error, userId });
+  }
+}
+
+/**
  * Returns whether the user has left the guild before (returning member).
  * @param {string} userId - User ID
  * @returns {Promise<boolean>}
@@ -996,5 +1043,8 @@ module.exports = {
   getAllInviteTagsData,
   getGuildName,
   setFormerMember,
-  isFormerMember
+  isFormerMember,
+  incrementMessageCount,
+  getMessageCount,
+  deleteMessageCount
 };
