@@ -18,7 +18,7 @@ module.exports = {
    */
   async execute(interaction) {
     // Handle autocomplete interactions
-      if (interaction.isAutocomplete()) {
+    if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);
       if (!command) {
         logger.warn('No command matching the requested command name was found for autocomplete.', {

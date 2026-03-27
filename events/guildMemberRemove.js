@@ -1,6 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { removeMuteModeUser, removeSpamModeJoinTime, setFormerMember } = require('../utils/database');
+const { removeMuteModeUser, removeSpamModeJoinTime, setFormerMember, deleteMessageCount } = require('../utils/database');
 const { Events } = require('discord.js');
 
 module.exports = {
@@ -32,7 +32,8 @@ module.exports = {
       await Promise.all([
         removeMuteModeUser(member.id),
         removeSpamModeJoinTime(member.id),
-        setFormerMember(member.id)
+        setFormerMember(member.id),
+        deleteMessageCount(member.id) // Clean up message count so it doesn't persist across rejoins
       ]);
 
       logger.info('Successfully processed member departure.', {

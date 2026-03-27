@@ -102,7 +102,6 @@ module.exports = {
                 .addFields(fields);
 
             await interaction.editReply({
-                content: `<@&${role.id}>`,
                 embeds: [embed]
             });
 

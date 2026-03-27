@@ -210,7 +210,7 @@ async function handleTranslationRequest(reaction, user) {
       });
 
       await reaction.message.reply({
-        content: `⚠️ ${errorMessage}`,
+        content: errorMessage,
         allowedMentions: { repliedUser: false }
       });
     } catch (replyError) {

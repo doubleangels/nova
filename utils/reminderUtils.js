@@ -371,7 +371,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     }, delay);
 
   } catch (error) {
-    handleError(error, 'handleReminder');
+    await handleError(error, 'handleReminder');
   }
 }
 
@@ -639,7 +639,7 @@ async function rescheduleReminder(client) {
     logger.error("Error in rescheduleReminder", {
       err: error
     });
-    handleError(error, 'rescheduleReminder');
+    await handleError(error, 'rescheduleReminder');
   }
 }
 

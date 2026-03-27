@@ -228,8 +228,8 @@ async function trackNewUserMessage(message) {
       // Get threshold from database (default: 3)
       const threshold = parseInt(await getValue('spam_mode_threshold'), 10) || 3;
 
-      // Get spam mode window for the notification message
-      let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
+      // Get spam mode window for the notification message (reuse windowHours already declared above)
+      windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
       if (!windowHours) {
         // Fallback to mute mode kick time
         windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;

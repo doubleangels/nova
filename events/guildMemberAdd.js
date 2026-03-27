@@ -78,6 +78,23 @@ module.exports = {
         }
       }
 
+      // Assign Noobies role immediately on join (new members have 0 messages and will qualify)
+      // This ensures the role exists from the moment they join, not just after their first message
+      if (config.noobiesRoleId && config.givePermsFrenRoleId) {
+        const hasFrenRole = member.roles.cache.has(config.givePermsFrenRoleId);
+        if (!hasFrenRole) {
+          await member.roles.add(config.noobiesRoleId, 'Assigned Noobies role on join (< 100 messages, no Fren role)').catch(err => {
+            logger.warn('Could not add Noobies role on join.', {
+              err: err.message,
+              guildId: member.guild.id,
+              userId: member.id,
+              roleId: config.noobiesRoleId
+            });
+          });
+          logger.debug('Assigned Noobies role on member join.', { userId: member.id });
+        }
+      }
+
       // Check for tagged invite usage
       await this.checkTaggedInvite(member);
 

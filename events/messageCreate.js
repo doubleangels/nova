@@ -89,6 +89,8 @@ module.exports = {
         channelName: message.channel.name
       });
 
+      // Skip bots and webhooks for no-text channel enforcement
+      if (message.author?.bot || message.webhookId) return;
       if (String(message.channelId) !== String(noTextChannelId)) return;
 
       const content = message.content ?? '';
@@ -188,12 +190,21 @@ async function processUserMessage(message) {
         await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (has Fren role)');
         logger.debug('Removed Noobies role.', { userId: message.author.id });
       }
-      // Delete message count from database since it's no longer needed
-      await deleteMessageCount(message.author.id);
+      // Only delete the message count once if it actually exists — avoids a no-op DB call on every message
+      const existingCount = await getMessageCount(message.author.id);
+      if (existingCount > 0) {
+        await deleteMessageCount(message.author.id);
+        logger.debug('Deleted message count for Fren user.', { userId: message.author.id });
+      }
       return; // Stop processing further
     }
 
     const messageCount = await incrementMessageCount(message.author.id);
+    if (messageCount === null) {
+      // DB error occurred — skip role logic to avoid making incorrect role decisions
+      logger.warn('Skipping Noobies role check due to message count DB error.', { userId: message.author.id });
+      return;
+    }
     const shouldHaveNoobiesRole = messageCount < 100;
 
     if (shouldHaveNoobiesRole && !hasNoobiesRole) {
@@ -266,9 +277,6 @@ async function checkForBumpMessages(message) {
       
       if (bumpEmbed) {
         logger.debug("Found Disboard bump embed in message.");
-      }
-      
-      if (bumpEmbed) {
         logger.info("Disboard bump detected, scheduling reminder.");
         await handleReminder(message, 7200000, 'bump');
         logger.debug("Bump reminder scheduled for 2 hours.");

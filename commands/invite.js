@@ -188,19 +188,8 @@ module.exports = {
     const existingTag = await getInviteTag(tagName);
     const isUpdate = existingTag !== null;
 
-    // Store the invite code with its tag in the invites namespace
-    const inviteData = {
-      code: cleanCode,
-      name: tagName,
-      createdAt: isUpdate ? existingTag.createdAt : dayjs().toISOString(),
-      updatedAt: dayjs().toISOString(),
-      createdBy: isUpdate ? existingTag.createdBy : interaction.user.id,
-      updatedBy: interaction.user.id
-    };
-
-    await setInviteTag(tagName, inviteData);
-
-    // Validate that the invite exists in the server (skip check for "Vanity" tag since vanity invites may not appear in the invite list)
+    // Validate that the invite exists in the server BEFORE saving anything
+    // (skip check for "Vanity" tag since vanity invites may not appear in the invite list)
     if (tagName.toLowerCase() !== 'vanity') {
       try {
         const invites = await interaction.guild.invites.fetch();
@@ -227,6 +216,18 @@ module.exports = {
         tagName: tagName
       });
     }
+
+    // All validation passed — now persist the tag
+    const inviteData = {
+      code: cleanCode,
+      name: tagName,
+      createdAt: isUpdate ? existingTag.createdAt : dayjs().toISOString(),
+      updatedAt: dayjs().toISOString(),
+      createdBy: isUpdate ? existingTag.createdBy : interaction.user.id,
+      updatedBy: interaction.user.id
+    };
+
+    await setInviteTag(tagName, inviteData);
 
     // Update code-to-tag mapping for quick lookups
     const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};

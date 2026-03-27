@@ -88,9 +88,9 @@ module.exports = {
         });
       }
 
-      // Schedule periodic cleanup every hour
+      // Schedule periodic cleanup every hour; store reference so it can be cleared on shutdown
       const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
-      setInterval(async () => {
+      client.cleanupInterval = setInterval(async () => {
         try {
           await cleanupOldTrackingUsers(client);
         } catch (error) {

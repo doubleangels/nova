@@ -969,7 +969,7 @@ async function incrementMessageCount(userId) {
     return count;
   } catch (error) {
     logger.error('Error incrementing message count.', { err: error, userId });
-    return 0; // return 0 on error so it doesn't crash
+    return null; // return null (not 0) so callers can detect a DB failure vs a real count
   }
 }
 
