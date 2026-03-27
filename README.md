@@ -68,6 +68,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `GIVE_PERMS_POSITION_ABOVE_ROLE_ID`
 - `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID`
 - `NEWUSER_PERMISSION_DIFF_ROLE_ID`
+- `NOOBIES_ROLE_ID`
 - `GOOGLE_API_KEY`
 - `GUILD_NAME`
 - `IMAGE_SEARCH_ENGINE_ID`
@@ -104,6 +105,7 @@ Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` w
 - **Mute Mode**: Automatically kick inactive users
 - **Troll Mode**: Kick new accounts that don't meet age requirements
 - **Spam Mode**: Enhanced spam detection and moderation
+- **Noobies Management**: Automatically assigned to new members without the primary role and automatically removed once they participate by sending 100 messages.
 
 ### Information & Entertainment
 
@@ -434,5 +436,4 @@ Calculate the time difference between two locations.
 
 Convert a message to mocking text format (alternating case by character, e.g., `lIkE tHiS`) and append a mocking emoji. Right-click on a message and select "Mock" from the context menu.
 
-**Note:** Works on messages with text content. Messages longer than 2000 characters cannot be converted.*** End Patch```}}/>
-{"tool_uses":[{"recipient_name":"functions.ApplyPatch","parameters":{"FREEFORM":"*** Begin Patch\n*** Update File: /home/doubleangels/Github/nova/README.md\n@@\n-#### `/timedifference`\n-\n-Calculate the time difference between two locations.\n-\n-**Parameters:**\n-\n-- `place1` (required): The first location (e.g., \"Tokyo\", \"London\", \"New York\")\n-- `place2` (required): The second location\n+#### `/timedifference`\n+\n+Calculate the time difference between two locations.\n+\n+**Parameters:**\n+\n+- `place1` (required): The first location (e.g., \"Tokyo\", \"London\", \"New York\")\n+- `place2` (required): The second location\n*** End Patch"}]}]}}} ***!
+**Note:** Works on messages with text content. Messages longer than 2000 characters cannot be converted.
