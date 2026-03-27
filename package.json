@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "axios": "^1.13.6",
+    "axios": "^1.14.0",
     "better-sqlite3": "^12.8.0",
     "dayjs": "^1.11.20",
     "discord.js": "^14.25.1",
