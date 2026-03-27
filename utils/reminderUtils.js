@@ -85,13 +85,20 @@ async function getLatestReminderData(type) {
       currentTime: now.toISOString()
     });
     
-    for (const reminderId of reminderIds) {
-      const reminder = await reminderKeyv.get(`reminder:${reminderId}`);
+    // Fetch all reminders in parallel
+    const reminders = await Promise.all(
+      reminderIds.map(id => reminderKeyv.get(`reminder:${id}`))
+    );
+
+    for (let i = 0; i < reminderIds.length; i++) {
+      const reminderId = reminderIds[i];
+      const reminder = reminders[i];
+      
       if (reminder && reminder.remind_at) {
         // Parse remind_at using dayjs
         const remindAt = dayjs(reminder.remind_at);
         
-        // Check if the date is valid
+        // ... rest of validation logic
         if (!remindAt.isValid()) {
           logger.warn('Invalid date found for reminder.', {
             reminderId: reminderId,

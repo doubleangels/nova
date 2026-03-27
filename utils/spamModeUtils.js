@@ -111,11 +111,6 @@ async function trackNewUserMessage(message) {
     // Skip if message is a slash command (starts with "/")
     if (message.content && message.content.trim().startsWith('/')) {
       logger.debug('Spam mode: Message is a slash command, skipping tracking.');
-      // Check if user is no longer new before returning
-      const { isNew: stillNew } = await isNewUser(userId);
-      if (!stillNew) {
-        await removeSpamModeJoinTime(userId);
-      }
       return;
     }
 
@@ -126,34 +121,25 @@ async function trackNewUserMessage(message) {
     // Skip if message only contains stickers (has stickers but no text content after removing emotes)
     if (message.stickers && message.stickers.size > 0 && contentWithoutEmotes.length === 0) {
       logger.debug('Spam mode: Message only contains stickers, skipping tracking.');
-      // Check if user is no longer new before returning
-      const { isNew: stillNew } = await isNewUser(userId);
-      if (!stillNew) {
-        await removeSpamModeJoinTime(userId);
-      }
       return;
     }
 
     // Skip if message only contains emotes (no stickers, no text content after removing emotes)
     if ((!message.stickers || message.stickers.size === 0) && contentWithoutEmotes.length === 0) {
       logger.debug('Spam mode: Message only contains emotes, skipping tracking.');
-      // Check if user is no longer new before returning
-      const { isNew: stillNew } = await isNewUser(userId);
-      if (!stillNew) {
-        await removeSpamModeJoinTime(userId);
-      }
       return;
     }
 
-    // Skip if message is too short (less than 3 characters after normalization and emote removal)
+    // Skip if message is too short (less than 3 characters after emote removal)
+    // Avoid running expensive normalizeContent on obviously short strings
+    if (contentWithoutEmotes.length < 3) {
+      logger.debug('Spam mode: Message too short (pre-normalization), skipping tracking.');
+      return;
+    }
+
     const normalizedContent = normalizeContent(contentWithoutEmotes);
     if (normalizedContent.length < 3) {
-      logger.debug('Spam mode: Message too short, skipping tracking.');
-      // Check if user is no longer new before returning
-      const { isNew: stillNew } = await isNewUser(userId);
-      if (!stillNew) {
-        await removeSpamModeJoinTime(userId);
-      }
+      logger.debug('Spam mode: Message too short (post-normalization), skipping tracking.');
       return;
     }
 
@@ -167,11 +153,6 @@ async function trackNewUserMessage(message) {
         wordCount,
         charCount: normalizedContent.length
       });
-      // Check if user is no longer new before returning
-      const { isNew: stillNew } = await isNewUser(userId);
-      if (!stillNew) {
-        await removeSpamModeJoinTime(userId);
-      }
       return;
     }
 
@@ -227,13 +208,6 @@ async function trackNewUserMessage(message) {
 
       // Get threshold from database (default: 3)
       const threshold = parseInt(await getValue('spam_mode_threshold'), 10) || 3;
-
-      // Get spam mode window for the notification message (reuse windowHours already declared above)
-      windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
-      if (!windowHours) {
-        // Fallback to mute mode kick time
-        windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-      }
 
       // Log if there are threshold or more occurrences (same or different channels)
       logger.debug('Spam mode: Found occurrences of message for user.', {

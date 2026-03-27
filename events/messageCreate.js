@@ -82,7 +82,9 @@ module.exports = {
       await processUserMessage(message);
       
       // Check for bump messages (Disboard with embeds)
-      await checkForBumpMessages(message);
+      if (message.embeds?.length > 0) {
+        await checkForBumpMessages(message);
+      }
       
       logger.debug('Processed message from user in channel.', {
         userTag: message.author.tag,

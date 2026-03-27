@@ -36,14 +36,17 @@ async function createPaginatedResults(
   const prevEmoji = options.prevEmoji || null;
   const nextEmoji = options.nextEmoji || null;
 
+  // Compute a unique suffix once per pagination session instead of on every render
+  const sessionSuffix = Date.now();
+
   const createArrowButtons = (index) => {
     const prevButton = new ButtonBuilder()
-      .setCustomId(`${prefix}_prev_${interaction.user.id}_${dayjs().valueOf()}`)
+      .setCustomId(`${prefix}_prev_${interaction.user.id}_${sessionSuffix}`)
       .setStyle(buttonStyle)
       .setDisabled(index === 0);
 
     const nextButton = new ButtonBuilder()
-      .setCustomId(`${prefix}_next_${interaction.user.id}_${dayjs().valueOf()}`)
+      .setCustomId(`${prefix}_next_${interaction.user.id}_${sessionSuffix}`)
       .setStyle(buttonStyle)
       .setDisabled(index === items.length - 1);
 
