@@ -114,7 +114,6 @@ module.exports = {
       }
 
       // Check and log NOOBIES tracking status
-      const config = require('../config');
       if (config.noobiesRoleId && config.givePermsFrenRoleId) {
         logger.info('Noobie message tracking initialized.', {
           noobiesRoleId: config.noobiesRoleId,
