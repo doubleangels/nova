@@ -37,7 +37,7 @@ const PROMOTION_SUBREDDITS = ['discordservers_', 'DiscordPromote', 'DiscordServe
 const SUBREDDIT_FLAIR_PREFERENCES = {
   'discordservers_': 'gaming',
   'DiscordPromote': 'gaming server',
-  'DiscordServerPromos': '18+ gaming server (minimal nsfw)'
+  'DiscordServerPromos': 'multiple categories [please list in post description]'
 };
 
 // Cache for OAuth token
