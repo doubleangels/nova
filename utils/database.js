@@ -4,6 +4,7 @@ const KeyvSqlite = requireDefault('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
 const dayjs = require('dayjs');
+const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
 
 // Ensure data directory exists with proper permissions
@@ -147,21 +148,7 @@ async function initializeDatabase() {
             size: stats.size,
             exists: true
           });
-          
-          // Try to query the database directly to see what's in it
-          try {
-            const Database = require('better-sqlite3');
-            const db = new Database(sqlitePath, { readonly: true });
-            const rows = db.prepare('SELECT COUNT(*) as count FROM keyv').get();
-            logger.info('Database contains keys in keyv table.', {
-              keyCount: rows.count
-            });
-            db.close();
-          } catch (dbError) {
-            logger.debug('Could not query database directly, this is OK.', {
-              err: dbError
-            });
-          }
+          // Database file verified successfully
         } else {
           logger.warn('Database file not found after successful test.', {
             sqlitePath: sqlitePath
@@ -219,6 +206,9 @@ async function initializeDatabase() {
   process.exit(1);
 }
 
+// Cache for config values to avoid DB reads on hot paths (e.g. every message)
+const configCache = new Map();
+
 /**
  * Retrieves a configuration value from the database
  * @param {string} key - The configuration key to retrieve
@@ -226,16 +216,16 @@ async function initializeDatabase() {
  */
 async function getValue(key) {
   try {
-    logger.debug('Getting config value for key.', {
-      key: key
-    });
+    if (configCache.has(key)) {
+      return configCache.get(key);
+    }
+    logger.debug('Getting config value for key.', { key: key });
     const value = await keyv.get(`config:${key}`);
-    return value !== undefined ? value : null;
+    const finalValue = value !== undefined ? value : null;
+    configCache.set(key, finalValue);
+    return finalValue;
   } catch (err) {
-    logger.error('Error occurred while getting key.', {
-      err: err,
-      key: key
-    });
+    logger.error('Error occurred while getting key.', { err: err, key: key });
     return null;
   }
 }
@@ -248,18 +238,12 @@ async function getValue(key) {
  */
 async function setValue(key, value) {
   try {
-    logger.debug('Setting config value for key.', {
-      key: key
-    });
+    logger.debug('Setting config value for key.', { key: key });
     await keyv.set(`config:${key}`, value);
-    logger.debug('Set config for key successfully.', {
-      key: key
-    });
+    configCache.set(key, value);
+    logger.debug('Set config for key successfully.', { key: key });
   } catch (err) {
-    logger.error('Error occurred while setting key.', {
-      err: err,
-      key: key
-    });
+    logger.error('Error occurred while setting key.', { err: err, key: key });
   }
 }
 
@@ -270,18 +254,12 @@ async function setValue(key, value) {
  */
 async function deleteValue(key) {
   try {
-    logger.debug('Deleting config for key.', {
-      key: key
-    });
+    logger.debug('Deleting config for key.', { key: key });
     await keyv.delete(`config:${key}`);
-    logger.debug('Deleted config for key successfully.', {
-      key: key
-    });
+    configCache.delete(key);
+    logger.debug('Deleted config for key successfully.', { key: key });
   } catch (err) {
-    logger.error('Error occurred while deleting key.', {
-      err: err,
-      key: key
-    });
+    logger.error('Error occurred while deleting key.', { err: err, key: key });
   }
 }
 
@@ -530,8 +508,14 @@ async function cleanupOldTrackingUsers(client = null) {
     const spamUserIds = await keyv.get('config:spam_mode_users') || [];
     const remainingSpamUsers = [];
     
-    for (const userId of spamUserIds) {
-      const userData = await keyv.get(`spam_mode:${userId}`);
+    // Fetch all user records in parallel rather than serially
+    const spamUserDataList = await Promise.all(
+      spamUserIds.map(userId => keyv.get(`spam_mode:${userId}`))
+    );
+    
+    for (let i = 0; i < spamUserIds.length; i++) {
+      const userId = spamUserIds[i];
+      const userData = spamUserDataList[i];
       if (userData && userData.joinTime) {
         const joinTime = dayjs(userData.joinTime).toDate();
         if (joinTime < spamCutoffTime) {
@@ -552,8 +536,14 @@ async function cleanupOldTrackingUsers(client = null) {
     const muteUserIds = await keyv.get('config:mute_mode_users') || [];
     const remainingMuteUsers = [];
     
-    for (const userId of muteUserIds) {
-      const userData = await keyv.get(`mute_mode:${userId}`);
+    // Fetch all user records in parallel rather than serially
+    const muteUserDataList = await Promise.all(
+      muteUserIds.map(userId => keyv.get(`mute_mode:${userId}`))
+    );
+    
+    for (let i = 0; i < muteUserIds.length; i++) {
+      const userId = muteUserIds[i];
+      const userData = muteUserDataList[i];
       if (userData && userData.joinTime) {
         const joinTime = dayjs(userData.joinTime).toDate();
         let shouldRemove = joinTime < muteCutoffTime;
@@ -809,20 +799,34 @@ async function getInviteCodeToTagMap(guildId) {
  * This queries the SQLite database directly to get all tags
  * @returns {Promise<Array>} Array of invite tag objects with {tagName, code, name, createdAt, updatedAt}
  */
+/**
+ * Helper to query all raw invite tags from the SQLite database
+ * @returns {Array} Array of raw rows from keyv
+ */
+function getRawInviteTagsRows() {
+  const Database = require('better-sqlite3');
+  const db = new Database(sqlitePath, { readonly: true });
+  
+  // Query all keys from invites namespace that start with tags:
+  const rows = db.prepare(`
+    SELECT key, value 
+    FROM keyv 
+    WHERE key LIKE 'invites:tags:%'
+  `).all();
+  
+  db.close();
+  return rows;
+}
+
+/**
+ * Gets all invite tags from the invites namespace
+ * This queries the SQLite database directly to get all tags
+ * @returns {Promise<Array>} Array of invite tag objects with {tagName, code, name, createdAt, updatedAt}
+ */
 async function getAllInviteTagsData() {
   try {
     logger.debug("Getting all invite tags.");
-    const Database = require('better-sqlite3');
-    const db = new Database(sqlitePath, { readonly: true });
-    
-    // Query all keys from invites namespace that start with tags:
-    const rows = db.prepare(`
-      SELECT key, value 
-      FROM keyv 
-      WHERE key LIKE 'invites:tags:%'
-    `).all();
-    
-    db.close();
+    const rows = getRawInviteTagsRows();
     
     const tags = [];
     
@@ -873,17 +877,7 @@ async function rebuildCodeToTagMap(guildId) {
     logger.debug('Rebuilding code-to-tag mapping from existing tags for guild.', {
       guildId: guildId
     });
-    const Database = require('better-sqlite3');
-    const db = new Database(sqlitePath, { readonly: true });
-    
-    // Query all keys from invites namespace that start with tags:
-    const rows = db.prepare(`
-      SELECT key, value 
-      FROM keyv 
-      WHERE key LIKE 'invites:tags:%'
-    `).all();
-    
-    db.close();
+    const rows = getRawInviteTagsRows();
     
     const codeToTagMap = {};
     
@@ -936,7 +930,6 @@ async function rebuildCodeToTagMap(guildId) {
 async function getGuildName() {
   // Guild name is now read from environment variable only (GUILD_NAME)
   // No longer stored in database
-  const config = require('../config');
   return config.guildName || 'Da Frens';
 }
 
@@ -952,6 +945,60 @@ async function setFormerMember(userId) {
     await keyv.set(`${FORMER_MEMBER_KEY_PREFIX}${userId}`, 1);
   } catch (err) {
     logger.error('Error recording former member.', { err: err, userId });
+  }
+}
+
+/**
+ * Increments and returns the user's total message count
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<number>} The updated message count
+ */
+async function incrementMessageCount(userId) {
+  try {
+    logger.debug('Incrementing message count for user.', { userId: userId });
+    const key = `message_count:${userId}`;
+    let count = await keyv.get(key) || 0;
+    count++;
+    await keyv.set(key, count);
+    logger.debug('Incremented message count for user successfully.', { 
+      userId: userId, 
+      count: count 
+    });
+    return count;
+  } catch (error) {
+    logger.error('Error incrementing message count.', { err: error, userId });
+    return null; // return null (not 0) so callers can detect a DB failure vs a real count
+  }
+}
+
+/**
+ * Gets the user's total message count
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<number>} The message count
+ */
+async function getMessageCount(userId) {
+  try {
+    const key = `message_count:${userId}`;
+    return await keyv.get(key) || 0;
+  } catch (error) {
+    logger.error('Error getting message count.', { err: error, userId });
+    return 0;
+  }
+}
+
+/**
+ * Deletes the user's total message count from the database
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<void>}
+ */
+async function deleteMessageCount(userId) {
+  try {
+    logger.debug('Deleting message count for user.', { userId: userId });
+    const key = `message_count:${userId}`;
+    await keyv.delete(key);
+    logger.debug('Deleted message count for user successfully.', { userId: userId });
+  } catch (error) {
+    logger.error('Error deleting message count.', { err: error, userId });
   }
 }
 
@@ -996,5 +1043,8 @@ module.exports = {
   getAllInviteTagsData,
   getGuildName,
   setFormerMember,
-  isFormerMember
+  isFormerMember,
+  incrementMessageCount,
+  getMessageCount,
+  deleteMessageCount
 };

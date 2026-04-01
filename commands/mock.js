@@ -61,7 +61,7 @@ module.exports = {
                 .setFooter({ text: `Mocked from ${targetMessage.author.tag}` })
                 .setTimestamp(targetMessage.createdAt);
             
-            await interaction.followUp({
+            await interaction.editReply({
                 embeds: [embed]
             });
             

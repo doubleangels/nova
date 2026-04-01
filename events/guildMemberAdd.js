@@ -78,6 +78,23 @@ module.exports = {
         }
       }
 
+      // Assign Noobies role immediately on join (new members have 0 messages and will qualify)
+      // This ensures the role exists from the moment they join, not just after their first message
+      if (config.noobiesRoleId && config.givePermsFrenRoleId) {
+        const hasFrenRole = member.roles.cache.has(config.givePermsFrenRoleId);
+        if (!hasFrenRole) {
+          await member.roles.add(config.noobiesRoleId, 'Assigned Noobies role on join (< 100 messages, no Fren role)').catch(err => {
+            logger.warn('Could not add Noobies role on join.', {
+              err: err.message,
+              guildId: member.guild.id,
+              userId: member.id,
+              roleId: config.noobiesRoleId
+            });
+          });
+          logger.debug('Assigned Noobies role on member join.', { userId: member.id });
+        }
+      }
+
       // Check for tagged invite usage
       await this.checkTaggedInvite(member);
 
@@ -85,30 +102,12 @@ module.exports = {
         userTag: member.user.tag
       });
     } catch (error) {
+      // Do not rethrow — event handlers have no caller to receive the error.
+      // Rethrowing here causes an unhandled promise rejection.
       logger.error('Error occurred while processing new member.', {
         err: error,
         userId: member.user.id
       });
-
-      let errorMessage = "⚠️ An unexpected error occurred while processing the new member.";
-      
-      if (error.message === "⚠️ Failed to track new member data.") {
-        errorMessage = "⚠️ Failed to track new member data.";
-      } else if (error.message === "⚠️ Failed to schedule mute kick for new member.") {
-        errorMessage = "⚠️ Failed to schedule mute kick for new member.";
-      } else if (error.message === "⚠️ Database error occurred while processing new member.") {
-        errorMessage = "⚠️ Database error occurred while processing new member.";
-      } else if (error.message === "⚠️ Insufficient permissions to process new member.") {
-        errorMessage = "⚠️ Insufficient permissions to process new member.";
-      } else if (error.message === "⚠️ Invalid member data received.") {
-        errorMessage = "⚠️ Invalid member data received.";
-      } else if (error.message === "⚠️ Failed to verify account age.") {
-        errorMessage = "⚠️ Failed to verify account age.";
-      } else if (error.message === "⚠️ Failed to kick member due to age requirement.") {
-        errorMessage = "⚠️ Failed to kick member due to age requirement.";
-      }
-      
-      throw new Error(errorMessage);
     }
   },
 

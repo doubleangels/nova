@@ -1,6 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, removeMuteModeUser } = require('../utils/database');
+const config = require('../config');
+const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
@@ -81,13 +82,17 @@ module.exports = {
       await processUserMessage(message);
       
       // Check for bump messages (Disboard with embeds)
-      await checkForBumpMessages(message);
+      if (message.embeds?.length > 0) {
+        await checkForBumpMessages(message);
+      }
       
       logger.debug('Processed message from user in channel.', {
         userTag: message.author.tag,
         channelName: message.channel.name
       });
 
+      // Skip bots and webhooks for no-text channel enforcement
+      if (message.author?.bot || message.webhookId) return;
       if (String(message.channelId) !== String(noTextChannelId)) return;
 
       const content = message.content ?? '';
@@ -169,9 +174,56 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function processUserMessage(message) {
-  // This function is kept for potential future use
-  // Mute mode removal is now handled in execute() for better performance
   if (message.webhookId || !message.author || message.author.bot) return;
+
+  try {
+    const { noobiesRoleId, givePermsFrenRoleId: frenRoleId } = config;
+
+    // Check if roles are configured
+    if (!noobiesRoleId || !frenRoleId) return;
+
+    if (!message.member) return; // Happens sometimes in DM or uncached members
+
+    const hasFrenRole = message.member.roles.cache.has(frenRoleId);
+    const hasNoobiesRole = message.member.roles.cache.has(noobiesRoleId);
+
+    if (hasFrenRole) {
+      if (hasNoobiesRole) {
+        await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (has Fren role)');
+        logger.debug('Removed Noobies role.', { userId: message.author.id });
+      }
+      // Only delete the message count once if it actually exists — avoids a no-op DB call on every message
+      const existingCount = await getMessageCount(message.author.id);
+      if (existingCount > 0) {
+        await deleteMessageCount(message.author.id);
+        logger.debug('Deleted message count for Fren user.', { userId: message.author.id });
+      }
+      return; // Stop processing further
+    }
+
+    const messageCount = await incrementMessageCount(message.author.id);
+    if (messageCount === null) {
+      // DB error occurred — skip role logic to avoid making incorrect role decisions
+      logger.warn('Skipping Noobies role check due to message count DB error.', { userId: message.author.id });
+      return;
+    }
+    const shouldHaveNoobiesRole = messageCount < 100;
+
+    if (shouldHaveNoobiesRole && !hasNoobiesRole) {
+      await message.member.roles.add(noobiesRoleId, 'Assigned Noobies role automatically (< 100 messages)');
+      logger.debug('Assigned Noobies role.', { userId: message.author.id, messageCount });
+    } else if (!shouldHaveNoobiesRole && hasNoobiesRole) {
+      await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (>= 100 messages)');
+      logger.debug('Removed Noobies role.', { userId: message.author.id, messageCount });
+      // Delete message count from database since they passed the threshold
+      await deleteMessageCount(message.author.id);
+    }
+  } catch (error) {
+    logger.error('Error handling role assignment in processUserMessage.', { 
+      err: error, 
+      userId: message.author.id 
+    });
+  }
 }
 
 
@@ -204,7 +256,6 @@ async function checkForBumpMessages(message) {
           const fetchedMessage = await message.fetch();
           if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
             embedsToCheck = fetchedMessage.embeds;
-            message.embeds = fetchedMessage.embeds;
             logger.debug("Fetched message embeds for Disboard check.", {
               label: "messageCreate.js",
               embedCount: fetchedMessage.embeds.length,
@@ -227,9 +278,6 @@ async function checkForBumpMessages(message) {
       
       if (bumpEmbed) {
         logger.debug("Found Disboard bump embed in message.");
-      }
-      
-      if (bumpEmbed) {
         logger.info("Disboard bump detected, scheduling reminder.");
         await handleReminder(message, 7200000, 'bump');
         logger.debug("Bump reminder scheduled for 2 hours.");

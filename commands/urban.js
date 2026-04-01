@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const path = require('path');
 const axios = require('axios');
-const logger = require('../logger')('urban.js');
+const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Command module for searching Urban Dictionary definitions.
@@ -55,7 +56,7 @@ module.exports = {
             const definition = definitions[0];
             const fields = [
                 { name: 'Example', value: definition.example || 'No example provided.' },
-                { name: 'Author', value: definition.author },
+                { name: 'Author', value: definition.author || 'Unknown' },
                 { name: '👍', value: definition.thumbs_up.toString(), inline: true },
                 { name: '👎', value: definition.thumbs_down.toString(), inline: true }
             ];

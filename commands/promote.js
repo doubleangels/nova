@@ -31,7 +31,14 @@ const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 
 /** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
-const PROMOTION_SUBREDDITS = ['discordservers_', 'Discord_Servers_List', 'DiscordAdults'];
+const PROMOTION_SUBREDDITS = ['discordservers_', 'DiscordPromote', 'DiscordServerPromos'];
+
+/** Preferred flair text per subreddit (case-insensitive substring match). Falls back to first available flair if not found. */
+const SUBREDDIT_FLAIR_PREFERENCES = {
+  'discordservers_': 'gaming',
+  'DiscordPromote': 'gaming server',
+  'DiscordServerPromos': '18+ gaming server (minimal nsfw)'
+};
 
 // Cache for OAuth token
 let accessToken = null;
@@ -140,7 +147,7 @@ async function redditApiRequest(method, endpoint, data = null) {
  * @returns {Promise<string>} The promotion title
  */
 async function getPromotionTitle() {
-  return "A 21+ chaos-friendly Discord for banter, games, and late-night oversharing. Be active, match the vibe, or don't stay long.";
+  return "🐸 Da Frens (21+) | High-energy gaming, top-tier banter, and a strict \"no lurkers\" policy.";
 }
 
 /**
@@ -225,11 +232,14 @@ async function postToSubreddit(subredditName, promotionTitle) {
         flairs: availableFlairs,
         totalCount: availableFlairs.length
       });
-      const preferred = flairData.find(f => (f.text || f.flair_text || '').toLowerCase().includes('gaming') || (f.text || f.flair_text || '').toLowerCase().includes('21'));
+      const preferredText = (SUBREDDIT_FLAIR_PREFERENCES[subredditName] || '').toLowerCase();
+      const preferred = preferredText
+        ? flairData.find(f => (f.text || f.flair_text || '').toLowerCase().includes(preferredText))
+        : null;
       const first = flairData[0];
       const flair = preferred || first;
       flairId = flair.id ?? flair.flair_template_id ?? flair.flair_identifier;
-      logger.debug(`Using flair for r/${subredditName}:`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text });
+      logger.debug(`Using flair for r/${subredditName}:`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text, preferredText, matchedPreferred: !!preferred });
     }
   } catch (flairErr) {
     if (flairErr.response?.status === 404 && flairErr.response?.data?.reason === 'banned') {

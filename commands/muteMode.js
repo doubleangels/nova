@@ -56,7 +56,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     
     try {      
       logger.info("/mutemode command initiated.", {

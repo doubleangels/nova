@@ -30,6 +30,36 @@ function cancelMuteKick(userId) {
 }
 
 /**
+ * Sends a DM to the member and kicks them from the guild
+ * @param {GuildMember} member - The member to kick
+ * @param {string} userId - The user ID (for logging)
+ * @param {string} context - 'immediate' or 'timeout' (for log messages)
+ * @returns {Promise<void>}
+ */
+async function executeKick(member, userId, context) {
+  try {
+    const inviteUrl = config.serverInviteUrl;
+    const guildName = await getGuildName();
+    const embed = {
+      color: config.baseEmbedColor,
+      title: 'Kicked for Inactivity',
+      description: `You have been kicked from ${guildName} because you did not send a message within the required time limit.`,
+      fields: [
+        { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
+      ]
+    };
+    await member.send({ embeds: [embed] });
+  } catch (dmError) {
+    logger.warn('Failed to send DM to member before mute kick.', {
+      err: dmError,
+      userTag: member.user.tag
+    });
+  }
+  await member.kick('User did not send a message in time.');
+  logger.info(`Kicked user (${context}).`, { userId });
+}
+
+/**
  * Schedules a mute kick for a user after a specified time period
  * @param {string} userId - The ID of the user to schedule the kick for
  * @param {Date|string} joinTime - When the user joined
@@ -46,12 +76,9 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
   const delay = kickAt.valueOf() - dayjs().valueOf();
   if (delay <= 0) {
     try {
-      // Check if user is still in mute mode before kicking
       const userJoinTime = await getUserJoinTime(userId);
       if (!userJoinTime) {
-        logger.debug('User is no longer in mute mode, skipping immediate kick.', {
-          userId: userId
-        });
+        logger.debug('User is no longer in mute mode, skipping immediate kick.', { userId });
         return;
       }
 
@@ -60,52 +87,23 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
           if (member.user.bot) {
-            logger.debug('Skipping mute kick for bot user.', {
-              userId: userId
-            });
+            logger.debug('Skipping mute kick for bot user.', { userId });
             return;
           }
-
-          try {
-            const inviteUrl = config.serverInviteUrl;
-            const guildName = await getGuildName();
-            const embed = {
-              color: config.baseEmbedColor,
-              title: 'Kicked for Inactivity',
-              description: `You have been kicked from ${guildName} because you did not send a message within the required time limit.`,
-              fields: [
-                { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
-              ]
-            };
-            await member.send({ embeds: [embed] });
-          } catch (dmError) {
-            logger.warn('Failed to send DM to member before mute kick.', {
-              err: dmError,
-              userTag: member.user.tag
-            });
-          }
-          await member.kick('User did not send a message in time.');
-          logger.info('Kicked user immediately on reschedule.', {
-            userId: userId
-          });
+          await executeKick(member, userId, 'immediate');
         }
       }
     } catch (e) {
-      logger.error('Failed to kick user on reschedule.', {
-        err: e,
-        userId: userId
-      });
+      logger.error('Failed to kick user on reschedule.', { err: e, userId });
     }
     return;
   }
+
   const timeoutId = setTimeout(async () => {
     try {
-      // Check if user is still in mute mode before kicking
       const userJoinTime = await getUserJoinTime(userId);
       if (!userJoinTime) {
-        logger.debug('User is no longer in mute mode, skipping kick.', {
-          userId: userId
-        });
+        logger.debug('User is no longer in mute mode, skipping kick.', { userId });
         activeTimeouts.delete(userId);
         return;
       }
@@ -115,42 +113,15 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         const member = await guild.members.fetch(userId).catch(() => null);
         if (member) {
           if (member.user.bot) {
-            logger.debug('Skipping mute kick for bot user.', {
-              userId: userId
-            });
+            logger.debug('Skipping mute kick for bot user.', { userId });
             activeTimeouts.delete(userId);
             return;
           }
-
-          try {
-            const inviteUrl = config.serverInviteUrl;
-            const guildName = await getGuildName();
-            const embed = {
-              color: config.baseEmbedColor,
-              title: 'Kicked for Inactivity',
-              description: `You have been kicked from ${guildName} because you did not send a message within the required time limit.`,
-              fields: [
-                { name: 'Want to rejoin?', value: `You can rejoin at ${inviteUrl}.` }
-              ]
-            };
-            await member.send({ embeds: [embed] });
-          } catch (dmError) {
-            logger.warn('Failed to send DM to member before mute kick.', {
-              err: dmError,
-              userTag: member.user.tag
-            });
-          }
-          await member.kick('User did not send a message in time.');
-          logger.info('Kicked user after timeout.', {
-            userId: userId
-          });
+          await executeKick(member, userId, 'timeout');
         }
       }
     } catch (e) {
-      logger.error('Failed to kick user after timeout.', {
-        err: e,
-        userId: userId
-      });
+      logger.error('Failed to kick user after timeout.', { err: e, userId });
     } finally {
       activeTimeouts.delete(userId);
     }
@@ -158,7 +129,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
 
   activeTimeouts.set(userId, timeoutId);
   logger.debug('Scheduled mute kick for user.', {
-    userId: userId,
+    userId,
     delayMinutes: Math.round(delay / 1000 / 60)
   });
 }

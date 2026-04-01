@@ -88,9 +88,9 @@ module.exports = {
         });
       }
 
-      // Schedule periodic cleanup every hour
+      // Schedule periodic cleanup every hour; store reference so it can be cleared on shutdown
       const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
-      setInterval(async () => {
+      client.cleanupInterval = setInterval(async () => {
         try {
           await cleanupOldTrackingUsers(client);
         } catch (error) {
@@ -111,6 +111,16 @@ module.exports = {
         logger.error('Failed to initialize invite usage tracking.', {
           err: error
         });
+      }
+
+      // Check and log NOOBIES tracking status
+      if (config.noobiesRoleId && config.givePermsFrenRoleId) {
+        logger.info('Noobie message tracking initialized.', {
+          noobiesRoleId: config.noobiesRoleId,
+          frenRoleId: config.givePermsFrenRoleId
+        });
+      } else {
+        logger.warn('Noobie message tracking is disabled (missing role IDs in config).');
       }
 
       logger.info('Bot is ready and all systems are initialized.');
