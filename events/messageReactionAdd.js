@@ -55,36 +55,14 @@ module.exports = {
         userTag: user.tag
       });
     } catch (error) {
+      // Do not rethrow — event handlers have no caller to receive the error.
+      // Rethrowing here causes an unhandled promise rejection.
       logger.error('Error processing reaction', {
         err: error,
-        emoji: reaction.emoji.name,
+        emoji: reaction.emoji?.name,
         userId: user.id,
-        messageId: reaction.message.id
+        messageId: reaction.message?.id
       });
-
-      let errorMessage = "⚠️ An unexpected error occurred while processing the reaction.";
-
-      if (error.message === "⚠️ Failed to fetch reaction data.") {
-        errorMessage = "⚠️ Failed to fetch reaction data.";
-      } else if (error.message === "⚠️ Invalid translation flag provided.") {
-        errorMessage = "⚠️ Invalid translation flag provided.";
-      } else if (error.message === "⚠️ No text to translate found in the message.") {
-        errorMessage = "⚠️ No text to translate found in the message.";
-      } else if (error.message === "⚠️ Translation API error occurred.") {
-        errorMessage = "⚠️ Translation API error occurred.";
-      } else if (error.message === "⚠️ Failed to translate the message.") {
-        errorMessage = "⚠️ Failed to translate the message.";
-      } else if (error.message === "⚠️ Message not found for translation.") {
-        errorMessage = "⚠️ Message not found for translation.";
-      } else if (error.message === "⚠️ Insufficient permissions to process reaction.") {
-        errorMessage = "⚠️ Insufficient permissions to process reaction.";
-      } else if (error.message === "⚠️ Invalid reaction data received.") {
-        errorMessage = "⚠️ Invalid reaction data received.";
-      } else if (error.message === "⚠️ Failed to send temporary message.") {
-        errorMessage = "⚠️ Failed to send temporary message.";
-      }
-
-      throw new Error(errorMessage);
     }
   }
 };

@@ -378,7 +378,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     }, delay);
 
   } catch (error) {
-    await handleError(error, 'handleReminder');
+    logger.error('Unexpected error in handleReminder.', { err: error });
   }
 }
 
@@ -646,7 +646,6 @@ async function rescheduleReminder(client) {
     logger.error("Error in rescheduleReminder", {
       err: error
     });
-    await handleError(error, 'rescheduleReminder');
   }
 }
 

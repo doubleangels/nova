@@ -1,7 +1,7 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
-const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount } = require('../utils/database');
+const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
@@ -256,7 +256,6 @@ async function checkForBumpMessages(message) {
           const fetchedMessage = await message.fetch();
           if (fetchedMessage.embeds && fetchedMessage.embeds.length > 0) {
             embedsToCheck = fetchedMessage.embeds;
-            message.embeds = fetchedMessage.embeds;
             logger.debug("Fetched message embeds for Disboard check.", {
               label: "messageCreate.js",
               embedCount: fetchedMessage.embeds.length,
