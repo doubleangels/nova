@@ -31,7 +31,7 @@ const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 
 /** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
-const PROMOTION_SUBREDDITS = ['discordservers_', /* 'Discord_Servers_List', */ 'DiscordPromote', 'DiscordServerPromos'];
+const PROMOTION_SUBREDDITS = ['discordservers_', 'DiscordPromote', 'DiscordServerPromos'];
 
 /** Preferred flair text per subreddit (case-insensitive substring match). Falls back to first available flair if not found. */
 const SUBREDDIT_FLAIR_PREFERENCES = {
@@ -147,7 +147,7 @@ async function redditApiRequest(method, endpoint, data = null) {
  * @returns {Promise<string>} The promotion title
  */
 async function getPromotionTitle() {
-  return "A 21+ chaos-friendly Discord for banter, games, and late-night oversharing. Be active, match the vibe, or don't stay long.";
+  return "🐸 Da Frens (21+) | High-energy gaming, top-tier banter, and a strict \"no lurkers\" policy.";
 }
 
 /**
