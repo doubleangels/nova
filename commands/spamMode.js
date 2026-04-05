@@ -2,7 +2,6 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } =
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
-const { sendSpamAlertTestPreview } = require('../utils/spamModeUtils');
 
 /**
  * Command module for managing server-wide spam mode settings.
@@ -51,24 +50,6 @@ module.exports = {
             .setRequired(false)
         )
     )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('test')
-        .setDescription('Post a test spam alert embed in the warning channel (preview only).')
-        .addUserOption(option =>
-          option
-            .setName('target')
-            .setDescription('User shown in the embed (defaults to the bot — safest for trying buttons)')
-            .setRequired(false)
-        )
-        .addStringOption(option =>
-          option
-            .setName('message')
-            .setDescription('Sample normalized message text for the embed')
-            .setRequired(false)
-            .setMaxLength(500)
-        )
-    )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
   /**
@@ -99,9 +80,6 @@ module.exports = {
           break;
         case 'set':
           await this.handleSetSubcommand(interaction);
-          break;
-        case 'test':
-          await this.handleTestSubcommand(interaction);
           break;
       }
       
@@ -144,57 +122,6 @@ module.exports = {
    * @throws {Error} If there's an error updating settings
    * @returns {Promise<void>}
    */
-  /**
-   * Posts a test spam alert embed to the configured warning channel.
-   *
-   * @param {CommandInteraction} interaction
-   * @returns {Promise<void>}
-   */
-  async handleTestSubcommand(interaction) {
-    const guild = interaction.guild;
-    if (!guild) {
-      await interaction.editReply({ content: '⚠️ This command must be used in a server.' });
-      return;
-    }
-
-    const channel = interaction.channel;
-    if (!channel || !channel.isTextBased()) {
-      await interaction.editReply({ content: '⚠️ Run this command from a text channel.' });
-      return;
-    }
-
-    const targetUser = interaction.options.getUser('target') ?? interaction.client.user;
-    const sampleMessage = interaction.options.getString('message') ?? undefined;
-
-    const channelName = 'name' in channel && typeof channel.name === 'string' ? channel.name : 'channel';
-
-    const result = await sendSpamAlertTestPreview(guild, targetUser, {
-      sampleContent: sampleMessage,
-      channelId: channel.id,
-      channelName
-    });
-
-    if (result.ok) {
-      const warningChannelId = await getValue('spam_mode_channel_id');
-      const warnCh = warningChannelId ? guild.channels.cache.get(warningChannelId) : null;
-      const where = warnCh ? `${warnCh}` : (warningChannelId ? `<#${warningChannelId}>` : 'the warning channel');
-      await interaction.editReply({
-        content:
-          `Posted a **test** spam alert showing ${targetUser}. Check ${where}.\n` +
-          '_Buttons target that user — use the bot as `target` if you only want to try dismiss._'
-      });
-    } else {
-      await interaction.editReply({ content: `⚠️ ${result.error}` });
-    }
-
-    logger.info('/spammode test completed.', {
-      userId: interaction.user.id,
-      guildId: guild.id,
-      ok: result.ok,
-      targetUserId: targetUser.id
-    });
-  },
-
   async handleSetSubcommand(interaction) {
     const enabled = interaction.options.getBoolean('enabled');
     const threshold = interaction.options.getInteger('threshold');

@@ -117,6 +117,60 @@ function containsLink(content) {
   return DISCORD_INVITE_PATTERN.test(content) || URL_PATTERN.test(content);
 }
 
+/**
+ * Short preview of message text for mod summaries (stored per tracked occurrence).
+ * @param {string} text
+ * @param {number} [maxLen]
+ * @returns {string}
+ */
+function truncateContentPreview(text, maxLen = 120) {
+  const t = (text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return '(empty or attachments only)';
+  if (t.length <= maxLen) return t;
+  return `${t.slice(0, maxLen - 1)}…`;
+}
+
+/**
+ * Human-readable breakdown of duplicate messages by channel (before deletion).
+ * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string, contentPreview?: string }>} occurrences
+ * @returns {string}
+ */
+function formatDeletedMessagesSummary(occurrences) {
+  if (!occurrences?.length) return '_No details_';
+
+  const sorted = [...occurrences].sort((a, b) => a.timestamp - b.timestamp);
+  const channelOrder = [];
+  const seen = new Set();
+  for (const occ of sorted) {
+    if (!seen.has(occ.channelId)) {
+      seen.add(occ.channelId);
+      channelOrder.push(occ.channelId);
+    }
+  }
+
+  const lines = [];
+  const maxTotal = 1000;
+
+  for (const chId of channelOrder) {
+    const inChannel = sorted.filter(o => o.channelId === chId);
+    const name = inChannel[0].channelName || 'unknown';
+    lines.push(`**#${name}** · ${inChannel.length} message${inChannel.length === 1 ? '' : 's'}`);
+    for (const occ of inChannel) {
+      const preview =
+        occ.contentPreview != null && String(occ.contentPreview).trim() !== ''
+          ? occ.contentPreview
+          : '(preview unavailable)';
+      lines.push(`• ${preview}`);
+    }
+  }
+
+  let out = lines.join('\n');
+  if (out.length > maxTotal) {
+    out = `${out.slice(0, maxTotal - 24)}\n_(summary truncated)_`;
+  }
+  return out || '_No details_';
+}
+
 /** Prefix for spam-alert moderation buttons (handled in interactionCreate). */
 const SPAM_WARN_BUTTON_PREFIX = 'spamWarn';
 
@@ -157,101 +211,37 @@ function buildSpamWarningButtons(targetUserId) {
 }
 
 /**
- * Builds the spam alert embed and button row (shared by real alerts and admin test previews).
+ * Builds the spam alert embed and button row.
  * @param {import('discord.js').User} user
- * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string }>} occurrences
- * @param {string} content
+ * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string, contentPreview?: string }>} occurrences
  * @param {boolean} dmSent
- * @param {boolean} [isTest]
  */
-function buildSpamWarningPayload(user, occurrences, content, dmSent, isTest = false) {
-  const uniqueChannels = [...new Set(occurrences.map(occ => occ.channelName))];
-  const channelMentions = uniqueChannels.map(name => `#${name}`).join(', ');
+function buildSpamWarningPayload(user, occurrences, dmSent) {
   const dmStatusValue = dmSent ? '✅ Sent' : '❌ Failed';
+  const summary = formatDeletedMessagesSummary(occurrences);
 
   const embed = new EmbedBuilder()
     .setColor(0xFF0000)
-    .setTitle(
-      isTest
-        ? '🔤 Spam Detected — Duplicate Content (test)'
-        : '🔤 Spam Detected — Duplicate Content'
-    );
-
-  if (isTest) {
-    embed.setDescription(
-      '_Preview only — no automatic timeout was applied. Buttons apply to the user shown in this embed._'
-    );
-    embed.setFooter({ text: 'Admin test via /spammode test' });
-  } else {
-    embed.setDescription(
+    .setTitle('🔤 Spam Detected — Duplicate Content')
+    .setDescription(
       '_A 10-minute timeout was applied automatically. Use the buttons below for further action._'
+    )
+    .addFields(
+      { name: 'User', value: `${user} (${user.tag})`, inline: true },
+      { name: 'User ID', value: user.id, inline: true },
+      { name: 'DM notification', value: dmStatusValue, inline: true },
+      { name: 'Occurrences', value: `${occurrences.length}`, inline: true },
+      {
+        name: 'Messages removed (by channel)',
+        value: summary,
+        inline: false
+      }
     );
-  }
-
-  embed.addFields(
-    { name: 'User', value: `${user} (${user.tag})`, inline: true },
-    { name: 'User ID', value: user.id, inline: true },
-    { name: 'DM notification', value: dmStatusValue, inline: true },
-    { name: 'Occurrences', value: `${occurrences.length}`, inline: true },
-    { name: 'Channels', value: channelMentions || 'Unknown', inline: false },
-    {
-      name: 'Message content (normalized)',
-      value: content.substring(0, 500) || 'No content',
-      inline: false
-    }
-  );
 
   return {
     embeds: [embed],
     components: [buildSpamWarningButtons(user.id)]
   };
-}
-
-/**
- * Posts a test spam alert to the configured warning channel (for /spammode test).
- * @param {import('discord.js').Guild} guild
- * @param {import('discord.js').User} displayUser
- * @param {{ sampleContent?: string, channelId: string, channelName: string }} meta
- * @returns {Promise<{ ok: true }|{ ok: false, error: string }>}
- */
-async function sendSpamAlertTestPreview(guild, displayUser, meta) {
-  const warningChannelId = await getValue('spam_mode_channel_id');
-  if (!warningChannelId) {
-    return { ok: false, error: 'No spam warning channel is configured. Set one with `/spammode set`.' };
-  }
-
-  const warningChannel = await guild.channels.fetch(warningChannelId).catch(() => null);
-  if (!warningChannel) {
-    return { ok: false, error: 'The configured spam warning channel could not be found.' };
-  }
-
-  if (!warningChannel.permissionsFor(guild.members.me)?.has(['SendMessages', 'EmbedLinks'])) {
-    return { ok: false, error: 'The bot cannot send embeds in the spam warning channel.' };
-  }
-
-  const sampleContent =
-    meta.sampleContent?.trim() ||
-    'this is sample duplicate message content used only for the admin preview';
-
-  const occurrences = [
-    {
-      channelId: meta.channelId,
-      channelName: meta.channelName || 'channel',
-      timestamp: Date.now(),
-      messageId: '0'
-    }
-  ];
-
-  const payload = buildSpamWarningPayload(displayUser, occurrences, sampleContent, false, true);
-
-  await warningChannel.send(payload);
-  logger.info('Posted test spam alert preview.', {
-    guildId: guild.id,
-    warningChannelId,
-    displayUserId: displayUser.id
-  });
-
-  return { ok: true };
 }
 
 // ── Core user-state helpers ───────────────────────────────────────────────────
@@ -414,7 +404,8 @@ async function trackNewUserMessage(message) {
       channelId: message.channel.id,
       channelName: message.channel.name,
       timestamp: messageTimestamp,
-      messageId: message.id
+      messageId: message.id,
+      contentPreview: truncateContentPreview(contentWithoutEmotes)
     };
 
     logger.debug('Spam mode: Tracking message for new user.', {
@@ -503,7 +494,7 @@ async function trackNewUserMessage(message) {
         }
 
         // Notify mods (with DM status) and apply timeout
-        await postSpamWarning(message.guild, message.author, existingOccurrences, normalizedContent, dmSent);
+        await postSpamWarning(message.guild, message.author, existingOccurrences, dmSent);
         await timeoutUser(message.guild, message.author, 600, 'Spam detected: duplicate or similar messages');
 
         // Remove this specific content key so future messages aren't caught
@@ -595,12 +586,11 @@ async function deleteOffendingMessages(guild, occurrences) {
  * Posts a mod-channel warning embed when duplicate spam is detected.
  * @param {import('discord.js').Guild} guild
  * @param {import('discord.js').User} user
- * @param {Array} occurrences
- * @param {string} content - Normalized message content
+ * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string, contentPreview?: string }>} occurrences
  * @param {boolean} dmSent - Whether a DM notification was successfully sent to the user.
  * @returns {Promise<void>}
  */
-async function postSpamWarning(guild, user, occurrences, content, dmSent = false) {
+async function postSpamWarning(guild, user, occurrences, dmSent = false) {
   if (!guild) return;
 
   try {
@@ -618,7 +608,7 @@ async function postSpamWarning(guild, user, occurrences, content, dmSent = false
       return;
     }
 
-    const payload = buildSpamWarningPayload(user, occurrences, content, dmSent, false);
+    const payload = buildSpamWarningPayload(user, occurrences, dmSent);
     await warningChannel.send(payload);
     logger.info('Posted spam warning to channel for user.', {
       channelName: warningChannel.name,
@@ -933,6 +923,5 @@ async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected
 
 module.exports = {
   trackNewUserMessage,
-  handleSpamWarningButton,
-  sendSpamAlertTestPreview
+  handleSpamWarningButton
 };
