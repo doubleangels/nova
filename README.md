@@ -18,6 +18,7 @@ A feature-rich Discord bot designed to bring advanced functionalities to your Di
   - [PirateWeather](https://pirateweather.net/) - For weather forecasts
   - [MyAnimeList](https://myanimelist.net/apiconfig) - Client ID for anime information
   - [Reddit](https://www.reddit.com/prefs/apps) - Client ID and Client Secret
+- [Sentry](https://sentry.io/) - DSN for error monitoring (optional but recommended)
 - Docker and Docker Compose
 
 ### Docker Deployment
@@ -81,8 +82,8 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `REDDIT_PASSWORD`
 - `REDDIT_USERNAME`
 - `SEARCH_ENGINE_ID`
+- `SENTRY_DSN`
 - `SERVER_INVITE_URL`
-<!-- Spotify env vars removed -->
 
 Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
 
@@ -94,14 +95,15 @@ Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` w
 - **OMDB**: Movie and TV show information
 - **PirateWeather**: Weather forecasts and conditions
 - **MyAnimeList**: Anime and manga information
-- **Reddit**: Server promotion and content sharing
+- **Reddit**: Server promotion and content sharing across multiple subreddits
+- **Sentry**: Automatic error monitoring and alerting across all bot events and commands
 - **Wikipedia**: Article summaries and information
 
 ### Administrative Tools
 
 - **Invite Tracking**: Monitor and tag invite codes with custom names, receive notifications when members join via tagged invites (only tagged invites are tracked)
 - **Role Management**: Assign custom roles with automatic permission management
-- **Reminder System**: Automated reminders for Disboard and Reddit promotions
+- **Reminder System**: Automated reminders for Disboard bumps and Reddit promotions (r/findaserver and r/needafriend)
 - **Mute Mode**: Automatically kick inactive users
 - **Troll Mode**: Kick new accounts that don't meet age requirements
 - **Spam Mode**: Enhanced spam detection and moderation
@@ -151,11 +153,18 @@ Configure and manage server reminders for Disboard and Reddit promotions.
   - `role` (required): The role to ping when reminders are sent
 - **`status`**: Check the current reminder configuration and status
   - Shows next scheduled bump time for Disboard
-  - Shows next scheduled promotion time for Reddit
+  - Shows next scheduled promotion time for Reddit (r/findaserver)
+  - Shows next scheduled comment time for r/needafriend
 
 #### `/promote` (Administrator Only)
 
-Post server advertisements to Reddit (r/findaserver) with automatic cooldown management. The bot enforces a 24-hour cooldown between promotions.
+Post a server advertisement link post to Reddit (r/findaserver) with automatic cooldown management. The post includes a full server description as the body text. The bot enforces a 24-hour cooldown between promotions and schedules a reminder when the cooldown expires.
+
+**Requirements:** Reddit API credentials must be configured.
+
+#### `/needafriend` (Administrator Only)
+
+Comment the server advertisement on the weekly "Weekly Discord Server Advertisement Thread" pinned post in r/needafriend. The bot searches the hot and new listings to locate the current week's thread, then posts the comment. A 7-day cooldown is enforced between uses, with a reminder scheduled for the next available time.
 
 **Requirements:** Reddit API credentials must be configured.
 
@@ -266,12 +275,13 @@ Manage automatic kicking of new members based on account age requirements.
 
 #### `/fix` (Administrator Only)
 
-Fix reminder data in the database for various reminder types.
+Fix reminder data in the database for various reminder types. Use this if a reminder gets stuck or shows the wrong time.
 
 **Subcommands:**
 
 - **`disboard`**: Fix Disboard bump reminder data (reschedules for 2 hours from now)
 - **`reddit`**: Fix Reddit promotion reminder data (reschedules for 24 hours from now)
+- **`needafriend`**: Fix r/needafriend comment reminder data (reschedules for 7 days from now)
 
 **Note:** Reminder configuration must be set up using `/reminder setup` before using this command.
 
