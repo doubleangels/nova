@@ -156,7 +156,7 @@ module.exports = {
           .setColor(0xff4500)
           .setTitle('r/needafriend weekly thread')
           .setDescription(
-            `Comment posted on [${WEEKLY_THREAD_TITLE}](https://www.reddit.com${post.permalink}).\n\n[View your comment](${commentUrl})`
+            `Comment posted on [${WEEKLY_THREAD_TITLE}](https://www.reddit.com${post.permalink}).`
           );
         const mockMessage = { client: interaction.client };
         await handleReminder(mockMessage, NEEDAFRIEND_REMINDER_MS, 'needafriend');
