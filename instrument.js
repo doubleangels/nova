@@ -4,6 +4,7 @@
  */
 require('dotenv').config();
 const Sentry = require('@sentry/node');
+const pkg = require('./package.json');
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -16,9 +17,9 @@ Sentry.init({
 
   enableLogs: true,
 
-  environment: process.env.SENTRY_ENVIRONMENT || process.env.NODE_ENV || 'production',
+  environment: process.env.NODE_ENV || 'production',
 
-  release: process.env.SENTRY_RELEASE || undefined
+  release: `${pkg.name}@${pkg.version}`
 });
 
 /**
