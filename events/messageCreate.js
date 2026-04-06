@@ -1,5 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const config = require('../config');
 const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
@@ -54,6 +55,7 @@ module.exports = {
           await trackNewUserMessage(message);
         }
       } catch (error) {
+        captureError(error, { event: 'messageCreate', handler: 'spamMode' });
         logger.error("Error occurred while checking spam mode or tracking new user message.", {
           err: error,
           messageId: message.id
@@ -126,6 +128,7 @@ module.exports = {
             content: message.content
           });
         } catch (error) {
+          captureError(error, { event: 'messageCreate', handler: 'noTextChannelDelete' });
           logger.error("Failed to delete message in no-text channel.", {
             err: error,
             channelId: message.channelId,
@@ -139,6 +142,7 @@ module.exports = {
       }
 
     } catch (error) {
+      captureError(error, { event: 'messageCreate' });
       logger.error('Error occurred while processing message.', {
         err: error,
         userId: message.author.id,
@@ -219,6 +223,7 @@ async function processUserMessage(message) {
       await deleteMessageCount(message.author.id);
     }
   } catch (error) {
+    captureError(error, { event: 'messageCreate', handler: 'processUserMessage' });
     logger.error('Error handling role assignment in processUserMessage.', { 
       err: error, 
       userId: message.author.id 
@@ -293,6 +298,7 @@ async function checkForBumpMessages(message) {
       });
     }
   } catch (error) {
+    captureError(error, { event: 'messageCreate', handler: 'checkForBumpMessages' });
     logger.error("Failed to process bump message.", {
       err: error,
       messageId: message.id,

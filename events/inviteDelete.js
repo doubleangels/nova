@@ -1,6 +1,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const { getInviteUsage, setInviteUsage, getInviteCodeToTagMap } = require('../utils/database');
 
 module.exports = {
@@ -62,6 +63,7 @@ module.exports = {
         });
       }
     } catch (error) {
+      captureError(error, { event: 'inviteDelete' });
       logger.error('Error occurred while cleaning up deleted invite from tracking.', {
         err: error,
         inviteCode: invite.code,

@@ -1,6 +1,8 @@
 const path = require('path');
+const { captureError } = require('../instrument');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
+const { handleSpamWarningButton } = require('../utils/spamModeUtils');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -17,6 +19,11 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
+    if (interaction.isButton() && interaction.customId.startsWith('spamWarn:')) {
+      await handleSpamWarningButton(interaction);
+      return;
+    }
+
     // Handle autocomplete interactions
     if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);
@@ -32,6 +39,7 @@ module.exports = {
           await command.autocomplete(interaction);
         }
       } catch (error) {
+        captureError(error, { handler: 'autocomplete', command: interaction.commandName });
         logger.error('Error occurred while handling autocomplete request.', {
           err: error,
           commandName: interaction.commandName
@@ -53,6 +61,7 @@ module.exports = {
     try {
       await command.execute(interaction);
     } catch (error) {
+      captureError(error, { handler: 'command', command: interaction.commandName });
       logger.error('Error occurred while executing command.', {
         err: error,
         commandName: interaction.commandName,

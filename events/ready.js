@@ -1,6 +1,7 @@
 const { ActivityType, Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const config = require('../config');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
@@ -83,6 +84,7 @@ module.exports = {
         await cleanupOldTrackingUsers(client);
         logger.info('Initial cleanup of old tracking users completed.');
       } catch (error) {
+        captureError(error, { event: 'ready', handler: 'initialCleanup' });
         logger.error('Failed to run initial cleanup.', {
           err: error
         });
@@ -94,6 +96,7 @@ module.exports = {
         try {
           await cleanupOldTrackingUsers(client);
         } catch (error) {
+          captureError(error, { event: 'ready', handler: 'scheduledCleanup' });
           logger.error('Error occurred during scheduled cleanup.', {
             err: error
           });
@@ -108,6 +111,7 @@ module.exports = {
         await initializeInviteUsage(client);
         logger.info('Invite usage tracking initialized for the guild.');
       } catch (error) {
+        captureError(error, { event: 'ready', handler: 'initializeInviteUsage' });
         logger.error('Failed to initialize invite usage tracking.', {
           err: error
         });
@@ -124,7 +128,9 @@ module.exports = {
       }
 
       logger.info('Bot is ready and all systems are initialized.');
+
     } catch (error) {
+      captureError(error, { event: 'ready' });
       logger.error('Error occurred in ready event.', {
         err: error,
         clientId: client.user?.id,

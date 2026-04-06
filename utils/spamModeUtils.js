@@ -1,6 +1,13 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { EmbedBuilder } = require('discord.js');
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  PermissionFlagsBits,
+  MessageFlags
+} = require('discord.js');
 const dayjs = require('dayjs');
 const { getValue, getSpamModeJoinTime, removeSpamModeJoinTime } = require('./database');
 
@@ -9,16 +16,7 @@ const { getValue, getSpamModeJoinTime, removeSpamModeJoinTime } = require('./dat
 /** @type {Map<string, Map<string, Array>>} userId -> normalizedContent -> message occurrences */
 const userMessageTracker = new Map();
 
-/** @type {Map<string, number[]>} userId -> array of recent message timestamps (flood detection) */
-const userFloodTracker = new Map();
-
 // ── Detection constants ───────────────────────────────────────────────────────
-
-/** Number of messages within the flood window to trigger a flood alert */
-const FLOOD_MESSAGE_COUNT = 6;
-
-/** Flood detection window in milliseconds (30 seconds) */
-const FLOOD_WINDOW_MS = 30_000;
 
 /** Levenshtein similarity ratio above which two messages are treated as duplicates */
 const SIMILARITY_THRESHOLD = 0.85;
@@ -120,21 +118,130 @@ function containsLink(content) {
 }
 
 /**
- * Records a message timestamp for flood/velocity detection.
- * Returns true if the user has hit the flood threshold within the window.
- * @param {string} userId
- * @param {number} timestamp - Unix millisecond timestamp
- * @returns {boolean}
+ * Short preview of message text for mod summaries (stored per tracked occurrence).
+ * @param {string} text
+ * @param {number} [maxLen]
+ * @returns {string}
  */
-function checkFlood(userId, timestamp) {
-  const windowStart = timestamp - FLOOD_WINDOW_MS;
-  if (!userFloodTracker.has(userId)) userFloodTracker.set(userId, []);
+function truncateContentPreview(text, maxLen = 120) {
+  const t = (text || '').replace(/\s+/g, ' ').trim();
+  if (!t) return '(empty or attachments only)';
+  if (t.length <= maxLen) return t;
+  return `${t.slice(0, maxLen - 1)}…`;
+}
 
-  const recent = userFloodTracker.get(userId).filter(t => t > windowStart);
-  recent.push(timestamp);
-  userFloodTracker.set(userId, recent);
+/**
+ * Human-readable breakdown of duplicate messages by channel (before deletion).
+ * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string, contentPreview?: string }>} occurrences
+ * @returns {string}
+ */
+function formatDeletedMessagesSummary(occurrences) {
+  if (!occurrences?.length) return '_No details_';
 
-  return recent.length >= FLOOD_MESSAGE_COUNT;
+  const sorted = [...occurrences].sort((a, b) => a.timestamp - b.timestamp);
+  const channelOrder = [];
+  const seen = new Set();
+  for (const occ of sorted) {
+    if (!seen.has(occ.channelId)) {
+      seen.add(occ.channelId);
+      channelOrder.push(occ.channelId);
+    }
+  }
+
+  const lines = [];
+  const maxTotal = 1000;
+
+  for (const chId of channelOrder) {
+    const inChannel = sorted.filter(o => o.channelId === chId);
+    const name = inChannel[0].channelName || 'unknown';
+    lines.push(`**#${name}** · ${inChannel.length} message${inChannel.length === 1 ? '' : 's'}`);
+    for (const occ of inChannel) {
+      const preview =
+        occ.contentPreview != null && String(occ.contentPreview).trim() !== ''
+          ? occ.contentPreview
+          : '(preview unavailable)';
+      lines.push(`• ${preview}`);
+    }
+  }
+
+  let out = lines.join('\n');
+  if (out.length > maxTotal) {
+    out = `${out.slice(0, maxTotal - 24)}\n_(summary truncated)_`;
+  }
+  return out || '_No details_';
+}
+
+/** Prefix for spam-alert moderation buttons (handled in interactionCreate). */
+const SPAM_WARN_BUTTON_PREFIX = 'spamWarn';
+
+/**
+ * @param {string} customId
+ * @returns {{ action: string, targetUserId?: string }|null}
+ */
+function parseSpamWarnButtonId(customId) {
+  const parts = customId.split(':');
+  if (parts[0] !== SPAM_WARN_BUTTON_PREFIX || parts.length < 2) return null;
+  if (parts[1] === 'dismiss') return { action: 'dismiss' };
+  if (parts.length !== 3) return null;
+  const action = parts[1];
+  const targetUserId = parts[2];
+  if (!/^\d{17,20}$/.test(targetUserId)) return null;
+  return { action, targetUserId };
+}
+
+function buildSpamWarningButtons(targetUserId) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${SPAM_WARN_BUTTON_PREFIX}:timeout1h:${targetUserId}`)
+      .setLabel('Timeout 1h')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`${SPAM_WARN_BUTTON_PREFIX}:kick:${targetUserId}`)
+      .setLabel('Kick')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`${SPAM_WARN_BUTTON_PREFIX}:ban:${targetUserId}`)
+      .setLabel('Ban')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`${SPAM_WARN_BUTTON_PREFIX}:dismiss`)
+      .setLabel('Dismiss')
+      .setStyle(ButtonStyle.Secondary)
+  );
+}
+
+/**
+ * Builds the spam alert embed and button row.
+ * @param {import('discord.js').User} user
+ * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string, contentPreview?: string }>} occurrences
+ * @param {boolean} dmSent
+ */
+function buildSpamWarningPayload(user, occurrences, dmSent) {
+  const dmStatusValue = dmSent ? '✅ Sent' : '❌ Failed';
+  const summary = formatDeletedMessagesSummary(occurrences);
+
+  const embed = new EmbedBuilder()
+    .setColor(0xFF0000)
+    .setTitle('🔤 Spam Detected — Duplicate Content')
+    .setDescription(
+      '_A 10-minute timeout was applied automatically. Use the buttons below for further action._'
+    )
+    .addFields(
+      { name: 'User', value: `${user} (${user.tag})`, inline: true },
+      { name: 'User ID', value: user.id, inline: true },
+      { name: 'DM notification', value: dmStatusValue, inline: true },
+      { name: 'Occurrences', value: `${occurrences.length}`, inline: true },
+      {
+        name: 'Messages removed (by channel)',
+        value: summary,
+        inline: false
+      }
+    );
+
+  return {
+    embeds: [embed],
+    components: [buildSpamWarningButtons(user.id)]
+  };
 }
 
 // ── Core user-state helpers ───────────────────────────────────────────────────
@@ -191,7 +298,6 @@ function cleanupUserEntries(userId, cutoffTime) {
 
 /**
  * Tracks a message from a new user and checks for spam patterns:
- *  - Message flood / velocity (≥6 messages in 30 s)
  *  - Duplicate or similar content (Levenshtein ≥85%)
  *  - Link / Discord invite spam (bypasses length filter, lower threshold)
  *  - Cross-channel spam (lower threshold when channels differ)
@@ -208,7 +314,6 @@ async function trackNewUserMessage(message) {
     if (!isNew) {
       logger.debug('Spam mode: User is not new, removing from tracking.', { userId });
       await removeSpamModeJoinTime(userId);
-      userFloodTracker.delete(userId);
       return;
     }
 
@@ -219,46 +324,6 @@ async function trackNewUserMessage(message) {
     }
 
     const messageTimestamp = message.createdTimestamp || dayjs().valueOf();
-
-    // ── Flood / velocity check ────────────────────────────────────────────
-    const isFlooding = checkFlood(userId, messageTimestamp);
-    if (isFlooding) {
-      logger.warn('[SPAM MODE] New user exceeded message velocity threshold (flood).', {
-        userId,
-        username: message.author.tag,
-        floodCount: FLOOD_MESSAGE_COUNT,
-        windowMs: FLOOD_WINDOW_MS
-      });
-
-      const floodOccurrence = [{
-        channelId: message.channel.id,
-        channelName: message.channel.name,
-        timestamp: messageTimestamp,
-        messageId: message.id
-      }];
-
-      // Try to DM the user about the flood before timing them out
-      let floodDmSent = false;
-      try {
-        await message.author.send(
-          `⚠️ **Spam Detected — Message Flood**\n\n` +
-          `You have been sending messages too quickly. You have been automatically timed out for **10 minutes**.\n\n` +
-          `Please slow down and read existing messages before sending new ones. Thank you!`
-        );
-        floodDmSent = true;
-        logger.debug('Sent flood-detection DM to user.', { userId });
-      } catch (dmErr) {
-        logger.debug('Could not DM user about flood detection (DMs may be disabled).', { err: dmErr, userId });
-      }
-
-      // Warn mods and timeout the user
-      await postSpamWarning(message.guild, message.author, floodOccurrence, '[message flood — velocity limit exceeded]', floodDmSent);
-      await timeoutUser(message.guild, message.author, 600);
-
-      // Reset flood tracker so repeated floods each get their own timeout
-      userFloodTracker.delete(userId);
-      return;
-    }
 
     // ── Strip custom emotes from content ─────────────────────────────────
     let contentWithoutEmotes = (message.content || '').replace(/<a?:\w+:\d+>/g, '').trim();
@@ -339,7 +404,8 @@ async function trackNewUserMessage(message) {
       channelId: message.channel.id,
       channelName: message.channel.name,
       timestamp: messageTimestamp,
-      messageId: message.id
+      messageId: message.id,
+      contentPreview: truncateContentPreview(contentWithoutEmotes)
     };
 
     logger.debug('Spam mode: Tracking message for new user.', {
@@ -428,8 +494,8 @@ async function trackNewUserMessage(message) {
         }
 
         // Notify mods (with DM status) and apply timeout
-        await postSpamWarning(message.guild, message.author, existingOccurrences, normalizedContent, dmSent);
-        await timeoutUser(message.guild, message.author, 600);
+        await postSpamWarning(message.guild, message.author, existingOccurrences, dmSent);
+        await timeoutUser(message.guild, message.author, 600, 'Spam detected: duplicate or similar messages');
 
         // Remove this specific content key so future messages aren't caught
         // by stale data; they'll be re-evaluated fresh.
@@ -517,17 +583,14 @@ async function deleteOffendingMessages(guild, occurrences) {
 }
 
 /**
- * Posts a mod-channel warning embed when spam is detected.
+ * Posts a mod-channel warning embed when duplicate spam is detected.
  * @param {import('discord.js').Guild} guild
  * @param {import('discord.js').User} user
- * @param {Array} occurrences
- * @param {string} content - Normalized message content (or label for flood)
+ * @param {Array<{ channelId: string, channelName: string, timestamp: number, messageId: string, contentPreview?: string }>} occurrences
+ * @param {boolean} dmSent - Whether a DM notification was successfully sent to the user.
  * @returns {Promise<void>}
  */
-/**
- * @param {boolean} dmSent - Whether a DM notification was successfully sent to the user.
- */
-async function postSpamWarning(guild, user, occurrences, content, dmSent = false) {
+async function postSpamWarning(guild, user, occurrences, dmSent = false) {
   if (!guild) return;
 
   try {
@@ -545,24 +608,8 @@ async function postSpamWarning(guild, user, occurrences, content, dmSent = false
       return;
     }
 
-    const uniqueChannels = [...new Set(occurrences.map(occ => occ.channelName))];
-    const channelMentions = uniqueChannels.map(name => `#${name}`).join(', ');
-
-    const dmStatusValue = dmSent ? '✅ Sent' : '❌ Failed';
-
-    const embed = new EmbedBuilder()
-      .setColor(0xFF0000)
-      .setTitle('🔤 Spam Detected')
-      .addFields(
-        { name: 'User', value: `${user} (${user.tag})`, inline: true },
-        { name: 'User ID', value: user.id, inline: true },
-        { name: 'DM Notification', value: dmStatusValue, inline: true },
-        { name: 'Occurrences', value: `${occurrences.length}`, inline: true },
-        { name: 'Channels', value: channelMentions || 'Unknown', inline: false },
-        { name: 'Message Content', value: content.substring(0, 500) || 'No content', inline: false }
-      );
-
-    await warningChannel.send({ embeds: [embed] });
+    const payload = buildSpamWarningPayload(user, occurrences, dmSent);
+    await warningChannel.send(payload);
     logger.info('Posted spam warning to channel for user.', {
       channelName: warningChannel.name,
       userTag: user.tag
@@ -577,13 +624,259 @@ async function postSpamWarning(guild, user, occurrences, content, dmSent = false
 }
 
 /**
+ * Handles moderation buttons on spam alert messages.
+ * @param {import('discord.js').ButtonInteraction} interaction
+ * @returns {Promise<boolean>} True if this interaction was handled (caller should return)
+ */
+async function handleSpamWarningButton(interaction) {
+  if (!interaction.isButton() || !interaction.customId.startsWith(`${SPAM_WARN_BUTTON_PREFIX}:`)) {
+    return false;
+  }
+
+  const parsed = parseSpamWarnButtonId(interaction.customId);
+  if (!parsed) {
+    await interaction.reply({
+      content: 'Invalid spam alert control.',
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return true;
+  }
+
+  try {
+    const spamChannelId = await getValue('spam_mode_channel_id');
+    if (!spamChannelId || interaction.channelId !== spamChannelId) {
+      await interaction.reply({
+        content: 'These controls only work on spam alerts in the configured spam channel.',
+        flags: MessageFlags.Ephemeral
+      });
+      return true;
+    }
+
+    const guild = interaction.guild;
+    if (!guild) {
+      await interaction.reply({ content: 'This can only be used in a server.', flags: MessageFlags.Ephemeral });
+      return true;
+    }
+
+    const moderator = interaction.member;
+    if (!moderator || typeof moderator.permissions?.has !== 'function') {
+      await interaction.reply({ content: 'Could not verify your permissions.', flags: MessageFlags.Ephemeral });
+      return true;
+    }
+
+    if (parsed.action === 'dismiss') {
+      if (!moderator.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+        await interaction.reply({
+          content: 'You need **Moderate Members** to dismiss.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      await interaction.deferUpdate();
+      await interaction.message.edit({ components: [] }).catch(err => {
+        logger.warn('Could not remove spam alert buttons.', { err });
+      });
+      return true;
+    }
+
+    const targetUserId = parsed.targetUserId;
+
+    const botMember = guild.members.me;
+    if (!botMember) {
+      await interaction.reply({ content: 'Bot member not available.', flags: MessageFlags.Ephemeral });
+      return true;
+    }
+
+    const targetMember = await guild.members.fetch(targetUserId).catch(() => null);
+    const reasonBase = 'Spam alert — duplicate content (moderator action)';
+
+    if (parsed.action === 'timeout1h') {
+      if (!moderator.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+        await interaction.reply({
+          content: 'You need **Moderate Members** to use this.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (!targetMember) {
+        await interaction.reply({
+          content: 'Member not found — they may have left.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (!botMember.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+        await interaction.reply({
+          content: 'The bot lacks **Moderate Members**.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (targetMember.roles.highest.position >= botMember.roles.highest.position) {
+        await interaction.reply({
+          content: 'Cannot moderate this member (role hierarchy).',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (moderator.id !== guild.ownerId && targetMember.roles.highest.position >= moderator.roles.highest.position) {
+        await interaction.reply({
+          content: 'You cannot timeout this member (role hierarchy).',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+
+      const durationMs = 60 * 60 * 1000;
+      try {
+        await targetMember.timeout(durationMs, `${reasonBase} (${interaction.user.tag})`);
+        await interaction.reply({
+          content: `Timed out ${targetMember} for **1 hour**.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (err) {
+        logger.error('Spam alert timeout failed.', { err, targetUserId });
+        await interaction.reply({
+          content: `Failed to timeout: ${err.message || 'unknown error'}`,
+          flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+      }
+      return true;
+    }
+
+    if (parsed.action === 'kick') {
+      if (!moderator.permissions.has(PermissionFlagsBits.KickMembers)) {
+        await interaction.reply({
+          content: 'You need **Kick Members** to use this.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (!targetMember) {
+        await interaction.reply({
+          content: 'Member not found — they may have left.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (!botMember.permissions.has(PermissionFlagsBits.KickMembers)) {
+        await interaction.reply({
+          content: 'The bot lacks **Kick Members**.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (targetMember.roles.highest.position >= botMember.roles.highest.position) {
+        await interaction.reply({
+          content: 'Cannot kick this member (role hierarchy).',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (moderator.id !== guild.ownerId && targetMember.roles.highest.position >= moderator.roles.highest.position) {
+        await interaction.reply({
+          content: 'You cannot kick this member (role hierarchy).',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+
+      await interaction.deferUpdate();
+      try {
+        await targetMember.kick(`${reasonBase} (${interaction.user.tag})`);
+        await interaction.message.edit({ components: [] }).catch(() => {});
+        await interaction.followUp({
+          content: `Kicked **${targetMember.user.tag}**.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (err) {
+        logger.error('Spam alert kick failed.', { err, targetUserId });
+        await interaction.followUp({
+          content: `Failed to kick: ${err.message || 'unknown error'}`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      return true;
+    }
+
+    if (parsed.action === 'ban') {
+      if (!moderator.permissions.has(PermissionFlagsBits.BanMembers)) {
+        await interaction.reply({
+          content: 'You need **Ban Members** to use this.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+      if (!botMember.permissions.has(PermissionFlagsBits.BanMembers)) {
+        await interaction.reply({
+          content: 'The bot lacks **Ban Members**.',
+          flags: MessageFlags.Ephemeral
+        });
+        return true;
+      }
+
+      if (targetMember) {
+        if (targetMember.roles.highest.position >= botMember.roles.highest.position) {
+          await interaction.reply({
+            content: 'Cannot ban this member (role hierarchy).',
+            flags: MessageFlags.Ephemeral
+          });
+          return true;
+        }
+        if (moderator.id !== guild.ownerId && targetMember.roles.highest.position >= moderator.roles.highest.position) {
+          await interaction.reply({
+            content: 'You cannot ban this member (role hierarchy).',
+            flags: MessageFlags.Ephemeral
+          });
+          return true;
+        }
+      }
+
+      await interaction.deferUpdate();
+      try {
+        await guild.members.ban(targetUserId, {
+          reason: `${reasonBase} (${interaction.user.tag})`,
+          deleteMessageSeconds: 0
+        });
+        await interaction.message.edit({ components: [] }).catch(() => {});
+        await interaction.followUp({
+          content: `Banned user \`${targetUserId}\`.`,
+          flags: MessageFlags.Ephemeral
+        });
+      } catch (err) {
+        logger.error('Spam alert ban failed.', { err, targetUserId });
+        await interaction.followUp({
+          content: `Failed to ban: ${err.message || 'unknown error'}`,
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      return true;
+    }
+
+    await interaction.reply({ content: 'Unknown action.', flags: MessageFlags.Ephemeral });
+    return true;
+  } catch (error) {
+    logger.error('Error handling spam warning button.', { err: error });
+    try {
+      if (interaction.deferred || interaction.replied) {
+        await interaction.followUp({ content: 'Something went wrong.', flags: MessageFlags.Ephemeral });
+      } else {
+        await interaction.reply({ content: 'Something went wrong.', flags: MessageFlags.Ephemeral });
+      }
+    } catch (_) { /* ignore */ }
+    return true;
+  }
+}
+
+/**
  * Times out a user for a specified duration.
  * @param {import('discord.js').Guild} guild
  * @param {import('discord.js').User} user
  * @param {number} durationSeconds
+ * @param {string} [reason] - Shown in the moderation audit log
  * @returns {Promise<void>}
  */
-async function timeoutUser(guild, user, durationSeconds) {
+async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected — automatic timeout') {
   if (!guild || !user) {
     logger.warn('Cannot timeout user: missing guild or user.');
     return;
@@ -621,7 +914,7 @@ async function timeoutUser(guild, user, durationSeconds) {
       return;
     }
 
-    await member.timeout(clampedMs, 'Spam detected - automatic timeout');
+    await member.timeout(clampedMs, reason);
     logger.info('Timed out user due to spam detection.', { userTag: user.tag, userId: user.id, durationSeconds });
   } catch (error) {
     logger.error('Error occurred while timing out user.', { err: error, userId: user.id, guildId: guild.id });
@@ -629,5 +922,6 @@ async function timeoutUser(guild, user, durationSeconds) {
 }
 
 module.exports = {
-  trackNewUserMessage
+  trackNewUserMessage,
+  handleSpamWarningButton
 };

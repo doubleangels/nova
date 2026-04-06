@@ -1,5 +1,6 @@
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const { removeMuteModeUser, removeSpamModeJoinTime, setFormerMember, deleteMessageCount } = require('../utils/database');
 const { Events } = require('discord.js');
 
@@ -40,6 +41,7 @@ module.exports = {
         userTag: member.user.tag
       });
     } catch (error) {
+      captureError(error, { event: 'guildMemberRemove' });
       logger.error('Error processing member leave', {
         err: error,
         userId: member.user?.id
