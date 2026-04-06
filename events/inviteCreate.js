@@ -1,6 +1,7 @@
 const { Events } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const { getInviteUsage, setInviteUsage, getInviteCodeToTagMap } = require('../utils/database');
 
 module.exports = {
@@ -57,6 +58,7 @@ module.exports = {
         uses: invite.uses || 0
       });
     } catch (error) {
+      captureError(error, { event: 'inviteCreate' });
       logger.error('Error occurred while tracking new invite.', {
         err: error,
         inviteCode: invite.code,

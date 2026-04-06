@@ -1,5 +1,5 @@
 const path = require('path');
-const { Sentry } = require('../instrument');
+const { captureError } = require('../instrument');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
 const { handleSpamWarningButton } = require('../utils/spamModeUtils');
@@ -39,7 +39,7 @@ module.exports = {
           await command.autocomplete(interaction);
         }
       } catch (error) {
-        Sentry.captureException(error, { tags: { handler: 'autocomplete', command: interaction.commandName } });
+        captureError(error, { handler: 'autocomplete', command: interaction.commandName });
         logger.error('Error occurred while handling autocomplete request.', {
           err: error,
           commandName: interaction.commandName
@@ -61,7 +61,7 @@ module.exports = {
     try {
       await command.execute(interaction);
     } catch (error) {
-      Sentry.captureException(error, { tags: { handler: 'command', command: interaction.commandName } });
+      captureError(error, { handler: 'command', command: interaction.commandName });
       logger.error('Error occurred while executing command.', {
         err: error,
         commandName: interaction.commandName,

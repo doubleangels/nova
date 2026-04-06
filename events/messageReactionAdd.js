@@ -1,6 +1,7 @@
 const path = require('path');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');
 const { Events } = require('discord.js');
 const axios = require('axios');
@@ -167,6 +168,7 @@ async function handleTranslationRequest(reaction, user) {
       messageId: message.id
     });
   } catch (error) {
+    captureError(error, { event: 'messageReactionAdd' });
     logger.error('Error in translation request', {
       err: error,
       status: error.response?.status,

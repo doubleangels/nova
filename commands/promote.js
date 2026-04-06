@@ -227,17 +227,11 @@ module.exports = {
   },
 
   async handlePost(interaction) {
-    await interaction.deferReply();
     const promotionTitle = await getPromotionTitle();
     const promotionBody = PROMOTION_BODY;
-    logger.info("/promote command initiated:", {
-      userId: interaction.user.id,
-      guildId: interaction.guildId,
-      promotionTitle: promotionTitle,
-      promotionLink: PROMOTION_LINK,
-      hasPromotionBody: !!promotionBody
-    });
 
+    // Cooldown check must happen before deferReply — once deferred publicly
+    // Discord.js won't honour MessageFlags.Ephemeral on the subsequent editReply.
     const nextPromotionTime = await this.getLastPromotion();
     if (nextPromotionTime) {
       const now = dayjs();
@@ -253,12 +247,21 @@ module.exports = {
         const totalMinutes = nextTime.diff(now, 'minute');
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        return await interaction.editReply({
+        return interaction.reply({
           content: `⚠️ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
           flags: MessageFlags.Ephemeral
         });
       }
     }
+
+    await interaction.deferReply();
+    logger.info("/promote command initiated:", {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      promotionTitle: promotionTitle,
+      promotionLink: PROMOTION_LINK,
+      hasPromotionBody: !!promotionBody
+    });
 
     try {
       logger.info("Attempting to post to Reddit:", {

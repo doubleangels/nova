@@ -1,4 +1,4 @@
-const { closeSentry } = require('./instrument');
+const { captureError, closeSentry } = require('./instrument');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -48,6 +48,7 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
     logger.info(`Loaded command: ${command.data.name}`);
   } catch (error) {
+    captureError(error, { source: 'commandLoad', file });
     logger.error(`Error loading command file: ${file}`, {
       error: error.stack,
       message: error.message
@@ -65,13 +66,22 @@ const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'
 for (const file of eventFiles) {
   try {
     const event = require(path.join(eventsPath, file));
+
+    // Wrap execute so any error that escapes the event's own try/catch is still captured.
+    const safeExecute = (...args) =>
+      Promise.resolve(event.execute(...args)).catch((error) => {
+        captureError(error, { event: event.name, source: 'eventExecute' });
+        logger.error(`Unhandled error escaped event handler: ${event.name}`, { err: error });
+      });
+
     if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args));
+      client.once(event.name, safeExecute);
     } else {
-      client.on(event.name, (...args) => event.execute(...args));
+      client.on(event.name, safeExecute);
     }
     logger.info(`Loaded event: ${event.name}`);
   } catch (error) {
+    captureError(error, { source: 'eventLoad', file });
     logger.error(`Error loading event file: ${file}`, {
       error: error.stack,
       message: error.message
@@ -80,6 +90,23 @@ for (const file of eventFiles) {
 }
 
 client.login(config.token);
+
+/**
+ * Last-resort safety net: catches any exception that escapes all try-catch blocks.
+ * Sentry's built-in integrations also handle these, but explicit handlers ensure
+ * we flush before the process exits.
+ */
+process.on('uncaughtException', (error) => {
+  captureError(error, { handler: 'uncaughtException' });
+  logger.error('Uncaught exception — process will exit.', { err: error });
+  closeSentry().finally(() => process.exit(1));
+});
+
+process.on('unhandledRejection', (reason) => {
+  const err = reason instanceof Error ? reason : new Error(String(reason));
+  captureError(err, { handler: 'unhandledRejection' });
+  logger.error('Unhandled promise rejection.', { err });
+});
 
 /**
  * Handles graceful shutdown on SIGINT signal

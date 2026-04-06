@@ -1,6 +1,7 @@
 const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { captureError } = require('../instrument');
 const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, isFormerMember } = require('../utils/database');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
@@ -102,6 +103,7 @@ module.exports = {
         userTag: member.user.tag
       });
     } catch (error) {
+      captureError(error, { event: 'guildMemberAdd' });
       // Do not rethrow — event handlers have no caller to receive the error.
       // Rethrowing here causes an unhandled promise rejection.
       logger.error('Error occurred while processing new member.', {
@@ -204,6 +206,7 @@ module.exports = {
           inviteCount: currentInvites.size
         });
       } catch (error) {
+        captureError(error, { event: 'guildMemberAdd', handler: 'fetchInvites' });
         logger.error('Failed to fetch invites from guild.', {
           err: error
         });
@@ -408,6 +411,7 @@ module.exports = {
         }
       }
     } catch (error) {
+      captureError(error, { event: 'guildMemberAdd', handler: 'checkTaggedInvite' });
       logger.error('Error occurred while checking tagged invite.', {
         err: error,
         userId: member.user.id,

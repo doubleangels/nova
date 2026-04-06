@@ -35,37 +35,31 @@ function isWeeklyAdvertisementThread(title) {
 
 /**
  * Prefer a stickied match, then any listing match (e.g. thread not sticky yet).
+ * Fetches each listing once and does two passes in memory.
  * @returns {Promise<{ name: string, permalink: string, title: string, stickied?: boolean } | null>}
  */
 async function findWeeklyAdvertisementPost() {
-  const paths = [`/r/${NEEDAFRIEND_SUBREDDIT}/hot.json?limit=30`, `/r/${NEEDAFRIEND_SUBREDDIT}/new.json?limit=50`];
+  const endpoints = [
+    `/r/${NEEDAFRIEND_SUBREDDIT}/hot.json?limit=30`,
+    `/r/${NEEDAFRIEND_SUBREDDIT}/new.json?limit=50`
+  ];
 
-  for (const p of paths) {
-    const listing = await redditApiRequest('GET', p);
-    const children = listing?.data?.children || [];
-    const sticky = children.map((c) => c.data).find((d) => d?.stickied && isWeeklyAdvertisementThread(d.title));
-    if (sticky) {
-      return {
-        name: sticky.name,
-        permalink: sticky.permalink,
-        title: sticky.title,
-        stickied: true
-      };
-    }
+  const listings = await Promise.all(
+    endpoints.map((p) => redditApiRequest('GET', p))
+  );
+
+  const allPosts = listings.flatMap((listing) =>
+    (listing?.data?.children || []).map((c) => c.data).filter(Boolean)
+  );
+
+  const sticky = allPosts.find((d) => d.stickied && isWeeklyAdvertisementThread(d.title));
+  if (sticky) {
+    return { name: sticky.name, permalink: sticky.permalink, title: sticky.title, stickied: true };
   }
 
-  for (const p of paths) {
-    const listing = await redditApiRequest('GET', p);
-    const children = listing?.data?.children || [];
-    const post = children.map((c) => c.data).find((d) => d && isWeeklyAdvertisementThread(d.title));
-    if (post) {
-      return {
-        name: post.name,
-        permalink: post.permalink,
-        title: post.title,
-        stickied: !!post.stickied
-      };
-    }
+  const any = allPosts.find((d) => isWeeklyAdvertisementThread(d.title));
+  if (any) {
+    return { name: any.name, permalink: any.permalink, title: any.title, stickied: !!any.stickied };
   }
 
   return null;
@@ -114,8 +108,8 @@ module.exports = {
       });
     }
 
-    await interaction.deferReply();
-
+    // Cooldown check must happen before deferReply — once deferred publicly
+    // Discord.js won't honour MessageFlags.Ephemeral on the subsequent editReply.
     const nextNeedafriendTime = await getNextReminderTimeAfterCleanup('needafriend');
     if (nextNeedafriendTime) {
       const now = dayjs();
@@ -129,12 +123,14 @@ module.exports = {
         if (days > 0) parts.push(`${days} day${days === 1 ? '' : 's'}`);
         if (hours > 0) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
         if (minutes > 0 || parts.length === 0) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
-        return interaction.editReply({
+        return interaction.reply({
           content: `⚠️ Please wait ${parts.join(', ')} before using /needafriend again.`,
           flags: MessageFlags.Ephemeral
         });
       }
     }
+
+    await interaction.deferReply();
 
     try {
       const post = await findWeeklyAdvertisementPost();
