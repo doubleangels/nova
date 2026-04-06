@@ -33,7 +33,7 @@ async function getRedditAccessToken() {
         headers: {
           Authorization: `Basic ${auth}`,
           'Content-Type': 'application/x-www-form-urlencoded',
-          User-Agent: USER_AGENT
+          'User-Agent': USER_AGENT
         }
       }
     );
