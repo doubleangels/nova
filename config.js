@@ -104,6 +104,9 @@ module.exports = {
   // Spotify integration removed
 };
 
+// Optional (not required to start): SENTRY_DSN — error monitoring (@sentry/node, see instrument.js).
+// Also supported: SENTRY_ENVIRONMENT, SENTRY_RELEASE, NODE_ENV (sampling + environment tag).
+
 // Required env vars (no default); bot fails to start if any are missing
 const REQUIRED_ENV_VARS = [
   'DISCORD_BOT_TOKEN',

@@ -5,7 +5,6 @@ const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 const { handleReminder, getNextReminderTimeAfterCleanup, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
 
-/** r/needafriend (common misspelling "needafreind" is not a subreddit name). */
 const NEEDAFRIEND_SUBREDDIT = 'needafriend';
 
 const WEEKLY_THREAD_TITLE = 'Weekly Discord Server Advertisement Thread';

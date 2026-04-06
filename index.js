@@ -1,3 +1,4 @@
+const { closeSentry } = require('./instrument');
 const { Client, Collection, GatewayIntentBits } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -83,15 +84,25 @@ client.login(config.token);
 /**
  * Handles graceful shutdown on SIGINT signal
  */
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   logger.info('Shutdown signal (SIGINT) received. Exiting...');
+  try {
+    await closeSentry();
+  } catch (err) {
+    logger.error('Error flushing Sentry on shutdown.', { err });
+  }
   process.exit(0);
 });
 
 /**
  * Handles graceful shutdown on SIGTERM signal
  */
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('Shutdown signal (SIGTERM) received. Exiting...');
+  try {
+    await closeSentry();
+  } catch (err) {
+    logger.error('Error flushing Sentry on shutdown.', { err });
+  }
   process.exit(0);
 });
