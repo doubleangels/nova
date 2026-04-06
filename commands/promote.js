@@ -1,30 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
-const config = require('../config');
 const dayjs = require('dayjs');
-const { handleReminder, getLatestReminderData } = require('../utils/reminderUtils');
-const requireDefault = (m) => (require(m).default || require(m));
-const Keyv = requireDefault('keyv');
-const KeyvSqlite = requireDefault('@keyv/sqlite');
-const fs = require('fs');
-
-// Ensure data directory exists
-const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// Initialize Keyv for reminder storage using SQLite (same database as main)
-const sqlitePath = path.join(dataDir, 'database.sqlite');
-const reminderKeyv = new Keyv({
-  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-    table: 'keyv',
-    busyTimeout: 10000
-  }),
-  namespace: 'nova_reminders'
-});
+const { handleReminder, getNextReminderTimeAfterCleanup } = require('../utils/reminderUtils');
+const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
 
@@ -57,9 +36,6 @@ Don't just sit on the sidelines! Introduce yourself, join the chat, and actually
 
 We're selective because we value the culture we've built. If you love fast-paced banter, can handle a joke, and want a crew that actually talks to each other, you've found the right spot.`;
 
-const REDDIT_API_BASE = 'https://oauth.reddit.com';
-const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
-
 /** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
 const PROMOTION_SUBREDDITS = ['discordservers_', 'DiscordPromote', 'DiscordServerPromos'];
 
@@ -69,108 +45,6 @@ const SUBREDDIT_FLAIR_PREFERENCES = {
   'DiscordPromote': 'gaming server',
   'DiscordServerPromos': 'multiple categories [please list in post description]'
 };
-
-// Cache for OAuth token
-let accessToken = null;
-let tokenExpiry = null;
-
-/**
- * Gets an OAuth access token from Reddit
- * Uses username/password authentication (script type)
- * @returns {Promise<string>} The access token
- */
-async function getRedditAccessToken() {
-  // Return cached token if still valid (with 5 minute buffer)
-  if (accessToken && tokenExpiry && dayjs().valueOf() < tokenExpiry - 300000) {
-    return accessToken;
-  }
-
-  try {
-    const auth = Buffer.from(`${config.redditClientId}:${config.redditClientSecret}`).toString('base64');
-
-    const response = await axios.post(
-      `${REDDIT_OAUTH_BASE}/access_token`,
-      new URLSearchParams({
-        grant_type: 'password',
-        username: config.redditUsername,
-        password: config.redditPassword
-      }),
-      {
-        headers: {
-          'Authorization': `Basic ${auth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Discord Bot Server Promoter (Node.js)'
-        }
-      }
-    );
-
-    if (response.data && response.data.access_token) {
-      accessToken = response.data.access_token;
-      // Reddit tokens typically last 1 hour, cache for 55 minutes
-      tokenExpiry = dayjs().valueOf() + (response.data.expires_in * 1000 || 3600000);
-      logger.debug('Successfully obtained Reddit OAuth token');
-      return accessToken;
-    } else {
-      throw new Error('No access token in Reddit OAuth response');
-    }
-  } catch (error) {
-    logger.error('Failed to get Reddit OAuth token', {
-      err: error,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-    throw new Error('Failed to authenticate with Reddit API');
-  }
-}
-
-/**
- * Makes an authenticated request to Reddit API
- * @param {string} method - HTTP method (GET, POST, etc.)
- * @param {string} endpoint - API endpoint (e.g., '/r/findaserver/api/link_flair')
- * @param {object} data - Request body data (for POST requests) - will be form-encoded
- * @returns {Promise<object>} API response
- */
-async function redditApiRequest(method, endpoint, data = null) {
-  const token = await getRedditAccessToken();
-
-  const requestConfig = {
-    method,
-    url: `${REDDIT_API_BASE}${endpoint}`,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'User-Agent': 'Discord Bot Server Promoter (Node.js)'
-    }
-  };
-
-  if (data && (method === 'POST' || method === 'PUT')) {
-    // Reddit API expects form-encoded data, not JSON
-    requestConfig.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-    requestConfig.data = new URLSearchParams(data).toString();
-  }
-
-  try {
-    const response = await axios(requestConfig);
-    return response.data;
-  } catch (error) {
-    logger.error('Reddit API request failed', {
-      err: error,
-      method,
-      endpoint,
-      status: error.response?.status,
-      data: error.response?.data
-    });
-
-    // If token expired, clear cache and retry once
-    if (error.response?.status === 401 && accessToken) {
-      logger.debug('Token expired, clearing cache and retrying');
-      accessToken = null;
-      tokenExpiry = null;
-      return redditApiRequest(method, endpoint, data);
-    }
-
-    throw error;
-  }
-}
 
 /**
  * Gets the promotion title
@@ -438,7 +312,7 @@ module.exports = {
   },
 
   validateConfiguration() {
-    return !!(config.redditClientId && config.redditClientSecret && config.redditUsername && config.redditPassword);
+    return isRedditConfigured();
   },
 
   async handleError(error, interaction) {
@@ -475,67 +349,16 @@ module.exports = {
 
   async getLastPromotion() {
     try {
-      // Clean up expired and invalid reminders
-      const reminderIds = await reminderKeyv.get('reminders:promote:list') || [];
-      const now = dayjs();
-      const idsToRemove = [];
-
-      // Collect all expired and invalid reminder IDs first
-      for (const id of reminderIds) {
-        const reminder = await reminderKeyv.get(`reminder:${id}`);
-
-        if (!reminder) {
-          // Reminder data missing, mark for cleanup
-          idsToRemove.push(id);
-          continue;
-        }
-
-        if (!reminder.remind_at) {
-          // Invalid reminder data (missing remind_at), mark for cleanup
-          idsToRemove.push(id);
-          continue;
-        }
-
-        // Handle both Date objects and ISO strings
-        const remindAt = dayjs(reminder.remind_at);
-
-        // Check if the date is valid
-        if (!remindAt.isValid()) {
-          // Invalid date, mark for cleanup
-          idsToRemove.push(id);
-          continue;
-        }
-
-        // Mark expired reminders for cleanup
-        if (remindAt <= now) {
-          idsToRemove.push(id);
-        }
-      }
-
-      // Remove all expired/invalid reminders and update the list once
-      if (idsToRemove.length > 0) {
-        for (const id of idsToRemove) {
-          await reminderKeyv.delete(`reminder:${id}`);
-        }
-        const remainingIds = reminderIds.filter(rid => !idsToRemove.includes(rid));
-        await reminderKeyv.set('reminders:promote:list', remainingIds);
-        logger.debug('Cleaned up expired/invalid promote reminders.', { count: idsToRemove.length });
-      }
-
-      // Get latest reminder
-      const latestReminder = await getLatestReminderData('promote');
-
-      if (latestReminder && latestReminder.remind_at) {
-        logger.debug("Found next promotion time:", {
-          remind_at: latestReminder.remind_at,
+      const remindAt = await getNextReminderTimeAfterCleanup('promote');
+      if (remindAt) {
+        logger.debug('Found next promotion time:', {
+          remind_at: remindAt,
           now: dayjs().toISOString()
         });
-        return latestReminder.remind_at;
       }
-
-      return null;
+      return remindAt;
     } catch (error) {
-      logger.error("Error occurred while getting next promotion time.", { err: error });
+      logger.error('Error occurred while getting next promotion time.', { err: error });
       return null;
     }
   }

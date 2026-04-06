@@ -29,9 +29,12 @@ const reminderKeyv = new Keyv({
 
 reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error occurred.', { err: err }));
 
+/** Interval for r/needafriend weekly comment reminder (7 days). */
+const NEEDAFRIEND_REMINDER_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * Helper function to get all reminder IDs for a type
- * @param {string} type - The type of reminder ('bump' or 'promote')
+ * @param {string} type - The type of reminder ('bump', 'promote', or 'needafriend')
  * @returns {Promise<string[]>} Array of reminder IDs
  */
 async function getReminderIds(type) {
@@ -69,7 +72,7 @@ async function removeReminderId(type, reminderId) {
 
 /**
  * Retrieves the latest reminder data for a specific type
- * @param {string} type - The type of reminder ('bump' or 'promote')
+ * @param {string} type - The type of reminder ('bump', 'promote', or 'needafriend')
  * @returns {Promise<{reminder_id: string, remind_at: Date, type: string}|null>} The latest reminder data or null if none found
  */
 async function getLatestReminderData(type) {
@@ -156,10 +159,66 @@ async function getLatestReminderData(type) {
 }
 
 /**
+ * Removes expired/invalid reminders for a type, then returns the next scheduled remind_at (ISO string) if any.
+ * @param {string} type - 'bump' | 'promote' | 'needafriend'
+ * @returns {Promise<string|null>}
+ */
+async function getNextReminderTimeAfterCleanup(type) {
+  try {
+    const reminderIds = await getReminderIds(type) || [];
+    const now = dayjs();
+    const idsToRemove = [];
+
+    for (const id of reminderIds) {
+      const reminder = await reminderKeyv.get(`reminder:${id}`);
+
+      if (!reminder) {
+        idsToRemove.push(id);
+        continue;
+      }
+
+      if (!reminder.remind_at) {
+        idsToRemove.push(id);
+        continue;
+      }
+
+      const remindAt = dayjs(reminder.remind_at);
+
+      if (!remindAt.isValid()) {
+        idsToRemove.push(id);
+        continue;
+      }
+
+      if (remindAt <= now) {
+        idsToRemove.push(id);
+      }
+    }
+
+    if (idsToRemove.length > 0) {
+      for (const id of idsToRemove) {
+        await reminderKeyv.delete(`reminder:${id}`);
+      }
+      const remainingIds = reminderIds.filter((rid) => !idsToRemove.includes(rid));
+      await reminderKeyv.set(`reminders:${type}:list`, remainingIds);
+      logger.debug(`Cleaned up expired/invalid reminders.`, { type, count: idsToRemove.length });
+    }
+
+    const latestReminder = await getLatestReminderData(type);
+    if (latestReminder?.remind_at) {
+      return latestReminder.remind_at;
+    }
+    return null;
+  } catch (error) {
+    logger.error('Error in getNextReminderTimeAfterCleanup.', { err: error, type });
+    return null;
+  }
+}
+
+/**
  * Handles the creation and scheduling of a reminder
  * @param {Message|Object} message - The Discord message that triggered the reminder, or an object with a client property
  * @param {number} delay - The delay in milliseconds before the reminder
- * @param {string} [type='bump'] - The type of reminder ('bump' or 'promote')
+ * @param {string} [type='bump'] - The type of reminder ('bump', 'promote', or 'needafriend')
  * @param {boolean} [skipConfirmation=false] - If true, skip sending the confirmation message to the channel
  * @returns {Promise<void>}
  * @throws {Error} If reminder creation fails or configuration is missing
@@ -324,6 +383,8 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         let confirmationMessage;
         if (type === 'promote') {
           confirmationMessage = `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`;
+        } else if (type === 'needafriend') {
+          confirmationMessage = `🎯 r/needafriend comment posted! I'll remind you to run /needafriend again <t:${unixTimestamp}:R>.`;
         } else {
           confirmationMessage = `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
         }
@@ -353,6 +414,8 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         let reminderMessage;
         if (type === 'promote') {
           reminderMessage = `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`;
+        } else if (type === 'needafriend') {
+          reminderMessage = `🔔 <@&${reminderRole}> Time for the r/needafriend weekly ad thread! Use \`/needafriend\` to comment.`;
         } else {
           reminderMessage = `🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`;
         }
@@ -410,18 +473,22 @@ async function rescheduleReminder(client) {
     // Get all reminder IDs to check what's in the database
     const bumpIds = await getReminderIds('bump');
     const promoteIds = await getReminderIds('promote');
+    const needafriendIds = await getReminderIds('needafriend');
     
     logger.info('Found reminder IDs in database.', {
       bumpCount: bumpIds.length,
       promoteCount: promoteIds.length,
+      needafriendCount: needafriendIds.length,
       bumpIds: bumpIds,
-      promoteIds: promoteIds
+      promoteIds: promoteIds,
+      needafriendIds: needafriendIds
     });
     
     // Clean up expired reminders
     const now = dayjs();
     let expiredBumpCount = 0;
     let expiredPromoteCount = 0;
+    let expiredNeedafriendCount = 0;
     
     // Clean up expired bump reminders
     // Collect IDs to remove first, then remove them all at once to avoid modifying list while iterating
@@ -510,27 +577,70 @@ async function rescheduleReminder(client) {
         reminderId: id
       });
     }
+
+    const needafriendIdsToRemove = [];
+    for (const id of needafriendIds) {
+      const reminder = await reminderKeyv.get(`reminder:${id}`);
+      if (reminder && reminder.remind_at) {
+        const remindAt = dayjs(reminder.remind_at);
+
+        if (!remindAt.isValid() || !remindAt.isAfter(now)) {
+          needafriendIdsToRemove.push(id);
+          expiredNeedafriendCount++;
+          logger.debug('Marked expired needafriend reminder for cleanup.', {
+            reminderId: id,
+            scheduledFor: remindAt.toISOString()
+          });
+        } else {
+          logger.debug('Needafriend reminder is active.', {
+            reminderId: id,
+            reminder_id: reminder.reminder_id,
+            remind_at: remindAt.toISOString(),
+            type: reminder.type
+          });
+        }
+      } else {
+        needafriendIdsToRemove.push(id);
+        expiredNeedafriendCount++;
+        logger.debug('Marked invalid needafriend reminder for cleanup.', {
+          reminderId: id,
+          reminder: reminder
+        });
+      }
+    }
+
+    for (const id of needafriendIdsToRemove) {
+      await reminderKeyv.delete(`reminder:${id}`);
+      await removeReminderId('needafriend', id);
+      logger.debug('Cleaned up needafriend reminder.', {
+        reminderId: id
+      });
+    }
     
-    if (expiredBumpCount > 0 || expiredPromoteCount > 0) {
+    if (expiredBumpCount > 0 || expiredPromoteCount > 0 || expiredNeedafriendCount > 0) {
       logger.info('Cleaned up expired reminders.', {
         expiredBumpCount: expiredBumpCount,
-        expiredPromoteCount: expiredPromoteCount
+        expiredPromoteCount: expiredPromoteCount,
+        expiredNeedafriendCount: expiredNeedafriendCount
       });
     }
 
-    const [bumpReminder, promoteReminder] = await Promise.all([
+    const [bumpReminder, promoteReminder, needafriendReminder] = await Promise.all([
       getLatestReminderData('bump'),
-      getLatestReminderData('promote')
+      getLatestReminderData('promote'),
+      getLatestReminderData('needafriend')
     ]);
 
     logger.info("Latest reminder data retrieved:", {
       hasBumpReminder: !!bumpReminder,
       hasPromoteReminder: !!promoteReminder,
+      hasNeedafriendReminder: !!needafriendReminder,
       bumpReminder: bumpReminder ? { id: bumpReminder.reminder_id, remind_at: bumpReminder.remind_at } : null,
-      promoteReminder: promoteReminder ? { id: promoteReminder.reminder_id, remind_at: promoteReminder.remind_at } : null
+      promoteReminder: promoteReminder ? { id: promoteReminder.reminder_id, remind_at: promoteReminder.remind_at } : null,
+      needafriendReminder: needafriendReminder ? { id: needafriendReminder.reminder_id, remind_at: needafriendReminder.remind_at } : null
     });
 
-    if (!bumpReminder && !promoteReminder) {
+    if (!bumpReminder && !promoteReminder && !needafriendReminder) {
       logger.warn("No active reminders found for rescheduling. All reminders may have expired or none were stored.");
       return;
     }
@@ -640,6 +750,52 @@ async function rescheduleReminder(client) {
         });
       }
     }
+
+    if (needafriendReminder) {
+      const scheduledTime = dayjs(needafriendReminder.remind_at);
+      const now = dayjs();
+      const delay = scheduledTime.diff(now, 'millisecond');
+
+      logger.info('Processing needafriend reminder for rescheduling:', {
+        reminder_id: needafriendReminder.reminder_id,
+        scheduledTime: scheduledTime.toISOString(),
+        now: now.toISOString(),
+        delayMs: delay,
+        delayMinutes: Math.round(delay / 1000 / 60)
+      });
+
+      if (delay > 0) {
+        setTimeout(async () => {
+          try {
+            await channel.send(`🔔 <@&${reminderRole}> Time for the r/needafriend weekly ad thread! Use \`/needafriend\` to comment.`);
+            logger.info('Sent rescheduled needafriend reminder.', {
+              reminder_id: needafriendReminder.reminder_id
+            });
+
+            await reminderKeyv.delete(`reminder:${needafriendReminder.reminder_id}`);
+            await removeReminderId('needafriend', needafriendReminder.reminder_id);
+          } catch (err) {
+            logger.error('Error while sending rescheduled needafriend reminder', {
+              err: err
+            });
+          }
+        }, delay);
+
+        logger.info('Successfully rescheduled needafriend reminder:', {
+          reminder_id: needafriendReminder.reminder_id,
+          delayMs: delay,
+          delayMinutes: Math.round(delay / 1000 / 60),
+          scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
+        });
+      } else {
+        logger.warn('Needafriend reminder is in the past, skipping reschedule:', {
+          reminder_id: needafriendReminder.reminder_id,
+          scheduledTime: scheduledTime.toISOString(),
+          now: now.toISOString(),
+          delayMs: delay
+        });
+      }
+    }
     
     logger.info("Reminder rescheduling completed.");
   } catch (error) {
@@ -685,5 +841,7 @@ async function handleError(error, context) {
 module.exports = {
   handleReminder,
   rescheduleReminder,
-  getLatestReminderData
+  getLatestReminderData,
+  getNextReminderTimeAfterCleanup,
+  NEEDAFRIEND_REMINDER_MS
 };

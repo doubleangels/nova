@@ -4,11 +4,11 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
 const { getValue } = require('../utils/database');
-const { handleReminder } = require('../utils/reminderUtils');
+const { handleReminder, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
 
 /**
  * Command module for fixing reminder data.
- * Handles fixing reminders for Disboard and Reddit promotions.
+ * Handles fixing reminders for Disboard, Reddit promotions, and r/needafriend.
  * @type {Object}
  */
 module.exports = {
@@ -24,6 +24,11 @@ module.exports = {
       subcommand
         .setName('reddit')
         .setDescription('Fix Reddit promotion reminder data in the database.')
+    )
+    .addSubcommand(subcommand =>
+      subcommand
+        .setName('needafriend')
+        .setDescription('Fix r/needafriend weekly thread reminder data in the database.')
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     
@@ -54,6 +59,8 @@ module.exports = {
         await this.handleFixReminder(interaction, 'bump', 7200000, 'Disboard Bump');
       } else if (subcommand === 'reddit') {
         await this.handleFixReminder(interaction, 'promote', 86400000, 'Reddit Promotion');
+      } else if (subcommand === 'needafriend') {
+        await this.handleFixReminder(interaction, 'needafriend', NEEDAFRIEND_REMINDER_MS, 'r/needafriend weekly');
       }
     } catch (error) {
       await this.handleError(interaction, error);
@@ -69,7 +76,7 @@ module.exports = {
    * 4. Sends a confirmation embed
    * 
    * @param {CommandInteraction} interaction - The interaction that triggered the command
-   * @param {string} type - The type of reminder ('bump' or 'promote')
+   * @param {string} type - The type of reminder ('bump', 'promote', or 'needafriend')
    * @param {number} delayMs - The delay in milliseconds before the reminder
    * @param {string} displayName - The display name for the reminder type
    * @throws {Error} If there's an error fixing the reminder data
