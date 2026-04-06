@@ -29,25 +29,32 @@ const reminderKeyv = new Keyv({
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
 
 /** Markdown body text for Reddit link posts (below the invite URL). */
-const PROMOTION_BODY = `🐸 Welcome to Da Frens!
-Where the banter is sharp, the games are sweaty, and the vibes are unmatched.
+const PROMOTION_BODY = `**🐸 Welcome to Da Frens!**
 
-🛸 The Vibe
+*Where the banter is sharp, the games are sweaty, and the vibes are unmatched.*
+
+## 🛸 The Vibe
+
 We're all about unfiltered honesty and authentic talk. Expect directness, sharp wit, and the occasional 3 AM deep dive into whatever is on our minds. We keep it real, but we keep it focused.
 
-🎮 The Gameplay
+## 🎮 The Gameplay
+
 High-energy banter meets serious gaming. Whether we're grinding ranks or just causing digital chaos, we play hard - but we're here for a good time, not a toxic one. Rowdy? Yes. Reckless? Never.
 
-🎪 The Circus Tent
+## 🎪 The Circus Tent
+
 Think of us as the high-end circus: fewer clowns, way better acts. We're here for the laughs and the big personalities. If you've got a sense of humor and can hold your own in a conversation, you'll fit right in.
 
-🔞 The Grown-Up Stuff
+## 🔞 The Grown-Up Stuff
+
 21+ Only. No exceptions. We're an adult community, and we keep it that way. Age is verified upon entry to ensure the atmosphere stays mature (mostly).
 
-💬 Jump Into the Action
+## 💬 Jump Into the Action
+
 Don't just sit on the sidelines! Introduce yourself, join the chat, and actually participate. This is a community, not a spectator sport. We're looking for people who bring personality and energy to the group.
 
-🔥 Why You're Here
+## 🔥 Why You're Here
+
 We're selective because we value the culture we've built. If you love fast-paced banter, can handle a joke, and want a crew that actually talks to each other, you've found the right spot.`;
 
 const REDDIT_API_BASE = 'https://oauth.reddit.com';
