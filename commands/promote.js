@@ -27,6 +27,29 @@ const reminderKeyv = new Keyv({
 });
 
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+
+/** Markdown body text for Reddit link posts (below the invite URL). */
+const PROMOTION_BODY = `🐸 Welcome to Da Frens!
+Where the banter is sharp, the games are sweaty, and the vibes are unmatched.
+
+🛸 The Vibe
+We're all about unfiltered honesty and authentic talk. Expect directness, sharp wit, and the occasional 3 AM deep dive into whatever is on our minds. We keep it real, but we keep it focused.
+
+🎮 The Gameplay
+High-energy banter meets serious gaming. Whether we're grinding ranks or just causing digital chaos, we play hard - but we're here for a good time, not a toxic one. Rowdy? Yes. Reckless? Never.
+
+🎪 The Circus Tent
+Think of us as the high-end circus: fewer clowns, way better acts. We're here for the laughs and the big personalities. If you've got a sense of humor and can hold your own in a conversation, you'll fit right in.
+
+🔞 The Grown-Up Stuff
+21+ Only. No exceptions. We're an adult community, and we keep it that way. Age is verified upon entry to ensure the atmosphere stays mature (mostly).
+
+💬 Jump Into the Action
+Don't just sit on the sidelines! Introduce yourself, join the chat, and actually participate. This is a community, not a spectator sport. We're looking for people who bring personality and energy to the group.
+
+🔥 Why You're Here
+We're selective because we value the culture we've built. If you love fast-paced banter, can handle a joke, and want a crew that actually talks to each other, you've found the right spot.`;
+
 const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 
@@ -208,13 +231,17 @@ function getRedditErrorMessage(err, subreddit) {
   return msg ? `${sr}: ${msg}` : `${sr}: Unknown error.`;
 }
 
+/** Max length for optional link-post body text (Reddit allows large selftext; keep a safe cap). */
+const PROMOTION_BODY_MAX_LEN = 10000;
+
 /**
  * Post promotion to a single subreddit
  * @param {string} subredditName - Subreddit name (e.g. 'discordservers_')
  * @param {string} promotionTitle - Post title
+ * @param {string} [promotionBody] - Markdown body for the link post
  * @returns {Promise<{ success: boolean, permalink?: string, error?: string }>}
  */
-async function postToSubreddit(subredditName, promotionTitle) {
+async function postToSubreddit(subredditName, promotionTitle, promotionBody = '') {
   let flairId = null;
   try {
     const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
@@ -256,6 +283,11 @@ async function postToSubreddit(subredditName, promotionTitle) {
     api_type: 'json'
   };
   if (flairId) submissionData.flair_id = flairId;
+
+  const body = (promotionBody || '').trim();
+  if (body) {
+    submissionData.text = body.length > PROMOTION_BODY_MAX_LEN ? body.slice(0, PROMOTION_BODY_MAX_LEN) : body;
+  }
 
   try {
     const response = await redditApiRequest('POST', '/api/submit', submissionData);
@@ -316,11 +348,13 @@ module.exports = {
   async handlePost(interaction) {
     await interaction.deferReply();
     const promotionTitle = await getPromotionTitle();
+    const promotionBody = PROMOTION_BODY;
     logger.info("/promote command initiated:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       promotionTitle: promotionTitle,
-      promotionLink: PROMOTION_LINK
+      promotionLink: PROMOTION_LINK,
+      hasPromotionBody: !!promotionBody
     });
 
     const nextPromotionTime = await this.getLastPromotion();
@@ -350,12 +384,13 @@ module.exports = {
         subreddits: PROMOTION_SUBREDDITS,
         title: promotionTitle,
         link: PROMOTION_LINK,
+        hasBody: !!promotionBody,
         userId: interaction.user.id
       });
 
       const results = [];
       for (const subredditName of PROMOTION_SUBREDDITS) {
-        const result = await postToSubreddit(subredditName, promotionTitle);
+        const result = await postToSubreddit(subredditName, promotionTitle, promotionBody);
         results.push({ subreddit: subredditName, ...result });
       }
 
