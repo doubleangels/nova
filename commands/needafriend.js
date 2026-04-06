@@ -153,10 +153,10 @@ module.exports = {
         const commentUrl = `https://www.reddit.com${parsed.permalink}`;
         logger.info('needafriend: comment posted', { post: post.name, commentPermalink: parsed.permalink });
         const embed = new EmbedBuilder()
-          .setColor(0xff4500)
-          .setTitle('r/needafriend weekly thread')
+          .setColor(0xFF4500)
+          .setTitle('Comment Posted Successfully')
           .setDescription(
-            `Comment posted on [${WEEKLY_THREAD_TITLE}](https://www.reddit.com${post.permalink}).`
+            `Your advertisement has been commented on the weekly thread on \`r/needafriend\`.\n\n• \`r/needafriend\`: [View thread](https://www.reddit.com${post.permalink})`
           );
         const mockMessage = { client: interaction.client };
         await handleReminder(mockMessage, NEEDAFRIEND_REMINDER_MS, 'needafriend');

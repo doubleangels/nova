@@ -384,7 +384,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         if (type === 'promote') {
           confirmationMessage = `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`;
         } else if (type === 'needafriend') {
-          confirmationMessage = `🎯 r/needafriend comment posted! I'll remind you to run /needafriend again <t:${unixTimestamp}:R>.`;
+          confirmationMessage = `🎯 Weekly r/needafriend comment posted successfully! I'll remind you to comment again <t:${unixTimestamp}:R>.`;
         } else {
           confirmationMessage = `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
         }
