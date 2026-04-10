@@ -81,7 +81,7 @@ jobs:
 
       - name: Build Docker Image
         id: build
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f
         with:
           context: .
           platforms: linux/amd64
@@ -156,7 +156,7 @@ jobs:
     steps:
       - name: Check PR mergeability
         id: check-mergeable
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             const { data: pr } = await github.rest.pulls.get({
@@ -186,7 +186,7 @@ jobs:
 
       - name: Comment on PR
         if: steps.check-mergeable.outputs.mergeable == 'true'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         continue-on-error: true
         with:
           script: |
@@ -209,7 +209,7 @@ jobs:
 
       - name: Comment on automerge success
         if: steps.automerge.outcome == 'success'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         continue-on-error: true
         with:
           script: |
@@ -222,7 +222,7 @@ jobs:
 
       - name: Comment on automerge failure
         if: steps.automerge.outcome == 'failure'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         continue-on-error: true
         with:
           script: |
