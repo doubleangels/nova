@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %> — Nova Dashboard</title>
+  <!-- Apply saved theme before paint to prevent flash -->
+  <script>(function(){var t=localStorage.getItem('dashboard-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tom Select: base (structure only) — all colors set by CSS vars below -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.base.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
+  <style>
+    /* ── Theme tokens ────────────────────────────────────────────────────── */
+    :root {
+      --c-bg:              #030712;
+      --c-sidebar:         #111827;
+      --c-sidebar-border:  #1f2937;
+      --c-topbar:          #111827;
+      --c-topbar-border:   #1f2937;
+      --c-text:            #f3f4f6;
+      --c-text-muted:      #9ca3af;
+      --c-text-dim:        #6b7280;
+      --c-nav-text:        #d1d5db;
+      --c-nav-hover-bg:    #1f2937;
+      --c-nav-hover-text:  #ffffff;
+      --c-nav-active-bg:   rgba(109,40,217,0.3);
+      --c-nav-active-text: #a78bfa;
+      /* component tokens (consumed by dashboard.ejs) */
+      --c-card:            #111827;
+      --c-card-border:     #1f2937;
+      --c-input:           #1f2937;
+      --c-input-border:    #374151;
+      --c-input-text:      #ffffff;
+      --c-input-ph:        #4b5563;
+      --c-label:           #d1d5db;
+      --c-hint:            #4b5563;
+      --c-toggle-off:      #374151;
+      /* Tom Select tokens */
+      --c-ts-ctrl:         #1f2937;
+      --c-ts-ctrl-border:  #374151;
+      --c-ts-ctrl-text:    #ffffff;
+      --c-ts-drop:         #111827;
+      --c-ts-drop-border:  #374151;
+      --c-ts-opt:          #d1d5db;
+      --c-ts-opt-hover:    #374151;
+      --c-ts-opt-hover-t:  #ffffff;
+      --c-ts-sel:          rgba(109,40,217,0.4);
+      --c-ts-sel-text:     #a78bfa;
+    }
+    html[data-theme="light"] {
+      --c-bg:              #f1f5f9;
+      --c-sidebar:         #ffffff;
+      --c-sidebar-border:  #e2e8f0;
+      --c-topbar:          #ffffff;
+      --c-topbar-border:   #e2e8f0;
+      --c-text:            #0f172a;
+      --c-text-muted:      #475569;
+      --c-text-dim:        #94a3b8;
+      --c-nav-text:        #334155;
+      --c-nav-hover-bg:    #f1f5f9;
+      --c-nav-hover-text:  #0f172a;
+      --c-nav-active-bg:   rgba(109,40,217,0.08);
+      --c-nav-active-text: #6d28d9;
+      --c-card:            #ffffff;
+      --c-card-border:     #e2e8f0;
+      --c-input:           #f8fafc;
+      --c-input-border:    #cbd5e1;
+      --c-input-text:      #0f172a;
+      --c-input-ph:        #94a3b8;
+      --c-label:           #334155;
+      --c-hint:            #94a3b8;
+      --c-toggle-off:      #cbd5e1;
+      --c-ts-ctrl:         #f8fafc;
+      --c-ts-ctrl-border:  #cbd5e1;
+      --c-ts-ctrl-text:    #0f172a;
+      --c-ts-drop:         #ffffff;
+      --c-ts-drop-border:  #e2e8f0;
+      --c-ts-opt:          #334155;
+      --c-ts-opt-hover:    #f1f5f9;
+      --c-ts-opt-hover-t:  #0f172a;
+      --c-ts-sel:          rgba(109,40,217,0.08);
+      --c-ts-sel-text:     #6d28d9;
+    }
+
+    /* ── Shell ───────────────────────────────────────────────────────────── */
+    body                     { background-color: var(--c-bg) !important; color: var(--c-text); }
+    #sidebar, #mobileSidebar { background-color: var(--c-sidebar) !important; border-color: var(--c-sidebar-border) !important; }
+    #mobileTopbar            { background-color: var(--c-topbar) !important; border-color: var(--c-topbar-border) !important; }
+
+    /* ── Sidebar internals ───────────────────────────────────────────────── */
+    .sb-header            { border-color: var(--c-sidebar-border); }
+    .sb-guild-name        { color: var(--c-text); }
+    .sb-sub               { color: var(--c-text-muted); }
+    .sb-section-label     { color: var(--c-text-dim); }
+    .sb-username          { color: var(--c-text-muted); }
+    .sb-footer            { border-color: var(--c-sidebar-border); }
+    .sidebar-link         { color: var(--c-nav-text); }
+    .sidebar-link:hover   { background-color: var(--c-nav-hover-bg) !important; color: var(--c-nav-hover-text) !important; }
+    .sidebar-link.active  { background-color: var(--c-nav-active-bg) !important; color: var(--c-nav-active-text) !important; }
+
+    /* ── Misc ────────────────────────────────────────────────────────────── */
+    [x-cloak] { display: none !important; }
+    input[type="color"] { padding: 2px 4px; cursor: pointer; }
+
+    /* ── Tom Select (all colors via CSS vars) ────────────────────────────── */
+    .ts-wrapper { width: 100%; }
+    .ts-wrapper .ts-control {
+      background: var(--c-ts-ctrl);
+      border: 1px solid var(--c-ts-ctrl-border);
+      border-radius: 0.5rem;
+      color: var(--c-ts-ctrl-text);
+      font-size: 0.875rem;
+      padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+      box-shadow: none;
+      cursor: pointer;
+      min-height: unset;
+      flex-wrap: nowrap;
+      line-height: 1.25rem;
+    }
+    .ts-wrapper.focus .ts-control {
+      border-color: #7c3aed;
+      box-shadow: 0 0 0 2px rgba(124,58,237,0.35);
+      outline: none;
+    }
+    .ts-wrapper .ts-control input {
+      color: var(--c-ts-ctrl-text) !important;
+      font-size: 0.875rem;
+      background: transparent;
+    }
+    .ts-wrapper .ts-control input::placeholder { color: var(--c-input-ph); }
+    .ts-wrapper .ts-control .item { color: var(--c-ts-ctrl-text); }
+    /* custom dropdown caret */
+    .ts-wrapper:not(.multi).single .ts-control:after {
+      content: '';
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid var(--c-text-muted);
+      pointer-events: none;
+    }
+    .ts-wrapper.dropdown-active.single .ts-control:after {
+      border-top: none;
+      border-bottom: 5px solid var(--c-text-muted);
+    }
+    .ts-dropdown {
+      background: var(--c-ts-drop);
+      border: 1px solid var(--c-ts-drop-border);
+      border-radius: 0.5rem;
+      margin-top: 4px;
+      font-size: 0.875rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      z-index: 100;
+    }
+    .ts-dropdown .ts-dropdown-content { padding: 4px; }
+    .ts-dropdown .option {
+      color: var(--c-ts-opt);
+      border-radius: 0.375rem;
+      padding: 6px 10px;
+    }
+    .ts-dropdown .option:hover,
+    .ts-dropdown .option.option--highlighted {
+      background: var(--c-ts-opt-hover);
+      color: var(--c-ts-opt-hover-t);
+    }
+    .ts-dropdown .option.selected,
+    .ts-dropdown .option.selected.option--highlighted {
+      background: var(--c-ts-sel);
+      color: var(--c-ts-sel-text);
+    }
+  </style>
+</head>
+<body class="h-full antialiased">
+
+<!-- Mobile top bar -->
+<div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40">
+  <div class="flex items-center gap-2">
+    <span class="text-lg font-bold text-violet-400">Nova</span>
+    <span class="sb-sub text-sm">Dashboard</span>
+  </div>
+  <button id="menuToggle" class="p-2 rounded-md" style="color:var(--c-text-muted)">
+    <svg id="menuOpen"  class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    <svg id="menuClose" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+  </button>
+</div>
+
+<div class="flex h-full min-h-screen">
+  <!-- Desktop sidebar -->
+  <aside id="sidebar" class="hidden lg:flex flex-col w-64 border-r fixed top-0 left-0 h-full z-30 overflow-y-auto">
+    <%- include('partials/sidebar') %>
+  </aside>
+
+  <!-- Mobile overlay + sidebar -->
+  <div id="mobileOverlay" class="hidden fixed inset-0 bg-black/60 z-20 lg:hidden"></div>
+  <aside id="mobileSidebar" class="hidden fixed top-0 left-0 h-full w-64 border-r z-30 overflow-y-auto lg:hidden">
+    <%- include('partials/sidebar') %>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 lg:ml-64 overflow-y-auto">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+      <%- body %>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('dashboard-theme', theme);
+    const sun  = document.getElementById('themeIconSun');
+    const moon = document.getElementById('themeIconMoon');
+    if (sun)  sun.style.display  = theme === 'dark'  ? '' : 'none';
+    if (moon) moon.style.display = theme === 'light' ? '' : 'none';
+  }
+  // Re-apply after DOM is ready (inline script at top handled the pre-paint case)
+  applyTheme(localStorage.getItem('dashboard-theme') || 'dark');
+
+  document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+    const t = document.documentElement.getAttribute('data-theme') || 'dark';
+    applyTheme(t === 'dark' ? 'light' : 'dark');
+  });
+
+  // ── Mobile menu ────────────────────────────────────────────────────────────
+  const menuToggle     = document.getElementById('menuToggle');
+  const mobileOverlay  = document.getElementById('mobileOverlay');
+  const mobileSidebar  = document.getElementById('mobileSidebar');
+  const menuOpenIcon   = document.getElementById('menuOpen');
+  const menuCloseIcon  = document.getElementById('menuClose');
+
+  function openMenu()  { mobileSidebar.classList.remove('hidden'); mobileOverlay.classList.remove('hidden'); menuOpenIcon.classList.add('hidden'); menuCloseIcon.classList.remove('hidden'); }
+  function closeMenu() { mobileSidebar.classList.add('hidden');    mobileOverlay.classList.add('hidden');    menuOpenIcon.classList.remove('hidden'); menuCloseIcon.classList.add('hidden'); }
+
+  menuToggle?.addEventListener('click', () => mobileSidebar.classList.contains('hidden') ? openMenu() : closeMenu());
+  mobileOverlay?.addEventListener('click', closeMenu);
+
+  // ── Active nav ─────────────────────────────────────────────────────────────
+  function setActiveNav() {
+    const hash = window.location.hash || '#general';
+    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.getAttribute('href') === hash));
+  }
+  setActiveNav();
+  window.addEventListener('hashchange', setActiveNav);
+</script>
+
+</body>
+</html>

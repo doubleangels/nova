@@ -1,0 +1,607 @@
+<!-- Page header -->
+<div class="mb-8 flex items-start justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold" style="color:var(--c-text)">Dashboard</h1>
+    <p class="text-sm mt-1" style="color:var(--c-text-muted)">
+      Managing <span class="font-medium text-violet-400"><%= guildName %></span>
+      &bull; <span id="memberCountBadge" style="color:var(--c-text-dim)"><%= memberCount %> members</span>
+    </p>
+  </div>
+  <div class="flex items-center gap-2 mt-1 flex-shrink-0">
+    <!-- Refresh button -->
+    <button id="refreshBtn" title="Refresh roles and channels from Discord"
+            style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.875rem;background:var(--c-input);border:1px solid var(--c-input-border);border-radius:0.5rem;font-size:0.875rem;font-weight:500;color:var(--c-label);cursor:pointer;transition:background-color 0.2s;white-space:nowrap">
+      <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Refresh
+    </button>
+    <!-- Theme toggle -->
+    <button id="themeToggleBtn" title="Toggle light/dark theme"
+            style="display:flex;align-items:center;justify-content:center;width:2.375rem;height:2.375rem;background:var(--c-input);border:1px solid var(--c-input-border);border-radius:0.5rem;cursor:pointer;transition:background-color 0.2s;flex-shrink:0;color:var(--c-label)">
+      <!-- Sun — shown in dark mode -->
+      <svg id="themeIconSun" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z"/>
+      </svg>
+      <!-- Moon — shown in light mode, hidden by default -->
+      <svg id="themeIconMoon" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem;display:none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"
+     class="fixed bottom-5 right-5 z-50 hidden px-5 py-3 rounded-xl text-sm font-medium shadow-lg transition-all duration-300 max-w-xs">
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ BOT SETTINGS -->
+<section id="general" class="mb-10">
+  <h2 class="section-heading">Bot Settings</h2>
+  <div class="card">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+      <div class="sm:col-span-2 flex items-start gap-4">
+        <div class="flex-1">
+          <label class="field-label">Status Text</label>
+          <input type="text" id="bot_status" placeholder="for ways to help! ❤️"
+                 class="field-input" maxlength="128" />
+          <p class="field-hint">The text shown next to the bot's activity.</p>
+        </div>
+        <div class="w-40">
+          <label class="field-label">Status Type</label>
+          <select id="bot_status_type" class="field-input">
+            <option value="watching">Watching</option>
+            <option value="playing">Playing</option>
+            <option value="listening">Listening to</option>
+            <option value="streaming">Streaming</option>
+            <option value="competing">Competing in</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="field-label">Embed Accent Color</label>
+        <div class="flex items-center gap-3 mt-1">
+          <input type="color" id="base_embed_color" class="h-10 w-16 rounded-lg border border-gray-700 bg-gray-800" />
+          <input type="text" id="base_embed_color_text" placeholder="#999999"
+                 class="field-input flex-1" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" />
+        </div>
+        <p class="field-hint">Used in embed borders across all commands.</p>
+      </div>
+
+      <div>
+        <label class="field-label">Log Level</label>
+        <select id="log_level" class="field-input">
+          <option value="error">Error</option>
+          <option value="warn">Warn</option>
+          <option value="info">Info</option>
+          <option value="debug">Debug</option>
+        </select>
+        <p class="field-hint">Requires bot restart to take effect.</p>
+      </div>
+
+      <div>
+        <label class="field-label">Guild Name</label>
+        <input type="text" id="guild_name" class="field-input" maxlength="100" />
+        <p class="field-hint">Display name used in embeds and messages.</p>
+      </div>
+
+      <div>
+        <label class="field-label">Server Invite URL</label>
+        <input type="url" id="server_invite_url" class="field-input" placeholder="https://discord.gg/..." />
+        <p class="field-hint">Included in kick DMs so users can rejoin.</p>
+      </div>
+
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button class="save-btn" data-section="general"
+              data-keys="bot_status,bot_status_type,base_embed_color,log_level,guild_name,server_invite_url">
+        Save Bot Settings
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ ROLE CONFIG -->
+<section id="roles" class="mb-10">
+  <h2 class="section-heading">Role Configuration</h2>
+  <div class="card">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+      <div>
+        <label class="field-label">Fren Role</label>
+        <select id="give_perms_fren_role_id" class="field-input role-select"></select>
+        <p class="field-hint">Assigned alongside custom roles via /giveperms.</p>
+      </div>
+
+      <div>
+        <label class="field-label">Position Above Role</label>
+        <select id="give_perms_position_above_role_id" class="field-input role-select"></select>
+        <p class="field-hint">New custom roles are placed above this role.</p>
+      </div>
+
+      <div>
+        <label class="field-label">Noobies Role</label>
+        <select id="noobies_role_id" class="field-input role-select"></select>
+        <p class="field-hint">Auto-assigned to members with fewer than 100 messages.</p>
+      </div>
+
+      <div>
+        <label class="field-label">New User — Returning Member Role</label>
+        <select id="newuser_been_in_server_before_role_id" class="field-input role-select"></select>
+        <p class="field-hint">Applied to members who have been in the server before.</p>
+      </div>
+
+      <div>
+        <label class="field-label">New User — Permission Diff Role</label>
+        <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
+        <p class="field-hint">Reference role for /newuser permission comparison embed.</p>
+      </div>
+
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button class="save-btn" data-section="roles"
+              data-keys="give_perms_fren_role_id,give_perms_position_above_role_id,noobies_role_id,newuser_been_in_server_before_role_id,newuser_permission_diff_role_id">
+        Save Role Configuration
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ MODERATION -->
+<section id="moderation" class="mb-10">
+  <h2 class="section-heading">Moderation</h2>
+
+  <!-- Mute Mode -->
+  <div class="card mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Mute Mode</h3>
+        <p class="card-sub-desc text-xs mt-0.5">Auto-kick members who don't send a message within the time limit.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="mute_mode_enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">Silence Timeout (hours)</label>
+        <input type="number" id="mute_mode_kick_time_hours" min="1" max="72" class="field-input" />
+        <p class="field-hint">Users silent for this long will be kicked (1–72).</p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button class="save-btn" data-section="mute"
+              data-keys="mute_mode_enabled,mute_mode_kick_time_hours">
+        Save Mute Mode
+      </button>
+    </div>
+  </div>
+
+  <!-- Troll Mode -->
+  <div class="card mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Troll Mode</h3>
+        <p class="card-sub-desc text-xs mt-0.5">Kick new members whose Discord account is younger than the minimum age.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="troll_mode_enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">Minimum Account Age (days)</label>
+        <input type="number" id="troll_mode_account_age" min="1" max="365" class="field-input" />
+        <p class="field-hint">Accounts younger than this are kicked on join (1–365).</p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button class="save-btn" data-section="troll"
+              data-keys="troll_mode_enabled,troll_mode_account_age">
+        Save Troll Mode
+      </button>
+    </div>
+  </div>
+
+  <!-- Spam Mode -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Spam Mode</h3>
+        <p class="card-sub-desc text-xs mt-0.5">Detect and warn users sending duplicate messages across channels.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="spam_mode_enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">Duplicate Threshold</label>
+        <input type="number" id="spam_mode_threshold" min="2" max="10" class="field-input" />
+        <p class="field-hint">Number of duplicates needed to trigger a warning (2–10).</p>
+      </div>
+      <div>
+        <label class="field-label">Tracking Window (hours)</label>
+        <input type="number" id="spam_mode_window_hours" min="1" max="72" class="field-input" />
+        <p class="field-hint">How far back to look for duplicate messages (1–72).</p>
+      </div>
+      <div>
+        <label class="field-label">Warning Channel</label>
+        <select id="spam_mode_channel_id" class="field-input channel-select"></select>
+        <p class="field-hint">Where spam warnings are posted.</p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button class="save-btn" data-section="spam"
+              data-keys="spam_mode_enabled,spam_mode_threshold,spam_mode_window_hours,spam_mode_channel_id">
+        Save Spam Mode
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ REMINDERS -->
+<section id="reminders" class="mb-10">
+  <h2 class="section-heading">Reminders</h2>
+  <div class="card">
+    <p class="card-sub-desc text-sm mb-5">
+      Channel and role used by all reminder types (Disboard bump, Reddit /promote, and /needafriend).
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">Reminder Channel</label>
+        <select id="reminder_channel" class="field-input channel-select"></select>
+        <p class="field-hint">Where reminder messages are sent.</p>
+      </div>
+      <div>
+        <label class="field-label">Reminder Role</label>
+        <select id="reminder_role" class="field-input role-select"></select>
+        <p class="field-hint">Role pinged when a reminder fires.</p>
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button class="save-btn" data-section="reminders"
+              data-keys="reminder_channel,reminder_role">
+        Save Reminders
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════ CHANNELS -->
+<section id="channels" class="mb-10">
+  <h2 class="section-heading">Channels</h2>
+  <div class="card">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">No-Text Channel</label>
+        <select id="notext_channel" class="field-input channel-select"></select>
+        <p class="field-hint">Only GIFs, images, stickers, and emotes are allowed here.</p>
+      </div>
+    </div>
+    <div class="mt-6 flex justify-end">
+      <button class="save-btn" data-section="channels"
+              data-keys="notext_channel">
+        Save Channels
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ─── Component styles (all colors via CSS vars — theme-aware) ─── -->
+<style>
+  .section-heading {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--c-text);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-heading::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 1.25rem;
+    background: #8b5cf6;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+  .card {
+    background: var(--c-card);
+    border: 1px solid var(--c-card-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+  .field-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--c-label);
+    margin-bottom: 0.25rem;
+  }
+  .field-input {
+    width: 100%;
+    background: var(--c-input);
+    border: 1px solid var(--c-input-border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--c-input-text);
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field-input::placeholder { color: var(--c-input-ph); }
+  .field-input:focus {
+    outline: none;
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 2px rgba(124,58,237,0.35);
+  }
+  select.field-input { cursor: pointer; }
+  .field-hint {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--c-hint);
+  }
+  .save-btn {
+    padding: 0.5rem 1.25rem;
+    background: #7c3aed;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .save-btn:hover    { background: #8b5cf6; }
+  .save-btn:active   { transform: scale(0.97); }
+  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  /* Card sub-headings */
+  .card-sub-title { color: var(--c-text); }
+  .card-sub-desc  { color: var(--c-hint); }
+  /* Toggle switch */
+  .toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+  .toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    width: 2.75rem; height: 1.5rem;
+    background: var(--c-toggle-off);
+    border-radius: 9999px;
+    transition: background-color 0.2s;
+    position: relative;
+  }
+  .toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 1.25rem; height: 1.25rem;
+    background: #fff;
+    border-radius: 9999px;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: #7c3aed; }
+  .toggle input:checked + .toggle-slider::after { transform: translateX(1.25rem); }
+</style>
+
+<!-- ─── Dashboard JavaScript ─── -->
+<script>
+  // ── Tom Select instances ──────────────────────────────────────────────────
+  const tsInstances = new Map();
+
+  function createTS(el, options, selectedValue) {
+    const existing = tsInstances.get(el.id);
+    if (existing) existing.destroy();
+    const ts = new TomSelect(el, {
+      options,
+      items:          selectedValue ? [selectedValue] : [],
+      maxOptions:     null,
+      allowEmptyOption: true,
+      placeholder:    '— None —',
+      plugins:        [],
+    });
+    tsInstances.set(el.id, ts);
+    return ts;
+  }
+
+  // ── Utility ──────────────────────────────────────────────────────────────
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg max-w-xs transition-all duration-300 ${
+      type === 'success'
+        ? 'bg-green-600 text-white'
+        : 'bg-red-600 text-white'
+    }`;
+    toast.style.opacity = '1';
+    setTimeout(() => { toast.className += ' opacity-0'; setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
+  }
+
+  function setButtonState(btn, state) {
+    if (state === 'loading') {
+      btn.disabled = true;
+      btn.dataset.originalText = btn.textContent;
+      btn.textContent = 'Saving…';
+    } else if (state === 'idle') {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.originalText || btn.textContent;
+    }
+  }
+
+  function getFieldValue(id) {
+    const ts = tsInstances.get(id);
+    if (ts) return ts.getValue();
+    const el = document.getElementById(id);
+    if (!el) return undefined;
+    if (el.type === 'checkbox') return el.checked;
+    return el.value;
+  }
+
+  function setFieldValue(id, value) {
+    const ts = tsInstances.get(id);
+    if (ts) { ts.setValue(value ?? '', true); return; }
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') {
+      el.checked = !!value;
+    } else {
+      el.value = value ?? '';
+    }
+  }
+
+  // ── Color picker sync ─────────────────────────────────────────────────────
+  const colorPicker = document.getElementById('base_embed_color');
+  const colorText   = document.getElementById('base_embed_color_text');
+
+  colorPicker?.addEventListener('input', () => { colorText.value = colorPicker.value.toUpperCase(); });
+  colorText?.addEventListener('input', () => {
+    const v = colorText.value;
+    if (/^#[0-9A-Fa-f]{6}$/.test(v)) colorPicker.value = v;
+  });
+
+  // ── Load guild roles/channels ─────────────────────────────────────────────
+  // savedSelectValues: optional map of { id -> value } to restore after repopulating
+  async function loadGuildData(savedSelectValues = {}) {
+    const [rolesRes, channelsRes] = await Promise.all([
+      fetch('/api/guild/roles'),
+      fetch('/api/guild/channels'),
+    ]);
+
+    const roles    = rolesRes.ok    ? await rolesRes.json()    : [];
+    const channels = channelsRes.ok ? await channelsRes.json() : [];
+
+    const noneOpt      = { value: '', text: '— None —' };
+    const roleOptions    = [noneOpt, ...roles.map(r => ({ value: r.id, text: r.name }))];
+    const channelOptions = [noneOpt, ...channels.map(c => ({ value: c.id, text: `#${c.name}` }))];
+
+    document.querySelectorAll('.role-select').forEach(el => {
+      createTS(el, roleOptions, savedSelectValues[el.id] ?? '');
+    });
+    document.querySelectorAll('.channel-select').forEach(el => {
+      createTS(el, channelOptions, savedSelectValues[el.id] ?? '');
+    });
+  }
+
+  // Snapshot current Tom Select values so they survive a refresh
+  function captureSelectValues() {
+    const map = {};
+    tsInstances.forEach((ts, id) => {
+      const v = ts.getValue();
+      if (v) map[id] = v;
+    });
+    return map;
+  }
+
+  // ── Load settings ─────────────────────────────────────────────────────────
+  async function loadSettings() {
+    const res = await fetch('/api/settings');
+    if (!res.ok) { showToast('Failed to load settings.', 'error'); return; }
+    const s = await res.json();
+
+    const plainFields = [
+      'bot_status', 'bot_status_type', 'log_level', 'guild_name', 'server_invite_url',
+      'give_perms_fren_role_id', 'give_perms_position_above_role_id',
+      'noobies_role_id', 'newuser_been_in_server_before_role_id', 'newuser_permission_diff_role_id',
+      'mute_mode_kick_time_hours', 'troll_mode_account_age', 'spam_mode_threshold', 'spam_mode_window_hours',
+      'spam_mode_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
+    ];
+    plainFields.forEach(key => setFieldValue(key, s[key]));
+
+    // Checkboxes
+    setFieldValue('mute_mode_enabled',  s.mute_mode_enabled);
+    setFieldValue('troll_mode_enabled', s.troll_mode_enabled);
+    setFieldValue('spam_mode_enabled',  s.spam_mode_enabled);
+
+    // Color picker
+    const color = s.base_embed_color || '#999999';
+    if (colorPicker) colorPicker.value = color;
+    if (colorText)   colorText.value   = color.toUpperCase();
+
+    // Build the saved-values map from settings, then populate selects
+    const selectIds = [
+      'give_perms_fren_role_id', 'give_perms_position_above_role_id',
+      'noobies_role_id', 'newuser_been_in_server_before_role_id', 'newuser_permission_diff_role_id',
+      'spam_mode_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
+    ];
+    const savedMap = {};
+    selectIds.forEach(id => { if (s[id]) savedMap[id] = s[id]; });
+    await loadGuildData(savedMap);
+  }
+
+  // ── Refresh button ────────────────────────────────────────────────────────
+  const refreshBtn  = document.getElementById('refreshBtn');
+  const refreshIcon = document.getElementById('refreshIcon');
+
+  refreshBtn?.addEventListener('click', async () => {
+    refreshBtn.disabled = true;
+    refreshIcon.style.transition = 'transform 0.6s ease';
+    refreshIcon.style.transform  = 'rotate(360deg)';
+
+    try {
+      const saved = captureSelectValues();
+      await loadGuildData(saved);
+      showToast('Roles and channels refreshed!', 'success');
+    } catch {
+      showToast('Failed to refresh guild data.', 'error');
+    } finally {
+      refreshBtn.disabled = false;
+      // Reset rotation so the animation can replay next click
+      setTimeout(() => {
+        refreshIcon.style.transition = 'none';
+        refreshIcon.style.transform  = 'rotate(0deg)';
+      }, 650);
+    }
+  });
+
+  // ── Save section ──────────────────────────────────────────────────────────
+  async function saveSection(btn) {
+    const keys = btn.dataset.keys.split(',');
+    const payload = {};
+
+    keys.forEach(key => {
+      const val = getFieldValue(key);
+      if (val !== undefined) {
+        // Use the color text box value (hex string) for embed color
+        if (key === 'base_embed_color') {
+          payload[key] = colorText?.value || colorPicker?.value || '#999999';
+        } else {
+          payload[key] = val;
+        }
+      }
+    });
+
+    setButtonState(btn, 'loading');
+    try {
+      const res = await fetch('/api/settings', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        showToast('Settings saved!', 'success');
+      } else {
+        showToast(data.error || 'Failed to save.', 'error');
+      }
+    } catch (err) {
+      showToast('Network error. Please try again.', 'error');
+    } finally {
+      setButtonState(btn, 'idle');
+    }
+  }
+
+  // Attach save handlers
+  document.querySelectorAll('.save-btn').forEach(btn => {
+    btn.addEventListener('click', () => saveSection(btn));
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadSettings();
+</script>

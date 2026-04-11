@@ -18,8 +18,24 @@ A feature-rich Discord bot designed to bring advanced functionalities to your Di
   - [PirateWeather](https://pirateweather.net/) - For weather forecasts
   - [MyAnimeList](https://myanimelist.net/apiconfig) - Client ID for anime information
   - [Reddit](https://www.reddit.com/prefs/apps) - Client ID and Client Secret
-- [Sentry](https://sentry.io/) - DSN for error monitoring (optional but recommended)
+  - [Sentry](https://sentry.io/) - DSN for error monitoring (optional but recommended)
 - Docker and Docker Compose
+
+### Web Dashboard Setup
+
+Nova includes a built-in web dashboard for managing bot settings without touching Doppler or redeploying.
+
+**1. Add a redirect URI in the [Discord Developer Portal](https://discord.com/developers/applications):**
+
+Open your application → OAuth2 → Redirects and add:
+```
+http://<your-server-ip-or-domain>:3001/auth/callback
+```
+Replace `3001` with your chosen `DASHBOARD_PORT` if different.
+
+**2. Add the required Doppler variables** (see the Configuration section below).
+
+**3. Access the dashboard** at `http://<DASHBOARD_BASE_URL>` and sign in with Discord. Only users with the Administrator permission in the server can log in.
 
 ### Docker Deployment
 
@@ -61,19 +77,11 @@ The following environment variables can be set in your `docker-compose.yml`:
 | `DOPPLER_TOKEN` | Doppler service token (injects secrets as env vars) |    ✅    |    -    | -       |
 
 **Note:** Secrets and API keys are injected at runtime by [Doppler](https://www.doppler.com/). Pass `DOPPLER_TOKEN` when running the container so the bot receives the following (configure them in your Doppler project):
-- `BASE_EMBED_COLOR`
-- `BOT_STATUS`
-- `BOT_STATUS_TYPE`
+
+**Required (bot will not start without these):**
 - `DISCORD_BOT_TOKEN`
-- `GIVE_PERMS_FREN_ROLE_ID`
-- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID`
-- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID`
-- `NEWUSER_PERMISSION_DIFF_ROLE_ID`
-- `NOOBIES_ROLE_ID`
 - `GOOGLE_API_KEY`
-- `GUILD_NAME`
 - `IMAGE_SEARCH_ENGINE_ID`
-- `LOG_LEVEL`
 - `MAL_CLIENT_ID`
 - `OMDB_API_KEY`
 - `PIRATEWEATHER_API_KEY`
@@ -82,8 +90,26 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `REDDIT_PASSWORD`
 - `REDDIT_USERNAME`
 - `SEARCH_ENGINE_ID`
-- `SENTRY_DSN`
-- `SERVER_INVITE_URL`
+
+**Dashboard (required to enable the web dashboard):**
+- `DISCORD_CLIENT_SECRET` — OAuth2 client secret from the Discord Developer Portal (same application as the bot)
+- `DASHBOARD_SESSION_SECRET` — A long random string for signing session cookies
+- `DASHBOARD_PORT` — Port for the dashboard web server (default: `3001`)
+- `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://192.168.1.10:3001`)
+
+**Optional (managed via dashboard after first start, can also be seeded from Doppler):**
+- `BASE_EMBED_COLOR` — Hex color for embed borders (e.g. `#CD41FF`); set once then editable in dashboard
+- `BOT_STATUS` — Bot activity status text
+- `BOT_STATUS_TYPE` — Activity type: `watching`, `playing`, `listening`, `streaming`, `competing`, `custom`
+- `GIVE_PERMS_FREN_ROLE_ID` — Role ID for the Fren role
+- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` — Role ID that new custom roles are positioned above
+- `GUILD_NAME` — Display name used in embeds (default: `Da Frens`)
+- `LOG_LEVEL` — Logging verbosity: `error`, `warn`, `info`, `debug` (default: `info`)
+- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID` — Role ID for returning members
+- `NEWUSER_PERMISSION_DIFF_ROLE_ID` — Reference role for /newuser permission comparison
+- `NOOBIES_ROLE_ID` — Role ID auto-assigned to members with fewer than 100 messages
+- `SENTRY_DSN` — Sentry project DSN for error monitoring
+- `SERVER_INVITE_URL` — Invite URL included in kick DMs
 
 Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
 

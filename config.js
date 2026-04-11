@@ -107,18 +107,25 @@ module.exports = {
 // Optional (not required to start): SENTRY_DSN — error monitoring (@sentry/node, see instrument.js).
 // Sentry environment uses NODE_ENV (default production). Release is set from package.json name + version in instrument.js.
 
+// Dashboard optional vars (dashboard will warn at startup if missing, but bot still starts):
+//   DISCORD_CLIENT_SECRET — OAuth2 secret for dashboard login (same Discord application as bot)
+//   DASHBOARD_SESSION_SECRET — secret for express-session cookie signing
+//   DASHBOARD_PORT — port for the web dashboard (default: 3001)
+//   DASHBOARD_BASE_URL — public URL for OAuth redirect (default: http://localhost:3001)
+
+// The following vars are now managed via the dashboard and seeded from env on first start.
+// They are no longer required to be in Doppler; set them once via the dashboard UI instead:
+//   BOT_STATUS, BOT_STATUS_TYPE, BASE_EMBED_COLOR, LOG_LEVEL, GUILD_NAME,
+//   GIVE_PERMS_FREN_ROLE_ID, GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
+//   NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID, NEWUSER_PERMISSION_DIFF_ROLE_ID,
+//   NOOBIES_ROLE_ID, SERVER_INVITE_URL
+
 // Required env vars (no default); bot fails to start if any are missing
 const REQUIRED_ENV_VARS = [
   'DISCORD_BOT_TOKEN',
-  'BOT_STATUS',
-  'GIVE_PERMS_FREN_ROLE_ID',
-  'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
   'GOOGLE_API_KEY',
   'IMAGE_SEARCH_ENGINE_ID',
   'MAL_CLIENT_ID',
-  'NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID',
-  'NEWUSER_PERMISSION_DIFF_ROLE_ID',
-  'NOOBIES_ROLE_ID',
   'OMDB_API_KEY',
   'PIRATEWEATHER_API_KEY',
   'REDDIT_CLIENT_ID',
@@ -126,7 +133,6 @@ const REQUIRED_ENV_VARS = [
   'REDDIT_PASSWORD',
   'REDDIT_USERNAME',
   'SEARCH_ENGINE_ID',
-  'SERVER_INVITE_URL',
   // Spotify env vars removed
 ];
 

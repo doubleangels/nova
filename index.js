@@ -91,6 +91,22 @@ for (const file of eventFiles) {
 
 client.login(config.token);
 
+// ─── Dashboard ───────────────────────────────────────────────────────────────
+// Starts the web dashboard in the same process after the Discord client is wired up.
+// The dashboard receives the live `client` so it can read guild data and apply changes.
+if (process.env.DISCORD_CLIENT_SECRET && process.env.DASHBOARD_SESSION_SECRET) {
+  const createDashboard = require('./dashboard/server');
+  const dashboardPort = parseInt(process.env.DASHBOARD_PORT || '3001', 10);
+  const dashboardApp = createDashboard(client);
+  dashboardApp.listen(dashboardPort, () => {
+    logger.info(`Dashboard running on port ${dashboardPort}.`, {
+      url: process.env.DASHBOARD_BASE_URL || `http://localhost:${dashboardPort}`,
+    });
+  });
+} else {
+  logger.info('Dashboard not started — set DISCORD_CLIENT_SECRET and DASHBOARD_SESSION_SECRET in Doppler to enable it.');
+}
+
 /**
  * Last-resort safety net: catches any exception that escapes all try-catch blocks.
  * Sentry's built-in integrations also handle these, but explicit handlers ensure

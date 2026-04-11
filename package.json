@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "doppler run -- node index.js",
+    "dev": "doppler run -- nodemon --watch . --ext js,ejs --ignore node_modules --ignore data index.js",
     "update": "npm outdated && npm update --save",
     "set-value": "node set-value.js",
     "remove-value": "node remove-value.js",
@@ -28,15 +29,22 @@
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "@sentry/node": "^10.47.0",
-    "axios": "^1.14.0",
+    "@sentry/node": "^10.48.0",
+    "axios": "^1.15.0",
     "better-sqlite3": "^12.8.0",
     "dayjs": "^1.11.20",
     "discord.js": "^14.26.2",
     "dotenv": "^17.4.1",
+    "ejs": "^5.0.1",
+    "express": "^5.2.1",
+    "express-ejs-layouts": "^2.5.1",
+    "express-session": "^1.19.0",
     "he": "^1.2.0",
     "keyv": "^5.6.0",
     "node-cache": "^5.1.2",
     "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

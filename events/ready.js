@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
+const { seedAllFromEnv } = require('../utils/dynamicConfig');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
@@ -31,6 +32,11 @@ module.exports = {
     try {
       await initializeDatabase();
       logger.info('Database connection initialized successfully.');
+
+      // Seed non-sensitive config from env → DB on first startup.
+      // DB values take priority so dashboard changes survive restarts.
+      await seedAllFromEnv();
+      logger.info('Dynamic config ready.');
 
       // Get bot status from environment variables
       let botActivity = DEFAULT_BOT_ACTIVITY;
