@@ -175,7 +175,7 @@ router.get('/guild/roles', (req, res) => {
 
   const roles = guild.roles.cache
     .filter(r => r.id !== guild.id) // exclude @everyone
-    .sort((a, b) => b.position - a.position)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
     .map(r => ({ id: r.id, name: r.name, color: r.hexColor }));
 
   res.json(roles);
@@ -189,7 +189,7 @@ router.get('/guild/channels', (req, res) => {
 
   const channels = guild.channels.cache
     .filter(c => c.isTextBased() && !c.isThread())
-    .sort((a, b) => a.position - b.position)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
     .map(c => ({ id: c.id, name: c.name, type: c.type }));
 
   res.json(channels);

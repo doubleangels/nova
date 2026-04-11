@@ -7,9 +7,6 @@
   <!-- Apply saved theme before paint to prevent flash -->
   <script>(function(){var t=localStorage.getItem('dashboard-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Tom Select: base (structure only) — all colors set by CSS vars below -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2/dist/css/tom-select.base.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/tom-select@2/dist/js/tom-select.complete.min.js"></script>
   <style>
     /* ── Theme tokens ────────────────────────────────────────────────────── */
     :root {
@@ -36,17 +33,6 @@
       --c-label:           #d1d5db;
       --c-hint:            #4b5563;
       --c-toggle-off:      #374151;
-      /* Tom Select tokens */
-      --c-ts-ctrl:         #1f2937;
-      --c-ts-ctrl-border:  #374151;
-      --c-ts-ctrl-text:    #ffffff;
-      --c-ts-drop:         #111827;
-      --c-ts-drop-border:  #374151;
-      --c-ts-opt:          #d1d5db;
-      --c-ts-opt-hover:    #374151;
-      --c-ts-opt-hover-t:  #ffffff;
-      --c-ts-sel:          rgba(109,40,217,0.4);
-      --c-ts-sel-text:     #a78bfa;
     }
     html[data-theme="light"] {
       --c-bg:              #f1f5f9;
@@ -71,16 +57,6 @@
       --c-label:           #334155;
       --c-hint:            #94a3b8;
       --c-toggle-off:      #cbd5e1;
-      --c-ts-ctrl:         #f8fafc;
-      --c-ts-ctrl-border:  #cbd5e1;
-      --c-ts-ctrl-text:    #0f172a;
-      --c-ts-drop:         #ffffff;
-      --c-ts-drop-border:  #e2e8f0;
-      --c-ts-opt:          #334155;
-      --c-ts-opt-hover:    #f1f5f9;
-      --c-ts-opt-hover-t:  #0f172a;
-      --c-ts-sel:          rgba(109,40,217,0.08);
-      --c-ts-sel-text:     #6d28d9;
     }
 
     /* ── Shell ───────────────────────────────────────────────────────────── */
@@ -102,76 +78,6 @@
     /* ── Misc ────────────────────────────────────────────────────────────── */
     [x-cloak] { display: none !important; }
     input[type="color"] { padding: 2px 4px; cursor: pointer; }
-
-    /* ── Tom Select (all colors via CSS vars) ────────────────────────────── */
-    .ts-wrapper { width: 100%; }
-    .ts-wrapper .ts-control {
-      background: var(--c-ts-ctrl);
-      border: 1px solid var(--c-ts-ctrl-border);
-      border-radius: 0.5rem;
-      color: var(--c-ts-ctrl-text);
-      font-size: 0.875rem;
-      padding: 0.5rem 2.25rem 0.5rem 0.75rem;
-      box-shadow: none;
-      cursor: pointer;
-      min-height: unset;
-      flex-wrap: nowrap;
-      line-height: 1.25rem;
-    }
-    .ts-wrapper.focus .ts-control {
-      border-color: #7c3aed;
-      box-shadow: 0 0 0 2px rgba(124,58,237,0.35);
-      outline: none;
-    }
-    .ts-wrapper .ts-control input {
-      color: var(--c-ts-ctrl-text) !important;
-      font-size: 0.875rem;
-      background: transparent;
-    }
-    .ts-wrapper .ts-control input::placeholder { color: var(--c-input-ph); }
-    .ts-wrapper .ts-control .item { color: var(--c-ts-ctrl-text); }
-    /* custom dropdown caret */
-    .ts-wrapper:not(.multi).single .ts-control:after {
-      content: '';
-      position: absolute;
-      right: 0.75rem;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 0; height: 0;
-      border-left: 4px solid transparent;
-      border-right: 4px solid transparent;
-      border-top: 5px solid var(--c-text-muted);
-      pointer-events: none;
-    }
-    .ts-wrapper.dropdown-active.single .ts-control:after {
-      border-top: none;
-      border-bottom: 5px solid var(--c-text-muted);
-    }
-    .ts-dropdown {
-      background: var(--c-ts-drop);
-      border: 1px solid var(--c-ts-drop-border);
-      border-radius: 0.5rem;
-      margin-top: 4px;
-      font-size: 0.875rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-      z-index: 100;
-    }
-    .ts-dropdown .ts-dropdown-content { padding: 4px; }
-    .ts-dropdown .option {
-      color: var(--c-ts-opt);
-      border-radius: 0.375rem;
-      padding: 6px 10px;
-    }
-    .ts-dropdown .option:hover,
-    .ts-dropdown .option.option--highlighted {
-      background: var(--c-ts-opt-hover);
-      color: var(--c-ts-opt-hover-t);
-    }
-    .ts-dropdown .option.selected,
-    .ts-dropdown .option.selected.option--highlighted {
-      background: var(--c-ts-sel);
-      color: var(--c-ts-sel-text);
-    }
   </style>
 </head>
 <body class="h-full antialiased">

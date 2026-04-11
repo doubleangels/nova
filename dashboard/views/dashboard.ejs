@@ -393,22 +393,19 @@
 
 <!-- ─── Dashboard JavaScript ─── -->
 <script>
-  // ── Tom Select instances ──────────────────────────────────────────────────
-  const tsInstances = new Map();
-
-  function createTS(el, options, selectedValue) {
-    const existing = tsInstances.get(el.id);
-    if (existing) existing.destroy();
-    const ts = new TomSelect(el, {
-      options,
-      items:          selectedValue ? [selectedValue] : [],
-      maxOptions:     null,
-      allowEmptyOption: true,
-      placeholder:    '— None —',
-      plugins:        [],
-    });
-    tsInstances.set(el.id, ts);
-    return ts;
+  // ── Native <select> helpers (roles / channels) ───────────────────────────
+  function populateSelect(el, options, selectedValue) {
+    const want = selectedValue ?? '';
+    el.replaceChildren();
+    for (const opt of options) {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.text;
+      el.appendChild(o);
+    }
+    el.value = want;
+    const valid = want === '' || Array.from(el.options).some(o => o.value === want);
+    if (!valid) el.value = '';
   }
 
   // ── Utility ──────────────────────────────────────────────────────────────
@@ -436,8 +433,6 @@
   }
 
   function getFieldValue(id) {
-    const ts = tsInstances.get(id);
-    if (ts) return ts.getValue();
     const el = document.getElementById(id);
     if (!el) return undefined;
     if (el.type === 'checkbox') return el.checked;
@@ -445,8 +440,6 @@
   }
 
   function setFieldValue(id, value) {
-    const ts = tsInstances.get(id);
-    if (ts) { ts.setValue(value ?? '', true); return; }
     const el = document.getElementById(id);
     if (!el) return;
     if (el.type === 'checkbox') {
@@ -482,19 +475,17 @@
     const channelOptions = [noneOpt, ...channels.map(c => ({ value: c.id, text: `#${c.name}` }))];
 
     document.querySelectorAll('.role-select').forEach(el => {
-      createTS(el, roleOptions, savedSelectValues[el.id] ?? '');
+      populateSelect(el, roleOptions, savedSelectValues[el.id] ?? '');
     });
     document.querySelectorAll('.channel-select').forEach(el => {
-      createTS(el, channelOptions, savedSelectValues[el.id] ?? '');
+      populateSelect(el, channelOptions, savedSelectValues[el.id] ?? '');
     });
   }
 
-  // Snapshot current Tom Select values so they survive a refresh
   function captureSelectValues() {
     const map = {};
-    tsInstances.forEach((ts, id) => {
-      const v = ts.getValue();
-      if (v) map[id] = v;
+    document.querySelectorAll('.role-select, .channel-select').forEach(el => {
+      if (el.value) map[el.id] = el.value;
     });
     return map;
   }
@@ -507,10 +498,7 @@
 
     const plainFields = [
       'bot_status', 'bot_status_type', 'log_level', 'guild_name', 'server_invite_url',
-      'give_perms_fren_role_id', 'give_perms_position_above_role_id',
-      'noobies_role_id', 'newuser_been_in_server_before_role_id', 'newuser_permission_diff_role_id',
       'mute_mode_kick_time_hours', 'troll_mode_account_age', 'spam_mode_threshold', 'spam_mode_window_hours',
-      'spam_mode_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
     ];
     plainFields.forEach(key => setFieldValue(key, s[key]));
 
@@ -531,7 +519,10 @@
       'spam_mode_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
     ];
     const savedMap = {};
-    selectIds.forEach(id => { if (s[id]) savedMap[id] = s[id]; });
+    selectIds.forEach(id => {
+      const v = s[id];
+      if (v !== undefined && v !== null && v !== '') savedMap[id] = v;
+    });
     await loadGuildData(savedMap);
   }
 
