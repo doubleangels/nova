@@ -48,7 +48,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Cache Trivy vulnerability database
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: .trivy-cache
           key: ${{ runner.os }}-trivy-db-v1
@@ -62,7 +62,7 @@ jobs:
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Build Docker Image
         id: build
-        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f
         with:
           context: .
           platforms: linux/amd64
@@ -113,7 +113,7 @@ jobs:
           done
 
       - name: Upload Trivy image scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@b8bb9f28b8d3f992092362369c57161b755dea45
+        uses: github/codeql-action/upload-sarif@c10b8064de6f491fea524254123dbe5e09572f13
         with:
           sarif_file: 'trivy-image-results.sarif'
           category: 'trivy-image'
@@ -133,7 +133,7 @@ jobs:
       contents: read
     steps:
       - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@bd2822c9d98065c9766fb1f4bbc32325c47de4fb
+        uses: Mattraks/delete-workflow-runs@b3018382ca039b53d238908238bd35d1fb14f8ee
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -156,7 +156,7 @@ jobs:
     steps:
       - name: Check PR mergeability
         id: check-mergeable
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             const { data: pr } = await github.rest.pulls.get({
@@ -186,7 +186,7 @@ jobs:
 
       - name: Comment on PR
         if: steps.check-mergeable.outputs.mergeable == 'true'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         continue-on-error: true
         with:
           script: |
@@ -209,7 +209,7 @@ jobs:
 
       - name: Comment on automerge success
         if: steps.automerge.outcome == 'success'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         continue-on-error: true
         with:
           script: |
@@ -222,7 +222,7 @@ jobs:
 
       - name: Comment on automerge failure
         if: steps.automerge.outcome == 'failure'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         continue-on-error: true
         with:
           script: |
