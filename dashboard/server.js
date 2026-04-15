@@ -42,6 +42,12 @@ class KeyvSessionStore extends Store {
  */
 function createDashboard(client) {
   const app = express();
+  const dashboardBaseUrl = process.env.DASHBOARD_BASE_URL || '';
+  const isHttpsBaseUrl = /^https:\/\//i.test(dashboardBaseUrl);
+  const secureCookieEnv = process.env.DASHBOARD_COOKIE_SECURE;
+  const useSecureCookie = secureCookieEnv == null
+    ? isHttpsBaseUrl
+    : secureCookieEnv === 'true';
 
   // Trust proxy headers when running behind nginx / Caddy
   app.set('trust proxy', 1);
@@ -68,7 +74,9 @@ function createDashboard(client) {
     store: new KeyvSessionStore(),
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // For OAuth state to survive redirect, cookie security must match the URL scheme.
+      // Default to secure only when DASHBOARD_BASE_URL is https://, with env override.
+      secure: useSecureCookie,
       maxAge: SESSION_TTL_MS,
     },
   }));

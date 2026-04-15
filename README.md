@@ -104,6 +104,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `DASHBOARD_SESSION_SECRET` — A long random string for signing session cookies
 - `DASHBOARD_PORT` — Port for the dashboard web server (default: `3001`)
 - `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://ares.nilgiri-dab.ts.net:5015`)
+- `DASHBOARD_COOKIE_SECURE` — Optional override (`true`/`false`) for session cookie `Secure` flag. Defaults to `true` only when `DASHBOARD_BASE_URL` starts with `https://`.
 
 **Optional (managed via dashboard after first start, can also be seeded from Doppler):**
 
