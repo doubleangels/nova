@@ -56,8 +56,10 @@ services:
       - SETGID
     environment:
       - DOPPLER_TOKEN=
+      - DASHBOARD_PORT=5015
+      - DASHBOARD_BASE_URL=http://iris:5015
     ports:
-      - "3001:3001"
+      - "5015:5015"
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
