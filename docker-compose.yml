@@ -10,7 +10,9 @@ services:
       - SETGID
     read_only: true
     environment:
-      - DOPPLER_TOKEN=your_doppler_service_token_here
+      - DOPPLER_TOKEN=
+    ports:
+      - "3001:3001"
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
