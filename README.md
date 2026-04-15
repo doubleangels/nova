@@ -30,10 +30,10 @@ Nova includes a built-in web dashboard for managing bot settings without touchin
 Open your application → OAuth2 → Redirects and add:
 
 ```
-http://<your-server-ip-or-domain>:3001/auth/callback
+http://ares.nilgiri-dab.ts.net:5015/auth/callback
 ```
 
-Replace `3001` with your chosen `DASHBOARD_PORT` if different.
+Use your own host/port if different, but this must exactly match `DASHBOARD_BASE_URL` + `/auth/callback`.
 
 **2. Add the required Doppler variables** (see the Configuration section below).
 
@@ -57,7 +57,7 @@ services:
     environment:
       - DOPPLER_TOKEN=
       - DASHBOARD_PORT=5015
-      - DASHBOARD_BASE_URL=http://iris:5015
+      - DASHBOARD_BASE_URL=
     ports:
       - "5015:5015"
     volumes:
@@ -103,7 +103,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `DISCORD_CLIENT_SECRET` — OAuth2 client secret from the Discord Developer Portal (same application as the bot)
 - `DASHBOARD_SESSION_SECRET` — A long random string for signing session cookies
 - `DASHBOARD_PORT` — Port for the dashboard web server (default: `3001`)
-- `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://192.168.1.10:3001`)
+- `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://ares.nilgiri-dab.ts.net:5015`)
 
 **Optional (managed via dashboard after first start, can also be seeded from Doppler):**
 
