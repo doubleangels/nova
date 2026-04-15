@@ -20,6 +20,7 @@ require('dotenv').config();
  * @property {string} botStatus - Bot activity status text (from BOT_STATUS env var)
  * @property {string} botStatusType - Bot activity type (from BOT_STATUS_TYPE env var)
  * @property {string} clientId - Discord application client ID
+ * @property {string} deeplApiKey - DeepL API auth key for reaction translations (from DEEPL_API_KEY env var)
  * @property {string} token - Discord bot token (from DISCORD_BOT_TOKEN env var)
  * @property {string} givePermsFrenRoleId - Role ID for Fren role (from GIVE_PERMS_FREN_ROLE_ID env var)
  * @property {string} givePermsPositionAboveRoleId - Role ID for permission management (from GIVE_PERMS_POSITION_ABOVE_ROLE_ID env var)
@@ -63,6 +64,8 @@ module.exports = {
   // Bot activity type (playing, watching, listening, streaming, competing)
   botStatusType: process.env.BOT_STATUS_TYPE || 'watching',
   clientId: "1280311987154456657",
+  // API key for DeepL translation
+  deeplApiKey: process.env.DEEPL_API_KEY,
   // Authentication token for your Discord bot
   token: process.env.DISCORD_BOT_TOKEN,
   // Discord role ID to assign alongside custom roles
@@ -112,6 +115,8 @@ module.exports = {
 //   DASHBOARD_SESSION_SECRET — secret for express-session cookie signing
 //   DASHBOARD_PORT — port for the web dashboard (default: 3001)
 //   DASHBOARD_BASE_URL — public URL for OAuth redirect (default: http://localhost:3001)
+// Other optional vars:
+//   DEEPL_API_KEY — enables flag-reaction translation via DeepL
 
 // The following vars are now managed via the dashboard and seeded from env on first start.
 // They are no longer required to be in Doppler; set them once via the dashboard UI instead:

@@ -7,6 +7,14 @@ const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
 
+const DEEPL_FREE_TRANSLATE_URL = 'https://api-free.deepl.com/v2/translate';
+
+const DEEPL_SUPPORTED_TARGET_LANGS = new Set([
+  'BG', 'CS', 'DA', 'DE', 'EL', 'EN', 'EN-GB', 'EN-US', 'ES', 'ET', 'FI', 'FR',
+  'HU', 'ID', 'IT', 'JA', 'KO', 'LT', 'LV', 'NB', 'NL', 'PL', 'PT', 'PT-BR',
+  'PT-PT', 'RO', 'RU', 'SK', 'SL', 'SV', 'TR', 'UK', 'ZH', 'ZH-HANS', 'ZH-HANT'
+]);
+
 module.exports = {
   name: Events.MessageReactionAdd,
 
@@ -110,24 +118,51 @@ async function handleTranslationRequest(reaction, user) {
       throw new Error("⚠️ No text to translate found in the message.");
     }
 
+    if (!config.deeplApiKey) {
+      logger.warn('DeepL API key missing; translation unavailable.', {
+        userId: user.id,
+        messageId: message.id
+      });
+      throw new Error('⚠️ DeepL is not configured yet.');
+    }
+
+    const targetLanguage = toDeepLTargetLanguage(languageInfo.code);
+    if (!targetLanguage) {
+      logger.warn('Selected language is unsupported by DeepL.', {
+        flagEmoji,
+        languageCode: languageInfo.code,
+        languageName: languageInfo.name
+      });
+      throw new Error(`⚠️ ${languageInfo.name} is not supported by DeepL yet.`);
+    }
+
     logger.debug('Making translation API request.', {
-      targetLanguage: languageInfo.code,
+      targetLanguage,
       textLength: originalText.length,
       userId: user.id
     });
 
+    const body = new URLSearchParams({
+      text: originalText,
+      target_lang: targetLanguage
+    });
     const response = await axios.post(
-      `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
+      DEEPL_FREE_TRANSLATE_URL,
+      body.toString(),
       {
-        q: originalText,
-        target: languageInfo.code,
-        format: 'text'
+        headers: {
+          Authorization: `DeepL-Auth-Key ${config.deeplApiKey}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
       }
     );
 
-    const translatedText = response.data.data.translations[0].translatedText;
+    const translatedText = response.data?.translations?.[0]?.text;
+    if (!translatedText) {
+      throw new Error('⚠️ DeepL returned an empty translation.');
+    }
     logger.debug('Translation API response received successfully.', {
-      targetLanguage: languageInfo.code,
+      targetLanguage,
       translatedLength: translatedText.length,
       userId: user.id
     });
@@ -180,7 +215,7 @@ async function handleTranslationRequest(reaction, user) {
 
     try {
       const errorMessage = error.response?.status === 403
-        ? "⚠️ Translation API error occurred."
+        ? "⚠️ DeepL API error occurred."
         : "⚠️ Failed to translate the message.";
 
       logger.debug('Sending translation error response to user.', {
@@ -200,4 +235,21 @@ async function handleTranslationRequest(reaction, user) {
       });
     }
   }
+}
+
+function toDeepLTargetLanguage(languageCode) {
+  if (!languageCode || typeof languageCode !== 'string') {
+    return null;
+  }
+
+  const normalized = languageCode.trim().toUpperCase();
+  const aliasMap = {
+    NO: 'NB',
+    ZH: 'ZH',
+    PT: 'PT',
+    EN: 'EN'
+  };
+  const deeplCode = aliasMap[normalized] || normalized;
+
+  return DEEPL_SUPPORTED_TARGET_LANGS.has(deeplCode) ? deeplCode : null;
 }
