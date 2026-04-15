@@ -113,8 +113,10 @@ module.exports = {
 // Dashboard optional vars (dashboard will warn at startup if missing, but bot still starts):
 //   DISCORD_CLIENT_SECRET — OAuth2 secret for dashboard login (same Discord application as bot)
 //   DASHBOARD_SESSION_SECRET — secret for express-session cookie signing
+// Dashboard runtime vars (seeded from env once, then editable in Dashboard UI and stored in DB):
 //   DASHBOARD_PORT — port for the web dashboard (default: 3001)
 //   DASHBOARD_BASE_URL — public URL for OAuth redirect (default: http://localhost:3001)
+//   DASHBOARD_COOKIE_SECURE — "true"/"false" override for secure session cookies
 // Other optional vars:
 //   DEEPL_API_KEY — enables flag-reaction translation via DeepL
 

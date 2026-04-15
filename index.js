@@ -4,13 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
-
-// Log the base embed color on startup for debugging
-if (config.baseEmbedColor) {
-  logger.info(`Base embed color loaded: 0x${config.baseEmbedColor.toString(16).toUpperCase()} (from BASE_EMBED_COLOR="${process.env.BASE_EMBED_COLOR}")`);
-} else {
-  logger.warn('BASE_EMBED_COLOR not set. Embed colors will use Discord defaults.');
-}
+const { getValue, setValue } = require('./utils/database');
 
 /** @type {GatewayIntentBits[]} Bot intents required for functionality */
 const BOT_INTENTS = [
@@ -95,14 +89,62 @@ client.login(config.token);
 // Starts the web dashboard in the same process after the Discord client is wired up.
 // The dashboard receives the live `client` so it can read guild data and apply changes.
 if (process.env.DISCORD_CLIENT_SECRET && process.env.DASHBOARD_SESSION_SECRET) {
-  const createDashboard = require('./dashboard/server');
-  const dashboardPort = parseInt(process.env.DASHBOARD_PORT || '3001', 10);
-  const dashboardApp = createDashboard(client);
-  dashboardApp.listen(dashboardPort, () => {
-    logger.info(`Dashboard running on port ${dashboardPort}.`, {
-      url: process.env.DASHBOARD_BASE_URL || `http://localhost:${dashboardPort}`,
-    });
-  });
+  (async () => {
+    const createDashboard = require('./dashboard/server');
+    const envDashboardPort = parseInt(process.env.DASHBOARD_PORT || '3001', 10);
+    const envDashboardBaseUrl = process.env.DASHBOARD_BASE_URL || `http://localhost:${envDashboardPort}`;
+    const envCookieSecure = process.env.DASHBOARD_COOKIE_SECURE;
+
+    function hasValue(v) {
+      return v != null && String(v).trim() !== '';
+    }
+    function parseBool(v) {
+      if (typeof v === 'boolean') return v;
+      if (!hasValue(v)) return null;
+      const s = String(v).trim().toLowerCase();
+      if (s === 'true') return true;
+      if (s === 'false') return false;
+      return null;
+    }
+
+    // Persist once from env, then prefer DB forever so these can be removed from Doppler.
+    async function resolveDashboardSetting(key, envValue) {
+      const current = await getValue(key);
+      if (hasValue(current)) return current;
+      if (hasValue(envValue)) {
+        await setValue(key, envValue);
+        return envValue;
+      }
+      return null;
+    }
+
+    try {
+      const dbPortRaw = await resolveDashboardSetting('dashboard_port', envDashboardPort);
+      const parsedPort = Number.parseInt(String(dbPortRaw || envDashboardPort), 10);
+      const dashboardPort = Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : 3001;
+
+      const dashboardBaseUrl = String(
+        (await resolveDashboardSetting('dashboard_base_url', envDashboardBaseUrl)) || `http://localhost:${dashboardPort}`
+      ).replace(/\/$/, '');
+
+      const dbCookieSecureRaw = await resolveDashboardSetting('dashboard_cookie_secure', envCookieSecure);
+      const dashboardCookieSecure = parseBool(dbCookieSecureRaw);
+      const useSecureCookie = dashboardCookieSecure == null
+        ? /^https:\/\//i.test(dashboardBaseUrl)
+        : dashboardCookieSecure;
+
+      const dashboardApp = createDashboard(client, {
+        dashboardBaseUrl,
+        useSecureCookie,
+      });
+
+      dashboardApp.listen(dashboardPort, () => {
+        logger.info(`Dashboard running on port ${dashboardPort}.`, { url: dashboardBaseUrl });
+      });
+    } catch (err) {
+      logger.error('Failed to start dashboard.', { err });
+    }
+  })();
 } else {
   logger.info('Dashboard not started — set DISCORD_CLIENT_SECRET and DASHBOARD_SESSION_SECRET in Doppler to enable it.');
 }

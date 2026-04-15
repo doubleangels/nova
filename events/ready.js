@@ -38,7 +38,11 @@ module.exports = {
       await seedAllFromEnv();
       logger.info('Dynamic config ready.');
 
-      // Get bot status from environment variables
+      logger.info('Runtime embed color resolved.', {
+        baseEmbedColorHex: `0x${(config.baseEmbedColor || 0x999999).toString(16).toUpperCase()}`
+      });
+
+      // Get bot status from effective runtime config (DB-backed, env-seeded on first start)
       let botActivity = DEFAULT_BOT_ACTIVITY;
       const botStatus = config.botStatus;
       const botStatusType = config.botStatusType || 'watching';
@@ -62,12 +66,12 @@ module.exports = {
           name: statusName,
           type: activityType
         };
-        logger.info('Loaded bot status from environment.', {
+        logger.info('Loaded bot status from runtime config.', {
           statusName: statusName,
           statusType: botStatusType
         });
       } else {
-        logger.info('No BOT_STATUS environment variable set, using default.');
+        logger.info('No bot status configured in runtime config, using default.');
       }
 
       logger.debug('Setting bot activity.', {

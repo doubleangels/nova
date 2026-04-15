@@ -11,8 +11,19 @@ const OAUTH_SCOPES = 'identify guilds';
 // Administrator permission bit
 const ADMINISTRATOR = BigInt(0x8);
 
-function getRedirectUri() {
-  const base = (process.env.DASHBOARD_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
+function getRedirectUri(req) {
+  const hostHeader = req?.get?.('host');
+  const hostName = (hostHeader || '').split(':')[0].toLowerCase();
+  const isLocalHost = hostName === 'localhost' || hostName === '127.0.0.1' || hostName === '::1' || hostName === '[::1]';
+
+  // Local testing convenience: if accessed via localhost, generate redirect_uri from the active request host.
+  // This avoids toggling DASHBOARD_BASE_URL when switching between local and remote testing.
+  if (isLocalHost && hostHeader) {
+    const proto = req.protocol || 'http';
+    return `${proto}://${hostHeader}/auth/callback`;
+  }
+
+  const base = (req?.app?.locals?.dashboardBaseUrl || process.env.DASHBOARD_BASE_URL || 'http://localhost:3001').replace(/\/$/, '');
   return `${base}/auth/callback`;
 }
 
@@ -21,7 +32,7 @@ function getRedirectUri() {
  */
 router.get('/discord', (req, res) => {
   const clientId = config.clientId;
-  const redirectUri = encodeURIComponent(getRedirectUri());
+  const redirectUri = encodeURIComponent(getRedirectUri(req));
   const state = Math.random().toString(36).slice(2);
   req.session.oauthState = state;
 
@@ -74,7 +85,7 @@ router.get('/callback', async (req, res) => {
         client_secret: clientSecret,
         grant_type:    'authorization_code',
         code,
-        redirect_uri:  getRedirectUri(),
+        redirect_uri:  getRedirectUri(req),
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );

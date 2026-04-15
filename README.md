@@ -31,9 +31,11 @@ Open your application → OAuth2 → Redirects and add:
 
 ```
 http://ares.nilgiri-dab.ts.net:5015/auth/callback
+http://localhost:5015/auth/callback
 ```
 
 Use your own host/port if different, but this must exactly match `DASHBOARD_BASE_URL` + `/auth/callback`.
+For local testing, the dashboard now auto-uses the current localhost host/port in OAuth redirects.
 
 **2. Add the required Doppler variables** (see the Configuration section below).
 
@@ -57,7 +59,8 @@ services:
     environment:
       - DOPPLER_TOKEN=
       - DASHBOARD_PORT=5015
-      - DASHBOARD_BASE_URL=
+      - DASHBOARD_BASE_URL=http://iris.nilgiri-dab.ts.net:5015
+      - DASHBOARD_COOKIE_SECURE=false
     ports:
       - "5015:5015"
     volumes:
@@ -102,6 +105,9 @@ The following environment variables can be set in your `docker-compose.yml`:
 
 - `DISCORD_CLIENT_SECRET` — OAuth2 client secret from the Discord Developer Portal (same application as the bot)
 - `DASHBOARD_SESSION_SECRET` — A long random string for signing session cookies
+
+**Dashboard runtime (editable in Dashboard UI; requires restart to apply):**
+
 - `DASHBOARD_PORT` — Port for the dashboard web server (default: `3001`)
 - `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://ares.nilgiri-dab.ts.net:5015`)
 - `DASHBOARD_COOKIE_SECURE` — Optional override (`true`/`false`) for session cookie `Secure` flag. Defaults to `true` only when `DASHBOARD_BASE_URL` starts with `https://`.

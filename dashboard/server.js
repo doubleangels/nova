@@ -40,14 +40,16 @@ class KeyvSessionStore extends Store {
  * @param {import('discord.js').Client} client - The live Discord client instance
  * @returns {import('express').Application}
  */
-function createDashboard(client) {
+function createDashboard(client, options = {}) {
   const app = express();
-  const dashboardBaseUrl = process.env.DASHBOARD_BASE_URL || '';
+  const dashboardBaseUrl = String(options.dashboardBaseUrl || process.env.DASHBOARD_BASE_URL || '').replace(/\/$/, '');
   const isHttpsBaseUrl = /^https:\/\//i.test(dashboardBaseUrl);
-  const secureCookieEnv = process.env.DASHBOARD_COOKIE_SECURE;
-  const useSecureCookie = secureCookieEnv == null
-    ? isHttpsBaseUrl
-    : secureCookieEnv === 'true';
+  const useSecureCookie = typeof options.useSecureCookie === 'boolean'
+    ? options.useSecureCookie
+    : isHttpsBaseUrl;
+
+  app.locals.dashboardBaseUrl = dashboardBaseUrl;
+  app.locals.useSecureCookie = useSecureCookie;
 
   // Trust proxy headers when running behind nginx / Caddy
   app.set('trust proxy', 1);
@@ -95,11 +97,13 @@ function createDashboard(client) {
   // 404 handler
   app.use((req, res) => {
     const guild = req.discordClient?.guilds?.cache?.first();
+    const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
     res.status(404).render('error', {
       title: 'Not Found', message: 'Page not found.',
       user: req.session?.user || null,
       guildName: guild?.name || 'Da Frens',
       guildIcon: guild?.iconURL({ size: 64 }) || null,
+      botIcon,
     });
   });
 
@@ -107,11 +111,13 @@ function createDashboard(client) {
   app.use((err, req, res, _next) => {
     logger.error('Dashboard unhandled error.', { err });
     const guild = req.discordClient?.guilds?.cache?.first();
+    const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
     res.status(500).render('error', {
       title: 'Server Error', message: 'An unexpected error occurred.',
       user: req.session?.user || null,
       guildName: guild?.name || 'Da Frens',
       guildIcon: guild?.iconURL({ size: 64 }) || null,
+      botIcon,
     });
   });
 

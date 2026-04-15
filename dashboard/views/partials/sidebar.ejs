@@ -2,9 +2,9 @@
 <div class="sb-header p-5 border-b">
   <div class="flex items-center gap-3">
     <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
-      <img src="<%= guildIcon %>" class="w-9 h-9 rounded-full ring-2 ring-violet-600" alt="Server icon" />
+      <img src="<%= guildIcon %>" class="w-9 h-9 rounded-full ring-2" style="--tw-ring-color: var(--c-accent);" alt="Server icon" />
     <% } else { %>
-      <div class="w-9 h-9 rounded-full bg-violet-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">N</div>
+      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style="background:var(--c-accent)">N</div>
     <% } %>
     <div>
       <p class="sb-guild-name font-semibold leading-tight text-sm"><%= typeof guildName !== 'undefined' ? guildName : 'Da Frens' %></p>
@@ -63,7 +63,7 @@
         <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=32"
              class="w-8 h-8 rounded-full flex-shrink-0" alt="Avatar" />
       <% } else { %>
-        <div class="w-8 h-8 rounded-full bg-violet-800 flex items-center justify-center text-xs text-white flex-shrink-0">
+        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white flex-shrink-0" style="background:var(--c-accent)">
           <%= user.username.slice(0,2).toUpperCase() %>
         </div>
       <% } %>

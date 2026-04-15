@@ -1,5 +1,7 @@
 const express = require('express');
 const requireAuth = require('../middleware/requireAuth');
+const config = require('../../config');
+const { colorIntToHex } = require('../../utils/dynamicConfig');
 
 const router = express.Router();
 
@@ -14,10 +16,23 @@ const ERROR_MESSAGES = {
   auth_failed:        'Authentication failed. Please try again.',
 };
 
+function getLoginThemeAccent() {
+  const hex = colorIntToHex(config.baseEmbedColor || 0x7c3aed);
+  const clean = hex.replace('#', '');
+  const rgb = {
+    r: parseInt(clean.slice(0, 2), 16),
+    g: parseInt(clean.slice(2, 4), 16),
+    b: parseInt(clean.slice(4, 6), 16),
+  };
+  return { hex, rgb };
+}
+
 router.get('/login', (req, res) => {
   const errorKey = req.query.error;
   const errorMsg = ERROR_MESSAGES[errorKey] || null;
   const guild = req.discordClient?.guilds?.cache?.first();
+  const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
+  const accent = getLoginThemeAccent();
   // Login page has its own full HTML; skip the shared layout
   res.render('login', {
     layout: false,
@@ -25,16 +40,21 @@ router.get('/login', (req, res) => {
     error: errorMsg,
     guildName: guild?.name || 'Da Frens',
     guildIcon: guild?.iconURL({ size: 64 }) || null,
+    botIcon,
+    accentHex: accent.hex,
+    accentRgb: accent.rgb,
   });
 });
 
 router.get('/', requireAuth, (req, res) => {
   const guild = req.discordClient?.guilds?.cache?.first();
+  const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
   res.render('dashboard', {
     title: 'Dashboard',
     user: req.session.user,
     guildName: guild?.name || 'Da Frens',
     guildIcon: guild?.iconURL({ size: 64 }) || null,
+    botIcon,
     memberCount: guild?.memberCount || 0,
   });
 });

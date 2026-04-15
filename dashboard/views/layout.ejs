@@ -4,35 +4,41 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= title %> — Nova Dashboard</title>
+  <% if (botIcon) { %><link rel="icon" type="image/png" href="<%= botIcon %>" /><% } %>
   <!-- Apply saved theme before paint to prevent flash -->
   <script>(function(){var t=localStorage.getItem('dashboard-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* ── Theme tokens ────────────────────────────────────────────────────── */
     :root {
-      --c-bg:              #030712;
-      --c-sidebar:         #111827;
-      --c-sidebar-border:  #1f2937;
-      --c-topbar:          #111827;
-      --c-topbar-border:   #1f2937;
+      --c-bg:              #050506;
+      --c-sidebar:         #0d0d10;
+      --c-sidebar-border:  #1f1f24;
+      --c-topbar:          #0d0d10;
+      --c-topbar-border:   #1f1f24;
       --c-text:            #f3f4f6;
-      --c-text-muted:      #9ca3af;
-      --c-text-dim:        #6b7280;
-      --c-nav-text:        #d1d5db;
-      --c-nav-hover-bg:    #1f2937;
+      --c-text-muted:      #a1a1aa;
+      --c-text-dim:        #71717a;
+      --c-nav-text:        #d4d4d8;
+      --c-nav-hover-bg:    #1b1b20;
       --c-nav-hover-text:  #ffffff;
-      --c-nav-active-bg:   rgba(109,40,217,0.3);
-      --c-nav-active-text: #a78bfa;
+      --c-nav-active-bg:   rgba(124,58,237,0.22);
+      --c-nav-active-text: #c4b5fd;
       /* component tokens (consumed by dashboard.ejs) */
-      --c-card:            #111827;
-      --c-card-border:     #1f2937;
-      --c-input:           #1f2937;
-      --c-input-border:    #374151;
+      --c-card:            #101014;
+      --c-card-border:     #24242a;
+      --c-input:           #18181d;
+      --c-input-border:    #32323a;
       --c-input-text:      #ffffff;
-      --c-input-ph:        #4b5563;
-      --c-label:           #d1d5db;
-      --c-hint:            #4b5563;
-      --c-toggle-off:      #374151;
+      --c-input-ph:        #52525b;
+      --c-label:           #d4d4d8;
+      --c-hint:            #71717a;
+      --c-toggle-off:      #3f3f46;
+      --c-accent:          #7c3aed;
+      --c-accent-strong:   #8b5cf6;
+      --c-accent-soft-bg:  rgba(124,58,237,0.22);
+      --c-accent-soft-ring: rgba(124,58,237,0.35);
+      --c-accent-text:     #c4b5fd;
     }
     html[data-theme="light"] {
       --c-bg:              #f1f5f9;
@@ -74,6 +80,7 @@
     .sidebar-link         { color: var(--c-nav-text); }
     .sidebar-link:hover   { background-color: var(--c-nav-hover-bg) !important; color: var(--c-nav-hover-text) !important; }
     .sidebar-link.active  { background-color: var(--c-nav-active-bg) !important; color: var(--c-nav-active-text) !important; }
+    .brand-accent { color: var(--c-accent-strong) !important; }
 
     /* ── Misc ────────────────────────────────────────────────────────────── */
     [x-cloak] { display: none !important; }
@@ -85,7 +92,7 @@
 <!-- Mobile top bar -->
 <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40">
   <div class="flex items-center gap-2">
-    <span class="text-lg font-bold text-violet-400">Nova</span>
+    <span class="text-lg font-bold brand-accent">Nova</span>
     <span class="sb-sub text-sm">Dashboard</span>
   </div>
   <button id="menuToggle" class="p-2 rounded-md" style="color:var(--c-text-muted)">

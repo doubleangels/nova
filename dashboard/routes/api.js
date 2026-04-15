@@ -40,6 +40,7 @@ async function readAllSettings() {
     spamModeEnabled, spamModeThreshold, spamModeWindowHours, spamModeChannelId,
     trollModeEnabled, trollModeAccountAge,
     notextChannel, reminderChannel, reminderRole,
+    dashboardPort, dashboardBaseUrl, dashboardCookieSecure,
   ] = await Promise.all([
     getSetting('bot_status'),
     getSetting('bot_status_type'),
@@ -63,6 +64,9 @@ async function readAllSettings() {
     getValue('notext_channel'),
     getValue('reminder_channel'),
     getValue('reminder_role'),
+    getValue('dashboard_port'),
+    getValue('dashboard_base_url'),
+    getValue('dashboard_cookie_secure'),
   ]);
 
   return {
@@ -88,6 +92,9 @@ async function readAllSettings() {
     notext_channel:     notextChannel    || '',
     reminder_channel:   reminderChannel  || '',
     reminder_role:      reminderRole     || '',
+    dashboard_port: dashboardPort ?? 3001,
+    dashboard_base_url: dashboardBaseUrl || '',
+    dashboard_cookie_secure: dashboardCookieSecure === true || dashboardCookieSecure === 'true',
   };
 }
 
@@ -130,8 +137,9 @@ router.post('/settings', async (req, res) => {
     'spam_mode_enabled', 'spam_mode_threshold', 'spam_mode_window_hours', 'spam_mode_channel_id',
     'troll_mode_enabled', 'troll_mode_account_age',
     'notext_channel', 'reminder_channel', 'reminder_role',
+    'dashboard_port', 'dashboard_base_url', 'dashboard_cookie_secure',
   ];
-  const numericDbKeys = new Set(['mute_mode_kick_time_hours', 'spam_mode_threshold', 'spam_mode_window_hours', 'troll_mode_account_age']);
+  const numericDbKeys = new Set(['mute_mode_kick_time_hours', 'spam_mode_threshold', 'spam_mode_window_hours', 'troll_mode_account_age', 'dashboard_port']);
   for (const key of dbKeys) {
     if (key in body) {
       let val = body[key];
