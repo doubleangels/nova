@@ -125,6 +125,7 @@ router.get('/callback', async (req, res) => {
     req.session.user = {
       id:            user.id,
       username:      user.username,
+      global_name:   user.global_name,
       discriminator: user.discriminator,
       avatar:        user.avatar,
     };

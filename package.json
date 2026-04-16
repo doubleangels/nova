@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "doppler run -- node index.js",
     "dev": "doppler run -- nodemon --watch . --ext js,ejs --ignore node_modules --ignore data index.js",

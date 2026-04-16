@@ -49,13 +49,22 @@ router.get('/login', (req, res) => {
 router.get('/', requireAuth, (req, res) => {
   const guild = req.discordClient?.guilds?.cache?.first();
   const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
+  
+  // Split member count into users vs bots (using cache)
+  const totalCount = guild?.memberCount || 0;
+  const botCount = guild?.members?.cache?.filter(m => m.user.bot)?.size || 0;
+  const userCount = totalCount - botCount;
+
   res.render('dashboard', {
     title: 'Dashboard',
     user: req.session.user,
+    displayName: req.session.user.global_name || req.session.user.username,
     guildName: guild?.name || 'Da Frens',
     guildIcon: guild?.iconURL({ size: 64 }) || null,
     botIcon,
-    memberCount: guild?.memberCount || 0,
+    memberCount: totalCount,
+    userCount,
+    botCount,
   });
 });
 

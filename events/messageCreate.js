@@ -61,6 +61,9 @@ module.exports = {
         await checkForBumpMessages(message);
       }
 
+      // Handle Auto-Reactions
+      await handleAutoReactions(message);
+
       logger.debug('Processed message from user in channel.', {
         userTag: message.author.tag,
         channelName: message.channel.name
@@ -201,6 +204,47 @@ async function processUserMessage(message) {
       err: error,
       userId: message.author.id
     });
+  }
+}
+
+/**
+ * Checks message content against auto-reaction regex patterns and reacts if matched.
+ * Uses a short-lived in-memory cache to reduce DB load.
+ */
+let reactionsCache = { data: null, lastFetch: 0 };
+async function handleAutoReactions(message) {
+  if (!message.content || message.author.bot) return;
+
+  try {
+    const now = Date.now();
+    if (!reactionsCache.data || (now - reactionsCache.lastFetch) > 60000) {
+      reactionsCache.data = await getValue('auto_reactions') || [];
+      reactionsCache.lastFetch = now;
+    }
+
+    if (reactionsCache.data.length === 0) return;
+
+    for (const entry of reactionsCache.data) {
+      try {
+        const regex = new RegExp(entry.regex, 'i');
+        if (regex.test(message.content)) {
+          // Resolve emoji - could be a custom emoji ID or a unicode character
+          await message.react(entry.emoji).catch(() => {
+              logger.warn('Failed to react with emoji. Might be invalid or bot lacks permissions.', {
+                  emoji: entry.emoji,
+                  messageId: message.id
+              });
+          });
+        }
+      } catch (regexErr) {
+        logger.error('Invalid auto-reaction regex pattern.', {
+          pattern: entry.regex,
+          err: regexErr.message
+        });
+      }
+    }
+  } catch (err) {
+    logger.error('Error processing auto-reactions.', { err });
   }
 }
 

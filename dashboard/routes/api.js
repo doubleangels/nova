@@ -347,6 +347,45 @@ router.post('/reminders/fix', async (req, res) => {
   }
 });
 
+// ─── GET /api/fun/auto-reactions ───────────────────────────────────────────
+router.get('/fun/auto-reactions', async (req, res) => {
+  try {
+    const reactions = await getValue('auto_reactions') || [];
+    res.json(reactions);
+  } catch (err) {
+    logger.error('Failed to fetch auto-reactions.', { err });
+    res.status(500).json({ error: 'Failed to fetch auto-reactions.' });
+  }
+});
+
+// ─── POST /api/fun/auto-reactions ──────────────────────────────────────────
+router.post('/fun/auto-reactions', async (req, res) => {
+  const { reactions } = req.body;
+  if (!Array.isArray(reactions)) {
+    return res.status(400).json({ error: 'Reactions must be an array.' });
+  }
+
+  try {
+    // Basic validation
+    const cleaned = reactions
+      .filter(r => r.regex && r.emoji)
+      .map(r => ({
+        regex: String(r.regex).trim(),
+        emoji: String(r.emoji).trim()
+      }));
+
+    await updateValue('auto_reactions', cleaned);
+    logger.info('Auto-reactions updated via dashboard.', {
+      count: cleaned.length,
+      user: req.session.user?.username
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('Failed to update auto-reactions.', { err });
+    res.status(500).json({ error: 'Failed to update auto-reactions.' });
+  }
+});
+
 // ─── GET /api/invites ────────────────────────────────────────────────────────
 router.get('/invites', async (req, res) => {
   try {

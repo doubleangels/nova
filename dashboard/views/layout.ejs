@@ -41,9 +41,14 @@
           --c-toggle-off: #3f3f46;
           --c-accent: #7c3aed;
           --c-accent-strong: #8b5cf6;
-          --c-accent-soft-bg: rgba(124, 58, 237, 0.22);
-          --c-accent-soft-ring: rgba(124, 58, 237, 0.35);
+          --c-accent-soft-bg: rgba(124, 58, 237, 0.12);
+          --c-accent-soft-ring: rgba(124, 58, 237, 0.25);
           --c-accent-text: #c4b5fd;
+          
+          /* Glassmorphism */
+          --glass-bg: rgba(16, 16, 20, 0.75);
+          --glass-border: rgba(255, 255, 255, 0.05);
+          --glass-blur: 12px;
         }
 
         html[data-theme="light"] {
@@ -131,10 +136,58 @@
           color: var(--c-accent-strong) !important;
         }
 
-        /* ── Misc ────────────────────────────────────────────────────────────── */
-        [x-cloak] {
-          display: none !important;
+        /* ── Unified Components ────────────────────────────────────────────── */
+        .premium-card {
+          background: var(--c-card);
+          border: 1px solid var(--c-card-border);
+          border-radius: 1.25rem;
+          transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s ease;
         }
+
+        .premium-card:hover {
+          box-shadow: 0 12px 40px -12px rgba(0,0,0,0.5);
+          border-color: var(--c-accent-soft-ring);
+        }
+
+        .glass-panel {
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur));
+          border: 1px solid var(--glass-border);
+          border-radius: 1.25rem;
+        }
+
+        .icon-box {
+          width: 2.5rem;
+          height: 2.5rem;
+          border-radius: 0.75rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .icon-box-sm {
+          width: 2rem;
+          height: 2rem;
+          border-radius: 0.625rem;
+        }
+
+        /* Ambient background blobs (like Login) */
+        .ambient-blob {
+          position: fixed;
+          border-radius: 9999px;
+          filter: blur(80px);
+          pointer-events: none;
+          z-index: -1;
+          opacity: 0.15;
+        }
+
+        html[data-theme="light"] .ambient-blob {
+          opacity: 0.05;
+        }
+
+        .blob-1 { width: 500px; height: 500px; background: var(--c-accent); top: -200px; right: -100px; }
+        .blob-2 { width: 400px; height: 400px; background: #3b82f6; bottom: -100px; left: -100px; }
 
         input[type="color"] {
           padding: 2px 4px;
@@ -143,7 +196,11 @@
       </style>
 </head>
 
-<body class="h-full antialiased">
+<body class="h-full antialiased overflow-x-hidden">
+
+  <!-- Ambient background -->
+  <div class="ambient-blob blob-1"></div>
+  <div class="ambient-blob blob-2"></div>
 
   <!-- Mobile top bar -->
   <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40">

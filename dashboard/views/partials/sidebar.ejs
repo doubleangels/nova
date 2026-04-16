@@ -1,17 +1,20 @@
 <!-- Sidebar header -->
-<div class="sb-header p-5 border-b">
+<div class="sb-header p-6 border-b border-white/5 bg-white/[0.02]">
   <div class="flex items-center gap-3">
     <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
-      <img src="<%= guildIcon %>" class="w-9 h-9 rounded-full ring-2" style="--tw-ring-color: var(--c-accent);" alt="Server icon" />
+      <div class="relative group">
+        <div class="absolute inset-0 bg-[var(--c-accent)] blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
+        <img src="<%= guildIcon %>" class="relative w-10 h-10 rounded-xl ring-1 ring-white/10" alt="Server icon" />
+      </div>
     <% } else { %>
-      <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
         style="background:var(--c-accent)">N</div>
     <% } %>
-    <div>
-      <p class="sb-guild-name font-semibold leading-tight text-sm">
+    <div class="min-w-0">
+      <p class="sb-guild-name font-bold leading-tight text-sm truncate">
         <%= typeof guildName !== 'undefined' ? guildName : 'Da Frens' %>
       </p>
-      <p class="sb-sub text-xs">Nova Dashboard</p>
+      <p class="sb-sub text-[10px] uppercase tracking-widest opacity-50 font-bold">Nova Control</p>
     </div>
   </div>
 </div>
@@ -120,24 +123,31 @@
 
 <!-- User info at bottom -->
 <% if (typeof user !== 'undefined' && user) { %>
-  <div class="sb-footer border-t p-4">
+  <div class="sb-footer border-t border-white/5 p-4 bg-white/[0.01]">
     <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2 min-w-0">
-        <% if (user.avatar) { %>
-          <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=32"
-            class="w-8 h-8 rounded-full flex-shrink-0" alt="Avatar" />
-        <% } else { %>
-          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs text-white flex-shrink-0"
-            style="background:var(--c-accent)">
-            <%= user.username.slice(0,2).toUpperCase() %>
-          </div>
-        <% } %>
-        <span class="sb-username text-sm truncate">
-          <%= user.username %>
-        </span>
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="relative">
+            <% if (user.avatar) { %>
+                <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=32"
+                    class="w-8 h-8 rounded-lg flex-shrink-0 ring-1 ring-white/10" alt="Avatar" />
+            <% } else { %>
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-white flex-shrink-0"
+                    style="background:var(--c-accent)">
+                    <%= user.username.slice(0,2).toUpperCase() %>
+                </div>
+            <% } %>
+            <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-[var(--c-sidebar)] rounded-full"></div>
+        </div>
+        <div class="min-w-0">
+            <p class="sb-username text-xs font-bold truncate text-[var(--c-text)]">
+                <%= user.username %>
+            </p>
+            <p class="text-[9px] text-[var(--c-text-dim)] uppercase tracking-tighter">Administrator</p>
+        </div>
       </div>
-      <a href="/auth/logout" class="text-xs ml-2 flex-shrink-0" style="color:var(--c-text-dim)"
-        onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='var(--c-text-dim)'">Logout</a>
+      <a href="/auth/logout" class="p-2 rounded-lg hover:bg-red-500/10 text-red-400/60 hover:text-red-400 transition-all" title="Logout">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+      </a>
     </div>
   </div>
 <% } %>

@@ -100,16 +100,21 @@
           position: relative;
           z-index: 1;
           width: 100%;
-          max-width: 380px;
-          background: var(--c-card);
-          border: 1px solid var(--c-card-border);
-          border-radius: 1.5rem;
-          padding: 2.5rem 2rem;
-          backdrop-filter: blur(16px);
+          max-width: 400px;
+          background: rgba(16, 16, 20, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 2rem;
+          padding: 3rem 2.5rem;
+          backdrop-filter: blur(24px);
           box-shadow:
-            0 0 0 1px rgba(var(--c-accent-rgb), 0.12),
-            0 20px 60px rgba(0, 0, 0, 0.6),
-            0 0 80px rgba(var(--c-accent-rgb), 0.14);
+            0 0 0 1px rgba(var(--c-accent-rgb), 0.1),
+            0 25px 50px -12px rgba(0, 0, 0, 0.7);
+          transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .card:hover {
+          transform: translateY(-4px) scale(1.01);
+          border-color: rgba(var(--c-accent-rgb), 0.3);
         }
 
         /* Avatar glow */
@@ -189,32 +194,33 @@
           gap: 0.5rem;
         }
 
-        /* Discord button */
         .discord-btn {
           display: flex;
           align-items: center;
           justify-content: center;
           gap: 0.75rem;
           width: 100%;
-          padding: 0.875rem 1.5rem;
+          padding: 1rem 1.5rem;
           background: var(--c-accent);
-          border-radius: 0.75rem;
+          border-radius: 1rem;
           font-size: 0.9375rem;
-          font-weight: 600;
+          font-weight: 700;
           color: #fff;
           text-decoration: none;
-          transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-          box-shadow: 0 4px 20px rgba(var(--c-accent-rgb), 0.35);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 20px rgba(var(--c-accent-rgb), 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .discord-btn:hover {
-          background: rgba(var(--c-accent-rgb), 0.82);
+          background: var(--c-accent);
+          filter: brightness(1.1);
           transform: translateY(-2px);
-          box-shadow: 0 8px 28px rgba(var(--c-accent-rgb), 0.5);
+          box-shadow: 0 10px 30px rgba(var(--c-accent-rgb), 0.4);
         }
 
         .discord-btn:active {
-          transform: translateY(0);
+          transform: scale(0.98);
         }
 
         /* Footer note */
