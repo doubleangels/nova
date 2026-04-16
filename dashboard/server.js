@@ -42,6 +42,7 @@ class KeyvSessionStore extends Store {
  */
 function createDashboard(client, options = {}) {
   const app = express();
+  app.set('client', client);
   const dashboardBaseUrl = String(options.dashboardBaseUrl || process.env.DASHBOARD_BASE_URL || '').replace(/\/$/, '');
   const isHttpsBaseUrl = /^https:\/\//i.test(dashboardBaseUrl);
   const useSecureCookie = typeof options.useSecureCookie === 'boolean'

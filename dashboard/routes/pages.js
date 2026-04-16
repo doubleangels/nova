@@ -55,6 +55,8 @@ router.get('/', requireAuth, (req, res) => {
   const botCount = guild?.members?.cache?.filter(m => m.user.bot)?.size || 0;
   const userCount = totalCount - botCount;
 
+  const accent = getLoginThemeAccent();
+
   res.render('dashboard', {
     title: 'Dashboard',
     user: req.session.user,
@@ -63,8 +65,10 @@ router.get('/', requireAuth, (req, res) => {
     guildIcon: guild?.iconURL({ size: 64 }) || null,
     botIcon,
     memberCount: totalCount,
-    userCount,
+    humanCount: userCount,
     botCount,
+    accentHex: accent.hex,
+    accentRgb: accent.rgb,
   });
 });
 

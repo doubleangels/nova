@@ -50,119 +50,105 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-    <!-- User Count -->
-    <div class="premium-card p-5 group border-b-2 border-indigo-500/50">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Community Users</p>
-      <div class="flex items-end justify-between">
-        <div>
-          <p class="text-2xl font-bold"><%= userCount %></p>
-          <p class="text-xs text-[var(--c-text-muted)]">Active Members</p>
-        </div>
-        <div class="icon-box bg-indigo-500/10 text-indigo-400 group-hover:scale-110">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0-6a5.99 5.99 0 00-4-1.874A5.99 5.99 0 007 15" /></svg>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Member Count -->
+    <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
+      <div class="flex items-start justify-between">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Community</p>
+        <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0-6a5.99 5.99 0 00-4-1.874A5.99 5.99 0 007 15" /></svg>
         </div>
       </div>
-    </div>
-
-    <!-- Bot Count -->
-    <div class="premium-card p-5 group border-b-2 border-rose-500/50">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Service Bots</p>
-      <div class="flex items-end justify-between">
-        <div>
-          <p class="text-2xl font-bold"><%= botCount %></p>
-          <p class="text-xs text-[var(--c-text-muted)]">Integrations</p>
-        </div>
-        <div class="icon-box bg-rose-500/10 text-rose-400 group-hover:scale-110">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2M9 9h6v6H9V9z" /></svg>
-        </div>
+      <div>
+        <p class="text-2xl font-bold leading-tight"><%= humanCount %> <span class="text-lg opacity-80 font-medium">Users</span></p>
+        <p class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide">Server Members</p>
       </div>
     </div>
 
     <!-- Discord Card -->
-    <div class="premium-card p-5 group">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Discord Status</p>
-      <div class="flex items-end justify-between">
-        <div>
-          <p id="health_ping" class="text-2xl font-bold">-- ms</p>
-          <p class="text-xs text-[var(--c-text-muted)]">API Latency</p>
+    <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
+      <div class="flex items-start justify-between">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Discord Status</p>
+        <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
         </div>
-        <div class="icon-box bg-green-500/10 text-green-500 group-hover:scale-110">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
-        </div>
+      </div>
+      <div>
+        <p id="health_ping" class="text-2xl font-bold leading-tight">-- ms</p>
+        <p class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide">API Latency</p>
       </div>
     </div>
     
     <!-- Uptime Card -->
-    <div class="premium-card p-5 group">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Bot Uptime</p>
-      <div class="flex items-end justify-between">
-        <div>
-          <p id="health_uptime" class="text-lg font-bold">--</p>
-          <p class="text-xs text-[var(--c-text-muted)]">Process Uptime</p>
+    <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
+      <div class="flex items-start justify-between">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Bot Uptime</p>
+        <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
-        <div class="icon-box bg-blue-500/10 text-blue-500 group-hover:scale-110">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </div>
+      </div>
+      <div>
+        <p id="health_uptime" class="text-xl font-bold leading-tight">--</p>
+        <p class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide">Process Uptime</p>
       </div>
     </div>
  
     <!-- Memory Card -->
-    <div class="premium-card p-5 group">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Memory Usage</p>
-      <div class="flex items-end justify-between">
-        <div>
-          <p id="health_mem" class="text-2xl font-bold">-- MB</p>
-          <p id="health_mem_sub" class="text-xs text-[var(--c-text-muted)]">RSS Usage</p>
+    <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
+      <div class="flex items-start justify-between">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Memory Usage</p>
+        <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
         </div>
-        <div class="icon-box bg-purple-500/10 text-purple-500 group-hover:scale-110">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
-        </div>
+      </div>
+      <div>
+        <p id="health_mem" class="text-xl font-bold leading-tight">-- MB</p>
+        <p id="health_mem_sub" class="text-[8px] text-[var(--c-text-muted)] uppercase truncate">--</p>
       </div>
     </div>
  
     <!-- Platform Card -->
-    <div class="premium-card p-5 group">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Host System</p>
-      <div class="flex items-end justify-between">
-        <div class="min-w-0">
-          <p id="health_platform" class="text-sm font-bold truncate">--</p>
-          <p id="health_node" class="text-xs text-[var(--c-text-muted)]">Node --</p>
+    <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
+      <div class="flex items-start justify-between">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Host System</p>
+        <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
         </div>
-        <div class="icon-box bg-amber-500/10 text-amber-500 group-hover:scale-110 flex-shrink-0">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
-        </div>
+      </div>
+      <div>
+        <p id="health_platform" class="text-xs font-bold truncate leading-tight">--</p>
+        <p id="health_node" class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-tight">Node --</p>
       </div>
     </div>
   </div>
 
   <!-- Live Reminders Monitoring -->
   <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-    <div class="card p-4 flex items-center gap-4 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
+      <div class="w-10 h-10 rounded-xl bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)] flex-shrink-0">
+        <svg class="w-5 h-5 text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
-      <div>
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Disboard Bump</p>
-        <p id="live_rem_bump" class="text-sm font-mono font-bold text-[var(--c-label)] italic">--:--:--</p>
-      </div>
-    </div>
-    <div class="card p-4 flex items-center gap-4 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      </div>
-      <div>
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Reddit Promo</p>
-        <p id="live_rem_promote" class="text-sm font-mono font-bold text-[var(--c-label)] italic">--:--:--</p>
+      <div class="flex flex-col">
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Disboard Bump</p>
+        <p id="live_rem_bump" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none">--:--:--</p>
       </div>
     </div>
-    <div class="card p-4 flex items-center gap-4 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-500">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+    <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
+      <div class="w-10 h-10 rounded-xl bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)] flex-shrink-0">
+        <svg class="w-5 h-5 text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
-      <div>
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">NeedAFriend</p>
-        <p id="live_rem_needafriend" class="text-sm font-mono font-bold text-[var(--c-label)] italic">--:--:--</p>
+      <div class="flex flex-col">
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Reddit Promo</p>
+        <p id="live_rem_promote" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none">--:--:--</p>
+      </div>
+    </div>
+    <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
+      <div class="w-10 h-10 rounded-xl bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)] flex-shrink-0">
+        <svg class="w-5 h-5 text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
+      <div class="flex flex-col">
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">NeedAFriend</p>
+        <p id="live_rem_needafriend" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none">--:--:--</p>
       </div>
     </div>
   </div>
@@ -179,26 +165,27 @@
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Server Identity</a>
-            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Safety & Anti-Spam</a>
-            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Roles & Perms</a>
-            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Reminders & Logistics</a>
+            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Appearance</a>
+            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Security</a>
+            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles</a>
+            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Logistics</a>
         </div>
     </div>
-    <div class="card p-6 border-l-4 border-amber-500/50">
+    <div class="card p-6 border-l-4 border-[var(--c-accent)]">
         <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.297A24.53 24.53 0 0112 20c.347 0 .692-.003 1.037-.01V5.882m-2.074 0c-.345.007-.69.01-1.037.01-1.347 0-2.65-.213-3.874-.604a2.032 2.032 0 01-1.394-1.933V4.316a2.032 2.032 0 011.394-1.933 24.053 24.053 0 0110.428 0 2.032 2.032 0 011.394 1.933v.367a2.032 2.032 0 01-1.394 1.933 24.53 24.53 0 01-1.037-.01" /></svg>
+            <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
             </div>
             <div>
-                <h3 class="font-bold text-sm">Administrative Tools</h3>
-                <p class="text-[10px] text-[var(--c-text-dim)]">Management and server growth controls.</p>
+                <h3 class="font-bold text-sm">Data Explorer</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Inspect and modify raw key-value storage.</p>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Invite Manager</a>
-            <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105 text-pink-400">Social & Fun</a>
-            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Message Center</a>
+            <a href="#database" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Storage Browser</a>
+            <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Invite Manager</a>
+            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Messaging</a>
+            <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Social & Fun</a>
         </div>
     </div>
   </div>
@@ -280,7 +267,7 @@
     <p class="text-xs text-[var(--c-text-dim)]">Configure automated role assignments and command access levels.</p>
   </div>
   
-  <div class="premium-card p-6 border-l-4 border-indigo-500/50">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
       
       <!-- Member Management Roles -->
@@ -353,7 +340,7 @@
   </div>
 
   <!-- Anti-Spam -->
-  <div class="premium-card p-6 border-l-4 border-red-500/50 mb-4">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Anti-Spam</h3>
@@ -390,7 +377,7 @@
   </div>
 
   <!-- Inactivity Guard -->
-  <div class="premium-card p-6 border-l-4 border-orange-500/50 mb-4">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Inactivity Guard</h3>
@@ -417,7 +404,7 @@
   </div>
 
   <!-- Entry Guard -->
-  <div class="premium-card p-6 border-l-4 border-yellow-500/50 mb-4">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Entry Guard</h3>
@@ -472,7 +459,7 @@
           <!-- Disboard -->
           <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
               <div class="flex items-center gap-2 mb-3">
-                  <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                  <div class="w-2 h-2 rounded-full bg-[var(--c-accent)] animate-pulse"></div>
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Disboard</span>
               </div>
               <div id="rem_stat_bump" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
@@ -482,7 +469,7 @@
           <!-- Reddit -->
           <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
               <div class="flex items-center gap-2 mb-3">
-                  <div class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                  <div class="w-2 h-2 rounded-full bg-[var(--c-accent)] animate-pulse"></div>
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Reddit /promote</span>
               </div>
               <div id="rem_stat_promote" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
@@ -492,7 +479,7 @@
           <!-- NeedAFriend -->
           <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
               <div class="flex items-center gap-2 mb-3">
-                  <div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+                  <div class="w-2 h-2 rounded-full bg-[var(--c-accent)] animate-pulse"></div>
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">NeedAFriend</span>
               </div>
               <div id="rem_stat_needafriend" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
@@ -500,7 +487,7 @@
           </div>
       </div>
   </div>
-  <div class="premium-card p-6 border-l-4 border-emerald-500/50">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
     <p class="card-sub-desc text-sm mb-5">
       Configure the destination and target role for automated bump and promotion reminders.
     </p>
@@ -543,13 +530,13 @@
     <p class="text-xs text-[var(--c-text-dim)]">Create high-energy creative spaces and manage social interaction rules.</p>
   </div>
 
-  <div class="premium-card p-6 border-l-4 border-pink-500/50">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Restricted Channels (Media Only)</h3>
         <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Perfect for #memes or #media channels where you want only GIFs, Stickers, and Reactions.</p>
       </div>
-      <div class="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500">
+      <div class="w-10 h-10 rounded-full bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)]">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
     </div>
@@ -568,13 +555,13 @@
     </div>
   </div>
 
-  <div class="premium-card p-6 border-l-4 border-purple-500/50 mt-6">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Keywords & Auto-Reactions</h3>
         <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Let Nova react with emojis when specific keywords or patterns are detected.</p>
       </div>
-      <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+      <div class="w-10 h-10 rounded-full bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)]">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
     </div>
@@ -601,7 +588,7 @@
     </div>
 
     <div class="mt-8 flex justify-end">
-      <button onclick="saveAutoReactions()" id="saveReactionsBtn" class="save-btn">
+      <button onclick="saveAutoReactions()" id="saveReactionsBtn" class="px-6 py-2 bg-[var(--c-accent)] hover:bg-[var(--c-accent-strong)] text-white rounded-lg text-sm font-semibold transition-all">
         Save Reactions
       </button>
     </div>
@@ -617,7 +604,7 @@
     </h2>
     <p class="text-xs text-[var(--c-text-dim)]">Broadcast announcements or send rich embeds directly to your community.</p>
   </div>
-  <div class="premium-card p-6 border-l-4 border-blue-500/50">
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
     <p class="card-sub-desc text-sm mb-6">Send messages directly to Discord channels as the Nova bot.</p>
     
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
@@ -703,7 +690,7 @@
         </button>
     </div>
   <!-- Invite List -->
-  <div class="premium-card p-0 overflow-hidden border-l-4 border-cyan-500/50">
+  <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent-soft-ring)]">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
@@ -984,8 +971,8 @@
     toast.textContent = message;
     toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg max-w-xs transition-all duration-300 ${
       type === 'success'
-        ? 'bg-green-600 text-white'
-        : 'bg-red-600 text-white'
+        ? 'bg-[var(--c-accent)] text-white'
+        : 'bg-[var(--c-accent)] opacity-60 text-white'
     }`;
     toast.style.opacity = '1';
     setTimeout(() => { toast.className += ' opacity-0'; setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
@@ -1318,9 +1305,9 @@
       
       // Update ping color based on latency
       const pingEl = document.getElementById('health_ping');
-      if (data.ping < 100) pingEl.className = 'text-2xl font-bold text-green-500';
-      else if (data.ping < 300) pingEl.className = 'text-2xl font-bold text-amber-500';
-      else pingEl.className = 'text-2xl font-bold text-red-500';
+      if (data.ping < 100) pingEl.className = 'text-2xl font-bold text-[var(--c-accent)]';
+      else if (data.ping < 300) pingEl.className = 'text-2xl font-bold text-[var(--c-accent)] opacity-80';
+      else pingEl.className = 'text-2xl font-bold text-[var(--c-accent)] opacity-60';
       
     } catch {
       console.warn('Failed to fetch health stats.');
@@ -1362,7 +1349,7 @@
                     <span class="font-bold text-[var(--c-label)]">${inv.uses}</span>
                     <span class="text-[var(--c-text-dim)]">/ ${inv.maxUses || '∞'}</span>
                 </td>
-                <td class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-amber-500 font-bold' : 'text-[var(--c-text-dim)]'}">
+                <td class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-[var(--c-accent)] font-bold' : 'text-[var(--c-text-dim)]'}">
                     ${expires}
                 </td>
                 <td class="px-5 py-4 text-right space-x-1 whitespace-nowrap">
@@ -1372,7 +1359,7 @@
                     <button onclick="promptEditTag('${inv.code}', '${inv.tagName || ''}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Manage Tag">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                     </button>
-                    <button onclick="deleteInvite('${inv.code}')" class="p-1.5 text-red-500/50 hover:text-red-500 transition-colors" title="Revoke Invite">
+                    <button onclick="deleteInvite('${inv.code}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors" title="Revoke Invite">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </td>
@@ -1617,14 +1604,19 @@
                                             <div class="text-[10px] text-[var(--c-text-dim)] font-mono opacity-0 group-hover:opacity-100 transition-opacity">full: ${e.key}</div>
                                         </td>
                                         <td class="px-5 py-3">
-                                            <div class="relative">
+                                            <div class="relative flex items-center gap-3">
                                                 <div id="status-${e.fullKey.replace(/:/g, '-')}" class="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-green-500 opacity-0 transition-opacity duration-300" title="Synced"></div>
-                                                <textarea 
-                                                    class="w-full min-h-[40px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
-                                                    rows="1"
-                                                    oninput="autoResize(this); scheduleSave('${e.fullKey}', this.value)"
-                                                    onfocus="autoResize(this)"
-                                                >${displayDbValue(e.value)}</textarea>
+                                                <div class="flex-1">
+                                                    <textarea 
+                                                        class="w-full min-h-[40px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
+                                                        rows="1"
+                                                        oninput="autoResize(this); scheduleSave('${e.fullKey}', this.value)"
+                                                        onfocus="autoResize(this)"
+                                                    >${displayDbValue(e.value)}</textarea>
+                                                </div>
+                                                <button onclick="deleteDbEntry('${e.fullKey}')" class="p-2 text-[var(--c-text-dim)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex-shrink-0" title="Delete entry">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -1644,13 +1636,49 @@
   }
 
   window.switchNamespace = (ns) => { curNamespace = ns; dbPage = 1; renderDbExplorer(); };
-  window.toggleCategory = (cat) => { if (expandedCats.has(cat)) expandedCats.delete(cat); else expandedCats.add(cat); renderDbExplorer(); };
-  window.expandAllCategories = () => { [...new Set(allDbEntries.filter(e => e.namespace === curNamespace).map(e => getCategory(e.key)))].forEach(c => expandedCats.add(c)); renderDbExplorer(); };
+  window.toggleCategory = (cat) => { 
+    if (expandedCats.has(cat)) expandedCats.delete(cat); 
+    else expandedCats.add(cat); 
+    renderDbExplorer(); 
+    // Trigger resize after re-rendering
+    setTimeout(() => {
+        document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
+    }, 50);
+  };
+  window.expandAllCategories = () => { 
+    [...new Set(allDbEntries.filter(e => e.namespace === curNamespace).map(e => getCategory(e.key)))].forEach(c => expandedCats.add(c)); 
+    renderDbExplorer(); 
+    setTimeout(() => {
+        document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
+    }, 50);
+  };
   window.collapseAllCategories = () => { expandedCats.clear(); renderDbExplorer(); };
 
   window.autoResize = (el) => {
     el.style.height = 'auto';
     el.style.height = (el.scrollHeight) + 'px';
+  };
+
+  window.deleteDbEntry = async (fullKey) => {
+    if (!confirm(`Are you sure you want to delete "${fullKey}"?\nThis action is irreversible.`)) return;
+    
+    try {
+        const res = await fetch('/api/database/raw', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fullKey })
+        });
+        if (res.ok) {
+            showToast('Entry deleted successfully.');
+            // Update local state and re-render
+            allDbEntries = allDbEntries.filter(e => e.fullKey !== fullKey);
+            renderDbExplorer();
+        } else {
+            showToast('Failed to delete entry.', 'error');
+        }
+    } catch {
+        showToast('Network error while deleting.', 'error');
+    }
   };
 
   window.scheduleSave = (fullKey, valueStr) => {
@@ -1660,7 +1688,8 @@
     // Show "dirty" state
     if (statusEl) {
         statusEl.classList.remove('bg-green-500', 'bg-blue-500', 'opacity-0');
-        statusEl.classList.add('bg-yellow-500', 'opacity-100', 'animate-pulse');
+        statusEl.classList.remove('bg-[var(--c-accent)]', 'bg-blue-500', 'opacity-0');
+        statusEl.classList.add('bg-[var(--c-accent)]', 'opacity-80', 'animate-pulse');
     }
 
     if (autoSaveTimers.has(fullKey)) clearTimeout(autoSaveTimers.get(fullKey));
@@ -1674,8 +1703,8 @@
         }
 
         if (statusEl) {
-            statusEl.classList.remove('bg-yellow-500', 'animate-pulse');
-            statusEl.classList.add('bg-blue-500'); // Saving state
+            statusEl.classList.remove('animate-pulse');
+            statusEl.classList.add('bg-[var(--c-accent)]'); // Saving state
         }
 
         try {
@@ -1686,16 +1715,16 @@
             });
             if (res.ok) {
                 if (statusEl) {
-                    statusEl.classList.remove('bg-blue-500');
-                    statusEl.classList.add('bg-green-500');
+                    statusEl.classList.remove('bg-[var(--c-accent)]');
+                    statusEl.classList.add('bg-[var(--c-accent)]');
                     setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
                 }
             } else {
                 showToast('Failed to auto-save change.', 'error');
-                if (statusEl) statusEl.classList.add('bg-red-500');
+                if (statusEl) statusEl.classList.add('bg-[var(--c-accent)]');
             }
         } catch {
-            if (statusEl) statusEl.classList.add('bg-red-500');
+            if (statusEl) statusEl.classList.add('bg-[var(--c-accent)]');
         }
     }, 1500));
   };
@@ -1730,7 +1759,7 @@
       if (!targetTime || targetTime <= now) {
         if (statusEl) statusEl.textContent = 'READY';
         if (liveEl)   liveEl.textContent = 'READY';
-        if (statusEl) statusEl.classList.add('text-green-500');
+        if (statusEl) statusEl.classList.add('text-[var(--c-accent)]');
         return;
       }
       
@@ -1742,11 +1771,11 @@
       
       if (statusEl) {
           statusEl.textContent = timeStr;
-          statusEl.classList.remove('text-green-500');
+          statusEl.classList.remove('text-[var(--c-accent)]');
       }
       if (liveEl) {
           liveEl.textContent = timeStr;
-          liveEl.classList.toggle('text-amber-500', h === 0 && m < 10);
+          liveEl.classList.toggle('text-[var(--c-accent)]', h === 0 && m < 10);
       }
     });
   }
@@ -1813,7 +1842,7 @@
           <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" value="${r.emoji}" placeholder="e.g. 👋 or :smile:" />
         </td>
         <td class="px-4 py-3 text-right">
-          <button onclick="removeAutoReactionRow(this)" class="p-1.5 text-[var(--c-text-dim)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+          <button onclick="removeAutoReactionRow(this)" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-accent-soft-bg)] rounded-lg transition-all opacity-0 group-hover:opacity-100">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </td>

@@ -244,9 +244,13 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
 
     let channel;
     try {
-      channel = message.client.channels.cache.get(reminderChannelId);
+      const client = message.client || (message.channels ? message : null);
+      if (!client) {
+        throw new Error("Discord client not found on triggering object.");
+      }
+      channel = client.channels.cache.get(reminderChannelId);
       if (!channel) {
-        channel = await message.client.channels.fetch(reminderChannelId);
+        channel = await client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
       logger.error("Failed to fetch channel", {

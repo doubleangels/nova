@@ -57,6 +57,19 @@ async function updateRawDatabaseEntry(fullKey, value) {
   db.close();
 }
 
+/**
+ * Deletes a raw Keyv row by full key.
+ * @param {string} fullKey - The raw key as stored in SQLite.
+ */
+async function deleteRawDatabaseEntry(fullKey) {
+  const Database = require('better-sqlite3');
+  const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
+  const sqlitePath = require('path').join(dataDir, 'database.sqlite');
+  const db = new Database(sqlitePath);
+  db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey);
+  db.close();
+}
+
 const ACTIVITY_TYPE_MAP = {
   playing: ActivityType.Playing,
   streaming: ActivityType.Streaming,
@@ -265,6 +278,27 @@ router.post('/database/raw', async (req, res) => {
   } catch (err) {
     logger.error('Failed to update raw database entry.', { err, fullKey });
     res.status(500).json({ error: 'Failed to update database entry.' });
+  }
+});
+
+// ─── DELETE /api/database/raw ───────────────────────────────────────────────
+
+router.delete('/database/raw', async (req, res) => {
+  const { fullKey } = req.body;
+  if (!fullKey) {
+    return res.status(400).json({ error: 'Missing fullKey in request body.' });
+  }
+
+  try {
+    await deleteRawDatabaseEntry(fullKey);
+    logger.info('Raw database entry deleted via dashboard.', {
+      fullKey,
+      user: req.session.user?.username
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('Failed to delete raw database entry.', { err, fullKey });
+    res.status(500).json({ error: 'Failed to delete database entry.' });
   }
 });
 
