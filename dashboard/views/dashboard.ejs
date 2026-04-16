@@ -108,6 +108,37 @@
     </div>
   </div>
 
+  <!-- Live Reminders Monitoring -->
+  <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card p-4 flex items-center gap-4 bg-[var(--c-input)]/50 border-dashed">
+      <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Disboard Bump</p>
+        <p id="live_rem_bump" class="text-sm font-mono font-bold text-[var(--c-label)] italic">--:--:--</p>
+      </div>
+    </div>
+    <div class="card p-4 flex items-center gap-4 bg-[var(--c-input)]/50 border-dashed">
+      <div class="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Reddit Promo</p>
+        <p id="live_rem_promote" class="text-sm font-mono font-bold text-[var(--c-label)] italic">--:--:--</p>
+      </div>
+    </div>
+    <div class="card p-4 flex items-center gap-4 bg-[var(--c-input)]/50 border-dashed">
+      <div class="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center text-teal-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
+      <div>
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">NeedAFriend</p>
+        <p id="live_rem_needafriend" class="text-sm font-mono font-bold text-[var(--c-label)] italic">--:--:--</p>
+      </div>
+    </div>
+  </div>
+
   <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="card p-6 border-l-4 border-[var(--c-accent)]">
         <div class="flex items-center gap-3 mb-4">
@@ -123,7 +154,7 @@
             <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Server Identity</a>
             <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Safety & Anti-Spam</a>
             <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Roles & Perms</a>
-            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Logistics</a>
+            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Reminders & Logistics</a>
         </div>
     </div>
     <div class="card p-6 border-l-4 border-amber-500/50">
@@ -225,7 +256,6 @@
       
       <!-- Member Management Roles -->
       <div class="space-y-5">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-dim" style="color:var(--c-text-dim)">Member Tracking</h3>
         
         <div>
           <label class="field-label">Noobies Role</label>
@@ -248,7 +278,6 @@
 
       <!-- Command & Assistant Roles -->
       <div class="space-y-5">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-dim" style="color:var(--c-text-dim)">Staff & Assistant</h3>
         
         <div>
           <label class="field-label">Fren Role</label>
@@ -265,7 +294,6 @@
 
       <!-- Validation Roles -->
       <div class="sm:col-span-2 space-y-5">
-        <h3 class="text-sm font-bold uppercase tracking-wider text-dim" style="color:var(--c-text-dim)">Comparison & Logic</h3>
         
         <div class="max-w-md">
           <label class="field-label">Permission Reference Role</label>
@@ -392,10 +420,55 @@
 <section id="reminders" class="mb-10 page-section hidden">
   <h2 class="section-heading">
     <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
-    Logistics & Automation
+    Reminders & Logistics
   </h2>
+
+  <!-- Live Reminders Table / Controls -->
+  <div class="card mb-6 border-[var(--c-accent)]/30 border-t-4">
+      <div class="flex items-center justify-between mb-4">
+          <div>
+              <h3 class="font-bold text-sm">Active Timers</h3>
+              <p class="text-[10px] text-[var(--c-text-dim)]">Real-time status of scheduled server growth actions.</p>
+          </div>
+          <button onclick="refreshLiveReminders()" class="p-2 hover:bg-[var(--c-input)] rounded-lg transition-colors" title="Refresh Timers">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--c-text-dim)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          </button>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Disboard -->
+          <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
+              <div class="flex items-center gap-2 mb-3">
+                  <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                  <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Disboard</span>
+              </div>
+              <div id="rem_stat_bump" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
+              <button onclick="fixReminder('bump')" id="fixBtn_bump" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+          </div>
+
+          <!-- Reddit -->
+          <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
+              <div class="flex items-center gap-2 mb-3">
+                  <div class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                  <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Reddit /promote</span>
+              </div>
+              <div id="rem_stat_promote" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
+              <button onclick="fixReminder('promote')" id="fixBtn_promote" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+          </div>
+
+          <!-- NeedAFriend -->
+          <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
+              <div class="flex items-center gap-2 mb-3">
+                  <div class="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></div>
+                  <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">NeedAFriend</span>
+              </div>
+              <div id="rem_stat_needafriend" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
+              <button onclick="fixReminder('needafriend')" id="fixBtn_needafriend" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+          </div>
+      </div>
+  </div>
   <div class="card">
     <p class="card-sub-desc text-sm mb-5">
       Configure the destination and target role for automated bump and promotion reminders.
@@ -1557,6 +1630,86 @@
   };
 
   document.getElementById('dbSearch')?.addEventListener('input', renderDbExplorer);
+
+  // ── Live Reminders System ───────────────────────────────────────────────────
+  let liveReminders = { bump: null, promote: null, needafriend: null };
+
+  async function refreshLiveReminders() {
+    try {
+      const res = await fetch('/api/reminders/live');
+      if (res.ok) {
+        liveReminders = await res.json();
+        updateRemindersUI();
+      }
+    } catch (e) {
+      console.error('Failed to fetch reminders', e);
+    }
+  }
+
+  function updateRemindersUI() {
+    const now = Date.now();
+    ['bump', 'promote', 'needafriend'].forEach(type => {
+      const targetTime = liveReminders[type] ? new Date(liveReminders[type]).getTime() : null;
+      const displayIdStatus = `rem_stat_${type}`;
+      const displayIdLive   = `live_rem_${type}`;
+      
+      const statusEl = document.getElementById(displayIdStatus);
+      const liveEl   = document.getElementById(displayIdLive);
+      
+      if (!targetTime || targetTime <= now) {
+        if (statusEl) statusEl.textContent = 'READY';
+        if (liveEl)   liveEl.textContent = 'READY';
+        if (statusEl) statusEl.classList.add('text-green-500');
+        return;
+      }
+      
+      const diff = targetTime - now;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      
+      if (statusEl) {
+          statusEl.textContent = timeStr;
+          statusEl.classList.remove('text-green-500');
+      }
+      if (liveEl) {
+          liveEl.textContent = timeStr;
+          liveEl.classList.toggle('text-amber-500', h === 0 && m < 10);
+      }
+    });
+  }
+
+  window.fixReminder = async (type) => {
+    const btn = document.getElementById(`fixBtn_${type}`);
+    const originalText = btn.textContent;
+    btn.textContent = 'FIXING...';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/reminders/fix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
+      if (res.ok) {
+        showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} timer reset successfully.`);
+        await refreshLiveReminders();
+      } else {
+        showToast('Failed to reset timer.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error while resetting timer.', 'error');
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  };
+
+  // Start polling
+  setInterval(updateRemindersUI, 1000);
+  setInterval(refreshLiveReminders, 30000);
+  refreshLiveReminders();
   document.getElementById('refreshDbBtn')?.addEventListener('click', loadDatabaseEntries);
 
   // Attach save handlers for non-hierarchical sections

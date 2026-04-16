@@ -5,6 +5,11 @@ const { ActivityType } = require('discord.js');
 const requireAuth = require('../middleware/requireAuth');
 const { getSetting, setSetting, colorIntToHex } = require('../../utils/dynamicConfig');
 const { getValue, setValue, getAllInviteTagsData } = require('../../utils/database');
+const { 
+  getLatestReminderData, 
+  handleReminder, 
+  NEEDAFRIEND_REMINDER_MS 
+} = require('../../utils/reminderUtils');
 const logger = require('../../logger')('dashboard:api');
 
 const router = express.Router();
@@ -133,7 +138,7 @@ router.get('/settings', async (req, res) => {
   }
 });
 
-// ─── POST /api/settings ──────────────────────────────────────────────────────
+// ─── POST /api/settings ────────────────────────────────────────────────
 
 router.post('/settings', async (req, res) => {
   const body = req.body;
@@ -295,6 +300,50 @@ router.get('/health', async (req, res) => {
   } catch (err) {
     logger.error('Failed to get health stats.', { err });
     res.status(500).json({ error: 'Failed to fetch health stats.' });
+  }
+});
+
+// ─── GET /api/reminders/live ────────────────────────────────────────────────
+router.get('/reminders/live', async (req, res) => {
+  try {
+    const [bump, promote, needafriend] = await Promise.all([
+      getLatestReminderData('bump'),
+      getLatestReminderData('promote'),
+      getLatestReminderData('needafriend')
+    ]);
+    res.json({
+      bump: bump?.remind_at || null,
+      promote: promote?.remind_at || null,
+      needafriend: needafriend?.remind_at || null
+    });
+  } catch (err) {
+    logger.error('Failed to fetch live reminders.', { err });
+    res.status(500).json({ error: 'Failed to fetch live reminders.' });
+  }
+});
+
+// ─── POST /api/reminders/fix ────────────────────────────────────────────────
+router.post('/reminders/fix', async (req, res) => {
+  const { type } = req.body;
+  if (!['bump', 'promote', 'needafriend'].includes(type)) {
+    return res.status(400).json({ error: 'Invalid reminder type.' });
+  }
+
+  try {
+    // Delays match the /fix command logic in commands/fix.js
+    let delayMs = 7200000; // 2 hours for disboard
+    if (type === 'promote') delayMs = 86400000; // 24 hours for reddit
+    if (type === 'needafriend') delayMs = NEEDAFRIEND_REMINDER_MS; // 7 days
+
+    // We need a mock message-like object that has the client attached
+    // req.app.get('client') is where the discord client is stored
+    const client = req.app.get('client');
+    await handleReminder({ client }, delayMs, type, true);
+    
+    res.json({ success: true, message: `Fixed ${type} reminder.` });
+  } catch (err) {
+    logger.error(`Failed to fix ${type} reminder.`, { err });
+    res.status(500).json({ error: 'Failed to fix reminder.' });
   }
 });
 
