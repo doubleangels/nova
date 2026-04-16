@@ -28,7 +28,7 @@ module.exports = {
         userTag: member.user.tag,
         userId: member.id
       });
-      
+
       // Parallelize database writes (record as former member so on re-join they get "been in server before" role)
       await Promise.all([
         removeMuteModeUser(member.id),

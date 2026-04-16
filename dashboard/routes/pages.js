@@ -6,14 +6,14 @@ const { colorIntToHex } = require('../../utils/dynamicConfig');
 const router = express.Router();
 
 const ERROR_MESSAGES = {
-  oauth_denied:       'You cancelled the Discord login.',
-  missing_code:       'No authorization code received from Discord.',
-  state_mismatch:     'Security check failed. Please try again.',
+  oauth_denied: 'You cancelled the Discord login.',
+  missing_code: 'No authorization code received from Discord.',
+  state_mismatch: 'Security check failed. Please try again.',
   server_misconfigured: 'The dashboard is not configured correctly. Contact the server owner.',
-  bot_not_ready:      'The bot is not fully started yet. Please try again in a moment.',
-  not_in_guild:       'You are not a member of the server this bot manages.',
-  not_admin:          'You must have the Administrator permission in the server to access the dashboard.',
-  auth_failed:        'Authentication failed. Please try again.',
+  bot_not_ready: 'The bot is not fully started yet. Please try again in a moment.',
+  not_in_guild: 'You are not a member of the server this bot manages.',
+  not_admin: 'You must have the Administrator permission in the server to access the dashboard.',
+  auth_failed: 'Authentication failed. Please try again.',
 };
 
 function getLoginThemeAccent() {

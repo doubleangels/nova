@@ -5,7 +5,6 @@ const { captureError } = require('../instrument');
 const config = require('../config');
 const { seedAllFromEnv } = require('../utils/dynamicConfig');
 const { rescheduleReminder } = require('../utils/reminderUtils');
-const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 
 const DEFAULT_BOT_ACTIVITY = {
@@ -22,7 +21,7 @@ module.exports = {
    * This function:
    * 1. Sets the bot's activity status
    * 2. Initializes the database connection
-   * 3. Reschedules mute kicks and reminders
+   * 3. Reschedules reminders
    * 
    * @param {Client} client - The Discord client instance
    * @throws {Error} If there's an error during initialization
@@ -46,10 +45,10 @@ module.exports = {
       let botActivity = DEFAULT_BOT_ACTIVITY;
       const botStatus = config.botStatus;
       const botStatusType = config.botStatusType || 'watching';
-      
+
       if (botStatus) {
         const statusName = String(botStatus);
-        
+
         // Map activity type string to ActivityType enum (case-insensitive)
         const activityTypeMap = {
           'playing': ActivityType.Playing,
@@ -59,7 +58,7 @@ module.exports = {
           'competing': ActivityType.Competing,
           'custom': ActivityType.Custom
         };
-        
+
         const typeKey = botStatusType.toLowerCase().trim();
         const activityType = activityTypeMap[typeKey] || ActivityType.Watching;
         botActivity = {
@@ -84,10 +83,9 @@ module.exports = {
 
       // Parallelize independent initialization tasks
       await Promise.all([
-        rescheduleAllMuteKicks(client),
         rescheduleReminder(client)
       ]);
-      logger.info('Mute kicks and reminders rescheduled successfully.');
+      logger.info('Reminders rescheduled successfully.');
 
       // Run cleanup on startup
       try {
@@ -148,11 +146,9 @@ module.exports = {
       });
 
       let errorMessage = "⚠️ An unexpected error occurred during bot initialization.";
-      
+
       if (error.message === "⚠️ Failed to initialize database connection.") {
         errorMessage = "⚠️ Failed to initialize database connection.";
-      } else if (error.message === "⚠️ Failed to reschedule mute kicks.") {
-        errorMessage = "⚠️ Failed to reschedule mute kicks.";
       } else if (error.message === "⚠️ Failed to reschedule reminders.") {
         errorMessage = "⚠️ Failed to reschedule reminders.";
       } else if (error.message === "⚠️ Failed to set bot activity.") {
@@ -164,7 +160,7 @@ module.exports = {
       } else if (error.message === "⚠️ Insufficient permissions for bot initialization.") {
         errorMessage = "⚠️ Insufficient permissions for bot initialization.";
       }
-      
+
       throw new Error(errorMessage);
     }
   }

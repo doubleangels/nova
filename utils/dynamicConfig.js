@@ -23,17 +23,17 @@ const cache = new Map();
  * Only non-sensitive values that can be edited from the dashboard.
  */
 const CONFIG_PROPERTY_MAP = {
-  bot_status:                          'botStatus',
-  bot_status_type:                     'botStatusType',
-  base_embed_color:                    'baseEmbedColor',
-  give_perms_fren_role_id:             'givePermsFrenRoleId',
-  give_perms_position_above_role_id:   'givePermsPositionAboveRoleId',
+  bot_status: 'botStatus',
+  bot_status_type: 'botStatusType',
+  base_embed_color: 'baseEmbedColor',
+  give_perms_fren_role_id: 'givePermsFrenRoleId',
+  give_perms_position_above_role_id: 'givePermsPositionAboveRoleId',
   newuser_been_in_server_before_role_id: 'newUserBeenInServerBeforeRoleId',
-  newuser_permission_diff_role_id:     'newUserPermissionDiffRoleId',
-  noobies_role_id:                     'noobiesRoleId',
-  guild_name:                          'guildName',
-  log_level:                           'logLevel',
-  server_invite_url:                   'serverInviteUrl',
+  newuser_permission_diff_role_id: 'newUserPermissionDiffRoleId',
+  noobies_role_id: 'noobiesRoleId',
+  guild_name: 'guildName',
+  log_level: 'logLevel',
+  server_invite_url: 'serverInviteUrl',
 };
 
 /** All keys managed by this module. */
@@ -152,17 +152,17 @@ async function seedFromEnv(key, envValue) {
  */
 async function seedAllFromEnv() {
   const seeds = [
-    ['bot_status',                          process.env.BOT_STATUS],
-    ['bot_status_type',                     process.env.BOT_STATUS_TYPE],
-    ['base_embed_color',                    process.env.BASE_EMBED_COLOR],
-    ['give_perms_fren_role_id',             process.env.GIVE_PERMS_FREN_ROLE_ID],
-    ['give_perms_position_above_role_id',   process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID],
+    ['bot_status', process.env.BOT_STATUS],
+    ['bot_status_type', process.env.BOT_STATUS_TYPE],
+    ['base_embed_color', process.env.BASE_EMBED_COLOR],
+    ['give_perms_fren_role_id', process.env.GIVE_PERMS_FREN_ROLE_ID],
+    ['give_perms_position_above_role_id', process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID],
     ['newuser_been_in_server_before_role_id', process.env.NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID],
-    ['newuser_permission_diff_role_id',     process.env.NEWUSER_PERMISSION_DIFF_ROLE_ID],
-    ['noobies_role_id',                     process.env.NOOBIES_ROLE_ID],
-    ['guild_name',                          process.env.GUILD_NAME || 'Da Frens'],
-    ['log_level',                           process.env.LOG_LEVEL || 'info'],
-    ['server_invite_url',                   process.env.SERVER_INVITE_URL],
+    ['newuser_permission_diff_role_id', process.env.NEWUSER_PERMISSION_DIFF_ROLE_ID],
+    ['noobies_role_id', process.env.NOOBIES_ROLE_ID],
+    ['guild_name', process.env.GUILD_NAME || 'Da Frens'],
+    ['log_level', process.env.LOG_LEVEL || 'info'],
+    ['server_invite_url', process.env.SERVER_INVITE_URL],
   ];
   await Promise.all(seeds.map(([key, val]) => seedFromEnv(key, val)));
   logger.info('Dynamic config seeded — non-sensitive settings loaded from DB / env.');

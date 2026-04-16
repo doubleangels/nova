@@ -44,7 +44,7 @@ try {
     });
     logger.error('Please ensure the data directory has write permissions for the bot user.');
   }
-  
+
   // Check if database file exists and log its status
   if (fs.existsSync(sqlitePath)) {
     const stats = fs.statSync(sqlitePath);
@@ -123,23 +123,23 @@ async function initializeDatabase() {
       logger.debug('Database path retrieved.', {
         sqlitePath: sqlitePath
       });
-      
+
       const testKey = 'db_test_key';
       const testValue = 'test_value';
-      
+
       await keyv.set(testKey, testValue);
       logger.debug('Test value written to database.');
-      
+
       const retrieved = await keyv.get(testKey);
       logger.debug('Test value retrieved from database.', {
         retrieved: retrieved
       });
-      
+
       if (retrieved === testValue) {
         logger.info("Database connection test successful.");
         await keyv.delete(testKey);
         logger.debug("Cleaned up database test data.");
-        
+
         // Verify database file exists and has data
         if (fs.existsSync(sqlitePath)) {
           const stats = fs.statSync(sqlitePath);
@@ -154,7 +154,7 @@ async function initializeDatabase() {
             sqlitePath: sqlitePath
           });
         }
-        
+
         // Ensure database file has correct permissions after creation
         // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
         try {
@@ -168,12 +168,12 @@ async function initializeDatabase() {
             err: chmodError
           });
         }
-        
+
         return;
       } else {
         throw new Error(`Database read/write test failed. Expected: ${testValue}, Got: ${retrieved}`);
       }
-      
+
     } catch (err) {
       lastError = err;
       logger.error('Database connection test failed.', {
@@ -184,10 +184,10 @@ async function initializeDatabase() {
         dataDirExists: fs.existsSync(dataDir),
         dbFileExists: fs.existsSync(sqlitePath)
       });
-      
+
       const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
       retryCount++;
-      
+
       if (retryCount < MAX_RETRIES) {
         logger.info('Retrying database connection.', {
           delayMs: delay
@@ -198,11 +198,11 @@ async function initializeDatabase() {
   }
 
   logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
-  
+
   if (lastError) {
     logger.error("Final database error occurred.", { err: lastError });
   }
-  
+
   process.exit(1);
 }
 
@@ -263,341 +263,14 @@ async function deleteValue(key) {
   }
 }
 
+
+
 /**
- * Helper function to maintain a list of user IDs for a given type
- * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
- * @param {string} userId - The user ID to add
+ * Cleans up old users from tracking if needed (placeholder for future cleanup tasks)
  * @returns {Promise<void>}
  */
-async function addToUserList(listKey, userId) {
-  try {
-    const configKey = `config:${listKey}`;
-    const list = await keyv.get(configKey) || [];
-    if (!list.includes(userId)) {
-      list.push(userId);
-      await keyv.set(configKey, list);
-    }
-  } catch (error) {
-    logger.error('Error occurred while adding to user list.', {
-      err: error,
-      listKey: listKey
-    });
-  }
-}
-
-/**
- * Helper function to remove a user ID from a list
- * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
- * @param {string} userId - The user ID to remove
- * @returns {Promise<void>}
- */
-async function removeFromUserList(listKey, userId) {
-  try {
-    const configKey = `config:${listKey}`;
-    const list = await keyv.get(configKey) || [];
-    const filtered = list.filter(id => id !== userId);
-    await keyv.set(configKey, filtered);
-  } catch (error) {
-    logger.error('Error occurred while removing from user list.', {
-      err: error,
-      listKey: listKey
-    });
-  }
-}
-
-/**
- * Adds a user to mute mode tracking
- * @param {string} userId - The Discord user ID
- * @param {string} username - The Discord username
- * @returns {Promise<void>}
- */
-async function addMuteModeUser(userId, username) {
-  try {
-    const userData = {
-      userId,
-      username,
-      joinTime: dayjs().toISOString()
-    };
-    await keyv.set(`mute_mode:${userId}`, userData);
-    await addToUserList('mute_mode_users', userId);
-    logger.debug('Added mute mode user with join time.', {
-      userId: userId,
-      joinTime: userData.joinTime
-    });
-  } catch (error) {
-    logger.error('Error occurred while adding mute mode user.', {
-      err: error,
-      userId: userId
-    });
-  }
-}
-
-/**
- * Removes a user from mute mode tracking
- * Removes immediately when called (e.g., when user sends a message)
- * @param {string} userId - The Discord user ID
- * @returns {Promise<void>}
- */
-async function removeMuteModeUser(userId) {
-  try {
-    const deleted = await keyv.delete(`mute_mode:${userId}`);
-    await removeFromUserList('mute_mode_users', userId);
-    if (deleted) {
-      logger.debug('Removed user from mute mode tracking.', {
-        userId: userId
-      });
-    }
-  } catch (error) {
-    logger.error('Error occurred while removing mute mode user.', {
-      err: error,
-      userId: userId
-    });
-  }
-}
-
-/**
- * Retrieves all users in mute mode tracking
- * @returns {Promise<Array>} Array of mute mode user records
- */
-async function getAllMuteModeUsers() {
-  try {
-    const userIds = await keyv.get('config:mute_mode_users') || [];
-    const users = [];
-    
-    for (const userId of userIds) {
-      const userData = await keyv.get(`mute_mode:${userId}`);
-      if (userData) {
-        users.push({
-          user_id: userData.userId,
-          username: userData.username,
-          join_time: userData.joinTime
-        });
-      }
-    }
-    
-    return users;
-  } catch (error) {
-    logger.error("Error occurred while getting all mute mode users.", {
-      err: error
-    });
-    return [];
-  }
-}
-
-/**
- * Gets the join time for a user from mute mode tracking
- * @param {string} userId - The Discord user ID
- * @returns {Promise<Date|null>} The join time or null if user not found
- */
-async function getUserJoinTime(userId) {
-  try {
-    const userData = await keyv.get(`mute_mode:${userId}`);
-    if (userData && userData.joinTime) {
-      return dayjs(userData.joinTime).toDate();
-    }
-    return null;
-  } catch (error) {
-    logger.error('Error occurred while getting user join time.', {
-      err: error,
-      userId: userId
-    });
-    return null;
-  }
-}
-
-/**
- * Adds a user's join time to spam mode tracking
- * @param {string} userId - The Discord user ID
- * @param {string} username - The Discord username
- * @param {Date|string} joinTime - The join time
- * @returns {Promise<void>}
- */
-async function addSpamModeJoinTime(userId, username, joinTime) {
-  try {
-    const timeToSet = dayjs(joinTime).toISOString();
-    
-    const userData = {
-      userId,
-      username,
-      joinTime: timeToSet
-    };
-    
-    await keyv.set(`spam_mode:${userId}`, userData);
-    await addToUserList('spam_mode_users', userId);
-    logger.debug('Added spam mode join time for user.', {
-      userId: userId,
-      joinTime: timeToSet
-    });
-  } catch (error) {
-    logger.error('Error occurred while adding spam mode join time for user.', {
-      err: error,
-      userId: userId
-    });
-  }
-}
-
-/**
- * Gets the join time for a user from spam mode tracking
- * @param {string} userId - The Discord user ID
- * @returns {Promise<Date|null>} The join time or null if user not found
- */
-async function getSpamModeJoinTime(userId) {
-  try {
-    const userData = await keyv.get(`spam_mode:${userId}`);
-    if (userData && userData.joinTime) {
-      return dayjs(userData.joinTime).toDate();
-    }
-    return null;
-  } catch (error) {
-    logger.error('Error occurred while getting spam mode join time for user.', {
-      err: error,
-      userId: userId
-    });
-    return null;
-  }
-}
-
-/**
- * Removes a user from spam mode tracking (after they're past the window)
- * @param {string} userId - The Discord user ID
- * @returns {Promise<void>}
- */
-async function removeSpamModeJoinTime(userId) {
-  try {
-    const deleted = await keyv.delete(`spam_mode:${userId}`);
-    await removeFromUserList('spam_mode_users', userId);
-    if (deleted) {
-      logger.debug('Removed user from spam mode tracking.', {
-        userId: userId
-      });
-    }
-  } catch (error) {
-    logger.error('Error occurred while removing spam mode join time for user.', {
-      err: error,
-      userId: userId
-    });
-  }
-}
-
-/**
- * Cleans up old users from tracking tables who are past their tracking windows
- * Removes users from spam_mode_join_times and mute_mode_recovery who are older than their respective windows
- * @param {Client} client - The Discord client instance (optional, for checking if users are still in guild)
- * @returns {Promise<{spamModeRemoved: number, muteModeRemoved: number}>} Number of users removed from each table
- */
-async function cleanupOldTrackingUsers(client = null) {
-  try {
-    // Get window settings
-    let spamWindowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
-    if (!spamWindowHours) {
-      spamWindowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-    }
-    
-    let muteWindowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-    
-    const spamWindowMs = spamWindowHours * 60 * 60 * 1000;
-    const muteWindowMs = muteWindowHours * 60 * 60 * 1000;
-    const now = dayjs();
-    const spamCutoffTime = now.subtract(spamWindowMs, 'millisecond').toDate();
-    const muteCutoffTime = now.subtract(muteWindowMs, 'millisecond').toDate();
-    
-    let spamModeRemoved = 0;
-    let muteModeRemoved = 0;
-    
-    // Clean up spam mode users
-    const spamUserIds = await keyv.get('config:spam_mode_users') || [];
-    const remainingSpamUsers = [];
-    
-    // Fetch all user records in parallel rather than serially
-    const spamUserDataList = await Promise.all(
-      spamUserIds.map(userId => keyv.get(`spam_mode:${userId}`))
-    );
-    
-    for (let i = 0; i < spamUserIds.length; i++) {
-      const userId = spamUserIds[i];
-      const userData = spamUserDataList[i];
-      if (userData && userData.joinTime) {
-        const joinTime = dayjs(userData.joinTime).toDate();
-        if (joinTime < spamCutoffTime) {
-          await keyv.delete(`spam_mode:${userId}`);
-          spamModeRemoved++;
-        } else {
-          remainingSpamUsers.push(userId);
-        }
-      } else {
-        // User data missing or corrupted; remove from list and delete any orphan key
-        await keyv.delete(`spam_mode:${userId}`);
-        spamModeRemoved++;
-      }
-    }
-    await keyv.set('config:spam_mode_users', remainingSpamUsers);
-    
-    // Clean up mute mode users
-    const muteUserIds = await keyv.get('config:mute_mode_users') || [];
-    const remainingMuteUsers = [];
-    
-    // Fetch all user records in parallel rather than serially
-    const muteUserDataList = await Promise.all(
-      muteUserIds.map(userId => keyv.get(`mute_mode:${userId}`))
-    );
-    
-    for (let i = 0; i < muteUserIds.length; i++) {
-      const userId = muteUserIds[i];
-      const userData = muteUserDataList[i];
-      if (userData && userData.joinTime) {
-        const joinTime = dayjs(userData.joinTime).toDate();
-        let shouldRemove = joinTime < muteCutoffTime;
-        
-        // If client is provided, also check if user is still in guild
-        // Bot is only in one guild, so check that guild directly
-        if (!shouldRemove && client) {
-          const guild = client.guilds.cache.first();
-          if (guild) {
-            try {
-              const member = await guild.members.fetch(userId).catch(() => null);
-              if (!member) {
-                shouldRemove = true;
-              }
-            } catch (error) {
-              // If fetch fails, assume user is not in guild
-              shouldRemove = true;
-            }
-          } else {
-            // No guild found, remove user
-            shouldRemove = true;
-          }
-        }
-        
-        if (shouldRemove) {
-          await keyv.delete(`mute_mode:${userId}`);
-          muteModeRemoved++;
-        } else {
-          remainingMuteUsers.push(userId);
-        }
-      } else {
-        // User data missing or corrupted; remove from list and delete any orphan key
-        await keyv.delete(`mute_mode:${userId}`);
-        muteModeRemoved++;
-      }
-    }
-    await keyv.set('config:mute_mode_users', remainingMuteUsers);
-    
-    if (spamModeRemoved > 0 || muteModeRemoved > 0) {
-      logger.info('Cleaned up old tracking users.', {
-        spamModeRemoved: spamModeRemoved,
-        muteModeRemoved: muteModeRemoved
-      });
-    } else {
-      logger.debug('Cleanup completed, no old users found to remove.');
-    }
-    
-    return { spamModeRemoved, muteModeRemoved };
-  } catch (error) {
-    logger.error('Error occurred while cleaning up old tracking users.', {
-      err: error
-    });
-    throw error;
-  }
+async function cleanupOldTrackingUsers() {
+  logger.debug('Cleanup completed, no old users found to remove.');
 }
 
 /**
@@ -806,14 +479,14 @@ async function getInviteCodeToTagMap(guildId) {
 function getRawInviteTagsRows() {
   const Database = require('better-sqlite3');
   const db = new Database(sqlitePath, { readonly: true });
-  
+
   // Query all keys from invites namespace that start with tags:
   const rows = db.prepare(`
     SELECT key, value 
     FROM keyv 
     WHERE key LIKE 'invites:tags:%'
   `).all();
-  
+
   db.close();
   return rows;
 }
@@ -827,15 +500,15 @@ async function getAllInviteTagsData() {
   try {
     logger.debug("Getting all invite tags.");
     const rows = getRawInviteTagsRows();
-    
+
     const tags = [];
-    
+
     for (const row of rows) {
       try {
         const parsed = JSON.parse(row.value);
         // Keyv stores values wrapped in {value: ..., expires: null}
         const tagData = parsed?.value || parsed;
-        
+
         if (tagData && tagData.code && tagData.name) {
           // Extract tag name from key (invites:tags:disboard -> disboard)
           const tagName = row.key.replace('invites:tags:', '');
@@ -856,7 +529,7 @@ async function getAllInviteTagsData() {
         });
       }
     }
-    
+
     return tags;
   } catch (err) {
     logger.error("Error occurred while getting all invite tags.", {
@@ -878,15 +551,15 @@ async function rebuildCodeToTagMap(guildId) {
       guildId: guildId
     });
     const rows = getRawInviteTagsRows();
-    
+
     const codeToTagMap = {};
-    
+
     for (const row of rows) {
       try {
         const parsed = JSON.parse(row.value);
         // Keyv stores values wrapped in {value: ..., expires: null}
         const tagData = parsed?.value || parsed;
-        
+
         if (tagData && tagData.code && tagData.name) {
           // Extract tag name from key (invites:tags:disboard -> disboard)
           const tagName = row.key.replace('invites:tags:', '');
@@ -903,7 +576,7 @@ async function rebuildCodeToTagMap(guildId) {
         });
       }
     }
-    
+
     // Save the rebuilt mapping for this guild
     if (Object.keys(codeToTagMap).length > 0) {
       await setInviteCodeToTagMap(guildId, codeToTagMap);
@@ -912,7 +585,7 @@ async function rebuildCodeToTagMap(guildId) {
         entryCount: Object.keys(codeToTagMap).length
       });
     }
-    
+
     return codeToTagMap;
   } catch (err) {
     logger.error('Error occurred while rebuilding code-to-tag mapping for guild.', {
@@ -960,9 +633,9 @@ async function incrementMessageCount(userId) {
     let count = await keyv.get(key) || 0;
     count++;
     await keyv.set(key, count);
-    logger.debug('Incremented message count for user successfully.', { 
-      userId: userId, 
-      count: count 
+    logger.debug('Incremented message count for user successfully.', {
+      userId: userId,
+      count: count
     });
     return count;
   } catch (error) {
@@ -1022,13 +695,6 @@ module.exports = {
   getValue,
   setValue,
   deleteValue,
-  addMuteModeUser,
-  removeMuteModeUser,
-  getAllMuteModeUsers,
-  getUserJoinTime,
-  addSpamModeJoinTime,
-  getSpamModeJoinTime,
-  removeSpamModeJoinTime,
   cleanupOldTrackingUsers,
   setInviteTag,
   getInviteTag,

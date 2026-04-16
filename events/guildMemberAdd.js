@@ -2,9 +2,7 @@ const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
-const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, isFormerMember } = require('../utils/database');
-const { scheduleMuteKick } = require('../utils/muteModeUtils');
-const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
+const { getValue, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, isFormerMember } = require('../utils/database');
 const config = require('../config');
 
 // Lock map to prevent race conditions in invite usage tracking
@@ -16,9 +14,7 @@ module.exports = {
   /**
    * Handles the event when a new member joins the guild.
    * This function:
-   * 1. Checks if the member's account meets age requirements
-   * 2. Adds the member to mute mode tracking
-   * 3. If mute mode is enabled, schedules an automatic kick after the configured time
+   * 1. Assigns auto-roles and checks returning members
    * 
    * @param {GuildMember} member - The member that joined the guild
    * @throws {Error} If there's an error processing the new member, with specific error messages for different failure cases
@@ -31,37 +27,8 @@ module.exports = {
       });
 
       if (member.user.bot) {
-        logger.debug('Bot joined the guild, skipping mute mode tracking.', { botTag: member.user.tag });
+        logger.debug('Bot joined the guild, skipping tracking.', { botTag: member.user.tag });
         return;
-      }
-
-      const meetsAgeRequirement = await checkAccountAge(member);
-      if (!meetsAgeRequirement) {
-        await performKick(member);
-        return;
-      }
-
-      // Parallelize database writes
-      await Promise.all([
-        addMuteModeUser(member.id, member.user.tag),
-        addSpamModeJoinTime(member.id, member.user.tag, member.joinedAt)
-      ]);
-
-      // Parallelize config reads
-      const [muteModeEnabled, muteKickTimeValue] = await Promise.all([
-        getValue('mute_mode_enabled'),
-        getValue('mute_mode_kick_time_hours')
-      ]);
-      
-      if (muteModeEnabled) {
-        const muteKickTime = parseInt(muteKickTimeValue, 10) || 4;
-        await scheduleMuteKick(
-          member.id,
-          member.joinedAt,
-          muteKickTime,
-          member.client,
-          member.guild.id
-        );
       }
 
       // Assign "been in server before" role only to returning members (if they have the role, they're not new)
@@ -124,7 +91,7 @@ module.exports = {
         userTag: member.user.tag,
         userId: member.user.id
       });
-      
+
       // Get notification channel
       const notificationChannelId = await getInviteNotificationChannel();
       if (!notificationChannelId) {
@@ -152,7 +119,7 @@ module.exports = {
           return;
         }
       }
-      
+
       if (!notificationChannel) {
         logger.warn('Invite notification channel not found in guild.', {
           channelId: notificationChannelId,
@@ -165,7 +132,7 @@ module.exports = {
         channelId: notificationChannel.id,
         channelType: notificationChannel.type
       });
-      
+
       // Check permissions once and cache
       const botMember = member.guild.members.me;
       if (!botMember) {
@@ -174,7 +141,7 @@ module.exports = {
         });
         return;
       }
-      
+
       const channelPermissions = notificationChannel.permissionsFor(botMember);
       if (!channelPermissions?.has('SendMessages')) {
         logger.error('Bot does not have SendMessages permission in notification channel.', {
@@ -183,7 +150,7 @@ module.exports = {
         });
         return;
       }
-      
+
       if (!channelPermissions.has('EmbedLinks')) {
         logger.error('Bot does not have EmbedLinks permission in notification channel.', {
           channelName: notificationChannel.name,
@@ -218,7 +185,7 @@ module.exports = {
       logger.debug('Retrieved previous invite usage data.', {
         previousUsage: JSON.stringify(previousUsage)
       });
-      
+
       // Build current usage map
       // Store codes in their original case for Discord API compatibility
       const currentUsage = {};
@@ -229,7 +196,7 @@ module.exports = {
       logger.debug('Built current invite usage data.', {
         currentUsage: JSON.stringify(currentUsage)
       });
-      
+
       // If previous usage is empty (bot just started or first time), initialize it
       const isFirstRun = Object.keys(previousUsage).length === 0;
       if (isFirstRun) {
@@ -252,7 +219,7 @@ module.exports = {
         // Wait for the previous check to complete
         await lockPromise;
       }
-      
+
       // Create a new lock promise for this check
       let resolveLock;
       const newLockPromise = new Promise(resolve => {
@@ -263,33 +230,33 @@ module.exports = {
       try {
         // Re-read previous usage after acquiring lock to get latest state
         const lockedPreviousUsage = await getInviteUsage(guildId);
-        
+
         // Get tagged invite code mapping
         let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
         if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
           // Try rebuilding the map
           codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
         }
-        
+
         // Find which tagged invite was used (usage count increased)
         let usedInviteCode = null;
         let maxIncrease = 0;
-        
+
         // Normalize previous usage keys to lowercase for case-insensitive comparison
         const normalizedPreviousUsage = {};
         for (const [code, count] of Object.entries(lockedPreviousUsage)) {
           normalizedPreviousUsage[code.toLowerCase()] = count;
         }
-        
+
         // Only check tagged invites
         for (const [code, currentCount] of Object.entries(currentUsage)) {
           const normalizedCode = code.toLowerCase();
-          
+
           // Skip if not a tagged invite
           if (!codeToTagMap[normalizedCode]) {
             continue;
           }
-          
+
           const previousCount = normalizedPreviousUsage[normalizedCode] || 0;
           const increase = currentCount - previousCount;
           logger.debug('Comparing tagged invite usage counts.', {
@@ -298,7 +265,7 @@ module.exports = {
             currentCount: currentCount,
             increase: increase
           });
-          
+
           if (increase > 0) {
             if (increase > maxIncrease) {
               maxIncrease = increase;
@@ -323,11 +290,11 @@ module.exports = {
             }
           }
         }
-        
+
         logger.debug('Detected used invite code.', {
           inviteCode: usedInviteCode || 'NONE'
         });
-        
+
         // Update stored usage counts BEFORE processing notification
         // This ensures we have the latest state for next join
         await setInviteUsage(member.guild.id, currentUsage).catch(err => {
@@ -342,19 +309,19 @@ module.exports = {
           // Normalize the code for lookup
           const normalizedUsedCode = usedInviteCode.toLowerCase();
           const tagName = codeToTagMap[normalizedUsedCode];
-          
+
           logger.debug('Looked up tag name for invite code.', {
             inviteCode: usedInviteCode,
             normalizedCode: normalizedUsedCode,
             tagName: tagName || 'not found'
           });
-          
+
           if (tagName) {
             const inviteTag = await getInviteTag(tagName);
             logger.debug('Retrieved invite tag data.', {
               inviteTag: JSON.stringify(inviteTag)
             });
-            
+
             if (inviteTag && inviteTag.code && inviteTag.code.toLowerCase() === normalizedUsedCode) {
               // Send tagged invite notification
               try {
@@ -375,7 +342,7 @@ module.exports = {
                   channelId: notificationChannel.id,
                   channelName: notificationChannel.name
                 });
-                
+
                 const sentMessage = await notificationChannel.send({ embeds: [embed] });
                 logger.info('Sent invite notification for member using tagged invite.', {
                   userTag: member.user.tag,
@@ -400,7 +367,7 @@ module.exports = {
             userId: member.user.id
           });
         }
-        
+
       } finally {
         // Release the lock (guard in case resolveLock was never assigned)
         if (typeof resolveLock === 'function') {

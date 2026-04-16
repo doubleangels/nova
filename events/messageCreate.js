@@ -5,8 +5,6 @@ const config = require('../config');
 const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
-const { cancelMuteKick } = require('../utils/muteModeUtils');
-const { trackNewUserMessage } = require('../utils/spamModeUtils');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -15,9 +13,7 @@ module.exports = {
    * Handles the event when a new message is created.
    * This function:
    * 1. Processes messages from users and specific bots
-   * 2. Handles mute mode tracking
-   * 3. Tracks new user messages for spam mode (duplicate detection across channels within mute mode kick time)
-   * 4. Processes time references and reminders
+   * 2. Processes time references and reminders
    * 5. Manages no-text channel restrictions
    * 
    * @param {Message} message - The message that was created
@@ -43,33 +39,10 @@ module.exports = {
         content: message.content?.replace(/\n/g, ' ') || "No Content"
       });
 
-      // Track new user messages for spam mode if enabled (BEFORE removing from mute mode)
       // Fetch config values in parallel
-      const [spamModeEnabled, noTextChannelId] = await Promise.all([
-        getValue('spam_mode_enabled'),
+      const [noTextChannelId] = await Promise.all([
         getValue('notext_channel')
       ]);
-      
-      try {
-        if (spamModeEnabled === true) {
-          await trackNewUserMessage(message);
-        }
-      } catch (error) {
-        captureError(error, { event: 'messageCreate', handler: 'spamMode' });
-        logger.error("Error occurred while checking spam mode or tracking new user message.", {
-          err: error,
-          messageId: message.id
-        });
-      }
-
-      // Only remove from mute mode if user was actually in mute mode (cancelMuteKick returns true)
-      // This avoids unnecessary database calls for users not in mute mode
-      if (cancelMuteKick(message.author.id)) {
-        await removeMuteModeUser(message.author.id);
-        logger.debug('Removed mute mode tracking for user after message.', {
-          userTag: message.author.tag
-        });
-      }
 
       if (message.content?.startsWith('!')) {
         const args = message.content.slice(1).trim().split(/ +/);
@@ -82,12 +55,12 @@ module.exports = {
       }
 
       await processUserMessage(message);
-      
+
       // Check for bump messages (Disboard with embeds)
       if (message.embeds?.length > 0) {
         await checkForBumpMessages(message);
       }
-      
+
       logger.debug('Processed message from user in channel.', {
         userTag: message.author.tag,
         channelName: message.channel.name
@@ -98,15 +71,15 @@ module.exports = {
       if (String(message.channelId) !== String(noTextChannelId)) return;
 
       const content = message.content ?? '';
-      const hasGif = message.attachments.some(attachment => 
-        attachment.url.toLowerCase().endsWith('.gif') || 
+      const hasGif = message.attachments.some(attachment =>
+        attachment.url.toLowerCase().endsWith('.gif') ||
         attachment.contentType?.toLowerCase() === 'image/gif'
       ) || content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
-      
-      const hasImage = message.attachments.some(attachment => 
+
+      const hasImage = message.attachments.some(attachment =>
         attachment.contentType?.toLowerCase().startsWith('image/')
       );
-      
+
       const hasSticker = message.stickers.size > 0;
 
       const hasEmote = content.match(/<a?:\w+:\d+>/g);
@@ -150,7 +123,7 @@ module.exports = {
       });
 
       let errorMessage = "⚠️ An unexpected error occurred while processing the message.";
-      
+
       if (error.message === "⚠️ Failed to fetch message content.") {
         errorMessage = "⚠️ Failed to fetch message content.";
       } else if (error.message === "⚠️ Failed to track message data.") {
@@ -166,7 +139,7 @@ module.exports = {
       } else if (error.message === "⚠️ Failed to set reminder for bump message.") {
         errorMessage = "⚠️ Failed to set reminder for bump message.";
       }
-      
+
       throw new Error(errorMessage);
     }
   }
@@ -224,9 +197,9 @@ async function processUserMessage(message) {
     }
   } catch (error) {
     captureError(error, { event: 'messageCreate', handler: 'processUserMessage' });
-    logger.error('Error handling role assignment in processUserMessage.', { 
-      err: error, 
-      userId: message.author.id 
+    logger.error('Error handling role assignment in processUserMessage.', {
+      err: error,
+      userId: message.author.id
     });
   }
 }
@@ -249,7 +222,7 @@ async function checkForBumpMessages(message) {
     isInteraction: !!message.interaction,
     isPartial: message.partial
   });
-  
+
   try {
     // Check for Disboard bump (has embed with "Bump done!")
     // Check ALL messages for the pattern, regardless of sender
@@ -275,12 +248,12 @@ async function checkForBumpMessages(message) {
           });
         }
       }
-      
+
       // Check embeds without logging on every iteration
-      const bumpEmbed = embedsToCheck.find(embed => 
+      const bumpEmbed = embedsToCheck.find(embed =>
         embed.description && embed.description.includes("Bump done!")
       );
-      
+
       if (bumpEmbed) {
         logger.debug("Found Disboard bump embed in message.");
         logger.info("Disboard bump detected, scheduling reminder.");

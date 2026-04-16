@@ -36,21 +36,157 @@
      class="fixed bottom-5 right-5 z-50 hidden px-5 py-3 rounded-xl text-sm font-medium shadow-lg transition-all duration-300 max-w-xs">
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════ BOT SETTINGS -->
-<section id="general" class="mb-10">
-  <h2 class="section-heading">Bot Settings</h2>
+<!-- ══════════════════════════════════════════════════════════ STATUS & OVERVIEW -->
+<section id="status" class="mb-10 page-section">
+  <div class="mb-8">
+    <div class="flex items-center gap-4 mb-2">
+        <div class="w-12 h-12 rounded-2xl bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
+            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+        </div>
+        <div>
+            <h2 class="text-2xl font-bold">Welcome back, <%= user.username %>!</h2>
+            <p class="text-sm text-[var(--c-text-dim)]">Here's what's happening with Nova and <span class="text-[var(--c-accent)] font-semibold"><%= guildName %></span>.</p>
+        </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Discord Card -->
+    <div class="card p-5">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Discord Status</p>
+      <div class="flex items-end justify-between">
+        <div>
+          <p id="health_ping" class="text-2xl font-bold">-- ms</p>
+          <p class="text-xs text-[var(--c-text-muted)]">API Latency</p>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Uptime Card -->
+    <div class="card p-5">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Bot Uptime</p>
+      <div class="flex items-end justify-between">
+        <div>
+          <p id="health_uptime" class="text-lg font-bold">--</p>
+          <p class="text-xs text-[var(--c-text-muted)]">Process Uptime</p>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memory Card -->
+    <div class="card p-5">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Memory Usage</p>
+      <div class="flex items-end justify-between">
+        <div>
+          <p id="health_mem" class="text-2xl font-bold">-- MB</p>
+          <p id="health_mem_sub" class="text-xs text-[var(--c-text-muted)]">RSS Usage</p>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Platform Card -->
+    <div class="card p-5">
+      <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] mb-3">Host System</p>
+      <div class="flex items-end justify-between">
+        <div class="min-w-0">
+          <p id="health_platform" class="text-sm font-bold truncate">--</p>
+          <p id="health_node" class="text-xs text-[var(--c-text-muted)]">Node --</p>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-6 border-l-4 border-[var(--c-accent)]">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-sm">Bot Configuration</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Adjust core personality and automation.</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Server Identity</a>
+            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Safety & Anti-Spam</a>
+            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Roles & Perms</a>
+            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Logistics</a>
+        </div>
+    </div>
+    <div class="card p-6 border-l-4 border-amber-500/50">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.297A24.53 24.53 0 0112 20c.347 0 .692-.003 1.037-.01V5.882m-2.074 0c-.345.007-.69.01-1.037.01-1.347 0-2.65-.213-3.874-.604a2.032 2.032 0 01-1.394-1.933V4.316a2.032 2.032 0 011.394-1.933 24.053 24.053 0 0110.428 0 2.032 2.032 0 011.394 1.933v.367a2.032 2.032 0 01-1.394 1.933 24.53 24.53 0 01-1.037-.01" /></svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-sm">Administrative Tools</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Management and server growth controls.</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Invite Manager</a>
+            <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105 text-pink-400">Social & Fun</a>
+            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-card-border)] transition-all hover:scale-105">Message Center</a>
+        </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ IDENTITY & APPEARANCE -->
+<section id="general" class="mb-10 page-section hidden">
+  <h2 class="section-heading">
+    <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+    Identity & Appearance
+  </h2>
   <div class="card">
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
+      <div>
+        <label class="field-label">Guild/Server Name</label>
+        <input type="text" id="guild_name" class="field-input" maxlength="100" />
+        <p class="field-hint">The display name of your server used throughout the dashboard and embeds.</p>
+      </div>
+
+      <div>
+        <label class="field-label">Server Invite URL</label>
+        <input type="url" id="server_invite_url" class="field-input" placeholder="https://discord.gg/..." />
+        <p class="field-hint">Included in bot notifications and automated kick messages.</p>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="field-label">Embed Accent Color</label>
+        <div class="flex items-center gap-3 mt-1">
+          <input type="color" id="base_embed_color" class="h-10 w-20" />
+          <input type="text" id="base_embed_color_text" placeholder="#999999"
+                 class="field-input w-40" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" />
+        </div>
+        <p class="field-hint">Determines the color strip on the side of bot response embeds.</p>
+      </div>
+
       <div class="sm:col-span-2 flex items-start gap-4">
         <div class="flex-1">
-          <label class="field-label">Status Text</label>
+          <label class="field-label">Bot Status Text</label>
           <input type="text" id="bot_status" placeholder="for ways to help! ❤️"
                  class="field-input" maxlength="128" />
-          <p class="field-hint">The text shown next to the bot's activity.</p>
+          <p class="field-hint">The custom status message shown in the bot's Discord profile.</p>
         </div>
-        <div class="w-40">
-          <label class="field-label">Status Type</label>
+        <div class="w-48">
+          <label class="field-label">Activity Type</label>
           <select id="bot_status_type" class="field-input">
             <option value="watching">Watching</option>
             <option value="playing">Playing</option>
@@ -62,271 +198,487 @@
         </div>
       </div>
 
-      <div>
-        <label class="field-label">Embed Accent Color</label>
-        <div class="flex items-center gap-3 mt-1">
-          <input type="color" id="base_embed_color" class="h-10 w-16 rounded-lg border border-gray-700 bg-gray-800" />
-          <input type="text" id="base_embed_color_text" placeholder="#999999"
-                 class="field-input flex-1" maxlength="7" pattern="^#[0-9A-Fa-f]{6}$" />
-        </div>
-        <p class="field-hint">Used in embed borders across all commands.</p>
-      </div>
-
-      <div>
-        <label class="field-label">Log Level</label>
-        <select id="log_level" class="field-input">
-          <option value="error">Error</option>
-          <option value="warn">Warn</option>
-          <option value="info">Info</option>
-          <option value="debug">Debug</option>
-        </select>
-        <p class="field-hint">Requires bot restart to take effect.</p>
-      </div>
-
-      <div>
-        <label class="field-label">Guild Name</label>
-        <input type="text" id="guild_name" class="field-input" maxlength="100" />
-        <p class="field-hint">Display name used in embeds and messages.</p>
-      </div>
-
-      <div>
-        <label class="field-label">Server Invite URL</label>
-        <input type="url" id="server_invite_url" class="field-input" placeholder="https://discord.gg/..." />
-        <p class="field-hint">Included in kick DMs so users can rejoin.</p>
-      </div>
-
     </div>
     <div class="mt-6 flex justify-end">
       <button class="save-btn" data-section="general"
-              data-keys="bot_status,bot_status_type,base_embed_color,log_level,guild_name,server_invite_url">
-        Save Bot Settings
+              data-keys="guild_name,server_invite_url,base_embed_color,bot_status,bot_status_type">
+        Save Identity Settings
       </button>
     </div>
   </div>
 </section>
 
-<!-- ═══════════════════════════════════════════════════════════ DASHBOARD -->
-<section id="dashboard-runtime" class="mb-10">
-  <h2 class="section-heading">Dashboard Runtime</h2>
+
+<!-- ══════════════════════════════════════════════════════════ ROLES & PERMISSIONS -->
+<section id="roles" class="mb-10 page-section hidden">
+  <h2 class="section-heading">
+    <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0-6a5.99 5.99 0 00-4-1.874A5.99 5.99 0 007 15" />
+    </svg>
+    Roles & Permissions
+  </h2>
+  
   <div class="card">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      <div>
-        <label class="field-label">Dashboard Port</label>
-        <input type="number" id="dashboard_port" min="1" max="65535" class="field-input" />
-        <p class="field-hint">Port the web dashboard listens on (requires restart).</p>
-      </div>
-      <div>
-        <label class="field-label">Dashboard Base URL</label>
-        <input type="url" id="dashboard_base_url" class="field-input" placeholder="http://example.ts.net:5015" />
-        <p class="field-hint">Used for OAuth redirect generation (no trailing slash, no /auth/callback).</p>
-      </div>
-      <div>
-        <label class="field-label">Secure Session Cookie</label>
-        <label class="toggle mt-2">
-          <input type="checkbox" id="dashboard_cookie_secure" />
-          <span class="toggle-slider"></span>
-        </label>
-        <p class="field-hint">Enable for HTTPS only. For HTTP URLs (like Tailscale HTTP), keep this off.</p>
-      </div>
-    </div>
-    <div class="mt-6 flex justify-end">
-      <button class="save-btn" data-section="dashboard-runtime"
-              data-keys="dashboard_port,dashboard_base_url,dashboard_cookie_secure">
-        Save Dashboard Runtime
-      </button>
-    </div>
-  </div>
-</section>
+    <p class="card-sub-desc text-sm mb-6">Configure which roles the bot assigns automatically or uses for command validation.</p>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      
+      <!-- Member Management Roles -->
+      <div class="space-y-5">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-dim" style="color:var(--c-text-dim)">Member Tracking</h3>
+        
+        <div>
+          <label class="field-label">Noobies Role</label>
+          <select id="noobies_role_id" class="field-input role-select"></select>
+          <p class="field-hint">Assigned to new members until they reach the message threshold.</p>
+        </div>
 
-<!-- ═══════════════════════════════════════════════════════════ ROLE CONFIG -->
-<section id="roles" class="mb-10">
-  <h2 class="section-heading">Role Configuration</h2>
-  <div class="card">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <div>
+          <label class="field-label">Returning Member Role</label>
+          <select id="newuser_been_in_server_before_role_id" class="field-input role-select"></select>
+          <p class="field-hint">Applied to members who rejoin the server.</p>
+        </div>
 
-      <div>
-        <label class="field-label">Fren Role</label>
-        <select id="give_perms_fren_role_id" class="field-input role-select"></select>
-        <p class="field-hint">Assigned alongside custom roles via /giveperms.</p>
+        <div>
+          <label class="field-label">Noobies Message Threshold</label>
+          <input type="number" id="noobies_threshold" min="1" max="5000" class="field-input" />
+          <p class="field-hint">Number of messages needed to lose the Noobies role (default: 100).</p>
+        </div>
       </div>
 
-      <div>
-        <label class="field-label">Position Above Role</label>
-        <select id="give_perms_position_above_role_id" class="field-input role-select"></select>
-        <p class="field-hint">New custom roles are placed above this role.</p>
+      <!-- Command & Assistant Roles -->
+      <div class="space-y-5">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-dim" style="color:var(--c-text-dim)">Staff & Assistant</h3>
+        
+        <div>
+          <label class="field-label">Fren Role</label>
+          <select id="give_perms_fren_role_id" class="field-input role-select"></select>
+          <p class="field-hint">Added alongside custom roles when using /giveperms.</p>
+        </div>
+
+        <div>
+          <label class="field-label">Position Above Role</label>
+          <select id="give_perms_position_above_role_id" class="field-input role-select"></select>
+          <p class="field-hint">Determines the hierarchy position of new custom roles.</p>
+        </div>
       </div>
 
-      <div>
-        <label class="field-label">Noobies Role</label>
-        <select id="noobies_role_id" class="field-input role-select"></select>
-        <p class="field-hint">Auto-assigned to members with fewer than 100 messages.</p>
-      </div>
-
-      <div>
-        <label class="field-label">New User — Returning Member Role</label>
-        <select id="newuser_been_in_server_before_role_id" class="field-input role-select"></select>
-        <p class="field-hint">Applied to members who have been in the server before.</p>
-      </div>
-
-      <div>
-        <label class="field-label">New User — Permission Diff Role</label>
-        <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
-        <p class="field-hint">Reference role for /newuser permission comparison embed.</p>
+      <!-- Validation Roles -->
+      <div class="sm:col-span-2 space-y-5">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-dim" style="color:var(--c-text-dim)">Comparison & Logic</h3>
+        
+        <div class="max-w-md">
+          <label class="field-label">Permission Reference Role</label>
+          <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
+          <p class="field-hint">Used by /newuser to highlight significant permission differences.</p>
+        </div>
       </div>
 
     </div>
-    <div class="mt-6 flex justify-end">
+
+    <div class="mt-8 flex justify-end">
       <button class="save-btn" data-section="roles"
-              data-keys="give_perms_fren_role_id,give_perms_position_above_role_id,noobies_role_id,newuser_been_in_server_before_role_id,newuser_permission_diff_role_id">
-        Save Role Configuration
+              data-keys="noobies_role_id,noobies_threshold,newuser_been_in_server_before_role_id,give_perms_fren_role_id,give_perms_position_above_role_id,newuser_permission_diff_role_id">
+        Save Role Settings
       </button>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════ MODERATION -->
-<section id="moderation" class="mb-10">
-  <h2 class="section-heading">Moderation</h2>
+<!-- ══════════════════════════════════════════════════════════ MODERATION & SAFETY -->
+<section id="moderation" class="mb-10 page-section hidden">
+  <h2 class="section-heading">
+    <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+    Moderation & Safety
+  </h2>
 
-  <!-- Mute Mode -->
+  <!-- Anti-Spam -->
   <div class="card mb-4">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h3 class="card-sub-title text-base font-semibold">Mute Mode</h3>
-        <p class="card-sub-desc text-xs mt-0.5">Auto-kick members who don't send a message within the time limit.</p>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="mute_mode_enabled" />
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      <div>
-        <label class="field-label">Silence Timeout (hours)</label>
-        <input type="number" id="mute_mode_kick_time_hours" min="1" max="72" class="field-input" />
-        <p class="field-hint">Users silent for this long will be kicked (1–72).</p>
-      </div>
-    </div>
-    <div class="mt-5 flex justify-end">
-      <button class="save-btn" data-section="mute"
-              data-keys="mute_mode_enabled,mute_mode_kick_time_hours">
-        Save Mute Mode
-      </button>
-    </div>
-  </div>
-
-  <!-- Troll Mode -->
-  <div class="card mb-4">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="card-sub-title text-base font-semibold">Troll Mode</h3>
-        <p class="card-sub-desc text-xs mt-0.5">Kick new members whose Discord account is younger than the minimum age.</p>
-      </div>
-      <label class="toggle">
-        <input type="checkbox" id="troll_mode_enabled" />
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-      <div>
-        <label class="field-label">Minimum Account Age (days)</label>
-        <input type="number" id="troll_mode_account_age" min="1" max="365" class="field-input" />
-        <p class="field-hint">Accounts younger than this are kicked on join (1–365).</p>
-      </div>
-    </div>
-    <div class="mt-5 flex justify-end">
-      <button class="save-btn" data-section="troll"
-              data-keys="troll_mode_enabled,troll_mode_account_age">
-        Save Troll Mode
-      </button>
-    </div>
-  </div>
-
-  <!-- Spam Mode -->
-  <div class="card">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="card-sub-title text-base font-semibold">Spam Mode</h3>
+        <h3 class="card-sub-title text-base font-semibold">Anti-Spam</h3>
         <p class="card-sub-desc text-xs mt-0.5">Detect and warn users sending duplicate messages across channels.</p>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="spam_mode_enabled" />
+        <input type="checkbox" id="anti_spam_enabled" />
         <span class="toggle-slider"></span>
       </label>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
         <label class="field-label">Duplicate Threshold</label>
-        <input type="number" id="spam_mode_threshold" min="2" max="10" class="field-input" />
+        <input type="number" id="anti_spam_threshold" min="2" max="10" class="field-input" />
         <p class="field-hint">Number of duplicates needed to trigger a warning (2–10).</p>
       </div>
       <div>
         <label class="field-label">Tracking Window (hours)</label>
-        <input type="number" id="spam_mode_window_hours" min="1" max="72" class="field-input" />
+        <input type="number" id="anti_spam_window_hours" min="1" max="72" class="field-input" />
         <p class="field-hint">How far back to look for duplicate messages (1–72).</p>
       </div>
-      <div>
+      <div class="sm:col-span-2">
         <label class="field-label">Warning Channel</label>
-        <select id="spam_mode_channel_id" class="field-input channel-select"></select>
-        <p class="field-hint">Where spam warnings are posted.</p>
+        <select id="anti_spam_channel_id" class="field-input channel-select"></select>
+        <p class="field-hint">The channel where the bot will post Anti-Spam alerts.</p>
       </div>
     </div>
     <div class="mt-5 flex justify-end">
-      <button class="save-btn" data-section="spam"
-              data-keys="spam_mode_enabled,spam_mode_threshold,spam_mode_window_hours,spam_mode_channel_id">
-        Save Spam Mode
+      <button class="save-btn" data-section="moderation"
+              data-keys="anti_spam_enabled,anti_spam_threshold,anti_spam_window_hours,anti_spam_channel_id">
+        Save Anti-Spam Settings
       </button>
     </div>
   </div>
+
+  <!-- Inactivity Guard -->
+  <div class="card mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Inactivity Guard</h3>
+        <p class="card-sub-desc text-xs mt-0.5">Auto-kick members who don't send a message within the time limit.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="inactivity_guard_enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">Silence Timeout (hours)</label>
+        <input type="number" id="inactivity_guard_timeout_hours" min="1" max="72" class="field-input" />
+        <p class="field-hint">Users silent for this long will be kicked (1–72).</p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button class="save-btn" data-section="moderation"
+              data-keys="inactivity_guard_enabled,inactivity_guard_timeout_hours">
+        Save Inactivity Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- Entry Guard -->
+  <div class="card mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Entry Guard</h3>
+        <p class="card-sub-desc text-xs mt-0.5">Kick new members whose Discord account is younger than the minimum age.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="entry_guard_enabled" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div>
+        <label class="field-label">Minimum Account Age (days)</label>
+        <input type="number" id="entry_guard_account_age" min="1" max="365" class="field-input" />
+        <p class="field-hint">Accounts younger than this are kicked on join (1–365).</p>
+      </div>
+    </div>
+    <div class="mt-5 flex justify-end">
+      <button class="save-btn" data-section="moderation"
+              data-keys="entry_guard_enabled,entry_guard_account_age">
+        Save Entry Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- (Restricted Channels moved to Social & Fun) -->
 </section>
 
-<!-- ══════════════════════════════════════════════════════════ REMINDERS -->
-<section id="reminders" class="mb-10">
-  <h2 class="section-heading">Reminders</h2>
+<!-- ══════════════════════════════════════════════════════════ LOGISTICS & AUTOMATION -->
+<section id="reminders" class="mb-10 page-section hidden">
+  <h2 class="section-heading">
+    <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+    Logistics & Automation
+  </h2>
   <div class="card">
     <p class="card-sub-desc text-sm mb-5">
-      Channel and role used by all reminder types (Disboard bump, Reddit /promote, and /needafriend).
+      Configure the destination and target role for automated bump and promotion reminders.
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
         <label class="field-label">Reminder Channel</label>
         <select id="reminder_channel" class="field-input channel-select"></select>
-        <p class="field-hint">Where reminder messages are sent.</p>
+        <p class="field-hint">The channel where the bot sends scheduled reminders.</p>
       </div>
       <div>
         <label class="field-label">Reminder Role</label>
         <select id="reminder_role" class="field-input role-select"></select>
-        <p class="field-hint">Role pinged when a reminder fires.</p>
+        <p class="field-hint">The role that will be pinged for each reminder.</p>
+      </div>
+
+      <div class="sm:col-span-2">
+        <label class="field-label">Invite Notification Channel</label>
+        <select id="invite_notification_channel" class="field-input channel-select"></select>
+        <p class="field-hint">Where the bot posts alerts for members joining via tagged invites.</p>
       </div>
     </div>
     <div class="mt-6 flex justify-end">
       <button class="save-btn" data-section="reminders"
-              data-keys="reminder_channel,reminder_role">
-        Save Reminders
+              data-keys="reminder_channel,reminder_role,invite_notification_channel">
+        Save Logistics Settings
       </button>
     </div>
   </div>
 </section>
 
-<!-- ══════════════════════════════════════════════════════════ CHANNELS -->
-<section id="channels" class="mb-10">
-  <h2 class="section-heading">Channels</h2>
-  <div class="card">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+<!-- ══════════════════════════════════════════════════════════ SOCIAL & FUN -->
+<section id="social" class="mb-10 page-section hidden">
+  <div class="mb-6">
+    <h2 class="section-heading mb-1">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
+      </svg>
+      Social & Fun
+    </h2>
+    <p class="text-xs text-[var(--c-text-dim)]">Create high-energy creative spaces and manage social interaction rules.</p>
+  </div>
+
+  <div class="card p-6 border-l-4 border-pink-500/50">
+    <div class="flex items-center justify-between mb-4">
       <div>
-        <label class="field-label">No-Text Channel</label>
+        <h3 class="font-bold text-base">Restricted Channels (Media Only)</h3>
+        <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Perfect for #memes or #media channels where you want only GIFs, Stickers, and Reactions.</p>
+      </div>
+      <div class="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center text-pink-500">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 py-2">
+      <div class="sm:col-span-2">
+        <label class="field-label">Creative Channel</label>
         <select id="notext_channel" class="field-input channel-select"></select>
-        <p class="field-hint">Only GIFs, images, stickers, and emotes are allowed here.</p>
+        <p class="field-hint">Any standard text message sent in this channel will be politely removed.</p>
       </div>
     </div>
     <div class="mt-6 flex justify-end">
-      <button class="save-btn" data-section="channels"
+      <button class="save-btn" data-section="social"
               data-keys="notext_channel">
-        Save Channels
+        Save Social Settings
       </button>
     </div>
   </div>
 </section>
+
+<!-- ══════════════════════════════════════════════════════════ MESSAGE CENTER -->
+<section id="messaging" class="mb-10 page-section hidden">
+  <h2 class="section-heading">
+    <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+    </svg>
+    Message Center
+  </h2>
+  <div class="card">
+    <p class="card-sub-desc text-sm mb-6">Send messages directly to Discord channels as the Nova bot.</p>
+    
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
+      <!-- Controls -->
+      <div class="space-y-5">
+        <div>
+          <label class="field-label">Target Channel</label>
+          <select id="msg_channel_id" class="field-input channel-select"></select>
+        </div>
+        
+        <div>
+          <label class="field-label">Message Mode</label>
+          <div class="flex gap-2 p-1 bg-[var(--c-input)] rounded-lg border border-[var(--c-input-border)]">
+            <button id="msg_mode_text" class="flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white">Plain Text</button>
+            <button id="msg_mode_embed" class="flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]">Rich Embed</button>
+          </div>
+        </div>
+
+        <div id="embed_color_wrap" class="hidden">
+          <label class="field-label">Embed Color</label>
+          <div class="flex items-center gap-3">
+            <input type="color" id="msg_embed_color" class="h-9 w-14" />
+            <input type="text" id="msg_embed_color_text" class="field-input font-mono text-xs" placeholder="#999999" maxlength="7" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div class="sm:col-span-2 space-y-4">
+        <!-- Plain Text Editor -->
+        <div id="editor_text">
+          <label class="field-label">Message Content</label>
+          <textarea id="msg_content" rows="6" class="field-input font-sans leading-relaxed" placeholder="Type your message here... markdown is supported!"></textarea>
+        </div>
+
+        <!-- Rich Embed Editor -->
+        <div id="editor_embed" class="hidden space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label">Embed Title</label>
+              <input type="text" id="msg_embed_title" class="field-input" placeholder="Title" />
+            </div>
+            <div>
+              <label class="field-label">Thumbnail URL</label>
+              <input type="url" id="msg_embed_thumbnail" class="field-input" placeholder="https://..." />
+            </div>
+          </div>
+          <div>
+            <label class="field-label">Embed Description</label>
+            <textarea id="msg_embed_description" rows="4" class="field-input" placeholder="Description content..."></textarea>
+          </div>
+          <div>
+            <label class="field-label">Footer Text</label>
+            <input type="text" id="msg_embed_footer" class="field-input" placeholder="Footer text" />
+          </div>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button id="sendMessageBtn" class="save-btn px-8">
+            Send Message
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- (Health Monitor moved to Status landing page) -->
+
+<!-- ══════════════════════════════════════════════════════════ INVITE MANAGER -->
+<section id="invites" class="mb-10 page-section hidden">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="section-heading mb-0">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+      </svg>
+      Invite Manager
+    </h2>
+    <div class="flex items-center gap-2">
+        <button onclick="openInviteModal()" class="px-3 py-1.5 bg-[var(--c-accent)] text-white rounded-lg text-xs font-semibold hover:bg-[var(--c-accent-strong)] transition-colors flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Create Invite
+        </button>
+    </div>
+  </div>
+
+  <div class="card p-0 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-[var(--c-input)] border-b border-[var(--c-card-border)]">
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Code / Tag</th>
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Channel</th>
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Uses / Max</th>
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Expires</th>
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inviteTableBody" class="divide-y divide-[var(--c-card-border)]">
+          <tr><td colspan="5" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading invites...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- Invite Creation Modal -->
+<div id="inviteModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="card w-full max-w-md shadow-2xl scale-95 opacity-0 transition-all duration-300" id="inviteModalCard">
+        <div class="flex items-center justify-between p-5 border-b border-[var(--c-card-border)]">
+            <h3 class="font-bold text-lg">Create New Invite</h3>
+            <button onclick="closeInviteModal()" class="text-[var(--c-text-dim)] hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="field-label">Target Channel</label>
+                <select id="inv_channel" class="field-input"></select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="field-label">Max Uses</label>
+                    <input type="number" id="inv_uses" class="field-input" value="0" min="0" />
+                    <p class="text-[10px] mt-1 text-[var(--c-text-dim)]">0 for unlimited</p>
+                </div>
+                <div>
+                    <label class="field-label">Expiration</label>
+                    <select id="inv_age" class="field-input">
+                        <option value="0">Never</option>
+                        <option value="1800">30 Minutes</option>
+                        <option value="3600">1 Hour</option>
+                        <option value="21600">6 Hours</option>
+                        <option value="43200">12 Hours</option>
+                        <option value="86400">24 Hours</option>
+                        <option value="604800">7 Days</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="field-label">Invite Tag (Optional)</label>
+                <input type="text" id="inv_tag" class="field-input" placeholder="e.g. Website, YouTube, Disboard" />
+                <p class="text-[10px] mt-1 text-[var(--c-text-dim)]">A custom name for tracking this invite.</p>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+                <input type="checkbox" id="inv_unique" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)] focus:ring-[var(--c-accent)]" />
+                <label for="inv_unique" class="text-xs text-[var(--c-label)]">Force unique code</label>
+            </div>
+        </div>
+        <div class="p-5 border-t border-[var(--c-card-border)] flex justify-end gap-3">
+            <button onclick="closeInviteModal()" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--c-input)] transition-colors">Cancel</button>
+            <button onclick="createInvite()" id="createInviteBtn" class="px-6 py-2 bg-[var(--c-accent)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--c-accent-strong)] transition-all">Create</button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ ADVANCED DATABASE EDITOR -->
+<section id="database" class="mb-10 page-section hidden">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="section-heading mb-0">
+      <svg xmlns="http://www.w3.org/2000/svg" style="width:1.25rem;height:1.25rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+      </svg>
+      Database Explorer
+    </h2>
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--c-text-dim)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" id="dbSearch" placeholder="Search keys or values..." class="field-input py-1.5 pl-9 text-xs w-64" />
+      </div>
+      <button id="refreshDbBtn" class="p-2 bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-lg hover:bg-[var(--c-card-border)] transition-all hover:scale-105 active:scale-95" title="Refresh Database">
+        <svg id="refreshDbIcon" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Namespace Sidebar -->
+    <aside class="w-full lg:w-56 shrink-0">
+        <div class="card p-2 space-y-1" id="dbNamespaceList">
+            <!-- Namespaces injected here -->
+            <div class="px-3 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading...</div>
+        </div>
+        
+        <div class="mt-4 px-2">
+            <button onclick="expandAllCategories()" class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors">Expand All</button>
+            <span class="mx-1 text-[var(--c-text-dim)]">/</span>
+            <button onclick="collapseAllCategories()" class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors">Collapse All</button>
+        </div>
+    </aside>
+
+    <!-- Content Area -->
+    <div class="flex-1 space-y-4" id="dbContentArea">
+        <!-- Categories and Items injected here -->
+        <div class="card p-12 text-center text-[var(--c-text-dim)]">
+            <div class="animate-spin w-6 h-6 border-2 border-[var(--c-accent)] border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-xs">Fetching database entries...</p>
+        </div>
+    </div>
+  </div>
+</section>
+
+
 
 <!-- ─── Component styles (all colors via CSS vars — theme-aware) ─── -->
 <style>
@@ -422,6 +774,47 @@
   }
   .toggle input:checked + .toggle-slider { background: var(--c-accent); }
   .toggle input:checked + .toggle-slider::after { transform: translateX(1.25rem); }
+
+  /* Better color pickers */
+  input[type="color"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background: var(--c-input);
+    border: 1px solid var(--c-input-border);
+    border-radius: 0.5rem;
+    padding: 4px;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  input[type="color"]:hover {
+    border-color: var(--c-accent-strong);
+    background: var(--c-nav-hover-bg);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  input[type="color"]:active {
+    transform: scale(0.95);
+  }
+  input[type="color"]:focus {
+    outline: none;
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 2px var(--c-accent-soft-ring);
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+  input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 0.35rem;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  }
+  input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 0.35rem;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  }
 </style>
 
 <!-- ─── Dashboard JavaScript ─── -->
@@ -530,6 +923,14 @@
   colorPicker?.addEventListener('input', () => {
     colorText.value = colorPicker.value.toUpperCase();
     applyAccentTheme(colorPicker.value);
+    
+    // Also sync the message embed color if it hasn't been manually touched
+    const msgColorText = document.getElementById('msg_embed_color_text');
+    const msgColorPicker = document.getElementById('msg_embed_color');
+    if (msgColorText && (!msgColorText.value || msgColorText.value === colorText.placeholder)) {
+        msgColorText.value = colorText.value;
+        msgColorPicker.value = colorPicker.value;
+    }
   });
   colorText?.addEventListener('input', () => {
     const v = colorText.value;
@@ -577,17 +978,16 @@
     const s = await res.json();
 
     const plainFields = [
-      'bot_status', 'bot_status_type', 'log_level', 'guild_name', 'server_invite_url',
-      'mute_mode_kick_time_hours', 'troll_mode_account_age', 'spam_mode_threshold', 'spam_mode_window_hours',
-      'dashboard_port', 'dashboard_base_url',
+      'bot_status', 'bot_status_type', 'guild_name', 'server_invite_url',
+      'noobies_threshold', 'inactivity_guard_timeout_hours', 'entry_guard_account_age',
+      'anti_spam_threshold', 'anti_spam_window_hours',
     ];
     plainFields.forEach(key => setFieldValue(key, s[key]));
 
     // Checkboxes
-    setFieldValue('mute_mode_enabled',  s.mute_mode_enabled);
-    setFieldValue('troll_mode_enabled', s.troll_mode_enabled);
-    setFieldValue('spam_mode_enabled',  s.spam_mode_enabled);
-    setFieldValue('dashboard_cookie_secure', s.dashboard_cookie_secure);
+    setFieldValue('inactivity_guard_enabled',  s.inactivity_guard_enabled);
+    setFieldValue('entry_guard_enabled', s.entry_guard_enabled);
+    setFieldValue('anti_spam_enabled',  s.anti_spam_enabled);
 
     // Color picker
     const color = s.base_embed_color || '#999999';
@@ -599,7 +999,8 @@
     const selectIds = [
       'give_perms_fren_role_id', 'give_perms_position_above_role_id',
       'noobies_role_id', 'newuser_been_in_server_before_role_id', 'newuser_permission_diff_role_id',
-      'spam_mode_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
+      'anti_spam_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
+      'invite_notification_channel', 'msg_channel_id'
     ];
     const savedMap = {};
     selectIds.forEach(id => {
@@ -671,11 +1072,515 @@
     }
   }
 
-  // Attach save handlers
-  document.querySelectorAll('.save-btn').forEach(btn => {
-    btn.addEventListener('click', () => saveSection(btn));
+  // ── Messaging Center ──────────────────────────────────────────────────────
+  const msgModeText   = document.getElementById('msg_mode_text');
+  const msgModeEmbed  = document.getElementById('msg_mode_embed');
+  const editorText    = document.getElementById('editor_text');
+  const editorEmbed   = document.getElementById('editor_embed');
+  const embedColorWrap = document.getElementById('embed_color_wrap');
+  let isEmbedMode = false;
+
+  msgModeText?.addEventListener('click', () => {
+    isEmbedMode = false;
+    editorText.classList.remove('hidden');
+    editorEmbed.classList.add('hidden');
+    embedColorWrap.classList.add('hidden');
+    msgModeText.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white";
+    msgModeEmbed.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]";
   });
+
+  msgModeEmbed?.addEventListener('click', () => {
+    isEmbedMode = true;
+    editorText.classList.add('hidden');
+    editorEmbed.classList.remove('hidden');
+    embedColorWrap.classList.remove('hidden');
+    msgModeEmbed.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white";
+    msgModeText.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]";
+    
+    // Init color if empty
+    const colorText = document.getElementById('msg_embed_color_text');
+    const colorPicker = document.getElementById('msg_embed_color');
+    if (!colorText.value) {
+        const baseColor = document.getElementById('base_embed_color_text')?.value || '#999999';
+        colorText.value = baseColor;
+        colorPicker.value = baseColor;
+    }
+  });
+
+  // Message color picker sync
+  const msgColorPicker = document.getElementById('msg_embed_color');
+  const msgColorText   = document.getElementById('msg_embed_color_text');
+  msgColorPicker?.addEventListener('input', () => { msgColorText.value = msgColorPicker.value.toUpperCase(); });
+  msgColorText?.addEventListener('input', () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(msgColorText.value)) msgColorPicker.value = msgColorText.value;
+  });
+
+  const sendMessageBtn = document.getElementById('sendMessageBtn');
+  sendMessageBtn?.addEventListener('click', async () => {
+    const channelId = document.getElementById('msg_channel_id').value;
+    if (!channelId) return showToast('Please select a target channel.', 'error');
+
+    const payload = {
+      channelId,
+      isEmbed: isEmbedMode,
+      content: document.getElementById('msg_content').value,
+      embedData: isEmbedMode ? {
+        title: document.getElementById('msg_embed_title').value,
+        description: document.getElementById('msg_embed_description').value,
+        color: msgColorText.value,
+        thumbnail: document.getElementById('msg_embed_thumbnail').value,
+        footer: document.getElementById('msg_embed_footer').value
+      } : null
+    };
+
+    if (isEmbedMode && !payload.embedData.description && !payload.embedData.title) {
+        return showToast('Embed must have at least a title or description.', 'error');
+    }
+
+    setButtonState(sendMessageBtn, 'loading');
+    try {
+      const res = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        showToast('Message sent successfully!');
+        if (!isEmbedMode) document.getElementById('msg_content').value = '';
+      } else {
+        const d = await res.json();
+        showToast(d.error || 'Failed to send.', 'error');
+      }
+    } catch {
+      showToast('Network error.', 'error');
+    } finally {
+      setButtonState(sendMessageBtn, 'idle');
+    }
+  });
+
+  // ── Health Monitor ────────────────────────────────────────────────────────
+  async function loadHealthStats() {
+    try {
+      const res = await fetch('/api/health');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      document.getElementById('health_ping').textContent = `${data.ping} ms`;
+      document.getElementById('health_uptime').textContent = data.uptime;
+      document.getElementById('health_mem').textContent = `${data.memory.rss} MB`;
+      document.getElementById('health_mem_sub').textContent = `System: ${data.memory.systemFree}GB / ${data.memory.systemTotal}GB Free`;
+      document.getElementById('health_platform').textContent = data.platform;
+      document.getElementById('health_node').textContent = `Node ${data.nodeVersion}`;
+      
+      // Update ping color based on latency
+      const pingEl = document.getElementById('health_ping');
+      if (data.ping < 100) pingEl.className = 'text-2xl font-bold text-green-500';
+      else if (data.ping < 300) pingEl.className = 'text-2xl font-bold text-amber-500';
+      else pingEl.className = 'text-2xl font-bold text-red-500';
+      
+    } catch {
+      console.warn('Failed to fetch health stats.');
+    }
+  }
+
+  // ── Invite Manager ────────────────────────────────────────────────────────
+  let allInvites = [];
+
+  async function loadInvites() {
+    try {
+      const res = await fetch('/api/invites');
+      if (!res.ok) throw new Error();
+      allInvites = await res.json();
+      renderInvites();
+    } catch {
+      showToast('Failed to load invites.', 'error');
+    }
+  }
+
+  function renderInvites() {
+    const tbody = document.getElementById('inviteTableBody');
+    
+    tbody.innerHTML = allInvites.map(inv => {
+        const expires = inv.expiresAt ? new Date(inv.expiresAt).toLocaleString() : 'Never';
+        const isExpiringSoon = inv.expiresAt && (new Date(inv.expiresAt) - new Date() < 3600000); // 1hr
+        
+        return `
+            <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
+                <td class="px-5 py-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm font-mono font-bold text-[var(--c-accent)]">${inv.code}</span>
+                        ${inv.tagName ? `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase tracking-wider">${inv.tagName}</span>` : ''}
+                    </div>
+                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1">Added by ${inv.inviter}</div>
+                </td>
+                <td class="px-5 py-4 text-xs font-medium text-[var(--c-label)]">#${inv.channel}</td>
+                <td class="px-5 py-4 text-xs">
+                    <span class="font-bold text-[var(--c-label)]">${inv.uses}</span>
+                    <span class="text-[var(--c-text-dim)]">/ ${inv.maxUses || '∞'}</span>
+                </td>
+                <td class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-amber-500 font-bold' : 'text-[var(--c-text-dim)]'}">
+                    ${expires}
+                </td>
+                <td class="px-5 py-4 text-right space-x-1 whitespace-nowrap">
+                    <button onclick="copyInvite('${inv.url}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Copy Link">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8h3m-3 4h3m-6-4h.01M9 17h.01"/></svg>
+                    </button>
+                    <button onclick="promptEditTag('${inv.code}', '${inv.tagName || ''}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Manage Tag">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                    </button>
+                    <button onclick="deleteInvite('${inv.code}')" class="p-1.5 text-red-500/50 hover:text-red-500 transition-colors" title="Revoke Invite">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('') || '<tr><td colspan="5" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">No active invites found.</td></tr>';
+  }
+
+  window.openInviteModal = async () => {
+    const modal = document.getElementById('inviteModal');
+    const channelSelect = document.getElementById('inv_channel');
+    
+    // Populate channels if empty
+    if (channelSelect.options.length === 0) {
+        const res = await fetch('/api/guild/channels');
+        const channels = await res.json();
+        channelSelect.innerHTML = channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+    }
+
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        document.getElementById('inviteModalCard').classList.remove('scale-95', 'opacity-0');
+        document.getElementById('inviteModalCard').classList.add('scale-100', 'opacity-100');
+    }, 10);
+  };
+
+  window.closeInviteModal = () => {
+    const modal = document.getElementById('inviteModal');
+    document.getElementById('inviteModalCard').classList.add('scale-95', 'opacity-0');
+    document.getElementById('inviteModalCard').classList.remove('scale-100', 'opacity-100');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+  };
+
+  window.createInvite = async () => {
+    const btn = document.getElementById('createInviteBtn');
+    const payload = {
+        channelId: document.getElementById('inv_channel').value,
+        maxAge: document.getElementById('inv_age').value,
+        maxUses: document.getElementById('inv_uses').value,
+        unique: document.getElementById('inv_unique').checked,
+        tag: document.getElementById('inv_tag').value
+    };
+
+    setButtonState(btn, 'loading');
+    try {
+        const res = await fetch('/api/invites', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            showToast('Invite created!');
+            closeInviteModal();
+            loadInvites();
+            // Clear inputs
+            document.getElementById('inv_tag').value = '';
+            document.getElementById('inv_uses').value = '0';
+        } else {
+            showToast('Failed to create invite.', 'error');
+        }
+    } catch {
+        showToast('Network error.', 'error');
+    } finally {
+        setButtonState(btn, 'idle');
+    }
+  };
+
+  window.deleteInvite = async (code) => {
+    if (!confirm(`Are you sure you want to revoke invite ${code}?`)) return;
+    try {
+        const res = await fetch(`/api/invites/${code}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Invite revoked.');
+            loadInvites();
+        } else {
+            showToast('Failed to revoke invite.', 'error');
+        }
+    } catch {
+        showToast('Network error.', 'error');
+    }
+  };
+
+  window.promptEditTag = async (code, currentTag) => {
+    const newTag = prompt(`Set Nova tag for invite ${code}:`, currentTag);
+    if (newTag === null) return;
+
+    try {
+        const res = await fetch('/api/invites/tag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, tag: newTag })
+        });
+        if (res.ok) {
+            showToast('Tag updated!');
+            loadInvites();
+        } else {
+            showToast('Failed to update tag.', 'error');
+        }
+    } catch {
+        showToast('Network error.', 'error');
+    }
+  };
+
+  window.copyInvite = (url) => {
+    navigator.clipboard.writeText(url);
+    showToast('Invite link copied!');
+  };
+
+  // ── Advanced Database Explorer ───────────────────────────────────────────
+  let allDbEntries = [];
+  let curNamespace = 'main';
+  let expandedCats = new Set(['config', 'tags', 'general']);
+  const autoSaveTimers = new Map();
+
+  /**
+   * Returns a display-friendly representation of a DB value.
+   * Primitives (string, number, boolean, null) are shown as-is.
+   * Arrays and objects are pretty-printed JSON.
+   */
+  function displayDbValue(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object') return JSON.stringify(val, null, 2);
+    return String(val);
+  }
+
+  /**
+   * Parses a textarea string back into the correct JS type before saving.
+   * Tries JSON.parse first; falls back to the raw string.
+   */
+  function parseDbValue(str) {
+    const trimmed = str.trim();
+    // Try to parse as JSON (handles numbers, booleans, null, arrays, objects)
+    try { return JSON.parse(trimmed); } catch {}
+    // Otherwise it's a plain string
+    return trimmed;
+  }
+
+  async function loadDatabaseEntries() {
+    const refreshIcon = document.getElementById('refreshDbIcon');
+    if (refreshIcon) {
+        refreshIcon.style.transition = 'transform 0.6s ease';
+        refreshIcon.style.transform  = 'rotate(360deg)';
+    }
+    
+    try {
+      const res = await fetch('/api/database/raw');
+      if (!res.ok) throw new Error();
+      allDbEntries = await res.json();
+      
+      // Ensure current namespace still exists, else pick first available
+      const namespaces = [...new Set(allDbEntries.map(e => e.namespace))];
+      if (namespaces.length > 0 && !namespaces.includes(curNamespace)) {
+          curNamespace = namespaces[0];
+      }
+      
+      renderDbExplorer();
+    } catch {
+      showToast('Failed to load database entries.', 'error');
+    } finally {
+        if (refreshIcon) {
+            setTimeout(() => {
+                refreshIcon.style.transition = 'none';
+                refreshIcon.style.transform  = 'rotate(0deg)';
+            }, 650);
+        }
+    }
+  }
+
+  function getCategory(key) {
+      const parts = key.split(':');
+      return parts.length > 1 ? parts[0] : 'general';
+  }
+
+  function renderDbExplorer() {
+    const nsList  = document.getElementById('dbNamespaceList');
+    const content = document.getElementById('dbContentArea');
+    const search  = document.getElementById('dbSearch').value.toLowerCase();
+    
+    // 1. Group Data
+    const namespaces = [...new Set(allDbEntries.map(e => e.namespace))].sort();
+    const nsCounts = {};
+    allDbEntries.forEach(e => nsCounts[e.namespace] = (nsCounts[e.namespace] || 0) + 1);
+
+    // 2. Render Namespace Sidebar
+    nsList.innerHTML = namespaces.map(ns => `
+        <button onclick="switchNamespace('${ns}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${curNamespace === ns ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold' : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)]'}">
+            <span>${ns}</span>
+            <span class="text-[10px] opacity-60 bg-black/20 px-1.5 py-0.5 rounded-full">${nsCounts[ns]}</span>
+        </button>
+    `).join('') || '<div class="p-4 text-center text-xs text-[var(--c-text-dim)]">No namespaces found</div>';
+
+    // 3. Filter and Group by Category for current namespace
+    const filtered = allDbEntries.filter(e => {
+        if (e.namespace !== curNamespace) return false;
+        if (!search) return true;
+        return e.key.toLowerCase().includes(search) || String(e.value).toLowerCase().includes(search);
+    });
+
+    const groups = {};
+    filtered.forEach(e => {
+        const cat = getCategory(e.key);
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(e);
+    });
+
+    // 4. Render Content
+    const sortedCats = Object.keys(groups).sort((a,b) => {
+        if (a === 'config') return -1;
+        if (b === 'config') return 1;
+        if (a === 'general') return 1;
+        return a.localeCompare(b);
+    });
+
+    if (sortedCats.length === 0) {
+        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border-dashed">No entries found in "${curNamespace}" match your search.</div>`;
+        return;
+    }
+
+    content.innerHTML = sortedCats.map(cat => {
+        const isOpen = expandedCats.has(cat);
+        const items = groups[cat];
+        
+        return `
+            <div class="card p-0 overflow-hidden border-[var(--c-card-border)]">
+                <button onclick="toggleCategory('${cat}')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-card-border)]" data-open="${isOpen}">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--c-accent)] transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        <span class="text-xs font-bold uppercase tracking-wider text-[var(--c-label)]">${cat}</span>
+                        <span class="text-[10px] text-[var(--c-text-dim)] font-normal">(${items.length} items)</span>
+                    </div>
+                </button>
+                
+                <div class="${isOpen ? '' : 'hidden'}">
+                    <table class="w-full text-left border-collapse">
+                        <tbody class="divide-y divide-[var(--c-card-border)]">
+                            ${items.map(e => {
+                                const cleanKey = e.key.includes(':') ? e.key.split(':').slice(1).join(':') : e.key;
+                                return `
+                                    <tr class="hover:bg-[var(--c-input)]/50 transition-colors group">
+                                        <td class="pl-12 pr-5 py-3 w-1/3">
+                                            <div class="text-sm font-medium text-[var(--c-label)] truncate" title="${e.key}">${cleanKey}</div>
+                                            <div class="text-[10px] text-[var(--c-text-dim)] font-mono opacity-0 group-hover:opacity-100 transition-opacity">full: ${e.key}</div>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <div class="relative">
+                                                <div id="status-${e.fullKey.replace(/:/g, '-')}" class="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-green-500 opacity-0 transition-opacity duration-300" title="Synced"></div>
+                                                <textarea 
+                                                    class="w-full min-h-[40px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
+                                                    rows="1"
+                                                    oninput="autoResize(this); scheduleSave('${e.fullKey}', this.value)"
+                                                    onfocus="autoResize(this)"
+                                                >${displayDbValue(e.value)}</textarea>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Trigger initial resize for visible textareas
+    setTimeout(() => {
+        document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
+    }, 10);
+  }
+
+  window.switchNamespace = (ns) => { curNamespace = ns; dbPage = 1; renderDbExplorer(); };
+  window.toggleCategory = (cat) => { if (expandedCats.has(cat)) expandedCats.delete(cat); else expandedCats.add(cat); renderDbExplorer(); };
+  window.expandAllCategories = () => { [...new Set(allDbEntries.filter(e => e.namespace === curNamespace).map(e => getCategory(e.key)))].forEach(c => expandedCats.add(c)); renderDbExplorer(); };
+  window.collapseAllCategories = () => { expandedCats.clear(); renderDbExplorer(); };
+
+  window.autoResize = (el) => {
+    el.style.height = 'auto';
+    el.style.height = (el.scrollHeight) + 'px';
+  };
+
+  window.scheduleSave = (fullKey, valueStr) => {
+    const statusId = `status-${fullKey.replace(/:/g, '-')}`;
+    const statusEl = document.getElementById(statusId);
+    
+    // Show "dirty" state
+    if (statusEl) {
+        statusEl.classList.remove('bg-green-500', 'bg-blue-500', 'opacity-0');
+        statusEl.classList.add('bg-yellow-500', 'opacity-100', 'animate-pulse');
+    }
+
+    if (autoSaveTimers.has(fullKey)) clearTimeout(autoSaveTimers.get(fullKey));
+
+    autoSaveTimers.set(fullKey, setTimeout(async () => {
+        let value;
+        try {
+            value = parseDbValue(valueStr);
+        } catch {
+            value = valueStr;
+        }
+
+        if (statusEl) {
+            statusEl.classList.remove('bg-yellow-500', 'animate-pulse');
+            statusEl.classList.add('bg-blue-500'); // Saving state
+        }
+
+        try {
+            const res = await fetch('/api/database/raw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fullKey, value })
+            });
+            if (res.ok) {
+                if (statusEl) {
+                    statusEl.classList.remove('bg-blue-500');
+                    statusEl.classList.add('bg-green-500');
+                    setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
+                }
+            } else {
+                showToast('Failed to auto-save change.', 'error');
+                if (statusEl) statusEl.classList.add('bg-red-500');
+            }
+        } catch {
+            if (statusEl) statusEl.classList.add('bg-red-500');
+        }
+    }, 1500));
+  };
+
+  document.getElementById('dbSearch')?.addEventListener('input', renderDbExplorer);
+  document.getElementById('refreshDbBtn')?.addEventListener('click', loadDatabaseEntries);
+
+  // Attach save handlers for non-hierarchical sections
+  document.querySelectorAll('.save-btn').forEach(btn => {
+    if (btn.id !== 'sendMessageBtn') btn.addEventListener('click', () => saveSection(btn));
+  });
+
+  // ── SPA Visibility Logic ──────────────────────────────────────────────────
+  function updateVisibility() {
+    const hash = window.location.hash || '#status';
+    document.querySelectorAll('.page-section').forEach(s => {
+        s.classList.toggle('hidden', `#${s.id}` !== hash);
+    });
+    
+    // Smooth scroll to top on section change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  window.addEventListener('hashchange', updateVisibility);
+  updateVisibility();
 
   // ── Init ──────────────────────────────────────────────────────────────────
   loadSettings();
+  loadDatabaseEntries();
+  loadHealthStats();
+  loadInvites();
+  setInterval(loadHealthStats, 30000); // Refresh stats every 30s
 </script>

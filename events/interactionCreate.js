@@ -2,7 +2,6 @@ const path = require('path');
 const { captureError } = require('../instrument');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
-const { handleSpamWarningButton } = require('../utils/spamModeUtils');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -19,11 +18,6 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async execute(interaction) {
-    if (interaction.isButton() && interaction.customId.startsWith('spamWarn:')) {
-      await handleSpamWarningButton(interaction);
-      return;
-    }
-
     // Handle autocomplete interactions
     if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);

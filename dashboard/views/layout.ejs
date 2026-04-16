@@ -1,165 +1,226 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><%= title %> — Nova Dashboard</title>
-  <% if (botIcon) { %><link rel="icon" type="image/png" href="<%= botIcon %>" /><% } %>
-  <!-- Apply saved theme before paint to prevent flash -->
-  <script>(function(){var t=localStorage.getItem('dashboard-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})()</script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* ── Theme tokens ────────────────────────────────────────────────────── */
-    :root {
-      --c-bg:              #050506;
-      --c-sidebar:         #0d0d10;
-      --c-sidebar-border:  #1f1f24;
-      --c-topbar:          #0d0d10;
-      --c-topbar-border:   #1f1f24;
-      --c-text:            #f3f4f6;
-      --c-text-muted:      #a1a1aa;
-      --c-text-dim:        #71717a;
-      --c-nav-text:        #d4d4d8;
-      --c-nav-hover-bg:    #1b1b20;
-      --c-nav-hover-text:  #ffffff;
-      --c-nav-active-bg:   rgba(124,58,237,0.22);
-      --c-nav-active-text: #c4b5fd;
-      /* component tokens (consumed by dashboard.ejs) */
-      --c-card:            #101014;
-      --c-card-border:     #24242a;
-      --c-input:           #18181d;
-      --c-input-border:    #32323a;
-      --c-input-text:      #ffffff;
-      --c-input-ph:        #52525b;
-      --c-label:           #d4d4d8;
-      --c-hint:            #71717a;
-      --c-toggle-off:      #3f3f46;
-      --c-accent:          #7c3aed;
-      --c-accent-strong:   #8b5cf6;
-      --c-accent-soft-bg:  rgba(124,58,237,0.22);
-      --c-accent-soft-ring: rgba(124,58,237,0.35);
-      --c-accent-text:     #c4b5fd;
-    }
-    html[data-theme="light"] {
-      --c-bg:              #f1f5f9;
-      --c-sidebar:         #ffffff;
-      --c-sidebar-border:  #e2e8f0;
-      --c-topbar:          #ffffff;
-      --c-topbar-border:   #e2e8f0;
-      --c-text:            #0f172a;
-      --c-text-muted:      #475569;
-      --c-text-dim:        #94a3b8;
-      --c-nav-text:        #334155;
-      --c-nav-hover-bg:    #f1f5f9;
-      --c-nav-hover-text:  #0f172a;
-      --c-nav-active-bg:   rgba(109,40,217,0.08);
-      --c-nav-active-text: #6d28d9;
-      --c-card:            #ffffff;
-      --c-card-border:     #e2e8f0;
-      --c-input:           #f8fafc;
-      --c-input-border:    #cbd5e1;
-      --c-input-text:      #0f172a;
-      --c-input-ph:        #94a3b8;
-      --c-label:           #334155;
-      --c-hint:            #94a3b8;
-      --c-toggle-off:      #cbd5e1;
-    }
+  <title>
+    <%= title %> — Nova Dashboard
+  </title>
+  <% if (botIcon) { %>
+    <link rel="icon" type="image/png" href="<%= botIcon %>" />
+    <% } %>
+      <!-- Apply saved theme before paint to prevent flash -->
+      <script>(function () { var t = localStorage.getItem('dashboard-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })()</script>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <style>
+        /* ── Theme tokens ────────────────────────────────────────────────────── */
+        :root {
+          --c-bg: #050506;
+          --c-sidebar: #0d0d10;
+          --c-sidebar-border: #1f1f24;
+          --c-topbar: #0d0d10;
+          --c-topbar-border: #1f1f24;
+          --c-text: #f3f4f6;
+          --c-text-muted: #a1a1aa;
+          --c-text-dim: #71717a;
+          --c-nav-text: #d4d4d8;
+          --c-nav-hover-bg: #1b1b20;
+          --c-nav-hover-text: #ffffff;
+          --c-nav-active-bg: rgba(124, 58, 237, 0.22);
+          --c-nav-active-text: #c4b5fd;
+          /* component tokens (consumed by dashboard.ejs) */
+          --c-card: #101014;
+          --c-card-border: #24242a;
+          --c-input: #18181d;
+          --c-input-border: #32323a;
+          --c-input-text: #ffffff;
+          --c-input-ph: #52525b;
+          --c-label: #d4d4d8;
+          --c-hint: #71717a;
+          --c-toggle-off: #3f3f46;
+          --c-accent: #7c3aed;
+          --c-accent-strong: #8b5cf6;
+          --c-accent-soft-bg: rgba(124, 58, 237, 0.22);
+          --c-accent-soft-ring: rgba(124, 58, 237, 0.35);
+          --c-accent-text: #c4b5fd;
+        }
 
-    /* ── Shell ───────────────────────────────────────────────────────────── */
-    body                     { background-color: var(--c-bg) !important; color: var(--c-text); }
-    #sidebar, #mobileSidebar { background-color: var(--c-sidebar) !important; border-color: var(--c-sidebar-border) !important; }
-    #mobileTopbar            { background-color: var(--c-topbar) !important; border-color: var(--c-topbar-border) !important; }
+        html[data-theme="light"] {
+          --c-bg: #f1f5f9;
+          --c-sidebar: #ffffff;
+          --c-sidebar-border: #e2e8f0;
+          --c-topbar: #ffffff;
+          --c-topbar-border: #e2e8f0;
+          --c-text: #0f172a;
+          --c-text-muted: #475569;
+          --c-text-dim: #94a3b8;
+          --c-nav-text: #334155;
+          --c-nav-hover-bg: #f1f5f9;
+          --c-nav-hover-text: #0f172a;
+          --c-nav-active-bg: rgba(109, 40, 217, 0.08);
+          --c-nav-active-text: #6d28d9;
+          --c-card: #ffffff;
+          --c-card-border: #e2e8f0;
+          --c-input: #f8fafc;
+          --c-input-border: #cbd5e1;
+          --c-input-text: #0f172a;
+          --c-input-ph: #94a3b8;
+          --c-label: #334155;
+          --c-hint: #94a3b8;
+          --c-toggle-off: #cbd5e1;
+        }
 
-    /* ── Sidebar internals ───────────────────────────────────────────────── */
-    .sb-header            { border-color: var(--c-sidebar-border); }
-    .sb-guild-name        { color: var(--c-text); }
-    .sb-sub               { color: var(--c-text-muted); }
-    .sb-section-label     { color: var(--c-text-dim); }
-    .sb-username          { color: var(--c-text-muted); }
-    .sb-footer            { border-color: var(--c-sidebar-border); }
-    .sidebar-link         { color: var(--c-nav-text); }
-    .sidebar-link:hover   { background-color: var(--c-nav-hover-bg) !important; color: var(--c-nav-hover-text) !important; }
-    .sidebar-link.active  { background-color: var(--c-nav-active-bg) !important; color: var(--c-nav-active-text) !important; }
-    .brand-accent { color: var(--c-accent-strong) !important; }
+        /* ── Shell ───────────────────────────────────────────────────────────── */
+        body {
+          background-color: var(--c-bg) !important;
+          color: var(--c-text);
+        }
 
-    /* ── Misc ────────────────────────────────────────────────────────────── */
-    [x-cloak] { display: none !important; }
-    input[type="color"] { padding: 2px 4px; cursor: pointer; }
-  </style>
+        #sidebar,
+        #mobileSidebar {
+          background-color: var(--c-sidebar) !important;
+          border-color: var(--c-sidebar-border) !important;
+        }
+
+        #mobileTopbar {
+          background-color: var(--c-topbar) !important;
+          border-color: var(--c-topbar-border) !important;
+        }
+
+        /* ── Sidebar internals ───────────────────────────────────────────────── */
+        .sb-header {
+          border-color: var(--c-sidebar-border);
+        }
+
+        .sb-guild-name {
+          color: var(--c-text);
+        }
+
+        .sb-sub {
+          color: var(--c-text-muted);
+        }
+
+        .sb-section-label {
+          color: var(--c-text-dim);
+        }
+
+        .sb-username {
+          color: var(--c-text-muted);
+        }
+
+        .sb-footer {
+          border-color: var(--c-sidebar-border);
+        }
+
+        .sidebar-link {
+          color: var(--c-nav-text);
+        }
+
+        .sidebar-link:hover {
+          background-color: var(--c-nav-hover-bg) !important;
+          color: var(--c-nav-hover-text) !important;
+        }
+
+        .sidebar-link.active {
+          background-color: var(--c-nav-active-bg) !important;
+          color: var(--c-nav-active-text) !important;
+        }
+
+        .brand-accent {
+          color: var(--c-accent-strong) !important;
+        }
+
+        /* ── Misc ────────────────────────────────────────────────────────────── */
+        [x-cloak] {
+          display: none !important;
+        }
+
+        input[type="color"] {
+          padding: 2px 4px;
+          cursor: pointer;
+        }
+      </style>
 </head>
+
 <body class="h-full antialiased">
 
-<!-- Mobile top bar -->
-<div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40">
-  <div class="flex items-center gap-2">
-    <span class="text-lg font-bold brand-accent">Nova</span>
-    <span class="sb-sub text-sm">Dashboard</span>
-  </div>
-  <button id="menuToggle" class="p-2 rounded-md" style="color:var(--c-text-muted)">
-    <svg id="menuOpen"  class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-    <svg id="menuClose" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-  </button>
-</div>
-
-<div class="flex h-full min-h-screen">
-  <!-- Desktop sidebar -->
-  <aside id="sidebar" class="hidden lg:flex flex-col w-64 border-r fixed top-0 left-0 h-full z-30 overflow-y-auto">
-    <%- include('partials/sidebar') %>
-  </aside>
-
-  <!-- Mobile overlay + sidebar -->
-  <div id="mobileOverlay" class="hidden fixed inset-0 bg-black/60 z-20 lg:hidden"></div>
-  <aside id="mobileSidebar" class="hidden fixed top-0 left-0 h-full w-64 border-r z-30 overflow-y-auto lg:hidden">
-    <%- include('partials/sidebar') %>
-  </aside>
-
-  <!-- Main content -->
-  <main class="flex-1 lg:ml-64 overflow-y-auto">
-    <div class="max-w-4xl mx-auto px-4 py-8">
-      <%- body %>
+  <!-- Mobile top bar -->
+  <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40">
+    <div class="flex items-center gap-2">
+      <span class="text-lg font-bold brand-accent">Nova</span>
+      <span class="sb-sub text-sm">Dashboard</span>
     </div>
-  </main>
-</div>
+    <button id="menuToggle" class="p-2 rounded-md" style="color:var(--c-text-muted)">
+      <svg id="menuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+      <svg id="menuClose" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
 
-<script>
-  // ── Theme ──────────────────────────────────────────────────────────────────
-  function applyTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('dashboard-theme', theme);
-    const sun  = document.getElementById('themeIconSun');
-    const moon = document.getElementById('themeIconMoon');
-    if (sun)  sun.style.display  = theme === 'dark'  ? '' : 'none';
-    if (moon) moon.style.display = theme === 'light' ? '' : 'none';
-  }
-  // Re-apply after DOM is ready (inline script at top handled the pre-paint case)
-  applyTheme(localStorage.getItem('dashboard-theme') || 'dark');
+  <div class="flex h-full min-h-screen">
+    <!-- Desktop sidebar -->
+    <aside id="sidebar" class="hidden lg:flex flex-col w-64 border-r fixed top-0 left-0 h-full z-30 overflow-y-auto">
+      <%- include('partials/sidebar') %>
+    </aside>
 
-  document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
-    const t = document.documentElement.getAttribute('data-theme') || 'dark';
-    applyTheme(t === 'dark' ? 'light' : 'dark');
-  });
+    <!-- Mobile overlay + sidebar -->
+    <div id="mobileOverlay" class="hidden fixed inset-0 bg-black/60 z-20 lg:hidden"></div>
+    <aside id="mobileSidebar" class="hidden fixed top-0 left-0 h-full w-64 border-r z-30 overflow-y-auto lg:hidden">
+      <%- include('partials/sidebar') %>
+    </aside>
 
-  // ── Mobile menu ────────────────────────────────────────────────────────────
-  const menuToggle     = document.getElementById('menuToggle');
-  const mobileOverlay  = document.getElementById('mobileOverlay');
-  const mobileSidebar  = document.getElementById('mobileSidebar');
-  const menuOpenIcon   = document.getElementById('menuOpen');
-  const menuCloseIcon  = document.getElementById('menuClose');
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-64 overflow-y-auto">
+      <div class="max-w-4xl mx-auto px-4 py-8">
+        <%- body %>
+      </div>
+    </main>
+  </div>
 
-  function openMenu()  { mobileSidebar.classList.remove('hidden'); mobileOverlay.classList.remove('hidden'); menuOpenIcon.classList.add('hidden'); menuCloseIcon.classList.remove('hidden'); }
-  function closeMenu() { mobileSidebar.classList.add('hidden');    mobileOverlay.classList.add('hidden');    menuOpenIcon.classList.remove('hidden'); menuCloseIcon.classList.add('hidden'); }
+  <script>
+    // ── Theme ──────────────────────────────────────────────────────────────────
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('dashboard-theme', theme);
+      const sun = document.getElementById('themeIconSun');
+      const moon = document.getElementById('themeIconMoon');
+      if (sun) sun.style.display = theme === 'dark' ? '' : 'none';
+      if (moon) moon.style.display = theme === 'light' ? '' : 'none';
+    }
+    // Re-apply after DOM is ready (inline script at top handled the pre-paint case)
+    applyTheme(localStorage.getItem('dashboard-theme') || 'dark');
 
-  menuToggle?.addEventListener('click', () => mobileSidebar.classList.contains('hidden') ? openMenu() : closeMenu());
-  mobileOverlay?.addEventListener('click', closeMenu);
+    document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
+      const t = document.documentElement.getAttribute('data-theme') || 'dark';
+      applyTheme(t === 'dark' ? 'light' : 'dark');
+    });
 
-  // ── Active nav ─────────────────────────────────────────────────────────────
-  function setActiveNav() {
-    const hash = window.location.hash || '#general';
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.getAttribute('href') === hash));
-  }
-  setActiveNav();
-  window.addEventListener('hashchange', setActiveNav);
-</script>
+    // ── Mobile menu ────────────────────────────────────────────────────────────
+    const menuToggle = document.getElementById('menuToggle');
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    const mobileSidebar = document.getElementById('mobileSidebar');
+    const menuOpenIcon = document.getElementById('menuOpen');
+    const menuCloseIcon = document.getElementById('menuClose');
+
+    function openMenu() { mobileSidebar.classList.remove('hidden'); mobileOverlay.classList.remove('hidden'); menuOpenIcon.classList.add('hidden'); menuCloseIcon.classList.remove('hidden'); }
+    function closeMenu() { mobileSidebar.classList.add('hidden'); mobileOverlay.classList.add('hidden'); menuOpenIcon.classList.remove('hidden'); menuCloseIcon.classList.add('hidden'); }
+
+    menuToggle?.addEventListener('click', () => mobileSidebar.classList.contains('hidden') ? openMenu() : closeMenu());
+    mobileOverlay?.addEventListener('click', closeMenu);
+
+    // ── Active nav ─────────────────────────────────────────────────────────────
+    function setActiveNav() {
+      const hash = window.location.hash || '#status';
+      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.getAttribute('href') === hash));
+    }
+    setActiveNav();
+    window.addEventListener('hashchange', setActiveNav);
+  </script>
 
 </body>
+
 </html>
