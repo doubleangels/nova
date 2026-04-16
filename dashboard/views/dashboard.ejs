@@ -689,6 +689,8 @@
             Create Invite
         </button>
     </div>
+  </div>
+  
   <!-- Invite List -->
   <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent-soft-ring)]">
     <div class="overflow-x-auto">
@@ -1151,11 +1153,19 @@
     refreshIcon.style.transform  = 'rotate(360deg)';
 
     try {
-      const saved = captureSelectValues();
-      await loadGuildData(saved);
-      showToast('Roles and channels refreshed!', 'success');
-    } catch {
-      showToast('Failed to refresh guild data.', 'error');
+      // Parallel fetch all data points for maximum efficiency
+      await Promise.all([
+        loadSettings(),           // Refreshes settings, roles, and channels
+        loadHealthStats(),        // Refreshes metrics (Latency, Uptime, Memory)
+        refreshLiveReminders(),   // Refreshes bump/promo timers
+        loadInvites(),            // Refreshes invite list
+        loadDatabaseEntries(),    // Refreshes raw database rows
+        loadAutoReactions()       // Refreshes keyword auto-reactions
+      ]);
+      showToast('Dashboard synchronized with live data.', 'success');
+    } catch (err) {
+      console.error('Refresh failed:', err);
+      showToast('Failed to sync all data points.', 'error');
     } finally {
       refreshBtn.disabled = false;
       // Reset rotation so the animation can replay next click
