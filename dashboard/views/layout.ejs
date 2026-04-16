@@ -215,10 +215,18 @@
   <div class="ambient-blob blob-2"></div>
 
   <!-- Mobile top bar -->
-  <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40">
-    <div class="flex items-center gap-2">
-      <span class="text-lg font-bold brand-accent">Nova</span>
-      <span class="sb-sub text-sm">Dashboard</span>
+  <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40 bg-[var(--c-topbar)]">
+    <div class="flex items-center gap-3">
+      <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
+        <img src="<%= guildIcon %>" class="w-8 h-8 rounded-lg ring-1 ring-white/10" alt="Server icon" />
+      <% } else { %>
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style="background:var(--c-accent)">N</div>
+      <% } %>
+      <div class="min-w-0">
+        <p class="sb-guild-name font-bold leading-tight text-sm truncate uppercase tracking-wide">
+          <%= typeof guildName !== 'undefined' ? guildName : 'Da Frens' %>
+        </p>
+      </div>
     </div>
     <button id="menuToggle" class="p-2 rounded-md" style="color:var(--c-text-muted)">
       <svg id="menuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,8 +245,8 @@
     </aside>
 
     <!-- Mobile overlay + sidebar -->
-    <div id="mobileOverlay" class="hidden fixed inset-0 bg-black/60 z-20 lg:hidden"></div>
-    <aside id="mobileSidebar" class="hidden fixed top-0 left-0 h-full w-64 border-r z-30 overflow-y-auto lg:hidden">
+    <div id="mobileOverlay" class="hidden fixed inset-0 bg-black/60 z-20 lg:hidden w-full h-full"></div>
+    <aside id="mobileSidebar" class="hidden flex-col fixed top-0 left-0 h-full w-64 border-r z-30 overflow-y-auto pt-[56px] pb-6 lg:hidden">
       <%- include('partials/sidebar') %>
     </aside>
 
@@ -275,8 +283,8 @@
     const menuOpenIcon = document.getElementById('menuOpen');
     const menuCloseIcon = document.getElementById('menuClose');
 
-    function openMenu() { mobileSidebar.classList.remove('hidden'); mobileOverlay.classList.remove('hidden'); menuOpenIcon.classList.add('hidden'); menuCloseIcon.classList.remove('hidden'); }
-    function closeMenu() { mobileSidebar.classList.add('hidden'); mobileOverlay.classList.add('hidden'); menuOpenIcon.classList.remove('hidden'); menuCloseIcon.classList.add('hidden'); }
+    function openMenu() { mobileSidebar.classList.remove('hidden'); mobileSidebar.classList.add('flex'); mobileOverlay.classList.remove('hidden'); menuOpenIcon.classList.add('hidden'); menuCloseIcon.classList.remove('hidden'); }
+    function closeMenu() { mobileSidebar.classList.add('hidden'); mobileSidebar.classList.remove('flex'); mobileOverlay.classList.add('hidden'); menuOpenIcon.classList.remove('hidden'); menuCloseIcon.classList.add('hidden'); }
 
     menuToggle?.addEventListener('click', () => mobileSidebar.classList.contains('hidden') ? openMenu() : closeMenu());
     mobileOverlay?.addEventListener('click', closeMenu);
@@ -285,6 +293,9 @@
     function setActiveNav() {
       const hash = window.location.hash || '#status';
       document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.getAttribute('href') === hash));
+      if (window.innerWidth < 1024 && mobileSidebar && !mobileSidebar.classList.contains('hidden')) {
+        closeMenu();
+      }
     }
     setActiveNav();
     window.addEventListener('hashchange', setActiveNav);

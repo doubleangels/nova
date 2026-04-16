@@ -1,5 +1,5 @@
 <!-- Sidebar header -->
-<div class="sb-header p-6 border-b border-white/5 bg-white/[0.02]">
+<div class="sb-header p-6 border-b border-white/5 bg-white/[0.02] hidden lg:flex flex-col">
   <div class="flex items-center gap-3">
     <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
       <div class="relative group">
@@ -14,7 +14,7 @@
       <p class="sb-guild-name font-bold leading-tight text-sm truncate">
         <%= typeof guildName !== 'undefined' ? guildName : 'Da Frens' %>
       </p>
-      <p class="sb-sub text-[10px] uppercase tracking-widest opacity-50 font-bold">Nova Control</p>
+      <p class="sb-sub text-[10px] uppercase tracking-widest opacity-50 font-bold">Nova</p>
     </div>
   </div>
 </div>

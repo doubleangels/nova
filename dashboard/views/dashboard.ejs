@@ -125,30 +125,30 @@
   <!-- Live Reminders Monitoring -->
   <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
     <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-xl bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)] flex-shrink-0">
-        <svg class="w-5 h-5 text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div class="w-10 h-10 rounded-xl bg-[#24b8ea]/10 flex items-center justify-center text-[#24b8ea] flex-shrink-0">
+        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
       <div class="flex flex-col">
         <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Disboard Bump</p>
-        <p id="live_rem_bump" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none">--:--:--</p>
+        <p id="live_rem_bump" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none transition-colors duration-300">--:--:--</p>
       </div>
     </div>
     <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-xl bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)] flex-shrink-0">
-        <svg class="w-5 h-5 text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div class="w-10 h-10 rounded-xl bg-[#ff4500]/10 flex items-center justify-center text-[#ff4500] flex-shrink-0">
+        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
       <div class="flex flex-col">
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Reddit Promo</p>
-        <p id="live_rem_promote" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none">--:--:--</p>
+        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Reddit</p>
+        <p id="live_rem_promote" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none transition-colors duration-300">--:--:--</p>
       </div>
     </div>
     <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-xl bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)] flex-shrink-0">
-        <svg class="w-5 h-5 text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div class="w-10 h-10 rounded-xl bg-[#3ba55c]/10 flex items-center justify-center text-[#3ba55c] flex-shrink-0">
+        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
       <div class="flex flex-col">
         <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">NeedAFriend</p>
-        <p id="live_rem_needafriend" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none">--:--:--</p>
+        <p id="live_rem_needafriend" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none transition-colors duration-300">--:--:--</p>
       </div>
     </div>
   </div>
@@ -459,30 +459,30 @@
           <!-- Disboard -->
           <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
               <div class="flex items-center gap-2 mb-3">
-                  <div class="w-2 h-2 rounded-full bg-[var(--c-accent)] animate-pulse"></div>
+                  <div class="w-2 h-2 rounded-full bg-[#24b8ea] animate-pulse"></div>
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Disboard</span>
               </div>
-              <div id="rem_stat_bump" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
-              <button onclick="fixReminder('bump')" id="fixBtn_bump" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+              <div id="rem_stat_bump" class="text-2xl font-mono font-bold mb-4 text-[#24b8ea] transition-colors duration-300">--:--:--</div>
+              <button onclick="fixReminder('bump')" id="fixBtn_bump" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[#24b8ea] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
           </div>
 
           <!-- Reddit -->
           <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
               <div class="flex items-center gap-2 mb-3">
-                  <div class="w-2 h-2 rounded-full bg-[var(--c-accent)] animate-pulse"></div>
-                  <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Reddit /promote</span>
+                  <div class="w-2 h-2 rounded-full bg-[#ff4500] animate-pulse"></div>
+                  <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Reddit</span>
               </div>
-              <div id="rem_stat_promote" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
-              <button onclick="fixReminder('promote')" id="fixBtn_promote" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+              <div id="rem_stat_promote" class="text-2xl font-mono font-bold mb-4 text-[#ff4500] transition-colors duration-300">--:--:--</div>
+              <button onclick="fixReminder('promote')" id="fixBtn_promote" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[#ff4500] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
           </div>
 
           <!-- NeedAFriend -->
           <div class="p-4 bg-[var(--c-input)] rounded-xl border border-[var(--c-input-border)]">
               <div class="flex items-center gap-2 mb-3">
-                  <div class="w-2 h-2 rounded-full bg-[var(--c-accent)] animate-pulse"></div>
+                  <div class="w-2 h-2 rounded-full bg-[#3ba55c] animate-pulse"></div>
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">NeedAFriend</span>
               </div>
-              <div id="rem_stat_needafriend" class="text-2xl font-mono font-bold mb-4 text-[var(--c-accent)]">--:--:--</div>
+              <div id="rem_stat_needafriend" class="text-2xl font-mono font-bold mb-4 text-[#3ba55c] transition-colors duration-300">--:--:--</div>
               <button onclick="fixReminder('needafriend')" id="fixBtn_needafriend" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
           </div>
       </div>
@@ -1615,7 +1615,7 @@
                                         </td>
                                         <td class="px-5 py-3">
                                             <div class="relative flex items-center gap-3">
-                                                <div id="status-${e.fullKey.replace(/:/g, '-')}" class="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-green-500 opacity-0 transition-opacity duration-300" title="Synced"></div>
+                                                <div id="status-${e.fullKey.replace(/:/g, '-')}" class="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] opacity-0 transition-opacity duration-300" title="Synced"></div>
                                                 <div class="flex-1">
                                                     <textarea 
                                                         class="w-full min-h-[40px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
@@ -1624,7 +1624,7 @@
                                                         onfocus="autoResize(this)"
                                                     >${displayDbValue(e.value)}</textarea>
                                                 </div>
-                                                <button onclick="deleteDbEntry('${e.fullKey}')" class="p-2 text-[var(--c-text-dim)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100 flex-shrink-0" title="Delete entry">
+                                                <button onclick="deleteDbEntry('${e.fullKey}')" class="p-2 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] rounded-lg transition-all opacity-0 group-hover:opacity-100 flex-shrink-0" title="Delete entry">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                 </button>
                                             </div>
@@ -1697,8 +1697,7 @@
     
     // Show "dirty" state
     if (statusEl) {
-        statusEl.classList.remove('bg-green-500', 'bg-blue-500', 'opacity-0');
-        statusEl.classList.remove('bg-[var(--c-accent)]', 'bg-blue-500', 'opacity-0');
+        statusEl.classList.remove('bg-[var(--c-accent)]', 'opacity-0');
         statusEl.classList.add('bg-[var(--c-accent)]', 'opacity-80', 'animate-pulse');
     }
 
@@ -1731,10 +1730,14 @@
                 }
             } else {
                 showToast('Failed to auto-save change.', 'error');
-                if (statusEl) statusEl.classList.add('bg-[var(--c-accent)]');
+                if (statusEl) {
+                    statusEl.classList.add('bg-[var(--c-accent)]');
+                }
             }
         } catch {
-            if (statusEl) statusEl.classList.add('bg-[var(--c-accent)]');
+            if (statusEl) {
+                statusEl.classList.add('bg-[var(--c-accent)]');
+            }
         }
     }, 1500));
   };
@@ -1758,6 +1761,7 @@
 
   function updateRemindersUI() {
     const now = Date.now();
+    const remColors = { bump: '#24b8ea', promote: '#ff4500', needafriend: '#3ba55c' };
     ['bump', 'promote', 'needafriend'].forEach(type => {
       const targetTime = liveReminders[type] ? new Date(liveReminders[type]).getTime() : null;
       const displayIdStatus = `rem_stat_${type}`;
@@ -1767,9 +1771,8 @@
       const liveEl   = document.getElementById(displayIdLive);
       
       if (!targetTime || targetTime <= now) {
-        if (statusEl) statusEl.textContent = 'READY';
-        if (liveEl)   liveEl.textContent = 'READY';
-        if (statusEl) statusEl.classList.add('text-[var(--c-accent)]');
+        if (statusEl) { statusEl.textContent = 'READY'; statusEl.style.color = remColors[type]; }
+        if (liveEl)   { liveEl.textContent = 'READY'; liveEl.style.color = remColors[type]; }
         return;
       }
       
@@ -1781,11 +1784,11 @@
       
       if (statusEl) {
           statusEl.textContent = timeStr;
-          statusEl.classList.remove('text-[var(--c-accent)]');
+          statusEl.style.color = ''; // Resets inline styling 
       }
       if (liveEl) {
           liveEl.textContent = timeStr;
-          liveEl.classList.toggle('text-[var(--c-accent)]', h === 0 && m < 10);
+          liveEl.style.color = (h === 0 && m < 10) ? '#f87171' : ''; // Fallback for expiring warning (rose-400 equivalent)
       }
     });
   }
