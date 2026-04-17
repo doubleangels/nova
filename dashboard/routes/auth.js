@@ -12,6 +12,42 @@ const OAUTH_SCOPES = 'identify guilds';
 // Administrator permission bit
 const ADMINISTRATOR = BigInt(0x8);
 
+function getAuthActor(req) {
+  return req.session?.user?.username || req.session?.user?.id || 'anonymous-user';
+}
+
+router.use((req, res, next) => {
+  const startedAt = Date.now();
+  const actor = getAuthActor(req);
+  logger.debug('Dashboard auth request started.', {
+    method: req.method,
+    path: req.path,
+    actor
+  });
+
+  res.on('finish', () => {
+    const durationMs = Date.now() - startedAt;
+    const payload = {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs,
+      actor
+    };
+    if (res.statusCode >= 500) {
+      logger.error('Dashboard auth request completed with a server error.', payload);
+      return;
+    }
+    if (res.statusCode >= 400) {
+      logger.warn('Dashboard auth request completed with a client error.', payload);
+      return;
+    }
+    logger.debug('Dashboard auth request completed successfully.', payload);
+  });
+
+  next();
+});
+
 function getRedirectUri(req) {
   const hostHeader = req?.get?.('host');
   const hostName = (hostHeader || '').split(':')[0].toLowerCase();

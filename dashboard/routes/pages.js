@@ -2,6 +2,7 @@ const express = require('express');
 const requireAuth = require('../middleware/requireAuth');
 const config = require('../../config');
 const { colorIntToHex } = require('../../utils/dynamicConfig');
+const logger = require('../../logger')('dashboard:pages');
 
 const router = express.Router();
 
@@ -15,6 +16,42 @@ const ERROR_MESSAGES = {
   not_admin: 'You must have the Administrator permission in the server to access the dashboard.',
   auth_failed: 'Authentication failed. Please try again.',
 };
+
+function getPagesActor(req) {
+  return req.session?.user?.username || req.session?.user?.id || 'anonymous-user';
+}
+
+router.use((req, res, next) => {
+  const startedAt = Date.now();
+  const actor = getPagesActor(req);
+  logger.debug('Dashboard page request started.', {
+    method: req.method,
+    path: req.path,
+    actor
+  });
+
+  res.on('finish', () => {
+    const durationMs = Date.now() - startedAt;
+    const payload = {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs,
+      actor
+    };
+    if (res.statusCode >= 500) {
+      logger.error('Dashboard page request completed with a server error.', payload);
+      return;
+    }
+    if (res.statusCode >= 400) {
+      logger.warn('Dashboard page request completed with a client error.', payload);
+      return;
+    }
+    logger.debug('Dashboard page request completed successfully.', payload);
+  });
+
+  next();
+});
 
 function getLoginThemeAccent() {
   const hex = colorIntToHex(config.baseEmbedColor || 0x7c3aed);

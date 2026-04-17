@@ -103,6 +103,42 @@ function sampleProcessCpuPercent() {
 const router = express.Router();
 router.use(requireAuth);
 
+function getDashboardActor(req) {
+  return req.session?.user?.username || req.session?.user?.id || 'unknown-user';
+}
+
+router.use((req, res, next) => {
+  const startedAt = Date.now();
+  const actor = getDashboardActor(req);
+  logger.debug('Dashboard API request started.', {
+    method: req.method,
+    path: req.path,
+    actor
+  });
+
+  res.on('finish', () => {
+    const durationMs = Date.now() - startedAt;
+    const payload = {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs,
+      actor
+    };
+    if (res.statusCode >= 500) {
+      logger.error('Dashboard API request completed with a server error.', payload);
+      return;
+    }
+    if (res.statusCode >= 400) {
+      logger.warn('Dashboard API request completed with a client error.', payload);
+      return;
+    }
+    logger.debug('Dashboard API request completed successfully.', payload);
+  });
+
+  next();
+});
+
 const INACTIVITY_KICK_REASON =
     'Inactivity - We kick members who are inactive; we want an active community more than a large one! Feel free to rejoin if you wish!';
 

@@ -964,7 +964,7 @@
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto sm:max-w-xl sm:ml-auto min-w-0">
       <div class="relative w-full min-w-0 flex-1">
         <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--c-text-dim)] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input type="text" id="dbSearch" placeholder="Search keys or values..." class="field-input py-2.5 pl-9 pr-3 text-xs w-full min-h-[44px]" />
+        <input type="text" id="dbSearch" placeholder="Search keys or values..." class="field-input field-input-with-icon py-2.5 pr-3 text-xs w-full min-h-[44px]" />
       </div>
       <button type="button" id="refreshDbBtn" class="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-lg hover:bg-[var(--c-card-border)] transition-colors active:scale-[0.98] shrink-0 self-end sm:self-auto" title="Refresh Database">
         <svg id="refreshDbIcon" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1141,6 +1141,9 @@
     color: var(--c-input-text);
     box-sizing: border-box;
     transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field-input.field-input-with-icon {
+    padding-left: 2.5rem;
   }
   .field-input::placeholder { color: var(--c-input-ph); }
   .field-input:focus {
@@ -1807,6 +1810,17 @@
     return String(val);
   }
 
+  function valueToSearchText(val) {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'string') return val;
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+    try {
+      return JSON.stringify(val);
+    } catch {
+      return String(val);
+    }
+  }
+
   /**
    * Parses a textarea string back into the correct JS type before saving.
    * Tries JSON.parse first; falls back to the raw string.
@@ -2433,7 +2447,7 @@
     const filtered = allDbEntries.filter(e => {
         if (e.namespace !== curNamespace) return false;
         if (!search) return true;
-        return e.key.toLowerCase().includes(search) || String(e.value).toLowerCase().includes(search);
+        return e.key.toLowerCase().includes(search) || valueToSearchText(e.value).toLowerCase().includes(search);
     });
 
     const groups = {};
