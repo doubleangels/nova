@@ -830,9 +830,9 @@
             <option value="200">200</option>
           </select>
         </label>
-        <button type="button" onclick="seedInviteJoinHistory()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">
+        <button type="button" onclick="seedInviteJoinHistory()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--c-accent)] text-white hover:opacity-90 transition-opacity">
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-          Seed from members
+          Seed From Members
         </button>
       </div>
       <pre id="maintJoinHistorySeedPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">Not run yet this session.</pre>
@@ -1093,51 +1093,39 @@
   </div>
   
   <!-- Invite List -->
-  <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent)]">
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse responsive-table">
-        <thead>
-          <tr class="bg-[var(--c-input)] border-b border-[var(--c-card-border)]">
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Code / Tag</th>
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Channel</th>
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Uses / Max</th>
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Expires</th>
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="inviteTableBody" class="divide-y divide-[var(--c-card-border)]">
-          <tr><td colspan="5" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading invites...</td></tr>
-        </tbody>
-      </table>
+  <div class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden">
+    <div class="hidden lg:grid lg:grid-cols-12 gap-4 px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-dim)] font-bold items-center">
+        <div class="lg:col-span-3">Code / Tag</div>
+        <div class="lg:col-span-2 text-center">Channel</div>
+        <div class="lg:col-span-2 text-center">Uses / Max</div>
+        <div class="lg:col-span-2 text-center">Expires</div>
+        <div class="lg:col-span-3 text-right">Actions</div>
+    </div>
+    <div id="inviteTableBody" class="divide-y divide-white/5">
+        <div class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading invites...</div>
     </div>
   </div>
 
-  <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent)] mt-6">
-    <div class="px-5 py-4 border-b border-[var(--c-card-border)] flex flex-wrap items-center justify-between gap-3">
+  <div class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden mt-6">
+    <div class="px-5 py-4 border-b border-[var(--c-card-border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--c-input)]/30">
       <div>
         <h3 class="font-bold text-sm text-[var(--c-text)]">Recent Joins</h3>
-        <p class="text-[11px] text-[var(--c-text-dim)] mt-0.5 max-w-3xl leading-relaxed">Live rows use invite usage when possible. To backfill from member join times when the invite code is unknown, use <strong class="text-[var(--c-text-muted)]">Seed Join History</strong> under <strong class="text-[var(--c-text-muted)]">Maintenance</strong>.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] mt-0.5 max-w-3xl leading-relaxed">Recorded join events and invite attribution.</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button type="button" onclick="loadInviteJoinHistory()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-[var(--c-text)]">
+        <button type="button" onclick="loadInviteJoinHistory()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-card)] hover:bg-[var(--c-card-border)] transition-colors text-[var(--c-text)]">
           <svg class="w-3.5 h-3.5 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Refresh
         </button>
       </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse min-w-[520px] responsive-table">
-        <thead>
-          <tr class="bg-[var(--c-input)] border-b border-[var(--c-card-border)]">
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">When</th>
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Member</th>
-            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Source</th>
-          </tr>
-        </thead>
-        <tbody id="inviteJoinHistoryBody" class="divide-y divide-[var(--c-card-border)]">
-          <tr><td colspan="3" class="px-5 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading…</td></tr>
-        </tbody>
-      </table>
+    <div class="hidden lg:grid lg:grid-cols-12 gap-4 px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-dim)] font-bold items-center">
+      <div class="lg:col-span-3">When</div>
+      <div class="lg:col-span-5">Member</div>
+      <div class="lg:col-span-4">Source</div>
+    </div>
+    <div id="inviteJoinHistoryBody" class="divide-y divide-white/5">
+      <div class="px-5 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading history…</div>
     </div>
   </div>
 </section>
@@ -1583,55 +1571,6 @@
     border: none;
     border-radius: 0.35rem;
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
-  }
-
-  /* Responsive Tables */
-  @media (max-width: 768px) {
-    .responsive-table {
-      display: block;
-    }
-    .responsive-table thead {
-      display: none;
-    }
-    .responsive-table tbody {
-      display: block;
-    }
-    .responsive-table tr {
-      display: block;
-      border: 1px solid var(--c-card-border);
-      border-radius: 0.75rem;
-      margin-bottom: 1rem;
-      padding: 0.5rem;
-      background: var(--c-card);
-    }
-    .responsive-table td {
-      display: grid;
-      grid-template-columns: 100px 1fr;
-      gap: 1rem;
-      padding: 0.5rem 0.75rem;
-      border: none !important;
-      text-align: left !important;
-    }
-    .responsive-table td::before {
-      content: attr(data-label);
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--c-text-dim);
-      display: flex;
-      align-items: center;
-    }
-    .responsive-table td.actions-cell {
-        grid-template-columns: 1fr;
-        justify-items: flex-end;
-    }
-    .responsive-table td.actions-cell::before {
-        display: none;
-    }
-    /* Specific overrides for join history to look cleaner */
-    #inviteJoinHistoryBody td {
-        grid-template-columns: 80px 1fr;
-    }
   }
 </style>
 
@@ -2644,14 +2583,25 @@
         const name = escapeHtml(row.displayName || '') || escapeHtml(row.userTag || '');
         const sub = row.userTag ? `<div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5">${escapeHtml(row.userTag)}</div>` : '';
         return `
-          <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
-            <td data-label="When" class="px-5 py-3 text-[11px] text-[var(--c-text-muted)] whitespace-nowrap align-top">${when}</td>
-            <td data-label="Member" class="px-5 py-3 text-sm text-[var(--c-label)] align-top">
-              <div class="font-medium">${name}</div>
-              ${sub}
-            </td>
-            <td data-label="Source" class="px-5 py-3 text-xs align-top">${formatJoinSourceRow(row)}</td>
-          </tr>`;
+          <div class="hover:bg-[var(--c-input)]/50 transition-colors">
+            <div class="lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center px-4 py-3">
+              <div class="lg:col-span-3 text-center lg:text-left">
+                <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">When</span>
+                <span class="text-[11px] text-[var(--c-text-muted)] whitespace-nowrap">${when}</span>
+              </div>
+              <div class="mt-3 lg:mt-0 lg:col-span-5 flex flex-col items-center lg:items-start text-center lg:text-left">
+                <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Member</span>
+                <div class="text-sm text-[var(--c-label)]">
+                  <div class="font-medium">${name}</div>
+                  ${sub}
+                </div>
+              </div>
+              <div class="mt-3 lg:mt-0 lg:col-span-4 text-center lg:text-left">
+                <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Source</span>
+                <div class="text-xs">${formatJoinSourceRow(row)}</div>
+              </div>
+            </div>
+          </div>`;
       }).join('');
     } catch {
       tbody.innerHTML = '<tr><td colspan="3" class="px-5 py-10 text-center text-xs text-red-400/90">Could not load join history.</td></tr>';
@@ -2712,36 +2662,55 @@
         const tagArg = JSON.stringify(String(inv.tagName || ''));
         
         return `
-            <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
-                <td data-label="Code / Tag" class="px-5 py-4">
+            <div class="hover:bg-[var(--c-input)]/50 transition-colors">
+              <div class="lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center px-4 py-3">
+                <div class="lg:col-span-3 min-w-0 flex flex-col items-center lg:items-start lg:justify-start">
                     <div class="flex items-center gap-2">
                         <span class="text-sm font-mono font-bold text-[var(--c-accent)]">${safeCode}</span>
                         ${inv.tagName ? `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase tracking-wider">${safeTagName}</span>` : ''}
                     </div>
-                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1">Added by ${safeInviter}</div>
-                </td>
-                <td data-label="Channel" class="px-5 py-4 text-xs font-medium text-[var(--c-label)]">#${safeChannel}</td>
-                <td data-label="Uses / Max" class="px-5 py-4 text-xs">
-                    <span class="font-bold text-[var(--c-label)]">${safeUses}</span>
-                    <span class="text-[var(--c-text-dim)]">/ ${safeMaxUses}</span>
-                </td>
-                <td data-label="Expires" class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-[var(--c-accent)] font-bold' : 'text-[var(--c-text-dim)]'}">
-                    ${safeExpires}
-                </td>
-                <td class="px-5 py-4 text-right space-x-1 whitespace-nowrap actions-cell">
-                    <button onclick="copyInvite(${copyUrlArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Copy Link">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8h3m-3 4h3m-6-4h.01M9 17h.01"/></svg>
-                    </button>
-                    <button onclick="promptEditTag(${codeArg}, ${tagArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Manage Tag">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                    </button>
-                    <button onclick="deleteInvite(${codeArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors" title="Revoke Invite">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                    </button>
-                </td>
-            </tr>
+                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1 truncate text-center lg:text-left">Added by ${safeInviter}</div>
+                </div>
+                
+                <div class="mt-3 lg:mt-0 lg:col-span-2 text-center">
+                    <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Channel</span>
+                    <span class="text-xs font-medium text-[var(--c-label)]">#${safeChannel}</span>
+                </div>
+
+                <div class="mt-2 lg:mt-0 lg:col-span-2 text-center">
+                    <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Uses / Max</span>
+                    <span class="text-xs">
+                      <span class="font-bold text-[var(--c-label)] tabular-nums">${safeUses}</span>
+                      <span class="text-[var(--c-text-dim)]">/ ${safeMaxUses}</span>
+                    </span>
+                </div>
+
+                <div class="mt-2 lg:mt-0 lg:col-span-2 text-center">
+                    <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Expires</span>
+                    <span class="text-[10px] tabular-nums ${isExpiringSoon ? 'text-[var(--c-accent)] font-bold' : 'text-[var(--c-text-dim)]'}">${safeExpires}</span>
+                </div>
+
+                <div class="mt-3 lg:mt-0 lg:col-span-3">
+                    <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1 text-center">Actions</span>
+                    <div class="flex flex-wrap justify-center lg:justify-end gap-1.5">
+                        <button onclick='copyInvite(${copyUrlArg})' class="inline-flex items-center justify-center gap-1.5 min-h-[32px] px-2 py-1 rounded-lg text-[10px] font-bold border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 transition-colors" title="Copy Link">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8h3m-3 4h3m-6-4h.01M9 17h.01"/></svg>
+                            Copy
+                        </button>
+                        <button onclick='promptEditTag(${codeArg}, ${tagArg})' class="inline-flex items-center justify-center gap-1.5 min-h-[32px] px-2 py-1 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors" title="Manage Tag">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            Tag
+                        </button>
+                        <button onclick='deleteInvite(${codeArg})' class="inline-flex items-center justify-center gap-1.5 min-h-[32px] px-2 py-1 rounded-lg text-[10px] font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors" title="Revoke Invite">
+                            <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            Revoke
+                        </button>
+                    </div>
+                </div>
+              </div>
+            </div>
         `;
-    }).join('') || '<tr><td colspan="5" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">No active invites found.</td></tr>';
+    }).join('') || '<div class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">No active invites found.</div>';
     ensureNonChipButtonsHaveIcons();
   }
 
@@ -3539,33 +3508,33 @@
         const displayNameJs = JSON.stringify(String(u.displayName || u.username || u.id || 'User'));
 
         row.innerHTML = `
-          <div class="lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center px-3 sm:px-4 py-3">
-            <div class="lg:col-span-4 flex items-start justify-between gap-2 min-w-0">
-              <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center px-4 py-3">
+            <div class="lg:col-span-4 flex flex-col items-center lg:flex-row lg:items-start lg:justify-start gap-2 min-w-0">
+              <div class="flex items-center lg:items-center gap-3 min-w-0 flex-1 flex-col lg:flex-row">
                 <div class="relative shrink-0">
-                  <img src="${avatarSrc}" class="w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-[var(--c-input-border)]" alt="">
+                  <img src="${avatarSrc}" class="w-10 h-10 sm:w-8 sm:h-8 rounded-full border border-[var(--c-input-border)]" alt="">
                   ${bot ? '<div class="absolute -bottom-1 -right-1 px-1 rounded bg-blue-500 text-[8px] font-bold text-white leading-tight">BOT</div>' : ''}
                 </div>
-                <div class="flex flex-col min-w-0">
+                <div class="flex flex-col min-w-0 items-center lg:items-start text-center lg:text-left">
                   <span class="text-sm font-bold truncate ${privilege === 'admin' ? 'text-red-400' : privilege === 'mod' ? 'text-yellow-400' : 'text-[var(--c-text)]'}">${dn}</span>
                   <span class="text-[10px] text-[var(--c-text-dim)] truncate">@${un}</span>
                   ${acctLine}
                 </div>
               </div>
-              <div class="lg:hidden shrink-0 pt-0.5" aria-label="Safe role">${safeInner}</div>
+              <div class="lg:hidden shrink-0 pt-0.5 mt-2 lg:mt-0" aria-label="Safe role">${safeInner}</div>
             </div>
             <div class="hidden lg:flex lg:col-span-1 justify-center items-center" aria-label="Safe role">${safeInner}</div>
-            <div class="mt-3 lg:mt-0 lg:col-span-3 text-xs sm:text-sm">
+            <div class="mt-4 lg:mt-0 lg:col-span-3 text-xs sm:text-sm text-center lg:text-right">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Last activity</span>
-              <div class="text-right" title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}${lastSubHtml}</div>
+              <div title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}${lastSubHtml}</div>
             </div>
-            <div class="mt-2 lg:mt-0 lg:col-span-2 text-xs text-[var(--c-text-muted)]">
+            <div class="mt-3 lg:mt-0 lg:col-span-2 text-xs text-[var(--c-text-muted)] text-center lg:text-right">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Joined</span>
-              <div class="text-right">${createdDate}</div>
+              <div>${createdDate}</div>
             </div>
-            <div class="mt-3 lg:mt-0 lg:col-span-2">
-              <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Actions</span>
-              <div class="flex justify-end gap-2">
+            <div class="mt-4 lg:mt-0 lg:col-span-2">
+              <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1 text-center">Actions</span>
+              <div class="flex justify-center lg:justify-end gap-2">
                 <button type="button" onclick='kickUserFromManager(${userIdJs}, ${displayNameJs})' class="inline-flex items-center justify-center gap-1 min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors">
                   <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   Kick
