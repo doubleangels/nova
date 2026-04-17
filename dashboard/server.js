@@ -165,7 +165,7 @@ function createDashboard(client, options = {}) {
   // 404 handler
   app.use((req, res) => {
     const guild = req.discordClient?.guilds?.cache?.first();
-    const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
+    const botIcon = '/assets/bot-icon.png';
     res.status(404).render('error', {
       title: 'Not Found', message: 'Page not found.',
       user: req.session?.user || null,
@@ -179,7 +179,7 @@ function createDashboard(client, options = {}) {
   app.use((err, req, res, _next) => {
     logger.error('Dashboard unhandled error.', { err });
     const guild = req.discordClient?.guilds?.cache?.first();
-    const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
+    const botIcon = '/assets/bot-icon.png';
     res.status(500).render('error', {
       title: 'Server Error', message: 'An unexpected error occurred.',
       user: req.session?.user || null,

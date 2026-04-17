@@ -5,6 +5,7 @@ const { colorIntToHex } = require('../../utils/dynamicConfig');
 const logger = require('../../logger')('dashboard:pages');
 
 const router = express.Router();
+const PUBLIC_BOT_ICON_PATH = '/assets/bot-icon.png';
 
 const ERROR_MESSAGES = {
   oauth_denied: 'You cancelled the Discord login.',
@@ -64,11 +65,41 @@ function getLoginThemeAccent() {
   return { hex, rgb };
 }
 
+function getPublicBotIconPath() {
+  return PUBLIC_BOT_ICON_PATH;
+}
+
+router.get(PUBLIC_BOT_ICON_PATH, async (req, res) => {
+  const botIconUrl = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 256 }) || null;
+  if (!botIconUrl) {
+    return res.status(404).send('Bot icon unavailable.');
+  }
+
+  try {
+    const upstream = await fetch(botIconUrl);
+    if (!upstream.ok) {
+      logger.warn('Failed to fetch upstream bot icon.', { status: upstream.status, botIconUrl });
+      return res.status(502).send('Failed to retrieve bot icon.');
+    }
+
+    const contentType = upstream.headers.get('content-type') || 'image/png';
+    const cacheControl = upstream.headers.get('cache-control') || 'public, max-age=300, s-maxage=300';
+    const imageBuffer = Buffer.from(await upstream.arrayBuffer());
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', cacheControl);
+    return res.send(imageBuffer);
+  } catch (err) {
+    logger.warn('Error while proxying bot icon.', { err, botIconUrl });
+    return res.status(502).send('Failed to retrieve bot icon.');
+  }
+});
+
 router.get('/login', (req, res) => {
   const errorKey = req.query.error;
   const errorMsg = ERROR_MESSAGES[errorKey] || null;
   const guild = req.discordClient?.guilds?.cache?.first();
-  const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
+  const botIcon = getPublicBotIconPath();
   const accent = getLoginThemeAccent();
   // Login page has its own full HTML; skip the shared layout
   res.render('login', {
@@ -85,7 +116,7 @@ router.get('/login', (req, res) => {
 
 router.get('/', requireAuth, (req, res) => {
   const guild = req.discordClient?.guilds?.cache?.first();
-  const botIcon = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 128 }) || null;
+  const botIcon = getPublicBotIconPath();
   
   // Split member count into users vs bots (using cache)
   const totalCount = guild?.memberCount || 0;
