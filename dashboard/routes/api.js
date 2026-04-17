@@ -1,10 +1,22 @@
 const express = require('express');
+const crypto = require('crypto');
 const os = require('os');
 const path = require('path');
-const { ActivityType } = require('discord.js');
+const { ActivityType, PermissionFlagsBits } = require('discord.js');
 const requireAuth = require('../middleware/requireAuth');
 const { getSetting, setSetting, colorIntToHex } = require('../../utils/dynamicConfig');
-const { getValue, setValue, getAllInviteTagsData } = require('../../utils/database');
+const { getValue, setValue, getAllInviteTagsData, getAllLastMessageTimes } = require('../../utils/database');
+const { getKeyvForNamespace } = require('../../utils/dbScriptUtils');
+const {
+  runSeedLastMessages,
+  DEFAULT_MAX_PER_CHANNEL,
+  DEFAULT_DELAY_MS
+} = require('../../utils/seedLastMessagesFromHistory');
+const {
+  parseBackupPayload,
+  validateNovaKeyvBackup,
+  applyNovaKeyvBackupEntries
+} = require('../../utils/novaKeyvBackup');
 const { 
   getLatestReminderData, 
   handleReminder, 
@@ -12,8 +24,164 @@ const {
 } = require('../../utils/reminderUtils');
 const logger = require('../../logger')('dashboard:api');
 
+/** Rolling sample for process CPU % (wall time between /api/health calls). */
+let _healthCpuPrev = process.cpuUsage();
+let _healthCpuWallPrev = Date.now();
+
+/**
+ * CPU time used by this Node process vs wall time since last sample (0–100 ≈ one core).
+ * @returns {number}
+ */
+function sampleProcessCpuPercent() {
+  const wall = Date.now();
+  const elapsedUs = Math.max(1, (wall - _healthCpuWallPrev) * 1000);
+  const diff = process.cpuUsage(_healthCpuPrev);
+  _healthCpuPrev = process.cpuUsage();
+  _healthCpuWallPrev = wall;
+  const coreUs = diff.user + diff.system;
+  return Math.min(100, Math.max(0, (coreUs / elapsedUs) * 100));
+}
+
 const router = express.Router();
 router.use(requireAuth);
+
+const INACTIVITY_KICK_REASON =
+    'Inactivity - We kick members who are inactive; we want an active community more than a large one! Feel free to rejoin if you wish!';
+
+/** Permissions granted beyond the @everyone baseline (avoids marking everyone "mod" when @everyone is permissive). */
+function elevatedMemberPermissions(member) {
+    try {
+        const everyone = member.guild?.roles?.everyone;
+        if (!everyone) return member.permissions;
+        return member.permissions.remove(everyone.permissions);
+    } catch {
+        return member.permissions;
+    }
+}
+
+/** @param {import('discord.js').GuildMember} member */
+function memberPrivilegeLevel(member) {
+    const perms = elevatedMemberPermissions(member);
+    if (
+        perms.has(PermissionFlagsBits.Administrator) ||
+        perms.has(PermissionFlagsBits.ManageGuild)
+    ) {
+        return 'admin';
+    }
+    const modFlags = [
+        PermissionFlagsBits.KickMembers,
+        PermissionFlagsBits.BanMembers,
+        PermissionFlagsBits.ModerateMembers,
+        PermissionFlagsBits.ManageMessages,
+        PermissionFlagsBits.ManageNicknames,
+        PermissionFlagsBits.ManageThreads,
+        PermissionFlagsBits.MuteMembers,
+        PermissionFlagsBits.DeafenMembers,
+        PermissionFlagsBits.MoveMembers
+    ];
+    if (modFlags.some((f) => perms.has(f))) return 'mod';
+    return null;
+}
+
+const USER_SUMMARY_CACHE_MS = 120 * 1000;
+/** @type {{ guildId: string, expires: number, data: { total: number, bots: number, humans: number, recent: unknown[] } } | null} */
+let userSummaryCacheEntry = null;
+
+function invalidateUserSummaryCache() {
+  userSummaryCacheEntry = null;
+}
+
+/** Shared gateway member list (opcode 8); reuse across summary + inactivity dry-run. */
+const GUILD_MEMBERS_CACHE_MS = USER_SUMMARY_CACHE_MS;
+/** @type {{ guildId: string, expires: number, members: import('discord.js').Collection<string, import('discord.js').GuildMember> } | null} */
+let guildMembersCacheEntry = null;
+
+async function fetchGuildMembersCached(guild, { force = false } = {}) {
+    const gid = guild.id;
+    const now = Date.now();
+    if (
+        !force &&
+        guildMembersCacheEntry &&
+        guildMembersCacheEntry.guildId === gid &&
+        guildMembersCacheEntry.expires > now
+    ) {
+        return guildMembersCacheEntry.members;
+    }
+    const members = await guild.members.fetch();
+    guildMembersCacheEntry = {
+        guildId: gid,
+        expires: now + GUILD_MEMBERS_CACHE_MS,
+        members
+    };
+    return members;
+}
+
+function invalidateGuildMembersCache() {
+    guildMembersCacheEntry = null;
+}
+
+/** REST: guild.invites.fetch() is easy to 429 when the dashboard refreshes often. */
+const INVITES_LIST_CACHE_MS = 90 * 1000;
+/** @type {{ guildId: string, expires: number, data: unknown[] } | null} */
+let invitesListCacheEntry = null;
+
+function invalidateInvitesListCache() {
+  invitesListCacheEntry = null;
+}
+
+/** Dashboard-only: backfill last_message keys from channel history (one job at a time). */
+let seedJobRunning = false;
+/** @type {string | null} */
+let currentSeedJobId = null;
+/** @type {Map<string, object>} */
+const seedJobs = new Map();
+
+function pruneOldSeedJobs() {
+  const now = Date.now();
+  const maxAge = 60 * 60 * 1000;
+  for (const [id, job] of seedJobs) {
+    if (job.finishedAt && now - job.finishedAt > maxAge) seedJobs.delete(id);
+  }
+}
+
+/**
+ * @param {object} job
+ * @param {object} evt
+ */
+function applySeedJobProgress(job, evt) {
+  if (evt.percent != null) job.percent = evt.percent;
+  if (evt.type === 'start') {
+    job.channelsTotal = evt.channelsTotal;
+    job.guildName = evt.guildName;
+  }
+  if (evt.type === 'channel_start' || evt.type === 'channel_batch' || evt.type === 'channel_done') {
+    job.channelIndex = evt.channelIndex;
+    job.channelsTotal = evt.channelsTotal;
+    job.currentChannelName = evt.channelName;
+    if (evt.messagesScanned != null) job.messagesScanned = evt.messagesScanned;
+    if (evt.usersTracked != null) job.usersTracked = evt.usersTracked;
+  }
+  if (evt.type === 'write_start') {
+    job.messagesScanned = evt.messagesScanned;
+    job.usersTracked = evt.usersTracked;
+    job.usersToWrite = evt.usersToWrite;
+  }
+  if (evt.type === 'write_progress') {
+    job.usersUpdated = evt.usersUpdated;
+    job.usersSkipped = evt.usersSkipped;
+    job.writeIndex = evt.writeIndex;
+    job.writesTotal = evt.writesTotal;
+  }
+  if (evt.type === 'done' && evt.result) {
+    const r = evt.result;
+    job.result = r;
+    job.messagesScanned = r.messagesScanned;
+    job.usersTracked = r.usersTracked;
+    job.usersUpdated = r.usersUpdated;
+    job.usersSkipped = r.usersSkipped;
+    job.channelErrors = r.channelErrors;
+  }
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -96,7 +264,7 @@ async function readAllSettings() {
     givePermsFrenRoleId, givePermsPositionAboveRoleId,
     newuserBeenRoleId, newuserPermDiffRoleId,
     noobiesRoleId, guildName, logLevel, serverInviteUrl,
-    notextChannel, reminderChannel, reminderRole,
+    notextChannel, reminderChannel, reminderRole, pruneProtectedRoleId,
     dashboardPort, dashboardBaseUrl, dashboardCookieSecure,
   ] = await Promise.all([
     getSetting('bot_status'),
@@ -113,6 +281,7 @@ async function readAllSettings() {
     getValue('notext_channel'),
     getValue('reminder_channel'),
     getValue('reminder_role'),
+    getValue('prune_protected_role_id'),
     getValue('dashboard_port'),
     getValue('dashboard_base_url'),
     getValue('dashboard_cookie_secure'),
@@ -133,6 +302,7 @@ async function readAllSettings() {
     notext_channel: notextChannel || '',
     reminder_channel: reminderChannel || '',
     reminder_role: reminderRole || '',
+    prune_protected_role_id: pruneProtectedRoleId || '',
     dashboard_port: dashboardPort ?? 3001,
     dashboard_base_url: dashboardBaseUrl || '',
     dashboard_cookie_secure: dashboardCookieSecure === true || dashboardCookieSecure === 'true',
@@ -174,7 +344,7 @@ router.post('/settings', async (req, res) => {
 
   // DB-backed settings (channels, roles)
   const dbKeys = [
-    'notext_channel', 'reminder_channel', 'reminder_role',
+    'notext_channel', 'reminder_channel', 'reminder_role', 'prune_protected_role_id',
     'dashboard_port', 'dashboard_base_url', 'dashboard_cookie_secure',
   ];
   const numericDbKeys = new Set(['dashboard_port']);
@@ -247,7 +417,6 @@ router.get('/me', (req, res) => {
   res.json(req.session.user);
 });
 
-module.exports = router;
 // ─── GET /api/database/raw ──────────────────────────────────────────────────
 
 router.get('/database/raw', async (req, res) => {
@@ -257,6 +426,135 @@ router.get('/database/raw', async (req, res) => {
   } catch (err) {
     logger.error('Failed to get raw database entries.', { err });
     res.status(500).json({ error: 'Failed to retrieve database entries.' });
+  }
+});
+
+// ─── GET /api/database/export ───────────────────────────────────────────────
+/** Full Keyv table backup as downloadable JSON (requires dashboard auth). */
+router.get('/database/export', (req, res) => {
+  try {
+    const entries = getRawDatabaseEntries();
+    const pkg = require('../../package.json');
+    const payload = {
+      format: 'nova-keyv-backup',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      app: { name: pkg.name, version: pkg.version },
+      entryCount: entries.length,
+      entries
+    };
+    const body = JSON.stringify(payload, null, 2);
+    const safeStamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `nova-database-backup-${safeStamp}.json`;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    logger.info('Database JSON export downloaded.', {
+      user: req.session.user?.username,
+      entryCount: entries.length
+    });
+    res.send(body);
+  } catch (err) {
+    logger.error('Failed to export database.', { err });
+    res.status(500).json({ error: 'Failed to export database.' });
+  }
+});
+
+// ─── POST /api/database/import/validate ─────────────────────────────────────
+/** Validates a backup JSON object without writing to the database. */
+router.post('/database/import/validate', (req, res) => {
+  const raw = req.body && req.body.backup != null ? req.body.backup : null;
+  if (raw == null) {
+    return res.status(400).json({ error: 'Missing "backup" in request body.' });
+  }
+
+  const parsed = parseBackupPayload(typeof raw === 'string' ? raw : raw);
+  if (!parsed.ok) {
+    return res.status(400).json({ error: parsed.error });
+  }
+
+  const result = validateNovaKeyvBackup(parsed.payload);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  const nsCounts = {};
+  for (const { fullKey } of result.entries) {
+    const ns = fullKey.split(':')[0] || 'main';
+    nsCounts[ns] = (nsCounts[ns] || 0) + 1;
+  }
+
+  logger.info('Database backup JSON validated (dry run).', {
+    user: req.session.user?.username,
+    entryCount: result.entries.length,
+    warnings: result.warnings.length
+  });
+
+  res.json({
+    ok: true,
+    entryCount: result.entries.length,
+    namespaces: nsCounts,
+    warnings: result.warnings
+  });
+});
+
+// ─── POST /api/database/import ──────────────────────────────────────────────
+/**
+ * Validates then applies a Keyv backup (upsert). Set dryRun: true to only validate
+ * (same checks as /import/validate; no writes).
+ */
+router.post('/database/import', (req, res) => {
+  const raw = req.body && req.body.backup != null ? req.body.backup : null;
+  if (raw == null) {
+    return res.status(400).json({ error: 'Missing "backup" in request body.' });
+  }
+
+  const dryRun = req.body.dryRun === true || req.body.dryRun === 'true';
+
+  const parsed = parseBackupPayload(typeof raw === 'string' ? raw : raw);
+  if (!parsed.ok) {
+    return res.status(400).json({ error: parsed.error });
+  }
+
+  const result = validateNovaKeyvBackup(parsed.payload);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  if (dryRun) {
+    logger.info('Database backup import dry run (no writes).', {
+      user: req.session.user?.username,
+      entryCount: result.entries.length
+    });
+    return res.json({
+      ok: true,
+      dryRun: true,
+      imported: 0,
+      entryCount: result.entries.length,
+      warnings: result.warnings
+    });
+  }
+
+  try {
+    const { written } = applyNovaKeyvBackupEntries(result.entries);
+    invalidateUserSummaryCache();
+    invalidateGuildMembersCache();
+    invalidateInvitesListCache();
+
+    logger.info('Database backup imported from JSON.', {
+      user: req.session.user?.username,
+      written,
+      warnings: result.warnings.length
+    });
+
+    res.json({
+      ok: true,
+      dryRun: false,
+      imported: written,
+      warnings: result.warnings
+    });
+  } catch (err) {
+    logger.error('Failed to import database backup.', { err });
+    res.status(500).json({ error: 'Failed to import database backup.' });
   }
 });
 
@@ -305,10 +603,12 @@ router.delete('/database/raw', async (req, res) => {
 // ─── GET /api/health ────────────────────────────────────────────────────────
 router.get('/health', async (req, res) => {
   try {
-    const uptimeSeconds = process.uptime();
-    const days = Math.floor(uptimeSeconds / (3600 * 24));
-    const hours = Math.floor((uptimeSeconds % (3600 * 24)) / 3600);
-    const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+    const cpuPercent = sampleProcessCpuPercent();
+    const load = os.loadavg();
+    const cpuSubtitle =
+      process.platform === 'win32'
+        ? 'Node process'
+        : `1m load ${load[0].toFixed(2)}`;
 
     const mem = process.memoryUsage();
     const totalMem = os.totalmem();
@@ -317,7 +617,10 @@ router.get('/health', async (req, res) => {
     const guild = req.discordClient.guilds.cache.first();
 
     res.json({
-      uptime: `${days}d ${hours}h ${minutes}m`,
+      cpu: {
+        percent: Number(cpuPercent.toFixed(1)),
+        subtitle: cpuSubtitle,
+      },
       ping: req.discordClient.ws.ping,
       memory: {
         rss: (mem.rss / 1024 / 1024).toFixed(2),
@@ -408,7 +711,7 @@ router.post('/fun/auto-reactions', async (req, res) => {
         emoji: String(r.emoji).trim()
       }));
 
-    await updateValue('auto_reactions', cleaned);
+    await setValue('auto_reactions', cleaned);
     logger.info('Auto-reactions updated via dashboard.', {
       count: cleaned.length,
       user: req.session.user?.username
@@ -426,12 +729,26 @@ router.get('/invites', async (req, res) => {
     const guild = req.discordClient.guilds.cache.first();
     if (!guild) return res.status(503).json({ error: 'Guild not available.' });
 
+    const forceRefresh =
+      req.query.refresh === '1' ||
+      req.query.refresh === 'true' ||
+      req.query.refresh === 'yes';
+    const now = Date.now();
+    if (
+      !forceRefresh &&
+      invitesListCacheEntry &&
+      invitesListCacheEntry.guildId === guild.id &&
+      invitesListCacheEntry.expires > now
+    ) {
+      return res.json(invitesListCacheEntry.data);
+    }
+
     const invites = await guild.invites.fetch();
     const tags = await getAllInviteTagsData();
 
     // Create a map for quick lookup
     const tagMap = {};
-    tags.forEach(t => tagMap[t.code.toLowerCase()] = t.tagName);
+    tags.forEach(t => { tagMap[t.code.toLowerCase()] = t.tagName; });
 
     const result = invites.map(inv => ({
       code: inv.code,
@@ -445,6 +762,12 @@ router.get('/invites', async (req, res) => {
       url: inv.url,
       createdAt: inv.createdAt ? inv.createdAt.toISOString() : null
     }));
+
+    invitesListCacheEntry = {
+      guildId: guild.id,
+      expires: now + INVITES_LIST_CACHE_MS,
+      data: result
+    };
 
     res.json(result);
   } catch (err) {
@@ -460,7 +783,8 @@ router.post('/invites', async (req, res) => {
 
   try {
     const guild = req.discordClient.guilds.cache.first();
-    const channel = await guild.channels.fetch(channelId);
+    const channel =
+      guild.channels.cache.get(channelId) || (await guild.channels.fetch(channelId));
 
     if (!channel || !channel.isTextBased()) {
       return res.status(400).json({ error: 'Invalid or non-text channel.' });
@@ -477,6 +801,7 @@ router.post('/invites', async (req, res) => {
       await setInviteTag(guild.id, invite.code, tag);
     }
 
+    invalidateInvitesListCache();
     res.json({ ok: true, code: invite.code });
   } catch (err) {
     logger.error('Failed to create invite.', { err });
@@ -494,6 +819,7 @@ router.delete('/invites/:code', async (req, res) => {
     // Also cleanup tag if exists
     await deleteInviteTag(guild.id, code);
 
+    invalidateInvitesListCache();
     res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to delete invite.', { err, code });
@@ -513,11 +839,341 @@ router.post('/invites/tag', async (req, res) => {
     } else {
       await deleteInviteTag(guild.id, code);
     }
+    invalidateInvitesListCache();
     res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to update invite tag.', { err, code });
     res.status(500).json({ error: 'Failed to update invite tag.' });
   }
+});
+
+// ─── GET /api/users/summary ──────────────────────────────────────────────────
+router.get('/users/summary', async (req, res) => {
+    const forceRefresh =
+        req.query.refresh === '1' ||
+        req.query.refresh === 'true' ||
+        req.query.refresh === 'yes';
+    const guild = req.discordClient.guilds.cache.first();
+    if (!guild) return res.status(500).json({ error: 'Guild not found' });
+
+    const now = Date.now();
+    if (
+        !forceRefresh &&
+        userSummaryCacheEntry &&
+        userSummaryCacheEntry.guildId === guild.id &&
+        userSummaryCacheEntry.expires > now
+    ) {
+        return res.json({ ...userSummaryCacheEntry.data, cached: true, stale: false });
+    }
+
+    try {
+        const safeRoleId = String((await getValue('prune_protected_role_id')) || '').trim();
+
+        const members = await fetchGuildMembersCached(guild, { force: forceRefresh });
+        const activityMap = await getAllLastMessageTimes();
+
+        const sortedMembers = Array.from(members.values())
+            .sort((a, b) => b.joinedTimestamp - a.joinedTimestamp)
+            .map(m => {
+                let lastMsg = activityMap[m.id];
+                if (lastMsg != null && typeof lastMsg !== 'number') lastMsg = Number(lastMsg);
+                if (lastMsg != null && Number.isNaN(lastMsg)) lastMsg = null;
+
+                return {
+                    id: m.id,
+                    username: m.user.username,
+                    displayName: m.displayName,
+                    avatar: m.user.displayAvatarURL({ size: 64 }),
+                    joinedAt: m.joinedAt,
+                    isBot: Boolean(m.user.bot),
+                    hasSafeRole: Boolean(safeRoleId && m.roles.cache.has(safeRoleId)),
+                    privilege: memberPrivilegeLevel(m),
+                    lastMessageAt: lastMsg == null ? null : lastMsg
+                };
+            });
+
+        const data = {
+            total: members.size,
+            bots: members.filter(m => m.user.bot).size,
+            humans: members.filter(m => !m.user.bot).size,
+            recent: sortedMembers
+        };
+
+        userSummaryCacheEntry = {
+            guildId: guild.id,
+            expires: now + USER_SUMMARY_CACHE_MS,
+            data
+        };
+
+        res.json({ ...data, cached: false, stale: false });
+    } catch (e) {
+        const isGatewayRateLimit =
+            e?.name === 'GatewayRateLimitError' ||
+            (typeof e?.message === 'string' && e.message.toLowerCase().includes('rate limit'));
+        if (isGatewayRateLimit && userSummaryCacheEntry?.guildId === guild.id && userSummaryCacheEntry?.data) {
+            const retryMs = Math.round((e?.data?.retry_after || 20) * 1000);
+            const bump = Math.max(USER_SUMMARY_CACHE_MS, retryMs);
+            userSummaryCacheEntry.expires = Math.max(userSummaryCacheEntry.expires, now + bump);
+            if (guildMembersCacheEntry?.guildId === guild.id) {
+                guildMembersCacheEntry.expires = Math.max(guildMembersCacheEntry.expires, now + bump);
+            }
+            logger.warn('API /users/summary gateway rate limited; returning cached roster', {
+                retry_after: e?.data?.retry_after
+            });
+            return res.json({ ...userSummaryCacheEntry.data, cached: true, stale: true });
+        }
+        logger.error('API /users/summary error', { err: e });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ─── GET /api/users/inactivity/dry-run ───────────────────────────────────────
+router.get('/users/inactivity/dry-run', async (req, res) => {
+    try {
+        const guild = req.discordClient.guilds.cache.first();
+        if (!guild) return res.status(500).json({ error: 'Guild not found' });
+        
+        const days = parseInt(req.query.days) || 30;
+        let excludedRole = String(req.query.excludedRole || '').trim();
+        if (!excludedRole) excludedRole = (await getValue('prune_protected_role_id')) || '';
+        
+        const inactivityThresholdMs = days * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        
+        const members = await fetchGuildMembersCached(guild, { force: false });
+        const activityMap = await getAllLastMessageTimes();
+        
+        const inactivityTargets = [];
+        members.forEach(m => {
+            if (m.user.bot) return;
+            if (excludedRole && m.roles.cache.has(excludedRole)) return;
+
+            const lastActivity = activityMap[m.id];
+
+            if (lastActivity) {
+                if (now - lastActivity > inactivityThresholdMs) {
+                    inactivityTargets.push({
+                        id: m.id,
+                        username: m.user.username,
+                        displayName: m.displayName,
+                        reason: 'Inactive (no recent messages)'
+                    });
+                }
+            } else {
+                const joinTs = m.joinedTimestamp || 0;
+                if (now - joinTs > inactivityThresholdMs) {
+                    inactivityTargets.push({
+                        id: m.id,
+                        username: m.user.username,
+                        displayName: m.displayName,
+                        reason: 'Inactive (no recorded activity since join)'
+                    });
+                }
+            }
+        });
+
+        res.json({ targetCount: inactivityTargets.length, targets: inactivityTargets });
+    } catch (e) {
+        logger.error('API /users/inactivity/dry-run error', { err: e });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ─── POST /api/users/inactivity/execute ──────────────────────────────────────
+router.post('/users/inactivity/execute', async (req, res) => {
+    try {
+        const guild = req.discordClient.guilds.cache.first();
+        if (!guild) return res.status(500).json({ error: 'Guild not found' });
+        
+        const days = parseInt(req.body.days) || 30;
+        let excludedRole = String(req.body.excludedRole || '').trim();
+        if (!excludedRole) excludedRole = (await getValue('prune_protected_role_id')) || '';
+        
+        const inactivityThresholdMs = days * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        
+        const members = await fetchGuildMembersCached(guild, { force: true });
+        const activityMap = await getAllLastMessageTimes();
+        
+        const inactivityTargets = [];
+        members.forEach(m => {
+            if (m.user.bot) return;
+            if (excludedRole && m.roles.cache.has(excludedRole)) return;
+            if (m.id === guild.ownerId) return;
+
+            const botRolePos = guild.members.resolve(req.discordClient.user.id).roles.highest.position;
+            if (m.roles.highest.position >= botRolePos) return;
+
+            const lastActivity = activityMap[m.id];
+            if (lastActivity) {
+                if (now - lastActivity > inactivityThresholdMs) inactivityTargets.push(m);
+            } else {
+                const joinTs = m.joinedTimestamp || 0;
+                if (now - joinTs > inactivityThresholdMs) inactivityTargets.push(m);
+            }
+        });
+
+        if (inactivityTargets.length === 0) {
+            return res.json({ success: true, kicked: 0, failed: 0 });
+        }
+
+        // We run kicks synchronously with 250ms sleep to avoid Discord API 429
+        let kicked = 0;
+        let failed = 0;
+        for (const m of inactivityTargets) {
+            try {
+                await m.kick(INACTIVITY_KICK_REASON);
+                kicked++;
+            } catch (kErr) {
+                failed++;
+            }
+            await new Promise(r => setTimeout(r, 250));
+        }
+
+        invalidateGuildMembersCache();
+        invalidateUserSummaryCache();
+
+        res.json({ success: true, kicked, failed });
+    } catch (e) {
+        logger.error('API /users/inactivity/execute error', { err: e });
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ─── GET /api/maintenance/seed-last-messages/active ─────────────────────────
+router.get('/maintenance/seed-last-messages/active', (_req, res) => {
+  res.json({ active: seedJobRunning, jobId: currentSeedJobId });
+});
+
+// ─── GET /api/maintenance/jobs/:id ──────────────────────────────────────────
+router.get('/maintenance/jobs/:id', (req, res) => {
+  const job = seedJobs.get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'Job not found.' });
+  res.json(job);
+});
+
+// ─── POST /api/maintenance/seed-last-messages ───────────────────────────────
+router.post('/maintenance/seed-last-messages', (req, res) => {
+  if (seedJobRunning) {
+    return res.status(409).json({ error: 'A backfill job is already running.', jobId: currentSeedJobId });
+  }
+  const guild = req.discordClient?.guilds?.cache?.first();
+  if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
+
+  pruneOldSeedJobs();
+  const jobId = crypto.randomUUID();
+  const job = {
+    id: jobId,
+    type: 'seed_last_messages',
+    status: 'running',
+    startedAt: Date.now(),
+    finishedAt: null,
+    error: null,
+    percent: 0,
+    guildName: guild.name,
+    channelsTotal: 0,
+    channelIndex: 0,
+    currentChannelName: null,
+    messagesScanned: 0,
+    usersTracked: 0,
+    usersToWrite: 0,
+    writeIndex: 0,
+    writesTotal: 0,
+    usersUpdated: 0,
+    usersSkipped: 0,
+    channelErrors: [],
+    result: null
+  };
+  seedJobs.set(jobId, job);
+
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const maxPerChannel = Math.min(
+    50000,
+    Math.max(100, parseInt(String(body.maxPerChannel), 10) || DEFAULT_MAX_PER_CHANNEL)
+  );
+  const delayMs = Math.min(5000, Math.max(0, parseInt(String(body.delayMs), 10) || DEFAULT_DELAY_MS));
+  const onlyMissing = body.onlyMissing === true || body.onlyMissing === 'true';
+  const dryRun = body.dryRun === true || body.dryRun === 'true';
+  let channelIds = null;
+  if (Array.isArray(body.channelIds) && body.channelIds.length > 0) {
+    channelIds = body.channelIds.map((id) => String(id).trim()).filter(Boolean);
+  }
+
+  seedJobRunning = true;
+  currentSeedJobId = jobId;
+
+  const username = req.session.user?.username;
+  const keyv = getKeyvForNamespace('main');
+
+  res.json({ jobId, started: true });
+
+  (async () => {
+    try {
+      const result = await runSeedLastMessages({
+        guild,
+        keyv,
+        maxPerChannel,
+        delayMs,
+        channelIds,
+        onlyMissing,
+        dryRun,
+        onProgress: async (evt) => {
+          applySeedJobProgress(job, evt);
+        }
+      });
+      job.status = 'done';
+      job.percent = 100;
+      job.result = result;
+      job.finishedAt = Date.now();
+      logger.info('Dashboard seed last messages completed.', {
+        jobId,
+        user: username,
+        messagesScanned: result.messagesScanned,
+        usersUpdated: result.usersUpdated
+      });
+    } catch (err) {
+      job.status = 'error';
+      job.error = err && err.message ? String(err.message) : String(err);
+      job.finishedAt = Date.now();
+      logger.error('Dashboard seed last messages failed.', { jobId, err });
+    } finally {
+      await keyv.disconnect().catch(() => {});
+      seedJobRunning = false;
+      currentSeedJobId = null;
+    }
+  })();
+});
+
+// ─── POST /api/maintenance/cache/clear ──────────────────────────────────────
+router.post('/maintenance/cache/clear', (req, res) => {
+  const raw = req.body?.targets;
+  const list = Array.isArray(raw) ? raw : raw ? [raw] : ['all'];
+  const cleared = [];
+
+  if (list.includes('all')) {
+    invalidateUserSummaryCache();
+    invalidateGuildMembersCache();
+    invalidateInvitesListCache();
+    cleared.push('user_summary', 'guild_members', 'invites');
+    logger.info('Dashboard cleared all API caches.', { user: req.session.user?.username });
+    return res.json({ ok: true, cleared });
+  }
+
+  if (list.includes('user_summary')) {
+    invalidateUserSummaryCache();
+    cleared.push('user_summary');
+  }
+  if (list.includes('guild_members')) {
+    invalidateGuildMembersCache();
+    cleared.push('guild_members');
+  }
+  if (list.includes('invites')) {
+    invalidateInvitesListCache();
+    cleared.push('invites');
+  }
+
+  logger.info('Dashboard cleared API caches.', { cleared, user: req.session.user?.username });
+  res.json({ ok: true, cleared });
 });
 
 module.exports = router;

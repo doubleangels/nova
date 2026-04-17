@@ -79,17 +79,17 @@
       </div>
     </div>
     
-    <!-- Uptime Card -->
+    <!-- CPU Card -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Bot Uptime</p>
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">CPU</p>
         <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
         </div>
       </div>
       <div>
-        <p id="health_uptime" class="text-xl font-bold leading-tight">--</p>
-        <p class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide">Process Uptime</p>
+        <p id="health_cpu" class="text-xl font-bold leading-tight">--</p>
+        <p id="health_cpu_sub" class="text-[10px] text-[var(--c-text-muted)] tracking-wide truncate" title="Process CPU vs wall time since last refresh; on Linux/macOS, system 1m load average.">--</p>
       </div>
     </div>
  
@@ -119,6 +119,43 @@
         <p id="health_platform" class="text-xs font-bold truncate leading-tight">--</p>
         <p id="health_node" class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-tight">Node --</p>
       </div>
+    </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-6 border-l-4 border-[var(--c-accent)]">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-sm">Bot Configuration</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Adjust core personality and automation.</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Appearance</a>
+            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Logistics</a>
+            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles</a>
+            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Security</a>
+        </div>
+    </div>
+    <div class="card p-6 border-l-4 border-[var(--c-accent)]">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+            </div>
+            <div>
+                <h3 class="font-bold text-sm">Data Explorer</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Inspect and modify raw key-value storage.</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Invite Manager</a>
+            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Messaging</a>
+            <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Social &amp; Fun</a>
+            <a href="#database" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Storage Browser</a>
+        </div>
     </div>
   </div>
 
@@ -153,42 +190,6 @@
     </div>
   </div>
 
-  <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="card p-6 border-l-4 border-[var(--c-accent)]">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-            </div>
-            <div>
-                <h3 class="font-bold text-sm">Bot Configuration</h3>
-                <p class="text-[10px] text-[var(--c-text-dim)]">Adjust core personality and automation.</p>
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Appearance</a>
-            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Security</a>
-            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles</a>
-            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Logistics</a>
-        </div>
-    </div>
-    <div class="card p-6 border-l-4 border-[var(--c-accent)]">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
-            </div>
-            <div>
-                <h3 class="font-bold text-sm">Data Explorer</h3>
-                <p class="text-[10px] text-[var(--c-text-dim)]">Inspect and modify raw key-value storage.</p>
-            </div>
-        </div>
-        <div class="flex flex-wrap gap-2">
-            <a href="#database" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Storage Browser</a>
-            <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Invite Manager</a>
-            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Messaging</a>
-            <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Social & Fun</a>
-        </div>
-    </div>
-  </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════ IDENTITY & APPEARANCE -->
@@ -316,13 +317,19 @@
           <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
           <p class="field-hint">Used by /newuser to highlight significant permission differences.</p>
         </div>
+
+        <div class="max-w-md">
+          <label class="field-label">Inactivity Kick Protected Role</label>
+          <select id="prune_protected_role_id" class="field-input role-select"></select>
+          <p class="field-hint">Members with this role are never targeted by Inactivity Prune. Marked in the User Manager list.</p>
+        </div>
       </div>
 
     </div>
 
     <div class="mt-8 flex justify-end">
       <button class="save-btn" data-section="roles"
-              data-keys="noobies_role_id,noobies_threshold,newuser_been_in_server_before_role_id,give_perms_fren_role_id,give_perms_position_above_role_id,newuser_permission_diff_role_id">
+              data-keys="noobies_role_id,noobies_threshold,newuser_been_in_server_before_role_id,give_perms_fren_role_id,give_perms_position_above_role_id,newuser_permission_diff_role_id,prune_protected_role_id">
         Save Role Settings
       </button>
     </div>
@@ -595,6 +602,136 @@
   </div>
 </section>
 
+<!-- ══════════════════════════════════════════════════════════ MAINTENANCE -->
+<section id="maintenance" class="mb-10 page-section hidden">
+  <div class="mb-6">
+    <h2 class="section-heading mb-1">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582M20 20v-5h-.581M5 9a7 7 0 0114 0v6H5V9z" /></svg>
+      Maintenance
+    </h2>
+    <p class="text-xs text-[var(--c-text-dim)]">Caches, backups, and backfill tools.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-5 space-y-4 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Dashboard Cache</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Clears in-memory caches used by the User Manager, member fetch, and invite list so the next load hits Discord and the database again.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="clearMaintCache(['user_summary'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">User Summary</button>
+        <button type="button" onclick="clearMaintCache(['guild_members'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Member Fetch</button>
+        <button type="button" onclick="clearMaintCache(['invites'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Invites List</button>
+        <button type="button" onclick="clearMaintCache(['all'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-colors">Clear All</button>
+      </div>
+    </div>
+
+    <div class="card p-5 space-y-4 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Seed Last Message Times</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Scans channel history and writes <code class="text-[10px]">last_message:&lt;userId&gt;</code> keys. Existing newer timestamps are kept. Only one job runs at a time.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="field-label text-[10px]">Max messages per channel</label>
+          <input type="number" id="maintMaxPerChannel" class="field-input w-full text-sm min-h-[44px]" value="10000" min="100" max="50000" />
+        </div>
+        <div>
+          <label class="field-label text-[10px]">Delay between fetches (ms)</label>
+          <input type="number" id="maintDelayMs" class="field-input w-full text-sm min-h-[44px]" value="300" min="0" max="5000" />
+        </div>
+      </div>
+      <div>
+        <label class="field-label text-[10px]">Channels</label>
+        <label class="flex items-start gap-2.5 text-xs text-[var(--c-label)] cursor-pointer mb-2">
+          <input type="checkbox" id="maintUseAllChannels" checked class="mt-0.5 rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)] focus:ring-[var(--c-accent)] shrink-0" onchange="maintOnAllChannelsChange()" />
+          <span>All channels the bot can read (text, announcement &amp; thread channels)</span>
+        </label>
+        <div id="maintChannelListWrap" class="rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)]/30 overflow-hidden">
+          <div id="maintChannelToolbar" class="flex flex-wrap justify-between items-center gap-2 px-2 py-1.5 border-b border-[var(--c-card-border)] bg-[var(--c-card)]/80">
+            <span class="text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Or choose specific channels</span>
+            <span class="flex gap-2">
+              <button type="button" id="maintChSelectAllBtn" onclick="maintSelectAllChannelBoxes()" class="text-[10px] font-bold text-[var(--c-accent)] hover:underline disabled:opacity-40 disabled:pointer-events-none">Select All</button>
+              <button type="button" id="maintChClearBtn" onclick="maintClearChannelBoxes()" class="text-[10px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:underline disabled:opacity-40 disabled:pointer-events-none">Clear</button>
+            </span>
+          </div>
+          <div id="maintChannelList" class="max-h-52 overflow-y-auto p-2 space-y-1" data-loaded="0">
+            <p class="text-[10px] text-[var(--c-text-dim)] px-1 py-2">Loading channels…</p>
+          </div>
+        </div>
+        <p class="text-[9px] text-[var(--c-text-dim)] mt-1.5">Uncheck <strong class="text-[var(--c-text-muted)]">All channels</strong> to scan only the boxes you tick.</p>
+      </div>
+      <div class="flex flex-wrap gap-4 items-center">
+        <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
+          <input type="checkbox" id="maintOnlyMissing" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
+          Only fill missing keys
+        </label>
+        <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
+          <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
+          Dry run (no writes)
+        </label>
+      </div>
+      <button type="button" id="maintStartSeedBtn" onclick="startMaintSeed()" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] text-white hover:opacity-90 transition-opacity">Run Backfill</button>
+
+      <div id="maintSeedProgressWrap" class="hidden space-y-2 pt-2 border-t border-[var(--c-card-border)]">
+        <div class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">
+          <span id="maintSeedPhaseLabel">Progress</span>
+          <span id="maintSeedPercentLabel">0%</span>
+        </div>
+        <div class="h-2.5 rounded-full bg-[var(--c-input)] overflow-hidden border border-[var(--c-input-border)]">
+          <div id="maintSeedProgressBar" class="h-full bg-[var(--c-accent)] transition-all duration-300 ease-out rounded-full" style="width:0%"></div>
+        </div>
+        <p id="maintSeedStatusLine" class="text-[11px] text-[var(--c-text-muted)] font-mono leading-relaxed"></p>
+      </div>
+
+      <div id="maintSeedSummary" class="hidden grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-[var(--c-card-border)]">
+        <div class="p-2 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">
+          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Messages scanned</p>
+          <p id="maintSumMessages" class="font-mono font-bold text-[var(--c-text)]">—</p>
+        </div>
+        <div class="p-2 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">
+          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Users tracked</p>
+          <p id="maintSumTracked" class="font-mono font-bold text-[var(--c-text)]">—</p>
+        </div>
+        <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
+          <p class="text-[9px] uppercase font-bold text-emerald-400/90">Updated</p>
+          <p id="maintSumUpdated" class="font-mono font-bold text-emerald-400">—</p>
+        </div>
+        <div class="p-2 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">
+          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Skipped</p>
+          <p id="maintSumSkipped" class="font-mono font-bold text-[var(--c-text-muted)]">—</p>
+        </div>
+      </div>
+      <div id="maintSeedErrors" class="hidden text-[11px] text-red-400/90 font-mono whitespace-pre-wrap"></div>
+    </div>
+
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)] lg:col-span-2">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Database Backup</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Download a JSON snapshot of the Keyv store (same data as the Database Explorer). Keep the file private — it can include sessions and tokens.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="exportDbJsonBtn" onclick="exportDatabaseJson()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px]">
+          <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Export Database as JSON
+        </button>
+      </div>
+      <div class="pt-2 border-t border-[var(--c-card-border)] space-y-2">
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Restore from a previously exported <span class="font-mono text-[10px]">nova-keyv-backup</span> file. The server validates the file before any write; use <strong class="text-[var(--c-text-muted)]">Validate</strong> first, then <strong class="text-[var(--c-text-muted)]">Import</strong> to upsert keys.</p>
+        <input type="file" id="importDbJsonInput" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1" />
+        <div class="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
+          <button type="button" id="importDbJsonPickBtn" onclick="document.getElementById('importDbJsonInput').click()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px]">
+            Choose Backup File…
+          </button>
+          <button type="button" id="validateDbJsonBtn" onclick="validateDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px] disabled:opacity-40 disabled:pointer-events-none">
+            Validate
+          </button>
+          <button type="button" id="applyDbJsonBtn" onclick="applyDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-sm font-bold text-amber-200 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none">
+            Import
+          </button>
+        </div>
+        <p id="importDbJsonFileLabel" class="text-[11px] text-[var(--c-text-dim)] font-mono hidden"></p>
+        <pre id="importDbJsonStatus" class="hidden text-[11px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+
 <!-- ══════════════════════════════════════════════════════════ MESSAGE CENTER -->
 <section id="messaging" class="mb-10 page-section hidden">
   <div class="mb-6">
@@ -764,20 +901,20 @@
 
 <!-- ══════════════════════════════════════════════════════════ ADVANCED DATABASE EDITOR -->
 <section id="database" class="mb-10 page-section hidden">
-  <div class="mb-6 flex items-center justify-between">
-    <div>
+  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div class="min-w-0">
         <h2 class="section-heading mb-1">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
             Database Explorer
         </h2>
         <p class="text-xs text-[var(--c-text-dim)]">Inspect and manage the raw runtime configuration state.</p>
     </div>
-    <div class="flex items-center gap-3">
-      <div class="relative">
-        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--c-text-dim)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input type="text" id="dbSearch" placeholder="Search keys or values..." class="field-input py-1.5 pl-9 text-xs w-64" />
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto sm:max-w-xl sm:ml-auto min-w-0">
+      <div class="relative w-full min-w-0 flex-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--c-text-dim)] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input type="text" id="dbSearch" placeholder="Search keys or values..." class="field-input py-2.5 pl-9 pr-3 text-xs w-full min-h-[44px]" />
       </div>
-      <button id="refreshDbBtn" class="p-2 bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-lg hover:bg-[var(--c-card-border)] transition-all hover:scale-105 active:scale-95" title="Refresh Database">
+      <button type="button" id="refreshDbBtn" class="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-lg hover:bg-[var(--c-card-border)] transition-colors active:scale-[0.98] shrink-0 self-end sm:self-auto" title="Refresh Database">
         <svg id="refreshDbIcon" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
@@ -785,29 +922,125 @@
     </div>
   </div>
 
-  <div class="flex flex-col lg:flex-row gap-6">
-    <!-- Namespace Sidebar -->
-    <aside class="w-full lg:w-56 shrink-0">
-        <div class="card p-2 space-y-1" id="dbNamespaceList">
+  <div class="flex flex-col lg:flex-row gap-4 lg:gap-6">
+    <!-- Namespace: horizontal scroll on small screens -->
+    <aside class="w-full lg:w-56 shrink-0 min-w-0">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-2 lg:hidden">Namespace</p>
+        <div class="card p-2 flex flex-row lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible lg:overflow-y-auto lg:max-h-[min(70vh,36rem)] snap-x snap-mandatory lg:snap-none" id="dbNamespaceList">
             <!-- Namespaces injected here -->
-            <div class="px-3 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading...</div>
+            <div class="px-3 py-10 text-center text-xs text-[var(--c-text-dim)] w-full flex-shrink-0 min-w-[200px]">Loading...</div>
         </div>
         
-        <div class="mt-4 px-2">
-            <button onclick="expandAllCategories()" class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors">Expand All</button>
-            <span class="mx-1 text-[var(--c-text-dim)]">/</span>
-            <button onclick="collapseAllCategories()" class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors">Collapse All</button>
+        <div class="mt-3 lg:mt-4 px-1 flex flex-wrap gap-x-2 gap-y-1 items-center text-[10px] font-bold uppercase tracking-widest">
+            <button type="button" onclick="expandAllCategories()" class="text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors py-1">Expand all</button>
+            <span class="text-[var(--c-text-dim)] opacity-50">·</span>
+            <button type="button" onclick="collapseAllCategories()" class="text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors py-1">Collapse all</button>
         </div>
     </aside>
 
     <!-- Content Area -->
-    <div class="flex-1 space-y-4" id="dbContentArea">
+    <div class="flex-1 space-y-4 min-w-0" id="dbContentArea">
         <!-- Categories and Items injected here -->
         <div class="card p-12 text-center text-[var(--c-text-dim)]">
             <div class="animate-spin w-6 h-6 border-2 border-[var(--c-accent)] border-t-transparent rounded-full mx-auto mb-4"></div>
             <p class="text-xs">Fetching database entries...</p>
         </div>
     </div>
+  </div>
+</section>
+
+<!-- ─── USERS SECTION ───────────────────────────────────────────────────────── -->
+<section id="users" class="page-section hidden space-y-8 mt-8">
+  <div class="card bg-[var(--c-input)]/50 border-dashed">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div>
+              <h2 class="section-heading mb-1">User Manager</h2>
+              <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Server Member Roster & Summary</p>
+          </div>
+          <button type="button" onclick="loadUserSummary(true)" class="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-[var(--c-card)] border border-[var(--c-input-border)] rounded-lg hover:border-[var(--c-accent)] transition-colors group w-full sm:w-auto">
+              <svg id="refreshUsersIcon" class="w-4 h-4 text-[var(--c-text-dim)] group-hover:text-[var(--c-accent)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+              <span class="text-xs font-bold">Refresh</span>
+          </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center">
+              <p class="text-[10px] text-[var(--c-text-dim)] uppercase font-bold tracking-wider mb-1">Total Members</p>
+              <p id="usr_total" class="text-xl sm:text-2xl font-mono font-bold text-[var(--c-text)]">--</p>
+          </div>
+          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center">
+              <p class="text-[10px] text-[var(--c-text-dim)] uppercase font-bold tracking-wider mb-1">Humans</p>
+              <p id="usr_humans" class="text-xl sm:text-2xl font-mono font-bold text-emerald-400">--</p>
+          </div>
+          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center">
+              <p class="text-[10px] text-[var(--c-text-dim)] uppercase font-bold tracking-wider mb-1">Bots</p>
+              <p id="usr_bots" class="text-xl sm:text-2xl font-mono font-bold text-blue-400">--</p>
+          </div>
+      </div>
+
+      <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] space-y-3">
+          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. The last-activity column uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> below for emphasis.</p>
+          <div class="flex flex-wrap items-center gap-2">
+              <button type="button" data-um-chip="admin" onclick="userManagerToggleChip('admin')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-red-500/40 bg-red-500/10 text-[11px] font-bold text-red-400 hover:bg-red-500/20 transition-all" aria-pressed="false">Admin <span id="usr_chip_admin" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="mod" onclick="userManagerToggleChip('mod')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-[11px] font-bold text-yellow-400 hover:bg-yellow-500/20 transition-all" aria-pressed="false">Mod <span id="usr_chip_mod" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="humans" onclick="userManagerToggleChip('humans')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all" aria-pressed="false">Humans <span id="usr_chip_um_humans" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="bots" onclick="userManagerToggleChip('bots')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-blue-500/40 bg-blue-500/10 text-[11px] font-bold text-blue-400 hover:bg-blue-500/20 transition-all" aria-pressed="false">Bots <span id="usr_chip_um_bots" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="safe" onclick="userManagerToggleChip('safe')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[11px] font-bold text-[var(--c-accent-text)] hover:opacity-90 transition-all" aria-pressed="false">Safe <span id="usr_chip_safe" class="font-mono">0</span></button>
+              <button type="button" onclick="userManagerResetFilters()" class="w-full sm:w-auto sm:ml-auto min-h-[40px] px-3 py-2 text-[10px] uppercase font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] underline decoration-dotted text-center sm:text-left">Clear chips</button>
+          </div>
+          <p id="userManagerFilterHint" class="text-[10px] text-[var(--c-text-dim)] font-medium hidden"></p>
+      </div>
+
+      <div class="bg-[var(--c-card)] border border-[var(--c-card-border)] rounded-xl overflow-hidden">
+          <div class="hidden lg:grid lg:grid-cols-12 gap-3 lg:gap-4 px-4 sm:px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-muted)] font-bold items-center">
+              <div class="lg:col-span-5">User</div>
+              <div class="lg:col-span-1 text-center" title="Protected from Inactivity Prune (safe role)">Safe</div>
+              <div class="lg:col-span-3 text-right" title="Last message time recorded by the bot">Last activity</div>
+              <div class="lg:col-span-3 text-right">Joined</div>
+          </div>
+          <div id="userTableBody" role="list" class="divide-y divide-white/5">
+              <div role="listitem" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading users...</div>
+          </div>
+      </div>
+
+      <div class="mt-8 border-t border-[var(--c-card-border)] pt-8">
+          <div class="flex flex-col mb-4">
+              <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
+              <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Prune members who have been inactive so the community stays active</p>
+          </div>
+          
+          <div class="grid grid-cols-1 md:max-w-md gap-6 mb-6">
+              <div>
+                  <label class="field-label">Days of Inactivity</label>
+                  <input type="number" id="inactivityDays" class="field-input w-full min-h-[44px]" value="30" min="1" max="730" />
+                  <p class="field-hint">Users inactive for this many days will be flagged here and in User Manager (last-activity column tint). Protected (safe) role is saved under Role Configuration.</p>
+              </div>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+              <button type="button" id="inactivityScanBtn" onclick="scanInactivityKickTargets()" class="min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.25)] rounded-lg hover:bg-red-600 hover:border-red-700 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  Purge users
+              </button>
+              <button type="button" id="inactivityExecuteBtn" onclick="executeInactivityKicks()" class="hidden min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] rounded-lg hover:bg-red-600 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+                  Execute Inactivity Prune
+              </button>
+          </div>
+
+          <!-- Dry Run Results -->
+          <div id="inactivityResultsContainer" class="hidden mt-6 border border-red-500/20 rounded-xl overflow-hidden bg-[var(--c-card)]">
+              <div class="bg-red-500/10 px-4 py-2 border-b border-red-500/20 flex justify-between items-center">
+                  <span class="text-[10px] uppercase font-bold text-red-500 tracking-widest">Dry-Run Preview</span>
+                  <span id="inactivityTargetCount" class="text-xs font-mono font-bold text-red-500">0 Targets</span>
+              </div>
+              <div class="max-h-64 overflow-y-auto overflow-x-auto">
+                  <table class="w-full text-left text-xs min-w-[280px]">
+                      <tbody id="inactivityResultsBody" class="divide-y divide-white/5">
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+      </div>
   </div>
 </section>
 
@@ -1132,7 +1365,7 @@
     const selectIds = [
       'give_perms_fren_role_id', 'give_perms_position_above_role_id',
       'noobies_role_id', 'newuser_been_in_server_before_role_id', 'newuser_permission_diff_role_id',
-      'anti_spam_channel_id', 'reminder_channel', 'reminder_role', 'notext_channel',
+      'anti_spam_channel_id', 'reminder_channel', 'reminder_role', 'prune_protected_role_id', 'notext_channel',
       'invite_notification_channel', 'msg_channel_id'
     ];
     const savedMap = {};
@@ -1155,12 +1388,13 @@
     try {
       // Parallel fetch all data points for maximum efficiency
       await Promise.all([
-        loadSettings(),           // Refreshes settings, roles, and channels
-        loadHealthStats(),        // Refreshes metrics (Latency, Uptime, Memory)
-        refreshLiveReminders(),   // Refreshes bump/promo timers
-        loadInvites(),            // Refreshes invite list
-        loadDatabaseEntries(),    // Refreshes raw database rows
-        loadAutoReactions()       // Refreshes keyword auto-reactions
+        loadSettings(),
+        loadHealthStats(),
+        refreshLiveReminders(),
+        loadDatabaseEntries(),
+        loadAutoReactions(),
+        loadUserSummary(true),
+        loadInvites(true)
       ]);
       showToast('Dashboard synchronized with live data.', 'success');
     } catch (err) {
@@ -1307,7 +1541,14 @@
       const data = await res.json();
       
       document.getElementById('health_ping').textContent = `${data.ping} ms`;
-      document.getElementById('health_uptime').textContent = data.uptime;
+      const cpuEl = document.getElementById('health_cpu');
+      const cpuSubEl = document.getElementById('health_cpu_sub');
+      if (cpuEl && data.cpu && typeof data.cpu.percent === 'number') {
+        cpuEl.textContent = `${data.cpu.percent}%`;
+      }
+      if (cpuSubEl && data.cpu && data.cpu.subtitle) {
+        cpuSubEl.textContent = data.cpu.subtitle;
+      }
       document.getElementById('health_mem').textContent = `${data.memory.rss} MB`;
       document.getElementById('health_mem_sub').textContent = `System: ${data.memory.systemFree}GB / ${data.memory.systemTotal}GB Free`;
       document.getElementById('health_platform').textContent = data.platform;
@@ -1327,9 +1568,9 @@
   // ── Invite Manager ────────────────────────────────────────────────────────
   let allInvites = [];
 
-  async function loadInvites() {
+  async function loadInvites(forceRefresh = false) {
     try {
-      const res = await fetch('/api/invites');
+      const res = await fetch(forceRefresh ? '/api/invites?refresh=1' : '/api/invites');
       if (!res.ok) throw new Error();
       allInvites = await res.json();
       renderInvites();
@@ -1538,6 +1779,562 @@
     }
   }
 
+  async function exportDatabaseJson() {
+    const btn = document.getElementById('exportDbJsonBtn');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await fetch('/api/database/export');
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Export failed');
+      }
+      const blob = await res.blob();
+      let filename = 'nova-database-backup.json';
+      const cd = res.headers.get('Content-Disposition');
+      if (cd) {
+        const m = /filename\*=UTF-8''([^;\s]+)|filename="([^"]+)"/i.exec(cd);
+        const raw = m ? decodeURIComponent((m[1] || m[2] || '').replace(/"/g, '')) : '';
+        if (raw) filename = raw;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Database backup downloaded.');
+    } catch (e) {
+      showToast(e.message || 'Failed to export database.', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /** @type {object | null} Parsed backup root object from file (format nova-keyv-backup). */
+  let pendingDbBackupJson = null;
+  let importDbBackupValidated = false;
+
+  function setImportDbUiStatus(msg, isError) {
+    const el = document.getElementById('importDbJsonStatus');
+    if (!el) return;
+    if (!msg) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    el.classList.remove('hidden');
+    el.textContent = msg;
+    el.classList.toggle('text-red-400/90', !!isError);
+    el.classList.toggle('text-[var(--c-text-muted)]', !isError);
+  }
+
+  document.getElementById('importDbJsonInput')?.addEventListener('change', (ev) => {
+    const f = ev.target && ev.target.files && ev.target.files[0];
+    pendingDbBackupJson = null;
+    importDbBackupValidated = false;
+    const vBtn = document.getElementById('validateDbJsonBtn');
+    const aBtn = document.getElementById('applyDbJsonBtn');
+    const label = document.getElementById('importDbJsonFileLabel');
+    setImportDbUiStatus('');
+    if (!f) {
+      if (label) { label.classList.add('hidden'); label.textContent = ''; }
+      if (vBtn) vBtn.disabled = true;
+      if (aBtn) aBtn.disabled = true;
+      return;
+    }
+    if (label) {
+      label.classList.remove('hidden');
+      label.textContent = f.name;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result || ''));
+        pendingDbBackupJson = parsed;
+        importDbBackupValidated = false;
+        if (vBtn) vBtn.disabled = false;
+        if (aBtn) aBtn.disabled = true;
+        showToast('Backup file loaded. Run Validate before Import.');
+      } catch (e) {
+        pendingDbBackupJson = null;
+        if (vBtn) vBtn.disabled = true;
+        if (aBtn) aBtn.disabled = true;
+        showToast(e.message || 'Invalid JSON file.', 'error');
+      }
+    };
+    reader.onerror = () => {
+      pendingDbBackupJson = null;
+      if (vBtn) vBtn.disabled = true;
+      if (aBtn) aBtn.disabled = true;
+      showToast('Could not read file.', 'error');
+    };
+    reader.readAsText(f);
+  });
+
+  async function validateDatabaseJsonImport() {
+    if (!pendingDbBackupJson) {
+      showToast('Choose a backup file first.', 'error');
+      return;
+    }
+    const btn = document.getElementById('validateDbJsonBtn');
+    if (btn) btn.disabled = true;
+    setImportDbUiStatus('Validating…', false);
+    try {
+      const res = await fetch('/api/database/import/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backup: pendingDbBackupJson })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Validation failed');
+      importDbBackupValidated = true;
+      const aBtn = document.getElementById('applyDbJsonBtn');
+      if (aBtn) aBtn.disabled = false;
+      const ns = data.namespaces && typeof data.namespaces === 'object'
+        ? Object.entries(data.namespaces).map(([k, v]) => `${k}: ${v}`).join(', ')
+        : '';
+      const warn = Array.isArray(data.warnings) && data.warnings.length
+        ? '\n\nWarnings:\n' + data.warnings.join('\n')
+        : '';
+      setImportDbUiStatus(`OK — ${data.entryCount} entries${ns ? '\nNamespaces: ' + ns : ''}${warn}`, false);
+      showToast('Backup passed validation.');
+    } catch (e) {
+      importDbBackupValidated = false;
+      const aBtn = document.getElementById('applyDbJsonBtn');
+      if (aBtn) aBtn.disabled = true;
+      setImportDbUiStatus(e.message || 'Validation failed', true);
+      showToast(e.message || 'Validation failed', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function applyDatabaseJsonImport() {
+    if (!pendingDbBackupJson) {
+      showToast('Choose a backup file first.', 'error');
+      return;
+    }
+    if (!importDbBackupValidated) {
+      showToast('Validate the backup before importing.', 'error');
+      return;
+    }
+    if (!confirm('Import will upsert keys from this backup into the live database. Continue?')) return;
+    const btn = document.getElementById('applyDbJsonBtn');
+    if (btn) btn.disabled = true;
+    setImportDbUiStatus('Importing…', false);
+    try {
+      const res = await fetch('/api/database/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backup: pendingDbBackupJson, dryRun: false })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      const warn = Array.isArray(data.warnings) && data.warnings.length
+        ? '\n\nWarnings:\n' + data.warnings.join('\n')
+        : '';
+      setImportDbUiStatus(`Imported ${data.imported} rows.${warn}`, false);
+      showToast(`Imported ${data.imported} keys.`);
+      try { await loadDatabaseEntries(); } catch (_) {}
+    } catch (e) {
+      setImportDbUiStatus(e.message || 'Import failed', true);
+      showToast(e.message || 'Import failed', 'error');
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // ── User Manager System ────────────────────────────────────────────────────────
+  let userManagerCache = null;
+  /** @type {Set<string>} Selected filter chip keys (AND together). */
+  let userManagerSelectedChips = new Set();
+
+  function userManagerRoot() {
+    return document.getElementById('users');
+  }
+
+  function userManagerIsBot(u) {
+    return u.isBot === true || u.isBot === 1 || String(u.isBot).toLowerCase() === 'true';
+  }
+
+  function userManagerPrivilege(u) {
+    const v = u && u.privilege;
+    if (v === 'admin' || v === 'Admin') return 'admin';
+    if (v === 'mod' || v === 'Mod') return 'mod';
+    return null;
+  }
+
+  function escapeHtmlUserManager(s) {
+    if (s == null) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function userManagerInactiveDays() {
+    const el = document.getElementById('inactivityDays');
+    const n = parseInt(el && el.value, 10);
+    if (!Number.isFinite(n) || n < 1) return 30;
+    return Math.min(730, n);
+  }
+
+  function userManagerIsInactive(u, days) {
+    if (userManagerIsBot(u)) return false;
+    const thresholdMs = days * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const last = u.lastMessageAt;
+    const lastNum =
+      last != null && last !== ''
+        ? typeof last === 'number'
+          ? last
+          : Number(last)
+        : null;
+    if (lastNum != null && !Number.isNaN(lastNum)) {
+      return now - lastNum > thresholdMs;
+    }
+    const joinTs = new Date(u.joinedAt).getTime();
+    if (Number.isNaN(joinTs)) return false;
+    return now - joinTs > thresholdMs;
+  }
+
+  function formatRelativeActivity(lastMessageAt) {
+    if (lastMessageAt == null || typeof lastMessageAt !== 'number') {
+      return { text: 'No messages', cls: 'text-[var(--c-text-dim)] italic', title: 'No message activity recorded yet for this member' };
+    }
+    const now = Date.now();
+    let diffSec = Math.floor((now - lastMessageAt) / 1000);
+    if (diffSec < 0) diffSec = 0;
+    const absTitle = new Date(lastMessageAt).toLocaleString();
+    if (diffSec < 60) return { text: 'Just now', cls: 'text-emerald-400', title: absTitle };
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return { text: `${diffMin}m ago`, cls: 'text-[var(--c-text-muted)]', title: absTitle };
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 48) return { text: `${diffH}h ago`, cls: 'text-[var(--c-text-muted)]', title: absTitle };
+    const diffD = Math.floor(diffH / 24);
+    if (diffD < 14) return { text: `${diffD}d ago`, cls: 'text-[var(--c-text-muted)]', title: absTitle };
+    const diffW = Math.floor(diffD / 7);
+    if (diffW < 8) return { text: `${diffW}w ago`, cls: 'text-[var(--c-text-dim)]', title: absTitle };
+    const diffMo = Math.floor(diffD / 30);
+    return { text: `${Math.max(1, diffMo)}mo ago`, cls: 'text-[var(--c-text-dim)]', title: absTitle };
+  }
+
+  function userManagerSyncChipStyles() {
+    const root = userManagerRoot();
+    if (!root) return;
+    root.querySelectorAll('[data-um-chip]').forEach((btn) => {
+      const key = btn.getAttribute('data-um-chip');
+      const on = key && userManagerSelectedChips.has(key);
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.classList.toggle('ring-2', !!on);
+      btn.classList.toggle('ring-[var(--c-accent)]', !!on);
+      btn.classList.toggle('ring-offset-2', !!on);
+      btn.classList.toggle('ring-offset-[var(--c-card)]', !!on);
+    });
+  }
+
+  function userManagerToggleChip(key) {
+    if (!userManagerCache) return;
+    if (userManagerSelectedChips.has(key)) userManagerSelectedChips.delete(key);
+    else userManagerSelectedChips.add(key);
+    userManagerSyncChipStyles();
+    renderUserManagerTable();
+  }
+
+  function userManagerPassesChipFilters(u, chips) {
+    if (!chips || chips.size === 0) return true;
+    const bot = userManagerIsBot(u);
+    const p = userManagerPrivilege(u);
+
+    if (chips.has('admin') && p !== 'admin') return false;
+    if (chips.has('mod') && p !== 'mod') return false;
+
+    if (chips.has('safe') && !u.hasSafeRole) return false;
+
+    const wantHumans = chips.has('humans');
+    const wantBots = chips.has('bots');
+    if (!(wantHumans && wantBots)) {
+      if (wantHumans && bot) return false;
+      if (wantBots && !bot) return false;
+    }
+
+    return true;
+  }
+
+  function userManagerUpdateChips() {
+    if (!userManagerCache || !userManagerCache.recent) return;
+    const list = userManagerCache.recent;
+    let admin = 0;
+    let mod = 0;
+    let umHumans = 0;
+    let umBots = 0;
+    let safe = 0;
+    for (const u of list) {
+      const p = userManagerPrivilege(u);
+      const bot = userManagerIsBot(u);
+      if (p === 'admin') admin++;
+      else if (p === 'mod') mod++;
+      if (bot) umBots++;
+      else umHumans++;
+      if (u.hasSafeRole) safe++;
+    }
+    const set = (id, n) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(n);
+    };
+    set('usr_chip_admin', admin);
+    set('usr_chip_mod', mod);
+    set('usr_chip_um_humans', umHumans);
+    set('usr_chip_um_bots', umBots);
+    set('usr_chip_safe', safe);
+    userManagerSyncChipStyles();
+  }
+
+  function userManagerResetFilters() {
+    userManagerSelectedChips.clear();
+    userManagerSyncChipStyles();
+    renderUserManagerTable();
+  }
+
+  function renderUserManagerTable() {
+    if (!userManagerCache || !userManagerCache.recent) return;
+    const tbody = document.getElementById('userTableBody');
+    const hint = document.getElementById('userManagerFilterHint');
+    const days = userManagerInactiveDays();
+    userManagerUpdateChips();
+
+    const filtered = userManagerCache.recent.filter((u) =>
+      userManagerPassesChipFilters(u, userManagerSelectedChips)
+    );
+
+    tbody.innerHTML = '';
+    if (filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'px-4 py-10 text-center text-xs text-[var(--c-text-dim)]';
+      empty.setAttribute('role', 'status');
+      empty.textContent = 'No members match these filters.';
+      tbody.appendChild(empty);
+    } else {
+      const safeCheckSvg =
+        '<svg class="w-4 h-4 mx-auto text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
+      const safeEmpty = '<span class="inline-flex w-8 justify-center text-[var(--c-text-dim)] opacity-25 select-none" aria-hidden="true">—</span>';
+      filtered.forEach((u) => {
+        const row = document.createElement('div');
+        row.setAttribute('role', 'listitem');
+        const bot = userManagerIsBot(u);
+        const privilege = userManagerPrivilege(u);
+        const rowTint =
+          privilege === 'admin'
+            ? ' border-l-[3px] border-l-red-500 bg-red-500/[0.08] hover:bg-red-500/[0.12]'
+            : privilege === 'mod'
+              ? ' border-l-[3px] border-l-yellow-500 bg-yellow-500/[0.07] hover:bg-yellow-500/[0.11]'
+              : ' border-l-[3px] border-l-transparent hover:bg-white/[0.02]';
+        row.className = 'transition-colors' + rowTint;
+
+        const avatarSrc = u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        const createdDate = new Date(u.joinedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        const safeInner = u.hasSafeRole
+          ? `<span class="inline-flex w-8 justify-center" title="Has protected (safe) role">${safeCheckSvg}</span>`
+          : safeEmpty;
+
+        const last = u.lastMessageAt;
+        const lastNum =
+          last != null && last !== ''
+            ? typeof last === 'number'
+              ? last
+              : Number(last)
+            : NaN;
+        const hasTracked = Number.isFinite(lastNum);
+        const inactiveRow = userManagerIsInactive(u, days);
+
+        let lastCellHtml;
+        let lastCellTitle;
+        if (!hasTracked) {
+          lastCellHtml =
+            '<span style="color:var(--c-text);font-style:italic">No messages</span>';
+          lastCellTitle = 'No message activity recorded yet for this member';
+        } else {
+          const rel = formatRelativeActivity(lastNum);
+          const actCls = inactiveRow && !bot ? 'text-orange-400/90' : rel.cls;
+          lastCellTitle = rel.title;
+          lastCellHtml = `<span class="${actCls}">${escapeHtmlUserManager(rel.text)}</span>`;
+        }
+
+        const dn = escapeHtmlUserManager(u.displayName);
+        const un = escapeHtmlUserManager(u.username);
+
+        row.innerHTML = `
+          <div class="lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center px-3 sm:px-4 py-3">
+            <div class="lg:col-span-5 flex items-start justify-between gap-2 min-w-0">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div class="relative shrink-0">
+                  <img src="${avatarSrc}" class="w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-[var(--c-input-border)]" alt="">
+                  ${bot ? '<div class="absolute -bottom-1 -right-1 px-1 rounded bg-blue-500 text-[8px] font-bold text-white leading-tight">BOT</div>' : ''}
+                </div>
+                <div class="flex flex-col min-w-0">
+                  <span class="text-sm font-bold truncate ${privilege === 'admin' ? 'text-red-400' : privilege === 'mod' ? 'text-yellow-400' : 'text-[var(--c-text)]'}">${dn}</span>
+                  <span class="text-[10px] text-[var(--c-text-dim)] truncate">@${un}</span>
+                </div>
+              </div>
+              <div class="lg:hidden shrink-0 pt-0.5" aria-label="Safe role">${safeInner}</div>
+            </div>
+            <div class="hidden lg:flex lg:col-span-1 justify-center items-center" aria-label="Safe role">${safeInner}</div>
+            <div class="mt-3 lg:mt-0 lg:col-span-3 text-xs sm:text-sm">
+              <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Last activity</span>
+              <div class="text-right" title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}</div>
+            </div>
+            <div class="mt-2 lg:mt-0 lg:col-span-3 text-xs text-[var(--c-text-muted)]">
+              <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Joined</span>
+              <div class="text-right">${createdDate}</div>
+            </div>
+          </div>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    if (hint) {
+      const allN = userManagerCache.recent.length;
+      const selective = userManagerSelectedChips.size > 0;
+      if (filtered.length !== allN || selective) {
+        hint.classList.remove('hidden');
+        hint.textContent = `Showing ${filtered.length} of ${allN} members (${days} day${days === 1 ? '' : 's'} inactive threshold; chips use AND).`;
+      } else {
+        hint.classList.add('hidden');
+        hint.textContent = '';
+      }
+    }
+  }
+
+  async function loadUserSummary(forceRefresh = false) {
+    const refreshIcon = document.getElementById('refreshUsersIcon');
+    if (refreshIcon) {
+      refreshIcon.style.transition = 'transform 0.6s ease';
+      refreshIcon.style.transform = 'rotate(360deg)';
+    }
+    try {
+      const url = forceRefresh ? '/api/users/summary?refresh=1' : '/api/users/summary';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('usr_total').textContent = data.total || 0;
+        document.getElementById('usr_humans').textContent = data.humans || 0;
+        document.getElementById('usr_bots').textContent = data.bots || 0;
+        userManagerCache = data;
+        renderUserManagerTable();
+        if (data.stale) {
+          showToast('User list is cached (Discord member fetch rate limit). Try again in a moment.', 'success');
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load user summary', e);
+    } finally {
+      if (refreshIcon) {
+        setTimeout(() => {
+          refreshIcon.style.transition = 'none';
+          refreshIcon.style.transform = 'rotate(0deg)';
+        }, 650);
+      }
+    }
+  }
+
+  (function initUserManagerFilterListeners() {
+    const root = userManagerRoot();
+    if (!root) return;
+    root.addEventListener('input', (e) => {
+      if (e.target && e.target.id === 'inactivityDays') renderUserManagerTable();
+    });
+  })();
+
+  async function scanInactivityKickTargets() {
+      const days = document.getElementById('inactivityDays').value;
+      const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
+      const btn = document.getElementById('inactivityScanBtn');
+      const prevLabel = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Scanning…';
+
+      try {
+          const res = await fetch(`/api/users/inactivity/dry-run?days=${days}&excludedRole=${excludedRole}`);
+          const data = await res.json();
+          
+          if (!res.ok) throw new Error(data.error);
+
+          const container = document.getElementById('inactivityResultsContainer');
+          const countSpan = document.getElementById('inactivityTargetCount');
+          const tbody = document.getElementById('inactivityResultsBody');
+          const execBtn = document.getElementById('inactivityExecuteBtn');
+
+          container.classList.remove('hidden');
+          countSpan.textContent = `${data.targetCount} Targets`;
+          execBtn.textContent = `Execute Inactivity Prune (${data.targetCount} users)`;
+
+          if (data.targetCount > 0) {
+              execBtn.classList.remove('hidden');
+              execBtn.disabled = false;
+              execBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+              tbody.innerHTML = data.targets.map(t => `
+                  <tr class="hover:bg-white/[0.02] transition-colors">
+                      <td class="px-4 py-2 font-medium text-[var(--c-text)]">${t.displayName} <span class="text-[10px] text-[var(--c-text-dim)]">@${t.username}</span></td>
+                      <td class="px-4 py-2 text-right text-red-400 opacity-80">${t.reason}</td>
+                  </tr>
+              `).join('');
+          } else {
+              execBtn.classList.add('hidden', 'opacity-50', 'cursor-not-allowed');
+              execBtn.disabled = true;
+              tbody.innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-center text-[var(--c-text-dim)]">No inactive users found matching this criteria.</td></tr>`;
+          }
+      } catch (err) {
+          showToast('Failed to scan for Inactivity Prune targets.', 'error');
+      } finally {
+          btn.disabled = false;
+          btn.textContent = prevLabel;
+      }
+  }
+
+  async function executeInactivityKicks() {
+      if (!confirm('WARNING: This will permanently kick the listed users from the server. This action cannot be undone. Are you sure you want to proceed?')) return;
+      
+      const days = document.getElementById('inactivityDays').value;
+      const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
+      const btn = document.getElementById('inactivityExecuteBtn');
+      const scanBtn = document.getElementById('inactivityScanBtn');
+      
+      btn.disabled = true;
+      btn.textContent = 'Executing Inactivity Prune...';
+      scanBtn.disabled = true;
+
+      try {
+          const res = await fetch('/api/users/inactivity/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ days, excludedRole })
+          });
+          const data = await res.json();
+          
+          if (!res.ok) throw new Error(data.error);
+          
+          showToast(`Successfully kicked ${data.kicked} users. ${data.failed > 0 ? `(${data.failed} failed)` : ''}`, 'success');
+          
+          document.getElementById('inactivityResultsContainer').classList.add('hidden');
+          btn.classList.add('hidden');
+          loadUserSummary(true);
+      } catch (err) {
+          showToast('Failed to execute Inactivity Prune.', 'error');
+      } finally {
+          btn.disabled = false;
+          scanBtn.disabled = false;
+      }
+  }
+
   function getCategory(key) {
       const parts = key.split(':');
       return parts.length > 1 ? parts[0] : 'general';
@@ -1555,11 +2352,11 @@
 
     // 2. Render Namespace Sidebar
     nsList.innerHTML = namespaces.map(ns => `
-        <button onclick="switchNamespace('${ns}')" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all ${curNamespace === ns ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold' : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)]'}">
-            <span>${ns}</span>
-            <span class="text-[10px] opacity-60 bg-black/20 px-1.5 py-0.5 rounded-full">${nsCounts[ns]}</span>
+        <button type="button" onclick="switchNamespace('${ns}')" class="flex w-full lg:w-full min-w-[7.5rem] shrink-0 snap-start items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm transition-all ${curNamespace === ns ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold' : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)]'}">
+            <span class="truncate">${ns}</span>
+            <span class="text-[10px] opacity-60 bg-black/20 px-1.5 py-0.5 rounded-full shrink-0">${nsCounts[ns]}</span>
         </button>
-    `).join('') || '<div class="p-4 text-center text-xs text-[var(--c-text-dim)]">No namespaces found</div>';
+    `).join('') || '<div class="p-4 text-center text-xs text-[var(--c-text-dim)] w-full min-w-[200px] flex-shrink-0">No namespaces found</div>';
 
     // 3. Filter and Group by Category for current namespace
     const filtered = allDbEntries.filter(e => {
@@ -1603,37 +2400,37 @@
                 </button>
                 
                 <div class="${isOpen ? '' : 'hidden'}">
-                    <table class="w-full text-left border-collapse">
-                        <tbody class="divide-y divide-[var(--c-card-border)]">
+                    <div class="divide-y divide-[var(--c-card-border)]">
                             ${items.map(e => {
                                 const cleanKey = e.key.includes(':') ? e.key.split(':').slice(1).join(':') : e.key;
+                                const fullKeyJs = JSON.stringify(e.fullKey);
+                                const statusId = `status-${e.fullKey.replace(/:/g, '-')}`;
                                 return `
-                                    <tr class="hover:bg-[var(--c-input)]/50 transition-colors group">
-                                        <td class="pl-12 pr-5 py-3 w-1/3">
-                                            <div class="text-sm font-medium text-[var(--c-label)] truncate" title="${e.key}">${cleanKey}</div>
-                                            <div class="text-[10px] text-[var(--c-text-dim)] font-mono opacity-0 group-hover:opacity-100 transition-opacity">full: ${e.key}</div>
-                                        </td>
-                                        <td class="px-5 py-3">
-                                            <div class="relative flex items-center gap-3">
-                                                <div id="status-${e.fullKey.replace(/:/g, '-')}" class="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] opacity-0 transition-opacity duration-300" title="Synced"></div>
-                                                <div class="flex-1">
+                                    <div class="px-3 sm:px-5 py-3 sm:py-3.5 hover:bg-[var(--c-input)]/40 transition-colors group">
+                                        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] gap-3 lg:gap-4 lg:items-start">
+                                            <div class="min-w-0 lg:pl-4">
+                                                <div class="text-sm font-medium text-[var(--c-label)] break-words">${cleanKey}</div>
+                                                <div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5 break-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">full: ${e.key}</div>
+                                            </div>
+                                            <div class="relative flex flex-col sm:flex-row items-stretch sm:items-start gap-2 min-w-0">
+                                                <div id="${statusId}" class="hidden sm:block absolute sm:left-0 sm:top-3 w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] opacity-0 transition-opacity duration-300 sm:-translate-x-4" title="Synced"></div>
+                                                <div class="flex-1 min-w-0 sm:pl-1">
                                                     <textarea 
-                                                        class="w-full min-h-[40px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
+                                                        class="w-full min-h-[44px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
                                                         rows="1"
-                                                        oninput="autoResize(this); scheduleSave('${e.fullKey}', this.value)"
+                                                        oninput="autoResize(this); scheduleSave(${fullKeyJs}, this.value)"
                                                         onfocus="autoResize(this)"
                                                     >${displayDbValue(e.value)}</textarea>
                                                 </div>
-                                                <button onclick="deleteDbEntry('${e.fullKey}')" class="p-2 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] rounded-lg transition-all opacity-0 group-hover:opacity-100 flex-shrink-0" title="Delete entry">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                <button type="button" onclick="deleteDbEntry(${fullKeyJs})" class="p-2.5 min-h-[44px] min-w-[44px] sm:min-w-0 sm:min-h-0 sm:p-2 self-end sm:self-start text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-input)] rounded-lg transition-all sm:opacity-0 sm:group-hover:opacity-100 shrink-0" title="Delete entry">
+                                                    <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                 </button>
                                             </div>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 `;
                             }).join('')}
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
             </div>
         `;
@@ -1927,6 +2724,252 @@
   loadAutoReactions();
   document.getElementById('refreshDbBtn')?.addEventListener('click', loadDatabaseEntries);
 
+  // ── Maintenance (cache + seed last messages) ───────────────────────────────
+  let maintSeedPollTimer = null;
+
+  function maintOnAllChannelsChange() {
+    const useAll = document.getElementById('maintUseAllChannels')?.checked;
+    document.querySelectorAll('.maint-channel-cb').forEach((cb) => {
+      cb.disabled = !!useAll;
+    });
+    const sa = document.getElementById('maintChSelectAllBtn');
+    const cl = document.getElementById('maintChClearBtn');
+    if (sa) sa.disabled = !!useAll;
+    if (cl) cl.disabled = !!useAll;
+  }
+
+  function maintSelectAllChannelBoxes() {
+    if (document.getElementById('maintUseAllChannels')?.checked) return;
+    document.querySelectorAll('.maint-channel-cb').forEach((cb) => {
+      cb.checked = true;
+    });
+  }
+
+  function maintClearChannelBoxes() {
+    if (document.getElementById('maintUseAllChannels')?.checked) return;
+    document.querySelectorAll('.maint-channel-cb').forEach((cb) => {
+      cb.checked = false;
+    });
+  }
+
+  async function loadMaintenanceChannels() {
+    const list = document.getElementById('maintChannelList');
+    if (!list || list.dataset.loaded === '1') return;
+    try {
+      const res = await fetch('/api/guild/channels');
+      if (!res.ok) {
+        list.innerHTML = '<p class="text-[10px] text-red-400/90 px-1">Could not load channels.</p>';
+        return;
+      }
+      const channels = await res.json();
+      list.innerHTML = '';
+      channels.forEach((c) => {
+        const id = `maint_ch_${c.id}`;
+        const row = document.createElement('label');
+        row.className =
+          'flex items-center gap-2.5 px-2 py-1 rounded-md hover:bg-[var(--c-card)]/80 cursor-pointer text-xs text-[var(--c-text)]';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.className =
+          'maint-channel-cb rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)] focus:ring-[var(--c-accent)] shrink-0';
+        input.value = c.id;
+        input.id = id;
+        input.disabled = document.getElementById('maintUseAllChannels')?.checked !== false;
+        const span = document.createElement('span');
+        span.className = 'font-mono text-[11px] truncate';
+        span.textContent = `#${c.name}`;
+        row.appendChild(input);
+        row.appendChild(span);
+        list.appendChild(row);
+      });
+      list.dataset.loaded = '1';
+      maintOnAllChannelsChange();
+    } catch (_) {
+      list.innerHTML = '<p class="text-[10px] text-red-400/90 px-1">Could not load channels.</p>';
+    }
+  }
+
+  async function clearMaintCache(targets) {
+    try {
+      const res = await fetch('/api/maintenance/cache/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targets })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast(`Cleared cache: ${(data.cleared || []).join(', ') || 'ok'}`);
+      } else {
+        showToast(data.error || 'Failed to clear cache.', 'error');
+      }
+    } catch {
+      showToast('Network error clearing cache.', 'error');
+    }
+  }
+
+  function maintStopPoll() {
+    if (maintSeedPollTimer) {
+      clearInterval(maintSeedPollTimer);
+      maintSeedPollTimer = null;
+    }
+  }
+
+  function maintApplyJobToUI(j) {
+    const wrap = document.getElementById('maintSeedProgressWrap');
+    const bar = document.getElementById('maintSeedProgressBar');
+    const pct = document.getElementById('maintSeedPercentLabel');
+    const phase = document.getElementById('maintSeedPhaseLabel');
+    const line = document.getElementById('maintSeedStatusLine');
+    const btn = document.getElementById('maintStartSeedBtn');
+    const sum = document.getElementById('maintSeedSummary');
+    const errEl = document.getElementById('maintSeedErrors');
+
+    if (wrap) wrap.classList.remove('hidden');
+    const p = Math.max(0, Math.min(100, Number(j.percent) || 0));
+    if (bar) bar.style.width = `${p}%`;
+    if (pct) pct.textContent = `${p}%`;
+
+    let phaseText = 'Scanning';
+    if (j.status === 'done') phaseText = 'Complete';
+    else if (j.status === 'error') phaseText = 'Error';
+    else if ((j.writeIndex || 0) > 0 || (j.percent || 0) >= 85) phaseText = 'Writing';
+    if (phase) phase.textContent = phaseText;
+
+    if (line) {
+      const ch = j.currentChannelName ? `#${j.currentChannelName}` : '—';
+      const idx = Number.isFinite(j.channelIndex) ? j.channelIndex + 1 : 0;
+      const tot = j.channelsTotal || 0;
+      line.textContent = `${ch} · channel ${idx}/${tot} · messages ${j.messagesScanned ?? 0} · users in map ${j.usersTracked ?? 0}`;
+    }
+
+    if (btn) btn.disabled = j.status === 'running';
+
+    if (j.status === 'done' && j.result) {
+      const r = j.result;
+      if (sum) sum.classList.remove('hidden');
+      const set = (id, v) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v == null ? '—' : String(v);
+      };
+      set('maintSumMessages', r.messagesScanned);
+      set('maintSumTracked', r.usersTracked);
+      set('maintSumUpdated', r.usersUpdated);
+      set('maintSumSkipped', r.usersSkipped);
+      if (errEl) {
+        if (r.channelErrors && r.channelErrors.length) {
+          errEl.classList.remove('hidden');
+          errEl.textContent = r.channelErrors.map((e) => `${e.channelName}: ${e.message}`).join('\n');
+        } else {
+          errEl.classList.add('hidden');
+          errEl.textContent = '';
+        }
+      }
+      const dry = r.dryRun ? ' (dry run)' : '';
+      showToast(`Backfill finished${dry}: ${r.usersUpdated} updated, ${r.usersSkipped} skipped.`);
+    } else if (j.status === 'error') {
+      if (sum) sum.classList.add('hidden');
+      if (errEl) {
+        errEl.classList.remove('hidden');
+        errEl.textContent = j.error || 'Unknown error';
+      }
+      showToast(j.error || 'Backfill failed.', 'error');
+    }
+  }
+
+  function maintStartPolling(jobId) {
+    maintStopPoll();
+    maintSeedPollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/maintenance/jobs/${encodeURIComponent(jobId)}`);
+        if (!res.ok) return;
+        const j = await res.json();
+        maintApplyJobToUI(j);
+        if (j.status === 'done' || j.status === 'error') {
+          maintStopPoll();
+          const btn = document.getElementById('maintStartSeedBtn');
+          if (btn) btn.disabled = false;
+        }
+      } catch (_) {}
+    }, 600);
+  }
+
+  async function startMaintSeed() {
+    const btn = document.getElementById('maintStartSeedBtn');
+    const maxPerChannel = parseInt(document.getElementById('maintMaxPerChannel')?.value, 10);
+    const delayMs = parseInt(document.getElementById('maintDelayMs')?.value, 10);
+    const onlyMissing = document.getElementById('maintOnlyMissing')?.checked;
+    const dryRun = document.getElementById('maintDryRun')?.checked;
+    const useAllChannels = document.getElementById('maintUseAllChannels')?.checked !== false;
+    let channelIds;
+    if (useAllChannels) {
+      channelIds = undefined;
+    } else {
+      channelIds = Array.from(document.querySelectorAll('.maint-channel-cb:checked')).map((cb) => cb.value);
+      if (channelIds.length === 0) {
+        showToast('Select at least one channel, or turn "All channels" back on.', 'error');
+        if (btn) btn.disabled = false;
+        return;
+      }
+    }
+
+    document.getElementById('maintSeedSummary')?.classList.add('hidden');
+    document.getElementById('maintSeedErrors')?.classList.add('hidden');
+    document.getElementById('maintSeedProgressWrap')?.classList.remove('hidden');
+    maintApplyJobToUI({
+      status: 'running',
+      percent: 0,
+      channelIndex: 0,
+      channelsTotal: 0,
+      currentChannelName: null,
+      messagesScanned: 0,
+      usersTracked: 0
+    });
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/maintenance/seed-last-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxPerChannel: Number.isFinite(maxPerChannel) ? maxPerChannel : 10000,
+          delayMs: Number.isFinite(delayMs) ? delayMs : 300,
+          onlyMissing,
+          dryRun,
+          channelIds
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 409) {
+        showToast(data.error || 'A job is already running.', 'error');
+        if (data.jobId) maintStartPolling(data.jobId);
+        else if (btn) btn.disabled = false;
+        return;
+      }
+      if (!res.ok) {
+        showToast(data.error || 'Failed to start backfill.', 'error');
+        if (btn) btn.disabled = false;
+        return;
+      }
+      if (data.jobId) maintStartPolling(data.jobId);
+    } catch {
+      showToast('Network error starting backfill.', 'error');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function maintCheckActiveJob() {
+    if (maintSeedPollTimer) return;
+    try {
+      const res = await fetch('/api/maintenance/seed-last-messages/active');
+      if (!res.ok) return;
+      const { active, jobId } = await res.json();
+      if (active && jobId) {
+        document.getElementById('maintSeedProgressWrap')?.classList.remove('hidden');
+        maintStartPolling(jobId);
+      }
+    } catch (_) {}
+  }
+
   // Attach save handlers for non-hierarchical sections
   document.querySelectorAll('.save-btn').forEach(btn => {
     if (btn.id !== 'sendMessageBtn') btn.addEventListener('click', () => saveSection(btn));
@@ -1938,6 +2981,18 @@
     document.querySelectorAll('.page-section').forEach(s => {
         s.classList.toggle('hidden', `#${s.id}` !== hash);
     });
+    
+    if (hash === '#users') {
+        const tbody = document.getElementById('userTableBody');
+        if (tbody && tbody.children.length === 1 && tbody.innerHTML.includes('Loading')) {
+            loadUserSummary(false);
+        }
+    }
+
+    if (hash === '#maintenance') {
+      loadMaintenanceChannels();
+      maintCheckActiveJob();
+    }
     
     // Smooth scroll to top on section change
     window.scrollTo({ top: 0, behavior: 'smooth' });

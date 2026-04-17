@@ -690,6 +690,81 @@ async function isFormerMember(userId) {
   }
 }
 
+// ── Inactivity Tracking ──────────────────────────────────────────────────────
+
+const userActivityCache = new Map(); // Debounce cache: { userId: timestamp }
+
+/**
+ * Updates the user's last message timestamp.
+ * Uses an in-memory 5-minute debounce to avoid spamming the database.
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<void>}
+ */
+async function updateLastMessageTime(userId) {
+  try {
+    const now = Date.now();
+    const lastUpdate = userActivityCache.get(userId) || 0;
+    
+    // Only write to SQLite at most once every 5 minutes per user
+    if (now - lastUpdate > 300000) {
+      await keyv.set(`last_message:${userId}`, now);
+      userActivityCache.set(userId, now);
+    }
+  } catch (err) {
+    logger.error('Error updating last message time.', { err, userId });
+  }
+}
+
+/**
+ * Gets a user's last message timestamp from the database.
+ * @param {string} userId - The Discord user ID
+ * @returns {Promise<number|null>} The timestamp or null if unrecorded
+ */
+async function getLastMessageTime(userId) {
+  try {
+    const ts = await keyv.get(`last_message:${userId}`);
+    return ts || null;
+  } catch (err) {
+    logger.error('Error getting last message time.', { err, userId });
+    return null;
+  }
+}
+
+/**
+ * Gets all stored last message timestamps using direct SQLite connection.
+ * @returns {Promise<Object>} Map of { userId: timestamp }
+ */
+async function getAllLastMessageTimes() {
+  try {
+    const Database = require('better-sqlite3');
+    const db = new Database(sqlitePath, { readonly: true });
+    
+    const rows = db.prepare(`
+      SELECT key, value 
+      FROM keyv 
+      WHERE key LIKE 'main:last_message:%'
+    `).all();
+    
+    db.close();
+    
+    const activityMap = {};
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.value);
+        const timestamp = parsed?.value || parsed;
+        const userId = row.key.replace('main:last_message:', '');
+        if (userId && timestamp) {
+          activityMap[userId] = timestamp;
+        }
+      } catch (e) {}
+    }
+    return activityMap;
+  } catch (err) {
+    logger.error('Error bulk fetching last message times.', { err });
+    return {};
+  }
+}
+
 module.exports = {
   initializeDatabase,
   getValue,
@@ -712,5 +787,8 @@ module.exports = {
   isFormerMember,
   incrementMessageCount,
   getMessageCount,
-  deleteMessageCount
+  deleteMessageCount,
+  updateLastMessageTime,
+  getLastMessageTime,
+  getAllLastMessageTimes
 };

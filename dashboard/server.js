@@ -61,8 +61,8 @@ function createDashboard(client, options = {}) {
   app.use(ejsLayouts);
   app.set('layout', 'layout');
 
-  // Body parsing
-  app.use(express.json());
+  // Body parsing (large limit: database JSON import from Maintenance)
+  app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true }));
 
   // Sessions — store in memory (acceptable for single-admin bot dashboard)

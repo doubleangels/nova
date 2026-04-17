@@ -10,9 +10,24 @@
   <% if (botIcon) { %>
     <link rel="icon" type="image/png" href="<%= botIcon %>" />
     <% } %>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       <!-- Apply saved theme before paint to prevent flash -->
       <script>(function () { var t = localStorage.getItem('dashboard-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })()</script>
       <script src="https://cdn.tailwindcss.com"></script>
+      <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              fontFamily: {
+                sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                mono: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+              },
+            },
+          },
+        };
+      </script>
       <style>
         /* ── Theme tokens ────────────────────────────────────────────────────── */
         :root {
@@ -89,9 +104,14 @@
         }
 
         /* ── Shell ───────────────────────────────────────────────────────────── */
+        html {
+          font-family: Inter, ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
         body {
           background-color: var(--c-bg) !important;
           color: var(--c-text);
+          font-family: inherit;
         }
 
         #sidebar,
@@ -208,7 +228,7 @@
       </style>
 </head>
 
-<body class="h-full antialiased overflow-x-hidden">
+<body class="h-full antialiased overflow-x-hidden font-sans">
 
   <!-- Ambient background -->
   <div class="ambient-blob blob-1"></div>

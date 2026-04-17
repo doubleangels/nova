@@ -2,7 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
-const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
+const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount, updateLastMessageTime } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 
@@ -52,6 +52,12 @@ module.exports = {
             await message.reply('Pong!');
             break;
         }
+      }
+
+      if (!message.author?.bot && !message.webhookId) {
+        updateLastMessageTime(message.author.id).catch(err => {
+            logger.error('Background last message tracking error', { err });
+        });
       }
 
       await processUserMessage(message);

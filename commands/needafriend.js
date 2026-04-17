@@ -1,5 +1,5 @@
 const path = require('path');
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
@@ -98,7 +98,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('needafriend')
     .setDescription('Comment on the r/needafriend weekly Discord server advertisement thread.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDefaultMemberPermissions(null),
 
   async execute(interaction) {
     if (!isRedditConfigured()) {
