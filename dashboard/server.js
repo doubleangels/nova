@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const ejsLayouts = require('express-ejs-layouts');
 const path = require('path');
+const crypto = require('crypto');
 const logger = require('../logger')('dashboard');
 
 // ─── SQLite-backed session store ─────────────────────────────────────────────
@@ -66,9 +67,13 @@ function createDashboard(client, options = {}) {
   app.use(express.urlencoded({ extended: true }));
 
   // Sessions — store in memory (acceptable for single-admin bot dashboard)
-  const sessionSecret = process.env.DASHBOARD_SESSION_SECRET;
+  const isDev = (process.env.NODE_ENV || '').toLowerCase() === 'development';
+  const sessionSecret = process.env.DASHBOARD_SESSION_SECRET || (isDev ? crypto.randomBytes(32).toString('hex') : '');
   if (!sessionSecret) {
-    logger.warn('DASHBOARD_SESSION_SECRET is not set — using insecure fallback. Set it in Doppler.');
+    throw new Error('DASHBOARD_SESSION_SECRET is required in non-development environments.');
+  }
+  if (!process.env.DASHBOARD_SESSION_SECRET && isDev) {
+    logger.warn('DASHBOARD_SESSION_SECRET is not set; using an ephemeral development-only secret.');
   }
   app.use(session({
     secret: sessionSecret || 'nova-dashboard-insecure-fallback',
@@ -77,12 +82,50 @@ function createDashboard(client, options = {}) {
     store: new KeyvSessionStore(),
     cookie: {
       httpOnly: true,
+      sameSite: 'lax',
       // For OAuth state to survive redirect, cookie security must match the URL scheme.
       // Default to secure only when DASHBOARD_BASE_URL is https://, with env override.
       secure: useSecureCookie,
       maxAge: SESSION_TTL_MS,
     },
   }));
+
+  // CSRF token bootstrap for server-rendered pages and XHR.
+  app.use((req, res, next) => {
+    if (req.session && !req.session.csrfToken) {
+      req.session.csrfToken = crypto.randomBytes(32).toString('hex');
+    }
+    res.locals.csrfToken = req.session?.csrfToken || '';
+    next();
+  });
+
+  function isUnsafeMethod(method) {
+    return method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+  }
+
+  function isSameOrigin(req) {
+    const origin = req.get('origin');
+    if (!origin) return true;
+    try {
+      const u = new URL(origin);
+      return u.host === req.get('host') && u.protocol === `${req.protocol}:`;
+    } catch {
+      return false;
+    }
+  }
+
+  // CSRF + origin validation for mutating dashboard API routes.
+  app.use('/api', (req, res, next) => {
+    if (!isUnsafeMethod(req.method)) return next();
+    if (!isSameOrigin(req)) {
+      return res.status(403).json({ error: 'Cross-site requests are not allowed.' });
+    }
+    const token = req.get('x-csrf-token') || req.body?._csrf;
+    if (!token || token !== req.session?.csrfToken) {
+      return res.status(403).json({ error: 'Invalid CSRF token.' });
+    }
+    next();
+  });
 
   // Make the Discord client available in every request
   app.use((req, _res, next) => {

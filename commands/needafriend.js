@@ -1,5 +1,5 @@
 const path = require('path');
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
@@ -101,6 +101,13 @@ module.exports = {
     .setDefaultMemberPermissions(null),
 
   async execute(interaction) {
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({
+        content: '⚠️ Only server administrators can run this command.',
+        flags: MessageFlags.Ephemeral
+      });
+    }
+
     if (!isRedditConfigured()) {
       return interaction.reply({
         content: '⚠️ This command is not properly configured. Please contact an administrator.',

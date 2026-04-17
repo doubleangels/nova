@@ -129,6 +129,84 @@ The following environment variables can be set in your `docker-compose.yml`:
 
 Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
 
+## 🏗️ Project Overview
+
+Nova is split into two primary runtime surfaces:
+
+- **Discord Bot Runtime** (`index.js`, `commands/`, `events/`, `utils/`): slash commands, moderation workflows, reminders, invite tracking, and external API integrations.
+- **Dashboard Runtime** (`dashboard/`): authenticated web UI for server settings, maintenance operations, analytics, and direct data management.
+
+### Core Architecture
+
+- **Entry point:** `index.js` initializes the Discord client, loads all commands/events dynamically, and starts the dashboard when dashboard auth secrets are present.
+- **Command layer:** files under `commands/` implement slash commands and command-specific validation/permission logic.
+- **Event layer:** files under `events/` handle Discord events (`ready`, `interactionCreate`, `messageCreate`, member join/leave, invite lifecycle, reactions).
+- **Data layer:** `utils/database.js` uses Keyv + SQLite persistence for bot settings, tracking keys, reminders, sessions, and analytics state.
+- **Maintenance layer:** `utils/maintenanceService.js`, `utils/novaKeyvBackup.js`, and `utils/seedLastMessagesFromHistory.js` provide storage reporting, SQLite operations, backup validation/import, and backfill jobs.
+
+## 🖥️ Dashboard Web UI
+
+The dashboard is organized by functional sections in the left navigation:
+
+- **Overview**
+  - Status & Health
+- **Configuration**
+  - Bot Settings
+  - Moderation
+  - Reminders
+  - Role Configuration
+- **Social & Fun**
+  - Social & Fun settings
+- **Maintenance**
+  - Deep Health
+  - Keyv Storage Report
+  - SQLite maintenance tools
+  - Discord alignment / resync
+  - Cache controls
+  - Seed-last-message history backfill with stop control
+  - Session hygiene tools
+- **Tools**
+  - DB Explorer
+  - Invite Manager
+  - Message Center
+  - User Manager + inactivity prune workflow
+
+### Dashboard API Surface
+
+`dashboard/routes/api.js` currently provides endpoints for:
+
+- settings read/write
+- guild roles/channels fetches
+- database raw operations
+- database backup export + safe JSON import validation/apply
+- health and deep-health metrics
+- reminder status/fix endpoints
+- invite listing/creation/revocation/tagging
+- user summary + inactivity dry-run/execute
+- maintenance jobs (seed history status/start/stop, cache clear, SQLite ops, cleanup, session purge, Discord resync)
+
+## 🔒 Security Model
+
+Current security behavior in the project:
+
+- Dashboard OAuth requires Discord Administrator permission in the target guild.
+- `DASHBOARD_SESSION_SECRET` is required outside development; no insecure production fallback.
+- Session cookies are `HttpOnly` and `SameSite=Lax`; `Secure` follows HTTPS base URL (or explicit override).
+- OAuth state uses cryptographically secure random generation.
+- Session ID rotation occurs after successful OAuth login.
+- CSRF/origin protections are enforced for mutating dashboard API requests.
+- Logout uses CSRF-protected `POST` flow.
+- High-risk posting commands (`/promote`, `/needafriend`) now enforce runtime administrator checks.
+- High-risk dashboard render paths were hardened to reduce untrusted HTML injection risk.
+
+## 🛠️ Maintenance & Data Safety
+
+- JSON database import is validated before write using strict backup format checks.
+- Storage report and deep health diagnostics are exposed in dashboard maintenance.
+- SQLite maintenance supports analyze/optimize/vacuum operations.
+- Session cleanup supports both expired-session cleanup and full session invalidation.
+- Seed-last-message backfill is cancelable from the dashboard and designed for large history scans.
+
 ## 🎯 Features
 
 ### Multi-Platform Integration
@@ -150,6 +228,7 @@ Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` w
 - **Troll Mode**: Kick new accounts that don't meet age requirements
 - **Spam Mode**: Enhanced spam detection and moderation
 - **Noobies Management**: Automatically assigned to new members without the primary role and automatically removed once they participate by sending 100 messages.
+- **Dashboard Operations**: Live health telemetry, config editing, invite management, DB explorer, user activity tooling, and maintenance actions from web UI.
 
 ### Information & Entertainment
 

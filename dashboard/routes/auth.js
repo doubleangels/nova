@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const crypto = require('crypto');
 const config = require('../../config');
 const logger = require('../../logger')('dashboard:auth');
 
@@ -33,7 +34,7 @@ function getRedirectUri(req) {
 router.get('/discord', (req, res) => {
   const clientId = config.clientId;
   const redirectUri = encodeURIComponent(getRedirectUri(req));
-  const state = Math.random().toString(36).slice(2);
+  const state = crypto.randomBytes(32).toString('hex');
   req.session.oauthState = state;
 
   const url =
@@ -121,20 +122,23 @@ router.get('/callback', async (req, res) => {
       return res.redirect('/login?error=not_admin');
     }
 
-    // Store in session
-    req.session.user = {
-      id:            user.id,
-      username:      user.username,
-      global_name:   user.global_name,
-      discriminator: user.discriminator,
-      avatar:        user.avatar,
-    };
-
-    logger.info('Admin logged in to dashboard.', { userId: user.id, username: user.username });
-
+    // Rotate session ID after auth to reduce fixation risk.
     const returnTo = req.session.returnTo || '/';
-    delete req.session.returnTo;
-    res.redirect(returnTo);
+    req.session.regenerate((regenErr) => {
+      if (regenErr) {
+        logger.error('Session regenerate failed after OAuth login.', { err: regenErr });
+        return res.redirect('/login?error=auth_failed');
+      }
+      req.session.user = {
+        id:            user.id,
+        username:      user.username,
+        global_name:   user.global_name,
+        discriminator: user.discriminator,
+        avatar:        user.avatar,
+      };
+      logger.info('Admin logged in to dashboard.', { userId: user.id, username: user.username });
+      res.redirect(returnTo);
+    });
 
   } catch (err) {
     logger.error('OAuth callback error.', { err: err.response?.data || err.message });
@@ -145,12 +149,22 @@ router.get('/callback', async (req, res) => {
 /**
  * Logout — destroys the session.
  */
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
+  const token = req.get('x-csrf-token') || req.body?._csrf;
+  if (!token || token !== req.session?.csrfToken) {
+    logger.warn('Rejected logout with invalid CSRF token.');
+    return res.status(403).redirect('/login?error=state_mismatch');
+  }
   const userId = req.session.user?.id;
   req.session.destroy(() => {
     logger.info('Admin logged out of dashboard.', { userId });
     res.redirect('/login');
   });
+});
+
+// Legacy GET logout endpoint intentionally disabled.
+router.get('/logout', (_req, res) => {
+  res.status(405).redirect('/login');
 });
 
 module.exports = router;

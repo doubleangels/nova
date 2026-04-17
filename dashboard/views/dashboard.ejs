@@ -694,10 +694,7 @@
         <p class="text-[9px] text-[var(--c-text-dim)] mt-1.5">Uncheck <strong class="text-[var(--c-text-muted)]">All channels</strong> to scan only the boxes you tick.</p>
       </div>
       <div class="flex flex-wrap gap-4 items-center">
-        <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
-          <input type="checkbox" id="maintOnlyMissing" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
-          Only Fill Missing Keys
-        </label>
+        <p class="text-xs text-[var(--c-text-dim)]">Only missing keys are written (existing values are never overwritten).</p>
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
           Dry Run (No Writes)
@@ -1279,6 +1276,15 @@
     }
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function getFieldValue(id) {
     const el = document.getElementById(id);
     if (!el) return undefined;
@@ -1640,32 +1646,42 @@
     tbody.innerHTML = allInvites.map(inv => {
         const expires = inv.expiresAt ? new Date(inv.expiresAt).toLocaleString() : 'Never';
         const isExpiringSoon = inv.expiresAt && (new Date(inv.expiresAt) - new Date() < 3600000); // 1hr
+        const safeCode = escapeHtml(inv.code);
+        const safeTagName = escapeHtml(inv.tagName || '');
+        const safeInviter = escapeHtml(inv.inviter);
+        const safeChannel = escapeHtml(inv.channel);
+        const safeUses = escapeHtml(inv.uses);
+        const safeMaxUses = escapeHtml(inv.maxUses || '∞');
+        const safeExpires = escapeHtml(expires);
+        const copyUrlArg = JSON.stringify(String(inv.url || ''));
+        const codeArg = JSON.stringify(String(inv.code || ''));
+        const tagArg = JSON.stringify(String(inv.tagName || ''));
         
         return `
             <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
                 <td class="px-5 py-4">
                     <div class="flex items-center gap-2">
-                        <span class="text-sm font-mono font-bold text-[var(--c-accent)]">${inv.code}</span>
-                        ${inv.tagName ? `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase tracking-wider">${inv.tagName}</span>` : ''}
+                        <span class="text-sm font-mono font-bold text-[var(--c-accent)]">${safeCode}</span>
+                        ${inv.tagName ? `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase tracking-wider">${safeTagName}</span>` : ''}
                     </div>
-                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1">Added by ${inv.inviter}</div>
+                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1">Added by ${safeInviter}</div>
                 </td>
-                <td class="px-5 py-4 text-xs font-medium text-[var(--c-label)]">#${inv.channel}</td>
+                <td class="px-5 py-4 text-xs font-medium text-[var(--c-label)]">#${safeChannel}</td>
                 <td class="px-5 py-4 text-xs">
-                    <span class="font-bold text-[var(--c-label)]">${inv.uses}</span>
-                    <span class="text-[var(--c-text-dim)]">/ ${inv.maxUses || '∞'}</span>
+                    <span class="font-bold text-[var(--c-label)]">${safeUses}</span>
+                    <span class="text-[var(--c-text-dim)]">/ ${safeMaxUses}</span>
                 </td>
                 <td class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-[var(--c-accent)] font-bold' : 'text-[var(--c-text-dim)]'}">
-                    ${expires}
+                    ${safeExpires}
                 </td>
                 <td class="px-5 py-4 text-right space-x-1 whitespace-nowrap">
-                    <button onclick="copyInvite('${inv.url}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Copy Link">
+                    <button onclick="copyInvite(${copyUrlArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Copy Link">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8h3m-3 4h3m-6-4h.01M9 17h.01"/></svg>
                     </button>
-                    <button onclick="promptEditTag('${inv.code}', '${inv.tagName || ''}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Manage Tag">
+                    <button onclick="promptEditTag(${codeArg}, ${tagArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Manage Tag">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                     </button>
-                    <button onclick="deleteInvite('${inv.code}')" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors" title="Revoke Invite">
+                    <button onclick="deleteInvite(${codeArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors" title="Revoke Invite">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </td>
@@ -1682,7 +1698,7 @@
     if (channelSelect.options.length === 0) {
         const res = await fetch('/api/guild/channels');
         const channels = await res.json();
-        channelSelect.innerHTML = channels.map(c => `<option value="${c.id}">#${c.name}</option>`).join('');
+        channelSelect.innerHTML = channels.map(c => `<option value="${escapeHtml(c.id)}">#${escapeHtml(c.name)}</option>`).join('');
     }
 
     modal.classList.remove('hidden');
@@ -2338,8 +2354,8 @@
               execBtn.classList.remove('opacity-50', 'cursor-not-allowed');
               tbody.innerHTML = data.targets.map(t => `
                   <tr class="hover:bg-white/[0.02] transition-colors">
-                      <td class="px-4 py-2 font-medium text-[var(--c-text)]">${t.displayName} <span class="text-[10px] text-[var(--c-text-dim)]">@${t.username}</span></td>
-                      <td class="px-4 py-2 text-right text-red-400 opacity-80">${t.reason}</td>
+                      <td class="px-4 py-2 font-medium text-[var(--c-text)]">${escapeHtml(t.displayName)} <span class="text-[10px] text-[var(--c-text-dim)]">@${escapeHtml(t.username)}</span></td>
+                      <td class="px-4 py-2 text-right text-red-400 opacity-80">${escapeHtml(t.reason)}</td>
                   </tr>
               `).join('');
           } else {
@@ -2407,8 +2423,8 @@
 
     // 2. Render Namespace Sidebar
     nsList.innerHTML = namespaces.map(ns => `
-        <button type="button" onclick="switchNamespace('${ns}')" class="flex w-full lg:w-full min-w-[7.5rem] shrink-0 snap-start items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm transition-all ${curNamespace === ns ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold' : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)]'}">
-            <span class="truncate">${ns}</span>
+        <button type="button" onclick="switchNamespace(${JSON.stringify(ns)})" class="flex w-full lg:w-full min-w-[7.5rem] shrink-0 snap-start items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm transition-all ${curNamespace === ns ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold' : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)]'}">
+            <span class="truncate">${escapeHtml(ns)}</span>
             <span class="text-[10px] opacity-60 bg-black/20 px-1.5 py-0.5 rounded-full shrink-0">${nsCounts[ns]}</span>
         </button>
     `).join('') || '<div class="p-4 text-center text-xs text-[var(--c-text-dim)] w-full min-w-[200px] flex-shrink-0">No namespaces found</div>';
@@ -2436,7 +2452,7 @@
     });
 
     if (sortedCats.length === 0) {
-        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border-dashed">No entries found in "${curNamespace}" match your search.</div>`;
+        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border-dashed">No entries found in "${escapeHtml(curNamespace)}" match your search.</div>`;
         return;
     }
 
@@ -2446,10 +2462,10 @@
         
         return `
             <div class="card p-0 overflow-hidden border-[var(--c-card-border)]">
-                <button onclick="toggleCategory('${cat}')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-card-border)]" data-open="${isOpen}">
+                <button onclick="toggleCategory(${JSON.stringify(cat)})" class="w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-card-border)]" data-open="${isOpen}">
                     <div class="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--c-accent)] transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                        <span class="text-xs font-bold uppercase tracking-wider text-[var(--c-label)]">${cat}</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-[var(--c-label)]">${escapeHtml(cat)}</span>
                         <span class="text-[10px] text-[var(--c-text-dim)] font-normal">(${items.length} items)</span>
                     </div>
                 </button>
@@ -2464,8 +2480,8 @@
                                     <div class="px-3 sm:px-5 py-3 sm:py-3.5 hover:bg-[var(--c-input)]/40 transition-colors group">
                                         <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] gap-3 lg:gap-4 items-stretch lg:items-start">
                                             <div class="min-w-0 lg:pl-4">
-                                                <div class="text-sm font-medium text-[var(--c-label)] break-words">${cleanKey}</div>
-                                                <div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5 break-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">full: ${e.key}</div>
+                                                <div class="text-sm font-medium text-[var(--c-label)] break-words">${escapeHtml(cleanKey)}</div>
+                                                <div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5 break-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">full: ${escapeHtml(e.key)}</div>
                                             </div>
                                             <div class="relative flex flex-col sm:flex-row items-stretch sm:items-stretch gap-2 min-w-0 h-full">
                                                 <div id="${statusId}" class="hidden sm:block absolute sm:left-0 sm:top-3 w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] opacity-0 transition-opacity duration-300 sm:-translate-x-4" title="Synced"></div>
@@ -2475,7 +2491,7 @@
                                                         rows="1"
                                                         oninput="autoResize(this); scheduleSave(${fullKeyJs}, this.value)"
                                                         onfocus="autoResize(this)"
-                                                    >${displayDbValue(e.value)}</textarea>
+                                                    >${escapeHtml(displayDbValue(e.value))}</textarea>
                                                 </div>
                                                 <button type="button" onclick="deleteDbEntry(${fullKeyJs})" class="p-2.5 min-h-[44px] min-w-[44px] sm:min-w-0 sm:min-h-0 sm:p-2 self-end sm:self-start text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-input)] rounded-lg transition-all sm:opacity-0 sm:group-hover:opacity-100 shrink-0" title="Delete entry">
                                                     <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -3114,7 +3130,6 @@
     const btn = document.getElementById('maintStartSeedBtn');
     const maxPerChannel = parseInt(document.getElementById('maintMaxPerChannel')?.value, 10);
     const delayMs = parseInt(document.getElementById('maintDelayMs')?.value, 10);
-    const onlyMissing = document.getElementById('maintOnlyMissing')?.checked;
     const dryRun = document.getElementById('maintDryRun')?.checked;
     const useAllChannels = document.getElementById('maintUseAllChannels')?.checked !== false;
     let channelIds;
@@ -3150,7 +3165,7 @@
         body: JSON.stringify({
           maxPerChannel: Number.isFinite(maxPerChannel) ? maxPerChannel : 10000,
           delayMs: Number.isFinite(delayMs) ? delayMs : 300,
-          onlyMissing,
+          onlyMissing: true,
           dryRun,
           channelIds
         })

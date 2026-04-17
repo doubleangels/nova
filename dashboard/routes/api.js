@@ -1184,7 +1184,7 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
     Math.max(100, parseInt(String(body.maxPerChannel), 10) || DEFAULT_MAX_PER_CHANNEL)
   );
   const delayMs = Math.min(5000, Math.max(0, parseInt(String(body.delayMs), 10) || DEFAULT_DELAY_MS));
-  const onlyMissing = body.onlyMissing === true || body.onlyMissing === 'true';
+  const onlyMissing = true;
   const dryRun = body.dryRun === true || body.dryRun === 'true';
   let channelIds = null;
   if (Array.isArray(body.channelIds) && body.channelIds.length > 0) {

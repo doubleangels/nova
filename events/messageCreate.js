@@ -2,7 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
-const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount, updateLastMessageTime } = require('../utils/database');
+const { getValue, incrementMessageCount, deleteMessageCount, getMessageCount, updateLastMessageTime } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 

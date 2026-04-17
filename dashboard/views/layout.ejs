@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="<%= csrfToken || '' %>" />
   <title>
     <%= title %> — Nova Dashboard
   </title>
@@ -279,6 +280,29 @@
   </div>
 
   <script>
+    // ── CSRF wrapper for mutating fetch calls ──────────────────────────────────
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const _nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      const req = new Request(input, init);
+      const method = String(req.method || 'GET').toUpperCase();
+      const isUnsafe = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+      const isLocalUrl = (() => {
+        try {
+          const u = new URL(req.url, window.location.origin);
+          return u.origin === window.location.origin;
+        } catch {
+          return false;
+        }
+      })();
+      if (!isUnsafe || !isLocalUrl || !csrfToken) {
+        return _nativeFetch(input, init);
+      }
+      const headers = new Headers(init.headers || req.headers || {});
+      if (!headers.has('x-csrf-token')) headers.set('x-csrf-token', csrfToken);
+      return _nativeFetch(input, { ...init, headers });
+    };
+
     // ── Theme ──────────────────────────────────────────────────────────────────
     function applyTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);

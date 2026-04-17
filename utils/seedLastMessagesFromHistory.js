@@ -178,7 +178,7 @@ function resolveScannableChannels(guild, opts = {}) {
  * @param {number} [params.maxPerChannel]
  * @param {number} [params.delayMs]
  * @param {string[] | null} [params.channelIds]
- * @param {boolean} [params.onlyMissing]
+ * @param {boolean} [params.onlyMissing=true] - Keep true to avoid overwriting existing data.
  * @param {boolean} [params.dryRun]
  * @param {AbortSignal | null} [params.signal]
  * @param {(evt: object) => void | Promise<void>} [params.onProgress]
@@ -189,7 +189,7 @@ async function runSeedLastMessages({
   maxPerChannel = DEFAULT_MAX_PER_CHANNEL,
   delayMs = DEFAULT_DELAY_MS,
   channelIds = null,
-  onlyMissing = false,
+  onlyMissing = true,
   dryRun = false,
   signal = null,
   onProgress = async () => {}

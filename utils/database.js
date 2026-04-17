@@ -676,6 +676,44 @@ async function deleteMessageCount(userId) {
 }
 
 /**
+ * Removes stale mute-mode tracking entries for a user.
+ * Supports both current and legacy key names to keep cleanup resilient.
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
+async function removeMuteModeUser(userId) {
+  const keys = [
+    `mute_mode:${userId}`,
+    `mute_mode_user:${userId}`,
+    `mute_mode:user:${userId}`
+  ];
+  try {
+    await Promise.all(keys.map((k) => keyv.delete(k)));
+  } catch (error) {
+    logger.error('Error removing mute-mode user tracking.', { err: error, userId });
+  }
+}
+
+/**
+ * Removes stale spam-mode join-time tracking entries for a user.
+ * Supports both current and legacy key names to keep cleanup resilient.
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
+async function removeSpamModeJoinTime(userId) {
+  const keys = [
+    `spam_mode_join_time:${userId}`,
+    `spam_mode_join:${userId}`,
+    `spam_mode:join_time:${userId}`
+  ];
+  try {
+    await Promise.all(keys.map((k) => keyv.delete(k)));
+  } catch (error) {
+    logger.error('Error removing spam-mode join-time tracking.', { err: error, userId });
+  }
+}
+
+/**
  * Returns whether the user has left the guild before (returning member).
  * @param {string} userId - User ID
  * @returns {Promise<boolean>}
@@ -788,6 +826,8 @@ module.exports = {
   incrementMessageCount,
   getMessageCount,
   deleteMessageCount,
+  removeMuteModeUser,
+  removeSpamModeJoinTime,
   updateLastMessageTime,
   getLastMessageTime,
   getAllLastMessageTimes
