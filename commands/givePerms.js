@@ -90,6 +90,16 @@ module.exports = {
                     flags: MessageFlags.Ephemeral
                 });
             }
+            const requesterMember = interaction.member;
+            if (
+                !requesterMember ||
+                (targetMember.roles.highest.position >= requesterMember.roles.highest.position && interaction.guild.ownerId !== requesterMember.id)
+            ) {
+                return await interaction.editReply({
+                    content: "⚠️ You can't modify a member with an equal or higher role.",
+                    flags: MessageFlags.Ephemeral
+                });
+            }
             
             const colorValidationResult = validateAndNormalizeColor(colorHex, logger);
             if (!colorValidationResult.success) {
@@ -242,6 +252,7 @@ module.exports = {
         }
         
         const botMember = interaction.guild.members.me;
+        const requesterMember = interaction.member;
         const newRolePosition = positionRole.position + 1;
         // Bot can only assign roles that are below its highest role; new role must be strictly below bot.
         if (botMember.roles.highest.position <= newRolePosition) {
@@ -253,6 +264,12 @@ module.exports = {
             return {
                 success: false,
                 message: "⚠️ I don't have permission to create or assign roles. My highest role must be above the reference role so I can assign the new role."
+            };
+        }
+        if (requesterMember && requesterMember.roles.highest.position <= newRolePosition && interaction.guild.ownerId !== requesterMember.id) {
+            return {
+                success: false,
+                message: "⚠️ You can't create or assign a role above your highest role."
             };
         }
 

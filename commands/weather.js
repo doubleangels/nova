@@ -196,7 +196,12 @@ module.exports = {
       });
       const requestUrl = `${url}?${params.toString()}`;
       
-      logger.debug("Making PirateWeather API request.", { requestUrl });
+      logger.debug("Making PirateWeather API request.", {
+        endpoint: 'forecast',
+        lat,
+        lon,
+        units: params.get('units')
+      });
       
       const response = await axios.get(requestUrl, { timeout: 5000 });
       

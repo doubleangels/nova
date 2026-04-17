@@ -1,5 +1,5 @@
 const { captureError, closeSentry } = require('./instrument');
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Options } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
@@ -17,14 +17,28 @@ const BOT_INTENTS = [
 
 /** @type {Client} Discord client instance */
 const client = new Client({
-  intents: BOT_INTENTS
+  intents: BOT_INTENTS,
+  makeCache: Options.cacheWithLimits({
+    MessageManager: 100,
+    ReactionManager: 50,
+    ReactionUserManager: 0,
+    PresenceManager: 0,
+    ThreadManager: 25,
+  }),
+  sweepers: {
+    messages: {
+      interval: 1800,
+      lifetime: 900,
+    },
+    users: {
+      interval: 3600,
+      filter: () => (user) => user.bot === false,
+    },
+  },
 });
 
 /** @type {Collection<string, Command>} Collection of registered commands */
 client.commands = new Collection();
-
-/** @type {Map<string, Array>} Map of conversation histories for users */
-client.conversationHistory = new Map();
 
 const deployCommands = require('./deploy-commands');
 deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));

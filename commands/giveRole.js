@@ -150,6 +150,19 @@ module.exports = {
      */
     async assignRole(interaction, role, targetMember) {
         const botMember = interaction.guild.members.me;
+        const requesterMember = interaction.member;
+        if (!requesterMember || requesterMember.roles.highest.position <= role.position) {
+            return {
+                success: false,
+                message: "⚠️ You can't assign a role that is equal to or above your highest role."
+            };
+        }
+        if (targetMember.roles.highest.position >= requesterMember.roles.highest.position && interaction.guild.ownerId !== requesterMember.id) {
+            return {
+                success: false,
+                message: "⚠️ You can't modify roles for a member with an equal or higher role."
+            };
+        }
         if (botMember.roles.highest.position <= role.position) {
             logger.warn("Bot's highest role is not high enough to assign the specified role.", {
                 botHighestRolePosition: botMember.roles.highest.position,

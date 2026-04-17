@@ -31,6 +31,47 @@ reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error occ
 
 /** Interval for r/needafriend weekly comment reminder (7 days). */
 const NEEDAFRIEND_REMINDER_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_SET_TIMEOUT_MS = 2_147_483_647;
+/** @type {Map<string, { reminderId: string, timeout: NodeJS.Timeout }>} */
+const scheduledReminderTimers = new Map();
+
+function clearScheduledTimer(type) {
+  const prev = scheduledReminderTimers.get(type);
+  if (prev?.timeout) clearTimeout(prev.timeout);
+  scheduledReminderTimers.delete(type);
+}
+
+function reminderMessageForType(type, reminderRole) {
+  if (type === 'promote') {
+    return `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`;
+  }
+  if (type === 'needafriend') {
+    return `🔔 <@&${reminderRole}> Time for the r/needafriend weekly ad thread! Use \`/needafriend\` to comment.`;
+  }
+  return `🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`;
+}
+
+async function scheduleReminderSend(type, reminderId, delay, channel, reminderRole) {
+  clearScheduledTimer(type);
+  const safeDelay = Math.max(0, Math.min(Number(delay) || 0, MAX_SET_TIMEOUT_MS));
+  const timeout = setTimeout(async () => {
+    try {
+      const list = await getReminderIds(type);
+      if (!list.includes(reminderId)) return;
+      const reminder = await reminderKeyv.get(`reminder:${reminderId}`);
+      if (!reminder) return;
+      await channel.send(reminderMessageForType(type, reminderRole));
+      await reminderKeyv.delete(`reminder:${reminderId}`);
+      await removeReminderId(type, reminderId);
+    } catch (err) {
+      logger.error('Error while sending scheduled reminder', { err, type, reminderId });
+    } finally {
+      const current = scheduledReminderTimers.get(type);
+      if (current?.reminderId === reminderId) scheduledReminderTimers.delete(type);
+    }
+  }, safeDelay);
+  scheduledReminderTimers.set(type, { reminderId, timeout });
+}
 
 /**
  * Helper function to get all reminder IDs for a type
@@ -189,7 +230,7 @@ async function getNextReminderTimeAfterCleanup(type) {
         continue;
       }
 
-      if (remindAt <= now) {
+      if (!remindAt.isAfter(now)) {
         idsToRemove.push(id);
       }
     }
@@ -413,36 +454,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
       });
     }
 
-    setTimeout(async () => {
-      try {
-        let reminderMessage;
-        if (type === 'promote') {
-          reminderMessage = `🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`;
-        } else if (type === 'needafriend') {
-          reminderMessage = `🔔 <@&${reminderRole}> Time for the r/needafriend weekly ad thread! Use \`/needafriend\` to comment.`;
-        } else {
-          reminderMessage = `🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`;
-        }
-
-        await channel.send(reminderMessage);
-        logger.debug("Sent scheduled reminder ping:", {
-          role: reminderRole,
-          channelId: reminderChannelId,
-          type
-        });
-
-        await reminderKeyv.delete(`reminder:${reminderId}`);
-        await removeReminderId(type, reminderId);
-        logger.debug("Cleaned up sent reminder from recovery table.", {
-          reminderId: reminderId
-        });
-      } catch (err) {
-        logger.error("Error while sending scheduled reminder", {
-          err: err,
-          type
-        });
-      }
-    }, delay);
+    await scheduleReminderSend(type, reminderId, delay, channel, reminderRole);
 
   } catch (error) {
     logger.error('Unexpected error in handleReminder.', { err: error });
@@ -677,21 +689,7 @@ async function rescheduleReminder(client) {
       });
       
       if (delay > 0) {
-        setTimeout(async () => {
-          try {
-            await channel.send(`🔔 <@&${reminderRole}> Time to bump the server! Use \`/bump\` to help us grow!`);
-            logger.info("Sent rescheduled bump reminder.", {
-              reminder_id: bumpReminder.reminder_id
-            });
-
-            await reminderKeyv.delete(`reminder:${bumpReminder.reminder_id}`);
-            await removeReminderId('bump', bumpReminder.reminder_id);
-          } catch (err) {
-            logger.error("Error while sending rescheduled bump reminder", {
-              err: err
-            });
-          }
-        }, delay);
+        await scheduleReminderSend('bump', bumpReminder.reminder_id, delay, channel, reminderRole);
         
         logger.info("Successfully rescheduled disboard reminder:", {
           reminder_id: bumpReminder.reminder_id,
@@ -723,21 +721,7 @@ async function rescheduleReminder(client) {
       });
       
       if (delay > 0) {
-        setTimeout(async () => {
-          try {
-            await channel.send(`🔔 <@&${reminderRole}> Time to promote the server! Use \`/promote\` to post on Reddit!`);
-            logger.info("Sent rescheduled promotion reminder.", {
-              reminder_id: promoteReminder.reminder_id
-            });
-
-            await reminderKeyv.delete(`reminder:${promoteReminder.reminder_id}`);
-            await removeReminderId('promote', promoteReminder.reminder_id);
-          } catch (err) {
-            logger.error("Error while sending rescheduled promotion reminder", {
-              err: err
-            });
-          }
-        }, delay);
+        await scheduleReminderSend('promote', promoteReminder.reminder_id, delay, channel, reminderRole);
         
         logger.info("Successfully rescheduled promotion reminder:", {
           reminder_id: promoteReminder.reminder_id,
@@ -769,21 +753,7 @@ async function rescheduleReminder(client) {
       });
 
       if (delay > 0) {
-        setTimeout(async () => {
-          try {
-            await channel.send(`🔔 <@&${reminderRole}> Time for the r/needafriend weekly ad thread! Use \`/needafriend\` to comment.`);
-            logger.info('Sent rescheduled needafriend reminder.', {
-              reminder_id: needafriendReminder.reminder_id
-            });
-
-            await reminderKeyv.delete(`reminder:${needafriendReminder.reminder_id}`);
-            await removeReminderId('needafriend', needafriendReminder.reminder_id);
-          } catch (err) {
-            logger.error('Error while sending rescheduled needafriend reminder', {
-              err: err
-            });
-          }
-        }, delay);
+        await scheduleReminderSend('needafriend', needafriendReminder.reminder_id, delay, channel, reminderRole);
 
         logger.info('Successfully rescheduled needafriend reminder:', {
           reminder_id: needafriendReminder.reminder_id,

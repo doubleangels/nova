@@ -73,6 +73,13 @@ module.exports = {
             if (!member.manageable) {
                 throw new Error("USER_NOT_MANAGEABLE");
             }
+            const requesterMember = interaction.member;
+            if (
+                !requesterMember ||
+                (member.roles.highest.position >= requesterMember.roles.highest.position && interaction.guild.ownerId !== requesterMember.id)
+            ) {
+                throw new Error("USER_NOT_MANAGEABLE");
+            }
 
             if (newNickname && (newNickname.length < 1 || newNickname.length > 32)) {
                 throw new Error("INVALID_NICKNAME_LENGTH");

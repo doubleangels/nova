@@ -39,7 +39,7 @@ For local testing, the dashboard now auto-uses the current localhost host/port i
 
 **2. Add the required Doppler variables** (see the Configuration section below).
 
-**3. Access the dashboard** at `http://<DASHBOARD_BASE_URL>` and sign in with Discord. Only users with the Administrator permission in the server can log in.
+**3. Access the dashboard** at `http://<DASHBOARD_BASE_URL>` and sign in with Discord. Users must have `Administrator` or `Manage Server` permissions in the target guild.
 
 ### Docker Deployment
 
@@ -144,6 +144,15 @@ Nova is split into two primary runtime surfaces:
 - **Data layer:** `utils/database.js` uses Keyv + SQLite persistence for bot settings, tracking keys, reminders, sessions, and analytics state.
 - **Maintenance layer:** `utils/maintenanceService.js`, `utils/novaKeyvBackup.js`, and `utils/seedLastMessagesFromHistory.js` provide storage reporting, SQLite operations, backup validation/import, and backfill jobs.
 
+### Runtime Performance Defaults
+
+Nova now includes memory-conscious runtime defaults for long-lived deployments:
+
+- `discord.js` cache limits are configured in `index.js` using `Options.cacheWithLimits(...)` to cap high-churn managers (messages/reactions/threads/presence-related caches).
+- Sweepers are enabled for message and user caches to reclaim stale objects over time.
+- Dashboard member fetch dedupe avoids retaining large full-member collections in process memory longer than needed.
+- Message pipeline logging trims large content payloads to reduce heap churn and log bloat.
+
 ## 🖥️ Dashboard Web UI
 
 The dashboard is organized by functional sections in the left navigation:
@@ -189,12 +198,13 @@ The dashboard is organized by functional sections in the left navigation:
 
 Current security behavior in the project:
 
-- Dashboard OAuth requires Discord Administrator permission in the target guild.
+- Dashboard OAuth and API access require Discord `Administrator` or `Manage Server` permissions in the target guild, with periodic re-validation to prevent stale sessions retaining elevated dashboard access.
 - `DASHBOARD_SESSION_SECRET` is required outside development; no insecure production fallback.
 - Session cookies are `HttpOnly` and `SameSite=Lax`; `Secure` follows HTTPS base URL (or explicit override).
 - OAuth state uses cryptographically secure random generation.
 - Session ID rotation occurs after successful OAuth login.
 - CSRF/origin protections are enforced for mutating dashboard API requests.
+- In production, insecure dashboard cookie mode is rejected (secure cookies required).
 - Logout uses CSRF-protected `POST` flow.
 - High-risk posting commands (`/promote`, `/needafriend`) now enforce runtime administrator checks.
 - High-risk dashboard render paths were hardened to reduce untrusted HTML injection risk.

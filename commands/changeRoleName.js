@@ -58,6 +58,13 @@ module.exports = {
           flags: MessageFlags.Ephemeral
         });
       }
+      const requesterMember = interaction.member;
+      if (!requesterMember || requesterMember.roles.highest.position <= role.position) {
+        return await interaction.editReply({
+          content: "⚠️ You can't rename a role that is equal to or above your highest role.",
+          flags: MessageFlags.Ephemeral
+        });
+      }
 
       if (role.managed) {
         return await interaction.editReply({

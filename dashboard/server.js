@@ -49,6 +49,10 @@ function createDashboard(client, options = {}) {
   const useSecureCookie = typeof options.useSecureCookie === 'boolean'
     ? options.useSecureCookie
     : isHttpsBaseUrl;
+  const isProd = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+  if (isProd && !useSecureCookie) {
+    throw new Error('Dashboard requires secure cookies in production (set HTTPS DASHBOARD_BASE_URL).');
+  }
 
   app.locals.dashboardBaseUrl = dashboardBaseUrl;
   app.locals.useSecureCookie = useSecureCookie;
@@ -105,9 +109,22 @@ function createDashboard(client, options = {}) {
 
   function isSameOrigin(req) {
     const origin = req.get('origin');
-    if (!origin) return true;
+    const referer = req.get('referer');
+    const expected = req.app.locals.dashboardBaseUrl || '';
+    const expectedUrl = expected ? new URL(expected) : null;
+    if (!origin) {
+      if (!referer) return false;
+      try {
+        const r = new URL(referer);
+        if (expectedUrl) return r.host === expectedUrl.host && r.protocol === expectedUrl.protocol;
+        return r.host === req.get('host') && r.protocol === `${req.protocol}:`;
+      } catch {
+        return false;
+      }
+    }
     try {
       const u = new URL(origin);
+      if (expectedUrl) return u.host === expectedUrl.host && u.protocol === expectedUrl.protocol;
       return u.host === req.get('host') && u.protocol === `${req.protocol}:`;
     } catch {
       return false;

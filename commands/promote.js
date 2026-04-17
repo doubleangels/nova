@@ -56,7 +56,8 @@ function normalizePromotionSubredditName(name) {
 
 /**
  * Resolves per-subreddit promotion rows from `reddit_promotion_targets`, or legacy link + subreddit list.
- * @returns {Promise<Array<{ subreddit: string, url: string, title: string, body: string, flairText: string, flairTemplateId: string }>>}
+ * Row-level title/body are intentionally ignored; global defaults are always used.
+ * @returns {Promise<Array<{ subreddit: string, url: string, flairText: string, flairTemplateId: string }>>}
  */
 async function getPromotionTargets() {
   const raw = await getValue('reddit_promotion_targets');
@@ -78,9 +79,8 @@ async function getPromotionTargets() {
       out.push({
         subreddit: sub,
         url,
-        title: row.title != null ? String(row.title).trim() : '',
-        body: row.body != null ? String(row.body) : '',
-        flairText: String(row.flair_text || row.flairText || '').trim()
+        flairText: String(row.flair_text || row.flairText || '').trim(),
+        flairTemplateId: String(row.flair_template_id || row.flairTemplateId || '').trim()
       });
     }
     if (out.length > 0) return out;
@@ -95,8 +95,6 @@ async function getPromotionTargets() {
   return subs.map((sub) => ({
     subreddit: normalizePromotionSubredditName(sub) || sub,
     url: link,
-    title: '',
-    body: '',
     flairText: SUBREDDIT_FLAIR_PREFERENCES[sub] || '',
     flairTemplateId: ''
   }));
@@ -351,7 +349,7 @@ module.exports = {
       guildId: interaction.guildId,
       promotionTitle: defaultTitle,
       targetCount: targets.length,
-      hasPromotionBody: targets.some((t) => (t.body || defaultBody).trim().length > 0)
+      hasPromotionBody: defaultBody.trim().length > 0
     });
 
     try {
@@ -363,8 +361,8 @@ module.exports = {
 
       const results = [];
       for (const t of targets) {
-        const title = t.title || defaultTitle;
-        const body = (t.body !== undefined && t.body !== '') ? t.body : defaultBody;
+        const title = defaultTitle;
+        const body = defaultBody;
         const result = await postToSubreddit(
           t.subreddit,
           title,

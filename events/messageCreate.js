@@ -5,6 +5,7 @@ const config = require('../config');
 const { getValue, incrementMessageCount, deleteMessageCount, getMessageCount, updateLastMessageTime } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
+const MAX_LOGGED_MESSAGE_CHARS = 240;
 
 module.exports = {
   name: Events.MessageCreate,
@@ -36,7 +37,9 @@ module.exports = {
       logger.debug("Message received from user.", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
-        content: message.content?.replace(/\n/g, ' ') || "No Content"
+        contentPreview: message.content
+          ? message.content.replace(/\n/g, ' ').slice(0, MAX_LOGGED_MESSAGE_CHARS)
+          : "No Content"
       });
 
       // Fetch config values in parallel
@@ -106,8 +109,8 @@ module.exports = {
             hasSticker,
             hasEmote,
             hasTag,
-            contentType: message.attachments.map(a => a.contentType),
-            content: message.content
+            attachmentCount: message.attachments.size,
+            contentPreview: (message.content || '').slice(0, MAX_LOGGED_MESSAGE_CHARS)
           });
         } catch (error) {
           captureError(error, { event: 'messageCreate', handler: 'noTextChannelDelete' });
@@ -218,21 +221,51 @@ async function processUserMessage(message) {
  * Uses a short-lived in-memory cache to reduce DB load.
  */
 let reactionsCache = { data: null, lastFetch: 0 };
+const MAX_AUTO_REACTION_MESSAGE_LENGTH = 1200;
+const autoReactionRegexCache = new Map();
+let lastRegexCachePruneAt = 0;
+
+function isPotentiallyUnsafeRegex(pattern) {
+  const src = String(pattern || '');
+  if (src.length > 160) return true;
+  if (/(\\\d|\\k<)/.test(src)) return true;
+  if (/\((?:[^()]|\\.)*[+*{](?:[^()]|\\.)*\)[+*{]/.test(src)) return true;
+  if (/(\.\*|\.\+)[+*{]/.test(src)) return true;
+  return false;
+}
+
 async function handleAutoReactions(message) {
   if (!message.content || message.author.bot) return;
+  if (message.content.length > MAX_AUTO_REACTION_MESSAGE_LENGTH) return;
 
   try {
     const now = Date.now();
     if (!reactionsCache.data || (now - reactionsCache.lastFetch) > 60000) {
       reactionsCache.data = await getValue('auto_reactions') || [];
       reactionsCache.lastFetch = now;
+      const livePatterns = new Set(reactionsCache.data.map((e) => String(e.regex || '')));
+      for (const key of autoReactionRegexCache.keys()) {
+        if (!livePatterns.has(key)) autoReactionRegexCache.delete(key);
+      }
+      lastRegexCachePruneAt = now;
+    } else if (now - lastRegexCachePruneAt > 10 * 60 * 1000 && autoReactionRegexCache.size > 200) {
+      autoReactionRegexCache.clear();
+      lastRegexCachePruneAt = now;
     }
 
     if (reactionsCache.data.length === 0) return;
 
     for (const entry of reactionsCache.data) {
       try {
-        const regex = new RegExp(entry.regex, 'i');
+        if (isPotentiallyUnsafeRegex(entry.regex)) {
+          logger.warn('Skipped potentially unsafe auto-reaction regex pattern.', { pattern: entry.regex });
+          continue;
+        }
+        let regex = autoReactionRegexCache.get(entry.regex);
+        if (!regex) {
+          regex = new RegExp(entry.regex, 'i');
+          autoReactionRegexCache.set(entry.regex, regex);
+        }
         if (regex.test(message.content)) {
           // Resolve emoji - could be a custom emoji ID or a unicode character
           await message.react(entry.emoji).catch(() => {

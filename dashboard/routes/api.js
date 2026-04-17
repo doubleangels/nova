@@ -14,7 +14,9 @@ const {
   setInviteTag,
   deleteInviteTag,
   setInviteNotificationChannel,
-  getInviteNotificationChannel
+  getInviteNotificationChannel,
+  invalidateConfigCache,
+  invalidateConfigCacheKey
 } = require('../../utils/database');
 const { getKeyvForNamespace } = require('../../utils/dbScriptUtils');
 const {
@@ -150,6 +152,30 @@ router.use((req, res, next) => {
   next();
 });
 
+router.use(async (req, res, next) => {
+  try {
+    const userId = req.session?.user?.id;
+    const guild = req.discordClient?.guilds?.cache?.first();
+    if (!userId || !guild) {
+      return res.status(403).json({ error: 'Dashboard access denied.' });
+    }
+    const member = guild.members.cache.get(userId) || await guild.members.fetch(userId).catch(() => null);
+    if (!member) {
+      return res.status(403).json({ error: 'Dashboard access denied.' });
+    }
+    if (
+      !member.permissions.has(PermissionFlagsBits.Administrator) &&
+      !member.permissions.has(PermissionFlagsBits.ManageGuild)
+    ) {
+      return res.status(403).json({ error: 'Administrator permissions required.' });
+    }
+    next();
+  } catch (err) {
+    logger.error('Failed dashboard authorization re-check.', { err });
+    return res.status(403).json({ error: 'Dashboard access denied.' });
+  }
+});
+
 const INACTIVITY_KICK_REASON =
     'Inactivity - We kick members who are inactive; we want an active community more than a large one! Feel free to rejoin if you wish!';
 
@@ -196,33 +222,28 @@ function invalidateUserSummaryCache() {
   userSummaryCacheEntry = null;
 }
 
-/** Shared gateway member list (opcode 8); reuse across summary + inactivity dry-run. */
-const GUILD_MEMBERS_CACHE_MS = USER_SUMMARY_CACHE_MS;
-/** @type {{ guildId: string, expires: number, members: import('discord.js').Collection<string, import('discord.js').GuildMember> } | null} */
-let guildMembersCacheEntry = null;
+/** Shared in-flight fetch promise only (avoid retaining full member collections in memory). */
+/** @type {{ guildId: string, promise: Promise<import('discord.js').Collection<string, import('discord.js').GuildMember>> } | null} */
+let guildMembersInflight = null;
 
 async function fetchGuildMembersCached(guild, { force = false } = {}) {
     const gid = guild.id;
-    const now = Date.now();
-    if (
-        !force &&
-        guildMembersCacheEntry &&
-        guildMembersCacheEntry.guildId === gid &&
-        guildMembersCacheEntry.expires > now
-    ) {
-        return guildMembersCacheEntry.members;
+    if (!force && guildMembersInflight && guildMembersInflight.guildId === gid) {
+        return guildMembersInflight.promise;
     }
-    const members = await guild.members.fetch();
-    guildMembersCacheEntry = {
-        guildId: gid,
-        expires: now + GUILD_MEMBERS_CACHE_MS,
-        members
-    };
-    return members;
+    const promise = guild.members.fetch();
+    guildMembersInflight = { guildId: gid, promise };
+    try {
+        return await promise;
+    } finally {
+        if (guildMembersInflight?.promise === promise) {
+            guildMembersInflight = null;
+        }
+    }
 }
 
 function invalidateGuildMembersCache() {
-    guildMembersCacheEntry = null;
+    guildMembersInflight = null;
 }
 
 /** REST: guild.invites.fetch() is easy to 429 when the dashboard refreshes often. */
@@ -275,10 +296,19 @@ function normalizePromotionSubredditName(name) {
     .replace(/[^A-Za-z0-9_]/g, '');
 }
 
+function looksUnsafeRegex(pattern) {
+  const src = String(pattern || '');
+  if (src.length > 160) return true;
+  if (/(\\\d|\\k<)/.test(src)) return true;
+  if (/\((?:[^()]|\\.)*[+*{](?:[^()]|\\.)*\)[+*{]/.test(src)) return true;
+  if (/(\.\*|\.\+)[+*{]/.test(src)) return true;
+  return false;
+}
+
 /**
- * Validates dashboard input for /promote targets (per subreddit: link, optional title/body, flair hint).
+ * Validates dashboard input for /promote targets (per subreddit: link + flair selection).
  * @param {unknown} val
- * @returns {Array<{ subreddit: string, url: string, title: string, body: string, flair_text: string, flair_template_id: string }>}
+ * @returns {Array<{ subreddit: string, url: string, flair_text: string, flair_template_id: string }>}
  */
 function validateAndNormalizeRedditPromotionTargets(val) {
   let parsed = val;
@@ -302,13 +332,11 @@ function validateAndNormalizeRedditPromotionTargets(val) {
     if (!sub || sub.length > 50) continue;
     const url = String(row.url || row.link || '').trim();
     if (!url || !/^https?:\/\//i.test(url)) continue;
-    const title = row.title != null ? String(row.title).trim().slice(0, 300) : '';
-    const body = row.body != null ? String(row.body).trim().slice(0, 10000) : '';
     const flairHint = String(row.flair_text || row.flairText || '').trim().slice(0, 200);
     const flairTemplateId = String(row.flair_template_id || row.flairTemplateId || '')
       .trim()
       .slice(0, 64);
-    out.push({ subreddit: sub, url, title, body, flair_text: flairHint, flair_template_id: flairTemplateId });
+    out.push({ subreddit: sub, url, flair_text: flairHint, flair_template_id: flairTemplateId });
   }
   return out;
 }
@@ -910,6 +938,7 @@ router.post('/database/import', (req, res) => {
 
   try {
     const { written } = applyNovaKeyvBackupEntries(result.entries);
+    invalidateConfigCache();
     invalidateUserSummaryCache();
     invalidateGuildMembersCache();
     invalidateInvitesListCache();
@@ -942,6 +971,9 @@ router.post('/database/raw', async (req, res) => {
 
   try {
     await updateRawDatabaseEntry(fullKey, value);
+    if (String(fullKey).startsWith('main:config:')) {
+      invalidateConfigCacheKey(String(fullKey).replace('main:config:', ''));
+    }
     logger.info('Raw database entry updated via dashboard.', {
       fullKey,
       user: req.session.user?.username
@@ -967,6 +999,9 @@ router.delete('/database/raw', async (req, res) => {
       return res.json({ ok: true, dryRun: true, fullKey, action: 'delete_raw_key' });
     }
     await deleteRawDatabaseEntry(fullKey);
+    if (String(fullKey).startsWith('main:config:')) {
+      invalidateConfigCacheKey(String(fullKey).replace('main:config:', ''));
+    }
     logger.info('Raw database entry deleted via dashboard.', {
       fullKey,
       user: req.session.user?.username
@@ -1145,7 +1180,19 @@ router.post('/fun/auto-reactions', async (req, res) => {
       .map(r => ({
         regex: String(r.regex).trim(),
         emoji: String(r.emoji).trim()
-      }));
+      }))
+      .filter((r) => r.regex.length > 0 && r.emoji.length > 0);
+    if (cleaned.some((r) => looksUnsafeRegex(r.regex))) {
+      return res.status(400).json({ error: 'One or more regex patterns are too complex/unsafe.' });
+    }
+    for (const r of cleaned) {
+      try {
+        // Validate syntax now so runtime message pipeline cannot crash on malformed entries.
+        new RegExp(r.regex, 'i');
+      } catch {
+        return res.status(400).json({ error: `Invalid regex pattern: ${r.regex}` });
+      }
+    }
 
     await setValue('auto_reactions', cleaned);
     logger.info('Auto-reactions updated via dashboard.', {
@@ -1156,6 +1203,45 @@ router.post('/fun/auto-reactions', async (req, res) => {
   } catch (err) {
     logger.error('Failed to update auto-reactions.', { err });
     res.status(500).json({ error: 'Failed to update auto-reactions.' });
+  }
+});
+
+// ─── POST /api/messages/send ────────────────────────────────────────────────
+router.post('/messages/send', async (req, res) => {
+  const { channelId, isEmbed, content, embedData } = req.body || {};
+  if (!channelId) return res.status(400).json({ error: 'Missing channelId.' });
+  try {
+    const guild = req.discordClient?.guilds?.cache?.first();
+    if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
+    const channel =
+      guild.channels.cache.get(String(channelId)) ||
+      await guild.channels.fetch(String(channelId)).catch(() => null);
+    if (!channel || !channel.isTextBased?.()) {
+      return res.status(400).json({ error: 'Invalid or non-text channel.' });
+    }
+    if (isEmbed) {
+      const title = String(embedData?.title || '').trim().slice(0, 256);
+      const description = String(embedData?.description || '').trim().slice(0, 4000);
+      if (!title && !description) {
+        return res.status(400).json({ error: 'Embed must include a title or description.' });
+      }
+      const colorRaw = String(embedData?.color || '').trim();
+      const color = /^#[0-9a-f]{6}$/i.test(colorRaw) ? parseInt(colorRaw.slice(1), 16) : 0x999999;
+      const embed = { color, title, description };
+      const thumbnail = String(embedData?.thumbnail || '').trim();
+      const footer = String(embedData?.footer || '').trim().slice(0, 2048);
+      if (thumbnail) embed.thumbnail = { url: thumbnail };
+      if (footer) embed.footer = { text: footer };
+      await channel.send({ embeds: [embed] });
+    } else {
+      const safeContent = String(content || '').trim();
+      if (!safeContent) return res.status(400).json({ error: 'Message content is empty.' });
+      await channel.send({ content: safeContent.slice(0, 2000) });
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    logger.error('Failed to send dashboard message.', { err });
+    return res.status(500).json({ error: 'Failed to send message.' });
   }
 });
 
@@ -1392,9 +1478,6 @@ router.get('/users/summary', async (req, res) => {
             const retryMs = Math.round((e?.data?.retry_after || 20) * 1000);
             const bump = Math.max(USER_SUMMARY_CACHE_MS, retryMs);
             userSummaryCacheEntry.expires = Math.max(userSummaryCacheEntry.expires, now + bump);
-            if (guildMembersCacheEntry?.guildId === guild.id) {
-                guildMembersCacheEntry.expires = Math.max(guildMembersCacheEntry.expires, now + bump);
-            }
             logger.warn('API /users/summary gateway rate limited; returning cached roster', {
                 retry_after: e?.data?.retry_after
             });

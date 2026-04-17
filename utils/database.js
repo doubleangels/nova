@@ -208,6 +208,15 @@ async function initializeDatabase() {
 
 // Cache for config values to avoid DB reads on hot paths (e.g. every message)
 const configCache = new Map();
+const messageCountLocks = new Map();
+
+function invalidateConfigCache() {
+  configCache.clear();
+}
+
+function invalidateConfigCacheKey(key) {
+  configCache.delete(String(key || ''));
+}
 
 /**
  * Retrieves a configuration value from the database
@@ -244,6 +253,7 @@ async function setValue(key, value) {
     logger.debug('Set config for key successfully.', { key: key });
   } catch (err) {
     logger.error('Error occurred while setting key.', { err: err, key: key });
+    throw err;
   }
 }
 
@@ -627,21 +637,28 @@ async function setFormerMember(userId) {
  * @returns {Promise<number>} The updated message count
  */
 async function incrementMessageCount(userId) {
-  try {
-    logger.debug('Incrementing message count for user.', { userId: userId });
-    const key = `message_count:${userId}`;
-    let count = await keyv.get(key) || 0;
-    count++;
-    await keyv.set(key, count);
-    logger.debug('Incremented message count for user successfully.', {
-      userId: userId,
-      count: count
-    });
-    return count;
-  } catch (error) {
-    logger.error('Error incrementing message count.', { err: error, userId });
-    return null; // return null (not 0) so callers can detect a DB failure vs a real count
-  }
+  const prev = messageCountLocks.get(userId) || Promise.resolve();
+  const op = prev.then(async () => {
+    try {
+      logger.debug('Incrementing message count for user.', { userId: userId });
+      const key = `message_count:${userId}`;
+      let count = await keyv.get(key) || 0;
+      count++;
+      await keyv.set(key, count);
+      logger.debug('Incremented message count for user successfully.', {
+        userId: userId,
+        count: count
+      });
+      return count;
+    } catch (error) {
+      logger.error('Error incrementing message count.', { err: error, userId });
+      return null;
+    }
+  });
+  messageCountLocks.set(userId, op.finally(() => {
+    if (messageCountLocks.get(userId) === op) messageCountLocks.delete(userId);
+  }));
+  return op;
 }
 
 /**
@@ -805,6 +822,8 @@ async function getAllLastMessageTimes() {
 
 module.exports = {
   initializeDatabase,
+  invalidateConfigCache,
+  invalidateConfigCacheKey,
   getValue,
   setValue,
   deleteValue,

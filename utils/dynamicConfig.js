@@ -112,12 +112,13 @@ async function getSetting(key) {
  */
 async function setSetting(key, value) {
   const coerced = coerce(key, value);
-  applyToBoth(key, coerced);
   try {
     const { setValue } = db();
     await setValue(key, coerced);
+    applyToBoth(key, coerced);
   } catch (err) {
     logger.error('Failed to persist dynamic config setting.', { key, err });
+    throw err;
   }
 }
 

@@ -12,6 +12,13 @@ const OAUTH_SCOPES = 'identify guilds';
 // Administrator permission bit
 const ADMINISTRATOR = BigInt(0x8);
 
+function sanitizeReturnTo(raw) {
+  const val = String(raw || '').trim();
+  if (!val.startsWith('/')) return '/';
+  if (val.startsWith('//')) return '/';
+  return val;
+}
+
 function getAuthActor(req) {
   return req.session?.user?.username || req.session?.user?.id || 'anonymous-user';
 }
@@ -159,7 +166,7 @@ router.get('/callback', async (req, res) => {
     }
 
     // Rotate session ID after auth to reduce fixation risk.
-    const returnTo = req.session.returnTo || '/';
+    const returnTo = sanitizeReturnTo(req.session.returnTo || '/');
     req.session.regenerate((regenErr) => {
       if (regenErr) {
         logger.error('Session regenerate failed after OAuth login.', { err: regenErr });
@@ -172,6 +179,7 @@ router.get('/callback', async (req, res) => {
         discriminator: user.discriminator,
         avatar:        user.avatar,
       };
+      req.session.authzCheckedAt = Date.now();
       logger.info('Admin logged in to dashboard.', { userId: user.id, username: user.username });
       res.redirect(returnTo);
     });

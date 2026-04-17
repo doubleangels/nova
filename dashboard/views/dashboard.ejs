@@ -152,7 +152,6 @@
             <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Appearance</a>
             <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Logistics</a>
             <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles</a>
-            <a href="#permissions" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Permissions Audit</a>
             <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Security</a>
         </div>
     </div>
@@ -183,7 +182,7 @@
       </div>
       <div class="flex flex-col">
         <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Disboard Bump</p>
-        <p id="live_rem_bump" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none transition-colors duration-300">--:--:--</p>
+        <p id="live_rem_bump" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
       </div>
     </div>
     <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
@@ -192,7 +191,7 @@
       </div>
       <div class="flex flex-col">
         <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Reddit</p>
-        <p id="live_rem_promote" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none transition-colors duration-300">--:--:--</p>
+        <p id="live_rem_promote" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
       </div>
     </div>
     <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
@@ -201,7 +200,7 @@
       </div>
       <div class="flex flex-col">
         <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">NeedAFriend</p>
-        <p id="live_rem_needafriend" class="text-sm font-mono font-bold text-[var(--c-label)] italic leading-none transition-colors duration-300">--:--:--</p>
+        <p id="live_rem_needafriend" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
       </div>
     </div>
   </div>
@@ -329,33 +328,6 @@
         </div>
       </div>
 
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════════ PERMISSIONS AUDIT -->
-<section id="permissions" class="mb-10 page-section hidden">
-  <div class="mb-6">
-    <h2 class="section-heading mb-1">
-      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-      Permissions Audit
-    </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Live privilege distribution and key moderation capability holders.</p>
-  </div>
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h3 class="font-bold text-base">Permissions Summary</h3>
-        <p class="text-xs text-[var(--c-text-dim)]">Snapshot of elevated permissions across server members.</p>
-      </div>
-      <button type="button" onclick="loadPermissionsSummary()" class="px-3 py-2 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh</button>
-    </div>
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Members</p><p id="perm_members" class="text-base font-bold">--</p></div>
-      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Admins</p><p id="perm_admins" class="text-base font-bold">--</p></div>
-      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Mods</p><p id="perm_mods" class="text-base font-bold">--</p></div>
-      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Kick</p><p id="perm_kick" class="text-base font-bold">--</p></div>
-      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Ban</p><p id="perm_ban" class="text-base font-bold">--</p></div>
     </div>
   </div>
 </section>
@@ -522,16 +494,16 @@
         <p class="field-hint">Where the bot posts alerts for members joining via tagged invites.</p>
       </div>
       <div>
-        <label class="field-label">Disboard Reminder Delay (ms)</label>
-        <input type="number" id="reminder_delay_bump_ms" class="field-input" min="60000" max="2592000000" />
+        <label class="field-label">Disboard Reminder Delay (hours)</label>
+        <input type="number" id="reminder_delay_bump_ms" class="field-input" min="1" max="720" />
       </div>
       <div>
-        <label class="field-label">Reddit Reminder Delay (ms)</label>
-        <input type="number" id="reminder_delay_promote_ms" class="field-input" min="60000" max="2592000000" />
+        <label class="field-label">Reddit Reminder Delay (hours)</label>
+        <input type="number" id="reminder_delay_promote_ms" class="field-input" min="1" max="720" />
       </div>
       <div class="sm:col-span-2">
-        <label class="field-label">NeedAFriend Reminder Delay (ms)</label>
-        <input type="number" id="reminder_delay_needafriend_ms" class="field-input" min="60000" max="2592000000" />
+        <label class="field-label">NeedAFriend Reminder Delay (hours)</label>
+        <input type="number" id="reminder_delay_needafriend_ms" class="field-input" min="1" max="720" />
       </div>
     </div>
   </div>
@@ -544,9 +516,9 @@
       </div>
     </div>
 
-    <div class="mb-6 p-4 rounded-xl border border-[var(--c-card-border)] bg-[var(--c-input)]/40 space-y-4">
+    <div class="mb-6 p-5 rounded-xl border border-[var(--c-card-border)] bg-[var(--c-card)]/70 space-y-5">
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">
-        <strong class="text-[var(--c-text-muted)]">Promotion targets</strong> — one row per subreddit. Enter the subreddit name, then use <strong>Fetch flairs</strong> to load that subreddit’s link flairs and pick one to save. If Reddit API credentials are not configured on the host, flair loading will fail (posting from <code class="text-[10px]">/promote</code> still uses the bot’s Reddit account). Empty title or body in a row uses the defaults below.
+        <strong class="text-[var(--c-text-muted)]">Promotion targets</strong> — one row per subreddit. Enter the subreddit name, then use <strong>Fetch flairs</strong> to load that subreddit’s link flairs and pick one to save. If Reddit API credentials are not configured on the host, flair loading will fail (posting from <code class="text-[10px]">/promote</code> still uses the bot’s Reddit account). All rows use the global title/body defaults above.
       </p>
       <textarea id="reddit_promotion_targets" class="hidden" aria-hidden="true"></textarea>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -559,15 +531,13 @@
           <textarea id="reddit_promotion_body" rows="4" class="field-input"></textarea>
         </div>
       </div>
-      <div class="overflow-x-auto -mx-1 px-1">
-        <table class="w-full text-left border-collapse min-w-[780px]">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] border-b border-[var(--c-card-border)]">
-              <th class="py-2 pr-2 w-[140px]">Subreddit</th>
-              <th class="py-2 pr-2 min-w-[180px]">Invite link</th>
-              <th class="py-2 pr-2 min-w-[160px]">Title (optional)</th>
-              <th class="py-2 pr-2 min-w-[200px]">Message (optional)</th>
-              <th class="py-2 pr-2 min-w-[180px]">Link flair</th>
+              <th class="py-2.5 pr-2 w-[130px]">Subreddit</th>
+              <th class="py-2.5 pr-2 min-w-[170px]">Invite link</th>
+              <th class="py-2.5 pr-2 min-w-[190px]">Link flair</th>
               <th class="py-2 w-10"></th>
             </tr>
           </thead>
@@ -1218,6 +1188,25 @@
     border-radius: 1rem;
     padding: 1.5rem;
   }
+  .page-section,
+  .page-section * {
+    font-family: inherit;
+  }
+  /* Keep monospaced typography only for actual code-like blocks. */
+  .page-section code,
+  .page-section pre,
+  .page-section kbd,
+  .page-section samp {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace !important;
+  }
+  /* Neutralize Tailwind utility overrides that force a second font family. */
+  .page-section .font-mono,
+  .page-section .font-sans {
+    font-family: inherit !important;
+  }
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
   .field-label {
     display: block;
     font-size: 0.875rem;
@@ -1244,6 +1233,11 @@
     outline: none;
     border-color: var(--c-accent);
     box-shadow: 0 0 0 2px var(--c-accent-soft-ring);
+  }
+  .save-success-glow {
+    border-color: #22c55e !important;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35), 0 0 14px rgba(34, 197, 94, 0.22) !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
   select.field-input { cursor: pointer; }
   .field-hint {
@@ -1586,7 +1580,15 @@
     { id: 'inactivity', keys: ['prune_protected_role_id'] },
   ];
   const SETTINGS_DEBOUNCE_MS = 650;
+  const REMINDER_DELAY_HOUR_KEYS = new Set([
+    'reminder_delay_bump_ms',
+    'reminder_delay_promote_ms',
+    'reminder_delay_needafriend_ms',
+  ]);
+  const MS_PER_HOUR = 60 * 60 * 1000;
   const settingsDebounceTimers = new Map();
+  const pendingChangedSettingsKeys = new Map();
+  const saveGlowTimers = new Map();
   let settingsSaveInFlight = 0;
   let settingsSaveFailed = false;
   let settingsHydrating = false;
@@ -1619,9 +1621,52 @@
         return;
       }
       const val = getFieldValue(key);
+      if (REMINDER_DELAY_HOUR_KEYS.has(key)) {
+        const hours = Number(val);
+        if (Number.isFinite(hours) && hours > 0) {
+          payload[key] = Math.round(hours * MS_PER_HOUR);
+        }
+        return;
+      }
       if (val !== undefined) payload[key] = val;
     });
     return payload;
+  }
+
+  function resolveSaveGlowTargets(key) {
+    if (key === 'base_embed_color') {
+      return [document.getElementById('base_embed_color'), document.getElementById('base_embed_color_text')].filter(Boolean);
+    }
+    if (key === 'reddit_promotion_targets') {
+      const tbody = document.getElementById('redditPromotionTargetsBody');
+      return tbody ? [tbody.closest('table') || tbody] : [];
+    }
+    const el = document.getElementById(key);
+    if (!el) return [];
+    if (el.type === 'checkbox') {
+      const slider = el.closest('.toggle')?.querySelector('.toggle-slider');
+      return slider ? [slider] : [];
+    }
+    return [el];
+  }
+
+  function glowSavedFields(keys) {
+    for (const key of keys) {
+      const targets = resolveSaveGlowTargets(key);
+      for (const el of targets) {
+        if (!el) continue;
+        const timerKey = `${key}:${el.id || el.className || el.tagName}`;
+        if (saveGlowTimers.has(timerKey)) {
+          clearTimeout(saveGlowTimers.get(timerKey));
+        }
+        el.classList.add('save-success-glow');
+        const tid = setTimeout(() => {
+          el.classList.remove('save-success-glow');
+          saveGlowTimers.delete(timerKey);
+        }, 1000);
+        saveGlowTimers.set(timerKey, tid);
+      }
+    }
   }
 
   async function performSettingsSave(keys) {
@@ -1635,6 +1680,7 @@
       const data = await res.json();
       if (res.ok && data.ok) {
         settingsSaveFailed = false;
+        glowSavedFields(keys);
         updatePendingSettingsState();
         return true;
       }
@@ -1653,19 +1699,31 @@
   async function runSettingsSaveForGroup(groupId) {
     const group = SETTINGS_GROUPS.find((g) => g.id === groupId);
     if (!group) return;
+    const pending = pendingChangedSettingsKeys.get(groupId);
+    const keysToSave = pending && pending.size > 0 ? Array.from(pending) : group.keys;
+    pendingChangedSettingsKeys.delete(groupId);
     settingsSaveInFlight++;
     updatePendingSettingsState();
     try {
-      await performSettingsSave(group.keys);
+      await performSettingsSave(keysToSave);
     } finally {
       settingsSaveInFlight--;
       updatePendingSettingsState();
     }
   }
 
-  function scheduleDebouncedSettingsSave(groupId) {
+  function scheduleDebouncedSettingsSave(groupId, changedKey = null) {
     if (settingsHydrating) return;
-    if (!SETTINGS_GROUPS.some((g) => g.id === groupId)) return;
+    const group = SETTINGS_GROUPS.find((g) => g.id === groupId);
+    if (!group) return;
+    if (changedKey) {
+      const normalizedKey = changedKey === 'base_embed_color_text' ? 'base_embed_color' : changedKey;
+      if (group.keys.includes(normalizedKey)) {
+        const set = pendingChangedSettingsKeys.get(groupId) || new Set();
+        set.add(normalizedKey);
+        pendingChangedSettingsKeys.set(groupId, set);
+      }
+    }
     const existing = settingsDebounceTimers.get(groupId);
     if (existing) clearTimeout(existing);
     const tid = setTimeout(() => {
@@ -1697,7 +1755,7 @@
     if (!dirtyTrackedIds.has(target.id)) return;
     const groupId = fieldIdToGroupId.get(target.id);
     if (!groupId) return;
-    scheduleDebouncedSettingsSave(groupId);
+    scheduleDebouncedSettingsSave(groupId, target.id);
   }
 
   function syncRedditPromotionTargetsJson() {
@@ -1708,8 +1766,6 @@
     tbody.querySelectorAll('tr').forEach((tr) => {
       const sub = tr.querySelector('.um-promo-sub')?.value?.trim();
       const url = tr.querySelector('.um-promo-url')?.value?.trim();
-      const title = tr.querySelector('.um-promo-title')?.value?.trim() || '';
-      const body = tr.querySelector('.um-promo-body')?.value?.trim() || '';
       const sel = tr.querySelector('.um-promo-flair');
       const tid = sel?.value?.trim() || '';
       let flairText = '';
@@ -1722,8 +1778,6 @@
       rows.push({
         subreddit: sub,
         url,
-        title,
-        body,
         flair_text: flairText,
         flair_template_id: tid
       });
@@ -1734,7 +1788,7 @@
   function redditPromotionTargetsAfterChange() {
     if (settingsHydrating) return;
     syncRedditPromotionTargetsJson();
-    scheduleDebouncedSettingsSave('reminders');
+    scheduleDebouncedSettingsSave('reminders', 'reddit_promotion_targets');
   }
 
   async function fetchRedditFlairsForRow(btn) {
@@ -1789,8 +1843,6 @@
 
     const sub = data?.subreddit != null ? String(data.subreddit) : '';
     const url = data?.url != null ? String(data.url) : '';
-    const title = data?.title != null ? String(data.title) : '';
-    const body = data?.body != null ? String(data.body) : '';
     const flair = data?.flair_text != null ? String(data.flair_text) : (data?.flairText != null ? String(data.flairText) : '');
     const flairTid = data?.flair_template_id != null ? String(data.flair_template_id) : (data?.flairTemplateId != null ? String(data.flairTemplateId) : '');
 
@@ -1800,39 +1852,27 @@
 
     function wrapCell(el) {
       const td = document.createElement('td');
-      td.className = 'py-2 pr-2';
+      td.className = 'py-2.5 pr-2';
       td.appendChild(el);
       return td;
     }
 
     const inSub = document.createElement('input');
     inSub.type = 'text';
-    inSub.className = 'field-input um-promo-sub text-sm';
+    inSub.className = 'field-input um-promo-sub text-sm min-h-[40px]';
     inSub.placeholder = 'MySubreddit';
     inSub.value = sub;
 
     const inUrl = document.createElement('input');
     inUrl.type = 'url';
-    inUrl.className = 'field-input um-promo-url text-sm';
+    inUrl.className = 'field-input um-promo-url text-sm min-h-[40px]';
     inUrl.placeholder = 'https://discord.gg/...';
     inUrl.value = url;
 
-    const inTitle = document.createElement('input');
-    inTitle.type = 'text';
-    inTitle.className = 'field-input um-promo-title text-sm';
-    inTitle.placeholder = 'Use default';
-    inTitle.value = title;
-
-    const taBody = document.createElement('textarea');
-    taBody.className = 'field-input um-promo-body text-sm min-h-[52px]';
-    taBody.rows = 2;
-    taBody.placeholder = 'Use default';
-    taBody.value = body;
-
     const flairWrap = document.createElement('div');
-    flairWrap.className = 'flex flex-col gap-1 min-w-[160px]';
+    flairWrap.className = 'flex items-center gap-2 min-w-[180px]';
     const selFlair = document.createElement('select');
-    selFlair.className = 'field-input um-promo-flair text-sm';
+    selFlair.className = 'field-input um-promo-flair text-sm min-h-[40px]';
     const optNone = document.createElement('option');
     optNone.value = '';
     optNone.textContent = '— None —';
@@ -1847,7 +1887,7 @@
     const btnLoad = document.createElement('button');
     btnLoad.type = 'button';
     btnLoad.className =
-      'um-promo-flair-load px-2 py-1 rounded text-[10px] font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors';
+      'um-promo-flair-load px-2.5 py-2 rounded-lg text-[10px] font-semibold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors whitespace-nowrap';
     btnLoad.textContent = 'Fetch flairs';
     flairWrap.appendChild(selFlair);
     flairWrap.appendChild(btnLoad);
@@ -1860,13 +1900,11 @@
     btnRm.addEventListener('click', () => removeRedditPromotionRow(btnRm));
 
     const tdLast = document.createElement('td');
-    tdLast.className = 'py-2 pr-0 text-right';
+    tdLast.className = 'py-2.5 pr-0 text-right';
     tdLast.appendChild(btnRm);
 
     tr.appendChild(wrapCell(inSub));
     tr.appendChild(wrapCell(inUrl));
-    tr.appendChild(wrapCell(inTitle));
-    tr.appendChild(wrapCell(taBody));
     tr.appendChild(wrapCell(flairWrap));
     tr.appendChild(tdLast);
 
@@ -1906,7 +1944,7 @@
       if (tr) delete tr.dataset.flairHint;
     }
     syncRedditPromotionTargetsJson();
-    scheduleDebouncedSettingsSave('reminders');
+    scheduleDebouncedSettingsSave('reminders', 'reddit_promotion_targets');
   }
 
   // ── Load settings ─────────────────────────────────────────────────────────
@@ -1925,7 +1963,14 @@
       'reddit_promotion_title', 'reddit_promotion_body',
       'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment',
     ];
-    plainFields.forEach(key => setFieldValue(key, s[key]));
+    const settingsForDisplay = { ...s };
+    REMINDER_DELAY_HOUR_KEYS.forEach((key) => {
+      const rawMs = Number(s[key]);
+      if (Number.isFinite(rawMs) && rawMs > 0) {
+        settingsForDisplay[key] = Math.max(1, Math.round(rawMs / MS_PER_HOUR));
+      }
+    });
+    plainFields.forEach(key => setFieldValue(key, settingsForDisplay[key]));
 
     // Checkboxes
     setFieldValue('inactivity_guard_enabled',  s.inactivity_guard_enabled);
@@ -1983,8 +2028,7 @@
         loadDatabaseEntries(),
         loadAutoReactions(),
         loadUserSummary(true),
-        loadInvites(true),
-        loadPermissionsSummary()
+        loadInvites(true)
       ]);
       showToast('Dashboard synchronized with live data.', 'success');
     } catch (err) {
@@ -2878,21 +2922,6 @@
     }
   }
 
-  async function loadPermissionsSummary() {
-    try {
-      const res = await fetch('/api/permissions/summary');
-      if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
-      document.getElementById('perm_members').textContent = data.members ?? '--';
-      document.getElementById('perm_admins').textContent = data.admins ?? '--';
-      document.getElementById('perm_mods').textContent = data.mods ?? '--';
-      document.getElementById('perm_kick').textContent = data.keyPermissionHolders?.kickMembers ?? '--';
-      document.getElementById('perm_ban').textContent = data.keyPermissionHolders?.banMembers ?? '--';
-    } catch {
-      showToast('Failed to load permissions panel.', 'error');
-    }
-  }
-
   async function exportDiagnosticsBundle() {
     try {
       const res = await fetch('/api/maintenance/diagnostics/export');
@@ -3388,13 +3417,16 @@
       return;
     }
 
-    tbody.innerHTML = reactions.map((r, i) => `
+    tbody.innerHTML = reactions.map((r) => {
+      const safeRegex = escapeHtml(r.regex);
+      const safeEmoji = escapeHtml(r.emoji);
+      return `
       <tr class="group hover:bg-[var(--c-input)]/50 transition-colors">
         <td class="px-4 py-3">
-          <input type="text" class="field-input py-1.5 text-xs font-mono ar-regex" value="${r.regex}" placeholder="e.g. hello|hi" />
+          <input type="text" class="field-input py-1.5 text-xs font-mono ar-regex" value="${safeRegex}" placeholder="e.g. hello|hi" />
         </td>
         <td class="px-4 py-3">
-          <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" value="${r.emoji}" placeholder="e.g. 👋 or :smile:" />
+          <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" value="${safeEmoji}" placeholder="e.g. 👋 or :smile:" />
         </td>
         <td class="px-4 py-3 text-right">
           <button onclick="removeAutoReactionRow(this)" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-accent-soft-bg)] rounded-lg transition-all opacity-0 group-hover:opacity-100">
@@ -3402,7 +3434,8 @@
           </button>
         </td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   }
 
   window.addAutoReactionRow = () => {
@@ -3917,10 +3950,6 @@
             loadUserSummary(false);
         }
     }
-    if (hash === '#roles' || hash === '#permissions') {
-      loadPermissionsSummary();
-    }
-
     if (hash === '#maintenance') {
       loadMaintenanceChannels();
       maintCheckActiveJob();
@@ -3965,6 +3994,5 @@
   loadDatabaseEntries();
   loadHealthStats();
   loadInvites();
-  loadPermissionsSummary();
   setInterval(loadHealthStats, 30000); // Refresh stats every 30s
 </script>
