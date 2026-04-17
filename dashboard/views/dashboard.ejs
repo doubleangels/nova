@@ -3167,7 +3167,7 @@
           lastCellTitle = rel.title;
           const extras = [];
           if (!bot && u.messageCount != null && Number(u.messageCount) > 0) {
-            extras.push(`${Number(u.messageCount).toLocaleString()} msgs tracked`);
+            extras.push(`${Number(u.messageCount).toLocaleString()} messages tracked`);
           }
           if (!bot && u.lastMessageChannelName) {
             extras.push(`Last in ${u.lastMessageChannelName}`);
@@ -3177,7 +3177,7 @@
           if (!bot) {
             const parts = [];
             if (u.messageCount != null && Number(u.messageCount) > 0) {
-              parts.push(`${Number(u.messageCount).toLocaleString()} msgs`);
+              parts.push(`${Number(u.messageCount).toLocaleString()} messages`);
             }
             if (u.lastMessageChannelName) {
               parts.push(escapeHtmlUserManager(u.lastMessageChannelName));
