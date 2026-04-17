@@ -613,6 +613,42 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)] lg:col-span-2">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Deep Health</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Process info, Discord gateway ping/status, and SQLite integrity / read-write probe.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="loadDeepHealth()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh</button>
+      </div>
+      <pre id="deepHealthPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-72 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Tap Refresh.</pre>
+    </div>
+
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Keyv Storage Report</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Row counts and payload size by namespace (from the <code class="text-[10px]">keyv</code> table). Largest keys help spot heavy rows.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="loadStorageReport()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh Report</button>
+      </div>
+      <pre id="storageReportPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-56 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Open this section or tap Refresh Report.</pre>
+    </div>
+
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">SQLite Maintenance</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">ANALYZE</strong> updates query statistics. <strong class="text-[var(--c-text-muted)]">PRAGMA optimize</strong> runs internal cleanup. <strong class="text-[var(--c-text-muted)]">VACUUM</strong> compacts the file but needs exclusive access and can fail while the bot holds the database.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="runSqliteMaint('analyze')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Analyze</button>
+        <button type="button" onclick="runSqliteMaint('optimize')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Optimize</button>
+        <button type="button" onclick="runSqliteMaint('vacuum')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors">Vacuum</button>
+      </div>
+      <pre id="sqliteMaintPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
+    </div>
+
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Discord Alignment</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Refetch channels and roles from Discord into the cache, then invalidate dashboard API caches (same targets as clearing User Summary / Member Fetch / Invites).</p>
+      <button type="button" onclick="maintDiscordResync()" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] text-white hover:opacity-90 transition-opacity">Resync Channels &amp; Roles</button>
+      <p id="discordResyncHint" class="text-[10px] text-[var(--c-text-dim)] font-mono hidden"></p>
+    </div>
+
     <div class="card p-5 space-y-4 border border-[var(--c-card-border)]">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Dashboard Cache</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Clears in-memory caches used by the User Manager, member fetch, and invite list so the next load hits Discord and the database again.</p>
@@ -629,11 +665,11 @@
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Scans channel history and writes <code class="text-[10px]">last_message:&lt;userId&gt;</code> keys. Existing newer timestamps are kept. Only one job runs at a time.</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label class="field-label text-[10px]">Max messages per channel</label>
+          <label class="field-label text-[10px]">Max Messages Per Channel</label>
           <input type="number" id="maintMaxPerChannel" class="field-input w-full text-sm min-h-[44px]" value="10000" min="100" max="50000" />
         </div>
         <div>
-          <label class="field-label text-[10px]">Delay between fetches (ms)</label>
+          <label class="field-label text-[10px]">Delay Between Fetches (ms)</label>
           <input type="number" id="maintDelayMs" class="field-input w-full text-sm min-h-[44px]" value="300" min="0" max="5000" />
         </div>
       </div>
@@ -660,14 +696,17 @@
       <div class="flex flex-wrap gap-4 items-center">
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintOnlyMissing" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
-          Only fill missing keys
+          Only Fill Missing Keys
         </label>
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
-          Dry run (no writes)
+          Dry Run (No Writes)
         </label>
       </div>
-      <button type="button" id="maintStartSeedBtn" onclick="startMaintSeed()" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] text-white hover:opacity-90 transition-opacity">Run Backfill</button>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" id="maintStartSeedBtn" onclick="startMaintSeed()" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] text-white hover:opacity-90 transition-opacity">Run Backfill</button>
+        <button type="button" id="maintStopSeedBtn" onclick="stopMaintSeed()" class="hidden px-4 py-2 rounded-lg text-sm font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">Stop</button>
+      </div>
 
       <div id="maintSeedProgressWrap" class="hidden space-y-2 pt-2 border-t border-[var(--c-card-border)]">
         <div class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">
@@ -682,11 +721,11 @@
 
       <div id="maintSeedSummary" class="hidden grid grid-cols-2 gap-2 text-center text-xs pt-2 border-t border-[var(--c-card-border)]">
         <div class="p-2 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">
-          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Messages scanned</p>
+          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Messages Scanned</p>
           <p id="maintSumMessages" class="font-mono font-bold text-[var(--c-text)]">—</p>
         </div>
         <div class="p-2 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">
-          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Users tracked</p>
+          <p class="text-[9px] uppercase font-bold text-[var(--c-text-dim)]">Users Tracked</p>
           <p id="maintSumTracked" class="font-mono font-bold text-[var(--c-text)]">—</p>
         </div>
         <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
@@ -699,6 +738,22 @@
         </div>
       </div>
       <div id="maintSeedErrors" class="hidden text-[11px] text-red-400/90 font-mono whitespace-pre-wrap"></div>
+    </div>
+
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Safe Cleanup</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Remove <strong class="text-[var(--c-text-muted)]">expired</strong> dashboard session rows (Keyv TTL in the past). Does not touch active sessions. Run dry-run first.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="maintCleanupSessions(true)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Dry Run</button>
+        <button type="button" onclick="maintCleanupSessions(false)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-colors">Delete Expired</button>
+      </div>
+      <pre id="cleanupSessionsPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap max-h-28 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
+    </div>
+
+    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Session Hygiene</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes <strong class="text-[var(--c-text-muted)]">all</strong> stored dashboard sessions. Every browser must log in again (including yours).</p>
+      <button type="button" onclick="maintClearAllSessions()" class="px-4 py-2 rounded-lg text-sm font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">Log Out Everyone</button>
     </div>
 
     <div class="card p-5 space-y-3 border border-[var(--c-card-border)] lg:col-span-2">
@@ -2407,16 +2462,16 @@
                                 const statusId = `status-${e.fullKey.replace(/:/g, '-')}`;
                                 return `
                                     <div class="px-3 sm:px-5 py-3 sm:py-3.5 hover:bg-[var(--c-input)]/40 transition-colors group">
-                                        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] gap-3 lg:gap-4 lg:items-start">
+                                        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] gap-3 lg:gap-4 items-stretch lg:items-start">
                                             <div class="min-w-0 lg:pl-4">
                                                 <div class="text-sm font-medium text-[var(--c-label)] break-words">${cleanKey}</div>
                                                 <div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5 break-all opacity-80 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">full: ${e.key}</div>
                                             </div>
-                                            <div class="relative flex flex-col sm:flex-row items-stretch sm:items-start gap-2 min-w-0">
+                                            <div class="relative flex flex-col sm:flex-row items-stretch sm:items-stretch gap-2 min-w-0 h-full">
                                                 <div id="${statusId}" class="hidden sm:block absolute sm:left-0 sm:top-3 w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] opacity-0 transition-opacity duration-300 sm:-translate-x-4" title="Synced"></div>
-                                                <div class="flex-1 min-w-0 sm:pl-1">
+                                                <div class="flex-1 min-w-0 sm:pl-1 h-full">
                                                     <textarea 
-                                                        class="w-full min-h-[44px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
+                                                        class="w-full h-full min-h-[44px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
                                                         rows="1"
                                                         oninput="autoResize(this); scheduleSave(${fullKeyJs}, this.value)"
                                                         onfocus="autoResize(this)"
@@ -2726,6 +2781,7 @@
 
   // ── Maintenance (cache + seed last messages) ───────────────────────────────
   let maintSeedPollTimer = null;
+  let maintCurrentJobId = null;
 
   function maintOnAllChannelsChange() {
     const useAll = document.getElementById('maintUseAllChannels')?.checked;
@@ -2807,11 +2863,142 @@
     }
   }
 
+  async function loadStorageReport() {
+    const pre = document.getElementById('storageReportPre');
+    if (pre) pre.textContent = 'Loading…';
+    try {
+      const res = await fetch('/api/maintenance/storage-report');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const lines = [];
+      lines.push(`File: ${data.filePath}`);
+      lines.push(`File size: ${(data.fileBytes / 1024).toFixed(1)} KB`);
+      lines.push(`Total rows: ${data.totalRows}`);
+      lines.push('');
+      lines.push('By namespace (rows / value bytes):');
+      (data.byNamespace || []).forEach((r) => {
+        lines.push(`  ${r.ns}: ${r.rowCount} rows, ${r.valueBytes} B`);
+      });
+      lines.push('');
+      lines.push('Largest keys (serialized value size):');
+      (data.largestKeys || []).forEach((r) => {
+        const k = String(r.key).startsWith('sessions:')
+          ? `sessions:…${String(r.key).slice(-10)}`
+          : r.key;
+        lines.push(`  ${r.bytes} B  ${k}`);
+      });
+      if (pre) pre.textContent = lines.join('\n');
+    } catch (e) {
+      if (pre) pre.textContent = e.message || 'Error';
+      showToast('Failed to load storage report.', 'error');
+    }
+  }
+
+  async function runSqliteMaint(op) {
+    const pre = document.getElementById('sqliteMaintPre');
+    if (pre) {
+      pre.classList.remove('hidden');
+      pre.textContent = 'Running…';
+    }
+    try {
+      const res = await fetch('/api/maintenance/sqlite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operation: op })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const before = (data.fileBytesBefore / 1024).toFixed(1);
+      const after = (data.fileBytesAfter / 1024).toFixed(1);
+      if (pre) pre.textContent = `OK: ${data.operation || op}\nBefore: ${before} KB\nAfter: ${after} KB`;
+      showToast(`SQLite ${op} completed.`);
+      loadStorageReport();
+    } catch (e) {
+      if (pre) pre.textContent = e.message || 'Error';
+      showToast(e.message || 'SQLite operation failed.', 'error');
+    }
+  }
+
+  async function maintDiscordResync() {
+    const hint = document.getElementById('discordResyncHint');
+    try {
+      const res = await fetch('/api/maintenance/discord/resync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channels: true, roles: true })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (hint) {
+        hint.classList.remove('hidden');
+        hint.textContent = 'Channels and roles refetched; API caches cleared.';
+      }
+      showToast('Discord caches refreshed.');
+    } catch (e) {
+      showToast(e.message || 'Resync failed.', 'error');
+    }
+  }
+
+  async function maintCleanupSessions(dryRun) {
+    const pre = document.getElementById('cleanupSessionsPre');
+    if (pre) {
+      pre.classList.remove('hidden');
+      pre.textContent = '…';
+    }
+    try {
+      const res = await fetch('/api/maintenance/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun, target: 'expired_sessions' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      const msg = `scanned=${data.scanned} expired=${data.expiredFound} deleted=${data.deleted} dryRun=${data.dryRun}`;
+      if (pre) pre.textContent = msg;
+      showToast(dryRun ? 'Dry Run Complete.' : `Deleted ${data.deleted} expired session row(s).`);
+    } catch (e) {
+      if (pre) pre.textContent = e.message || 'Error';
+      showToast(e.message || 'Cleanup failed.', 'error');
+    }
+  }
+
+  async function maintClearAllSessions() {
+    if (!confirm('This logs out every dashboard user. Continue?')) return;
+    try {
+      const res = await fetch('/api/maintenance/sessions/clear-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'CLEAR_ALL_SESSIONS' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      showToast(`Removed ${data.deleted} session row(s). Redirecting…`);
+      window.location.href = '/login';
+    } catch (e) {
+      showToast(e.message || 'Failed to clear sessions.', 'error');
+    }
+  }
+
+  async function loadDeepHealth() {
+    const pre = document.getElementById('deepHealthPre');
+    if (pre) pre.textContent = 'Loading…';
+    try {
+      const res = await fetch('/api/health/deep');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (pre) pre.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      if (pre) pre.textContent = e.message || 'Error';
+      showToast('Failed to load deep health.', 'error');
+    }
+  }
+
   function maintStopPoll() {
     if (maintSeedPollTimer) {
       clearInterval(maintSeedPollTimer);
       maintSeedPollTimer = null;
     }
+    maintCurrentJobId = null;
   }
 
   function maintApplyJobToUI(j) {
@@ -2821,6 +3008,7 @@
     const phase = document.getElementById('maintSeedPhaseLabel');
     const line = document.getElementById('maintSeedStatusLine');
     const btn = document.getElementById('maintStartSeedBtn');
+    const stopBtn = document.getElementById('maintStopSeedBtn');
     const sum = document.getElementById('maintSeedSummary');
     const errEl = document.getElementById('maintSeedErrors');
 
@@ -2843,6 +3031,7 @@
     }
 
     if (btn) btn.disabled = j.status === 'running';
+    if (stopBtn) stopBtn.classList.toggle('hidden', j.status !== 'running');
 
     if (j.status === 'done' && j.result) {
       const r = j.result;
@@ -2866,6 +3055,13 @@
       }
       const dry = r.dryRun ? ' (dry run)' : '';
       showToast(`Backfill finished${dry}: ${r.usersUpdated} updated, ${r.usersSkipped} skipped.`);
+    } else if (j.status === 'stopped') {
+      if (sum) sum.classList.add('hidden');
+      if (errEl) {
+        errEl.classList.remove('hidden');
+        errEl.textContent = j.error || 'Stopped by user.';
+      }
+      showToast('Backfill stopped.');
     } else if (j.status === 'error') {
       if (sum) sum.classList.add('hidden');
       if (errEl) {
@@ -2878,19 +3074,40 @@
 
   function maintStartPolling(jobId) {
     maintStopPoll();
+    maintCurrentJobId = jobId;
     maintSeedPollTimer = setInterval(async () => {
       try {
         const res = await fetch(`/api/maintenance/jobs/${encodeURIComponent(jobId)}`);
         if (!res.ok) return;
         const j = await res.json();
         maintApplyJobToUI(j);
-        if (j.status === 'done' || j.status === 'error') {
+        if (j.status === 'done' || j.status === 'error' || j.status === 'stopped') {
           maintStopPoll();
           const btn = document.getElementById('maintStartSeedBtn');
           if (btn) btn.disabled = false;
+          const stopBtn = document.getElementById('maintStopSeedBtn');
+          if (stopBtn) stopBtn.classList.add('hidden');
         }
       } catch (_) {}
     }, 600);
+  }
+
+  async function stopMaintSeed() {
+    if (!maintCurrentJobId) {
+      showToast('No active job to stop.', 'error');
+      return;
+    }
+    try {
+      const res = await fetch('/api/maintenance/seed-last-messages/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to stop backfill.');
+      showToast('Stop requested. Waiting for job to halt…');
+    } catch (e) {
+      showToast(e.message || 'Failed to stop backfill.', 'error');
+    }
   }
 
   async function startMaintSeed() {
@@ -2992,6 +3209,8 @@
     if (hash === '#maintenance') {
       loadMaintenanceChannels();
       maintCheckActiveJob();
+      loadStorageReport();
+      loadDeepHealth();
     }
     
     // Smooth scroll to top on section change

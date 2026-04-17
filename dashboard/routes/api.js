@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { ActivityType, PermissionFlagsBits } = require('discord.js');
@@ -22,7 +23,64 @@ const {
   handleReminder, 
   NEEDAFRIEND_REMINDER_MS 
 } = require('../../utils/reminderUtils');
+const {
+  getSqlitePath,
+  getStorageReport,
+  runSqliteMaintenance,
+  sqliteIntegrityCheck,
+  cleanupExpiredSessions,
+  clearAllSessionRows,
+  sqliteRwProbe
+} = require('../../utils/maintenanceService');
 const logger = require('../../logger')('dashboard:api');
+
+/**
+ * Extended diagnostics for GET /api/health/deep.
+ * @param {import('discord.js').Client} client
+ */
+function buildDeepHealthPayload(client) {
+  const integrity = sqliteIntegrityCheck();
+  const rw = sqliteRwProbe();
+  const sqlitePath = getSqlitePath();
+  let fileBytes = 0;
+  try {
+    if (fs.existsSync(sqlitePath)) fileBytes = fs.statSync(sqlitePath).size;
+  } catch {
+    /* ignore */
+  }
+  const guild = client.guilds.cache.first();
+  return {
+    timestamp: new Date().toISOString(),
+    process: {
+      uptimeSeconds: Math.floor(process.uptime()),
+      pid: process.pid,
+      node: process.version,
+      platform: `${os.platform()} ${os.release()}`
+    },
+    memory: {
+      rssMb: (process.memoryUsage().rss / 1024 / 1024).toFixed(2),
+      heapUsedMb: (process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)
+    },
+    discord: {
+      ready: client.isReady(),
+      user: client.user ? { tag: client.user.tag, id: client.user.id } : null,
+      ping: client.ws.ping,
+      wsStatus: client.ws.status,
+      guilds: client.guilds.cache.size,
+      primaryGuild: guild
+        ? { id: guild.id, name: guild.name, approximateMemberCount: guild.memberCount }
+        : null
+    },
+    sqlite: {
+      path: sqlitePath,
+      fileBytes,
+      integrityCheck: integrity.ok ? 'ok' : integrity.result || integrity.error || 'unknown',
+      integrityOk: integrity.ok,
+      readable: rw.readable,
+      writable: rw.writable
+    }
+  };
+}
 
 /** Rolling sample for process CPU % (wall time between /api/health calls). */
 let _healthCpuPrev = process.cpuUsage();
@@ -133,6 +191,8 @@ function invalidateInvitesListCache() {
 let seedJobRunning = false;
 /** @type {string | null} */
 let currentSeedJobId = null;
+/** @type {AbortController | null} */
+let currentSeedAbortController = null;
 /** @type {Map<string, object>} */
 const seedJobs = new Map();
 
@@ -640,6 +700,21 @@ router.get('/health', async (req, res) => {
   }
 });
 
+// ─── GET /api/health/deep ───────────────────────────────────────────────────
+/** Process, Discord gateway, and SQLite diagnostics (Maintenance). */
+router.get('/health/deep', (req, res) => {
+  try {
+    const client = req.discordClient;
+    if (!client) {
+      return res.status(503).json({ error: 'Discord client not available.' });
+    }
+    res.json(buildDeepHealthPayload(client));
+  } catch (err) {
+    logger.error('Failed to build deep health.', { err });
+    res.status(500).json({ error: 'Failed to fetch deep health.' });
+  }
+});
+
 // ─── GET /api/reminders/live ────────────────────────────────────────────────
 router.get('/reminders/live', async (req, res) => {
   try {
@@ -1052,6 +1127,23 @@ router.get('/maintenance/jobs/:id', (req, res) => {
   res.json(job);
 });
 
+// ─── POST /api/maintenance/seed-last-messages/stop ──────────────────────────
+router.post('/maintenance/seed-last-messages/stop', (req, res) => {
+  if (!seedJobRunning || !currentSeedJobId || !currentSeedAbortController) {
+    return res.status(409).json({ error: 'No active backfill job to stop.' });
+  }
+  const job = seedJobs.get(currentSeedJobId);
+  if (job) {
+    job.stopRequested = true;
+  }
+  currentSeedAbortController.abort();
+  logger.warn('Dashboard requested stop for seed last messages job.', {
+    jobId: currentSeedJobId,
+    user: req.session.user?.username
+  });
+  res.json({ ok: true, jobId: currentSeedJobId, stopping: true });
+});
+
 // ─── POST /api/maintenance/seed-last-messages ───────────────────────────────
 router.post('/maintenance/seed-last-messages', (req, res) => {
   if (seedJobRunning) {
@@ -1101,6 +1193,7 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
 
   seedJobRunning = true;
   currentSeedJobId = jobId;
+  currentSeedAbortController = new AbortController();
 
   const username = req.session.user?.username;
   const keyv = getKeyvForNamespace('main');
@@ -1117,31 +1210,144 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
         channelIds,
         onlyMissing,
         dryRun,
+        signal: currentSeedAbortController.signal,
         onProgress: async (evt) => {
           applySeedJobProgress(job, evt);
         }
       });
-      job.status = 'done';
-      job.percent = 100;
-      job.result = result;
-      job.finishedAt = Date.now();
-      logger.info('Dashboard seed last messages completed.', {
-        jobId,
-        user: username,
-        messagesScanned: result.messagesScanned,
-        usersUpdated: result.usersUpdated
-      });
+      if (job.stopRequested) {
+        job.status = 'stopped';
+        job.finishedAt = Date.now();
+        job.error = 'Stopped by user.';
+        logger.warn('Dashboard seed last messages stopped.', { jobId, user: username });
+      } else {
+        job.status = 'done';
+        job.percent = 100;
+        job.result = result;
+        job.finishedAt = Date.now();
+        logger.info('Dashboard seed last messages completed.', {
+          jobId,
+          user: username,
+          messagesScanned: result.messagesScanned,
+          usersUpdated: result.usersUpdated
+        });
+      }
     } catch (err) {
-      job.status = 'error';
-      job.error = err && err.message ? String(err.message) : String(err);
-      job.finishedAt = Date.now();
-      logger.error('Dashboard seed last messages failed.', { jobId, err });
+      if (err && err.name === 'AbortError') {
+        job.status = 'stopped';
+        job.error = 'Stopped by user.';
+        job.finishedAt = Date.now();
+        logger.warn('Dashboard seed last messages aborted.', { jobId, user: username });
+      } else {
+        job.status = 'error';
+        job.error = err && err.message ? String(err.message) : String(err);
+        job.finishedAt = Date.now();
+        logger.error('Dashboard seed last messages failed.', { jobId, err });
+      }
     } finally {
       await keyv.disconnect().catch(() => {});
       seedJobRunning = false;
       currentSeedJobId = null;
+      currentSeedAbortController = null;
     }
   })();
+});
+
+// ─── GET /api/maintenance/storage-report ────────────────────────────────────
+router.get('/maintenance/storage-report', (req, res) => {
+  try {
+    const report = getStorageReport();
+    res.json(report);
+  } catch (err) {
+    logger.error('Storage report failed.', { err });
+    res.status(500).json({ error: 'Failed to build storage report.' });
+  }
+});
+
+// ─── POST /api/maintenance/sqlite ───────────────────────────────────────────
+/** Body: { operation: 'analyze' | 'vacuum' | 'optimize' } */
+router.post('/maintenance/sqlite', (req, res) => {
+  const op = req.body && String(req.body.operation || '').toLowerCase();
+  const result = runSqliteMaintenance(op);
+  if (!result.ok) {
+    logger.warn('SQLite maintenance failed.', { operation: op, err: result.error });
+    return res.status(400).json({ ok: false, error: result.error, operation: op });
+  }
+  logger.info('SQLite maintenance completed.', {
+    operation: op,
+    user: req.session.user?.username,
+    fileBytesBefore: result.fileBytesBefore,
+    fileBytesAfter: result.fileBytesAfter
+  });
+  res.json({ ok: true, ...result });
+});
+
+// ─── POST /api/maintenance/cleanup ──────────────────────────────────────────
+/** Body: { dryRun?: boolean, target: 'expired_sessions' } */
+router.post('/maintenance/cleanup', (req, res) => {
+  const target = req.body && req.body.target;
+  if (target !== 'expired_sessions') {
+    return res.status(400).json({ error: 'Unsupported cleanup target.' });
+  }
+  const dryRun = req.body.dryRun === true || req.body.dryRun === 'true';
+  try {
+    const result = cleanupExpiredSessions(dryRun);
+    logger.info('Session cleanup.', {
+      dryRun,
+      ...result,
+      user: req.session.user?.username
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    logger.error('Cleanup failed.', { err });
+    res.status(500).json({ error: err.message || 'Cleanup failed.' });
+  }
+});
+
+// ─── POST /api/maintenance/sessions/clear-all ───────────────────────────────
+/** Destroys all dashboard sessions in Keyv (everyone must log in again). Body: { confirm: 'CLEAR_ALL_SESSIONS' } */
+router.post('/maintenance/sessions/clear-all', (req, res) => {
+  if (req.body?.confirm !== 'CLEAR_ALL_SESSIONS') {
+    return res.status(400).json({
+      error: 'Confirmation required: send { "confirm": "CLEAR_ALL_SESSIONS" }.'
+    });
+  }
+  try {
+    const { deleted } = clearAllSessionRows();
+    logger.warn('All dashboard sessions cleared from database.', {
+      deleted,
+      user: req.session.user?.username
+    });
+    res.json({ ok: true, deleted });
+  } catch (err) {
+    logger.error('Clear sessions failed.', { err });
+    res.status(500).json({ error: err.message || 'Failed to clear sessions.' });
+  }
+});
+
+// ─── POST /api/maintenance/discord/resync ───────────────────────────────────
+router.post('/maintenance/discord/resync', async (req, res) => {
+  const guild = req.discordClient?.guilds?.cache?.first();
+  if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const channels = body.channels !== false;
+  const roles = body.roles !== false;
+  try {
+    if (channels) await guild.channels.fetch();
+    if (roles) await guild.roles.fetch();
+    invalidateUserSummaryCache();
+    invalidateGuildMembersCache();
+    invalidateInvitesListCache();
+    logger.info('Discord cache resync completed.', {
+      channels,
+      roles,
+      user: req.session.user?.username
+    });
+    res.json({ ok: true, channels, roles });
+  } catch (err) {
+    logger.error('Discord resync failed.', { err });
+    res.status(500).json({ error: err.message || 'Resync failed.' });
+  }
 });
 
 // ─── POST /api/maintenance/cache/clear ──────────────────────────────────────

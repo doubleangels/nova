@@ -3,7 +3,10 @@
  * Used by the dashboard maintenance API (`/api/maintenance/seed-last-messages`).
  */
 
+const fs = require('fs');
+const path = require('path');
 const { ChannelType, PermissionFlagsBits } = require('discord.js');
+const Database = require('better-sqlite3');
 
 const DEFAULT_MAX_PER_CHANNEL = 10000;
 const DEFAULT_DELAY_MS = 300;
@@ -59,10 +62,10 @@ function scanProgressPercent(channelsTotal, channelIndex, fetchedInChannel, maxP
  * @param {import('discord.js').TextChannel | import('discord.js').ThreadChannel | import('discord.js').NewsChannel} channel
  * @param {number} maxPerChannel
  * @param {number} delayMs
- * @param {Map<string, number>} maxTsByUser
- * @param {{ signal?: AbortSignal, onBatch?: (info: { fetched: number, batchSize: number, usersTracked: number }) => void }} [opts]
+ * @param {(userId: string, ts: number) => void} onUserMessage
+ * @param {{ signal?: AbortSignal, onBatch?: (info: { fetched: number, batchSize: number, usersTracked: number }) => void, getUsersTracked?: () => number }} [opts]
  */
-async function scanChannelMessages(channel, maxPerChannel, delayMs, maxTsByUser, opts = {}) {
+async function scanChannelMessages(channel, maxPerChannel, delayMs, onUserMessage, opts = {}) {
   const { signal, onBatch } = opts;
   let fetched = 0;
   /** @type {string|undefined} */
@@ -80,21 +83,75 @@ async function scanChannelMessages(channel, maxPerChannel, delayMs, maxTsByUser,
       const id = msg.author?.id;
       if (!id) continue;
       const ts = msg.createdTimestamp;
-      const prev = maxTsByUser.get(id);
-      if (prev == null || ts > prev) maxTsByUser.set(id, ts);
+      onUserMessage(id, ts);
     }
 
     fetched += batch.size;
     const oldest = batch.last();
     before = oldest ? oldest.id : undefined;
     if (typeof onBatch === 'function') {
-      onBatch({ fetched, batchSize: batch.size, usersTracked: maxTsByUser.size });
+      onBatch({
+        fetched,
+        batchSize: batch.size,
+        usersTracked: typeof opts.getUsersTracked === 'function' ? opts.getUsersTracked() : 0
+      });
     }
     if (batch.size < limit) break;
     if (delayMs > 0) await sleep(delayMs);
   }
 
   return fetched;
+}
+
+/**
+ * Disk-backed temp store for max timestamp by user (memory efficient).
+ * @returns {{
+ *   upsertMax: (userId: string, ts: number) => void,
+ *   countUsers: () => number,
+ *   iterateRows: () => IterableIterator<{ userId: string, ts: number }>,
+ *   closeAndDelete: () => void
+ * }}
+ */
+function createTempUserTimestampStore() {
+  const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  const tempPath = path.join(
+    dataDir,
+    `.seed-last-messages-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}.sqlite`
+  );
+  const db = new Database(tempPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('synchronous = NORMAL');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_last_ts (
+      user_id TEXT PRIMARY KEY,
+      ts INTEGER NOT NULL
+    );
+  `);
+  const upsert = db.prepare(`
+    INSERT INTO user_last_ts (user_id, ts)
+    VALUES (?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+      ts = CASE WHEN excluded.ts > user_last_ts.ts THEN excluded.ts ELSE user_last_ts.ts END;
+  `);
+  const countStmt = db.prepare('SELECT COUNT(*) AS c FROM user_last_ts');
+  const iterateStmt = db.prepare('SELECT user_id AS userId, ts FROM user_last_ts');
+
+  return {
+    upsertMax(userId, ts) {
+      upsert.run(userId, ts);
+    },
+    countUsers() {
+      return Number(countStmt.get().c || 0);
+    },
+    iterateRows() {
+      return iterateStmt.iterate();
+    },
+    closeAndDelete() {
+      try { db.close(); } catch {}
+      try { fs.unlinkSync(tempPath); } catch {}
+    }
+  };
 }
 
 /**
@@ -159,13 +216,16 @@ async function runSeedLastMessages({
     percent: 0
   });
 
-  const maxTsByUser = new Map();
   let messagesScanned = 0;
   /** @type {{ channelId: string, channelName: string, message: string }[]} */
   const channelErrors = [];
 
+  const tempStore = createTempUserTimestampStore();
+  let trackedUsersApprox = 0;
+
   let channelIndex = 0;
-  for (const ch of channels) {
+  try {
+    for (const ch of channels) {
     if (signal?.aborted) throw abortError();
 
     await emit({
@@ -175,7 +235,7 @@ async function runSeedLastMessages({
       channelId: ch.id,
       channelName: ch.name,
       messagesScanned,
-      usersTracked: maxTsByUser.size,
+      usersTracked: trackedUsersApprox,
       percent: scanProgressPercent(channels.length, channelIndex, 0, maxPerChannel)
     });
 
@@ -194,10 +254,16 @@ async function runSeedLastMessages({
         /** @type {import('discord.js').TextChannel} */ (ch),
         maxPerChannel,
         delayMs,
-        maxTsByUser,
+        (userId, ts) => {
+          tempStore.upsertMax(userId, ts);
+        },
         {
           signal,
+          getUsersTracked: () => trackedUsersApprox,
           onBatch: ({ fetched }) => {
+            if (fetched % 500 === 0 || fetched <= 100) {
+              trackedUsersApprox = tempStore.countUsers();
+            }
             void emit({
               type: 'channel_batch',
               channelIndex,
@@ -206,13 +272,14 @@ async function runSeedLastMessages({
               channelName: ch.name,
               fetchedInChannel: fetched,
               messagesScanned: messagesScanned + fetched,
-              usersTracked: maxTsByUser.size,
+              usersTracked: trackedUsersApprox,
               percent: scanProgressPercent(channels.length, channelIndex, fetched, maxPerChannel)
             });
           }
         }
       );
       messagesScanned += n;
+      trackedUsersApprox = tempStore.countUsers();
     } catch (err) {
       if (err && err.name === 'AbortError') throw err;
       channelErrors.push({
@@ -229,28 +296,30 @@ async function runSeedLastMessages({
       channelId: ch.id,
       channelName: ch.name,
       messagesScanned,
-      usersTracked: maxTsByUser.size,
+      usersTracked: trackedUsersApprox,
       percent: scanProgressPercent(channels.length, channelIndex + 1, 0, maxPerChannel)
     });
 
     channelIndex++;
   }
 
-  const entries = [...maxTsByUser.entries()];
+  const usersTracked = tempStore.countUsers();
   let usersUpdated = 0;
   let usersSkipped = 0;
 
   await emit({
     type: 'write_start',
-    usersToWrite: entries.length,
+    usersToWrite: usersTracked,
     messagesScanned,
-    usersTracked: maxTsByUser.size,
+    usersTracked,
     percent: 85
   });
 
-  for (let i = 0; i < entries.length; i++) {
+  let i = 0;
+  for (const row of tempStore.iterateRows()) {
     if (signal?.aborted) throw abortError();
-    const [userId, scannedTs] = entries[i];
+    const userId = row.userId;
+    const scannedTs = row.ts;
     const key = `last_message:${userId}`;
     let existing = null;
     try {
@@ -278,14 +347,15 @@ async function runSeedLastMessages({
       }
     }
 
-    if (i % 20 === 0 || i === entries.length - 1) {
+    i++;
+    if (i % 20 === 0 || i === usersTracked) {
       await emit({
         type: 'write_progress',
         usersUpdated,
         usersSkipped,
-        writeIndex: i + 1,
-        writesTotal: entries.length,
-        percent: 85 + Math.round(((i + 1) / Math.max(1, entries.length)) * 14)
+        writeIndex: i,
+        writesTotal: usersTracked,
+        percent: 85 + Math.round((i / Math.max(1, usersTracked)) * 14)
       });
     }
   }
@@ -294,7 +364,7 @@ async function runSeedLastMessages({
     guildId: guild.id,
     guildName: guild.name,
     messagesScanned,
-    usersTracked: maxTsByUser.size,
+    usersTracked,
     usersUpdated,
     usersSkipped,
     channelsScanned: channels.length,
@@ -305,6 +375,9 @@ async function runSeedLastMessages({
 
   await emit({ type: 'done', percent: 100, result });
   return result;
+  } finally {
+    tempStore.closeAndDelete();
+  }
 }
 
 module.exports = {
