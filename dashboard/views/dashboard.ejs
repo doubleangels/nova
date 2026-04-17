@@ -3149,7 +3149,7 @@
         
         return `
             <div class="card p-0 overflow-hidden border-[var(--c-card-border)]">
-                <button type="button" onclick="toggleCategory(${JSON.stringify(cat)})" class="no-auto-icon w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-card-border)]" data-open="${isOpen}">
+                <button type="button" class="no-auto-icon w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-card-border)]" data-open="${isOpen}" data-db-category="${escapeHtml(cat)}">
                     <div class="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--c-accent)] transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         <span class="text-xs font-bold uppercase tracking-wider text-[var(--c-label)]">${escapeHtml(cat)}</span>
@@ -3193,6 +3193,14 @@
             </div>
         `;
     }).join('');
+
+    content.querySelectorAll('[data-db-category]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const cat = btn.dataset.dbCategory;
+            if (!cat) return;
+            toggleCategory(cat);
+        });
+    });
 
     // Trigger initial resize for visible textareas
     setTimeout(() => {
