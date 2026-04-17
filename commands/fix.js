@@ -95,7 +95,7 @@ module.exports = {
 
       const reminderChannelId = await getValue('reminder_channel');
       if (!reminderChannelId) {
-        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder channel and role first.");
+        await interaction.editReply("⚠️ Reminder configuration is incomplete. Set the reminder channel and role in the Nova dashboard (Reminders section), then try again.");
         return;
       }
       

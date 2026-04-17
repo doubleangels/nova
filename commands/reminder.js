@@ -1,43 +1,23 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
-const { getValue, setValue } = require('../utils/database');
+const { getValue } = require('../utils/database');
 const { getLatestReminderData } = require('../utils/reminderUtils');
 
 /**
- * Command module for configuring and managing reminders.
- * Handles setup of reminder channels and roles, displays reminder status, and fixes reminder data.
+ * Command module for viewing reminder status.
+ * Displays reminder status. Channel and role are configured in the Nova dashboard.
  * @type {Object}
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reminder')
-    .setDescription('Configure and manage server reminders (Disboard, Reddit, and r/needafriend).')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('setup')
-        .setDescription('Set up the reminder channel and role.')
-        .addChannelOption(option =>
-          option
-            .setName('channel')
-            .setDescription('What channel do you want to send reminders to?')
-            .addChannelTypes(ChannelType.GuildText)
-            .setRequired(true)
-        )
-        .addRoleOption(option =>
-          option
-            .setName('role')
-            .setDescription('What role do you want to ping for reminders?')
-            .setRequired(true)
-        )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('status')
-        .setDescription('Check the current reminder configuration and status.')
+    .setDescription('Check server reminder status (Disboard, Reddit, and r/needafriend).')
+    .addSubcommand((subcommand) =>
+      subcommand.setName('status').setDescription('Check the current reminder configuration and status.')
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
@@ -45,7 +25,7 @@ module.exports = {
    * Executes the reminder command.
    * This function:
    * 1. Defers the reply
-   * 2. Processes the subcommand (setup or status)
+   * 2. Processes the status subcommand
    * 3. Handles any errors that occur
    * 
    * @param {CommandInteraction} interaction - The interaction that triggered the command
@@ -64,9 +44,7 @@ module.exports = {
       
       const subcommand = interaction.options.getSubcommand();
       
-      if (subcommand === 'setup') {
-        await this.handleReminderSetup(interaction);
-      } else if (subcommand === 'status') {
+      if (subcommand === 'status') {
         await this.handleReminderStatus(interaction);
       }
       
@@ -75,60 +53,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Handles the reminder setup subcommand.
-   * This function:
-   * 1. Validates channel type
-   * 2. Updates database with channel and role settings
-   * 3. Sends confirmation embed
-   * 
-   * @param {CommandInteraction} interaction - The interaction that triggered the command
-   * @throws {Error} If there's an error setting up reminders
-   * @returns {Promise<void>}
-   */
-  async handleReminderSetup(interaction) {
-    const channelOption = interaction.options.getChannel('channel');
-    const roleOption = interaction.options.getRole('role');
-    
-    if (channelOption.type !== ChannelType.GuildText) {
-      throw new Error("INVALID_CHANNEL_TYPE");
-    }
-    
-    try {
-      await Promise.all([
-        setValue('reminder_channel', channelOption.id),
-        setValue('reminder_role', roleOption.id)
-      ]);
-    } catch (dbError) {
-      logger.error("Database operation failed during reminder setup.", { 
-        err: dbError,
-        userId: interaction.user.id,
-        guildId: interaction.guildId
-      });
-      
-      throw new Error("DATABASE_WRITE_ERROR");
-    }
-    
-    logger.info("/reminder command completed successfully.", {
-      userId: interaction.user.id,
-      guildId: interaction.guildId,
-      channelId: channelOption.id,
-      roleId: roleOption.id
-    });
-
-    const fields = [
-      { name: 'Channel', value: `<#${channelOption.id}>` },
-      { name: 'Role', value: `<@&${roleOption.id}>` }
-    ];
-    const embed = new EmbedBuilder()
-      .setColor(0xc03728)
-      .setTitle('Reminder Setup Complete')
-      .addFields(fields)
-      .setDescription(`Reminders will be sent in <#${channelOption.id}> and will ping <@&${roleOption.id}>.`);
-
-    await interaction.editReply({ embeds: [embed] });
-  },
-  
   /**
    * Handles the reminder status subcommand.
    * This function:
@@ -275,10 +199,6 @@ module.exports = {
     
     if (error.message === "DATABASE_READ_ERROR") {
       errorMessage = "⚠️ Failed to retrieve reminder settings. Please try again later.";
-    } else if (error.message === "DATABASE_WRITE_ERROR") {
-      errorMessage = "⚠️ Failed to update reminder settings. Please try again later.";
-    } else if (error.message === "INVALID_CHANNEL_TYPE") {
-      errorMessage = "⚠️ Please select a text channel for reminders.";
     } else if (error.message === "CONFIG_INCOMPLETE") {
       errorMessage = "⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.";
     }

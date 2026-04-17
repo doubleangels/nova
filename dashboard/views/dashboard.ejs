@@ -285,7 +285,7 @@
             <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Invite Manager</a>
             <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Message Center</a>
             <a href="#users" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">User Manager</a>
-            <a href="#inactivity" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Inactivity Prune</a>
+            <a href="#users-inactivity-prune" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Inactivity Prune</a>
             <a href="#maintenance" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Maintenance &amp; Diagnostics</a>
             <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Social &amp; Fun</a>
         </div>
@@ -1232,7 +1232,7 @@
 </section>
 
 <!-- ─── USERS SECTION ───────────────────────────────────────────────────────── -->
-<section id="users" class="page-section hidden space-y-8 mt-8">
+<section id="users" class="page-section hidden space-y-8 mt-8 mb-10">
   <div class="card bg-[var(--c-input)]/50 border-dashed">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
@@ -1287,7 +1287,7 @@
       </div>
 
       <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] space-y-3">
-          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. <strong class="text-[var(--c-text-muted)]">Inactive</strong> uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> (Inactivity Prune section). Sort applies to the table below.</p>
+          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. <strong class="text-[var(--c-text-muted)]">Inactive</strong> uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> (Inactivity Prune card below). Sort applies to the table below.</p>
           <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1329,16 +1329,13 @@
       </div>
 
   </div>
-</section>
 
-<!-- ══════════════════════════════════════════════════════════ INACTIVITY PRUNE -->
-<section id="inactivity" class="mb-10 page-section hidden">
-  <div class="card p-6">
+  <div id="users-inactivity-prune" class="card p-6 scroll-mt-28 border border-red-500/20">
       <div class="flex flex-col mb-4">
           <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
           <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed font-bold">Scan and kick members past your inactivity threshold (uses last-message data when present).</p>
       </div>
-      
+
       <div class="grid grid-cols-1 md:max-w-md gap-6 mb-6">
           <div>
               <label class="field-label">Days of Inactivity</label>
@@ -1362,7 +1359,6 @@
           </button>
       </div>
 
-      <!-- Dry Run Results -->
       <div id="inactivityResultsContainer" class="hidden mt-6 border border-red-500/20 rounded-xl overflow-hidden bg-[var(--c-card)]">
           <div class="bg-red-500/10 px-4 py-2 border-b border-red-500/20 flex justify-between items-center">
               <span class="text-[10px] uppercase font-bold text-red-500 tracking-widest">Dry-Run Preview</span>
@@ -1850,7 +1846,7 @@
     { id: 'moderation_entry', keys: ['entry_guard_enabled', 'entry_guard_account_age'] },
     { id: 'reminders', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms', 'reddit_promotion_targets', 'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
     { id: 'social_notext', keys: ['notext_channel'] },
-    { id: 'inactivity', keys: ['prune_protected_role_id'] },
+    { id: 'user_manager_prune', keys: ['prune_protected_role_id'] },
     { id: 'messaging', keys: ['msg_channel_id'] },
   ];
   const SETTINGS_DEBOUNCE_MS = 650;
@@ -2599,7 +2595,7 @@
     const limit = sel ? parseInt(sel.value, 10) || 50 : 50;
     const ok = await confirmWithModal({
       title: 'Seed Join History',
-      message: `Add up to ${limit} rows from the server’s current member list for Recent Joins (newest Discord join times first), using each member’s Discord join time. Rows you already have with the same user and time are skipped. Invite codes are not recovered.`,
+      message: `Add up to ${limit} rows from the server’s current member list for Recent Joins (newest Discord join times first), using each member’s Discord join time. Rows you already have with the same user and time are skipped. When the bot already recorded that join, tagged invite info is copied; otherwise the source shows as unknown invite.`,
       confirmLabel: 'Seed'
     });
     if (!ok) return;
@@ -2611,7 +2607,8 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Request failed');
-      const summary = `Seeded ${data.merged ?? 0} new row(s); ${data.totalInHistory ?? 0} total stored.`;
+      const attr = typeof data.attributedFromHistory === 'number' ? data.attributedFromHistory : 0;
+      const summary = `Seeded ${data.merged ?? 0} new row(s); ${data.totalInHistory ?? 0} total stored (${attr} matched existing on-join invite records).`;
       showToast(summary);
       loadInviteJoinHistory();
       const pre = document.getElementById('maintJoinHistorySeedPre');
@@ -4679,27 +4676,46 @@
   })();
 
   // ── SPA Visibility Logic ──────────────────────────────────────────────────
-  function updateVisibility() {
-    const hash = window.location.hash || '#status';
-    document.querySelectorAll('.page-section').forEach(s => {
-        s.classList.toggle('hidden', `#${s.id}` !== hash);
-    });
-    
-    if (hash === '#users') {
-        const tbody = document.getElementById('userTableBody');
-        if (tbody && tbody.children.length === 1 && tbody.innerHTML.includes('Loading')) {
-            loadUserSummary(false);
-        }
+  function normalizeDashboardNavHash(raw) {
+    let h = raw || '#status';
+    if (h === '#inactivity') {
+      if (window.location.hash === '#inactivity') {
+        history.replaceState(null, '', '#users-inactivity-prune');
+      }
+      h = '#users-inactivity-prune';
     }
-    if (hash === '#maintenance') {
+    if (h === '#users-inactivity-prune') {
+      return { sectionHash: '#users', scrollToId: 'users-inactivity-prune' };
+    }
+    return { sectionHash: h, scrollToId: null };
+  }
+
+  function updateVisibility() {
+    const { sectionHash, scrollToId } = normalizeDashboardNavHash(window.location.hash);
+    document.querySelectorAll('.page-section').forEach((s) => {
+      s.classList.toggle('hidden', `#${s.id}` !== sectionHash);
+    });
+
+    if (sectionHash === '#users') {
+      const tbody = document.getElementById('userTableBody');
+      if (tbody && tbody.children.length === 1 && tbody.innerHTML.includes('Loading')) {
+        loadUserSummary(false);
+      }
+    }
+    if (sectionHash === '#maintenance') {
       loadMaintenanceChannels();
       maintCheckActiveJob();
       loadStorageReport();
       loadDeepHealth();
     }
-    
-    // Smooth scroll to top on section change
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (scrollToId) {
+      requestAnimationFrame(() => {
+        document.getElementById(scrollToId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     ensureNonChipButtonsHaveIcons();
   }
   window.addEventListener('hashchange', async (e) => {

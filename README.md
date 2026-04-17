@@ -265,9 +265,9 @@ The bot currently ships with command families for administration, moderation, in
 ### Command Families
 
 - **Administration & Moderation**
-  - `/invite`, `/reminder`, `/fix`
+  - `/invite list`, `/reminder status`, `/fix` (invite tagging, reminder channel/role, and no-text channel are configured in the **Nova dashboard**)
   - `/giveperms`, `/giverole`, `/takerole`, `/changerolename`, `/changecolor`, `/changenickname`
-  - `/notext`, `/newuser`, `/audit`, `/compareroles`
+  - `/notext info`, `/newuser`, `/audit`, `/compareroles`
   - Reddit posting/admin flows: `/promote`, `/needafriend`
 - **Information & Search**
   - `/google`, `/googleimages`, `/youtube`, `/wikipedia`

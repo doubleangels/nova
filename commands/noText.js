@@ -1,154 +1,59 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const { getValue, setValue } = require('../utils/database');
+const { getValue } = require('../utils/database');
 const config = require('../config');
 
 /**
- * Command module for configuring channels to only allow GIFs and stickers.
- * Prevents text messages in designated channels.
- * @type {Object}
+ * No-text channel (GIFs/stickers only) is configured in the Nova dashboard under Social & Fun.
  */
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('notext')
-    .setDescription('Configure a channel to only allow GIFs and stickers.')
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('set')
-        .setDescription('Set a channel to only allow GIFs and stickers.')
-        .addChannelOption(option =>
-          option
-            .setName('channel')
-            .setDescription('What channel do you want to configure?')
-            .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
-        )
-    )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('remove')
-        .setDescription('Remove no-text configuration from a channel.')
-        .addChannelOption(option =>
-          option
-            .setName('channel')
-            .setDescription('What channel do you want to remove the configuration from?')
-            .setRequired(true)
-            .addChannelTypes(ChannelType.GuildText)
-        )
+    .setDescription('Where to configure the no-text (GIF/sticker-only) channel.')
+    .addSubcommand((sub) =>
+      sub.setName('info').setDescription('Open the dashboard or see where this channel is configured.')
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
-  /**
-   * Executes the no-text command.
-   * This function:
-   * 1. Validates channel permissions
-   * 2. Sets or removes no-text configuration
-   * 3. Sends confirmation embed
-   * 
-   * @param {CommandInteraction} interaction - The interaction that triggered the command
-   * @throws {Error} If there's an error configuring the channel
-   * @returns {Promise<void>}
-   */
   async execute(interaction) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     try {
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-      const subcommand = interaction.options.getSubcommand();
-      const channel = interaction.options.getChannel('channel');
-
-      if (!channel) {
-        return await interaction.editReply({
-          content: "⚠️ Please select a text channel.",
-          flags: MessageFlags.Ephemeral
-        });
+      const sub = interaction.options.getSubcommand();
+      if (sub !== 'info') {
+        return interaction.editReply({ content: '⚠️ Unknown subcommand.' });
       }
 
-      const permissions = channel.permissionsFor(interaction.client.user);
-      if (!permissions.has(PermissionFlagsBits.ManageMessages)) {
-        return await interaction.editReply({
-          content: "⚠️ I need permission to manage messages in the selected channel.",
-          flags: MessageFlags.Ephemeral
-        });
+      const dashboardUrl = String((await getValue('dashboard_base_url')) || '').trim();
+      const currentId = await getValue('notext_channel');
+      const channelLine = currentId
+        ? `Current no-text channel: <#${currentId}>`
+        : 'No no-text channel is set yet.';
+
+      const descParts = [
+        'Set or change the **no-text channel** in the **Nova dashboard** under **Social & Fun** (Restricted channel).',
+        channelLine
+      ];
+      if (dashboardUrl) {
+        descParts.push(`Dashboard: ${dashboardUrl}`);
+      } else {
+        descParts.push(
+          'Ask a server admin for the dashboard URL, or set `dashboard_base_url` in the dashboard settings / database.'
+        );
       }
 
-      if (subcommand === 'set') {
-        const currentChannel = await getValue('notext_channel');
-        if (currentChannel === channel.id) {
-          return await interaction.editReply({
-            content: "⚠️ This channel is already configured as a no-text channel.",
-            flags: MessageFlags.Ephemeral
-          });
-        }
+      const embed = new EmbedBuilder()
+        .setColor(config.baseEmbedColor ?? 0)
+        .setTitle('No-text channel')
+        .setDescription(descParts.join('\n\n'))
+        .setTimestamp();
 
-        try {
-          await setValue('notext_channel', channel.id);
-        } catch (error) {
-          logger.error("Failed to save no-text channel configuration.", { err: error });
-          return await interaction.editReply({
-            content: "⚠️ Failed to save channel configuration. Please try again later.",
-            flags: MessageFlags.Ephemeral
-          });
-        }
-
-        const embed = new EmbedBuilder()
-          .setColor(config.baseEmbedColor ?? 0)
-          .setTitle('No Text Channel Set')
-          .setDescription(`Channel ${channel} has been configured to only allow GIFs and stickers.`)
-          .setTimestamp();
-
-        await interaction.editReply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
-        });
-        logger.info("/notext command completed successfully.", {
-          channelId: channel.id,
-          guildId: interaction.guildId,
-          userId: interaction.user.id,
-          action: 'set'
-        });
-
-      } else if (subcommand === 'remove') {
-        const currentChannel = await getValue('notext_channel');
-        if (currentChannel !== channel.id) {
-          return await interaction.editReply({
-            content: "⚠️ This channel is not configured as a no-text channel.",
-            flags: MessageFlags.Ephemeral
-          });
-        }
-
-        try {
-          await setValue('notext_channel', null);
-        } catch (error) {
-          logger.error("Failed to remove no-text channel configuration.", { err: error });
-          return await interaction.editReply({
-            content: "⚠️ Failed to save channel configuration. Please try again later.",
-            flags: MessageFlags.Ephemeral
-          });
-        }
-
-        const embed = new EmbedBuilder()
-          .setColor(config.baseEmbedColor ?? 0)
-          .setTitle('No Text Channel Removed')
-          .setDescription(`Channel ${channel} is no longer restricted to GIFs and stickers.`)
-          .setTimestamp();
-
-        await interaction.editReply({
-          embeds: [embed],
-          flags: MessageFlags.Ephemeral
-        });
-        logger.info("/notext command completed successfully.", {
-          channelId: channel.id,
-          guildId: interaction.guildId,
-          userId: interaction.user.id,
-          action: 'remove'
-        });
-      }
-
-    } catch (error) {
-      logger.error("Error occurred in notext command.", { err: error });
+      await interaction.editReply({ embeds: [embed] });
+      logger.info('/notext info used.', { userId: interaction.user.id, guildId: interaction.guildId });
+    } catch (err) {
+      logger.error('/notext command failed.', { err, userId: interaction.user?.id });
       await interaction.editReply({
-        content: "⚠️ An unexpected error occurred while configuring the channel. Please try again later.",
+        content: '⚠️ Could not load settings. Try again later.',
         flags: MessageFlags.Ephemeral
       });
     }

@@ -19,6 +19,8 @@ const {
   setInviteNotificationChannel,
   getInviteNotificationChannel,
   getInviteJoinHistory,
+  getInviteCodeToTagMap,
+  rebuildCodeToTagMap,
   mergeInviteJoinHistoryEntries,
   invalidateConfigCache,
   invalidateConfigCacheKey
@@ -1392,7 +1394,7 @@ router.post('/messages/send', async (req, res) => {
 });
 
 // ─── GET /api/invites/join-history ───────────────────────────────────────────
-/** Recent member joins with best-effort invite attribution (stored when members join). */
+/** Recent member joins with best-effort invite attribution (stored when members join; seed may reuse those rows). */
 router.get('/invites/join-history', async (req, res) => {
   try {
     const guild = req.discordClient.guilds.cache.first();
@@ -1408,7 +1410,72 @@ router.get('/invites/join-history', async (req, res) => {
 });
 
 // ─── POST /api/invites/join-history/seed ─────────────────────────────────────
-/** Backfill join history from current guild members’ Discord join times (invite source unknown). */
+/** Max gap between Discord join time and an existing on-join history row's `at` to reuse invite attribution. */
+const SEED_JOIN_HISTORY_MATCH_MS = 15 * 60 * 1000;
+
+/**
+ * If we already recorded this join (bot was online), reuse that row's invite/tag for the seed row.
+ * @param {Array<{ userId?: string, at?: string, source?: string, inviteCode?: string|null, tagName?: string|null, channelName?: string|null, detail?: string|null }>} historyRows
+ * @param {string} userId
+ * @param {number} joinTsMs
+ * @returns {{ source: string, inviteCode: string|null, tagName: string|null, channelName: string|null, detail: string|null }|null}
+ */
+function pickAttributionFromJoinHistory(historyRows, userId, joinTsMs) {
+  const uid = String(userId);
+  let best = null;
+  let bestDiff = Infinity;
+  for (const row of historyRows) {
+    if (String(row.userId || '') !== uid) continue;
+    const src = String(row.source || '');
+    if (src === 'seeded' || src === 'baseline') continue;
+    const t = new Date(row.at || 0).getTime();
+    if (!Number.isFinite(t)) continue;
+    const diff = Math.abs(t - joinTsMs);
+    if (diff > SEED_JOIN_HISTORY_MATCH_MS) continue;
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = row;
+    }
+  }
+  if (!best) return null;
+  const src = String(best.source || '');
+  const code = best.inviteCode != null && String(best.inviteCode).trim() ? String(best.inviteCode).trim() : null;
+  const tag = best.tagName != null && String(best.tagName).trim() ? String(best.tagName).trim() : null;
+  const ch = best.channelName != null ? String(best.channelName) : null;
+  if (src === 'tagged_invite' && tag) {
+    return {
+      source: 'tagged_invite',
+      inviteCode: code,
+      tagName: tag,
+      channelName: ch || null,
+      detail: null
+    };
+  }
+  if (code && (src === 'invite' || src === 'tagged_invite')) {
+    return {
+      source: 'invite',
+      inviteCode: code,
+      tagName: tag || null,
+      channelName: ch || null,
+      detail: null
+    };
+  }
+  return null;
+}
+
+function enrichAttributionWithCodeToTagMap(attribution, codeToTagMap) {
+  if (!attribution || !attribution.inviteCode || attribution.tagName) return attribution;
+  const mapped = codeToTagMap[attribution.inviteCode.toLowerCase()];
+  if (!mapped) return attribution;
+  return {
+    ...attribution,
+    source: 'tagged_invite',
+    tagName: mapped,
+    detail: null
+  };
+}
+
+/** Backfill join history from current guild members’ Discord join times; reuse on-join attribution when present. */
 router.post('/invites/join-history/seed', async (req, res) => {
   try {
     const limitRaw = parseInt(String(req.body?.limit ?? 50), 10);
@@ -1421,21 +1488,48 @@ router.post('/invites/join-history/seed', async (req, res) => {
     members.sort((a, b) => (b.joinedTimestamp ?? 0) - (a.joinedTimestamp ?? 0));
     const picked = members.slice(0, limit);
 
-    const seedDetail =
-      'Backfilled from Discord member join time. Invite code was not recorded for this row.';
-    const newEntries = picked.map((m) => ({
-      at: m.joinedAt
+    const existingHistory = await getInviteJoinHistory(guild.id, 200);
+    let codeToTagMap = await getInviteCodeToTagMap(guild.id);
+    if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
+      codeToTagMap = await rebuildCodeToTagMap(guild.id);
+    }
+
+    let attributedFromHistory = 0;
+    const newEntries = picked.map((m) => {
+      const joinTsMs = m.joinedTimestamp ?? (m.joinedAt ? m.joinedAt.getTime() : Date.now());
+      const atIso = m.joinedAt
         ? m.joinedAt.toISOString()
-        : new Date(m.joinedTimestamp ?? Date.now()).toISOString(),
-      userId: m.id,
-      userTag: m.user.tag,
-      displayName: m.displayName || m.user.username,
-      source: 'seeded',
-      inviteCode: null,
-      tagName: null,
-      channelName: null,
-      detail: seedDetail
-    }));
+        : new Date(joinTsMs).toISOString();
+
+      let pickedAttr = pickAttributionFromJoinHistory(existingHistory, m.id, joinTsMs);
+      if (pickedAttr) {
+        pickedAttr = enrichAttributionWithCodeToTagMap(pickedAttr, codeToTagMap);
+        attributedFromHistory++;
+        return {
+          at: atIso,
+          userId: m.id,
+          userTag: m.user.tag,
+          displayName: m.displayName || m.user.username,
+          source: pickedAttr.source,
+          inviteCode: pickedAttr.inviteCode,
+          tagName: pickedAttr.tagName,
+          channelName: pickedAttr.channelName,
+          detail: pickedAttr.detail
+        };
+      }
+
+      return {
+        at: atIso,
+        userId: m.id,
+        userTag: m.user.tag,
+        displayName: m.displayName || m.user.username,
+        source: 'seeded',
+        inviteCode: null,
+        tagName: null,
+        channelName: null,
+        detail: 'Unknown invite'
+      };
+    });
 
     const { added, total } = await mergeInviteJoinHistoryEntries(guild.id, newEntries);
     logger.info('Invite join history seeded from member list.', {
@@ -1443,13 +1537,15 @@ router.post('/invites/join-history/seed', async (req, res) => {
       scanned: picked.length,
       merged: added,
       totalInHistory: total,
+      attributedFromHistory,
       user: req.session.user?.username
     });
     res.json({
       ok: true,
       scanned: picked.length,
       merged: added,
-      totalInHistory: total
+      totalInHistory: total,
+      attributedFromHistory
     });
   } catch (err) {
     logger.error('Failed to seed invite join history.', { err });
