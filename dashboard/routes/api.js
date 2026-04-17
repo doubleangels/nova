@@ -2179,7 +2179,6 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
   const delayMs = Math.min(5000, Math.max(0, parseInt(String(body.delayMs), 10) || DEFAULT_DELAY_MS));
   const dryRun = body.dryRun === true || body.dryRun === 'true';
   const onlyMissing = body.onlyMissing === true || body.onlyMissing === 'true';
-  const includeNsfw = body.includeNsfw === true || body.includeNsfw === 'true';
   const maxMembers = Math.min(
     50000,
     Math.max(1, parseInt(String(body.maxMembers), 10) || 50000)
@@ -2204,7 +2203,6 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
     dryRun,
     strategy,
     onlyMissing,
-    includeNsfw,
     maxMembers,
     maxPerChannel,
     delayMs,
@@ -2224,7 +2222,6 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
         onlyMissing,
         dryRun,
         strategy,
-        includeNsfw,
         maxMembers,
         signal: currentSeedAbortController.signal,
         onProgress: async (evt) => {

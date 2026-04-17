@@ -161,7 +161,7 @@ async function fetchGuildMessagesSearchRaw(guild, query, opts = {}) {
   if (query.sort_by) params.set('sort_by', String(query.sort_by));
   if (query.sort_order) params.set('sort_order', String(query.sort_order));
   params.set('limit', String(Math.min(25, Math.max(1, query.limit ?? 25))));
-  if (query.include_nsfw === true) params.set('include_nsfw', 'true');
+  params.set('include_nsfw', 'true');
   if (query.content) params.set('content', String(query.content));
 
   let attempt = 0;
@@ -185,7 +185,7 @@ async function fetchGuildMessagesSearchRaw(guild, query, opts = {}) {
 /**
  * @param {import('discord.js').Guild} guild
  * @param {string} userId
- * @param {{ includeNsfw?: boolean, signal?: AbortSignal }} [opts]
+ * @param {{ signal?: AbortSignal }} [opts]
  */
 async function fetchLatestUserMessageFromGuildSearch(guild, userId, opts = {}) {
   const data = await fetchGuildMessagesSearchRaw(
@@ -195,8 +195,7 @@ async function fetchLatestUserMessageFromGuildSearch(guild, userId, opts = {}) {
       author_type: ['user'],
       sort_by: 'timestamp',
       sort_order: 'desc',
-      limit: 25,
-      include_nsfw: opts.includeNsfw === true
+      limit: 25
     },
     { signal: opts.signal }
   );
@@ -411,7 +410,6 @@ function resolveScannableChannels(guild, opts = {}) {
  * @param {boolean} [params.dryRun]
  * @param {AbortSignal | null} [params.signal]
  * @param {(evt: object) => void | Promise<void>} [params.onProgress]
- * @param {boolean} [params.includeNsfw]
  * @param {number} [params.maxMembers]
  */
 async function runSeedLastMessagesMemberSearch({
@@ -422,7 +420,6 @@ async function runSeedLastMessagesMemberSearch({
   dryRun = false,
   signal = null,
   onProgress = async () => {},
-  includeNsfw = false,
   maxMembers = 50000
 }) {
   const emit = onProgress;
@@ -496,10 +493,7 @@ async function runSeedLastMessagesMemberSearch({
       });
 
       try {
-        const msg = await fetchLatestUserMessageFromGuildSearch(guild, uid, {
-          includeNsfw,
-          signal
-        });
+        const msg = await fetchLatestUserMessageFromGuildSearch(guild, uid, { signal });
         messagesScanned += 1;
         if (msg) {
           const ts = apiMessageCreatedMs(msg);
@@ -573,8 +567,7 @@ async function runSeedLastMessagesMemberSearch({
  * @param {boolean} [params.dryRun]
  * @param {AbortSignal | null} [params.signal]
  * @param {(evt: object) => void | Promise<void>} [params.onProgress]
- * @param {SeedLastMessagesStrategy} [params.strategy='channel_scan'] — `member_search` uses Discord Search Guild Messages per member (requires MESSAGE_CONTENT; may return 202 while indexing).
- * @param {boolean} [params.includeNsfw=false] — member_search only: set `include_nsfw` on search queries.
+ * @param {SeedLastMessagesStrategy} [params.strategy='channel_scan'] — `member_search` uses Discord Search Guild Messages per member (requires MESSAGE_CONTENT; may return 202 while indexing). Search always includes age-restricted channels (`include_nsfw`).
  * @param {number} [params.maxMembers=50000] — member_search only: cap humans processed.
  */
 async function runSeedLastMessages({
@@ -588,7 +581,6 @@ async function runSeedLastMessages({
   signal = null,
   onProgress = async () => {},
   strategy = SEED_STRATEGY_CHANNEL_SCAN,
-  includeNsfw = false,
   maxMembers = 50000
 }) {
   const strat =
@@ -602,7 +594,6 @@ async function runSeedLastMessages({
       dryRun,
       signal,
       onProgress,
-      includeNsfw,
       maxMembers
     });
   }

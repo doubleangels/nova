@@ -183,7 +183,7 @@ Bounded in-memory caching reduces quota usage on Google Custom Search, Books, Yo
 Under **Maintenance → Seed Last Message Times**, you can choose:
 
 - **Channel history scan** — walks readable text/announcement/thread channels and merges newest human message timestamps into `last_message:<userId>` (original behavior). Scope with channel checkboxes and **Max messages per channel**.
-- **Guild message search** — uses Discord’s [Search Guild Messages](https://discord.com/developers/docs/resources/message#search-guild-messages) API (`GET /guilds/{guild.id}/messages/search`) once per human member (cap with **Max members**). Requires **MESSAGE_CONTENT** in the Developer Portal (Nova requests it in `index.js`). If the guild index is not ready, Discord may return HTTP 202 with code `110000`; the job retries with backoff. **Only missing keys** skips members who already have a `last_message:*` value (fewer API calls). Successful searches may also set `last_message_channel:<userId>` from the returned message.
+- **Guild message search** — uses Discord’s [Search Guild Messages](https://discord.com/developers/docs/resources/message#search-guild-messages) API (`GET /guilds/{guild.id}/messages/search`) once per human member (cap with **Max members**), always with `include_nsfw` so age-restricted channels are included. Requires **MESSAGE_CONTENT** in the Developer Portal (Nova requests it in `index.js`). If the guild index is not ready, Discord may return HTTP 202 with code `110000`; the job retries with backoff. **Only missing keys** skips members who already have a `last_message:*` value (fewer API calls). Successful searches may also set `last_message_channel:<userId>` from the returned message.
 
 ## 🖥️ Dashboard Web UI
 

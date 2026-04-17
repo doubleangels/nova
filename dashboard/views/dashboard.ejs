@@ -760,8 +760,8 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">Deep Health</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Shows process details, <strong class="text-[var(--c-text-muted)]">Discord gateway</strong> latency and connection state, and an <strong class="text-[var(--c-text-muted)]">SQLite</strong> integrity check plus a quick read/write probe. <strong class="text-[var(--c-text-muted)]">Export Diagnostics</strong> saves the same snapshot for sharing with support.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="loadDeepHealth()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh</button>
-        <button type="button" onclick="exportDiagnosticsBundle()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Export Diagnostics</button>
+        <button type="button" onclick="loadDeepHealth()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">Refresh</button>
+        <button type="button" onclick="exportDiagnosticsBundle()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">Export Diagnostics</button>
       </div>
       <pre id="deepHealthPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-72 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Tap Refresh.</pre>
     </div>
@@ -770,7 +770,7 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">Keyv Storage Report</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Summarizes row counts and approximate payload size per namespace from the <code class="text-[10px]">keyv</code> table. The <strong class="text-[var(--c-text-muted)]">largest keys</strong> list helps you find rows that may be slowing queries or using disk.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="loadStorageReport()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh Report</button>
+        <button type="button" onclick="loadStorageReport()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">Refresh Report</button>
       </div>
       <pre id="storageReportPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-56 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Open this section or tap Refresh Report.</pre>
     </div>
@@ -779,16 +779,16 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">SQLite Maintenance</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Analyze</strong> refreshes planner statistics for better query plans. <strong class="text-[var(--c-text-muted)]">Pragma optimize</strong> runs routine internal maintenance. <strong class="text-[var(--c-text-muted)]">Vacuum</strong> compacts the database file but needs exclusive access and often fails while the bot still has the database open.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="runSqliteMaint('analyze')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">
-          <svg class="w-3.5 h-3.5 shrink-0 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <button type="button" onclick="runSqliteMaint('analyze')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">
+          <svg class="w-3.5 h-3.5 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           Analyze
         </button>
-        <button type="button" onclick="runSqliteMaint('optimize')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">
-          <svg class="w-3.5 h-3.5 shrink-0 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        <button type="button" onclick="runSqliteMaint('optimize')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">
+          <svg class="w-3.5 h-3.5 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
           Optimize
         </button>
-        <button type="button" onclick="runSqliteMaint('vacuum')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors">
-          <svg class="w-3.5 h-3.5 shrink-0 text-amber-300/90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+        <button type="button" onclick="runSqliteMaint('vacuum')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-400/50 bg-amber-500/25 text-amber-100 hover:bg-amber-500/35 transition-colors">
+          <svg class="w-3.5 h-3.5 shrink-0 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
           Vacuum
         </button>
       </div>
@@ -808,10 +808,10 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">Dashboard Cache</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Clears in-memory caches for user summaries, member lists, and invites so the <strong class="text-[var(--c-text-muted)]">next</strong> dashboard load refetches from Discord and the database. Does <strong class="text-[var(--c-text-muted)]">not</strong> change anything on Discord itself.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="clearMaintCache(['user_summary'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">User Summary</button>
-        <button type="button" onclick="clearMaintCache(['guild_members'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Member Fetch</button>
-        <button type="button" onclick="clearMaintCache(['invites'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Invites List</button>
-        <button type="button" onclick="clearMaintCache(['all'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-colors">Clear All</button>
+        <button type="button" onclick="clearMaintCache(['user_summary'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">User Summary</button>
+        <button type="button" onclick="clearMaintCache(['guild_members'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">Member Fetch</button>
+        <button type="button" onclick="clearMaintCache(['invites'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">Invites List</button>
+        <button type="button" onclick="clearMaintCache(['all'])" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--c-accent)] text-white border border-[var(--c-accent)] hover:opacity-90 transition-opacity">Clear All</button>
       </div>
     </div>
 
@@ -840,7 +840,7 @@
 
     <div class="card p-5 space-y-4 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Seed Last Message Times</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Channel scan</strong> walks message history in selected channels. <strong class="text-[var(--c-text-muted)]">Member search</strong> uses Discord’s Search Guild Messages API per human member (requires <code class="text-[10px]">MESSAGE_CONTENT</code>; may wait while the guild search index warms up). Both upsert <code class="text-[10px]">last_message:&lt;userId&gt;</code> in Keyv. <strong class="text-[var(--c-text-muted)]">Only one</strong> backfill can run at a time.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Channel scan</strong> walks message history in selected channels. <strong class="text-[var(--c-text-muted)]">Member search</strong> uses Discord’s Search Guild Messages API per human member (requires <code class="text-[10px]">MESSAGE_CONTENT</code>; may wait while the guild search index warms up; age-restricted channels are always included in search). Both upsert <code class="text-[10px]">last_message:&lt;userId&gt;</code> in Keyv. <strong class="text-[var(--c-text-muted)]">Only one</strong> backfill can run at a time.</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="field-label text-[10px]">Strategy</label>
@@ -874,8 +874,8 @@
           <div id="maintChannelToolbar" class="flex flex-wrap justify-between items-center gap-2 px-2 py-1.5 border-b border-[var(--c-card-border)] bg-[var(--c-card)]/80">
             <span class="text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Or choose specific channels</span>
             <span class="flex gap-2">
-              <button type="button" id="maintChSelectAllBtn" onclick="maintSelectAllChannelBoxes()" class="text-[10px] font-bold text-[var(--c-accent)] hover:underline disabled:opacity-40 disabled:pointer-events-none">Select All</button>
-              <button type="button" id="maintChClearBtn" onclick="maintClearChannelBoxes()" class="text-[10px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:underline disabled:opacity-40 disabled:pointer-events-none">Clear</button>
+              <button type="button" id="maintChSelectAllBtn" onclick="maintSelectAllChannelBoxes()" class="text-[10px] font-bold text-[var(--c-accent)] hover:underline disabled:text-[var(--c-text-dim)] disabled:pointer-events-none">Select All</button>
+              <button type="button" id="maintChClearBtn" onclick="maintClearChannelBoxes()" class="text-[10px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:underline disabled:text-[var(--c-text-dim)] disabled:pointer-events-none">Clear</button>
             </span>
           </div>
           <div id="maintChannelList" class="max-h-52 overflow-y-auto p-2 space-y-1" data-loaded="0">
@@ -889,10 +889,6 @@
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintOnlyMissing" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
           Only missing keys
-        </label>
-        <label id="maintIncludeNsfwWrap" class="hidden flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
-          <input type="checkbox" id="maintIncludeNsfw" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
-          Include age-restricted channels (search)
         </label>
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
@@ -942,8 +938,8 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">Safe Cleanup</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes dashboard session rows whose Keyv <strong class="text-[var(--c-text-muted)]">TTL is already in the past</strong>. <strong class="text-[var(--c-text-muted)]">Active</strong> sessions are left alone. Run <strong class="text-[var(--c-text-muted)]">Dry Run</strong> first to see counts before deleting.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="maintCleanupSessions(true)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Dry Run</button>
-        <button type="button" onclick="maintCleanupSessions(false)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-colors">Delete Expired</button>
+        <button type="button" onclick="maintCleanupSessions(true)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">Dry Run</button>
+        <button type="button" onclick="maintCleanupSessions(false)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[var(--c-accent)] text-white border border-[var(--c-accent)] hover:opacity-90 transition-opacity">Delete Expired</button>
       </div>
       <pre id="cleanupSessionsPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap max-h-28 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
     </div>
@@ -963,8 +959,8 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">Database Backup</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Downloads a <strong class="text-[var(--c-text-muted)]">JSON snapshot</strong> of the Keyv store—the same scope as <strong class="text-[var(--c-text-muted)]">Database Explorer</strong>. Treat the file as <strong class="text-[var(--c-text-muted)]">secret</strong>; it can contain session material and tokens.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" id="exportDbJsonBtn" onclick="exportDatabaseJson()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px]">
-          <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        <button type="button" id="exportDbJsonBtn" onclick="exportDatabaseJson()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity text-sm font-bold min-h-[44px]">
+          <svg class="w-4 h-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           Export Database as JSON
         </button>
       </div>
@@ -972,16 +968,16 @@
         <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Imports a previously exported <code class="text-[10px]">nova-keyv-backup</code> JSON file. The server checks the payload before any write; use <strong class="text-[var(--c-text-muted)]">Validate</strong>, then <strong class="text-[var(--c-text-muted)]">Import</strong> to merge keys into Keyv.</p>
         <input type="file" id="importDbJsonInput" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1" />
         <div class="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
-          <button type="button" id="importDbJsonPickBtn" onclick="document.getElementById('importDbJsonInput').click()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px]">
-            <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+          <button type="button" id="importDbJsonPickBtn" onclick="document.getElementById('importDbJsonInput').click()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity text-sm font-bold min-h-[44px]">
+            <svg class="w-4 h-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
             Choose Backup File…
           </button>
-          <button type="button" id="validateDbJsonBtn" onclick="validateDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px] disabled:opacity-40 disabled:pointer-events-none">
-            <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <button type="button" id="validateDbJsonBtn" onclick="validateDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg min-h-[44px] text-sm font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity disabled:pointer-events-none disabled:border-[var(--c-input-border)] disabled:bg-[var(--c-card)] disabled:text-[var(--c-text-dim)] disabled:hover:opacity-100">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Validate
           </button>
-          <button type="button" id="applyDbJsonBtn" onclick="applyDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-sm font-bold text-amber-200 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none">
-            <svg class="w-4 h-4 text-amber-300/90 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          <button type="button" id="applyDbJsonBtn" onclick="applyDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg min-h-[44px] text-sm font-bold border border-amber-500/50 bg-amber-500/25 text-amber-100 hover:bg-amber-500/35 transition-colors disabled:pointer-events-none disabled:border-[var(--c-input-border)] disabled:bg-[var(--c-card)] disabled:text-[var(--c-text-dim)] disabled:hover:bg-[var(--c-card)]">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
             Import
           </button>
         </div>
@@ -4285,11 +4281,9 @@
     const maxPer = document.getElementById('maintMaxPerChannel');
     const maxMem = document.getElementById('maintMaxMembers');
     const scope = document.getElementById('maintSeedChannelScopeWrap');
-    const nsfwWrap = document.getElementById('maintIncludeNsfwWrap');
     if (maxPer) maxPer.disabled = search;
     if (maxMem) maxMem.disabled = !search;
     if (scope) scope.classList.toggle('hidden', search);
-    if (nsfwWrap) nsfwWrap.classList.toggle('hidden', !search);
   }
 
   function maintSelectAllChannelBoxes() {
@@ -4654,7 +4648,6 @@
     const delayMs = parseInt(document.getElementById('maintDelayMs')?.value, 10);
     const dryRun = document.getElementById('maintDryRun')?.checked;
     const onlyMissing = document.getElementById('maintOnlyMissing')?.checked;
-    const includeNsfw = document.getElementById('maintIncludeNsfw')?.checked;
     const useAllChannels = document.getElementById('maintUseAllChannels')?.checked !== false;
     let channelIds;
     if (strategy === 'member_search') {
@@ -4695,7 +4688,6 @@
           delayMs: Number.isFinite(delayMs) ? delayMs : 300,
           dryRun,
           onlyMissing: !!onlyMissing,
-          includeNsfw: !!includeNsfw,
           channelIds
         })
       });
