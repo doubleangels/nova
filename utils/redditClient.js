@@ -10,6 +10,10 @@ const USER_AGENT = 'Discord Bot Server Promoter (Node.js)';
 
 let accessToken = null;
 let tokenExpiry = null;
+/** @type {Map<string, { expires: number, data: any }>} */
+const getResponseCache = new Map();
+/** @type {Map<string, Promise<any>>} */
+const inflightGetRequests = new Map();
 
 /**
  * @returns {Promise<string>}
@@ -61,11 +65,27 @@ async function getRedditAccessToken() {
  * @param {Record<string, string | number | boolean | undefined> | null} data - form body for POST/PUT
  * @returns {Promise<object>}
  */
-async function redditApiRequest(method, endpoint, data = null) {
+async function redditApiRequest(method, endpoint, data = null, options = {}) {
+  const upperMethod = String(method || 'GET').toUpperCase();
+  const cacheTtlMs = Number(options.cacheTtlMs || 0);
+  const cacheKey = String(options.cacheKey || `${upperMethod}:${endpoint}`);
+  if (upperMethod === 'GET' && cacheTtlMs > 0) {
+    const now = Date.now();
+    const cached = getResponseCache.get(cacheKey);
+    if (cached && cached.expires > now) {
+      return cached.data;
+    }
+    const inflight = inflightGetRequests.get(cacheKey);
+    if (inflight) {
+      return inflight;
+    }
+  }
+
+  const runRequest = async () => {
   const token = await getRedditAccessToken();
 
   const requestConfig = {
-    method,
+    method: upperMethod,
     url: `${REDDIT_API_BASE}${endpoint}`,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -73,18 +93,25 @@ async function redditApiRequest(method, endpoint, data = null) {
     }
   };
 
-  if (data && (method === 'POST' || method === 'PUT')) {
+  if (data && (upperMethod === 'POST' || upperMethod === 'PUT')) {
     requestConfig.headers['Content-Type'] = 'application/x-www-form-urlencoded';
     requestConfig.data = new URLSearchParams(data).toString();
   }
 
   try {
     const response = await axios(requestConfig);
-    return response.data;
+    const responseData = response.data;
+    if (upperMethod === 'GET' && cacheTtlMs > 0) {
+      getResponseCache.set(cacheKey, {
+        expires: Date.now() + cacheTtlMs,
+        data: responseData
+      });
+    }
+    return responseData;
   } catch (error) {
     logger.error('Reddit API request failed', {
       err: error,
-      method,
+      method: upperMethod,
       endpoint,
       status: error.response?.status,
       data: error.response?.data
@@ -94,11 +121,23 @@ async function redditApiRequest(method, endpoint, data = null) {
       logger.debug('Token expired, clearing cache and retrying');
       accessToken = null;
       tokenExpiry = null;
-      return redditApiRequest(method, endpoint, data);
+      return redditApiRequest(upperMethod, endpoint, data, options);
     }
 
     throw error;
   }
+  };
+
+  if (upperMethod !== 'GET' || cacheTtlMs <= 0) {
+    return runRequest();
+  }
+  const promise = runRequest().finally(() => {
+    if (inflightGetRequests.get(cacheKey) === promise) {
+      inflightGetRequests.delete(cacheKey);
+    }
+  });
+  inflightGetRequests.set(cacheKey, promise);
+  return promise;
 }
 
 function isRedditConfigured() {

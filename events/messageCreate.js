@@ -113,6 +113,15 @@ module.exports = {
             contentPreview: (message.content || '').slice(0, MAX_LOGGED_MESSAGE_CHARS)
           });
         } catch (error) {
+          if (error?.code === 10008 || error?.status === 404) {
+            // Benign race: message was already deleted (user/moderator/Discord).
+            logger.debug('No-text message already deleted before bot action.', {
+              channelId: message.channelId,
+              userId: message.author.id,
+              messageId: message.id
+            });
+            return;
+          }
           captureError(error, { event: 'messageCreate', handler: 'noTextChannelDelete' });
           logger.error("Failed to delete message in no-text channel.", {
             err: error,

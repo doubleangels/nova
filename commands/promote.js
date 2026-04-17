@@ -197,7 +197,10 @@ async function postToSubreddit(
   }
   try {
     if (!flairId) {
-      const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
+      const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`, null, {
+        cacheTtlMs: 10 * 60 * 1000,
+        cacheKey: `link_flair:${subredditName.toLowerCase()}`
+      });
       if (flairData && Array.isArray(flairData) && flairData.length > 0) {
         const availableFlairs = flairData.map((f, i) => {
           const id = f.id ?? f.flair_template_id ?? f.flair_identifier;
@@ -308,7 +311,8 @@ module.exports = {
 
   async handlePost(interaction) {
     const defaultTitle = await getPromotionTitle();
-    const defaultBody = String((await getValue('reddit_promotion_body')) || PROMOTION_BODY);
+    const defaultBodyRaw = String((await getValue('reddit_promotion_body')) || '').trim();
+    const defaultBody = defaultBodyRaw || PROMOTION_BODY;
     const targets = await getPromotionTargets();
 
     // Cooldown check must happen before deferReply — once deferred publicly

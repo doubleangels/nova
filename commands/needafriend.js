@@ -48,7 +48,10 @@ async function findWeeklyAdvertisementPost() {
   ];
 
   const listings = await Promise.all(
-    endpoints.map((p) => redditApiRequest('GET', p))
+    endpoints.map((p) => redditApiRequest('GET', p, null, {
+      cacheTtlMs: 30 * 1000,
+      cacheKey: `needafriend_listing:${subreddit}:${p}`
+    }))
   );
 
   const allPosts = listings.flatMap((listing) =>

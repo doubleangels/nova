@@ -115,6 +115,9 @@ function sampleProcessCpuPercent() {
 
 const router = express.Router();
 router.use(requireAuth);
+const API_AUTHZ_CACHE_MS = 30 * 1000;
+/** @type {Map<string, { expires: number, allowed: boolean }>} */
+const apiAuthzCache = new Map();
 
 function getDashboardActor(req) {
   return req.session?.user?.username || req.session?.user?.id || 'unknown-user';
@@ -159,17 +162,29 @@ router.use(async (req, res, next) => {
     if (!userId || !guild) {
       return res.status(403).json({ error: 'Dashboard access denied.' });
     }
+    const cacheKey = `${guild.id}:${userId}`;
+    const now = Date.now();
+    const cached = apiAuthzCache.get(cacheKey);
+    if (cached && cached.expires > now) {
+      if (!cached.allowed) {
+        return res.status(403).json({ error: 'Administrator permissions required.' });
+      }
+      return next();
+    }
     const member = guild.members.cache.get(userId) || await guild.members.fetch(userId).catch(() => null);
     if (!member) {
+      apiAuthzCache.set(cacheKey, { expires: now + API_AUTHZ_CACHE_MS, allowed: false });
       return res.status(403).json({ error: 'Dashboard access denied.' });
     }
-    if (
+    const allowed = (
       !member.permissions.has(PermissionFlagsBits.Administrator) &&
       !member.permissions.has(PermissionFlagsBits.ManageGuild)
-    ) {
+    ) === false;
+    apiAuthzCache.set(cacheKey, { expires: now + API_AUTHZ_CACHE_MS, allowed });
+    if (!allowed) {
       return res.status(403).json({ error: 'Administrator permissions required.' });
     }
-    next();
+    return next();
   } catch (err) {
     logger.error('Failed dashboard authorization re-check.', { err });
     return res.status(403).json({ error: 'Dashboard access denied.' });
@@ -616,7 +631,10 @@ router.get('/reddit/link-flair', async (req, res) => {
     return res.status(503).json({ error: 'Reddit API is not configured on this bot.' });
   }
   try {
-    const flairData = await redditApiRequest('GET', `/r/${sub}/api/link_flair`);
+    const flairData = await redditApiRequest('GET', `/r/${sub}/api/link_flair`, null, {
+      cacheTtlMs: 10 * 60 * 1000,
+      cacheKey: `link_flair:${sub.toLowerCase()}`
+    });
     if (!Array.isArray(flairData)) {
       return res.json({ flairs: [] });
     }

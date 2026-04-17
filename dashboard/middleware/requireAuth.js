@@ -1,6 +1,9 @@
 const { PermissionFlagsBits } = require('discord.js');
 
 const AUTHZ_RECHECK_MS = 5 * 60 * 1000;
+const DISCORD_MEMBER_AUTHZ_CACHE_MS = 30 * 1000;
+/** @type {Map<string, { expires: number, allowed: boolean }>} */
+const memberAuthzCache = new Map();
 
 function isApiRequest(req) {
   return req.path.startsWith('/api') || req.headers.accept?.includes('application/json');
@@ -18,13 +21,24 @@ async function stillHasDashboardAccess(req) {
   if (!userId) return false;
   const guild = req.discordClient?.guilds?.cache?.first();
   if (!guild) return false;
+  const cacheKey = `${guild.id}:${userId}`;
+  const now = Date.now();
+  const cached = memberAuthzCache.get(cacheKey);
+  if (cached && cached.expires > now) {
+    return cached.allowed;
+  }
   const member = guild.members.cache.get(userId) || await guild.members.fetch(userId).catch(() => null);
   if (!member) return false;
   const perms = member.permissions;
-  return (
+  const allowed = (
     perms.has(PermissionFlagsBits.Administrator) ||
     perms.has(PermissionFlagsBits.ManageGuild)
   );
+  memberAuthzCache.set(cacheKey, {
+    expires: now + DISCORD_MEMBER_AUTHZ_CACHE_MS,
+    allowed
+  });
+  return allowed;
 }
 
 /**
