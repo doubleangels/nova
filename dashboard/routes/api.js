@@ -5,6 +5,8 @@ const os = require('os');
 const { monitorEventLoopDelay } = require('perf_hooks');
 const path = require('path');
 const { ActivityType, PermissionFlagsBits } = require('discord.js');
+const { GatewayRateLimitError } = require('@discordjs/util');
+const { fetchAllGuildMembersViaRest } = require('../../utils/guildMembersRest');
 const requireAuth = require('../middleware/requireAuth');
 const { getSetting, setSetting, colorIntToHex } = require('../../utils/dynamicConfig');
 const {
@@ -269,12 +271,31 @@ function invalidateUserSummaryCache() {
 /** @type {{ guildId: string, promise: Promise<import('discord.js').Collection<string, import('discord.js').GuildMember>> } | null} */
 let guildMembersInflight = null;
 
+async function fetchGuildMembersWithGatewayRetry(guild) {
+  const maxAttempts = 4;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await guild.members.fetch();
+    } catch (e) {
+      const isGatewayRl =
+        e instanceof GatewayRateLimitError || (e && e.name === 'GatewayRateLimitError');
+      if (!isGatewayRl || attempt === maxAttempts - 1) throw e;
+      const retrySec = e?.data?.retry_after ?? 1;
+      const waitMs = Math.min(
+        120000,
+        Math.ceil(Number(retrySec) * 1000) + Math.floor(Math.random() * 400)
+      );
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+}
+
 async function fetchGuildMembersCached(guild, { force = false } = {}) {
     const gid = guild.id;
     if (!force && guildMembersInflight && guildMembersInflight.guildId === gid) {
         return guildMembersInflight.promise;
     }
-    const promise = guild.members.fetch();
+    const promise = fetchGuildMembersWithGatewayRetry(guild);
     guildMembersInflight = { guildId: gid, promise };
     try {
         return await promise;
@@ -441,11 +462,21 @@ function applySeedJobProgress(job, evt) {
   if (evt.type === 'start') {
     job.channelsTotal = evt.channelsTotal;
     job.guildName = evt.guildName;
+    if (evt.strategy != null) job.strategy = evt.strategy;
+    if (evt.membersTotal != null) job.membersTotal = evt.membersTotal;
   }
   if (evt.type === 'channel_start' || evt.type === 'channel_batch' || evt.type === 'channel_done') {
     job.channelIndex = evt.channelIndex;
     job.channelsTotal = evt.channelsTotal;
     job.currentChannelName = evt.channelName;
+    if (evt.messagesScanned != null) job.messagesScanned = evt.messagesScanned;
+    if (evt.usersTracked != null) job.usersTracked = evt.usersTracked;
+  }
+  if (evt.type === 'member_start' || evt.type === 'member_batch') {
+    if (evt.memberIndex != null) job.memberIndex = evt.memberIndex;
+    if (evt.membersTotal != null) job.membersTotal = evt.membersTotal;
+    if (evt.userId != null) job.currentUserId = evt.userId;
+    if (evt.memberTag != null) job.currentMemberTag = evt.memberTag;
     if (evt.messagesScanned != null) job.messagesScanned = evt.messagesScanned;
     if (evt.usersTracked != null) job.usersTracked = evt.usersTracked;
   }
@@ -468,6 +499,7 @@ function applySeedJobProgress(job, evt) {
     job.usersUpdated = r.usersUpdated;
     job.usersSkipped = r.usersSkipped;
     job.channelErrors = r.channelErrors;
+    if (r.searchErrors) job.searchErrors = r.searchErrors;
   }
 }
 
@@ -1505,8 +1537,8 @@ router.post('/invites/join-history/seed', async (req, res) => {
     const guild = req.dashboardGuild;
     if (!guild) return res.status(503).json({ error: 'Guild not available.' });
 
-    await guild.members.fetch();
-    const members = [...guild.members.cache.values()].filter((m) => !m.user.bot);
+    const membersCol = await fetchAllGuildMembersViaRest(guild);
+    const members = [...membersCol.values()].filter((m) => !m.user.bot);
     members.sort((a, b) => (b.joinedTimestamp ?? 0) - (a.joinedTimestamp ?? 0));
     const picked = members.slice(0, limit);
 
@@ -2129,6 +2161,12 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
     usersUpdated: 0,
     usersSkipped: 0,
     channelErrors: [],
+    searchErrors: [],
+    strategy: 'channel_scan',
+    membersTotal: 0,
+    memberIndex: 0,
+    currentUserId: null,
+    currentMemberTag: null,
     result: null
   };
   seedJobs.set(jobId, job);
@@ -2140,6 +2178,14 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
   );
   const delayMs = Math.min(5000, Math.max(0, parseInt(String(body.delayMs), 10) || DEFAULT_DELAY_MS));
   const dryRun = body.dryRun === true || body.dryRun === 'true';
+  const onlyMissing = body.onlyMissing === true || body.onlyMissing === 'true';
+  const includeNsfw = body.includeNsfw === true || body.includeNsfw === 'true';
+  const maxMembers = Math.min(
+    50000,
+    Math.max(1, parseInt(String(body.maxMembers), 10) || 50000)
+  );
+  const strategyRaw = String(body.strategy || body.mode || 'channel_scan').toLowerCase();
+  const strategy = strategyRaw === 'member_search' ? 'member_search' : 'channel_scan';
   let channelIds = null;
   if (Array.isArray(body.channelIds) && body.channelIds.length > 0) {
     channelIds = body.channelIds.map((id) => String(id).trim()).filter(Boolean);
@@ -2156,6 +2202,10 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
     jobId,
     guildId: guild.id,
     dryRun,
+    strategy,
+    onlyMissing,
+    includeNsfw,
+    maxMembers,
     maxPerChannel,
     delayMs,
     channelScope: channelIds && channelIds.length ? `${channelIds.length} channels` : 'all',
@@ -2171,7 +2221,11 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
         maxPerChannel,
         delayMs,
         channelIds,
+        onlyMissing,
         dryRun,
+        strategy,
+        includeNsfw,
+        maxMembers,
         signal: currentSeedAbortController.signal,
         onProgress: async (evt) => {
           applySeedJobProgress(job, evt);

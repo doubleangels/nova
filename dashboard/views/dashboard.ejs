@@ -840,18 +840,31 @@
 
     <div class="card p-5 space-y-4 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Seed Last Message Times</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Scans message history in the channels you choose (up to the per-channel cap) and upserts <code class="text-[10px]">last_message:&lt;userId&gt;</code> keys in Keyv. <strong class="text-[var(--c-text-muted)]">Newer</strong> timestamps already stored are left unchanged; <strong class="text-[var(--c-text-muted)]">only one</strong> backfill can run at a time.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Channel scan</strong> walks message history in selected channels. <strong class="text-[var(--c-text-muted)]">Member search</strong> uses Discord’s Search Guild Messages API per human member (requires <code class="text-[10px]">MESSAGE_CONTENT</code>; may wait while the guild search index warms up). Both upsert <code class="text-[10px]">last_message:&lt;userId&gt;</code> in Keyv. <strong class="text-[var(--c-text-muted)]">Only one</strong> backfill can run at a time.</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="field-label text-[10px]">Strategy</label>
+          <select id="maintSeedStrategy" class="field-input w-full text-sm min-h-[44px]" onchange="maintOnSeedStrategyChange()">
+            <option value="channel_scan" selected>Channel history scan</option>
+            <option value="member_search">Guild message search (per member)</option>
+          </select>
+        </div>
+        <div>
+          <label class="field-label text-[10px]">Delay Between Requests (ms)</label>
+          <input type="number" id="maintDelayMs" class="field-input w-full text-sm min-h-[44px]" value="300" min="0" max="5000" />
+        </div>
+      </div>
+      <div id="maintSeedChannelOpts" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="field-label text-[10px]">Max Messages Per Channel</label>
           <input type="number" id="maintMaxPerChannel" class="field-input w-full text-sm min-h-[44px]" value="10000" min="100" max="50000" />
         </div>
         <div>
-          <label class="field-label text-[10px]">Delay Between Fetches (ms)</label>
-          <input type="number" id="maintDelayMs" class="field-input w-full text-sm min-h-[44px]" value="300" min="0" max="5000" />
+          <label class="field-label text-[10px]">Max Members (search mode)</label>
+          <input type="number" id="maintMaxMembers" class="field-input w-full text-sm min-h-[44px]" value="50000" min="1" max="50000" disabled title="Enable when using member search" />
         </div>
       </div>
-      <div>
+      <div id="maintSeedChannelScopeWrap">
         <label class="field-label text-[10px]">Channels</label>
         <label class="flex items-start gap-2.5 text-xs text-[var(--c-label)] cursor-pointer mb-2">
           <input type="checkbox" id="maintUseAllChannels" checked class="mt-0.5 rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)] focus:ring-[var(--c-accent)] shrink-0" onchange="maintOnAllChannelsChange()" />
@@ -872,7 +885,15 @@
         <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-1.5">Uncheck <strong class="text-[var(--c-text-muted)]">All channels</strong> to limit the scan to the channels you tick below.</p>
       </div>
       <div class="flex flex-wrap gap-4 items-center">
-        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Every tracked <code class="text-[10px]">last_message:&lt;userId&gt;</code> key is updated from the scan; each user keeps the <strong class="text-[var(--c-text-muted)]">newest</strong> timestamp Keyv already had or that this run discovers.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Each user keeps the <strong class="text-[var(--c-text-muted)]">newest</strong> timestamp Keyv already had or that this run discovers.</p>
+        <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
+          <input type="checkbox" id="maintOnlyMissing" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
+          Only missing keys
+        </label>
+        <label id="maintIncludeNsfwWrap" class="hidden flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
+          <input type="checkbox" id="maintIncludeNsfw" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
+          Include age-restricted channels (search)
+        </label>
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
           Dry Run (No Writes)
@@ -995,13 +1016,13 @@
         <div>
           <label class="field-label">Message Mode</label>
           <div class="flex gap-2 p-1 bg-[var(--c-input)] rounded-lg border border-[var(--c-input-border)]">
-            <button type="button" id="msg_mode_text" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white">
+            <button type="button" id="msg_mode_text" class="msg-mode-seg flex-1 min-h-[2.25rem] inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap bg-[var(--c-accent)] text-white">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14" /></svg>
-              Plain Text
+              <span>Plain Text</span>
             </button>
-            <button type="button" id="msg_mode_embed" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]">
+            <button type="button" id="msg_mode_embed" class="msg-mode-seg flex-1 min-h-[2.25rem] inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap text-[var(--c-text-dim)] hover:text-[var(--c-label)]">
               <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              Rich Embed
+              <span>Rich Embed</span>
             </button>
           </div>
         </div>
@@ -2324,13 +2345,17 @@
   const embedColorWrap = document.getElementById('embed_color_wrap');
   let isEmbedMode = false;
 
+  /** Must match .msg-mode-seg in markup — click handlers used to drop flex classes and broke icon alignment. */
+  const MSG_MODE_SEG_BASE =
+    'msg-mode-seg flex-1 min-h-[2.25rem] inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap';
+
   msgModeText?.addEventListener('click', () => {
     isEmbedMode = false;
     editorText.classList.remove('hidden');
     editorEmbed.classList.add('hidden');
     embedColorWrap.classList.add('hidden');
-    msgModeText.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white";
-    msgModeEmbed.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]";
+    msgModeText.className = `${MSG_MODE_SEG_BASE} bg-[var(--c-accent)] text-white`;
+    msgModeEmbed.className = `${MSG_MODE_SEG_BASE} text-[var(--c-text-dim)] hover:text-[var(--c-label)]`;
   });
 
   msgModeEmbed?.addEventListener('click', () => {
@@ -2338,8 +2363,8 @@
     editorText.classList.add('hidden');
     editorEmbed.classList.remove('hidden');
     embedColorWrap.classList.remove('hidden');
-    msgModeEmbed.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white";
-    msgModeText.className = "flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]";
+    msgModeEmbed.className = `${MSG_MODE_SEG_BASE} bg-[var(--c-accent)] text-white`;
+    msgModeText.className = `${MSG_MODE_SEG_BASE} text-[var(--c-text-dim)] hover:text-[var(--c-label)]`;
     
     // Init color if empty
     const colorText = document.getElementById('msg_embed_color_text');
@@ -4255,6 +4280,18 @@
     if (cl) cl.disabled = !!useAll;
   }
 
+  function maintOnSeedStrategyChange() {
+    const search = document.getElementById('maintSeedStrategy')?.value === 'member_search';
+    const maxPer = document.getElementById('maintMaxPerChannel');
+    const maxMem = document.getElementById('maintMaxMembers');
+    const scope = document.getElementById('maintSeedChannelScopeWrap');
+    const nsfwWrap = document.getElementById('maintIncludeNsfwWrap');
+    if (maxPer) maxPer.disabled = search;
+    if (maxMem) maxMem.disabled = !search;
+    if (scope) scope.classList.toggle('hidden', search);
+    if (nsfwWrap) nsfwWrap.classList.toggle('hidden', !search);
+  }
+
   function maintSelectAllChannelBoxes() {
     if (document.getElementById('maintUseAllChannels')?.checked) return;
     document.querySelectorAll('.maint-channel-cb').forEach((cb) => {
@@ -4271,7 +4308,10 @@
 
   async function loadMaintenanceChannels() {
     const list = document.getElementById('maintChannelList');
-    if (!list || list.dataset.loaded === '1') return;
+    if (!list || list.dataset.loaded === '1') {
+      maintOnSeedStrategyChange();
+      return;
+    }
     try {
       const res = await fetch('/api/guild/channels');
       if (!res.ok) {
@@ -4301,6 +4341,7 @@
       });
       list.dataset.loaded = '1';
       maintOnAllChannelsChange();
+      maintOnSeedStrategyChange();
     } catch (_) {
       list.innerHTML = '<p class="text-[10px] text-red-400/90 px-1">Could not load channels.</p>';
     }
@@ -4497,13 +4538,23 @@
     if (j.status === 'done') phaseText = 'Complete';
     else if (j.status === 'error') phaseText = 'Error';
     else if ((j.writeIndex || 0) > 0 || (j.percent || 0) >= 85) phaseText = 'Writing';
+    if (j.strategy === 'member_search' && j.status === 'running' && (j.percent || 0) < 85) {
+      phaseText = 'Searching';
+    }
     if (phase) phase.textContent = phaseText;
 
     if (line) {
-      const ch = j.currentChannelName ? `#${j.currentChannelName}` : '—';
-      const idx = Number.isFinite(j.channelIndex) ? j.channelIndex + 1 : 0;
-      const tot = j.channelsTotal || 0;
-      line.textContent = `${ch} · channel ${idx}/${tot} · messages ${j.messagesScanned ?? 0} · users in map ${j.usersTracked ?? 0}`;
+      if (j.strategy === 'member_search') {
+        const tag = j.currentMemberTag || j.currentUserId || '—';
+        const idx = Number.isFinite(j.memberIndex) ? j.memberIndex + 1 : 0;
+        const tot = j.membersTotal || 0;
+        line.textContent = `${tag} · member ${idx}/${tot} · search calls ${j.messagesScanned ?? 0} · users in map ${j.usersTracked ?? 0}`;
+      } else {
+        const ch = j.currentChannelName ? `#${j.currentChannelName}` : '—';
+        const idx = Number.isFinite(j.channelIndex) ? j.channelIndex + 1 : 0;
+        const tot = j.channelsTotal || 0;
+        line.textContent = `${ch} · channel ${idx}/${tot} · messages ${j.messagesScanned ?? 0} · users in map ${j.usersTracked ?? 0}`;
+      }
     }
 
     if (btn) btn.disabled = j.status === 'running';
@@ -4521,9 +4572,18 @@
       set('maintSumUpdated', r.usersUpdated);
       set('maintSumSkipped', r.usersSkipped);
       if (errEl) {
+        const parts = [];
         if (r.channelErrors && r.channelErrors.length) {
+          parts.push(r.channelErrors.map((e) => `${e.channelName}: ${e.message}`).join('\n'));
+        }
+        if (r.searchErrors && r.searchErrors.length) {
+          parts.push(
+            r.searchErrors.map((e) => `${e.username || e.userId || 'user'}: ${e.message}`).join('\n')
+          );
+        }
+        if (parts.length) {
           errEl.classList.remove('hidden');
-          errEl.textContent = r.channelErrors.map((e) => `${e.channelName}: ${e.message}`).join('\n');
+          errEl.textContent = parts.join('\n\n');
         } else {
           errEl.classList.add('hidden');
           errEl.textContent = '';
@@ -4588,12 +4648,18 @@
 
   async function startMaintSeed() {
     const btn = document.getElementById('maintStartSeedBtn');
+    const strategy = document.getElementById('maintSeedStrategy')?.value || 'channel_scan';
     const maxPerChannel = parseInt(document.getElementById('maintMaxPerChannel')?.value, 10);
+    const maxMembers = parseInt(document.getElementById('maintMaxMembers')?.value, 10);
     const delayMs = parseInt(document.getElementById('maintDelayMs')?.value, 10);
     const dryRun = document.getElementById('maintDryRun')?.checked;
+    const onlyMissing = document.getElementById('maintOnlyMissing')?.checked;
+    const includeNsfw = document.getElementById('maintIncludeNsfw')?.checked;
     const useAllChannels = document.getElementById('maintUseAllChannels')?.checked !== false;
     let channelIds;
-    if (useAllChannels) {
+    if (strategy === 'member_search') {
+      channelIds = undefined;
+    } else if (useAllChannels) {
       channelIds = undefined;
     } else {
       channelIds = Array.from(document.querySelectorAll('.maint-channel-cb:checked')).map((cb) => cb.value);
@@ -4623,9 +4689,13 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          strategy,
           maxPerChannel: Number.isFinite(maxPerChannel) ? maxPerChannel : 10000,
+          maxMembers: Number.isFinite(maxMembers) ? maxMembers : 50000,
           delayMs: Number.isFinite(delayMs) ? delayMs : 300,
           dryRun,
+          onlyMissing: !!onlyMissing,
+          includeNsfw: !!includeNsfw,
           channelIds
         })
       });
