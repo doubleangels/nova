@@ -8,6 +8,14 @@ const REDDIT_API_BASE = 'https://oauth.reddit.com';
 const REDDIT_OAUTH_BASE = 'https://www.reddit.com/api/v1';
 const USER_AGENT = 'Discord Bot Server Promoter (Node.js)';
 
+function envInt(name, def) {
+  const v = Number.parseInt(process.env[name] || '', 10);
+  return Number.isFinite(v) && v > 0 ? v : def;
+}
+
+/** Max entries for GET response cache (oldest keys evicted first). */
+const redditGetCacheMaxKeys = envInt('REDDIT_GET_CACHE_MAX_KEYS', 300);
+
 let accessToken = null;
 let tokenExpiry = null;
 /** @type {Map<string, { expires: number, data: any }>} */
@@ -106,6 +114,11 @@ async function redditApiRequest(method, endpoint, data = null, options = {}) {
         expires: Date.now() + cacheTtlMs,
         data: responseData
       });
+      while (getResponseCache.size > redditGetCacheMaxKeys) {
+        const oldest = getResponseCache.keys().next().value;
+        if (oldest === undefined) break;
+        getResponseCache.delete(oldest);
+      }
     }
     return responseData;
   } catch (error) {

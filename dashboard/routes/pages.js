@@ -3,6 +3,7 @@ const requireAuth = require('../middleware/requireAuth');
 const config = require('../../config');
 const { colorIntToHex } = require('../../utils/dynamicConfig');
 const logger = require('../../logger')('dashboard:pages');
+const { reportDashboardError } = require('../sentryDashboard');
 
 const router = express.Router();
 const PUBLIC_BOT_ICON_PATH = '/assets/bot-icon.png';
@@ -12,7 +13,7 @@ const ERROR_MESSAGES = {
   missing_code: 'No authorization code received from Discord.',
   state_mismatch: 'Security check failed. Please try again.',
   server_misconfigured: 'The dashboard is not configured correctly. Contact the server owner.',
-  bot_not_ready: 'The bot is not fully started yet. Please try again in a moment.',
+  bot_not_ready: 'The bot cannot resolve which guild to use (not ready, or multiple guilds without DASHBOARD_GUILD_ID). Contact the server owner.',
   not_in_guild: 'You are not a member of the server this bot manages.',
   not_admin: 'You must have the Administrator permission in the server to access the dashboard.',
   auth_failed: 'Authentication failed. Please try again.',
@@ -90,6 +91,7 @@ router.get(PUBLIC_BOT_ICON_PATH, async (req, res) => {
     res.setHeader('Cache-Control', cacheControl);
     return res.send(imageBuffer);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:pages', op: 'bot_icon_proxy' });
     logger.warn('Error while proxying bot icon.', { err, botIconUrl });
     return res.status(502).send('Failed to retrieve bot icon.');
   }
@@ -98,7 +100,7 @@ router.get(PUBLIC_BOT_ICON_PATH, async (req, res) => {
 router.get('/login', (req, res) => {
   const errorKey = req.query.error;
   const errorMsg = ERROR_MESSAGES[errorKey] || null;
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild;
   const botIcon = getPublicBotIconPath();
   const accent = getLoginThemeAccent();
   // Login page has its own full HTML; skip the shared layout
@@ -115,7 +117,7 @@ router.get('/login', (req, res) => {
 });
 
 router.get('/', requireAuth, (req, res) => {
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild;
   const botIcon = getPublicBotIconPath();
   
   // Split member count into users vs bots (using cache)

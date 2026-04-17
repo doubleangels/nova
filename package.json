@@ -41,8 +41,10 @@
     "ejs": "^5.0.2",
     "express": "^5.2.1",
     "express-ejs-layouts": "^2.5.1",
+    "express-rate-limit": "^8.3.2",
     "express-session": "^1.19.0",
     "he": "^1.2.0",
+    "helmet": "^8.1.0",
     "keyv": "^5.6.0",
     "node-cache": "^5.1.2",
     "pino": "^10.3.1"

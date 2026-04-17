@@ -6,6 +6,7 @@ const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUt
 const { Events } = require('discord.js');
 const axios = require('axios');
 const config = require('../config');
+const { getOrSet, hashKeyPart, deeplTtlSec } = require('../utils/externalApiCache');
 
 const DEEPL_FREE_TRANSLATE_URL = 'https://api-free.deepl.com/v2/translate';
 
@@ -142,25 +143,29 @@ async function handleTranslationRequest(reaction, user) {
       userId: user.id
     });
 
-    const body = new URLSearchParams({
-      text: originalText,
-      target_lang: targetLanguage
-    });
-    const response = await axios.post(
-      DEEPL_FREE_TRANSLATE_URL,
-      body.toString(),
-      {
-        headers: {
-          Authorization: `DeepL-Auth-Key ${config.deeplApiKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
+    const deeplCacheKey = `${targetLanguage}:${hashKeyPart(originalText)}`;
+    const translatedText = await getOrSet('deepl', deeplCacheKey, deeplTtlSec, async () => {
+      const body = new URLSearchParams({
+        text: originalText,
+        target_lang: targetLanguage
+      });
+      const response = await axios.post(
+        DEEPL_FREE_TRANSLATE_URL,
+        body.toString(),
+        {
+          headers: {
+            Authorization: `DeepL-Auth-Key ${config.deeplApiKey}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
         }
-      }
-    );
+      );
 
-    const translatedText = response.data?.translations?.[0]?.text;
-    if (!translatedText) {
-      throw new Error('⚠️ DeepL returned an empty translation.');
-    }
+      const text = response.data?.translations?.[0]?.text;
+      if (!text) {
+        throw new Error('⚠️ DeepL returned an empty translation.');
+      }
+      return text;
+    });
     logger.debug('Translation API response received successfully.', {
       targetLanguage,
       translatedLength: translatedText.length,

@@ -78,9 +78,14 @@ module.exports = {
           });
         }
       } catch (replyError) {
-        logger.error('Error sending error response', {
+        captureError(replyError, {
+          handler: 'interaction_error_reply',
+          command: interaction.commandName
+        });
+        logger.error('Could not send the ephemeral error reply to the user.', {
           err: replyError,
-          originalError: error.message
+          commandName: interaction.commandName,
+          originalMessage: error.message
         });
       }
     }

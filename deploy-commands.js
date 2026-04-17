@@ -1,3 +1,4 @@
+const { captureError } = require('./instrument');
 const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -27,6 +28,7 @@ async function deployCommands() {
     try {
       command = require(`./commands/${file}`);
     } catch (error) {
+      captureError(error, { source: 'deployCommandLoad', file });
       logger.error(`Error loading command file: ${file}`, {
         error: error.stack,
         message: error.message
@@ -58,7 +60,7 @@ async function deployCommands() {
     
     logger.info(`Successfully registered ${commands.length} application (/) commands.`);
   } catch (error) {
-    logger.error('Failed to deploy commands:', { error });
+    logger.error('Failed to register slash commands with Discord.', { err: error });
     throw error;
   }
 }
@@ -68,8 +70,9 @@ module.exports = deployCommands;
 if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully.'))
-    .catch(err => {
-      logger.error('Failed to deploy commands:', err);
+    .catch((err) => {
+      captureError(err, { source: 'deployCommands', when: 'cli' });
+      logger.error('Failed to register slash commands with Discord.', { err });
       process.exit(1);
     });
 }

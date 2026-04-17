@@ -1,4 +1,5 @@
 const { PermissionFlagsBits } = require('discord.js');
+const { getDashboardGuild } = require('../../utils/dashboardGuild');
 
 const AUTHZ_RECHECK_MS = 5 * 60 * 1000;
 const DISCORD_MEMBER_AUTHZ_CACHE_MS = 30 * 1000;
@@ -19,7 +20,7 @@ function sanitizeReturnTo(raw) {
 async function stillHasDashboardAccess(req) {
   const userId = req.session?.user?.id;
   if (!userId) return false;
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild ?? getDashboardGuild(req.discordClient);
   if (!guild) return false;
   const cacheKey = `${guild.id}:${userId}`;
   const now = Date.now();
@@ -47,27 +48,31 @@ async function stillHasDashboardAccess(req) {
  * API routes receive a 401/403 JSON response instead of a redirect.
  */
 async function requireAuth(req, res, next) {
-  if (req.session && req.session.user) {
-    const checkedAt = Number(req.session.authzCheckedAt || 0);
-    const now = Date.now();
-    if (!Number.isFinite(checkedAt) || now - checkedAt > AUTHZ_RECHECK_MS) {
-      const allowed = await stillHasDashboardAccess(req);
-      if (!allowed) {
-        req.session.destroy(() => {});
-        if (isApiRequest(req)) {
-          return res.status(403).json({ error: 'Dashboard access revoked. Please log in again.' });
+  try {
+    if (req.session && req.session.user) {
+      const checkedAt = Number(req.session.authzCheckedAt || 0);
+      const now = Date.now();
+      if (!Number.isFinite(checkedAt) || now - checkedAt > AUTHZ_RECHECK_MS) {
+        const allowed = await stillHasDashboardAccess(req);
+        if (!allowed) {
+          req.session.destroy(() => {});
+          if (isApiRequest(req)) {
+            return res.status(403).json({ error: 'Dashboard access revoked. Please log in again.' });
+          }
+          return res.redirect('/login?error=not_admin');
         }
-        return res.redirect('/login?error=not_admin');
+        req.session.authzCheckedAt = now;
       }
-      req.session.authzCheckedAt = now;
+      return next();
     }
-    return next();
+    if (isApiRequest(req)) {
+      return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+    }
+    req.session.returnTo = sanitizeReturnTo(req.originalUrl);
+    return res.redirect('/login');
+  } catch (err) {
+    return next(err);
   }
-  if (isApiRequest(req)) {
-    return res.status(401).json({ error: 'Unauthorized. Please log in.' });
-  }
-  req.session.returnTo = sanitizeReturnTo(req.originalUrl);
-  return res.redirect('/login');
 }
 
 module.exports = requireAuth;

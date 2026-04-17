@@ -1,8 +1,27 @@
 const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 const config = require('../../config');
 const logger = require('../../logger')('dashboard:auth');
+const { reportDashboardError } = require('../sentryDashboard');
+const { getDashboardGuild } = require('../../utils/dashboardGuild');
+
+const oauthDiscordRedirectLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number.parseInt(process.env.DASHBOARD_OAUTH_DISCORD_MAX_PER_15M || '60', 10) || 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many login attempts. Please try again in a few minutes.' }
+});
+
+const oauthCallbackLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: Number.parseInt(process.env.DASHBOARD_OAUTH_CALLBACK_MAX_PER_15M || '40', 10) || 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OAuth callbacks. Please try again in a few minutes.' }
+});
 
 const router = express.Router();
 
@@ -74,7 +93,7 @@ function getRedirectUri(req) {
 /**
  * Step 1 — redirect the user to Discord's OAuth2 consent screen.
  */
-router.get('/discord', (req, res) => {
+router.get('/discord', oauthDiscordRedirectLimiter, (req, res) => {
   const clientId = config.clientId;
   const redirectUri = encodeURIComponent(getRedirectUri(req));
   const state = crypto.randomBytes(32).toString('hex');
@@ -95,7 +114,7 @@ router.get('/discord', (req, res) => {
  * Step 2 — Discord redirects back here with a `code`.
  * Exchange the code for a token, verify the user is an admin in the bot's guild.
  */
-router.get('/callback', async (req, res) => {
+router.get('/callback', oauthCallbackLimiter, async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
@@ -146,9 +165,9 @@ router.get('/callback', async (req, res) => {
     const guilds = guildsRes.data;
 
     // Determine the bot's guild ID from the live client
-    const botGuild = req.discordClient?.guilds?.cache?.first();
+    const botGuild = getDashboardGuild(req.discordClient);
     if (!botGuild) {
-      logger.error('Bot is not in any guild yet — cannot verify admin status.');
+      logger.error('Bot has no resolved dashboard guild (not in a guild, or multiple guilds without DASHBOARD_GUILD_ID). Cannot verify admin status.');
       return res.redirect('/login?error=bot_not_ready');
     }
 
@@ -185,6 +204,7 @@ router.get('/callback', async (req, res) => {
     });
 
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:auth', op: 'oauth_callback' });
     logger.error('OAuth callback error.', { err: err.response?.data || err.message });
     res.redirect('/login?error=auth_failed');
   }

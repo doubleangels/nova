@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
+const { getOrSet, hashKeyPart, normalizeQuery, googleTtlSec } = require('../utils/externalApiCache');
 
 /**
  * Command module for searching and displaying book information using Google Books API.
@@ -136,45 +137,52 @@ module.exports = {
         throw new Error("API_KEY_MISSING");
       }
 
-      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
-        params: {
-          q: query,
-          maxResults: maxResults,
-          orderBy: 'relevance',
-          printType: 'books',
-          fields: 'items(id,volumeInfo,searchInfo)',
-          key: apiKey
-        },
-        timeout: 10000
-      });
+      const nq = normalizeQuery(query);
+      const cacheKey = `${hashKeyPart(nq)}:${maxResults}`;
+      return await getOrSet('google_books_search', cacheKey, googleTtlSec, async () => {
+        const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+          params: {
+            q: query,
+            maxResults: maxResults,
+            orderBy: 'relevance',
+            printType: 'books',
+            fields: 'items(id,volumeInfo,searchInfo)',
+            key: apiKey
+          },
+          timeout: 10000
+        });
 
-      if (!response.data.items || response.data.items.length === 0) {
+        if (!response.data.items || response.data.items.length === 0) {
+          const empty = new Error('NO_ITEMS');
+          /** @type {any} */ (empty).code = 'NO_ITEMS';
+          throw empty;
+        }
+
+        return response.data.items.map((item, index) => ({
+          index,
+          id: item.id,
+          title: item.volumeInfo.title || 'Unknown Title',
+          authors: item.volumeInfo.authors || ['Unknown Author'],
+          description: item.volumeInfo.description || item.searchInfo?.textSnippet || 'No description available',
+          publishedDate: item.volumeInfo.publishedDate || 'Unknown',
+          pageCount: item.volumeInfo.pageCount || 'Unknown',
+          categories: item.volumeInfo.categories || [],
+          averageRating: item.volumeInfo.averageRating || null,
+          ratingsCount: item.volumeInfo.ratingsCount || 0,
+          language: item.volumeInfo.language || 'Unknown',
+          publisher: item.volumeInfo.publisher || 'Unknown',
+          isbn10: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_10'),
+          isbn13: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_13'),
+          imageUrl: item.volumeInfo.imageLinks?.thumbnail || null,
+          previewLink: item.volumeInfo.previewLink || null,
+          infoLink: item.volumeInfo.infoLink || null,
+          maturityRating: item.volumeInfo.maturityRating || 'NOT_MATURE'
+        }));
+      });
+    } catch (error) {
+      if (/** @type {any} */ (error).code === 'NO_ITEMS') {
         return null;
       }
-
-      const books = response.data.items.map((item, index) => ({
-        index,
-        id: item.id,
-        title: item.volumeInfo.title || 'Unknown Title',
-        authors: item.volumeInfo.authors || ['Unknown Author'],
-        description: item.volumeInfo.description || item.searchInfo?.textSnippet || 'No description available',
-        publishedDate: item.volumeInfo.publishedDate || 'Unknown',
-        pageCount: item.volumeInfo.pageCount || 'Unknown',
-        categories: item.volumeInfo.categories || [],
-        averageRating: item.volumeInfo.averageRating || null,
-        ratingsCount: item.volumeInfo.ratingsCount || 0,
-        language: item.volumeInfo.language || 'Unknown',
-        publisher: item.volumeInfo.publisher || 'Unknown',
-        isbn10: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_10'),
-        isbn13: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_13'),
-        imageUrl: item.volumeInfo.imageLinks?.thumbnail || null,
-        previewLink: item.volumeInfo.previewLink || null,
-        infoLink: item.volumeInfo.infoLink || null,
-        maturityRating: item.volumeInfo.maturityRating || 'NOT_MATURE'
-      }));
-
-      return books;
-    } catch (error) {
       logger.error("Failed to search for books.", {
         err: error,
         query
@@ -199,45 +207,52 @@ module.exports = {
 
       // Clean the ISBN (remove hyphens and spaces)
       const cleanISBN = isbn.replace(/[-\s]/g, '');
-      
-      const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
-        params: {
-          q: `isbn:${cleanISBN}`,
-          maxResults: 1,
-          fields: 'items(id,volumeInfo,searchInfo)',
-          key: apiKey
-        },
-        timeout: 10000
+
+      const books = await getOrSet('google_books_isbn', cleanISBN, googleTtlSec, async () => {
+        const response = await axios.get('https://www.googleapis.com/books/v1/volumes', {
+          params: {
+            q: `isbn:${cleanISBN}`,
+            maxResults: 1,
+            fields: 'items(id,volumeInfo,searchInfo)',
+            key: apiKey
+          },
+          timeout: 10000
+        });
+
+        if (!response.data.items || response.data.items.length === 0) {
+          const empty = new Error('NO_ITEMS');
+          /** @type {any} */ (empty).code = 'NO_ITEMS';
+          throw empty;
+        }
+
+        const item = response.data.items[0];
+        return [{
+          index: 0,
+          id: item.id,
+          title: item.volumeInfo.title || 'Unknown Title',
+          authors: item.volumeInfo.authors || ['Unknown Author'],
+          description: item.volumeInfo.description || item.searchInfo?.textSnippet || 'No description available',
+          publishedDate: item.volumeInfo.publishedDate || 'Unknown',
+          pageCount: item.volumeInfo.pageCount || 'Unknown',
+          categories: item.volumeInfo.categories || [],
+          averageRating: item.volumeInfo.averageRating || null,
+          ratingsCount: item.volumeInfo.ratingsCount || 0,
+          language: item.volumeInfo.language || 'Unknown',
+          publisher: item.volumeInfo.publisher || 'Unknown',
+          isbn10: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_10'),
+          isbn13: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_13'),
+          imageUrl: item.volumeInfo.imageLinks?.thumbnail || null,
+          previewLink: item.volumeInfo.previewLink || null,
+          infoLink: item.volumeInfo.infoLink || null,
+          maturityRating: item.volumeInfo.maturityRating || 'NOT_MATURE'
+        }];
       });
 
-      if (!response.data.items || response.data.items.length === 0) {
+      return books;
+    } catch (error) {
+      if (/** @type {any} */ (error).code === 'NO_ITEMS') {
         return null;
       }
-
-      const item = response.data.items[0];
-      const book = {
-        index: 0,
-        id: item.id,
-        title: item.volumeInfo.title || 'Unknown Title',
-        authors: item.volumeInfo.authors || ['Unknown Author'],
-        description: item.volumeInfo.description || item.searchInfo?.textSnippet || 'No description available',
-        publishedDate: item.volumeInfo.publishedDate || 'Unknown',
-        pageCount: item.volumeInfo.pageCount || 'Unknown',
-        categories: item.volumeInfo.categories || [],
-        averageRating: item.volumeInfo.averageRating || null,
-        ratingsCount: item.volumeInfo.ratingsCount || 0,
-        language: item.volumeInfo.language || 'Unknown',
-        publisher: item.volumeInfo.publisher || 'Unknown',
-        isbn10: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_10'),
-        isbn13: this.extractISBN(item.volumeInfo.industryIdentifiers, 'ISBN_13'),
-        imageUrl: item.volumeInfo.imageLinks?.thumbnail || null,
-        previewLink: item.volumeInfo.previewLink || null,
-        infoLink: item.volumeInfo.infoLink || null,
-        maturityRating: item.volumeInfo.maturityRating || 'NOT_MATURE'
-      };
-
-      return [book];
-    } catch (error) {
       logger.error("Failed to search for book by ISBN.", {
         err: error,
         isbn

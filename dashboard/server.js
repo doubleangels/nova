@@ -3,7 +3,26 @@ const session = require('express-session');
 const ejsLayouts = require('express-ejs-layouts');
 const path = require('path');
 const crypto = require('crypto');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { Sentry, captureError } = require('../instrument');
+const { getDashboardGuild } = require('../utils/dashboardGuild');
 const logger = require('../logger')('dashboard');
+
+const JSON_LIMIT_DEFAULT = '2mb';
+const JSON_LIMIT_DATABASE_IMPORT = '50mb';
+
+const jsonParserDefault = express.json({ limit: JSON_LIMIT_DEFAULT });
+const jsonParserLarge = express.json({ limit: JSON_LIMIT_DATABASE_IMPORT });
+
+/** Rate limit mutating /api requests (per IP, respects trust proxy). */
+const apiMutationLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number.parseInt(process.env.DASHBOARD_API_MUTATION_MAX_PER_MINUTE || '240', 10) || 240,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many dashboard API requests. Please try again shortly.' }
+});
 
 // ─── SQLite-backed session store ─────────────────────────────────────────────
 // Persists sessions to the same SQLite database as the bot, so logins survive
@@ -67,14 +86,24 @@ function createDashboard(client, options = {}) {
   // Trust proxy headers when running behind nginx / Caddy
   app.set('trust proxy', 1);
 
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false
+  }));
+
   // View engine + layouts
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
   app.use(ejsLayouts);
   app.set('layout', 'layout');
 
-  // Body parsing (large limit: database JSON import from Maintenance)
-  app.use(express.json({ limit: '50mb' }));
+  // JSON body: small default; large payloads only for database backup import routes.
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && (req.path === '/api/database/import' || req.path === '/api/database/import/validate')) {
+      return jsonParserLarge(req, res, next);
+    }
+    return jsonParserDefault(req, res, next);
+  });
   app.use(express.urlencoded({ extended: true }));
 
   // Sessions — store in memory (acceptable for single-admin bot dashboard)
@@ -151,9 +180,17 @@ function createDashboard(client, options = {}) {
     next();
   });
 
-  // Make the Discord client available in every request
+  app.use('/api', (req, res, next) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      return apiMutationLimiter(req, res, next);
+    }
+    return next();
+  });
+
+  // Make the Discord client and resolved dashboard guild available on every request.
   app.use((req, _res, next) => {
     req.discordClient = client;
+    req.dashboardGuild = getDashboardGuild(client);
     next();
   });
 
@@ -164,7 +201,7 @@ function createDashboard(client, options = {}) {
 
   // 404 handler
   app.use((req, res) => {
-    const guild = req.discordClient?.guilds?.cache?.first();
+    const guild = req.dashboardGuild;
     const botIcon = '/assets/bot-icon.png';
     res.status(404).render('error', {
       title: 'Not Found', message: 'Page not found.',
@@ -175,10 +212,19 @@ function createDashboard(client, options = {}) {
     });
   });
 
-  // Global error handler
+  // Sentry Express wiring: runs before our handler; we capture in our handler with tags
+  // (shouldHandleError false avoids double captureException for the same error).
+  Sentry.setupExpressErrorHandler(app, { shouldHandleError: () => false });
+
+  // Global error handler (next(err), sync throws in middleware after routes, etc.)
   app.use((err, req, res, _next) => {
+    captureError(err, {
+      handler: 'dashboard',
+      path: String(req.path || ''),
+      method: String(req.method || '')
+    });
     logger.error('Dashboard unhandled error.', { err });
-    const guild = req.discordClient?.guilds?.cache?.first();
+    const guild = req.dashboardGuild;
     const botIcon = '/assets/bot-icon.png';
     res.status(500).render('error', {
       title: 'Server Error', message: 'An unexpected error occurred.',

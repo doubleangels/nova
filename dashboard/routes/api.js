@@ -58,6 +58,8 @@ const {
 } = require('../../utils/maintenanceService');
 const logger = require('../../logger')('dashboard:api');
 const { redditApiRequest, isRedditConfigured } = require('../../utils/redditClient');
+const { reportDashboardError } = require('../sentryDashboard');
+const { getDashboardGuild } = require('../../utils/dashboardGuild');
 
 /**
  * Extended diagnostics for GET /api/health/deep.
@@ -73,7 +75,7 @@ function buildDeepHealthPayload(client) {
   } catch {
     /* ignore */
   }
-  const guild = client.guilds.cache.first();
+  const guild = getDashboardGuild(client);
   return {
     timestamp: new Date().toISOString(),
     process: {
@@ -172,9 +174,12 @@ router.use((req, res, next) => {
 router.use(async (req, res, next) => {
   try {
     const userId = req.session?.user?.id;
-    const guild = req.discordClient?.guilds?.cache?.first();
+    const guild = req.dashboardGuild;
     if (!userId || !guild) {
-      return res.status(403).json({ error: 'Dashboard access denied.' });
+      return res.status(403).json({
+        error: 'Dashboard access denied.',
+        hint: 'If the bot is in multiple guilds, set DASHBOARD_GUILD_ID to the correct guild snowflake.'
+      });
     }
     const cacheKey = `${guild.id}:${userId}`;
     const now = Date.now();
@@ -190,16 +195,15 @@ router.use(async (req, res, next) => {
       apiAuthzCache.set(cacheKey, { expires: now + API_AUTHZ_CACHE_MS, allowed: false });
       return res.status(403).json({ error: 'Dashboard access denied.' });
     }
-    const allowed = (
-      !member.permissions.has(PermissionFlagsBits.Administrator) &&
-      !member.permissions.has(PermissionFlagsBits.ManageGuild)
-    ) === false;
+    // Match OAuth login policy in dashboard/routes/auth.js (Administrator only).
+    const allowed = member.permissions.has(PermissionFlagsBits.Administrator);
     apiAuthzCache.set(cacheKey, { expires: now + API_AUTHZ_CACHE_MS, allowed });
     if (!allowed) {
       return res.status(403).json({ error: 'Administrator permissions required.' });
     }
     return next();
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed dashboard authorization re-check.', { err });
     return res.status(403).json({ error: 'Dashboard access denied.' });
   }
@@ -663,6 +667,7 @@ router.get('/settings', async (req, res) => {
     const settings = await readAllSettings();
     res.json(settings);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to read settings.', { err });
     res.status(500).json({ error: 'Failed to read settings.' });
   }
@@ -696,6 +701,7 @@ router.get('/reddit/link-flair', async (req, res) => {
       .filter(Boolean);
     res.json({ flairs });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Reddit link_flair fetch failed.', { err, subreddit: sub });
     const status = err.response?.status;
     const clientErr =
@@ -821,6 +827,7 @@ router.post('/settings', async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to save settings.', { err });
     res.status(500).json({ error: 'Failed to save settings.' });
   }
@@ -829,7 +836,7 @@ router.post('/settings', async (req, res) => {
 // ─── GET /api/guild/roles ────────────────────────────────────────────────────
 
 router.get('/guild/roles', (req, res) => {
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild;
   if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
 
   const roles = guild.roles.cache
@@ -843,7 +850,7 @@ router.get('/guild/roles', (req, res) => {
 // ─── GET /api/permissions/summary ────────────────────────────────────────────
 router.get('/permissions/summary', async (req, res) => {
   try {
-    const guild = req.discordClient?.guilds?.cache?.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
 
     const members = await fetchGuildMembersCached(guild, { force: false });
@@ -879,6 +886,7 @@ router.get('/permissions/summary', async (req, res) => {
       keyPermissionHolders: keyPermCounts
     });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to build permissions summary.', { err });
     res.status(500).json({ error: 'Failed to build permissions summary.' });
   }
@@ -887,7 +895,7 @@ router.get('/permissions/summary', async (req, res) => {
 // ─── GET /api/guild/channels ─────────────────────────────────────────────────
 
 router.get('/guild/channels', (req, res) => {
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild;
   if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
 
   const channels = guild.channels.cache
@@ -911,6 +919,7 @@ router.get('/database/raw', async (req, res) => {
     const entries = await getRawDatabaseEntries();
     res.json(entries);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to get raw database entries.', { err });
     res.status(500).json({ error: 'Failed to retrieve database entries.' });
   }
@@ -941,6 +950,7 @@ router.get('/database/export', (req, res) => {
     });
     res.send(body);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to export database.', { err });
     res.status(500).json({ error: 'Failed to export database.' });
   }
@@ -1041,6 +1051,7 @@ router.post('/database/import', (req, res) => {
       warnings: result.warnings
     });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to import database backup.', { err });
     res.status(500).json({ error: 'Failed to import database backup.' });
   }
@@ -1065,6 +1076,7 @@ router.post('/database/raw', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to update raw database entry.', { err, fullKey });
     res.status(500).json({ error: 'Failed to update database entry.' });
   }
@@ -1099,6 +1111,7 @@ router.delete('/database/raw', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to delete raw database entry.', { err, fullKey });
     res.status(500).json({ error: 'Failed to delete database entry.' });
   }
@@ -1118,7 +1131,7 @@ router.get('/health', async (req, res) => {
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
 
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     const loopP95Ms = Number((eventLoopHistogram.percentile(95) / 1e6).toFixed(2));
     const loopMeanMs = Number((eventLoopHistogram.mean / 1e6).toFixed(2));
     const loopMaxMs = Number((eventLoopHistogram.max / 1e6).toFixed(2));
@@ -1160,6 +1173,7 @@ router.get('/health', async (req, res) => {
       }
     });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to get health stats.', { err });
     res.status(500).json({ error: 'Failed to fetch health stats.' });
   }
@@ -1175,6 +1189,7 @@ router.get('/health/deep', (req, res) => {
     }
     res.json(buildDeepHealthPayload(client));
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to build deep health.', { err });
     res.status(500).json({ error: 'Failed to fetch deep health.' });
   }
@@ -1214,6 +1229,7 @@ router.get('/maintenance/diagnostics/export', async (req, res) => {
     logger.info('Diagnostics bundle exported from dashboard.', { user: req.session.user?.username });
     res.send(JSON.stringify(bundle, null, 2));
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to export diagnostics bundle.', { err });
     res.status(500).json({ error: 'Failed to export diagnostics bundle.' });
   }
@@ -1233,6 +1249,7 @@ router.get('/reminders/live', async (req, res) => {
       needafriend: needafriend?.remind_at || null
     });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to fetch live reminders.', { err });
     res.status(500).json({ error: 'Failed to fetch live reminders.' });
   }
@@ -1267,6 +1284,7 @@ router.post('/reminders/fix', async (req, res) => {
     });
     res.json({ success: true, message: `Fixed ${type} reminder.` });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error(`Failed to fix ${type} reminder.`, { err });
     res.status(500).json({ error: 'Failed to fix reminder.' });
   }
@@ -1278,6 +1296,7 @@ router.get('/fun/auto-reactions', async (req, res) => {
     const reactions = await getValue('auto_reactions') || [];
     res.json(reactions);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to fetch auto-reactions.', { err });
     res.status(500).json({ error: 'Failed to fetch auto-reactions.' });
   }
@@ -1336,6 +1355,7 @@ router.post('/fun/auto-reactions', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to update auto-reactions.', { err });
     res.status(500).json({ error: 'Failed to update auto-reactions.' });
   }
@@ -1346,7 +1366,7 @@ router.post('/messages/send', async (req, res) => {
   const { channelId, isEmbed, content, embedData } = req.body || {};
   if (!channelId) return res.status(400).json({ error: 'Missing channelId.' });
   try {
-    const guild = req.discordClient?.guilds?.cache?.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
     const channel =
       guild.channels.cache.get(String(channelId)) ||
@@ -1388,6 +1408,7 @@ router.post('/messages/send', async (req, res) => {
     }
     return res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to send dashboard message.', { err });
     return res.status(500).json({ error: 'Failed to send message.' });
   }
@@ -1397,13 +1418,14 @@ router.post('/messages/send', async (req, res) => {
 /** Recent member joins with best-effort invite attribution (stored when members join; seed may reuse those rows). */
 router.get('/invites/join-history', async (req, res) => {
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(503).json({ error: 'Guild not available.' });
     const limitRaw = parseInt(String(req.query.limit || '50'), 10);
     const limit = Math.min(100, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 50));
     const entries = await getInviteJoinHistory(guild.id, limit);
     res.json({ entries });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to get invite join history.', { err });
     res.status(500).json({ error: 'Failed to load join history.' });
   }
@@ -1480,7 +1502,7 @@ router.post('/invites/join-history/seed', async (req, res) => {
   try {
     const limitRaw = parseInt(String(req.body?.limit ?? 50), 10);
     const limit = Math.min(200, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 50));
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(503).json({ error: 'Guild not available.' });
 
     await guild.members.fetch();
@@ -1548,6 +1570,7 @@ router.post('/invites/join-history/seed', async (req, res) => {
       attributedFromHistory
     });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to seed invite join history.', { err });
     res.status(500).json({ error: err.message || 'Failed to seed join history.' });
   }
@@ -1556,7 +1579,7 @@ router.post('/invites/join-history/seed', async (req, res) => {
 // ─── GET /api/invites ────────────────────────────────────────────────────────
 router.get('/invites', async (req, res) => {
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(503).json({ error: 'Guild not available.' });
 
     const forceRefresh =
@@ -1601,6 +1624,7 @@ router.get('/invites', async (req, res) => {
 
     res.json(result);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to get invites.', { err });
     res.status(500).json({ error: 'Failed to fetch invites.' });
   }
@@ -1612,7 +1636,7 @@ router.post('/invites', async (req, res) => {
   if (!channelId) return res.status(400).json({ error: 'Missing channelId.' });
 
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     const channel =
       guild.channels.cache.get(channelId) || (await guild.channels.fetch(channelId));
 
@@ -1641,6 +1665,7 @@ router.post('/invites', async (req, res) => {
     });
     res.json({ ok: true, code: invite.code });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to create invite.', { err });
     res.status(500).json({ error: 'Failed to create invite.' });
   }
@@ -1651,7 +1676,7 @@ router.delete('/invites/:code', async (req, res) => {
   const { code } = req.params;
   const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (dryRun) {
       const invite = (await guild.invites.fetch()).find((i) => i.code === code);
       return res.json({
@@ -1675,6 +1700,7 @@ router.delete('/invites/:code', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to delete invite.', { err, code });
     res.status(500).json({ error: 'Failed to delete invite.' });
   }
@@ -1687,7 +1713,7 @@ router.post('/invites/tag', async (req, res) => {
   if (!code) return res.status(400).json({ error: 'Missing code.' });
 
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (dryRun) {
       return res.json({
         ok: true,
@@ -1711,6 +1737,7 @@ router.post('/invites/tag', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to update invite tag.', { err, code });
     res.status(500).json({ error: 'Failed to update invite tag.' });
   }
@@ -1722,7 +1749,7 @@ router.get('/users/summary', async (req, res) => {
         req.query.refresh === '1' ||
         req.query.refresh === 'true' ||
         req.query.refresh === 'yes';
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(500).json({ error: 'Guild not found' });
 
     const now = Date.now();
@@ -1827,12 +1854,13 @@ router.get('/users/summary', async (req, res) => {
             const retryMs = Math.round((e?.data?.retry_after || 20) * 1000);
             const bump = Math.max(USER_SUMMARY_CACHE_MS, retryMs);
             userSummaryCacheEntry.expires = Math.max(userSummaryCacheEntry.expires, now + bump);
-            logger.warn('API /users/summary gateway rate limited; returning cached roster', {
+            logger.warn('Gateway rate limited while building the user summary; returning a cached roster.', {
                 retry_after: e?.data?.retry_after
             });
             return res.json({ ...userSummaryCacheEntry.data, cached: true, stale: true });
         }
-        logger.error('API /users/summary error', { err: e });
+        reportDashboardError(e, req, { area: 'dashboard:api', op: 'users_summary' });
+        logger.error('Failed to build the user summary for the dashboard.', { err: e, path: req.path });
         res.status(500).json({ error: e.message });
     }
 });
@@ -1840,7 +1868,7 @@ router.get('/users/summary', async (req, res) => {
 // ─── GET /api/users/inactivity/dry-run ───────────────────────────────────────
 router.get('/users/inactivity/dry-run', async (req, res) => {
     try {
-        const guild = req.discordClient.guilds.cache.first();
+        const guild = req.dashboardGuild;
         if (!guild) return res.status(500).json({ error: 'Guild not found' });
         
         const days = parseInt(req.query.days) || 30;
@@ -1884,7 +1912,8 @@ router.get('/users/inactivity/dry-run', async (req, res) => {
 
         res.json({ targetCount: inactivityTargets.length, targets: inactivityTargets });
     } catch (e) {
-        logger.error('API /users/inactivity/dry-run error', { err: e });
+        reportDashboardError(e, req, { area: 'dashboard:api', op: 'inactivity_dry_run' });
+        logger.error('Failed to run the inactivity dry-run query.', { err: e, path: req.path });
         res.status(500).json({ error: e.message });
     }
 });
@@ -1892,7 +1921,7 @@ router.get('/users/inactivity/dry-run', async (req, res) => {
 // ─── POST /api/users/inactivity/execute ──────────────────────────────────────
 router.post('/users/inactivity/execute', async (req, res) => {
     try {
-        const guild = req.discordClient.guilds.cache.first();
+        const guild = req.dashboardGuild;
         if (!guild) return res.status(500).json({ error: 'Guild not found' });
         
         const days = parseInt(req.body.days) || 30;
@@ -1959,7 +1988,8 @@ router.post('/users/inactivity/execute', async (req, res) => {
         });
         res.json({ success: true, kicked, failed });
     } catch (e) {
-        logger.error('API /users/inactivity/execute error', { err: e });
+        reportDashboardError(e, req, { area: 'dashboard:api', op: 'inactivity_execute' });
+        logger.error('Failed to execute the inactivity prune from the dashboard.', { err: e, path: req.path });
         res.status(500).json({ error: e.message });
     }
 });
@@ -1967,7 +1997,7 @@ router.post('/users/inactivity/execute', async (req, res) => {
 // ─── POST /api/users/:userId/kick ────────────────────────────────────────────
 router.post('/users/:userId/kick', async (req, res) => {
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(500).json({ error: 'Guild not found' });
 
     const userId = String(req.params.userId || '').trim();
@@ -1996,6 +2026,7 @@ router.post('/users/:userId/kick', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to kick member from dashboard.', { err, userId: req.params.userId });
     res.status(500).json({ error: 'Failed to kick member.' });
   }
@@ -2004,7 +2035,7 @@ router.post('/users/:userId/kick', async (req, res) => {
 // ─── POST /api/users/:userId/ban ─────────────────────────────────────────────
 router.post('/users/:userId/ban', async (req, res) => {
   try {
-    const guild = req.discordClient.guilds.cache.first();
+    const guild = req.dashboardGuild;
     if (!guild) return res.status(500).json({ error: 'Guild not found' });
 
     const userId = String(req.params.userId || '').trim();
@@ -2033,6 +2064,7 @@ router.post('/users/:userId/ban', async (req, res) => {
     });
     res.json({ ok: true });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to ban member from dashboard.', { err, userId: req.params.userId });
     res.status(500).json({ error: 'Failed to ban member.' });
   }
@@ -2072,7 +2104,7 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
   if (seedJobRunning) {
     return res.status(409).json({ error: 'A backfill job is already running.', jobId: currentSeedJobId });
   }
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild;
   if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
 
   pruneOldSeedJobs();
@@ -2169,6 +2201,7 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
         job.finishedAt = Date.now();
         logger.warn('Dashboard seed last messages aborted.', { jobId, user: username });
       } else {
+        reportDashboardError(err, req, { area: 'dashboard:api', op: 'seed_last_messages' });
         job.status = 'error';
         job.error = err && err.message ? String(err.message) : String(err);
         job.finishedAt = Date.now();
@@ -2189,6 +2222,7 @@ router.get('/maintenance/storage-report', (req, res) => {
     const report = getStorageReport();
     res.json(report);
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Storage report failed.', { err });
     res.status(500).json({ error: 'Failed to build storage report.' });
   }
@@ -2229,6 +2263,7 @@ router.post('/maintenance/cleanup', (req, res) => {
     });
     res.json({ ok: true, ...result });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Cleanup failed.', { err });
     res.status(500).json({ error: err.message || 'Cleanup failed.' });
   }
@@ -2243,6 +2278,7 @@ router.post('/maintenance/sessions/clear-all', (req, res) => {
       const preview = cleanupExpiredSessions(true);
       return res.json({ ok: true, dryRun: true, estimatedActiveSessionRows: preview.scanned });
     } catch (err) {
+      reportDashboardError(err, req, { area: 'dashboard:api', op: 'sessions_clear_preview' });
       return res.status(500).json({ error: err.message || 'Failed to preview session clear.' });
     }
   }
@@ -2259,6 +2295,7 @@ router.post('/maintenance/sessions/clear-all', (req, res) => {
     });
     res.json({ ok: true, deleted });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Clear sessions failed.', { err });
     res.status(500).json({ error: err.message || 'Failed to clear sessions.' });
   }
@@ -2266,7 +2303,7 @@ router.post('/maintenance/sessions/clear-all', (req, res) => {
 
 // ─── POST /api/maintenance/discord/resync ───────────────────────────────────
 router.post('/maintenance/discord/resync', async (req, res) => {
-  const guild = req.discordClient?.guilds?.cache?.first();
+  const guild = req.dashboardGuild;
   if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const channels = body.channels !== false;
@@ -2284,6 +2321,7 @@ router.post('/maintenance/discord/resync', async (req, res) => {
     });
     res.json({ ok: true, channels, roles });
   } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Discord resync failed.', { err });
     res.status(500).json({ error: err.message || 'Resync failed.' });
   }

@@ -39,7 +39,7 @@ For local testing, the dashboard now auto-uses the current localhost host/port i
 
 **2. Add the required Doppler variables** (see the Configuration section below).
 
-**3. Access the dashboard** at `http://<DASHBOARD_BASE_URL>` and sign in with Discord. Users must have `Administrator` or `Manage Server` permissions in the target guild.
+**3. Access the dashboard** at `http://<DASHBOARD_BASE_URL>` and sign in with Discord. Users must have the **Administrator** permission in the target guild. If the bot is in **more than one** guild, set **`DASHBOARD_GUILD_ID`** to that guild’s snowflake.
 
 ### Docker Deployment
 
@@ -113,6 +113,10 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://ares.nilgiri-dab.ts.net:5015`)
 - `DASHBOARD_COOKIE_SECURE` — Optional override (`true`/`false`) for session cookie `Secure` flag. Defaults to `true` only when `DASHBOARD_BASE_URL` starts with `https://`.
 - `ALLOW_INSECURE_DASHBOARD_ON_PRIVATE_NETWORK` — Optional explicit override (`true`/`false`). When `true`, allows HTTP dashboard cookies in production for private-network-only access (for example Tailscale). Keep this disabled on public internet deployments.
+- `DASHBOARD_GUILD_ID` — **Required** when the bot is in more than one guild: set to the guild snowflake the dashboard should use (OAuth, API, and pages).
+- `DASHBOARD_API_MUTATION_MAX_PER_MINUTE` — Optional cap on mutating `/api` requests per IP per minute (default `240`).
+- `DASHBOARD_OAUTH_DISCORD_MAX_PER_15M` — Optional cap on OAuth “start login” requests per IP per 15 minutes (default `60`).
+- `DASHBOARD_OAUTH_CALLBACK_MAX_PER_15M` — Optional cap on OAuth callback requests per IP per 15 minutes (default `40`).
 
 **Private-network HTTP example (Tailscale-only):**
 
@@ -134,6 +138,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `NEWUSER_PERMISSION_DIFF_ROLE_ID` — Reference role for /newuser permission comparison
 - `NOOBIES_ROLE_ID` — Role ID auto-assigned to members with fewer than 100 messages
 - `SENTRY_DSN` — Sentry project DSN for error monitoring
+- `SENTRY_SENSITIVE_PII` — Set to `true` only if you want Sentry to attach default PII and local variables to events (default off; see `instrument.js`)
 - `SERVER_INVITE_URL` — Invite URL included in kick DMs
 
 Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
@@ -161,6 +166,17 @@ Nova now includes memory-conscious runtime defaults for long-lived deployments:
 - Sweepers are enabled for message and user caches to reclaim stale objects over time.
 - Dashboard member fetch dedupe avoids retaining large full-member collections in process memory longer than needed.
 - Message pipeline logging trims large content payloads to reduce heap churn and log bloat.
+
+### External API response cache (optional)
+
+Bounded in-memory caching reduces quota usage on Google Custom Search, Books, YouTube, and DeepL (flag-emoji translations), and caps Reddit GET response cache size. Higher TTL means fewer API calls but staler results.
+
+| Variable | Purpose | Default |
+| -------- | ------- | ------- |
+| `GOOGLE_CACHE_TTL_SEC` | TTL (seconds) for Google CSE, Books, and YouTube cached responses | `600` (10 minutes) |
+| `DEEPL_CACHE_TTL_SEC` | TTL (seconds) for DeepL translation cache (same message + target language) | `180` (3 minutes) |
+| `EXTERNAL_API_CACHE_MAX_KEYS` | Max entries shared by the Google + DeepL cache (`utils/externalApiCache.js`) | `500` |
+| `REDDIT_GET_CACHE_MAX_KEYS` | Max entries for Reddit GET response cache in `utils/redditClient.js` | `300` |
 
 ## 🖥️ Dashboard Web UI
 
@@ -235,7 +251,7 @@ Current security behavior in the project:
 - **PirateWeather**: Weather forecasts and conditions
 - **MyAnimeList**: Anime and manga information
 - **Reddit**: Server promotion and content sharing across multiple subreddits
-- **Sentry**: Automatic error monitoring and alerting across all bot events and commands
+- **Sentry**: Error monitoring for Discord events and slash commands, the Express **dashboard** (API/auth/pages + global error handler), slash-command **deploy on startup** and **`node deploy-commands.js`**, when `SENTRY_DSN` is set (see [`instrument.js`](instrument.js)). Sensitive PII in Sentry is **off** unless `SENTRY_SENSITIVE_PII=true`.
 - **Wikipedia**: Article summaries and information
 
 ### Administrative Tools

@@ -113,6 +113,11 @@ module.exports = {
 // Dashboard optional vars (dashboard will warn at startup if missing, but bot still starts):
 //   DISCORD_CLIENT_SECRET — OAuth2 secret for dashboard login (same Discord application as bot)
 //   DASHBOARD_SESSION_SECRET — secret for express-session cookie signing
+//   DASHBOARD_GUILD_ID — when the bot is in more than one guild, set this to the guild snowflake the dashboard should use (OAuth + API)
+//   DASHBOARD_API_MUTATION_MAX_PER_MINUTE — cap mutating /api requests per IP per minute (default 240)
+//   DASHBOARD_OAUTH_DISCORD_MAX_PER_15M — cap GET /auth/discord starts per IP per 15 minutes (default 60)
+//   DASHBOARD_OAUTH_CALLBACK_MAX_PER_15M — cap GET /auth/callback per IP per 15 minutes (default 40)
+//   SENTRY_SENSITIVE_PII — set to "true" to send default PII and local variables to Sentry (default off)
 // Dashboard runtime vars (seeded from env once, then editable in Dashboard UI and stored in DB):
 //   DASHBOARD_PORT — port for the web dashboard (default: 3001)
 //   DASHBOARD_BASE_URL — public URL for OAuth redirect (default: http://localhost:3001)

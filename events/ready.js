@@ -172,10 +172,10 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function initializeInviteUsage(client) {
-  // Bot is only in one guild, so get it directly
-  const guild = client.guilds.cache.first();
+  const { getDashboardGuild } = require('../utils/dashboardGuild');
+  const guild = getDashboardGuild(client);
   if (!guild) {
-    logger.warn('No guild found for invite usage initialization.');
+    logger.warn('Invite usage was not initialized (no guild, or multiple guilds without DASHBOARD_GUILD_ID).');
     return;
   }
 

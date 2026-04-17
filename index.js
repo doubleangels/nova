@@ -41,7 +41,12 @@ const client = new Client({
 client.commands = new Collection();
 
 const deployCommands = require('./deploy-commands');
-deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
+deployCommands()
+  .then(() => logger.info('Slash commands deployed on startup.'))
+  .catch((err) => {
+    captureError(err, { source: 'deployCommands', when: 'startup' });
+    logger.error('Failed to deploy slash commands on startup.', { err });
+  });
 
 /**
  * Loads all command files from the commands directory
@@ -156,6 +161,7 @@ if (process.env.DISCORD_CLIENT_SECRET && process.env.DASHBOARD_SESSION_SECRET) {
         logger.info(`Dashboard running on port ${dashboardPort}.`, { url: dashboardBaseUrl });
       });
     } catch (err) {
+      captureError(err, { source: 'dashboard', when: 'startup' });
       logger.error('Failed to start dashboard.', { err });
     }
   })();

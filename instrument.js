@@ -1,19 +1,23 @@
 /**
  * Sentry must load before other application modules (see @sentry/node docs).
  * Set SENTRY_DSN in the environment to enable reporting; without it the SDK stays disabled.
+ * Optional: SENTRY_SENSITIVE_PII=true enables sendDefaultPii and includeLocalVariables (off by default).
  */
 require('dotenv').config();
 const Sentry = require('@sentry/node');
 const pkg = require('./package.json');
 
+/** When true, Sentry may attach request PII and local variables to events (avoid in strict compliance environments). */
+const sentrySensitivePii = String(process.env.SENTRY_SENSITIVE_PII || '').toLowerCase() === 'true';
+
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
 
-  sendDefaultPii: true,
+  sendDefaultPii: sentrySensitivePii,
 
   tracesSampleRate: 1.0,
 
-  includeLocalVariables: true,
+  includeLocalVariables: sentrySensitivePii,
 
   enableLogs: true,
 

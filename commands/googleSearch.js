@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
+const { getOrSet, hashKeyPart, normalizeQuery, googleTtlSec } = require('../utils/externalApiCache');
 
 /**
  * Command module for performing Google web searches.
@@ -178,32 +179,36 @@ module.exports = {
    * @returns {Promise<Object>} Object containing search results or error information
    */
   async fetchSearchResults(query, resultsCount) {
-    const params = new URLSearchParams({
-      key: config.googleApiKey,
-      cx: config.searchEngineId,
-      q: query,
-      num: resultsCount.toString(),
-      start: "1",
-      safe: "off"
-    });
-    const requestUrl = `https://www.googleapis.com/customsearch/v1?${params.toString()}`;
-    logger.debug("Preparing Google API request.", { 
-      searchQuery: query,
-      resultsRequested: resultsCount
-    });
-
+    const nq = normalizeQuery(query);
+    const cacheKey = `${config.searchEngineId}:${hashKeyPart(nq)}:${resultsCount}`;
     try {
-      const response = await axios.get(requestUrl, { timeout: 10000 });
-      logger.debug("Google API response received.", { 
-        status: response.status,
-        itemsReturned: response.data?.items?.length || 0
+      return await getOrSet('google_cse_web', cacheKey, googleTtlSec, async () => {
+        const params = new URLSearchParams({
+          key: config.googleApiKey,
+          cx: config.searchEngineId,
+          q: query,
+          num: resultsCount.toString(),
+          start: "1",
+          safe: "off"
+        });
+        const requestUrl = `https://www.googleapis.com/customsearch/v1?${params.toString()}`;
+        logger.debug("Preparing Google API request.", {
+          searchQuery: query,
+          resultsRequested: resultsCount
+        });
+
+        const response = await axios.get(requestUrl, { timeout: 10000 });
+        logger.debug("Google API response received.", {
+          status: response.status,
+          itemsReturned: response.data?.items?.length || 0
+        });
+
+        return {
+          items: response.data.items || []
+        };
       });
-      
-      return {
-        items: response.data.items || []
-      };
     } catch (apiError) {
-      logger.error("Google API request failed.", { 
+      logger.error("Google API request failed.", {
         err: apiError,
         status: apiError.response?.status,
         errorDetails: apiError.response?.data

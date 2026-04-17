@@ -5,6 +5,7 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
+const { getOrSet, hashKeyPart, normalizeQuery, googleTtlSec } = require('../utils/externalApiCache');
 
 /**
  * Command module for searching and displaying YouTube content.
@@ -163,38 +164,42 @@ module.exports = {
    * @throws {Error} If there's an error searching YouTube
    */
   async searchYouTube(query, contentType) {
+    const nq = normalizeQuery(query);
+    const cacheKey = `${contentType}:${hashKeyPart(nq)}`;
     try {
-      const params = {
-        part: 'snippet',
-        q: query,
-        type: contentType,
-        maxResults: 20,
-        key: config.googleApiKey,
-        order: 'relevance',
-        safeSearch: 'moderate'
-      };
+      return await getOrSet('youtube', cacheKey, googleTtlSec, async () => {
+        const params = {
+          part: 'snippet',
+          q: query,
+          type: contentType,
+          maxResults: 20,
+          key: config.googleApiKey,
+          order: 'relevance',
+          safeSearch: 'moderate'
+        };
 
-      const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-        params,
-        timeout: 5000
+        const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
+          params,
+          timeout: 5000
+        });
+
+        if (!response.data || !response.data.items || response.data.items.length === 0) {
+          logger.debug("YouTube API returned no results.", { query, contentType });
+          return [];
+        }
+
+        let results = response.data.items;
+
+        if (contentType === 'video') {
+          results = await this.enrichVideoResults(results);
+        } else if (contentType === 'channel') {
+          results = await this.enrichChannelResults(results);
+        } else if (contentType === 'playlist') {
+          results = await this.enrichPlaylistResults(results);
+        }
+
+        return results;
       });
-
-      if (!response.data || !response.data.items || response.data.items.length === 0) {
-        logger.debug("YouTube API returned no results.", { query, contentType });
-        return [];
-      }
-
-      let results = response.data.items;
-
-      if (contentType === 'video') {
-        results = await this.enrichVideoResults(results);
-      } else if (contentType === 'channel') {
-        results = await this.enrichChannelResults(results);
-      } else if (contentType === 'playlist') {
-        results = await this.enrichPlaylistResults(results);
-      }
-
-      return results;
     } catch (error) {
       logger.error("YouTube API search failed", {
         err: error,
