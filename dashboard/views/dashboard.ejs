@@ -65,6 +65,11 @@
     </div>
   </div>
 
+  <div class="mb-3">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Snapshot</p>
+    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Community size, Discord latency, and resource use on this host.</p>
+  </div>
+
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
     <!-- Member Count -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
@@ -103,8 +108,8 @@
         </div>
       </div>
       <div>
-        <p id="health_cpu" class="text-xl font-bold leading-tight">--</p>
-        <p id="health_cpu_sub" class="text-[10px] text-[var(--c-text-muted)] tracking-wide truncate" title="Process CPU vs wall time since last refresh; on Linux/macOS, system 1m load average.">--</p>
+        <p id="health_cpu" class="text-2xl font-bold leading-tight">--</p>
+        <p id="health_cpu_sub" class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide truncate" title="Process CPU vs wall time since last refresh; on Linux/macOS, system 1m load average.">--</p>
       </div>
     </div>
  
@@ -117,8 +122,8 @@
         </div>
       </div>
       <div>
-        <p id="health_mem" class="text-xl font-bold leading-tight">-- MB</p>
-        <p id="health_mem_sub" class="text-[8px] text-[var(--c-text-muted)] uppercase truncate">--</p>
+        <p id="health_mem" class="text-xl font-bold leading-tight truncate whitespace-nowrap">-- MB</p>
+        <p id="health_mem_sub" class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide truncate">--</p>
       </div>
     </div>
  
@@ -131,28 +136,132 @@
         </div>
       </div>
       <div>
-        <p id="health_platform" class="text-xs font-bold truncate leading-tight">--</p>
-        <p id="health_node" class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-tight">Node --</p>
+        <p id="health_platform" class="text-base font-bold truncate leading-tight">--</p>
+        <p id="health_node" class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide truncate">Node --</p>
       </div>
     </div>
   </div>
 
-  <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="mt-10 mb-3">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Service health</p>
+    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Discord gateway, dashboard API response, and SQLite read/write probes.</p>
+  </div>
+
+  <div class="card p-4">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div class="flex flex-wrap items-center gap-2" id="healthServiceBadges">
+        <span class="px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wide font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] text-[var(--c-text-dim)]">Gateway: --</span>
+        <span class="px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wide font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] text-[var(--c-text-dim)]">API: --</span>
+        <span class="px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wide font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] text-[var(--c-text-dim)]">DB Read: --</span>
+        <span class="px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wide font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] text-[var(--c-text-dim)]">DB Write: --</span>
+      </div>
+      <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+        <a href="https://discordstatus.com" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wide text-[var(--c-accent)] hover:opacity-80 whitespace-nowrap">Discord platform status</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-10 mb-3">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Performance &amp; runtime</p>
+    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Process uptime, event-loop delay, and short CPU / memory trends from the dashboard poll.</p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+    <div class="card p-4">
+      <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wide">Uptime</p>
+      <p id="health_uptime" class="text-sm font-bold mt-1">--</p>
+    </div>
+    <div class="card p-4">
+      <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wide">Event loop (p95)</p>
+      <p id="health_loop" class="text-sm font-bold mt-1">-- ms</p>
+    </div>
+    <div class="card p-4">
+      <div class="flex items-center justify-between">
+        <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wide">CPU trend</p>
+        <span id="health_cpu_trend_latest" class="text-[10px] font-bold text-[var(--c-label)]">--%</span>
+      </div>
+      <svg id="health_cpu_trend" viewBox="0 0 120 28" class="w-full h-8 mt-2">
+        <polyline points="" fill="none" stroke="var(--c-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      </svg>
+    </div>
+    <div class="card p-4">
+      <div class="flex items-center justify-between">
+        <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wide">Memory trend</p>
+        <span id="health_mem_trend_latest" class="text-[10px] font-bold text-[var(--c-label)]">-- MB</span>
+      </div>
+      <svg id="health_mem_trend" viewBox="0 0 120 28" class="w-full h-8 mt-2">
+        <polyline points="" fill="none" stroke="var(--c-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      </svg>
+    </div>
+  </div>
+
+  <div class="mt-10 mb-3">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Queues &amp; scheduled reminders</p>
+    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Reminder backlog counts and the next fire times for bump, Reddit, and NeedAFriend schedules.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+    <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between min-h-[7.5rem]">
+      <div class="flex items-start justify-between">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Queue</p>
+      </div>
+      <div>
+        <p id="health_queue_total" class="text-2xl font-bold leading-tight">--</p>
+        <p class="text-[10px] text-[var(--c-text-muted)] uppercase tracking-wide">Scheduled Reminders</p>
+      </div>
+    </div>
+    <div class="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
+        <div class="w-10 h-10 rounded-xl bg-[#24b8ea]/10 flex items-center justify-center text-[#24b8ea] flex-shrink-0">
+          <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Disboard bump</p>
+          <p id="live_rem_bump" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
+        </div>
+      </div>
+      <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
+        <div class="w-10 h-10 rounded-xl bg-[#ff4500]/10 flex items-center justify-center text-[#ff4500] flex-shrink-0">
+          <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Reddit promote</p>
+          <p id="live_rem_promote" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
+        </div>
+      </div>
+      <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
+        <div class="w-10 h-10 rounded-xl bg-[#3ba55c]/10 flex items-center justify-center text-[#3ba55c] flex-shrink-0">
+          <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">NeedAFriend</p>
+          <p id="live_rem_needafriend" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-10 mb-3">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Navigate</p>
+    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Jump to configuration areas and admin tools without using the sidebar.</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     <div class="card p-6 border-l-4 border-[var(--c-accent)]">
         <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 rounded-lg bg-[var(--c-accent-soft-bg)] flex items-center justify-center text-[var(--c-accent)]">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
             </div>
             <div>
-                <h3 class="font-bold text-sm">Bot Configuration</h3>
-                <p class="text-[10px] text-[var(--c-text-dim)]">Adjust core personality and automation.</p>
+                <h3 class="font-bold text-sm">Configuration Shortcuts</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Jump directly to core setup and automation settings.</p>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Appearance</a>
-            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Logistics</a>
-            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles</a>
-            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Security</a>
+            <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Identity &amp; Appearance</a>
+            <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles &amp; Permissions</a>
+            <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Moderation &amp; Safety</a>
+            <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Reminders &amp; Schedules</a>
         </div>
     </div>
     <div class="card p-6 border-l-4 border-[var(--c-accent)]">
@@ -161,47 +270,19 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
             </div>
             <div>
-                <h3 class="font-bold text-sm">Data Explorer</h3>
-                <p class="text-[10px] text-[var(--c-text-dim)]">Inspect and modify raw key-value storage.</p>
+                <h3 class="font-bold text-sm">Tools &amp; Operations</h3>
+                <p class="text-[10px] text-[var(--c-text-dim)]">Open admin tools for data, messaging, users, and maintenance.</p>
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
+            <a href="#database" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Database Explorer</a>
             <a href="#invites" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Invite Manager</a>
-            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Messaging</a>
+            <a href="#messaging" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Message Center</a>
+            <a href="#users" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">User Manager</a>
+            <a href="#inactivity" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Inactivity Prune</a>
+            <a href="#maintenance" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Maintenance &amp; Diagnostics</a>
             <a href="#social" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Social &amp; Fun</a>
-            <a href="#database" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Storage Browser</a>
         </div>
-    </div>
-  </div>
-
-  <!-- Live Reminders Monitoring -->
-  <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-    <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-xl bg-[#24b8ea]/10 flex items-center justify-center text-[#24b8ea] flex-shrink-0">
-        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      </div>
-      <div class="flex flex-col">
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Disboard Bump</p>
-        <p id="live_rem_bump" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
-      </div>
-    </div>
-    <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-xl bg-[#ff4500]/10 flex items-center justify-center text-[#ff4500] flex-shrink-0">
-        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      </div>
-      <div class="flex flex-col">
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">Reddit</p>
-        <p id="live_rem_promote" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
-      </div>
-    </div>
-    <div class="card p-5 flex items-center gap-5 bg-[var(--c-input)]/50 border-dashed">
-      <div class="w-10 h-10 rounded-xl bg-[#3ba55c]/10 flex items-center justify-center text-[#3ba55c] flex-shrink-0">
-        <svg class="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-      </div>
-      <div class="flex flex-col">
-        <p class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider mb-0.5">NeedAFriend</p>
-        <p id="live_rem_needafriend" class="text-sm font-semibold text-[var(--c-label)] leading-none transition-colors duration-300 tabular-nums">--:--:--</p>
-      </div>
     </div>
   </div>
 
@@ -1048,10 +1129,15 @@
               <h2 class="section-heading mb-1">User Manager</h2>
               <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Server Member Roster & Summary</p>
           </div>
-          <button type="button" onclick="loadUserSummary(true)" class="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-[var(--c-card)] border border-[var(--c-input-border)] rounded-lg hover:border-[var(--c-accent)] transition-colors group w-full sm:w-auto">
-              <svg id="refreshUsersIcon" class="w-4 h-4 text-[var(--c-text-dim)] group-hover:text-[var(--c-accent)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-              <span class="text-xs font-bold">Refresh</span>
-          </button>
+          <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <button type="button" onclick="userManagerExportCsv()" class="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-[var(--c-card)] border border-[var(--c-input-border)] rounded-lg hover:border-emerald-500/50 transition-colors text-xs font-bold w-full sm:w-auto">
+                  Export CSV
+              </button>
+              <button type="button" onclick="loadUserSummary(true)" class="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-[var(--c-card)] border border-[var(--c-input-border)] rounded-lg hover:border-[var(--c-accent)] transition-colors group w-full sm:w-auto">
+                  <svg id="refreshUsersIcon" class="w-4 h-4 text-[var(--c-text-dim)] group-hover:text-[var(--c-accent)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  <span class="text-xs font-bold">Refresh</span>
+              </button>
+          </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
@@ -1077,8 +1163,20 @@
           <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">No Data</p><p id="usr_act_nodata" class="text-lg font-bold">--</p></div>
       </div>
 
+      <p id="userManagerRosterMeta" class="text-[10px] text-[var(--c-text-dim)] mb-4 px-1 font-medium"></p>
+
       <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] space-y-3">
-          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. The last-activity column uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> below for emphasis.</p>
+          <h3 class="text-[11px] font-bold text-[var(--c-text-muted)] uppercase tracking-wider">Admin vs Mod vs member</h3>
+          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Row tint and filter chips use each member’s effective permissions <strong class="text-[var(--c-text-muted)]">minus @everyone</strong>. That way a very open base role does not mark the whole server as staff.</p>
+          <ul class="text-[10px] text-[var(--c-text-dim)] space-y-2 list-none leading-relaxed border-t border-[var(--c-card-border)] pt-3">
+              <li class="flex gap-2"><span class="shrink-0 w-14 text-red-400 font-bold">Admin</span><span>If elevated permissions include <strong class="text-[var(--c-text-muted)]">Administrator</strong> or <strong class="text-[var(--c-text-muted)]">Manage Server</strong>.</span></li>
+              <li class="flex gap-2"><span class="shrink-0 w-14 text-yellow-400 font-bold">Mod</span><span>Otherwise, if <strong class="text-[var(--c-text-muted)]">any</strong> of these elevated permissions are present: Kick Members, Ban Members, Moderate Members, Manage Messages, Manage Nicknames, Manage Threads, Mute Members, Deafen Members, Move Members.</span></li>
+              <li class="flex gap-2"><span class="shrink-0 w-14 text-[var(--c-text-muted)] font-bold">Neither</span><span>Everyone else: no elevated admin or mod permission from the lists above (normal member row styling).</span></li>
+          </ul>
+      </div>
+
+      <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] space-y-3">
+          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. <strong class="text-[var(--c-text-muted)]">Inactive</strong> uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> (Inactivity Prune section). Sort applies to the table below.</p>
           <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -1091,7 +1189,13 @@
               <button type="button" data-um-chip="humans" onclick="userManagerToggleChip('humans')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all" aria-pressed="false">Humans <span id="usr_chip_um_humans" class="font-mono">0</span></button>
               <button type="button" data-um-chip="bots" onclick="userManagerToggleChip('bots')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-blue-500/40 bg-blue-500/10 text-[11px] font-bold text-blue-400 hover:bg-blue-500/20 transition-all" aria-pressed="false">Bots <span id="usr_chip_um_bots" class="font-mono">0</span></button>
               <button type="button" data-um-chip="safe" onclick="userManagerToggleChip('safe')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[11px] font-bold text-[var(--c-accent-text)] hover:opacity-90 transition-all" aria-pressed="false">Safe <span id="usr_chip_safe" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="inactive" onclick="userManagerToggleChip('inactive')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-orange-500/40 bg-orange-500/10 text-[11px] font-bold text-orange-300 hover:bg-orange-500/20 transition-all" aria-pressed="false">Inactive <span id="usr_chip_inactive" class="font-mono">0</span></button>
               <button type="button" onclick="userManagerResetFilters()" class="w-full sm:w-auto sm:ml-auto min-h-[40px] px-3 py-2 text-[10px] uppercase font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] underline decoration-dotted text-center sm:text-left">Clear chips</button>
+          </div>
+          <div class="flex lg:hidden flex-wrap items-center gap-2 pt-1">
+              <span class="text-[9px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Sort</span>
+              <button type="button" onclick="userManagerToggleSort('activity')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-card-border)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Last activity <span id="um_sort_ico_act_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
+              <button type="button" onclick="userManagerToggleSort('joined')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-card-border)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Joined <span id="um_sort_ico_join_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
           </div>
           <p id="userManagerFilterHint" class="text-[10px] text-[var(--c-text-dim)] font-medium hidden"></p>
       </div>
@@ -1100,8 +1204,12 @@
           <div class="hidden lg:grid lg:grid-cols-12 gap-3 lg:gap-4 px-4 sm:px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-muted)] font-bold items-center">
               <div class="lg:col-span-4">User</div>
               <div class="lg:col-span-1 text-center" title="Protected from Inactivity Prune (safe role)">Safe</div>
-              <div class="lg:col-span-3 text-right" title="Last message time recorded by the bot">Last activity</div>
-              <div class="lg:col-span-2 text-right">Joined</div>
+              <div class="lg:col-span-3 text-right">
+                  <button type="button" onclick="userManagerToggleSort('activity')" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by last recorded message">Last activity <span id="um_sort_ico_act" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
+              </div>
+              <div class="lg:col-span-2 text-right">
+                  <button type="button" onclick="userManagerToggleSort('joined')" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by server join date">Joined <span id="um_sort_ico_join" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
+              </div>
               <div class="lg:col-span-2 text-right">Actions</div>
           </div>
           <div id="userTableBody" role="list" class="divide-y divide-white/5">
@@ -1577,6 +1685,7 @@
     { id: 'reminders', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms', 'reddit_promotion_targets', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
     { id: 'social_notext', keys: ['notext_channel'] },
     { id: 'inactivity', keys: ['prune_protected_role_id'] },
+    { id: 'messaging', keys: ['msg_channel_id'] },
   ];
   const SETTINGS_DEBOUNCE_MS = 650;
   const REMINDER_DELAY_HOUR_KEYS = new Set([
@@ -2137,6 +2246,68 @@
     }
   });
 
+  const healthTrendState = {
+    cpu: [],
+    mem: [],
+    maxPoints: 24
+  };
+
+  function formatUptime(totalSeconds) {
+    const sec = Math.max(0, Number(totalSeconds) || 0);
+    const days = Math.floor(sec / 86400);
+    const hours = Math.floor((sec % 86400) / 3600);
+    const mins = Math.floor((sec % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  }
+
+  function pushTrendPoint(list, value) {
+    list.push(Number(value) || 0);
+    while (list.length > healthTrendState.maxPoints) list.shift();
+  }
+
+  function renderTrend(svgId, values) {
+    const svg = document.getElementById(svgId);
+    const polyline = svg?.querySelector('polyline');
+    if (!svg || !polyline || values.length === 0) return;
+    const w = 120;
+    const h = 28;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = Math.max(1, max - min);
+    const points = values.map((v, i) => {
+      const x = values.length === 1 ? 0 : (i / (values.length - 1)) * w;
+      const y = h - (((v - min) / range) * (h - 2) + 1);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    polyline.setAttribute('points', points);
+  }
+
+  function setBadge(el, label, healthy) {
+    if (!el) return;
+    const ok = healthy === true;
+    el.textContent = `${label}: ${ok ? 'OK' : 'Issue'}`;
+    el.className = `px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wide font-bold border ${
+      ok
+        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+        : 'border-red-500/40 bg-red-500/10 text-red-400'
+    }`;
+  }
+
+  function gatewayLabel(status) {
+    const map = {
+      0: 'READY',
+      1: 'CONNECTING',
+      2: 'RECONNECTING',
+      3: 'IDLE',
+      4: 'NEARLY',
+      5: 'DISCONNECTED',
+      6: 'WAITING'
+    };
+    return map[Number(status)] || `WS ${status}`;
+  }
+
   // ── Health Monitor ────────────────────────────────────────────────────────
   async function loadHealthStats() {
     try {
@@ -2155,8 +2326,34 @@
       }
       document.getElementById('health_mem').textContent = `${data.memory.rss} MB`;
       document.getElementById('health_mem_sub').textContent = `System: ${data.memory.systemFree}GB / ${data.memory.systemTotal}GB Free`;
-      document.getElementById('health_platform').textContent = data.platform;
+      document.getElementById('health_platform').textContent = data.hostname || data.platform;
       document.getElementById('health_node').textContent = `Node ${data.nodeVersion}`;
+      document.getElementById('health_mem')?.setAttribute('title', `${data.memory.rss} MB`);
+      document.getElementById('health_mem_sub')?.setAttribute('title', `System: ${data.memory.systemFree}GB / ${data.memory.systemTotal}GB Free`);
+      document.getElementById('health_platform')?.setAttribute('title', data.hostname || data.platform || '');
+      document.getElementById('health_node')?.setAttribute('title', `Node ${data.nodeVersion}`);
+
+      document.getElementById('health_uptime').textContent = formatUptime(data.uptimeSeconds);
+      document.getElementById('health_loop').textContent = `${data.eventLoop?.p95Ms ?? '--'} ms`;
+
+      const reminders = data.queue?.reminders;
+      if (reminders) {
+        document.getElementById('health_queue_total').textContent = String(reminders.total);
+      }
+
+      pushTrendPoint(healthTrendState.cpu, Number(data.cpu?.percent || 0));
+      pushTrendPoint(healthTrendState.mem, Number(data.memory?.rss || 0));
+      renderTrend('health_cpu_trend', healthTrendState.cpu);
+      renderTrend('health_mem_trend', healthTrendState.mem);
+      document.getElementById('health_cpu_trend_latest').textContent = `${Number(data.cpu?.percent || 0).toFixed(1)}%`;
+      document.getElementById('health_mem_trend_latest').textContent = `${Number(data.memory?.rss || 0).toFixed(2)} MB`;
+
+      const badges = document.getElementById('healthServiceBadges')?.children || [];
+      setBadge(badges[0], `Gateway ${gatewayLabel(data.services?.discordGateway)}`, Number(data.services?.discordGateway) === 0);
+      setBadge(badges[1], 'API', res.ok);
+      setBadge(badges[2], 'DB Read', data.services?.sqliteReadable === true);
+      setBadge(badges[3], 'DB Write', data.services?.sqliteWritable === true);
+      if (badges[0]) badges[0].setAttribute('title', `Discord gateway status: ${gatewayLabel(data.services?.discordGateway)}`);
       
       // Update ping color based on latency
       const pingEl = document.getElementById('health_ping');
@@ -2597,6 +2794,10 @@
   let userManagerSearchQuery = '';
   /** @type {Set<string>} Selected filter chip keys (AND together). */
   let userManagerSelectedChips = new Set();
+  /** @type {'joined' | 'activity'} */
+  let userManagerSortKey = 'joined';
+  /** @type {'asc' | 'desc'} */
+  let userManagerSortDir = 'desc';
 
   function userManagerRoot() {
     return document.getElementById('users');
@@ -2648,9 +2849,143 @@
     return now - joinTs > thresholdMs;
   }
 
+  function userManagerLastActivityNum(u) {
+    const last = u && u.lastMessageAt;
+    if (last == null || last === '') return NaN;
+    const n = typeof last === 'number' ? last : Number(last);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function userManagerCompareSort(a, b) {
+    const mult = userManagerSortDir === 'asc' ? 1 : -1;
+    if (userManagerSortKey === 'joined') {
+      const ta = new Date(a.joinedAt).getTime();
+      const tb = new Date(b.joinedAt).getTime();
+      const va = Number.isNaN(ta) ? 0 : ta;
+      const vb = Number.isNaN(tb) ? 0 : tb;
+      return mult * (va - vb);
+    }
+    const la = userManagerLastActivityNum(a);
+    const lb = userManagerLastActivityNum(b);
+    const aHas = Number.isFinite(la);
+    const bHas = Number.isFinite(lb);
+    if (aHas && bHas) return mult * (la - lb);
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+    const ja = new Date(a.joinedAt).getTime();
+    const jb = new Date(b.joinedAt).getTime();
+    const va = Number.isNaN(ja) ? 0 : ja;
+    const vb = Number.isNaN(jb) ? 0 : jb;
+    return mult * (va - vb);
+  }
+
+  function userManagerToggleSort(key) {
+    if (!userManagerCache) return;
+    if (userManagerSortKey === key) {
+      userManagerSortDir = userManagerSortDir === 'desc' ? 'asc' : 'desc';
+    } else {
+      userManagerSortKey = key;
+      userManagerSortDir = 'desc';
+    }
+    renderUserManagerTable();
+  }
+
+  function userManagerUpdateSortHeaderIcons() {
+    const icon = (k) => (userManagerSortKey === k ? (userManagerSortDir === 'desc' ? '▼' : '▲') : '');
+    const set = (id, k) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = icon(k);
+    };
+    set('um_sort_ico_act', 'activity');
+    set('um_sort_ico_join', 'joined');
+    set('um_sort_ico_act_m', 'activity');
+    set('um_sort_ico_join_m', 'joined');
+  }
+
+  function userManagerCsvEscape(value) {
+    const s = value == null ? '' : String(value);
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function userManagerExportCsv() {
+    if (!userManagerCache || !userManagerCache.recent) {
+      showToast('Load the roster first.', 'error');
+      return;
+    }
+    const days = userManagerInactiveDays();
+    const filtered = userManagerCache.recent.filter(
+      (u) =>
+        userManagerPassesChipFilters(u, userManagerSelectedChips) &&
+        userManagerPassesSearch(u, userManagerSearchQuery)
+    );
+    filtered.sort(userManagerCompareSort);
+    const headers = [
+      'id',
+      'username',
+      'display_name',
+      'bot',
+      'privilege',
+      'safe',
+      'account_created',
+      'joined_server',
+      'last_message_iso',
+      'last_activity_label',
+      'message_count',
+      'last_channel_id',
+      'last_channel',
+      'inactive_for_threshold'
+    ];
+    const lines = [headers.join(',')];
+    for (const u of filtered) {
+      const lastNum = userManagerLastActivityNum(u);
+      const hasTracked = Number.isFinite(lastNum);
+      let relLabel;
+      if (!hasTracked) {
+        relLabel = userManagerIsBot(u) ? 'Bot' : 'No Data';
+      } else {
+        relLabel = formatRelativeActivity(lastNum).text;
+      }
+      const inactive = userManagerIsInactive(u, days) ? 'yes' : 'no';
+      const acctMs = u.accountCreatedAt != null ? Number(u.accountCreatedAt) : NaN;
+      const acct = Number.isFinite(acctMs) ? new Date(acctMs).toISOString() : '';
+      const joined = u.joinedAt ? new Date(u.joinedAt).toISOString() : '';
+      const lastIso = hasTracked ? new Date(lastNum).toISOString() : '';
+      const mc = u.messageCount != null && u.messageCount !== '' ? String(u.messageCount) : '';
+      const row = [
+        userManagerCsvEscape(u.id),
+        userManagerCsvEscape(u.username),
+        userManagerCsvEscape(u.displayName),
+        userManagerIsBot(u) ? 'yes' : 'no',
+        userManagerCsvEscape(userManagerPrivilege(u) || ''),
+        u.hasSafeRole ? 'yes' : 'no',
+        userManagerCsvEscape(acct),
+        userManagerCsvEscape(joined),
+        userManagerCsvEscape(lastIso),
+        userManagerCsvEscape(relLabel),
+        userManagerCsvEscape(mc),
+        userManagerCsvEscape(u.lastMessageChannelId || ''),
+        userManagerCsvEscape(u.lastMessageChannelName || ''),
+        inactive
+      ];
+      lines.push(row.join(','));
+    }
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nova-users-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Exported CSV (' + filtered.length + ' rows).');
+  }
+
   function formatRelativeActivity(lastMessageAt) {
     if (lastMessageAt == null || typeof lastMessageAt !== 'number') {
-      return { text: 'No messages', cls: 'text-[var(--c-text-dim)] italic', title: 'No message activity recorded yet for this member' };
+      return { text: 'No Data', cls: 'text-[var(--c-text-dim)] italic', title: 'No message activity recorded yet for this member' };
     }
     const now = Date.now();
     let diffSec = Math.floor((now - lastMessageAt) / 1000);
@@ -2695,11 +3030,14 @@
     if (!chips || chips.size === 0) return true;
     const bot = userManagerIsBot(u);
     const p = userManagerPrivilege(u);
+    const days = userManagerInactiveDays();
 
     if (chips.has('admin') && p !== 'admin') return false;
     if (chips.has('mod') && p !== 'mod') return false;
 
     if (chips.has('safe') && !u.hasSafeRole) return false;
+
+    if (chips.has('inactive') && !userManagerIsInactive(u, days)) return false;
 
     const wantHumans = chips.has('humans');
     const wantBots = chips.has('bots');
@@ -2729,6 +3067,8 @@
     let umHumans = 0;
     let umBots = 0;
     let safe = 0;
+    const days = userManagerInactiveDays();
+    let inactive = 0;
     for (const u of list) {
       const p = userManagerPrivilege(u);
       const bot = userManagerIsBot(u);
@@ -2737,6 +3077,7 @@
       if (bot) umBots++;
       else umHumans++;
       if (u.hasSafeRole) safe++;
+      if (userManagerIsInactive(u, days)) inactive++;
     }
     const set = (id, n) => {
       const el = document.getElementById(id);
@@ -2747,6 +3088,7 @@
     set('usr_chip_um_humans', umHumans);
     set('usr_chip_um_bots', umBots);
     set('usr_chip_safe', safe);
+    set('usr_chip_inactive', inactive);
     userManagerSyncChipStyles();
   }
 
@@ -2767,9 +3109,10 @@
       userManagerPassesChipFilters(u, userManagerSelectedChips) &&
       userManagerPassesSearch(u, userManagerSearchQuery)
     ));
+    const sorted = [...filtered].sort(userManagerCompareSort);
 
     tbody.innerHTML = '';
-    if (filtered.length === 0) {
+    if (sorted.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'px-4 py-10 text-center text-xs text-[var(--c-text-dim)]';
       empty.setAttribute('role', 'status');
@@ -2779,7 +3122,7 @@
       const safeCheckSvg =
         '<svg class="w-4 h-4 mx-auto text-[var(--c-accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>';
       const safeEmpty = '<span class="inline-flex w-8 justify-center text-[var(--c-text-dim)] opacity-25 select-none" aria-hidden="true">—</span>';
-      filtered.forEach((u) => {
+      sorted.forEach((u) => {
         const row = document.createElement('div');
         row.setAttribute('role', 'listitem');
         const bot = userManagerIsBot(u);
@@ -2802,28 +3145,58 @@
           ? `<span class="inline-flex w-8 justify-center" title="Has protected (safe) role">${safeCheckSvg}</span>`
           : safeEmpty;
 
-        const last = u.lastMessageAt;
-        const lastNum =
-          last != null && last !== ''
-            ? typeof last === 'number'
-              ? last
-              : Number(last)
-            : NaN;
+        const lastNum = userManagerLastActivityNum(u);
         const hasTracked = Number.isFinite(lastNum);
         const inactiveRow = userManagerIsInactive(u, days);
 
         let lastCellHtml;
         let lastCellTitle;
+        let lastSubHtml = '';
         if (!hasTracked) {
-          lastCellHtml =
-            '<span style="color:var(--c-text);font-style:italic">No messages</span>';
-          lastCellTitle = 'No message activity recorded yet for this member';
+          if (bot) {
+            lastCellHtml = '<span class="text-blue-400/90 font-medium">Bot</span>';
+            lastCellTitle = 'Bot accounts are exempt from human message activity tracking';
+          } else {
+            lastCellHtml =
+              '<span style="color:var(--c-text);font-style:italic">No Data</span>';
+            lastCellTitle = 'No message activity recorded yet for this member';
+          }
         } else {
           const rel = formatRelativeActivity(lastNum);
           const actCls = inactiveRow && !bot ? 'text-orange-400/90' : rel.cls;
           lastCellTitle = rel.title;
+          const extras = [];
+          if (!bot && u.messageCount != null && Number(u.messageCount) > 0) {
+            extras.push(`${Number(u.messageCount).toLocaleString()} msgs tracked`);
+          }
+          if (!bot && u.lastMessageChannelName) {
+            extras.push(`Last in ${u.lastMessageChannelName}`);
+          }
+          if (extras.length) lastCellTitle = `${rel.title} · ${extras.join(' · ')}`;
           lastCellHtml = `<span class="${actCls}">${escapeHtmlUserManager(rel.text)}</span>`;
+          if (!bot) {
+            const parts = [];
+            if (u.messageCount != null && Number(u.messageCount) > 0) {
+              parts.push(`${Number(u.messageCount).toLocaleString()} msgs`);
+            }
+            if (u.lastMessageChannelName) {
+              parts.push(escapeHtmlUserManager(u.lastMessageChannelName));
+            }
+            if (parts.length) {
+              lastSubHtml = `<div class="text-[9px] text-[var(--c-text-dim)] truncate mt-0.5">${parts.join(' · ')}</div>`;
+            }
+          }
         }
+
+        const acctMs = u.accountCreatedAt != null ? Number(u.accountCreatedAt) : NaN;
+        const acctLine =
+          Number.isFinite(acctMs) && !bot
+            ? `<span class="text-[9px] text-[var(--c-text-dim)] truncate">Discord since ${new Date(acctMs).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              })}</span>`
+            : '';
 
         const dn = escapeHtmlUserManager(u.displayName);
         const un = escapeHtmlUserManager(u.username);
@@ -2841,6 +3214,7 @@
                 <div class="flex flex-col min-w-0">
                   <span class="text-sm font-bold truncate ${privilege === 'admin' ? 'text-red-400' : privilege === 'mod' ? 'text-yellow-400' : 'text-[var(--c-text)]'}">${dn}</span>
                   <span class="text-[10px] text-[var(--c-text-dim)] truncate">@${un}</span>
+                  ${acctLine}
                 </div>
               </div>
               <div class="lg:hidden shrink-0 pt-0.5" aria-label="Safe role">${safeInner}</div>
@@ -2848,7 +3222,7 @@
             <div class="hidden lg:flex lg:col-span-1 justify-center items-center" aria-label="Safe role">${safeInner}</div>
             <div class="mt-3 lg:mt-0 lg:col-span-3 text-xs sm:text-sm">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Last activity</span>
-              <div class="text-right" title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}</div>
+              <div class="text-right" title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}${lastSubHtml}</div>
             </div>
             <div class="mt-2 lg:mt-0 lg:col-span-2 text-xs text-[var(--c-text-muted)]">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Joined</span>
@@ -2870,14 +3244,20 @@
     if (hint) {
       const allN = userManagerCache.recent.length;
       const selective = userManagerSelectedChips.size > 0 || Boolean(userManagerSearchQuery.trim());
-      if (filtered.length !== allN || selective) {
+      const sortNonDefault =
+        userManagerSortKey !== 'joined' || userManagerSortDir !== 'desc';
+      const sortBit = sortNonDefault
+        ? ` · sort: ${userManagerSortKey === 'joined' ? 'joined' : 'last activity'} ${userManagerSortDir}`
+        : '';
+      if (sorted.length !== allN || selective || sortNonDefault) {
         hint.classList.remove('hidden');
-        hint.textContent = `Showing ${filtered.length} of ${allN} members (${days} day${days === 1 ? '' : 's'} inactive threshold; chips use AND${userManagerSearchQuery.trim() ? '; search active' : ''}).`;
+        hint.textContent = `Showing ${sorted.length} of ${allN} members (${days} day${days === 1 ? '' : 's'} inactive threshold; chips use AND${userManagerSearchQuery.trim() ? '; search active' : ''}${sortBit}).`;
       } else {
         hint.classList.add('hidden');
         hint.textContent = '';
       }
     }
+    userManagerUpdateSortHeaderIcons();
   }
 
   async function loadUserSummary(forceRefresh = false) {
@@ -2904,6 +3284,19 @@
         document.getElementById('usr_act_30p').textContent = b.over30d ?? 0;
         document.getElementById('usr_act_nodata').textContent = b.noData ?? 0;
         userManagerCache = data;
+        const metaEl = document.getElementById('userManagerRosterMeta');
+        if (metaEl) {
+          const gen = data.activityInsights && data.activityInsights.generatedAt;
+          const parts = [];
+          if (gen) {
+            try {
+              parts.push('Snapshot · ' + new Date(gen).toLocaleString());
+            } catch (e) {}
+          }
+          if (data.cached) parts.push('served from cache');
+          if (data.stale) parts.push('stale (Discord rate limit)');
+          metaEl.textContent = parts.join(' · ');
+        }
         renderUserManagerTable();
         if (data.stale) {
           showToast('User list is cached (Discord member fetch rate limit). Try again in a moment.', 'success');
@@ -4017,5 +4410,6 @@
   loadDatabaseEntries();
   loadHealthStats();
   loadInvites();
-  setInterval(loadHealthStats, 30000); // Refresh stats every 30s
+  const HEALTH_STATS_POLL_MS = 1000; // status cards: uptime, loop, trends, queue (1s)
+  setInterval(loadHealthStats, HEALTH_STATS_POLL_MS);
 </script>

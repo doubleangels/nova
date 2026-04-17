@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
+const { monitorEventLoopDelay } = require('perf_hooks');
 const path = require('path');
 const { ActivityType, PermissionFlagsBits } = require('discord.js');
 const requireAuth = require('../middleware/requireAuth');
@@ -11,6 +12,8 @@ const {
   setValue,
   getAllInviteTagsData,
   getAllLastMessageTimes,
+  getAllMessageCounts,
+  getAllLastMessageChannels,
   setInviteTag,
   deleteInviteTag,
   setInviteNotificationChannel,
@@ -32,7 +35,8 @@ const {
 const { 
   getLatestReminderData, 
   handleReminder, 
-  NEEDAFRIEND_REMINDER_MS 
+  NEEDAFRIEND_REMINDER_MS,
+  getReminderBacklogSummary
 } = require('../../utils/reminderUtils');
 const {
   getSqlitePath,
@@ -98,6 +102,8 @@ function buildDeepHealthPayload(client) {
 /** Rolling sample for process CPU % (wall time between /api/health calls). */
 let _healthCpuPrev = process.cpuUsage();
 let _healthCpuWallPrev = Date.now();
+const eventLoopHistogram = monitorEventLoopDelay({ resolution: 20 });
+eventLoopHistogram.enable();
 
 /**
  * CPU time used by this Node process vs wall time since last sample (0–100 ≈ one core).
@@ -206,6 +212,16 @@ function elevatedMemberPermissions(member) {
 }
 
 /** @param {import('discord.js').GuildMember} member */
+/** Discord snowflake → account creation time (ms). */
+function discordSnowflakeToCreatedMs(id) {
+    try {
+        const n = BigInt(String(id));
+        return Number((n >> 22n) + 1420070400000n);
+    } catch {
+        return null;
+    }
+}
+
 function memberPrivilegeLevel(member) {
     const perms = elevatedMemberPermissions(member);
     if (
@@ -536,7 +552,17 @@ async function readAllSettings() {
     redditPromotionTargetsRaw,
     redditPromotionLink, redditPromotionTitle, redditPromotionBody, redditPromotionSubreddits,
     needafriendSubreddit, needafriendThreadTitle, needafriendComment,
-    reminderBumpDelayMs, reminderPromoteDelayMs, reminderNeedafriendDelayMs
+    reminderBumpDelayMs, reminderPromoteDelayMs, reminderNeedafriendDelayMs,
+    antiSpamEnabled,
+    antiSpamThreshold,
+    antiSpamWindowHours,
+    antiSpamChannelId,
+    inactivityGuardEnabled,
+    inactivityGuardTimeoutHours,
+    entryGuardEnabled,
+    entryGuardAccountAge,
+    noobiesThreshold,
+    msgChannelId,
   ] = await Promise.all([
     getSetting('bot_status'),
     getSetting('bot_status_type'),
@@ -567,7 +593,17 @@ async function readAllSettings() {
     getValue('needafriend_comment'),
     getValue('reminder_delay_bump_ms'),
     getValue('reminder_delay_promote_ms'),
-    getValue('reminder_delay_needafriend_ms')
+    getValue('reminder_delay_needafriend_ms'),
+    getValue('anti_spam_enabled'),
+    getValue('anti_spam_threshold'),
+    getValue('anti_spam_window_hours'),
+    getValue('anti_spam_channel_id'),
+    getValue('inactivity_guard_enabled'),
+    getValue('inactivity_guard_timeout_hours'),
+    getValue('entry_guard_enabled'),
+    getValue('entry_guard_account_age'),
+    getValue('noobies_threshold'),
+    getValue('msg_channel_id'),
   ]);
 
   return {
@@ -604,7 +640,17 @@ async function readAllSettings() {
     needafriend_comment: String(needafriendComment || DEFAULT_NEEDAFRIEND_COMMENT),
     reminder_delay_bump_ms: toIntOrDefault(reminderBumpDelayMs, DEFAULT_REMINDER_BUMP_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000),
     reminder_delay_promote_ms: toIntOrDefault(reminderPromoteDelayMs, DEFAULT_REMINDER_PROMOTE_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000),
-    reminder_delay_needafriend_ms: toIntOrDefault(reminderNeedafriendDelayMs, DEFAULT_REMINDER_NEEDAFRIEND_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000)
+    reminder_delay_needafriend_ms: toIntOrDefault(reminderNeedafriendDelayMs, DEFAULT_REMINDER_NEEDAFRIEND_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000),
+    anti_spam_enabled: antiSpamEnabled === true || antiSpamEnabled === 'true',
+    anti_spam_threshold: toIntOrDefault(antiSpamThreshold, 3, 2, 10),
+    anti_spam_window_hours: toIntOrDefault(antiSpamWindowHours, 24, 1, 72),
+    anti_spam_channel_id: antiSpamChannelId || '',
+    inactivity_guard_enabled: inactivityGuardEnabled === true || inactivityGuardEnabled === 'true',
+    inactivity_guard_timeout_hours: toIntOrDefault(inactivityGuardTimeoutHours, 24, 1, 72),
+    entry_guard_enabled: entryGuardEnabled === true || entryGuardEnabled === 'true',
+    entry_guard_account_age: toIntOrDefault(entryGuardAccountAge, 7, 1, 365),
+    noobies_threshold: toIntOrDefault(noobiesThreshold, 100, 1, 5000),
+    msg_channel_id: msgChannelId || '',
   };
 }
 
@@ -690,13 +736,22 @@ router.post('/settings', async (req, res) => {
     'reddit_promotion_targets',
     'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'reddit_promotion_subreddits',
     'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment',
-    'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms'
+    'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms',
+    'anti_spam_enabled', 'anti_spam_threshold', 'anti_spam_window_hours', 'anti_spam_channel_id',
+    'inactivity_guard_enabled', 'inactivity_guard_timeout_hours',
+    'entry_guard_enabled', 'entry_guard_account_age',
+    'noobies_threshold', 'msg_channel_id',
   ];
   const numericDbKeys = new Set([
     'dashboard_port',
     'reminder_delay_bump_ms',
     'reminder_delay_promote_ms',
-    'reminder_delay_needafriend_ms'
+    'reminder_delay_needafriend_ms',
+    'anti_spam_threshold',
+    'anti_spam_window_hours',
+    'inactivity_guard_timeout_hours',
+    'entry_guard_account_age',
+    'noobies_threshold',
   ]);
   for (const key of dbKeys) {
     if (key in body) {
@@ -726,6 +781,16 @@ router.post('/settings', async (req, res) => {
       if (key === 'reminder_delay_bump_ms') val = toIntOrDefault(val, DEFAULT_REMINDER_BUMP_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
       if (key === 'reminder_delay_promote_ms') val = toIntOrDefault(val, DEFAULT_REMINDER_PROMOTE_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
       if (key === 'reminder_delay_needafriend_ms') val = toIntOrDefault(val, DEFAULT_REMINDER_NEEDAFRIEND_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+      if (key === 'anti_spam_threshold') val = toIntOrDefault(val, 3, 2, 10);
+      if (key === 'anti_spam_window_hours') val = toIntOrDefault(val, 24, 1, 72);
+      if (key === 'inactivity_guard_timeout_hours') val = toIntOrDefault(val, 24, 1, 72);
+      if (key === 'entry_guard_account_age') val = toIntOrDefault(val, 7, 1, 365);
+      if (key === 'noobies_threshold') val = toIntOrDefault(val, 100, 1, 5000);
+      if (key === 'msg_channel_id') val = String(val || '').trim();
+      if (key === 'anti_spam_channel_id') val = String(val || '').trim();
+      if (key === 'anti_spam_enabled' || key === 'inactivity_guard_enabled' || key === 'entry_guard_enabled') {
+        val = val === true || val === 'true';
+      }
       if (key === 'invite_notification_channel') {
         ops.push(setInviteNotificationChannel(val || null));
       } else {
@@ -1046,6 +1111,12 @@ router.get('/health', async (req, res) => {
     const freeMem = os.freemem();
 
     const guild = req.discordClient.guilds.cache.first();
+    const loopP95Ms = Number((eventLoopHistogram.percentile(95) / 1e6).toFixed(2));
+    const loopMeanMs = Number((eventLoopHistogram.mean / 1e6).toFixed(2));
+    const loopMaxMs = Number((eventLoopHistogram.max / 1e6).toFixed(2));
+    eventLoopHistogram.reset();
+    const reminderBacklog = await getReminderBacklogSummary();
+    const rw = sqliteRwProbe();
 
     res.json({
       cpu: {
@@ -1062,8 +1133,23 @@ router.get('/health', async (req, res) => {
       },
       guilds: req.discordClient.guilds.cache.size,
       users: guild ? guild.memberCount : 0,
+      uptimeSeconds: Math.floor(process.uptime()),
       nodeVersion: process.version,
+      hostname: os.hostname(),
       platform: `${os.platform()} ${os.release()}`,
+      eventLoop: {
+        p95Ms: Number.isFinite(loopP95Ms) ? loopP95Ms : 0,
+        meanMs: Number.isFinite(loopMeanMs) ? loopMeanMs : 0,
+        maxMs: Number.isFinite(loopMaxMs) ? loopMaxMs : 0
+      },
+      queue: {
+        reminders: reminderBacklog
+      },
+      services: {
+        discordGateway: req.discordClient.ws.status,
+        sqliteReadable: rw.readable === true,
+        sqliteWritable: rw.writable === true
+      }
     });
   } catch (err) {
     logger.error('Failed to get health stats.', { err });
@@ -1431,14 +1517,33 @@ router.get('/users/summary', async (req, res) => {
         const safeRoleId = String((await getValue('prune_protected_role_id')) || '').trim();
 
         const members = await fetchGuildMembersCached(guild, { force: forceRefresh });
-        const activityMap = await getAllLastMessageTimes();
+        const [activityMap, messageCountMap, lastChannelMap] = await Promise.all([
+            getAllLastMessageTimes(),
+            getAllMessageCounts(),
+            getAllLastMessageChannels()
+        ]);
 
         const sortedMembers = Array.from(members.values())
             .sort((a, b) => b.joinedTimestamp - a.joinedTimestamp)
             .map(m => {
-                let lastMsg = activityMap[m.id];
+                // Never attach last-message activity for bots (not meaningful; ignore stale keys).
+                let lastMsg = m.user.bot ? null : activityMap[m.id];
                 if (lastMsg != null && typeof lastMsg !== 'number') lastMsg = Number(lastMsg);
                 if (lastMsg != null && Number.isNaN(lastMsg)) lastMsg = null;
+
+                const bot = Boolean(m.user.bot);
+                let lastMessageChannelId = null;
+                let lastMessageChannelName = null;
+                if (!bot) {
+                    const chId = lastChannelMap[m.id];
+                    if (chId) {
+                        lastMessageChannelId = chId;
+                        const ch = guild.channels.cache.get(chId);
+                        lastMessageChannelName = ch?.name ? `#${ch.name}` : chId;
+                    }
+                }
+
+                const msgCount = bot ? null : (messageCountMap[m.id] ?? 0);
 
                 return {
                     id: m.id,
@@ -1446,10 +1551,14 @@ router.get('/users/summary', async (req, res) => {
                     displayName: m.displayName,
                     avatar: m.user.displayAvatarURL({ size: 64 }),
                     joinedAt: m.joinedAt,
-                    isBot: Boolean(m.user.bot),
+                    isBot: bot,
                     hasSafeRole: Boolean(safeRoleId && m.roles.cache.has(safeRoleId)),
                     privilege: memberPrivilegeLevel(m),
-                    lastMessageAt: lastMsg == null ? null : lastMsg
+                    lastMessageAt: lastMsg == null ? null : lastMsg,
+                    lastMessageChannelId,
+                    lastMessageChannelName,
+                    messageCount: msgCount,
+                    accountCreatedAt: discordSnowflakeToCreatedMs(m.id)
                 };
             });
 

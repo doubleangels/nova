@@ -755,7 +755,7 @@ const userActivityCache = new Map(); // Debounce cache: { userId: timestamp }
  * @param {string} userId - The Discord user ID
  * @returns {Promise<void>}
  */
-async function updateLastMessageTime(userId) {
+async function updateLastMessageTime(userId, channelId) {
   try {
     const now = Date.now();
     const lastUpdate = userActivityCache.get(userId) || 0;
@@ -763,6 +763,9 @@ async function updateLastMessageTime(userId) {
     // Only write to SQLite at most once every 5 minutes per user
     if (now - lastUpdate > 300000) {
       await keyv.set(`last_message:${userId}`, now);
+      if (channelId != null && String(channelId).trim() !== '') {
+        await keyv.set(`last_message_channel:${userId}`, String(channelId));
+      }
       userActivityCache.set(userId, now);
     }
   } catch (err) {
@@ -820,6 +823,80 @@ async function getAllLastMessageTimes() {
   }
 }
 
+/**
+ * Bulk fetch message counts from keyv (same store as incrementMessageCount).
+ * @returns {Promise<Record<string, number>>}
+ */
+async function getAllMessageCounts() {
+  try {
+    const Database = require('better-sqlite3');
+    const db = new Database(sqlitePath, { readonly: true });
+
+    const rows = db
+      .prepare(
+        `
+      SELECT key, value 
+      FROM keyv 
+      WHERE key LIKE 'main:message_count:%'
+    `
+      )
+      .all();
+
+    db.close();
+
+    const out = {};
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.value);
+        const n = typeof parsed === 'number' ? parsed : parsed?.value ?? parsed;
+        const userId = row.key.replace('main:message_count:', '');
+        if (userId) out[userId] = Number(n) || 0;
+      } catch (e) {}
+    }
+    return out;
+  } catch (err) {
+    logger.error('Error bulk fetching message counts.', { err });
+    return {};
+  }
+}
+
+/**
+ * Bulk fetch last message channel ids (see updateLastMessageTime).
+ * @returns {Promise<Record<string, string>>}
+ */
+async function getAllLastMessageChannels() {
+  try {
+    const Database = require('better-sqlite3');
+    const db = new Database(sqlitePath, { readonly: true });
+
+    const rows = db
+      .prepare(
+        `
+      SELECT key, value 
+      FROM keyv 
+      WHERE key LIKE 'main:last_message_channel:%'
+    `
+      )
+      .all();
+
+    db.close();
+
+    const out = {};
+    for (const row of rows) {
+      try {
+        const parsed = JSON.parse(row.value);
+        const raw = parsed?.value !== undefined ? parsed.value : parsed;
+        const userId = row.key.replace('main:last_message_channel:', '');
+        if (userId && raw != null && String(raw).trim() !== '') out[userId] = String(raw).trim();
+      } catch (e) {}
+    }
+    return out;
+  } catch (err) {
+    logger.error('Error bulk fetching last message channels.', { err });
+    return {};
+  }
+}
+
 module.exports = {
   initializeDatabase,
   invalidateConfigCache,
@@ -849,5 +926,7 @@ module.exports = {
   removeSpamModeJoinTime,
   updateLastMessageTime,
   getLastMessageTime,
-  getAllLastMessageTimes
+  getAllLastMessageTimes,
+  getAllMessageCounts,
+  getAllLastMessageChannels
 };

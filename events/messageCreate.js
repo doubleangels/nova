@@ -58,7 +58,7 @@ module.exports = {
       }
 
       if (!message.author?.bot && !message.webhookId) {
-        updateLastMessageTime(message.author.id).catch(err => {
+        updateLastMessageTime(message.author.id, message.channel?.id).catch(err => {
             logger.error('Background last message tracking error', { err });
         });
       }
@@ -205,13 +205,19 @@ async function processUserMessage(message) {
       logger.warn('Skipping Noobies role check due to message count DB error.', { userId: message.author.id });
       return;
     }
-    const shouldHaveNoobiesRole = messageCount < 100;
+    const rawNoobiesThreshold = await getValue('noobies_threshold');
+    const noobiesMsgThreshold = (() => {
+      const n = parseInt(String(rawNoobiesThreshold ?? ''), 10);
+      if (!Number.isFinite(n)) return 100;
+      return Math.min(5000, Math.max(1, n));
+    })();
+    const shouldHaveNoobiesRole = messageCount < noobiesMsgThreshold;
 
     if (shouldHaveNoobiesRole && !hasNoobiesRole) {
-      await message.member.roles.add(noobiesRoleId, 'Assigned Noobies role automatically (< 100 messages)');
+      await message.member.roles.add(noobiesRoleId, `Assigned Noobies role automatically (< ${noobiesMsgThreshold} messages)`);
       logger.debug('Assigned Noobies role.', { userId: message.author.id, messageCount });
     } else if (!shouldHaveNoobiesRole && hasNoobiesRole) {
-      await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (>= 100 messages)');
+      await message.member.roles.remove(noobiesRoleId, `Removed Noobies role automatically (>= ${noobiesMsgThreshold} messages)`);
       logger.debug('Removed Noobies role.', { userId: message.author.id, messageCount });
       // Delete message count from database since they passed the threshold
       await deleteMessageCount(message.author.id);

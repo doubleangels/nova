@@ -256,6 +256,25 @@ async function getNextReminderTimeAfterCleanup(type) {
 }
 
 /**
+ * Returns reminder queue/backlog counts for status surfaces.
+ * @returns {Promise<{ total: number, byType: { bump: number, promote: number, needafriend: number } }>}
+ */
+async function getReminderBacklogSummary() {
+  const types = ['bump', 'promote', 'needafriend'];
+  const byType = { bump: 0, promote: 0, needafriend: 0 };
+
+  for (const type of types) {
+    const list = await getReminderIds(type);
+    byType[type] = Array.isArray(list) ? list.length : 0;
+  }
+
+  return {
+    total: byType.bump + byType.promote + byType.needafriend,
+    byType
+  };
+}
+
+/**
  * Handles the creation and scheduling of a reminder
  * @param {Message|Object} message - The Discord message that triggered the reminder, or an object with a client property
  * @param {number} delay - The delay in milliseconds before the reminder
@@ -817,5 +836,6 @@ module.exports = {
   rescheduleReminder,
   getLatestReminderData,
   getNextReminderTimeAfterCleanup,
+  getReminderBacklogSummary,
   NEEDAFRIEND_REMINDER_MS
 };
