@@ -434,6 +434,33 @@ async function getInviteUsage(guildId) {
 
 const INVITE_JOIN_HISTORY_LIMIT = 200;
 
+/** Duplicate guildMemberAdd (or overlapping handlers) can append twice within seconds; skip near-identical rows. */
+const INVITE_JOIN_HISTORY_DEDUP_MS = 15_000;
+
+function normalizeInviteCodeForDedup(code) {
+  if (code == null) return null;
+  const s = String(code).trim();
+  return s ? s.toLowerCase() : null;
+}
+
+/**
+ * @param {Object} existing
+ * @param {Object} incoming
+ * @param {number} windowMs
+ * @returns {boolean}
+ */
+function isNearDuplicateInviteJoinRow(existing, incoming, windowMs) {
+  if (String(existing.userId || '') !== String(incoming.userId || '')) return false;
+  const t0 = new Date(existing.at || 0).getTime();
+  const t1 = new Date(incoming.at || 0).getTime();
+  if (!Number.isFinite(t0) || !Number.isFinite(t1)) return false;
+  if (Math.abs(t0 - t1) > windowMs) return false;
+  const c0 = normalizeInviteCodeForDedup(existing.inviteCode);
+  const c1 = normalizeInviteCodeForDedup(incoming.inviteCode);
+  if (c0 && c1 && c0 !== c1) return false;
+  return true;
+}
+
 /**
  * Appends a member join record for Invite Manager history (newest first).
  * @param {string} guildId
@@ -455,6 +482,14 @@ async function appendInviteJoinHistory(guildId, entry) {
       channelName: entry.channelName != null ? String(entry.channelName) : null,
       detail: entry.detail != null ? String(entry.detail) : null
     };
+    const dup = list.some((e) => isNearDuplicateInviteJoinRow(e, row, INVITE_JOIN_HISTORY_DEDUP_MS));
+    if (dup) {
+      logger.debug('Skipping near-duplicate invite join history row (same user + time window).', {
+        guildId,
+        userId: row.userId
+      });
+      return;
+    }
     list.unshift(row);
     while (list.length > INVITE_JOIN_HISTORY_LIMIT) list.pop();
     await keyv.set(key, list);

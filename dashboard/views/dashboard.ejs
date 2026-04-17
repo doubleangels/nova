@@ -1095,7 +1095,7 @@
   <!-- Invite List -->
   <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent)]">
     <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
+      <table class="w-full text-left border-collapse responsive-table">
         <thead>
           <tr class="bg-[var(--c-input)] border-b border-[var(--c-card-border)]">
             <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Code / Tag</th>
@@ -1126,7 +1126,7 @@
       </div>
     </div>
     <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse min-w-[520px]">
+      <table class="w-full text-left border-collapse min-w-[520px] responsive-table">
         <thead>
           <tr class="bg-[var(--c-input)] border-b border-[var(--c-card-border)]">
             <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">When</th>
@@ -1583,6 +1583,55 @@
     border: none;
     border-radius: 0.35rem;
     box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1);
+  }
+
+  /* Responsive Tables */
+  @media (max-width: 768px) {
+    .responsive-table {
+      display: block;
+    }
+    .responsive-table thead {
+      display: none;
+    }
+    .responsive-table tbody {
+      display: block;
+    }
+    .responsive-table tr {
+      display: block;
+      border: 1px solid var(--c-card-border);
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      background: var(--c-card);
+    }
+    .responsive-table td {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 1rem;
+      padding: 0.5rem 0.75rem;
+      border: none !important;
+      text-align: left !important;
+    }
+    .responsive-table td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--c-text-dim);
+      display: flex;
+      align-items: center;
+    }
+    .responsive-table td.actions-cell {
+        grid-template-columns: 1fr;
+        justify-items: flex-end;
+    }
+    .responsive-table td.actions-cell::before {
+        display: none;
+    }
+    /* Specific overrides for join history to look cleaner */
+    #inviteJoinHistoryBody td {
+        grid-template-columns: 80px 1fr;
+    }
   }
 </style>
 
@@ -2596,12 +2645,12 @@
         const sub = row.userTag ? `<div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5">${escapeHtml(row.userTag)}</div>` : '';
         return `
           <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
-            <td class="px-5 py-3 text-[11px] text-[var(--c-text-muted)] whitespace-nowrap align-top">${when}</td>
-            <td class="px-5 py-3 text-sm text-[var(--c-label)] align-top">
+            <td data-label="When" class="px-5 py-3 text-[11px] text-[var(--c-text-muted)] whitespace-nowrap align-top">${when}</td>
+            <td data-label="Member" class="px-5 py-3 text-sm text-[var(--c-label)] align-top">
               <div class="font-medium">${name}</div>
               ${sub}
             </td>
-            <td class="px-5 py-3 text-xs align-top">${formatJoinSourceRow(row)}</td>
+            <td data-label="Source" class="px-5 py-3 text-xs align-top">${formatJoinSourceRow(row)}</td>
           </tr>`;
       }).join('');
     } catch {
@@ -2664,22 +2713,22 @@
         
         return `
             <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
-                <td class="px-5 py-4">
+                <td data-label="Code / Tag" class="px-5 py-4">
                     <div class="flex items-center gap-2">
                         <span class="text-sm font-mono font-bold text-[var(--c-accent)]">${safeCode}</span>
                         ${inv.tagName ? `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase tracking-wider">${safeTagName}</span>` : ''}
                     </div>
                     <div class="text-[10px] text-[var(--c-text-dim)] mt-1">Added by ${safeInviter}</div>
                 </td>
-                <td class="px-5 py-4 text-xs font-medium text-[var(--c-label)]">#${safeChannel}</td>
-                <td class="px-5 py-4 text-xs">
+                <td data-label="Channel" class="px-5 py-4 text-xs font-medium text-[var(--c-label)]">#${safeChannel}</td>
+                <td data-label="Uses / Max" class="px-5 py-4 text-xs">
                     <span class="font-bold text-[var(--c-label)]">${safeUses}</span>
                     <span class="text-[var(--c-text-dim)]">/ ${safeMaxUses}</span>
                 </td>
-                <td class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-[var(--c-accent)] font-bold' : 'text-[var(--c-text-dim)]'}">
+                <td data-label="Expires" class="px-5 py-4 text-[10px] ${isExpiringSoon ? 'text-[var(--c-accent)] font-bold' : 'text-[var(--c-text-dim)]'}">
                     ${safeExpires}
                 </td>
-                <td class="px-5 py-4 text-right space-x-1 whitespace-nowrap">
+                <td class="px-5 py-4 text-right space-x-1 whitespace-nowrap actions-cell">
                     <button onclick="copyInvite(${copyUrlArg})" class="p-1.5 text-[var(--c-text-dim)] hover:text-white transition-colors" title="Copy Link">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-3 8h3m-3 4h3m-6-4h.01M9 17h.01"/></svg>
                     </button>
