@@ -13,6 +13,8 @@ services:
       - DOPPLER_TOKEN=
       - DASHBOARD_PORT=5015
       - DASHBOARD_BASE_URL=
+      - DASHBOARD_COOKIE_SECURE=false
+      - ALLOW_INSECURE_DASHBOARD_ON_PRIVATE_NETWORK=true
     ports:
       - "5015:5015"
     volumes:

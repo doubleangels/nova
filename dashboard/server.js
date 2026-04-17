@@ -50,8 +50,15 @@ function createDashboard(client, options = {}) {
     ? options.useSecureCookie
     : isHttpsBaseUrl;
   const isProd = (process.env.NODE_ENV || '').toLowerCase() === 'production';
-  if (isProd && !useSecureCookie) {
+  const allowInsecurePrivateNetwork =
+    String(process.env.ALLOW_INSECURE_DASHBOARD_ON_PRIVATE_NETWORK || '').trim().toLowerCase() === 'true';
+  if (isProd && !useSecureCookie && !allowInsecurePrivateNetwork) {
     throw new Error('Dashboard requires secure cookies in production (set HTTPS DASHBOARD_BASE_URL).');
+  }
+  if (isProd && !useSecureCookie && allowInsecurePrivateNetwork) {
+    logger.warn('Dashboard insecure-cookie mode enabled in production via private-network override. Restrict access to trusted internal network only.', {
+      dashboardBaseUrl
+    });
   }
 
   app.locals.dashboardBaseUrl = dashboardBaseUrl;

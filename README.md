@@ -61,6 +61,7 @@ services:
       - DASHBOARD_PORT=5015
       - DASHBOARD_BASE_URL=http://iris.nilgiri-dab.ts.net:5015
       - DASHBOARD_COOKIE_SECURE=false
+      - ALLOW_INSECURE_DASHBOARD_ON_PRIVATE_NETWORK=true
     ports:
       - "5015:5015"
     volumes:
@@ -111,6 +112,14 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `DASHBOARD_PORT` — Port for the dashboard web server (default: `3001`)
 - `DASHBOARD_BASE_URL` — Public URL of the dashboard for OAuth redirects (e.g. `http://ares.nilgiri-dab.ts.net:5015`)
 - `DASHBOARD_COOKIE_SECURE` — Optional override (`true`/`false`) for session cookie `Secure` flag. Defaults to `true` only when `DASHBOARD_BASE_URL` starts with `https://`.
+- `ALLOW_INSECURE_DASHBOARD_ON_PRIVATE_NETWORK` — Optional explicit override (`true`/`false`). When `true`, allows HTTP dashboard cookies in production for private-network-only access (for example Tailscale). Keep this disabled on public internet deployments.
+
+**Private-network HTTP example (Tailscale-only):**
+
+- `NODE_ENV=production`
+- `DASHBOARD_BASE_URL=http://iris.nilgiri-dab.ts.net:5015`
+- `DASHBOARD_COOKIE_SECURE=false`
+- `ALLOW_INSECURE_DASHBOARD_ON_PRIVATE_NETWORK=true`
 
 **Optional (managed via dashboard after first start, can also be seeded from Doppler):**
 
