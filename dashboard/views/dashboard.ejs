@@ -40,12 +40,18 @@
 <div id="confirmModal" class="hidden fixed inset-0 z-50">
   <div class="absolute inset-0 bg-black/60" id="confirmModalBackdrop"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
-    <div class="w-full max-w-md card border border-[var(--c-card-border)]">
-      <h3 id="confirmModalTitle" class="text-sm font-bold text-[var(--c-text)]">Confirm action</h3>
+    <div class="w-full max-w-md card">
+      <h3 id="confirmModalTitle" class="text-sm font-bold text-[var(--c-text)]">Confirm Action</h3>
       <p id="confirmModalMessage" class="text-xs text-[var(--c-text-dim)] mt-2 whitespace-pre-wrap"></p>
       <div class="mt-5 flex items-center justify-end gap-2">
-        <button type="button" id="confirmModalCancel" class="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Cancel</button>
-        <button type="button" id="confirmModalConfirm" class="px-3 py-2 text-xs font-semibold rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">Confirm</button>
+        <button type="button" id="confirmModalCancel" class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          Cancel
+        </button>
+        <button type="button" id="confirmModalConfirm" class="inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span data-btn-text>Confirm</span>
+        </button>
       </div>
     </div>
   </div>
@@ -66,15 +72,15 @@
   </div>
 
   <div class="mb-3">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Snapshot</p>
-    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Community size, Discord latency, and resource use on this host.</p>
+    <p class="dash-cat-label">Snapshot</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl">Member count, <strong class="text-[var(--c-text-muted)]">Discord</strong> API latency, and host <strong class="text-[var(--c-text-muted)]">CPU / memory</strong> at a glance.</p>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
     <!-- Member Count -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Community</p>
+        <p class="dash-cat-label">Community</p>
         <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0-6a5.99 5.99 0 00-4-1.874A5.99 5.99 0 007 15" /></svg>
         </div>
@@ -88,7 +94,7 @@
     <!-- Discord Card -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Discord Status</p>
+        <p class="dash-cat-label">Discord Status</p>
         <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
         </div>
@@ -102,7 +108,7 @@
     <!-- CPU Card -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">CPU</p>
+        <p class="dash-cat-label">CPU</p>
         <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
         </div>
@@ -116,7 +122,7 @@
     <!-- Memory Card -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Memory Usage</p>
+        <p class="dash-cat-label">Memory Usage</p>
         <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" /></svg>
         </div>
@@ -130,7 +136,7 @@
     <!-- Platform Card -->
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between h-[120px]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Host System</p>
+        <p class="dash-cat-label">Host System</p>
         <div class="icon-box bg-[var(--c-accent-soft-bg)] text-[var(--c-accent)] group-hover:scale-110 -mt-1 -mr-1">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg>
         </div>
@@ -143,8 +149,8 @@
   </div>
 
   <div class="mt-10 mb-3">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Service health</p>
-    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Discord gateway, dashboard API response, and SQLite read/write probes.</p>
+    <p class="dash-cat-label">Service Health</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl"><strong class="text-[var(--c-text-muted)]">Gateway</strong>, dashboard <strong class="text-[var(--c-text-muted)]">API</strong>, and <strong class="text-[var(--c-text-muted)]">SQLite</strong> read/write checks.</p>
   </div>
 
   <div class="card p-4">
@@ -156,14 +162,14 @@
         <span class="px-2.5 py-1 rounded-md text-[10px] uppercase tracking-wide font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] text-[var(--c-text-dim)]">DB Write: --</span>
       </div>
       <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-        <a href="https://discordstatus.com" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold uppercase tracking-wide text-[var(--c-accent)] hover:opacity-80 whitespace-nowrap">Discord platform status</a>
+        <a href="https://discordstatus.com" target="_blank" rel="noopener noreferrer" class="text-[10px] font-bold tracking-wide text-[var(--c-accent)] hover:opacity-80 whitespace-nowrap">Discord Platform Status</a>
       </div>
     </div>
   </div>
 
   <div class="mt-10 mb-3">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Performance &amp; runtime</p>
-    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Process uptime, event-loop delay, and short CPU / memory trends from the dashboard poll.</p>
+    <p class="dash-cat-label">Performance &amp; Runtime</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl"><strong class="text-[var(--c-text-muted)]">Uptime</strong>, event-loop delay, and short <strong class="text-[var(--c-text-muted)]">CPU / memory</strong> trends from the dashboard poll.</p>
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -196,14 +202,14 @@
   </div>
 
   <div class="mt-10 mb-3">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Queues &amp; scheduled reminders</p>
-    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Reminder backlog counts and the next fire times for bump, Reddit, and NeedAFriend schedules.</p>
+    <p class="dash-cat-label">Queues &amp; Scheduled Reminders</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl">Reminder queue size and next fire times for <strong class="text-[var(--c-text-muted)]">Disboard</strong>, <strong class="text-[var(--c-text-muted)]">Reddit</strong>, and <strong class="text-[var(--c-text-muted)]">NeedAFriend</strong>.</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
     <div class="premium-card p-5 group border-b-2 border-[var(--c-accent-soft-ring)] flex flex-col justify-between min-h-[7.5rem]">
       <div class="flex items-start justify-between">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Queue</p>
+        <p class="dash-cat-label">Queue</p>
       </div>
       <div>
         <p id="health_queue_total" class="text-2xl font-bold leading-tight">--</p>
@@ -242,8 +248,8 @@
   </div>
 
   <div class="mt-10 mb-3">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-[var(--c-text-dim)]">Navigate</p>
-    <p class="text-xs text-[var(--c-text-dim)] mt-0.5 max-w-2xl">Jump to configuration areas and admin tools without using the sidebar.</p>
+    <p class="dash-cat-label">Navigate</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl">Quick links to settings and tools (same destinations as the sidebar).</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -295,7 +301,7 @@
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
       Identity & Appearance
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Customize how Nova represents your community across Discord.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Name, invite link, embed color, and the bot’s <strong class="text-[var(--c-text-muted)]">Discord activity</strong> line.</p>
   </div>
 
   <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
@@ -355,7 +361,7 @@
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0-6a5.99 5.99 0 00-4-1.874A5.99 5.99 0 007 15" /></svg>
       Roles & Permissions
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Configure automated role assignments and command access levels.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Roles for <strong class="text-[var(--c-text-muted)]">new members</strong>, <code class="text-[10px]">/giveperms</code>, and <code class="text-[10px]">/newuser</code> permission checks.</p>
   </div>
   
   <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
@@ -420,7 +426,7 @@
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
       Moderation & Safety
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Automated protection layers to keep your server healthy and safe.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Anti-Spam</strong>, inactivity kicks, and minimum account age on join.</p>
   </div>
 
   <!-- Anti-Spam -->
@@ -428,7 +434,7 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Anti-Spam</h3>
-        <p class="card-sub-desc text-xs mt-0.5">Detect and warn users sending duplicate messages across channels.</p>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Warns when the same content is repeated across channels inside the tracking window.</p>
       </div>
       <label class="toggle">
         <input type="checkbox" id="anti_spam_enabled" />
@@ -459,7 +465,7 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Inactivity Guard</h3>
-        <p class="card-sub-desc text-xs mt-0.5">Auto-kick members who don't send a message within the time limit.</p>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Kicks members with <strong class="text-[var(--c-text-muted)]">no messages</strong> longer than your silence window (uses last-message tracking when available).</p>
       </div>
       <label class="toggle">
         <input type="checkbox" id="inactivity_guard_enabled" />
@@ -480,7 +486,7 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Entry Guard</h3>
-        <p class="card-sub-desc text-xs mt-0.5">Kick new members whose Discord account is younger than the minimum age.</p>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Kicks joins when the Discord account is <strong class="text-[var(--c-text-muted)]">newer</strong> than your minimum age in days.</p>
       </div>
       <label class="toggle">
         <input type="checkbox" id="entry_guard_enabled" />
@@ -506,7 +512,7 @@
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       Logistics & Automation
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Schedule server growth actions and monitor real-time growth metrics.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Bump timers, reminder channels, and <strong class="text-[var(--c-text-muted)]">Reddit / NeedAFriend</strong> promotion fields.</p>
   </div>
 
   <!-- Live Reminders Table / Controls -->
@@ -514,7 +520,7 @@
       <div class="flex items-center justify-between mb-4">
           <div>
               <h3 class="font-bold text-sm">Active Timers</h3>
-              <p class="text-[10px] text-[var(--c-text-dim)]">Real-time status of scheduled server growth actions.</p>
+              <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Countdowns for the next <strong class="text-[var(--c-text-muted)]">Disboard</strong>, <strong class="text-[var(--c-text-muted)]">Reddit</strong>, and <strong class="text-[var(--c-text-muted)]">NeedAFriend</strong> reminders.</p>
           </div>
           <button onclick="refreshLiveReminders()" class="p-2 hover:bg-[var(--c-input)] rounded-lg transition-colors" title="Refresh Timers">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--c-text-dim)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -529,7 +535,10 @@
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Disboard</span>
               </div>
               <div id="rem_stat_bump" class="text-2xl font-mono font-bold mb-4 text-[#24b8ea] transition-colors duration-300">--:--:--</div>
-              <button onclick="fixReminder('bump')" id="fixBtn_bump" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[#24b8ea] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+              <button type="button" onclick="fixReminder('bump')" id="fixBtn_bump" class="w-full inline-flex items-center justify-center gap-1.5 py-1.5 bg-[var(--c-card-border)] hover:bg-[#24b8ea] hover:text-white transition-all rounded text-[10px] font-bold tracking-wide">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Fix Timer
+              </button>
           </div>
 
           <!-- Reddit -->
@@ -539,7 +548,10 @@
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">Reddit</span>
               </div>
               <div id="rem_stat_promote" class="text-2xl font-mono font-bold mb-4 text-[#ff4500] transition-colors duration-300">--:--:--</div>
-              <button onclick="fixReminder('promote')" id="fixBtn_promote" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[#ff4500] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+              <button type="button" onclick="fixReminder('promote')" id="fixBtn_promote" class="w-full inline-flex items-center justify-center gap-1.5 py-1.5 bg-[var(--c-card-border)] hover:bg-[#ff4500] hover:text-white transition-all rounded text-[10px] font-bold tracking-wide">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Fix Timer
+              </button>
           </div>
 
           <!-- NeedAFriend -->
@@ -549,13 +561,16 @@
                   <span class="text-xs font-bold text-[var(--c-label)] uppercase tracking-tight">NeedAFriend</span>
               </div>
               <div id="rem_stat_needafriend" class="text-2xl font-mono font-bold mb-4 text-[#3ba55c] transition-colors duration-300">--:--:--</div>
-              <button onclick="fixReminder('needafriend')" id="fixBtn_needafriend" class="w-full py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold uppercase tracking-widest">Fix Timer</button>
+              <button type="button" onclick="fixReminder('needafriend')" id="fixBtn_needafriend" class="w-full inline-flex items-center justify-center gap-1.5 py-1.5 bg-[var(--c-card-border)] hover:bg-[var(--c-accent)] hover:text-white transition-all rounded text-[10px] font-bold tracking-wide">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Fix Timer
+              </button>
           </div>
       </div>
   </div>
   <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
-    <p class="card-sub-desc text-sm mb-5">
-      Configure the destination and target role for automated bump and promotion reminders.
+    <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mb-5">
+      Where reminders post, which role gets pinged, invite join alerts, and per-schedule <strong class="text-[var(--c-text-muted)]">delay</strong> overrides (hours).
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
@@ -593,16 +608,21 @@
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Reddit &amp; NeedAFriend</h3>
-        <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Per-subreddit <code class="text-[10px]">/promote</code> link posts, NeedAFriend comment template, and global title/body used for every target row.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Shared invite and post defaults for <code class="text-[10px]">/promote</code>, per-subreddit flair rows, and the <strong class="text-[var(--c-text-muted)]">NeedAFriend</strong> weekly thread fields.</p>
       </div>
     </div>
 
-    <div class="mb-6 p-5 rounded-xl border border-[var(--c-card-border)] bg-[var(--c-card)]/70 space-y-5">
+    <div class="mb-6 p-5 rounded-xl border border-[var(--c-accent-soft-ring)] bg-[var(--c-card)]/70 space-y-5">
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">
-        <strong class="text-[var(--c-text-muted)]">Promotion targets</strong> — one row per subreddit. Enter the subreddit name, then use <strong>Fetch flairs</strong> to load that subreddit’s link flairs and pick one to save. If Reddit API credentials are not configured on the host, flair loading will fail (posting from <code class="text-[10px]">/promote</code> still uses the bot’s Reddit account). All rows use the global title/body fields below.
+        <strong class="text-[var(--c-text-muted)]">Promotion targets</strong> — one row per subreddit (same invite link for all). Enter the subreddit name, then use <strong>Find Flairs</strong> to load that subreddit’s link flairs and pick one to save. If Reddit API credentials are not configured on the host, flair loading will fail (posting from <code class="text-[10px]">/promote</code> still uses the bot’s Reddit account).
       </p>
       <textarea id="reddit_promotion_targets" class="hidden" aria-hidden="true"></textarea>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="field-label">Invite link (all promotion subreddits)</label>
+          <input type="url" id="reddit_promotion_link" class="field-input" placeholder="https://discord.gg/..." />
+          <p class="field-hint">Discord invite URL used for every <code class="text-[10px]">/promote</code> link post.</p>
+        </div>
         <div class="sm:col-span-2">
           <label class="field-label">Default post title</label>
           <input type="text" id="reddit_promotion_title" class="field-input" />
@@ -613,11 +633,10 @@
         </div>
       </div>
       <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse min-w-[700px]">
+        <table class="w-full text-left border-collapse min-w-[520px]">
           <thead>
             <tr class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] border-b border-[var(--c-card-border)]">
               <th class="py-2.5 pr-2 w-[130px]">Subreddit</th>
-              <th class="py-2.5 pr-2 min-w-[170px]">Invite link</th>
               <th class="py-2.5 pr-2 min-w-[190px]">Link flair</th>
               <th class="py-2 w-10"></th>
             </tr>
@@ -661,14 +680,14 @@
       </svg>
       Social & Fun
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Create high-energy creative spaces and manage social interaction rules.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Media-only</strong> channels and keyword or regex <strong class="text-[var(--c-text-muted)]">auto-reactions</strong>.</p>
   </div>
 
   <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Restricted Channels (Media Only)</h3>
-        <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Perfect for #memes or #media channels where you want only GIFs, Stickers, and Reactions.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Keeps a channel to <strong class="text-[var(--c-text-muted)]">GIFs, stickers, and reactions</strong> by removing plain text posts.</p>
       </div>
       <div class="w-10 h-10 rounded-full bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)]">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -686,19 +705,20 @@
   <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6">
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h3 class="font-bold text-base">Keywords & Auto-Reactions</h3>
-        <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Let Nova react with emojis when specific keywords or patterns are detected.</p>
+        <h3 class="font-bold text-base">Keywords &amp; Auto-Reactions</h3>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Emoji reactions from <strong class="text-[var(--c-text-muted)]">whole-word keywords</strong> or optional regex rows (saved with the table below).</p>
       </div>
       <div class="w-10 h-10 rounded-full bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)]">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </div>
     </div>
 
-    <div class="overflow-hidden border border-[var(--c-card-border)] rounded-xl mt-4">
+    <div class="overflow-hidden border border-[var(--c-accent-soft-ring)] rounded-xl mt-4">
       <table class="w-full text-left border-collapse">
         <thead class="bg-[var(--c-input)] text-[var(--c-text-dim)] text-[10px] uppercase font-bold tracking-wider">
           <tr>
-            <th class="px-4 py-3">Regex Pattern</th>
+            <th class="px-4 py-3">Keyword / phrase</th>
+            <th class="px-2 py-3 w-24 text-center" title="Enable only if you need full regular expressions">Regex</th>
             <th class="px-4 py-3">Emoji (string or ID)</th>
             <th class="px-4 py-3 text-right">Action</th>
           </tr>
@@ -715,8 +735,10 @@
       </div>
     </div>
 
-    <div class="mt-6 text-[11px] text-[var(--c-text-dim)]">
-      Changes save automatically.
+    <div class="mt-6 text-[11px] text-[var(--c-text-dim)] space-y-2 leading-relaxed">
+      <p>Changes save automatically.</p>
+      <p><strong class="text-[var(--c-text-muted)]">Keyword mode (default):</strong> type a word or phrase — matching is <strong class="text-[var(--c-text-muted)]">case-insensitive</strong> and uses <strong class="text-[var(--c-text-muted)]">whole words</strong> (so <span class="font-mono text-[var(--c-text-muted)]">cat</span> won’t match <span class="font-mono text-[var(--c-text-muted)]">category</span>). Special regex characters are treated as plain text.</p>
+      <p><strong class="text-[var(--c-text-muted)]">Regex column:</strong> turn on only for full patterns; you can still use literals like <span class="font-mono text-[var(--c-text-muted)]">/dubz/i</span>.</p>
     </div>
   </div>
 </section>
@@ -728,13 +750,15 @@
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582M20 20v-5h-.581M5 9a7 7 0 0114 0v6H5V9z" /></svg>
       Maintenance
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Caches, backups, and backfill tools.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Inspect the bot and <strong class="text-[var(--c-text-muted)]">SQLite</strong> store, sync <strong class="text-[var(--c-text-muted)]">Discord</strong> with dashboard caches, run backfills, manage <strong class="text-[var(--c-text-muted)]">sessions</strong>, and export or restore Keyv.</p>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)] lg:col-span-2">
+    <p class="maint-group-label lg:col-span-2">Diagnostics &amp; SQLite</p>
+
+    <div class="card p-5 space-y-3 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Deep Health</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Process info, Discord gateway ping/status, and SQLite integrity / read-write probe.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Shows process details, <strong class="text-[var(--c-text-muted)]">Discord gateway</strong> latency and connection state, and an <strong class="text-[var(--c-text-muted)]">SQLite</strong> integrity check plus a quick read/write probe. <strong class="text-[var(--c-text-muted)]">Export Diagnostics</strong> saves the same snapshot for sharing with support.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="loadDeepHealth()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh</button>
         <button type="button" onclick="exportDiagnosticsBundle()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Export Diagnostics</button>
@@ -742,36 +766,47 @@
       <pre id="deepHealthPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-72 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Tap Refresh.</pre>
     </div>
 
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+    <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Keyv Storage Report</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Row counts and payload size by namespace (from the <code class="text-[10px]">keyv</code> table). Largest keys help spot heavy rows.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Summarizes row counts and approximate payload size per namespace from the <code class="text-[10px]">keyv</code> table. The <strong class="text-[var(--c-text-muted)]">largest keys</strong> list helps you find rows that may be slowing queries or using disk.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="loadStorageReport()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh Report</button>
       </div>
       <pre id="storageReportPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-56 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Open this section or tap Refresh Report.</pre>
     </div>
 
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+    <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">SQLite Maintenance</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">ANALYZE</strong> updates query statistics. <strong class="text-[var(--c-text-muted)]">PRAGMA optimize</strong> runs internal cleanup. <strong class="text-[var(--c-text-muted)]">VACUUM</strong> compacts the file but needs exclusive access and can fail while the bot holds the database.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Analyze</strong> refreshes planner statistics for better query plans. <strong class="text-[var(--c-text-muted)]">Pragma optimize</strong> runs routine internal maintenance. <strong class="text-[var(--c-text-muted)]">Vacuum</strong> compacts the database file but needs exclusive access and often fails while the bot still has the database open.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="runSqliteMaint('analyze')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Analyze</button>
-        <button type="button" onclick="runSqliteMaint('optimize')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Optimize</button>
-        <button type="button" onclick="runSqliteMaint('vacuum')" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors">Vacuum</button>
+        <button type="button" onclick="runSqliteMaint('analyze')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">
+          <svg class="w-3.5 h-3.5 shrink-0 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          Analyze
+        </button>
+        <button type="button" onclick="runSqliteMaint('optimize')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">
+          <svg class="w-3.5 h-3.5 shrink-0 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          Optimize
+        </button>
+        <button type="button" onclick="runSqliteMaint('vacuum')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors">
+          <svg class="w-3.5 h-3.5 shrink-0 text-amber-300/90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+          Vacuum
+        </button>
       </div>
       <pre id="sqliteMaintPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
     </div>
 
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+    <p class="maint-group-label lg:col-span-2">Discord &amp; Dashboard Cache</p>
+
+    <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Discord Alignment</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Refetch channels and roles from Discord into the cache, then invalidate dashboard API caches (same targets as clearing User Summary / Member Fetch / Invites).</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Refetches <strong class="text-[var(--c-text-muted)]">channels and roles</strong> from Discord into the guild cache, then clears the same dashboard API caches as <strong class="text-[var(--c-text-muted)]">User Summary</strong>, <strong class="text-[var(--c-text-muted)]">Member Fetch</strong>, and <strong class="text-[var(--c-text-muted)]">Invites</strong> in the <strong class="text-[var(--c-text-muted)]">Dashboard Cache</strong> card on this page.</p>
       <button type="button" onclick="maintDiscordResync()" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] text-white hover:opacity-90 transition-opacity">Resync Channels &amp; Roles</button>
       <p id="discordResyncHint" class="text-[10px] text-[var(--c-text-dim)] font-mono hidden"></p>
     </div>
 
-    <div class="card p-5 space-y-4 border border-[var(--c-card-border)]">
+    <div class="card p-5 space-y-4">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Dashboard Cache</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Clears in-memory caches used by the User Manager, member fetch, and invite list so the next load hits Discord and the database again.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Clears in-memory caches for user summaries, member lists, and invites so the <strong class="text-[var(--c-text-muted)]">next</strong> dashboard load refetches from Discord and the database. Does <strong class="text-[var(--c-text-muted)]">not</strong> change anything on Discord itself.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="clearMaintCache(['user_summary'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">User Summary</button>
         <button type="button" onclick="clearMaintCache(['guild_members'])" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Member Fetch</button>
@@ -780,9 +815,32 @@
       </div>
     </div>
 
-    <div class="card p-5 space-y-4 border border-[var(--c-card-border)]">
+    <p class="maint-group-label lg:col-span-2">Backfill &amp; Channel Jobs</p>
+
+    <div class="card p-5 space-y-3 lg:col-span-2">
+      <h3 class="text-sm font-bold text-[var(--c-text)]">Seed Join History</h3>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Backfills Recent Joins from members currently in the guild (newest Discord join times first). <strong class="text-[var(--c-text-muted)]">Invite codes</strong> cannot be reconstructed from this data; duplicate user+time pairs are skipped.</p>
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="flex items-center gap-1.5 text-[10px] text-[var(--c-text-dim)]">
+          <span class="whitespace-nowrap">Rows</span>
+          <select id="maintInviteJoinSeedLimit" class="field-input text-xs py-1.5 min-h-0 w-[4.5rem]">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+          </select>
+        </label>
+        <button type="button" onclick="seedInviteJoinHistory()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-opacity">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Seed from members
+        </button>
+      </div>
+      <pre id="maintJoinHistorySeedPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]">Not run yet this session.</pre>
+    </div>
+
+    <div class="card p-5 space-y-4 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Seed Last Message Times</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Scans channel history and writes <code class="text-[10px]">last_message:&lt;userId&gt;</code> keys. Existing newer timestamps are kept. Only one job runs at a time.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Scans message history in the channels you choose (up to the per-channel cap) and upserts <code class="text-[10px]">last_message:&lt;userId&gt;</code> keys in Keyv. <strong class="text-[var(--c-text-muted)]">Newer</strong> timestamps already stored are left unchanged; <strong class="text-[var(--c-text-muted)]">only one</strong> backfill can run at a time.</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="field-label text-[10px]">Max Messages Per Channel</label>
@@ -811,10 +869,10 @@
             <p class="text-[10px] text-[var(--c-text-dim)] px-1 py-2">Loading channels…</p>
           </div>
         </div>
-        <p class="text-[9px] text-[var(--c-text-dim)] mt-1.5">Uncheck <strong class="text-[var(--c-text-muted)]">All channels</strong> to scan only the boxes you tick.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-1.5">Uncheck <strong class="text-[var(--c-text-muted)]">All channels</strong> to limit the scan to the channels you tick below.</p>
       </div>
       <div class="flex flex-wrap gap-4 items-center">
-        <p class="text-xs text-[var(--c-text-dim)]">All tracked keys are processed. Existing values are reconciled to the newest timestamp.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Every tracked <code class="text-[10px]">last_message:&lt;userId&gt;</code> key is updated from the scan; each user keeps the <strong class="text-[var(--c-text-muted)]">newest</strong> timestamp Keyv already had or that this run discovers.</p>
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
           Dry Run (No Writes)
@@ -857,9 +915,11 @@
       <div id="maintSeedErrors" class="hidden text-[11px] text-red-400/90 font-mono whitespace-pre-wrap"></div>
     </div>
 
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+    <p class="maint-group-label lg:col-span-2">Sessions &amp; Keyv</p>
+
+    <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Safe Cleanup</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Remove <strong class="text-[var(--c-text-muted)]">expired</strong> dashboard session rows (Keyv TTL in the past). Does not touch active sessions. Run dry-run first.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes dashboard session rows whose Keyv <strong class="text-[var(--c-text-muted)]">TTL is already in the past</strong>. <strong class="text-[var(--c-text-muted)]">Active</strong> sessions are left alone. Run <strong class="text-[var(--c-text-muted)]">Dry Run</strong> first to see counts before deleting.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="maintCleanupSessions(true)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Dry Run</button>
         <button type="button" onclick="maintCleanupSessions(false)" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] hover:opacity-90 transition-colors">Delete Expired</button>
@@ -867,15 +927,20 @@
       <pre id="cleanupSessionsPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap max-h-28 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
     </div>
 
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)]">
+    <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Session Hygiene</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes <strong class="text-[var(--c-text-muted)]">all</strong> stored dashboard sessions. Every browser must log in again (including yours).</p>
-      <button type="button" onclick="maintClearAllSessions()" class="px-4 py-2 rounded-lg text-sm font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">Log Out Everyone</button>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes <strong class="text-[var(--c-text-muted)]">every</strong> stored dashboard login session in Keyv. <strong class="text-[var(--c-text-muted)]">Everyone</strong> must sign in again—including this browser.</p>
+      <button type="button" onclick="maintClearAllSessions()" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">
+        <svg class="w-4 h-4 shrink-0 text-red-400/90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        Log Out Everyone
+      </button>
     </div>
 
-    <div class="card p-5 space-y-3 border border-[var(--c-card-border)] lg:col-span-2">
+    <p class="maint-group-label lg:col-span-2">Backup &amp; Restore</p>
+
+    <div class="card p-5 space-y-3 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Database Backup</h3>
-      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Download a JSON snapshot of the Keyv store (same data as the Database Explorer). Keep the file private — it can include sessions and tokens.</p>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Downloads a <strong class="text-[var(--c-text-muted)]">JSON snapshot</strong> of the Keyv store—the same scope as <strong class="text-[var(--c-text-muted)]">Database Explorer</strong>. Treat the file as <strong class="text-[var(--c-text-muted)]">secret</strong>; it can contain session material and tokens.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" id="exportDbJsonBtn" onclick="exportDatabaseJson()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px]">
           <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
@@ -883,16 +948,19 @@
         </button>
       </div>
       <div class="pt-2 border-t border-[var(--c-card-border)] space-y-2">
-        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Restore from a previously exported <span class="font-mono text-[10px]">nova-keyv-backup</span> file. The server validates the file before any write; use <strong class="text-[var(--c-text-muted)]">Validate</strong> first, then <strong class="text-[var(--c-text-muted)]">Import</strong> to upsert keys.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Imports a previously exported <code class="text-[10px]">nova-keyv-backup</code> JSON file. The server checks the payload before any write; use <strong class="text-[var(--c-text-muted)]">Validate</strong>, then <strong class="text-[var(--c-text-muted)]">Import</strong> to merge keys into Keyv.</p>
         <input type="file" id="importDbJsonInput" accept="application/json,.json" class="sr-only" aria-hidden="true" tabindex="-1" />
         <div class="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center">
           <button type="button" id="importDbJsonPickBtn" onclick="document.getElementById('importDbJsonInput').click()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px]">
+            <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
             Choose Backup File…
           </button>
           <button type="button" id="validateDbJsonBtn" onclick="validateDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-sm font-bold text-[var(--c-text)] min-h-[44px] disabled:opacity-40 disabled:pointer-events-none">
+            <svg class="w-4 h-4 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Validate
           </button>
           <button type="button" id="applyDbJsonBtn" onclick="applyDatabaseJsonImport()" disabled class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 transition-colors text-sm font-bold text-amber-200 min-h-[44px] disabled:opacity-40 disabled:pointer-events-none">
+            <svg class="w-4 h-4 text-amber-300/90 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
             Import
           </button>
         </div>
@@ -911,10 +979,10 @@
       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
       Message Center
     </h2>
-    <p class="text-xs text-[var(--c-text-dim)]">Broadcast announcements or send rich embeds directly to your community.</p>
+    <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Send <strong class="text-[var(--c-text-muted)]">plain text</strong> or a <strong class="text-[var(--c-text-muted)]">rich embed</strong> as the bot to any channel you can select.</p>
   </div>
   <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
-    <p class="card-sub-desc text-sm mb-6">Send messages directly to Discord channels as the Nova bot.</p>
+    <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mb-6">Uses your chosen channel; content is sent through the dashboard API (not stored as a draft).</p>
     
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
       <!-- Controls -->
@@ -927,8 +995,14 @@
         <div>
           <label class="field-label">Message Mode</label>
           <div class="flex gap-2 p-1 bg-[var(--c-input)] rounded-lg border border-[var(--c-input-border)]">
-            <button id="msg_mode_text" class="no-auto-icon flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white">Plain Text</button>
-            <button id="msg_mode_embed" class="no-auto-icon flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]">Rich Embed</button>
+            <button type="button" id="msg_mode_text" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-[var(--c-accent)] text-white">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14" /></svg>
+              Plain Text
+            </button>
+            <button type="button" id="msg_mode_embed" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all text-[var(--c-text-dim)] hover:text-[var(--c-label)]">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              Rich Embed
+            </button>
           </div>
         </div>
 
@@ -972,8 +1046,9 @@
         </div>
 
         <div class="flex justify-end pt-2">
-          <button id="sendMessageBtn" type="button" class="send-msg-btn px-8">
-            Send Message
+          <button id="sendMessageBtn" type="button" class="send-msg-btn px-8 inline-flex items-center justify-center gap-2">
+            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+            <span data-btn-text>Send Message</span>
           </button>
         </div>
       </div>
@@ -1001,7 +1076,7 @@
   </div>
   
   <!-- Invite List -->
-  <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent-soft-ring)]">
+  <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent)]">
     <div class="overflow-x-auto">
       <table class="w-full text-left border-collapse">
         <thead>
@@ -1015,6 +1090,35 @@
         </thead>
         <tbody id="inviteTableBody" class="divide-y divide-[var(--c-card-border)]">
           <tr><td colspan="5" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading invites...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="premium-card p-0 overflow-hidden border-l-4 border-[var(--c-accent)] mt-6">
+    <div class="px-5 py-4 border-b border-[var(--c-card-border)] flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 class="font-bold text-sm text-[var(--c-text)]">Recent Joins</h3>
+        <p class="text-[11px] text-[var(--c-text-dim)] mt-0.5 max-w-3xl leading-relaxed">Live rows use invite usage when possible. To backfill from member join times when the invite code is unknown, use <strong class="text-[var(--c-text-muted)]">Seed Join History</strong> under <strong class="text-[var(--c-text-muted)]">Maintenance</strong>.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="loadInviteJoinHistory()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors text-[var(--c-text)]">
+          <svg class="w-3.5 h-3.5 text-[var(--c-text-dim)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[520px]">
+        <thead>
+          <tr class="bg-[var(--c-input)] border-b border-[var(--c-card-border)]">
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">When</th>
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Member</th>
+            <th class="px-5 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-dim)]">Source</th>
+          </tr>
+        </thead>
+        <tbody id="inviteJoinHistoryBody" class="divide-y divide-[var(--c-card-border)]">
+          <tr><td colspan="3" class="px-5 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -1065,8 +1169,14 @@
             </div>
         </div>
         <div class="p-5 border-t border-[var(--c-card-border)] flex justify-end gap-3">
-            <button onclick="closeInviteModal()" class="px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--c-input)] transition-colors">Cancel</button>
-            <button onclick="createInvite()" id="createInviteBtn" class="px-6 py-2 bg-[var(--c-accent)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--c-accent-strong)] transition-all">Create</button>
+            <button type="button" onclick="closeInviteModal()" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--c-input)] transition-colors">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+              Cancel
+            </button>
+            <button type="button" onclick="createInvite()" id="createInviteBtn" class="inline-flex items-center justify-center gap-2 px-6 py-2 bg-[var(--c-accent)] text-white rounded-lg text-sm font-semibold hover:bg-[var(--c-accent-strong)] transition-all">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              <span data-btn-text>Create</span>
+            </button>
         </div>
     </div>
 </div>
@@ -1079,7 +1189,7 @@
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
             Database Explorer
         </h2>
-        <p class="text-xs text-[var(--c-text-dim)]">Inspect and manage the raw runtime configuration state.</p>
+        <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Browse Keyv namespaces, edit values, and delete keys—<strong class="text-[var(--c-text-muted)]">dangerous</strong> on production if misused.</p>
     </div>
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto sm:max-w-xl sm:ml-auto min-w-0">
       <div class="relative w-full min-w-0 flex-1">
@@ -1104,9 +1214,9 @@
         </div>
         
         <div class="mt-3 lg:mt-4 px-1 flex flex-wrap gap-x-2 gap-y-1 items-center text-[10px] font-bold uppercase tracking-widest">
-            <button type="button" onclick="expandAllCategories()" class="no-auto-icon text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors py-1">Expand all</button>
+            <button type="button" onclick="expandAllCategories()" class="inline-flex items-center gap-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors py-1 text-[10px] font-bold tracking-wide">Expand All</button>
             <span class="text-[var(--c-text-dim)] opacity-50">·</span>
-            <button type="button" onclick="collapseAllCategories()" class="no-auto-icon text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors py-1">Collapse all</button>
+            <button type="button" onclick="collapseAllCategories()" class="inline-flex items-center gap-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] transition-colors py-1 text-[10px] font-bold tracking-wide">Collapse All</button>
         </div>
     </aside>
 
@@ -1127,10 +1237,11 @@
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
               <h2 class="section-heading mb-1">User Manager</h2>
-              <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Server Member Roster & Summary</p>
+              <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed font-bold">Server member roster, filters, and exports.</p>
           </div>
           <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <button type="button" onclick="userManagerExportCsv()" class="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-[var(--c-card)] border border-[var(--c-input-border)] rounded-lg hover:border-emerald-500/50 transition-colors text-xs font-bold w-full sm:w-auto">
+                  <svg class="w-4 h-4 shrink-0 text-emerald-400/90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l4-4m-4 4l-4-4M4 21h16" /></svg>
                   Export CSV
               </button>
               <button type="button" onclick="loadUserSummary(true)" class="flex items-center justify-center gap-2 min-h-[44px] px-4 py-2 bg-[var(--c-card)] border border-[var(--c-input-border)] rounded-lg hover:border-[var(--c-accent)] transition-colors group w-full sm:w-auto">
@@ -1141,32 +1252,32 @@
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
-          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center">
+          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center">
               <p class="text-[10px] text-[var(--c-text-dim)] uppercase font-bold tracking-wider mb-1">Total Members</p>
               <p id="usr_total" class="text-xl sm:text-2xl font-mono font-bold text-[var(--c-text)]">--</p>
           </div>
-          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center">
+          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center">
               <p class="text-[10px] text-[var(--c-text-dim)] uppercase font-bold tracking-wider mb-1">Humans</p>
               <p id="usr_humans" class="text-xl sm:text-2xl font-mono font-bold text-emerald-400">--</p>
           </div>
-          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center">
+          <div class="p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center">
               <p class="text-[10px] text-[var(--c-text-dim)] uppercase font-bold tracking-wider mb-1">Bots</p>
               <p id="usr_bots" class="text-xl sm:text-2xl font-mono font-bold text-blue-400">--</p>
           </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
-          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;1d</p><p id="usr_act_1d" class="text-lg font-bold">--</p></div>
-          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;7d</p><p id="usr_act_7d" class="text-lg font-bold">--</p></div>
-          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;30d</p><p id="usr_act_30d" class="text-lg font-bold">--</p></div>
-          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Inactive 30d+</p><p id="usr_act_30p" class="text-lg font-bold">--</p></div>
-          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">No Data</p><p id="usr_act_nodata" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;1d</p><p id="usr_act_1d" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;7d</p><p id="usr_act_7d" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;30d</p><p id="usr_act_30d" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Inactive 30d+</p><p id="usr_act_30p" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">No Data</p><p id="usr_act_nodata" class="text-lg font-bold">--</p></div>
       </div>
 
       <p id="userManagerRosterMeta" class="text-[10px] text-[var(--c-text-dim)] mb-4 px-1 font-medium"></p>
 
-      <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] space-y-3">
-          <h3 class="text-[11px] font-bold text-[var(--c-text-muted)] uppercase tracking-wider">Admin vs Mod vs member</h3>
+      <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] space-y-3">
+          <h3 class="text-[11px] font-bold text-[var(--c-text-muted)] tracking-wide">Admin vs Mod vs Member</h3>
           <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Row tint and filter chips use each member’s effective permissions <strong class="text-[var(--c-text-muted)]">minus @everyone</strong>. That way a very open base role does not mark the whole server as staff.</p>
           <ul class="text-[10px] text-[var(--c-text-dim)] space-y-2 list-none leading-relaxed border-t border-[var(--c-card-border)] pt-3">
               <li class="flex gap-2"><span class="shrink-0 w-14 text-red-400 font-bold">Admin</span><span>If elevated permissions include <strong class="text-[var(--c-text-muted)]">Administrator</strong> or <strong class="text-[var(--c-text-muted)]">Manage Server</strong>.</span></li>
@@ -1175,7 +1286,7 @@
           </ul>
       </div>
 
-      <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] space-y-3">
+      <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] space-y-3">
           <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. <strong class="text-[var(--c-text-muted)]">Inactive</strong> uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> (Inactivity Prune section). Sort applies to the table below.</p>
           <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1190,17 +1301,17 @@
               <button type="button" data-um-chip="bots" onclick="userManagerToggleChip('bots')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-blue-500/40 bg-blue-500/10 text-[11px] font-bold text-blue-400 hover:bg-blue-500/20 transition-all" aria-pressed="false">Bots <span id="usr_chip_um_bots" class="font-mono">0</span></button>
               <button type="button" data-um-chip="safe" onclick="userManagerToggleChip('safe')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[11px] font-bold text-[var(--c-accent-text)] hover:opacity-90 transition-all" aria-pressed="false">Safe <span id="usr_chip_safe" class="font-mono">0</span></button>
               <button type="button" data-um-chip="inactive" onclick="userManagerToggleChip('inactive')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-orange-500/40 bg-orange-500/10 text-[11px] font-bold text-orange-300 hover:bg-orange-500/20 transition-all" aria-pressed="false">Inactive <span id="usr_chip_inactive" class="font-mono">0</span></button>
-              <button type="button" onclick="userManagerResetFilters()" class="w-full sm:w-auto sm:ml-auto min-h-[40px] px-3 py-2 text-[10px] uppercase font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] underline decoration-dotted text-center sm:text-left">Clear chips</button>
+              <button type="button" onclick="userManagerResetFilters()" class="w-full sm:w-auto sm:ml-auto min-h-[40px] px-3 py-2 text-[10px] font-bold tracking-wide text-[var(--c-text-dim)] hover:text-[var(--c-text)] underline decoration-dotted text-center sm:text-left">Clear Chips</button>
           </div>
           <div class="flex lg:hidden flex-wrap items-center gap-2 pt-1">
               <span class="text-[9px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Sort</span>
-              <button type="button" onclick="userManagerToggleSort('activity')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-card-border)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Last activity <span id="um_sort_ico_act_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
-              <button type="button" onclick="userManagerToggleSort('joined')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-card-border)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Joined <span id="um_sort_ico_join_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
+              <button type="button" onclick="userManagerToggleSort('activity')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Last activity <span id="um_sort_ico_act_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
+              <button type="button" onclick="userManagerToggleSort('joined')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Joined <span id="um_sort_ico_join_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
           </div>
           <p id="userManagerFilterHint" class="text-[10px] text-[var(--c-text-dim)] font-medium hidden"></p>
       </div>
 
-      <div class="bg-[var(--c-card)] border border-[var(--c-card-border)] rounded-xl overflow-hidden">
+      <div class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden">
           <div class="hidden lg:grid lg:grid-cols-12 gap-3 lg:gap-4 px-4 sm:px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-muted)] font-bold items-center">
               <div class="lg:col-span-4">User</div>
               <div class="lg:col-span-1 text-center" title="Protected from Inactivity Prune (safe role)">Safe</div>
@@ -1225,7 +1336,7 @@
   <div class="card p-6">
       <div class="flex flex-col mb-4">
           <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
-          <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Prune members who have been inactive so the community stays active</p>
+          <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed font-bold">Scan and kick members past your inactivity threshold (uses last-message data when present).</p>
       </div>
       
       <div class="grid grid-cols-1 md:max-w-md gap-6 mb-6">
@@ -1246,6 +1357,7 @@
               Scan for Users
           </button>
           <button type="button" id="inactivityExecuteBtn" onclick="executeInactivityKicks()" class="hidden min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] rounded-lg hover:bg-red-600 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
               Execute Inactivity Prune
           </button>
       </div>
@@ -1290,9 +1402,33 @@
   }
   .card {
     background: var(--c-card);
-    border: 1px solid var(--c-card-border);
+    border: 1px solid var(--c-accent-soft-ring);
     border-radius: 1rem;
     padding: 1.5rem;
+  }
+  .card.border-dashed {
+    border-style: dashed;
+    border-color: var(--c-accent-soft-ring);
+  }
+  /* Maintenance grid: subsection headings (match Status “Snapshot / Service health” rhythm). */
+  #maintenance .maint-group-label {
+    margin-top: 1.5rem;
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--c-card-border);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--c-text-dim);
+  }
+  /* Status & overview subsection titles (title case, not all caps). */
+  .dash-cat-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--c-text-dim);
+  }
+  #maintenance .grid > .maint-group-label:first-child {
+    margin-top: 0;
   }
   .page-section,
   .page-section * {
@@ -1468,13 +1604,23 @@
   }
 
   function setButtonState(btn, state) {
+    if (!btn) return;
+    const label = btn.querySelector('[data-btn-text]');
     if (state === 'loading') {
       btn.disabled = true;
-      btn.dataset.originalText = btn.textContent;
-      btn.textContent = 'Saving…';
+      const cur = (label || btn).textContent.trim();
+      btn.dataset.originalBtnText = cur;
+      if (label) {
+        label.textContent = btn.id === 'createInviteBtn' ? 'Creating…' : 'Sending…';
+      } else {
+        btn.textContent = 'Saving…';
+      }
     } else if (state === 'idle') {
       btn.disabled = false;
-      btn.textContent = btn.dataset.originalText || btn.textContent;
+      const t = btn.dataset.originalBtnText;
+      if (label && t != null) label.textContent = t;
+      else if (t != null) btn.textContent = t;
+      delete btn.dataset.originalBtnText;
     }
   }
 
@@ -1488,6 +1634,10 @@
     if (kind === 'upload') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21V9m0 0l-4 4m4-4l4 4M4 3h16" /></svg>';
     if (kind === 'send') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>';
     if (kind === 'stop') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" stroke-width="2"></rect></svg>';
+    if (kind === 'wrench') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>';
+    if (kind === 'chevronDown') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>';
+    if (kind === 'chevronUp') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>';
+    if (kind === 'cancelX') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>';
     return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke-width="2"></circle></svg>';
   }
 
@@ -1497,15 +1647,28 @@
     const title = (btn.title || '').toLowerCase();
     const onclick = (btn.getAttribute('onclick') || '').toLowerCase();
     const hay = `${text} ${id} ${title} ${onclick}`;
+    if (btn.classList.contains('um-promo-flair-load')) return 'search';
+    if (text === 'cancel' || /\bcancel\b/.test(text)) return 'cancelX';
+    if (/\bconfirm\b/.test(text)) return 'save';
     if (hay.includes('save')) return 'save';
+    if (onclick.includes('fixreminder') || (text.includes('fix') && text.includes('timer'))) return 'wrench';
+    if (onclick.includes('clearmaintcache')) return 'refresh';
     if (hay.includes('refresh') || hay.includes('resync') || hay.includes('reload')) return 'refresh';
+    if (hay.includes('dry run') || hay.includes('dryrun')) return 'search';
+    if (hay.includes('validate')) return 'save';
     if (hay.includes('scan') || hay.includes('search')) return 'search';
     if (hay.includes('export') || hay.includes('download')) return 'download';
     if (hay.includes('import') || hay.includes('upload') || hay.includes('apply')) return 'upload';
-    if (hay.includes('create') || hay.includes('add')) return 'create';
-    if (hay.includes('delete') || hay.includes('remove') || hay.includes('revoke') || hay.includes('clear')) return 'delete';
-    if (hay.includes('send') || hay.includes('execute') || hay.includes('run')) return 'send';
-    if (hay.includes('stop') || hay.includes('cancel')) return 'stop';
+    if (hay.includes('select all')) return 'save';
+    if (hay.includes('clear') && onclick.includes('maintclearchannelboxes')) return 'delete';
+    if (hay.includes('create') || (hay.includes('add') && !hay.includes('addreddit'))) return 'create';
+    if (hay.includes('expand all')) return 'chevronDown';
+    if (hay.includes('collapse all')) return 'chevronUp';
+    if (hay.includes('delete') || hay.includes('remove') || hay.includes('revoke')) return 'delete';
+    if (hay.includes('clear all') || hay.includes('clear chips') || hay.includes('clear session') || hay.includes('log out everyone')) return 'delete';
+    if (hay.includes('clear') && !onclick.includes('clearmaintcache')) return 'delete';
+    if (hay.includes('send') || hay.includes('execute') || hay.includes('run backfill')) return 'send';
+    if (hay.includes('stop')) return 'stop';
     return 'default';
   }
 
@@ -1514,13 +1677,14 @@
       if (btn.classList.contains('um-chip-btn')) return;
       if (btn.classList.contains('no-auto-icon')) return;
       if (btn.querySelector('svg')) return;
-      const kind = inferButtonIconKind(btn);
+      const override = btn.getAttribute('data-btn-icon');
+      const kind = override || inferButtonIconKind(btn);
       btn.classList.add('inline-flex', 'items-center', 'justify-center', 'gap-2');
       btn.insertAdjacentHTML('afterbegin', buildButtonIcon(kind));
     });
   }
 
-  function confirmWithModal({ title = 'Confirm action', message = 'Are you sure?', confirmLabel = 'Confirm' }) {
+  function confirmWithModal({ title = 'Confirm Action', message = 'Are you sure?', confirmLabel = 'Confirm' }) {
     return new Promise((resolve) => {
       const modal = document.getElementById('confirmModal');
       const backdrop = document.getElementById('confirmModalBackdrop');
@@ -1535,7 +1699,9 @@
 
       titleEl.textContent = title;
       messageEl.textContent = message;
-      confirmBtn.textContent = confirmLabel;
+      const confirmLabelEl = confirmBtn.querySelector('[data-btn-text]');
+      if (confirmLabelEl) confirmLabelEl.textContent = confirmLabel;
+      else confirmBtn.textContent = confirmLabel;
       modal.classList.remove('hidden');
 
       const cleanup = (result) => {
@@ -1682,7 +1848,7 @@
     { id: 'moderation_spam', keys: ['anti_spam_enabled', 'anti_spam_threshold', 'anti_spam_window_hours', 'anti_spam_channel_id'] },
     { id: 'moderation_inactivity', keys: ['inactivity_guard_enabled', 'inactivity_guard_timeout_hours'] },
     { id: 'moderation_entry', keys: ['entry_guard_enabled', 'entry_guard_account_age'] },
-    { id: 'reminders', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms', 'reddit_promotion_targets', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
+    { id: 'reminders', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms', 'reddit_promotion_targets', 'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
     { id: 'social_notext', keys: ['notext_channel'] },
     { id: 'inactivity', keys: ['prune_protected_role_id'] },
     { id: 'messaging', keys: ['msg_channel_id'] },
@@ -1873,7 +2039,6 @@
     const rows = [];
     tbody.querySelectorAll('tr').forEach((tr) => {
       const sub = tr.querySelector('.um-promo-sub')?.value?.trim();
-      const url = tr.querySelector('.um-promo-url')?.value?.trim();
       const sel = tr.querySelector('.um-promo-flair');
       const tid = sel?.value?.trim() || '';
       let flairText = '';
@@ -1882,10 +2047,9 @@
       } else if (tr.dataset.flairHint) {
         flairText = String(tr.dataset.flairHint).trim();
       }
-      if (!sub || !url) return;
+      if (!sub) return;
       rows.push({
         subreddit: sub,
-        url,
         flair_text: flairText,
         flair_template_id: tid
       });
@@ -1950,7 +2114,6 @@
     if (!tbody) return;
 
     const sub = data?.subreddit != null ? String(data.subreddit) : '';
-    const url = data?.url != null ? String(data.url) : '';
     const flair = data?.flair_text != null ? String(data.flair_text) : (data?.flairText != null ? String(data.flairText) : '');
     const flairTid = data?.flair_template_id != null ? String(data.flair_template_id) : (data?.flairTemplateId != null ? String(data.flairTemplateId) : '');
 
@@ -1971,12 +2134,6 @@
     inSub.placeholder = 'MySubreddit';
     inSub.value = sub;
 
-    const inUrl = document.createElement('input');
-    inUrl.type = 'url';
-    inUrl.className = 'field-input um-promo-url text-sm min-h-[40px]';
-    inUrl.placeholder = 'https://discord.gg/...';
-    inUrl.value = url;
-
     const flairWrap = document.createElement('div');
     flairWrap.className = 'flex items-center gap-2 min-w-[180px]';
     const selFlair = document.createElement('select');
@@ -1996,7 +2153,7 @@
     btnLoad.type = 'button';
     btnLoad.className =
       'um-promo-flair-load px-2.5 py-2 rounded-lg text-[10px] font-semibold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors whitespace-nowrap';
-    btnLoad.textContent = 'Fetch flairs';
+    btnLoad.textContent = 'Find Flairs';
     flairWrap.appendChild(selFlair);
     flairWrap.appendChild(btnLoad);
 
@@ -2012,13 +2169,15 @@
     tdLast.appendChild(btnRm);
 
     tr.appendChild(wrapCell(inSub));
-    tr.appendChild(wrapCell(inUrl));
     tr.appendChild(wrapCell(flairWrap));
     tr.appendChild(tdLast);
 
     tbody.appendChild(tr);
 
-    if (!silent) redditPromotionTargetsAfterChange();
+    if (!silent) {
+      redditPromotionTargetsAfterChange();
+      ensureNonChipButtonsHaveIcons();
+    }
   }
 
   function removeRedditPromotionRow(btn) {
@@ -2043,6 +2202,7 @@
       arr.forEach((row) => addRedditPromotionRow(row, true));
     }
     syncRedditPromotionTargetsJson();
+    ensureNonChipButtonsHaveIcons();
   }
 
   function onRedditPromotionTableInput(e) {
@@ -2068,7 +2228,7 @@
       'noobies_threshold', 'inactivity_guard_timeout_hours', 'entry_guard_account_age',
       'anti_spam_threshold', 'anti_spam_window_hours',
       'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms',
-      'reddit_promotion_title', 'reddit_promotion_body',
+      'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body',
       'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment',
     ];
     const settingsForDisplay = { ...s };
@@ -2380,6 +2540,93 @@
     }
   }
 
+  function formatJoinSourceRow(row) {
+    const src = String(row.source || 'unknown');
+    if (src === 'baseline') {
+      return `<span class="text-[var(--c-text-dim)]">${escapeHtml(row.detail || 'Baseline')}</span>`;
+    }
+    if (src === 'seeded') {
+      return `<span class="text-[var(--c-text-dim)] text-xs">${escapeHtml(row.detail || 'Seeded from member join date')}</span>`;
+    }
+    if (src === 'tagged_invite' && row.tagName) {
+      const tag = escapeHtml(row.tagName);
+      const code = row.inviteCode ? `<span class="font-mono text-[10px]">${escapeHtml(row.inviteCode)}</span>` : '';
+      const ch = row.channelName ? ` · #${escapeHtml(row.channelName)}` : '';
+      return `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase">${tag}</span> ${code}${ch}`;
+    }
+    if (src === 'invite' && row.inviteCode) {
+      const ch = row.channelName ? ` · #${escapeHtml(row.channelName)}` : '';
+      return `<span class="font-mono text-xs font-bold text-[var(--c-label)]">${escapeHtml(row.inviteCode)}</span><span class="text-[var(--c-text-dim)] text-[10px]">${ch}</span> <span class="text-[10px] text-[var(--c-text-dim)]">(no tag)</span>`;
+    }
+    return `<span class="text-[var(--c-text-dim)] text-xs">${escapeHtml(row.detail || 'Unknown source')}</span>`;
+  }
+
+  async function loadInviteJoinHistory() {
+    const tbody = document.getElementById('inviteJoinHistoryBody');
+    if (!tbody) return;
+    try {
+      const res = await fetch('/api/invites/join-history?limit=50');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const entries = Array.isArray(data.entries) ? data.entries : [];
+      if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">No join history yet. New members will appear here after the bot records their invite.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = entries.map((row) => {
+        const when = row.at ? escapeHtml(new Date(row.at).toLocaleString()) : '—';
+        const name = escapeHtml(row.displayName || '') || escapeHtml(row.userTag || '');
+        const sub = row.userTag ? `<div class="text-[10px] text-[var(--c-text-dim)] font-mono mt-0.5">${escapeHtml(row.userTag)}</div>` : '';
+        return `
+          <tr class="hover:bg-[var(--c-input)]/50 transition-colors">
+            <td class="px-5 py-3 text-[11px] text-[var(--c-text-muted)] whitespace-nowrap align-top">${when}</td>
+            <td class="px-5 py-3 text-sm text-[var(--c-label)] align-top">
+              <div class="font-medium">${name}</div>
+              ${sub}
+            </td>
+            <td class="px-5 py-3 text-xs align-top">${formatJoinSourceRow(row)}</td>
+          </tr>`;
+      }).join('');
+    } catch {
+      tbody.innerHTML = '<tr><td colspan="3" class="px-5 py-10 text-center text-xs text-red-400/90">Could not load join history.</td></tr>';
+    }
+  }
+
+  window.loadInviteJoinHistory = loadInviteJoinHistory;
+
+  window.seedInviteJoinHistory = async () => {
+    const sel = document.getElementById('maintInviteJoinSeedLimit');
+    const limit = sel ? parseInt(sel.value, 10) || 50 : 50;
+    const ok = await confirmWithModal({
+      title: 'Seed Join History',
+      message: `Add up to ${limit} rows from the server’s current member list for Recent Joins (newest Discord join times first), using each member’s Discord join time. Rows you already have with the same user and time are skipped. Invite codes are not recovered.`,
+      confirmLabel: 'Seed'
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch('/api/invites/join-history/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      const summary = `Seeded ${data.merged ?? 0} new row(s); ${data.totalInHistory ?? 0} total stored.`;
+      showToast(summary);
+      loadInviteJoinHistory();
+      const pre = document.getElementById('maintJoinHistorySeedPre');
+      if (pre) {
+        pre.textContent = `${new Date().toLocaleString()}\n${summary}\nScanned ${data.scanned ?? limit} member(s).`;
+      }
+    } catch (e) {
+      showToast(e.message || 'Failed to seed join history.', 'error');
+      const pre = document.getElementById('maintJoinHistorySeedPre');
+      if (pre) {
+        pre.textContent = `Error: ${e.message || 'Failed'}`;
+      }
+    }
+  };
+
   function renderInvites() {
     const tbody = document.getElementById('inviteTableBody');
     
@@ -2428,6 +2675,7 @@
             </tr>
         `;
     }).join('') || '<tr><td colspan="5" class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">No active invites found.</td></tr>';
+    ensureNonChipButtonsHaveIcons();
   }
 
   window.openInviteModal = async () => {
@@ -2548,8 +2796,28 @@
   // ── Advanced Database Explorer ───────────────────────────────────────────
   let allDbEntries = [];
   let curNamespace = 'main';
+  let dbPage = 1;
   let expandedCats = new Set(['config', 'tags', 'general']);
   const autoSaveTimers = new Map();
+
+  window.switchNamespace = function switchNamespace(ns) {
+    curNamespace = ns;
+    dbPage = 1;
+    renderDbExplorer();
+  };
+
+  function wireDbNamespaceNav() {
+    const el = document.getElementById('dbNamespaceList');
+    if (!el || el.dataset.nsNavWired === '1') return;
+    el.dataset.nsNavWired = '1';
+    el.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button[data-db-namespace]');
+      if (!btn) return;
+      const ns = btn.getAttribute('data-db-namespace');
+      if (ns == null || ns === '') return;
+      window.switchNamespace(ns);
+    });
+  }
 
   /**
    * Returns a display-friendly representation of a DB value.
@@ -3231,8 +3499,14 @@
             <div class="mt-3 lg:mt-0 lg:col-span-2">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Actions</span>
               <div class="flex justify-end gap-2">
-                <button type="button" onclick='kickUserFromManager(${userIdJs}, ${displayNameJs})' class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors">Kick</button>
-                <button type="button" onclick='banUserFromManager(${userIdJs}, ${displayNameJs})' class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">Ban</button>
+                <button type="button" onclick='kickUserFromManager(${userIdJs}, ${displayNameJs})' class="inline-flex items-center justify-center gap-1 min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors">
+                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Kick
+                </button>
+                <button type="button" onclick='banUserFromManager(${userIdJs}, ${displayNameJs})' class="inline-flex items-center justify-center gap-1 min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">
+                  <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 0L5.636 18.364" /></svg>
+                  Ban
+                </button>
               </div>
             </div>
           </div>
@@ -3258,6 +3532,7 @@
       }
     }
     userManagerUpdateSortHeaderIcons();
+    ensureNonChipButtonsHaveIcons();
   }
 
   async function loadUserSummary(forceRefresh = false) {
@@ -3501,13 +3776,25 @@
     const nsCounts = {};
     allDbEntries.forEach(e => nsCounts[e.namespace] = (nsCounts[e.namespace] || 0) + 1);
 
-    // 2. Render Namespace Sidebar
-    nsList.innerHTML = namespaces.map(ns => `
-        <button type="button" onclick="switchNamespace(${JSON.stringify(ns)})" class="flex w-full lg:w-full min-w-[7.5rem] shrink-0 snap-start items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm transition-all ${curNamespace === ns ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold' : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)]'}">
+    // 2. Render Namespace Sidebar (delegated click on #dbNamespaceList — no inline handlers)
+    nsList.innerHTML =
+      namespaces
+        .map((ns) => {
+          const isSel = curNamespace === ns;
+          const badgeClass = isSel
+            ? 'inline-flex min-w-[2rem] justify-center items-center text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-full shrink-0 bg-[var(--c-accent)] text-white shadow-sm'
+            : 'inline-flex min-w-[2rem] justify-center items-center text-[11px] font-bold tabular-nums px-2 py-0.5 rounded-full shrink-0 text-[var(--c-label)] bg-[var(--c-input)] border border-[var(--c-accent-soft-ring)]';
+          const rowClass = isSel
+            ? 'bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] font-semibold'
+            : 'text-[var(--c-text-dim)] hover:bg-[var(--c-nav-hover-bg)] hover:text-[var(--c-label)] border border-transparent hover:border-[var(--c-accent-soft-ring)]';
+          return `
+        <button type="button" data-db-namespace="${escapeHtml(ns)}" aria-pressed="${isSel ? 'true' : 'false'}" class="db-ns-btn cursor-pointer flex w-full lg:w-full min-w-[7.5rem] shrink-0 snap-start items-center justify-between gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition-colors outline-none focus:outline-none ${rowClass}">
             <span class="truncate">${escapeHtml(ns)}</span>
-            <span class="text-[10px] opacity-60 bg-black/20 px-1.5 py-0.5 rounded-full shrink-0">${nsCounts[ns]}</span>
-        </button>
-    `).join('') || '<div class="p-4 text-center text-xs text-[var(--c-text-dim)] w-full min-w-[200px] flex-shrink-0">No namespaces found</div>';
+            <span class="${badgeClass}">${nsCounts[ns]}</span>
+        </button>`;
+        })
+        .join('') ||
+      '<div class="p-4 text-center text-xs text-[var(--c-text-dim)] w-full min-w-[200px] flex-shrink-0">No namespaces found</div>';
 
     // 3. Filter and Group by Category for current namespace
     const filtered = allDbEntries.filter(e => {
@@ -3532,7 +3819,7 @@
     });
 
     if (sortedCats.length === 0) {
-        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border-dashed">No entries found in "${escapeHtml(curNamespace)}" match your search.</div>`;
+        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border border-dashed border-[var(--c-accent-soft-ring)]">No entries found in "${escapeHtml(curNamespace)}" match your search.</div>`;
         return;
     }
 
@@ -3541,8 +3828,8 @@
         const items = groups[cat];
         
         return `
-            <div class="card p-0 overflow-hidden border-[var(--c-card-border)]">
-                <button type="button" class="no-auto-icon w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-card-border)]" data-open="${isOpen}" data-db-category="${escapeHtml(cat)}">
+            <div class="card p-0 overflow-hidden">
+                <button type="button" class="no-auto-icon w-full flex items-center justify-between px-5 py-3 hover:bg-[var(--c-input)] transition-colors text-left border-b border-transparent data-[open=true]:border-[var(--c-accent-soft-ring)]" data-open="${isOpen}" data-db-category="${escapeHtml(cat)}">
                     <div class="flex items-center gap-3">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-[var(--c-accent)] transition-transform ${isOpen ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                         <span class="text-xs font-bold uppercase tracking-wider text-[var(--c-label)]">${escapeHtml(cat)}</span>
@@ -3554,7 +3841,6 @@
                     <div class="divide-y divide-[var(--c-card-border)]">
                             ${items.map(e => {
                                 const cleanKey = e.key.includes(':') ? e.key.split(':').slice(1).join(':') : e.key;
-                                const fullKeyJs = JSON.stringify(e.fullKey);
                                 const statusId = `status-${e.fullKey.replace(/:/g, '-')}`;
                                 return `
                                     <div class="px-3 sm:px-5 py-3 sm:py-3.5 hover:bg-[var(--c-input)]/40 transition-colors group">
@@ -3567,13 +3853,12 @@
                                                 <div id="${statusId}" class="hidden sm:block absolute sm:left-0 sm:top-3 w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] opacity-0 transition-opacity duration-300 sm:-translate-x-4" title="Synced"></div>
                                                 <div class="flex-1 min-w-0 sm:pl-1 h-full">
                                                     <textarea 
-                                                        class="w-full h-full min-h-[44px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
+                                                        class="db-explorer-value w-full h-full min-h-[44px] bg-[var(--c-input)] border border-[var(--c-input-border)] rounded-md px-2 py-2 text-xs font-mono text-[var(--c-text-muted)] focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-soft-ring)] outline-none transition-all resize-none overflow-hidden" 
                                                         rows="1"
-                                                        oninput="autoResize(this); scheduleSave(${fullKeyJs}, this.value)"
-                                                        onfocus="autoResize(this)"
+                                                        data-db-full-key="${escapeHtml(e.fullKey)}"
                                                     >${escapeHtml(displayDbValue(e.value))}</textarea>
                                                 </div>
-                                                <button type="button" onclick="deleteDbEntry(${fullKeyJs})" class="p-2.5 min-h-[44px] min-w-[44px] sm:min-w-0 sm:min-h-0 sm:p-2 self-end sm:self-start text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-input)] rounded-lg transition-all sm:opacity-0 sm:group-hover:opacity-100 shrink-0" title="Delete entry">
+                                                <button type="button" data-db-full-key="${escapeHtml(e.fullKey)}" class="p-2.5 min-h-[44px] min-w-[44px] sm:min-w-0 sm:min-h-0 sm:p-2 self-end sm:self-start text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-input)] rounded-lg transition-all sm:opacity-0 sm:group-hover:opacity-100 shrink-0" title="Delete entry">
                                                     <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                 </button>
                                             </div>
@@ -3595,13 +3880,32 @@
         });
     });
 
+    content.querySelectorAll('#dbContentArea textarea.db-explorer-value[data-db-full-key]').forEach((ta) => {
+      const fk = ta.getAttribute('data-db-full-key');
+      if (!fk) return;
+      ta.addEventListener('input', function onDbExplorerInput() {
+        window.autoResize(this);
+        window.scheduleSave(fk, this.value);
+      });
+      ta.addEventListener('focus', function onDbExplorerFocus() {
+        window.autoResize(this);
+      });
+    });
+    content.querySelectorAll('#dbContentArea button[data-db-full-key]').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const fk = btn.getAttribute('data-db-full-key');
+        if (fk) window.deleteDbEntry(fk);
+      });
+    });
+
     // Trigger initial resize for visible textareas
     setTimeout(() => {
         document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
     }, 10);
+    ensureNonChipButtonsHaveIcons();
   }
 
-  window.switchNamespace = (ns) => { curNamespace = ns; dbPage = 1; renderDbExplorer(); };
   window.toggleCategory = (cat) => { 
     if (expandedCats.has(cat)) expandedCats.delete(cat); 
     else expandedCats.add(cat); 
@@ -3625,14 +3929,17 @@
     el.style.height = (el.scrollHeight) + 'px';
   };
 
+  function dbRawDeleteUrl(fullKey, dryRun) {
+    const p = new URLSearchParams();
+    p.set('fullKey', fullKey);
+    if (dryRun) p.set('dryRun', 'true');
+    return `/api/database/raw?${p.toString()}`;
+  }
+
   window.deleteDbEntry = async (fullKey) => {
     let previewText = '';
     try {
-      const p = await fetch('/api/database/raw', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullKey, dryRun: true })
-      });
+      const p = await fetch(dbRawDeleteUrl(fullKey, true), { method: 'DELETE' });
       const d = await p.json().catch(() => ({}));
       if (p.ok) previewText = `\nPreview action: ${d.action || 'delete_raw_key'}.`;
     } catch (_) {}
@@ -3644,18 +3951,14 @@
     if (!ok) return;
     
     try {
-        const res = await fetch('/api/database/raw', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fullKey })
-        });
+        const res = await fetch(dbRawDeleteUrl(fullKey, false), { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
         if (res.ok) {
             showToast('Entry deleted successfully.');
-            // Update local state and re-render
             allDbEntries = allDbEntries.filter(e => e.fullKey !== fullKey);
             renderDbExplorer();
         } else {
-            showToast('Failed to delete entry.', 'error');
+            showToast(data.error || 'Failed to delete entry.', 'error');
         }
     } catch {
         showToast('Network error while deleting.', 'error');
@@ -3813,20 +4116,29 @@
     if (!tbody) return;
     
     if (reactions.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">No reactions configured. Click "Add New Pattern" to start!</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">No reactions configured. Click "Add New Pattern" to start!</td></tr>';
       return;
     }
 
     tbody.innerHTML = reactions.map((r) => {
-      const safeRegex = escapeHtml(r.regex);
+      const useRegex = r.mode === 'regex' || r.mode == null;
+      const display =
+        r.mode === 'keyword' && r.keyword != null && r.keyword !== ''
+          ? r.keyword
+          : (r.regex || '');
+      const safePattern = escapeHtml(display);
       const safeEmoji = escapeHtml(r.emoji);
+      const regexChecked = useRegex ? ' checked' : '';
       return `
       <tr class="group hover:bg-[var(--c-input)]/50 transition-colors">
         <td class="px-4 py-3">
-          <input type="text" class="field-input py-1.5 text-xs font-mono ar-regex" value="${safeRegex}" placeholder="e.g. hello|hi" />
+          <input type="text" class="field-input py-1.5 text-xs font-mono ar-pattern" value="${safePattern}" placeholder="e.g. dubz" />
+        </td>
+        <td class="px-2 py-3 text-center align-middle">
+          <input type="checkbox" class="ar-use-regex rounded border-[var(--c-input-border)] text-[var(--c-accent)] focus:ring-[var(--c-accent)]" title="Regular expression"${regexChecked} />
         </td>
         <td class="px-4 py-3">
-          <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" value="${safeEmoji}" placeholder="e.g. 👋 or :smile:" />
+          <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" value="${safeEmoji}" placeholder="Unicode emoji or <:name:id>" />
         </td>
         <td class="px-4 py-3 text-right">
           <button onclick="removeAutoReactionRow(this)" class="p-1.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-accent-soft-bg)] rounded-lg transition-all opacity-0 group-hover:opacity-100">
@@ -3855,10 +4167,13 @@
     tr.className = 'group hover:bg-[var(--c-input)]/50 transition-colors';
     tr.innerHTML = `
       <td class="px-4 py-3">
-        <input type="text" class="field-input py-1.5 text-xs font-mono ar-regex" placeholder="e.g. hello|hi" />
+        <input type="text" class="field-input py-1.5 text-xs font-mono ar-pattern" placeholder="e.g. dubz" />
+      </td>
+      <td class="px-2 py-3 text-center align-middle">
+        <input type="checkbox" class="ar-use-regex rounded border-[var(--c-input-border)] text-[var(--c-accent)] focus:ring-[var(--c-accent)]" title="Regular expression" />
       </td>
       <td class="px-4 py-3">
-        <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" placeholder="e.g. 👋 or :smile:" />
+        <input type="text" class="field-input py-1.5 text-xs font-mono ar-emoji" placeholder="Unicode emoji or <:name:id>" />
       </td>
       <td class="px-4 py-3 text-right">
         <button onclick="removeAutoReactionRow(this)" class="p-1.5 text-[var(--c-text-dim)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100">
@@ -3873,7 +4188,7 @@
     btn.closest('tr').remove();
     const tbody = document.getElementById('autoReactionTableBody');
     if (tbody.children.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">No reactions configured. Click "Add New Pattern" to start!</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">No reactions configured. Click "Add New Pattern" to start!</td></tr>';
     }
     queueAutoReactionsSave();
   };
@@ -3884,10 +4199,13 @@
     const rows = document.querySelectorAll('#autoReactionTableBody tr');
     const reactions = [];
     
-    rows.forEach(row => {
-      const regex = row.querySelector('.ar-regex')?.value.trim();
+    rows.forEach((row) => {
+      const pattern = row.querySelector('.ar-pattern')?.value.trim();
       const emoji = row.querySelector('.ar-emoji')?.value.trim();
-      if (regex && emoji) reactions.push({ regex, emoji });
+      const useRegex = row.querySelector('.ar-use-regex')?.checked;
+      if (!pattern || !emoji) return;
+      if (useRegex) reactions.push({ mode: 'regex', regex: pattern, emoji });
+      else reactions.push({ mode: 'keyword', keyword: pattern, emoji });
     });
 
     try {
@@ -3898,6 +4216,7 @@
       });
       if (res.ok) {
         showToast('Auto-reactions saved successfully.');
+        loadAutoReactions();
       } else {
         const data = await res.json().catch(() => ({}));
         showToast(data.error || 'Failed to save auto-reactions.', 'error');
@@ -3910,9 +4229,15 @@
   };
 
   document.getElementById('autoReactionTableBody')?.addEventListener('input', (event) => {
-    if (event.target?.classList?.contains('ar-regex') || event.target?.classList?.contains('ar-emoji')) {
+    if (
+      event.target?.classList?.contains('ar-pattern') ||
+      event.target?.classList?.contains('ar-emoji')
+    ) {
       queueAutoReactionsSave();
     }
+  });
+  document.getElementById('autoReactionTableBody')?.addEventListener('change', (event) => {
+    if (event.target?.classList?.contains('ar-use-regex')) queueAutoReactionsSave();
   });
 
   loadAutoReactions();
@@ -4375,6 +4700,7 @@
     
     // Smooth scroll to top on section change
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    ensureNonChipButtonsHaveIcons();
   }
   window.addEventListener('hashchange', async (e) => {
     await flushAllPendingSettingsSaves();
@@ -4406,10 +4732,12 @@
   updateVisibility();
 
   // ── Init ──────────────────────────────────────────────────────────────────
+  wireDbNamespaceNav();
   loadSettings();
   loadDatabaseEntries();
   loadHealthStats();
   loadInvites();
+  loadInviteJoinHistory();
   const HEALTH_STATS_POLL_MS = 1000; // status cards: uptime, loop, trends, queue (1s)
   setInterval(loadHealthStats, HEALTH_STATS_POLL_MS);
 </script>

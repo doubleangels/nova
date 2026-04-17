@@ -16,23 +16,9 @@
           --c-bg: #050506;
           --c-card: rgba(16, 16, 20, 0.88);
           --c-card-border: #25252c;
-          --c-accent: <%=accentHex || '#7C3AED' %>;
+          --c-accent: <%= accentHex || '#7C3AED' %>;
 
-          --c-accent-rgb: <%=accentRgb ? `$ {
-            accentRgb.r
-          }
-
-          ,
-          $ {
-            accentRgb.g
-          }
-
-          ,
-          $ {
-            accentRgb.b
-          }
-
-          ` : '124, 58, 237' %>;
+          --c-accent-rgb: <%= accentRgb ? `${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}` : '124, 58, 237' %>;
         }
 
         *,

@@ -3,6 +3,7 @@ const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
 const { getValue, incrementMessageCount, deleteMessageCount, getMessageCount, updateLastMessageTime } = require('../utils/database');
+const { normalizeAutoReactionRegex } = require('../utils/autoReactionRegex');
 const { handleReminder } = require('../utils/reminderUtils');
 const { Events } = require('discord.js');
 const MAX_LOGGED_MESSAGE_CHARS = 240;
@@ -255,10 +256,17 @@ async function handleAutoReactions(message) {
 
   try {
     const now = Date.now();
-    if (!reactionsCache.data || (now - reactionsCache.lastFetch) > 60000) {
+    if (!reactionsCache.data || (now - reactionsCache.lastFetch) > 10000) {
       reactionsCache.data = await getValue('auto_reactions') || [];
       reactionsCache.lastFetch = now;
-      const livePatterns = new Set(reactionsCache.data.map((e) => String(e.regex || '')));
+      const livePatterns = new Set(
+        reactionsCache.data.map((e) => {
+          const norm = normalizeAutoReactionRegex(e.regex);
+          const flags =
+            e.flags != null && String(e.flags).length > 0 ? String(e.flags) : norm.flags;
+          return `${norm.pattern}\0${flags}`;
+        })
+      );
       for (const key of autoReactionRegexCache.keys()) {
         if (!livePatterns.has(key)) autoReactionRegexCache.delete(key);
       }
@@ -272,14 +280,19 @@ async function handleAutoReactions(message) {
 
     for (const entry of reactionsCache.data) {
       try {
-        if (isPotentiallyUnsafeRegex(entry.regex)) {
-          logger.warn('Skipped potentially unsafe auto-reaction regex pattern.', { pattern: entry.regex });
+        const norm = normalizeAutoReactionRegex(entry.regex);
+        const flags =
+          entry.flags != null && String(entry.flags).length > 0 ? String(entry.flags) : norm.flags;
+        const pattern = norm.pattern;
+        if (isPotentiallyUnsafeRegex(pattern)) {
+          logger.warn('Skipped potentially unsafe auto-reaction regex pattern.', { pattern });
           continue;
         }
-        let regex = autoReactionRegexCache.get(entry.regex);
+        const cacheKey = `${pattern}\0${flags}`;
+        let regex = autoReactionRegexCache.get(cacheKey);
         if (!regex) {
-          regex = new RegExp(entry.regex, 'i');
-          autoReactionRegexCache.set(entry.regex, regex);
+          regex = new RegExp(pattern, flags || 'i');
+          autoReactionRegexCache.set(cacheKey, regex);
         }
         if (regex.test(message.content)) {
           // Resolve emoji - could be a custom emoji ID or a unicode character
@@ -293,7 +306,7 @@ async function handleAutoReactions(message) {
       } catch (regexErr) {
         logger.error('Invalid auto-reaction regex pattern.', {
           pattern: entry.regex,
-          err: regexErr.message
+          err: regexErr && regexErr.message
         });
       }
     }

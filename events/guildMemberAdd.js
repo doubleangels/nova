@@ -2,11 +2,42 @@ const { Events, EmbedBuilder } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
-const { getValue, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, isFormerMember } = require('../utils/database');
+const {
+  getInviteUsage,
+  setInviteUsage,
+  getInviteNotificationChannel,
+  getInviteTag,
+  getInviteCodeToTagMap,
+  rebuildCodeToTagMap,
+  isFormerMember,
+  appendInviteJoinHistory
+} = require('../utils/database');
 const config = require('../config');
 
 // Lock map to prevent race conditions in invite usage tracking
 const inviteCheckLocks = new Map();
+
+/**
+ * Invite code with the largest positive use-count delta vs. previous snapshot (any invite, not only tagged).
+ * @returns {string|null}
+ */
+function pickStrongestInviteDelta(previousUsage, currentUsage) {
+  const normPrev = {};
+  for (const [code, count] of Object.entries(previousUsage)) {
+    normPrev[code.toLowerCase()] = count;
+  }
+  let bestCode = null;
+  let maxIncrease = 0;
+  for (const [code, currentCount] of Object.entries(currentUsage)) {
+    const prev = normPrev[code.toLowerCase()] || 0;
+    const increase = currentCount - prev;
+    if (increase > maxIncrease) {
+      maxIncrease = increase;
+      bestCode = code;
+    }
+  }
+  return maxIncrease > 0 ? bestCode : null;
+}
 
 module.exports = {
   name: Events.GuildMemberAdd,
@@ -15,7 +46,7 @@ module.exports = {
    * Handles the event when a new member joins the guild.
    * This function:
    * 1. Assigns auto-roles and checks returning members
-   * 
+   *
    * @param {GuildMember} member - The member that joined the guild
    * @throws {Error} If there's an error processing the new member, with specific error messages for different failure cases
    * @returns {Promise<void>}
@@ -63,7 +94,6 @@ module.exports = {
         }
       }
 
-      // Check for tagged invite usage
       await this.checkTaggedInvite(member);
 
       logger.info('Successfully processed new member.', {
@@ -71,8 +101,6 @@ module.exports = {
       });
     } catch (error) {
       captureError(error, { event: 'guildMemberAdd' });
-      // Do not rethrow — event handlers have no caller to receive the error.
-      // Rethrowing here causes an unhandled promise rejection.
       logger.error('Error occurred while processing new member.', {
         err: error,
         userId: member.user.id
@@ -81,7 +109,7 @@ module.exports = {
   },
 
   /**
-   * Checks if the member joined using a tagged invite and sends a notification if so
+   * Detects invite attribution, appends Invite Manager join history, and optionally sends a tagged-invite notification.
    * @param {GuildMember} member - The member that joined
    * @returns {Promise<void>}
    */
@@ -92,135 +120,118 @@ module.exports = {
         userId: member.user.id
       });
 
-      // Get notification channel
       const notificationChannelId = await getInviteNotificationChannel();
-      if (!notificationChannelId) {
-        logger.debug('No invite notification channel configured, skipping invite check.');
-        return;
-      }
-      logger.debug('Notification channel ID retrieved.', {
-        channelId: notificationChannelId
-      });
-
-      // Try to get channel from cache first, then fetch if not found
-      let notificationChannel = member.guild.channels.cache.get(notificationChannelId);
-      if (!notificationChannel) {
-        try {
-          notificationChannel = await member.guild.channels.fetch(notificationChannelId);
-          logger.debug('Fetched notification channel from API.', {
-            channelName: notificationChannel.name,
-            channelId: notificationChannel.id
-          });
-        } catch (fetchError) {
-          logger.error('Failed to fetch notification channel from API.', {
-            err: fetchError,
-            channelId: notificationChannelId
-          });
-          return;
+      let notificationChannel = null;
+      let canNotify = false;
+      if (notificationChannelId) {
+        logger.debug('Notification channel ID retrieved.', { channelId: notificationChannelId });
+        notificationChannel = member.guild.channels.cache.get(notificationChannelId);
+        if (!notificationChannel) {
+          try {
+            notificationChannel = await member.guild.channels.fetch(notificationChannelId);
+            logger.debug('Fetched notification channel from API.', {
+              channelName: notificationChannel.name,
+              channelId: notificationChannel.id
+            });
+          } catch (fetchError) {
+            logger.error('Failed to fetch notification channel from API.', {
+              err: fetchError,
+              channelId: notificationChannelId
+            });
+          }
         }
+        if (notificationChannel) {
+          const botForChannel = member.guild.members.me;
+          const channelPermissions = notificationChannel.permissionsFor(botForChannel);
+          canNotify = Boolean(
+            channelPermissions?.has('SendMessages') &&
+            channelPermissions.has('EmbedLinks')
+          );
+          if (!canNotify) {
+            logger.warn('Invite notifications disabled: bot missing SendMessages or EmbedLinks on notification channel.', {
+              channelId: notificationChannel.id
+            });
+          }
+        } else {
+          logger.warn('Invite notification channel not found in guild.', {
+            channelId: notificationChannelId,
+            guildId: member.guild.id
+          });
+        }
+      } else {
+        logger.debug('No invite notification channel configured; join history still records invite source when possible.');
       }
 
-      if (!notificationChannel) {
-        logger.warn('Invite notification channel not found in guild.', {
-          channelId: notificationChannelId,
-          guildId: member.guild.id
-        });
-        return;
-      }
-      logger.debug('Found notification channel.', {
-        channelName: notificationChannel.name,
-        channelId: notificationChannel.id,
-        channelType: notificationChannel.type
-      });
-
-      // Check permissions once and cache
       const botMember = member.guild.members.me;
       if (!botMember) {
-        logger.error('Bot member not found in guild.', {
-          guildId: member.guild.id
-        });
+        logger.error('Bot member not found in guild.', { guildId: member.guild.id });
         return;
       }
 
-      const channelPermissions = notificationChannel.permissionsFor(botMember);
-      if (!channelPermissions?.has('SendMessages')) {
-        logger.error('Bot does not have SendMessages permission in notification channel.', {
-          channelName: notificationChannel.name,
-          channelId: notificationChannel.id
-        });
-        return;
-      }
-
-      if (!channelPermissions.has('EmbedLinks')) {
-        logger.error('Bot does not have EmbedLinks permission in notification channel.', {
-          channelName: notificationChannel.name,
-          channelId: notificationChannel.id
-        });
-        return;
-      }
-
-      // Check if bot has permission to view invites
       if (!botMember.permissions.has('ManageGuild')) {
-        logger.debug('Bot does not have ManageGuild permission, cannot check invites.');
+        await appendInviteJoinHistory(member.guild.id, {
+          userId: member.id,
+          userTag: member.user.tag,
+          displayName: member.displayName,
+          source: 'unknown',
+          inviteCode: null,
+          tagName: null,
+          channelName: null,
+          detail: 'Bot needs Manage Server to detect which invite was used.'
+        });
         return;
       }
 
-      // Fetch current invites
       let currentInvites;
       try {
         currentInvites = await member.guild.invites.fetch();
-        logger.debug('Fetched invites from guild.', {
-          inviteCount: currentInvites.size
-        });
+        logger.debug('Fetched invites from guild.', { inviteCount: currentInvites.size });
       } catch (error) {
         captureError(error, { event: 'guildMemberAdd', handler: 'fetchInvites' });
-        logger.error('Failed to fetch invites from guild.', {
-          err: error
+        logger.error('Failed to fetch invites from guild.', { err: error });
+        await appendInviteJoinHistory(member.guild.id, {
+          userId: member.id,
+          userTag: member.user.tag,
+          displayName: member.displayName,
+          source: 'unknown',
+          detail: 'Could not fetch server invites.'
         });
         return;
       }
 
-      // Get previous invite usage counts
       const previousUsage = await getInviteUsage(member.guild.id);
+      const currentUsage = {};
+      currentInvites.each(invite => {
+        currentUsage[invite.code] = invite.uses || 0;
+      });
       logger.debug('Retrieved previous invite usage data.', {
         previousUsage: JSON.stringify(previousUsage)
       });
+      logger.debug('Built current invite usage data.', { currentUsage: JSON.stringify(currentUsage) });
 
-      // Build current usage map
-      // Store codes in their original case for Discord API compatibility
-      const currentUsage = {};
-      currentInvites.each(invite => {
-        const code = invite.code; // Keep original case
-        currentUsage[code] = invite.uses || 0;
-      });
-      logger.debug('Built current invite usage data.', {
-        currentUsage: JSON.stringify(currentUsage)
-      });
-
-      // If previous usage is empty (bot just started or first time), initialize it
       const isFirstRun = Object.keys(previousUsage).length === 0;
       if (isFirstRun) {
-        logger.debug('No previous invite usage data found, initializing with current state. Skipping invite detection for this join.');
-        // On first run, just initialize the usage tracking and skip detection
-        // We can't reliably determine which invite was used without previous state
+        logger.debug('No previous invite usage data — initializing baseline (detection starts next join).');
         await setInviteUsage(member.guild.id, currentUsage).catch(err => {
-          logger.error('Failed to initialize invite usage tracking.', {
-            err: err,
-            guildId: member.guild.id
-          });
+          logger.error('Failed to initialize invite usage tracking.', { err, guildId: member.guild.id });
         });
-        return; // Skip notification on first run
+        await appendInviteJoinHistory(member.guild.id, {
+          userId: member.id,
+          userTag: member.user.tag,
+          displayName: member.displayName,
+          source: 'baseline',
+          inviteCode: null,
+          tagName: null,
+          channelName: null,
+          detail: 'Invite usage baseline saved; attribution begins with the next join.'
+        });
+        return;
       }
 
-      // Use a lock per guild to prevent race conditions
       const guildId = member.guild.id;
-      let lockPromise = inviteCheckLocks.get(guildId);
-      if (lockPromise) {
-        // Wait for the previous check to complete
-        await lockPromise;
-      }
+      const lockPromise = inviteCheckLocks.get(guildId);
+      if (lockPromise) await lockPromise;
 
-      // Create a new lock promise for this check
       let resolveLock;
       const newLockPromise = new Promise(resolve => {
         resolveLock = resolve;
@@ -228,88 +239,85 @@ module.exports = {
       inviteCheckLocks.set(guildId, newLockPromise);
 
       try {
-        // Re-read previous usage after acquiring lock to get latest state
         const lockedPreviousUsage = await getInviteUsage(guildId);
 
-        // Get tagged invite code mapping
         let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
         if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
-          // Try rebuilding the map
           codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
         }
 
-        // Find which tagged invite was used (usage count increased)
         let usedInviteCode = null;
         let maxIncrease = 0;
 
-        // Normalize previous usage keys to lowercase for case-insensitive comparison
         const normalizedPreviousUsage = {};
         for (const [code, count] of Object.entries(lockedPreviousUsage)) {
           normalizedPreviousUsage[code.toLowerCase()] = count;
         }
 
-        // Only check tagged invites
         for (const [code, currentCount] of Object.entries(currentUsage)) {
           const normalizedCode = code.toLowerCase();
-
-          // Skip if not a tagged invite
-          if (!codeToTagMap[normalizedCode]) {
-            continue;
-          }
-
+          if (!codeToTagMap[normalizedCode]) continue;
           const previousCount = normalizedPreviousUsage[normalizedCode] || 0;
           const increase = currentCount - previousCount;
           logger.debug('Comparing tagged invite usage counts.', {
             inviteCode: code,
-            previousCount: previousCount,
-            currentCount: currentCount,
-            increase: increase
+            previousCount,
+            currentCount,
+            increase
           });
-
-          if (increase > 0) {
-            if (increase > maxIncrease) {
-              maxIncrease = increase;
-              usedInviteCode = code; // Keep original case
-            }
+          if (increase > 0 && increase > maxIncrease) {
+            maxIncrease = increase;
+            usedInviteCode = code;
           }
         }
 
-        // If we couldn't find it by comparison, check if it's a new tagged invite
         if (!usedInviteCode) {
           logger.debug('No tagged invite found with increased usage, checking for new tagged invites.');
           for (const [code, currentCount] of Object.entries(currentUsage)) {
             const normalizedCode = code.toLowerCase();
-            // Check for new tagged invites that weren't in previous usage
             if (!normalizedPreviousUsage[normalizedCode] && currentCount >= 1 && codeToTagMap[normalizedCode]) {
-              usedInviteCode = code; // Keep original case
-              logger.debug('Found new tagged invite that was likely used.', {
-                inviteCode: code,
-                uses: currentCount
-              });
+              usedInviteCode = code;
+              logger.debug('Found new tagged invite that was likely used.', { inviteCode: code, uses: currentCount });
               break;
             }
           }
         }
 
-        logger.debug('Detected used invite code.', {
-          inviteCode: usedInviteCode || 'NONE'
-        });
+        logger.debug('Detected tagged invite code.', { inviteCode: usedInviteCode || 'NONE' });
 
-        // Update stored usage counts BEFORE processing notification
-        // This ensures we have the latest state for next join
         await setInviteUsage(member.guild.id, currentUsage).catch(err => {
-          logger.error('Failed to update invite usage tracking.', {
-            err: err,
-            guildId: member.guild.id
-          });
+          logger.error('Failed to update invite usage tracking.', { err, guildId: member.guild.id });
         });
 
-        // Only send notification for tagged invites
-        if (usedInviteCode) {
-          // Normalize the code for lookup
+        const fallbackCode = pickStrongestInviteDelta(lockedPreviousUsage, currentUsage);
+        const historyCode = usedInviteCode || fallbackCode;
+        const historyTag = historyCode ? (codeToTagMap[historyCode.toLowerCase()] || null) : null;
+        const invObj = historyCode ? currentInvites.get(historyCode) : null;
+        const historyChannel = invObj?.channel?.name || null;
+
+        let histSource = 'unknown';
+        if (historyTag) histSource = 'tagged_invite';
+        else if (historyCode) histSource = 'invite';
+
+        const unknownDetail =
+          histSource === 'unknown'
+            ? 'Could not match an invite (vanity URL, Server Discovery, same-time joins, or untracked invite).'
+            : null;
+
+        await appendInviteJoinHistory(member.guild.id, {
+          userId: member.id,
+          userTag: member.user.tag,
+          displayName: member.displayName,
+          source: histSource,
+          inviteCode: historyCode,
+          tagName: historyTag,
+          channelName: historyChannel,
+          detail: unknownDetail
+        });
+
+        if (canNotify && notificationChannel && usedInviteCode) {
           const normalizedUsedCode = usedInviteCode.toLowerCase();
           const tagName = codeToTagMap[normalizedUsedCode];
-
           logger.debug('Looked up tag name for invite code.', {
             inviteCode: usedInviteCode,
             normalizedCode: normalizedUsedCode,
@@ -318,12 +326,9 @@ module.exports = {
 
           if (tagName) {
             const inviteTag = await getInviteTag(tagName);
-            logger.debug('Retrieved invite tag data.', {
-              inviteTag: JSON.stringify(inviteTag)
-            });
+            logger.debug('Retrieved invite tag data.', { inviteTag: JSON.stringify(inviteTag) });
 
             if (inviteTag && inviteTag.code && inviteTag.code.toLowerCase() === normalizedUsedCode) {
-              // Send tagged invite notification
               try {
                 const embed = new EmbedBuilder()
                   .setColor(config.baseEmbedColor ?? 0)
@@ -360,19 +365,14 @@ module.exports = {
               }
             }
           }
-        } else {
-          // No tagged invite detected - don't send notification
-          logger.debug('No tagged invite detected for member, skipping notification.', {
+        } else if (!usedInviteCode) {
+          logger.debug('No tagged invite detected for notification.', {
             userTag: member.user.tag,
             userId: member.user.id
           });
         }
-
       } finally {
-        // Release the lock (guard in case resolveLock was never assigned)
-        if (typeof resolveLock === 'function') {
-          resolveLock();
-        }
+        if (typeof resolveLock === 'function') resolveLock();
         if (inviteCheckLocks.get(guildId) === newLockPromise) {
           inviteCheckLocks.delete(guildId);
         }
@@ -384,7 +384,6 @@ module.exports = {
         userId: member.user.id,
         guildId: member.guild.id
       });
-      // Don't throw - this is a non-critical feature
     }
   }
 };

@@ -70,12 +70,15 @@ async function getPromotionTargets() {
     }
   }
   if (Array.isArray(parsed) && parsed.length > 0) {
+    const globalLink = String((await getValue('reddit_promotion_link')) || PROMOTION_LINK).trim();
     const out = [];
     for (const row of parsed) {
       if (!row || typeof row !== 'object') continue;
       const sub = normalizePromotionSubredditName(row.subreddit);
-      const url = String(row.url || row.link || '').trim();
-      if (!sub || !url) continue;
+      if (!sub) continue;
+      const rowUrl = String(row.url || row.link || '').trim();
+      const url = rowUrl || globalLink;
+      if (!url) continue;
       out.push({
         subreddit: sub,
         url,

@@ -432,6 +432,99 @@ async function getInviteUsage(guildId) {
   }
 }
 
+const INVITE_JOIN_HISTORY_LIMIT = 200;
+
+/**
+ * Appends a member join record for Invite Manager history (newest first).
+ * @param {string} guildId
+ * @param {Object} entry - at, userId, userTag, displayName?, source, inviteCode?, tagName?, channelName?, detail?
+ */
+async function appendInviteJoinHistory(guildId, entry) {
+  try {
+    const key = `invite_join_history:${guildId}`;
+    const raw = await keyv.get(key);
+    const list = Array.isArray(raw) ? raw : [];
+    const row = {
+      at: entry.at || new Date().toISOString(),
+      userId: String(entry.userId || ''),
+      userTag: String(entry.userTag || ''),
+      displayName: entry.displayName != null ? String(entry.displayName) : '',
+      source: String(entry.source || 'unknown'),
+      inviteCode: entry.inviteCode != null ? String(entry.inviteCode) : null,
+      tagName: entry.tagName != null ? String(entry.tagName) : null,
+      channelName: entry.channelName != null ? String(entry.channelName) : null,
+      detail: entry.detail != null ? String(entry.detail) : null
+    };
+    list.unshift(row);
+    while (list.length > INVITE_JOIN_HISTORY_LIMIT) list.pop();
+    await keyv.set(key, list);
+  } catch (err) {
+    logger.error('Error appending invite join history.', { err, guildId });
+  }
+}
+
+/**
+ * @param {string} guildId
+ * @param {number} [limit=100]
+ * @returns {Promise<Array>}
+ */
+async function getInviteJoinHistory(guildId, limit = 100) {
+  try {
+    const raw = await keyv.get(`invite_join_history:${guildId}`);
+    const list = Array.isArray(raw) ? raw : [];
+    const n = Math.min(Math.max(1, Number(limit) || 100), INVITE_JOIN_HISTORY_LIMIT);
+    return list.slice(0, n);
+  } catch (err) {
+    logger.error('Error reading invite join history.', { err, guildId });
+    return [];
+  }
+}
+
+function normalizeInviteJoinHistoryRow(entry) {
+  return {
+    at: entry.at || new Date().toISOString(),
+    userId: String(entry.userId || ''),
+    userTag: String(entry.userTag || ''),
+    displayName: entry.displayName != null ? String(entry.displayName) : '',
+    source: String(entry.source || 'unknown'),
+    inviteCode: entry.inviteCode != null ? String(entry.inviteCode) : null,
+    tagName: entry.tagName != null ? String(entry.tagName) : null,
+    channelName: entry.channelName != null ? String(entry.channelName) : null,
+    detail: entry.detail != null ? String(entry.detail) : null
+  };
+}
+
+/**
+ * Merges new rows into invite join history (dedupe by userId + at), newest first, capped.
+ * @param {string} guildId
+ * @param {Array<Object>} newEntries
+ * @returns {Promise<{ added: number, total: number }>}
+ */
+async function mergeInviteJoinHistoryEntries(guildId, newEntries) {
+  const key = `invite_join_history:${guildId}`;
+  const raw = await keyv.get(key);
+  const existing = Array.isArray(raw) ? raw : [];
+  const map = new Map();
+  for (const e of existing) {
+    const n = normalizeInviteJoinHistoryRow(e);
+    map.set(`${n.userId}|${n.at}`, n);
+  }
+  let added = 0;
+  for (const e of newEntries) {
+    const n = normalizeInviteJoinHistoryRow(e);
+    const k = `${n.userId}|${n.at}`;
+    if (!map.has(k)) {
+      map.set(k, n);
+      added++;
+    }
+  }
+  const merged = [...map.values()]
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    .slice(0, INVITE_JOIN_HISTORY_LIMIT);
+  await keyv.set(key, merged);
+  return { added, total: merged.length };
+}
+
 /**
  * Stores invite code-to-tag mapping for a guild
  * @param {string} guildId - The guild ID
@@ -912,6 +1005,9 @@ module.exports = {
   getInviteNotificationChannel,
   setInviteUsage,
   getInviteUsage,
+  appendInviteJoinHistory,
+  getInviteJoinHistory,
+  mergeInviteJoinHistoryEntries,
   setInviteCodeToTagMap,
   getInviteCodeToTagMap,
   rebuildCodeToTagMap,

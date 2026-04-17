@@ -18,6 +18,8 @@ const {
   deleteInviteTag,
   setInviteNotificationChannel,
   getInviteNotificationChannel,
+  getInviteJoinHistory,
+  mergeInviteJoinHistoryEntries,
   invalidateConfigCache,
   invalidateConfigCacheKey
 } = require('../../utils/database');
@@ -27,6 +29,10 @@ const {
   DEFAULT_MAX_PER_CHANNEL,
   DEFAULT_DELAY_MS
 } = require('../../utils/seedLastMessagesFromHistory');
+const {
+  normalizeAutoReactionRegex,
+  keywordToWordBoundaryPattern
+} = require('../../utils/autoReactionRegex');
 const {
   parseBackupPayload,
   validateNovaKeyvBackup,
@@ -339,7 +345,7 @@ function looksUnsafeRegex(pattern) {
 /**
  * Validates dashboard input for /promote targets (per subreddit: link + flair selection).
  * @param {unknown} val
- * @returns {Array<{ subreddit: string, url: string, flair_text: string, flair_template_id: string }>}
+ * @returns {Array<{ subreddit: string, flair_text: string, flair_template_id: string }>}
  */
 function validateAndNormalizeRedditPromotionTargets(val) {
   let parsed = val;
@@ -361,13 +367,11 @@ function validateAndNormalizeRedditPromotionTargets(val) {
     if (!row || typeof row !== 'object') continue;
     const sub = normalizePromotionSubredditName(row.subreddit);
     if (!sub || sub.length > 50) continue;
-    const url = String(row.url || row.link || '').trim();
-    if (!url || !/^https?:\/\//i.test(url)) continue;
     const flairHint = String(row.flair_text || row.flairText || '').trim().slice(0, 200);
     const flairTemplateId = String(row.flair_template_id || row.flairTemplateId || '')
       .trim()
       .slice(0, 64);
-    out.push({ subreddit: sub, url, flair_text: flairHint, flair_template_id: flairTemplateId });
+    out.push({ subreddit: sub, flair_text: flairHint, flair_template_id: flairTemplateId });
   }
   return out;
 }
@@ -393,12 +397,8 @@ function buildRedditPromotionTargetsJsonForDashboard(rawTargets, legacyLink, leg
     }
   }
   const subs = parseJsonList(legacySubsRaw, DEFAULT_REDDIT_PROMOTION_SUBREDDITS);
-  const link = String(legacyLink || DEFAULT_REDDIT_PROMOTION_LINK).trim();
   const rows = subs.map((sub) => ({
     subreddit: sub,
-    url: link,
-    title: '',
-    body: '',
     flair_text: LEGACY_PROMOTION_FLAIR_HINTS[sub] || '',
     flair_template_id: ''
   }));
@@ -1071,10 +1071,16 @@ router.post('/database/raw', async (req, res) => {
 // ─── DELETE /api/database/raw ───────────────────────────────────────────────
 
 router.delete('/database/raw', async (req, res) => {
-  const { fullKey } = req.body;
-  const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
+  // Prefer body (JSON); fall back to query — some proxies/clients do not deliver a parseable body on DELETE.
+  const fullKeyRaw = req.body?.fullKey ?? req.query?.fullKey;
+  const fullKey = typeof fullKeyRaw === 'string' ? fullKeyRaw.trim() : '';
+  const dryRun =
+    req.body?.dryRun === true ||
+    req.body?.dryRun === 'true' ||
+    req.query?.dryRun === 'true' ||
+    req.query?.dryRun === true;
   if (!fullKey) {
-    return res.status(400).json({ error: 'Missing fullKey in request body.' });
+    return res.status(400).json({ error: 'Missing fullKey (send JSON body or ?fullKey=).' });
   }
 
   try {
@@ -1251,7 +1257,12 @@ router.post('/reminders/fix', async (req, res) => {
     // req.app.get('client') is where the discord client is stored
     const client = req.app.get('client');
     await handleReminder({ client }, delayMs, type, true);
-    
+
+    logger.info('Dashboard reminder fixed.', {
+      type,
+      delayMs,
+      user: getDashboardActor(req)
+    });
     res.json({ success: true, message: `Fixed ${type} reminder.` });
   } catch (err) {
     logger.error(`Failed to fix ${type} reminder.`, { err });
@@ -1278,21 +1289,39 @@ router.post('/fun/auto-reactions', async (req, res) => {
   }
 
   try {
-    // Basic validation
+    const MAX_KEYWORD_LEN = 120;
+
     const cleaned = reactions
-      .filter(r => r.regex && r.emoji)
-      .map(r => ({
-        regex: String(r.regex).trim(),
-        emoji: String(r.emoji).trim()
-      }))
-      .filter((r) => r.regex.length > 0 && r.emoji.length > 0);
+      .map((r) => {
+        const emoji = String(r.emoji || '').trim();
+        if (!emoji) return null;
+
+        const isKeyword = r.mode === 'keyword';
+        if (isKeyword) {
+          const keyword = String(r.keyword || '').trim();
+          if (!keyword || keyword.length > MAX_KEYWORD_LEN) return null;
+          const { regex, flags } = keywordToWordBoundaryPattern(keyword);
+          return { mode: 'keyword', keyword, regex, flags, emoji };
+        }
+
+        const raw = String(r.regex || '').trim();
+        if (!raw) return null;
+        const norm = normalizeAutoReactionRegex(raw);
+        return {
+          mode: 'regex',
+          regex: norm.pattern,
+          flags: norm.flags || 'i',
+          emoji
+        };
+      })
+      .filter(Boolean);
     if (cleaned.some((r) => looksUnsafeRegex(r.regex))) {
       return res.status(400).json({ error: 'One or more regex patterns are too complex/unsafe.' });
     }
     for (const r of cleaned) {
       try {
         // Validate syntax now so runtime message pipeline cannot crash on malformed entries.
-        new RegExp(r.regex, 'i');
+        new RegExp(r.regex, r.flags || 'i');
       } catch {
         return res.status(400).json({ error: `Invalid regex pattern: ${r.regex}` });
       }
@@ -1337,15 +1366,94 @@ router.post('/messages/send', async (req, res) => {
       if (thumbnail) embed.thumbnail = { url: thumbnail };
       if (footer) embed.footer = { text: footer };
       await channel.send({ embeds: [embed] });
+      logger.info('Dashboard message sent (embed).', {
+        guildId: guild.id,
+        channelId: String(channelId),
+        titleLen: title.length,
+        descriptionLen: description.length,
+        user: getDashboardActor(req)
+      });
     } else {
       const safeContent = String(content || '').trim();
       if (!safeContent) return res.status(400).json({ error: 'Message content is empty.' });
       await channel.send({ content: safeContent.slice(0, 2000) });
+      logger.info('Dashboard message sent (plain).', {
+        guildId: guild.id,
+        channelId: String(channelId),
+        contentLen: safeContent.length,
+        user: getDashboardActor(req)
+      });
     }
     return res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to send dashboard message.', { err });
     return res.status(500).json({ error: 'Failed to send message.' });
+  }
+});
+
+// ─── GET /api/invites/join-history ───────────────────────────────────────────
+/** Recent member joins with best-effort invite attribution (stored when members join). */
+router.get('/invites/join-history', async (req, res) => {
+  try {
+    const guild = req.discordClient.guilds.cache.first();
+    if (!guild) return res.status(503).json({ error: 'Guild not available.' });
+    const limitRaw = parseInt(String(req.query.limit || '50'), 10);
+    const limit = Math.min(100, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 50));
+    const entries = await getInviteJoinHistory(guild.id, limit);
+    res.json({ entries });
+  } catch (err) {
+    logger.error('Failed to get invite join history.', { err });
+    res.status(500).json({ error: 'Failed to load join history.' });
+  }
+});
+
+// ─── POST /api/invites/join-history/seed ─────────────────────────────────────
+/** Backfill join history from current guild members’ Discord join times (invite source unknown). */
+router.post('/invites/join-history/seed', async (req, res) => {
+  try {
+    const limitRaw = parseInt(String(req.body?.limit ?? 50), 10);
+    const limit = Math.min(200, Math.max(1, Number.isFinite(limitRaw) ? limitRaw : 50));
+    const guild = req.discordClient.guilds.cache.first();
+    if (!guild) return res.status(503).json({ error: 'Guild not available.' });
+
+    await guild.members.fetch();
+    const members = [...guild.members.cache.values()].filter((m) => !m.user.bot);
+    members.sort((a, b) => (b.joinedTimestamp ?? 0) - (a.joinedTimestamp ?? 0));
+    const picked = members.slice(0, limit);
+
+    const seedDetail =
+      'Backfilled from Discord member join time. Invite code was not recorded for this row.';
+    const newEntries = picked.map((m) => ({
+      at: m.joinedAt
+        ? m.joinedAt.toISOString()
+        : new Date(m.joinedTimestamp ?? Date.now()).toISOString(),
+      userId: m.id,
+      userTag: m.user.tag,
+      displayName: m.displayName || m.user.username,
+      source: 'seeded',
+      inviteCode: null,
+      tagName: null,
+      channelName: null,
+      detail: seedDetail
+    }));
+
+    const { added, total } = await mergeInviteJoinHistoryEntries(guild.id, newEntries);
+    logger.info('Invite join history seeded from member list.', {
+      guildId: guild.id,
+      scanned: picked.length,
+      merged: added,
+      totalInHistory: total,
+      user: req.session.user?.username
+    });
+    res.json({
+      ok: true,
+      scanned: picked.length,
+      merged: added,
+      totalInHistory: total
+    });
+  } catch (err) {
+    logger.error('Failed to seed invite join history.', { err });
+    res.status(500).json({ error: err.message || 'Failed to seed join history.' });
   }
 });
 
@@ -1428,6 +1536,13 @@ router.post('/invites', async (req, res) => {
     }
 
     invalidateInvitesListCache();
+    logger.info('Dashboard invite created.', {
+      guildId: guild.id,
+      code: invite.code,
+      channelId: String(channelId),
+      tagged: Boolean(tag),
+      user: getDashboardActor(req)
+    });
     res.json({ ok: true, code: invite.code });
   } catch (err) {
     logger.error('Failed to create invite.', { err });
@@ -1457,6 +1572,11 @@ router.delete('/invites/:code', async (req, res) => {
     await deleteInviteTag(guild.id, code);
 
     invalidateInvitesListCache();
+    logger.info('Dashboard invite revoked.', {
+      guildId: guild.id,
+      code,
+      user: getDashboardActor(req)
+    });
     res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to delete invite.', { err, code });
@@ -1487,6 +1607,12 @@ router.post('/invites/tag', async (req, res) => {
       await deleteInviteTag(guild.id, code);
     }
     invalidateInvitesListCache();
+    logger.info('Dashboard invite tag updated.', {
+      guildId: guild.id,
+      code,
+      action: tag ? 'set' : 'clear',
+      user: getDashboardActor(req)
+    });
     res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to update invite tag.', { err, code });
@@ -1702,6 +1828,13 @@ router.post('/users/inactivity/execute', async (req, res) => {
         });
 
         if (inactivityTargets.length === 0) {
+            logger.info('Dashboard inactivity prune executed (no targets).', {
+              guildId: guild.id,
+              days,
+              kicked: 0,
+              failed: 0,
+              user: getDashboardActor(req)
+            });
             return res.json({ success: true, kicked: 0, failed: 0 });
         }
 
@@ -1721,6 +1854,13 @@ router.post('/users/inactivity/execute', async (req, res) => {
         invalidateGuildMembersCache();
         invalidateUserSummaryCache();
 
+        logger.info('Dashboard inactivity prune executed.', {
+          guildId: guild.id,
+          days,
+          kicked,
+          failed,
+          user: getDashboardActor(req)
+        });
         res.json({ success: true, kicked, failed });
     } catch (e) {
         logger.error('API /users/inactivity/execute error', { err: e });
@@ -1753,6 +1893,11 @@ router.post('/users/:userId/kick', async (req, res) => {
 
     invalidateGuildMembersCache();
     invalidateUserSummaryCache();
+    logger.info('Dashboard member kicked.', {
+      guildId: guild.id,
+      userId,
+      user: getDashboardActor(req)
+    });
     res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to kick member from dashboard.', { err, userId: req.params.userId });
@@ -1785,6 +1930,11 @@ router.post('/users/:userId/ban', async (req, res) => {
 
     invalidateGuildMembersCache();
     invalidateUserSummaryCache();
+    logger.info('Dashboard member banned.', {
+      guildId: guild.id,
+      userId,
+      user: getDashboardActor(req)
+    });
     res.json({ ok: true });
   } catch (err) {
     logger.error('Failed to ban member from dashboard.', { err, userId: req.params.userId });
@@ -1874,6 +2024,15 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
   const username = req.session.user?.username;
   const keyv = getKeyvForNamespace('main');
 
+  logger.info('Dashboard seed last messages job started.', {
+    jobId,
+    guildId: guild.id,
+    dryRun,
+    maxPerChannel,
+    delayMs,
+    channelScope: channelIds && channelIds.length ? `${channelIds.length} channels` : 'all',
+    user: getDashboardActor(req)
+  });
   res.json({ jobId, started: true });
 
   (async () => {
