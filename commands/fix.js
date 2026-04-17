@@ -54,13 +54,16 @@ module.exports = {
       });
       
       const subcommand = interaction.options.getSubcommand();
+      const bumpDelay = Number(await getValue('reminder_delay_bump_ms')) || 7200000;
+      const promoteDelay = Number(await getValue('reminder_delay_promote_ms')) || 86400000;
+      const needafriendDelay = Number(await getValue('reminder_delay_needafriend_ms')) || NEEDAFRIEND_REMINDER_MS;
       
       if (subcommand === 'disboard') {
-        await this.handleFixReminder(interaction, 'bump', 7200000, 'Disboard Bump');
+        await this.handleFixReminder(interaction, 'bump', bumpDelay, 'Disboard Bump');
       } else if (subcommand === 'reddit') {
-        await this.handleFixReminder(interaction, 'promote', 86400000, 'Reddit Promotion');
+        await this.handleFixReminder(interaction, 'promote', promoteDelay, 'Reddit Promotion');
       } else if (subcommand === 'needafriend') {
-        await this.handleFixReminder(interaction, 'needafriend', NEEDAFRIEND_REMINDER_MS, 'r/needafriend weekly');
+        await this.handleFixReminder(interaction, 'needafriend', needafriendDelay, 'r/needafriend weekly');
       }
     } catch (error) {
       await this.handleError(interaction, error);

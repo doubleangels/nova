@@ -202,6 +202,71 @@ function sqliteRwProbe() {
   }
 }
 
+/**
+ * Builds an internal diagnostics payload for support/troubleshooting exports.
+ * Sensitive auth/session data must be filtered by the caller before passing in.
+ * @param {object} input
+ * @param {object} [input.deepHealth]
+ * @param {object} [input.storageReport]
+ * @param {object} [input.activeJob]
+ * @param {string[]} [input.cacheKeys]
+ * @param {object} [input.safeSettings]
+ * @param {object} [input.idSettings]
+ * @returns {object}
+ */
+function buildDiagnosticsBundle({
+  deepHealth = null,
+  storageReport = null,
+  activeJob = null,
+  cacheKeys = [],
+  safeSettings = {},
+  idSettings = {}
+} = {}) {
+  const pkg = require('../package.json');
+  const sqlitePath = getSqlitePath();
+  const sqliteBase = path.basename(sqlitePath);
+  const sourceHealth = deepHealth || {};
+  const sourceStorage = storageReport || getStorageReport();
+
+  return {
+    format: 'nova-diagnostics-bundle',
+    formatVersion: 1,
+    generatedAt: new Date().toISOString(),
+    app: { name: pkg.name, version: pkg.version },
+    environment: {
+      nodeVersion: process.version,
+      platform: process.platform,
+      uptimeSeconds: Math.floor(process.uptime())
+    },
+    health: {
+      process: sourceHealth.process || null,
+      memory: sourceHealth.memory || null,
+      discord: sourceHealth.discord || null,
+      sqlite: {
+        path: `<DATA_DIR>/${sqliteBase}`,
+        fileBytes: sourceHealth.sqlite?.fileBytes ?? sourceStorage.fileBytes ?? 0,
+        integrityOk: sourceHealth.sqlite?.integrityOk ?? null,
+        integrityResult: sourceHealth.sqlite?.integrityCheck ?? null,
+        readable: sourceHealth.sqlite?.readable ?? null,
+        writable: sourceHealth.sqlite?.writable ?? null
+      }
+    },
+    storage: {
+      totalRows: sourceStorage.totalRows ?? 0,
+      byNamespace: sourceStorage.byNamespace || [],
+      largestKeys: sourceStorage.largestKeys || []
+    },
+    maintenance: {
+      activeCacheKeys: cacheKeys,
+      activeSeedJob: activeJob || null
+    },
+    config: {
+      safeSettings,
+      idSettings
+    }
+  };
+}
+
 module.exports = {
   getSqlitePath,
   getStorageReport,
@@ -209,5 +274,6 @@ module.exports = {
   sqliteIntegrityCheck,
   cleanupExpiredSessions,
   clearAllSessionRows,
-  sqliteRwProbe
+  sqliteRwProbe,
+  buildDiagnosticsBundle
 };

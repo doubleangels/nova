@@ -36,6 +36,21 @@
      class="fixed bottom-5 right-5 z-50 hidden px-5 py-3 rounded-xl text-sm font-medium shadow-lg transition-all duration-300 max-w-xs">
 </div>
 
+<!-- Confirmation modal -->
+<div id="confirmModal" class="hidden fixed inset-0 z-50">
+  <div class="absolute inset-0 bg-black/60" id="confirmModalBackdrop"></div>
+  <div class="absolute inset-0 flex items-center justify-center p-4">
+    <div class="w-full max-w-md card border border-[var(--c-card-border)]">
+      <h3 id="confirmModalTitle" class="text-sm font-bold text-[var(--c-text)]">Confirm action</h3>
+      <p id="confirmModalMessage" class="text-xs text-[var(--c-text-dim)] mt-2 whitespace-pre-wrap"></p>
+      <div class="mt-5 flex items-center justify-end gap-2">
+        <button type="button" id="confirmModalCancel" class="px-3 py-2 text-xs font-semibold rounded-lg border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Cancel</button>
+        <button type="button" id="confirmModalConfirm" class="px-3 py-2 text-xs font-semibold rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════ STATUS & OVERVIEW -->
 <section id="status" class="mb-10 page-section">
   <div class="mb-8">
@@ -137,6 +152,7 @@
             <a href="#general" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Appearance</a>
             <a href="#reminders" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Logistics</a>
             <a href="#roles" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Roles</a>
+            <a href="#permissions" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Permissions Audit</a>
             <a href="#moderation" class="px-3 py-2 bg-[var(--c-input)] rounded-lg text-xs font-medium hover:bg-[var(--c-accent-soft-bg)] hover:text-[var(--c-accent-text)] transition-all hover:scale-105 border border-transparent hover:border-[var(--c-accent-soft-ring)]">Security</a>
         </div>
     </div>
@@ -248,12 +264,6 @@
       </div>
 
     </div>
-    <div class="mt-6 flex justify-end">
-      <button class="save-btn" data-section="general"
-              data-keys="guild_name,server_invite_url,base_embed_color,bot_status,bot_status_type">
-        Save Identity Settings
-      </button>
-    </div>
   </div>
 </section>
 
@@ -317,21 +327,35 @@
           <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
           <p class="field-hint">Used by /newuser to highlight significant permission differences.</p>
         </div>
-
-        <div class="max-w-md">
-          <label class="field-label">Inactivity Kick Protected Role</label>
-          <select id="prune_protected_role_id" class="field-input role-select"></select>
-          <p class="field-hint">Members with this role are never targeted by Inactivity Prune. Marked in the User Manager list.</p>
-        </div>
       </div>
 
     </div>
+  </div>
+</section>
 
-    <div class="mt-8 flex justify-end">
-      <button class="save-btn" data-section="roles"
-              data-keys="noobies_role_id,noobies_threshold,newuser_been_in_server_before_role_id,give_perms_fren_role_id,give_perms_position_above_role_id,newuser_permission_diff_role_id,prune_protected_role_id">
-        Save Role Settings
-      </button>
+<!-- ══════════════════════════════════════════════════════════ PERMISSIONS AUDIT -->
+<section id="permissions" class="mb-10 page-section hidden">
+  <div class="mb-6">
+    <h2 class="section-heading mb-1">
+      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+      Permissions Audit
+    </h2>
+    <p class="text-xs text-[var(--c-text-dim)]">Live privilege distribution and key moderation capability holders.</p>
+  </div>
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-base">Permissions Summary</h3>
+        <p class="text-xs text-[var(--c-text-dim)]">Snapshot of elevated permissions across server members.</p>
+      </div>
+      <button type="button" onclick="loadPermissionsSummary()" class="px-3 py-2 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Members</p><p id="perm_members" class="text-base font-bold">--</p></div>
+      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Admins</p><p id="perm_admins" class="text-base font-bold">--</p></div>
+      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Mods</p><p id="perm_mods" class="text-base font-bold">--</p></div>
+      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Kick</p><p id="perm_kick" class="text-base font-bold">--</p></div>
+      <div class="p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)]"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Ban</p><p id="perm_ban" class="text-base font-bold">--</p></div>
     </div>
   </div>
 </section>
@@ -375,12 +399,6 @@
         <p class="field-hint">The channel where the bot will post Anti-Spam alerts.</p>
       </div>
     </div>
-    <div class="mt-5 flex justify-end">
-      <button class="save-btn" data-section="moderation"
-              data-keys="anti_spam_enabled,anti_spam_threshold,anti_spam_window_hours,anti_spam_channel_id">
-        Save Anti-Spam Settings
-      </button>
-    </div>
   </div>
 
   <!-- Inactivity Guard -->
@@ -402,12 +420,6 @@
         <p class="field-hint">Users silent for this long will be kicked (1–72).</p>
       </div>
     </div>
-    <div class="mt-5 flex justify-end">
-      <button class="save-btn" data-section="moderation"
-              data-keys="inactivity_guard_enabled,inactivity_guard_timeout_hours">
-        Save Inactivity Settings
-      </button>
-    </div>
   </div>
 
   <!-- Entry Guard -->
@@ -428,12 +440,6 @@
         <input type="number" id="entry_guard_account_age" min="1" max="365" class="field-input" />
         <p class="field-hint">Accounts younger than this are kicked on join (1–365).</p>
       </div>
-    </div>
-    <div class="mt-5 flex justify-end">
-      <button class="save-btn" data-section="moderation"
-              data-keys="entry_guard_enabled,entry_guard_account_age">
-        Save Entry Settings
-      </button>
     </div>
   </div>
 
@@ -515,12 +521,82 @@
         <select id="invite_notification_channel" class="field-input channel-select"></select>
         <p class="field-hint">Where the bot posts alerts for members joining via tagged invites.</p>
       </div>
+      <div>
+        <label class="field-label">Disboard Reminder Delay (ms)</label>
+        <input type="number" id="reminder_delay_bump_ms" class="field-input" min="60000" max="2592000000" />
+      </div>
+      <div>
+        <label class="field-label">Reddit Reminder Delay (ms)</label>
+        <input type="number" id="reminder_delay_promote_ms" class="field-input" min="60000" max="2592000000" />
+      </div>
+      <div class="sm:col-span-2">
+        <label class="field-label">NeedAFriend Reminder Delay (ms)</label>
+        <input type="number" id="reminder_delay_needafriend_ms" class="field-input" min="60000" max="2592000000" />
+      </div>
     </div>
-    <div class="mt-6 flex justify-end">
-      <button class="save-btn" data-section="reminders"
-              data-keys="reminder_channel,reminder_role,invite_notification_channel">
-        Save Logistics Settings
+  </div>
+
+  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-base">Reddit &amp; NeedAFriend</h3>
+        <p class="text-xs text-[var(--c-text-dim)] mt-0.5">Per-subreddit <code class="text-[10px]">/promote</code> posts (link + optional body), NeedAFriend comment template, and defaults when a row leaves title or body blank.</p>
+      </div>
+    </div>
+
+    <div class="mb-6 p-4 rounded-xl border border-[var(--c-card-border)] bg-[var(--c-input)]/40 space-y-4">
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">
+        <strong class="text-[var(--c-text-muted)]">Promotion targets</strong> — one row per subreddit. Enter the subreddit name, then use <strong>Fetch flairs</strong> to load that subreddit’s link flairs and pick one to save. If Reddit API credentials are not configured on the host, flair loading will fail (posting from <code class="text-[10px]">/promote</code> still uses the bot’s Reddit account). Empty title or body in a row uses the defaults below.
+      </p>
+      <textarea id="reddit_promotion_targets" class="hidden" aria-hidden="true"></textarea>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+          <label class="field-label">Default post title (fallback)</label>
+          <input type="text" id="reddit_promotion_title" class="field-input" />
+        </div>
+        <div class="sm:col-span-2">
+          <label class="field-label">Default post body (fallback)</label>
+          <textarea id="reddit_promotion_body" rows="4" class="field-input"></textarea>
+        </div>
+      </div>
+      <div class="overflow-x-auto -mx-1 px-1">
+        <table class="w-full text-left border-collapse min-w-[780px]">
+          <thead>
+            <tr class="text-[10px] uppercase font-bold text-[var(--c-text-dim)] border-b border-[var(--c-card-border)]">
+              <th class="py-2 pr-2 w-[140px]">Subreddit</th>
+              <th class="py-2 pr-2 min-w-[180px]">Invite link</th>
+              <th class="py-2 pr-2 min-w-[160px]">Title (optional)</th>
+              <th class="py-2 pr-2 min-w-[200px]">Message (optional)</th>
+              <th class="py-2 pr-2 min-w-[180px]">Link flair</th>
+              <th class="py-2 w-10"></th>
+            </tr>
+          </thead>
+          <tbody id="redditPromotionTargetsBody" class="divide-y divide-[var(--c-card-border)]"></tbody>
+        </table>
+      </div>
+      <button type="button" onclick="addRedditPromotionRow()" class="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add subreddit
       </button>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 border-t border-[var(--c-card-border)]">
+      <div class="sm:col-span-2">
+        <h4 class="text-sm font-bold text-[var(--c-text)] mb-2">NeedAFriend weekly thread</h4>
+        <p class="text-[11px] text-[var(--c-text-dim)] mb-4">Used by <code class="text-[10px]">/needafriend</code> (separate from /promote).</p>
+      </div>
+      <div>
+        <label class="field-label">NeedAFriend Subreddit</label>
+        <input type="text" id="needafriend_subreddit" class="field-input" />
+      </div>
+      <div>
+        <label class="field-label">NeedAFriend Thread Title</label>
+        <input type="text" id="needafriend_thread_title" class="field-input" />
+      </div>
+      <div class="sm:col-span-2">
+        <label class="field-label">NeedAFriend Comment Body</label>
+        <textarea id="needafriend_comment" rows="4" class="field-input"></textarea>
+      </div>
     </div>
   </div>
 </section>
@@ -553,12 +629,6 @@
         <select id="notext_channel" class="field-input channel-select"></select>
         <p class="field-hint">Any standard text message sent in this channel will be politely removed.</p>
       </div>
-    </div>
-    <div class="mt-6 flex justify-end">
-      <button class="save-btn" data-section="social"
-              data-keys="notext_channel">
-        Save Social Settings
-      </button>
     </div>
   </div>
 
@@ -618,6 +688,7 @@
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Process info, Discord gateway ping/status, and SQLite integrity / read-write probe.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="loadDeepHealth()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Refresh</button>
+        <button type="button" onclick="exportDiagnosticsBundle()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors">Export Diagnostics</button>
       </div>
       <pre id="deepHealthPre" class="text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-72 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2">Tap Refresh.</pre>
     </div>
@@ -694,7 +765,7 @@
         <p class="text-[9px] text-[var(--c-text-dim)] mt-1.5">Uncheck <strong class="text-[var(--c-text-muted)]">All channels</strong> to scan only the boxes you tick.</p>
       </div>
       <div class="flex flex-wrap gap-4 items-center">
-        <p class="text-xs text-[var(--c-text-dim)]">Only missing keys are written (existing values are never overwritten).</p>
+        <p class="text-xs text-[var(--c-text-dim)]">All tracked keys are processed. Existing values are reconciled to the newest timestamp.</p>
         <label class="flex items-center gap-2 text-xs text-[var(--c-label)] cursor-pointer">
           <input type="checkbox" id="maintDryRun" class="rounded bg-[var(--c-input)] border-[var(--c-input-border)] text-[var(--c-accent)]" />
           Dry Run (No Writes)
@@ -852,7 +923,7 @@
         </div>
 
         <div class="flex justify-end pt-2">
-          <button id="sendMessageBtn" class="save-btn px-8">
+          <button id="sendMessageBtn" type="button" class="send-msg-btn px-8">
             Send Message
           </button>
         </div>
@@ -1030,8 +1101,22 @@
           </div>
       </div>
 
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6">
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;1d</p><p id="usr_act_1d" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;7d</p><p id="usr_act_7d" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Active &lt;30d</p><p id="usr_act_30d" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">Inactive 30d+</p><p id="usr_act_30p" class="text-lg font-bold">--</p></div>
+          <div class="p-3 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] text-center"><p class="text-[10px] text-[var(--c-text-dim)] uppercase">No Data</p><p id="usr_act_nodata" class="text-lg font-bold">--</p></div>
+      </div>
+
       <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-card-border)] space-y-3">
           <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. The last-activity column uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> below for emphasis.</p>
+          <div class="relative">
+              <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input type="search" id="userManagerSearch" class="field-input field-input-with-icon min-h-[40px]" placeholder="Search members by display name, username, or ID" />
+          </div>
           <div class="flex flex-wrap items-center gap-2">
               <button type="button" data-um-chip="admin" onclick="userManagerToggleChip('admin')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-red-500/40 bg-red-500/10 text-[11px] font-bold text-red-400 hover:bg-red-500/20 transition-all" aria-pressed="false">Admin <span id="usr_chip_admin" class="font-mono">0</span></button>
               <button type="button" data-um-chip="mod" onclick="userManagerToggleChip('mod')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-[11px] font-bold text-yellow-400 hover:bg-yellow-500/20 transition-all" aria-pressed="false">Mod <span id="usr_chip_mod" class="font-mono">0</span></button>
@@ -1045,52 +1130,61 @@
 
       <div class="bg-[var(--c-card)] border border-[var(--c-card-border)] rounded-xl overflow-hidden">
           <div class="hidden lg:grid lg:grid-cols-12 gap-3 lg:gap-4 px-4 sm:px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-muted)] font-bold items-center">
-              <div class="lg:col-span-5">User</div>
+              <div class="lg:col-span-4">User</div>
               <div class="lg:col-span-1 text-center" title="Protected from Inactivity Prune (safe role)">Safe</div>
               <div class="lg:col-span-3 text-right" title="Last message time recorded by the bot">Last activity</div>
-              <div class="lg:col-span-3 text-right">Joined</div>
+              <div class="lg:col-span-2 text-right">Joined</div>
+              <div class="lg:col-span-2 text-right">Actions</div>
           </div>
           <div id="userTableBody" role="list" class="divide-y divide-white/5">
               <div role="listitem" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading users...</div>
           </div>
       </div>
 
-      <div class="mt-8 border-t border-[var(--c-card-border)] pt-8">
-          <div class="flex flex-col mb-4">
-              <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
-              <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Prune members who have been inactive so the community stays active</p>
-          </div>
-          
-          <div class="grid grid-cols-1 md:max-w-md gap-6 mb-6">
-              <div>
-                  <label class="field-label">Days of Inactivity</label>
-                  <input type="number" id="inactivityDays" class="field-input w-full min-h-[44px]" value="30" min="1" max="730" />
-                  <p class="field-hint">Users inactive for this many days will be flagged here and in User Manager (last-activity column tint). Protected (safe) role is saved under Role Configuration.</p>
-              </div>
-          </div>
-          
-          <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
-              <button type="button" id="inactivityScanBtn" onclick="scanInactivityKickTargets()" class="min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.25)] rounded-lg hover:bg-red-600 hover:border-red-700 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
-                  <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                  Purge users
-              </button>
-              <button type="button" id="inactivityExecuteBtn" onclick="executeInactivityKicks()" class="hidden min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] rounded-lg hover:bg-red-600 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
-                  Execute Inactivity Prune
-              </button>
-          </div>
+  </div>
+</section>
 
-          <!-- Dry Run Results -->
-          <div id="inactivityResultsContainer" class="hidden mt-6 border border-red-500/20 rounded-xl overflow-hidden bg-[var(--c-card)]">
-              <div class="bg-red-500/10 px-4 py-2 border-b border-red-500/20 flex justify-between items-center">
-                  <span class="text-[10px] uppercase font-bold text-red-500 tracking-widest">Dry-Run Preview</span>
-                  <span id="inactivityTargetCount" class="text-xs font-mono font-bold text-red-500">0 Targets</span>
-              </div>
-              <div class="max-h-64 overflow-y-auto overflow-x-auto">
-                  <table class="w-full text-left text-xs min-w-[280px]">
-                      <tbody id="inactivityResultsBody" class="divide-y divide-white/5">
-                      </tbody>
-                  </table>
-              </div>
+<!-- ══════════════════════════════════════════════════════════ INACTIVITY PRUNE -->
+<section id="inactivity" class="mb-10 page-section hidden">
+  <div class="card p-6">
+      <div class="flex flex-col mb-4">
+          <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
+          <p class="text-[10px] text-[var(--c-text-dim)] uppercase tracking-wider font-bold">Prune members who have been inactive so the community stays active</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:max-w-md gap-6 mb-6">
+          <div>
+              <label class="field-label">Days of Inactivity</label>
+              <input type="number" id="inactivityDays" class="field-input w-full min-h-[44px]" value="30" min="1" max="730" />
+              <p class="field-hint">Users inactive for this many days will be flagged here and in User Manager (last-activity column tint).</p>
+          </div>
+          <div>
+              <label class="field-label">Inactivity Kick Protected Role</label>
+              <select id="prune_protected_role_id" class="field-input role-select"></select>
+              <p class="field-hint">Members with this role are never targeted by Inactivity Prune and are marked as Safe in User Manager.</p>
+          </div>
+      </div>
+      <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
+          <button type="button" id="inactivityScanBtn" onclick="scanInactivityKickTargets()" class="min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.25)] rounded-lg hover:bg-red-600 hover:border-red-700 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+              <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              Scan for Users
+          </button>
+          <button type="button" id="inactivityExecuteBtn" onclick="executeInactivityKicks()" class="hidden min-h-[44px] px-4 py-2.5 bg-red-500 border border-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.3)] rounded-lg hover:bg-red-600 transition-all text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+              Execute Inactivity Prune
+          </button>
+      </div>
+
+      <!-- Dry Run Results -->
+      <div id="inactivityResultsContainer" class="hidden mt-6 border border-red-500/20 rounded-xl overflow-hidden bg-[var(--c-card)]">
+          <div class="bg-red-500/10 px-4 py-2 border-b border-red-500/20 flex justify-between items-center">
+              <span class="text-[10px] uppercase font-bold text-red-500 tracking-widest">Dry-Run Preview</span>
+              <span id="inactivityTargetCount" class="text-xs font-mono font-bold text-red-500">0 Targets</span>
+          </div>
+          <div class="max-h-64 overflow-y-auto overflow-x-auto">
+              <table class="w-full text-left text-xs min-w-[280px]">
+                  <tbody id="inactivityResultsBody" class="divide-y divide-white/5">
+                  </tbody>
+              </table>
           </div>
       </div>
   </div>
@@ -1157,7 +1251,7 @@
     font-size: 0.75rem;
     color: var(--c-hint);
   }
-  .save-btn {
+  .send-msg-btn {
     padding: 0.5rem 1.25rem;
     background: var(--c-accent);
     border-radius: 0.5rem;
@@ -1168,9 +1262,14 @@
     cursor: pointer;
     transition: background-color 0.2s;
   }
-  .save-btn:hover    { background: var(--c-accent-strong); }
-  .save-btn:active   { transform: scale(0.97); }
-  .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .send-msg-btn:hover    { background: var(--c-accent-strong); }
+  .send-msg-btn:active   { transform: scale(0.97); }
+  .send-msg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-icon {
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+  }
   /* Card sub-headings */
   .card-sub-title { color: var(--c-text); }
   .card-sub-desc  { color: var(--c-hint); }
@@ -1277,6 +1376,80 @@
       btn.disabled = false;
       btn.textContent = btn.dataset.originalText || btn.textContent;
     }
+  }
+
+  function buildButtonIcon(kind = 'default') {
+    if (kind === 'refresh') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>';
+    if (kind === 'save') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>';
+    if (kind === 'search') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>';
+    if (kind === 'create') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>';
+    if (kind === 'delete') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12M9 7v12m6-12v12M10 7l1-2h2l1 2" /></svg>';
+    if (kind === 'download') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v12m0 0l4-4m-4 4l-4-4M4 21h16" /></svg>';
+    if (kind === 'upload') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 21V9m0 0l-4 4m4-4l4 4M4 3h16" /></svg>';
+    if (kind === 'send') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>';
+    if (kind === 'stop') return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" stroke-width="2"></rect></svg>';
+    return '<svg class="btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" stroke-width="2"></circle></svg>';
+  }
+
+  function inferButtonIconKind(btn) {
+    const text = (btn.textContent || '').trim().toLowerCase();
+    const id = (btn.id || '').toLowerCase();
+    const title = (btn.title || '').toLowerCase();
+    const onclick = (btn.getAttribute('onclick') || '').toLowerCase();
+    const hay = `${text} ${id} ${title} ${onclick}`;
+    if (hay.includes('save')) return 'save';
+    if (hay.includes('refresh') || hay.includes('resync') || hay.includes('reload')) return 'refresh';
+    if (hay.includes('scan') || hay.includes('search')) return 'search';
+    if (hay.includes('export') || hay.includes('download')) return 'download';
+    if (hay.includes('import') || hay.includes('upload') || hay.includes('apply')) return 'upload';
+    if (hay.includes('create') || hay.includes('add')) return 'create';
+    if (hay.includes('delete') || hay.includes('remove') || hay.includes('revoke') || hay.includes('clear')) return 'delete';
+    if (hay.includes('send') || hay.includes('execute') || hay.includes('run')) return 'send';
+    if (hay.includes('stop') || hay.includes('cancel')) return 'stop';
+    return 'default';
+  }
+
+  function ensureNonChipButtonsHaveIcons() {
+    document.querySelectorAll('button').forEach((btn) => {
+      if (btn.classList.contains('um-chip-btn')) return;
+      if (btn.querySelector('svg')) return;
+      const kind = inferButtonIconKind(btn);
+      btn.classList.add('inline-flex', 'items-center', 'justify-center', 'gap-2');
+      btn.insertAdjacentHTML('afterbegin', buildButtonIcon(kind));
+    });
+  }
+
+  function confirmWithModal({ title = 'Confirm action', message = 'Are you sure?', confirmLabel = 'Confirm' }) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirmModal');
+      const backdrop = document.getElementById('confirmModalBackdrop');
+      const titleEl = document.getElementById('confirmModalTitle');
+      const messageEl = document.getElementById('confirmModalMessage');
+      const cancelBtn = document.getElementById('confirmModalCancel');
+      const confirmBtn = document.getElementById('confirmModalConfirm');
+      if (!modal || !titleEl || !messageEl || !cancelBtn || !confirmBtn) {
+        resolve(window.confirm(message));
+        return;
+      }
+
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      confirmBtn.textContent = confirmLabel;
+      modal.classList.remove('hidden');
+
+      const cleanup = (result) => {
+        modal.classList.add('hidden');
+        cancelBtn.removeEventListener('click', onCancel);
+        confirmBtn.removeEventListener('click', onConfirm);
+        backdrop?.removeEventListener('click', onCancel);
+        resolve(result);
+      };
+      const onCancel = () => cleanup(false);
+      const onConfirm = () => cleanup(true);
+      cancelBtn.addEventListener('click', onCancel);
+      confirmBtn.addEventListener('click', onConfirm);
+      backdrop?.addEventListener('click', onCancel);
+    });
   }
 
   function escapeHtml(value) {
@@ -1401,8 +1574,345 @@
     return map;
   }
 
+  // ── Debounced settings persistence (replaces manual Save buttons) ─────────
+  const SETTINGS_GROUPS = [
+    { id: 'general', keys: ['guild_name', 'server_invite_url', 'base_embed_color', 'bot_status', 'bot_status_type'] },
+    { id: 'roles', keys: ['noobies_role_id', 'noobies_threshold', 'newuser_been_in_server_before_role_id', 'give_perms_fren_role_id', 'give_perms_position_above_role_id', 'newuser_permission_diff_role_id'] },
+    { id: 'moderation_spam', keys: ['anti_spam_enabled', 'anti_spam_threshold', 'anti_spam_window_hours', 'anti_spam_channel_id'] },
+    { id: 'moderation_inactivity', keys: ['inactivity_guard_enabled', 'inactivity_guard_timeout_hours'] },
+    { id: 'moderation_entry', keys: ['entry_guard_enabled', 'entry_guard_account_age'] },
+    { id: 'reminders', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms', 'reddit_promotion_targets', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
+    { id: 'social_notext', keys: ['notext_channel'] },
+    { id: 'inactivity', keys: ['prune_protected_role_id'] },
+  ];
+  const SETTINGS_DEBOUNCE_MS = 650;
+  const settingsDebounceTimers = new Map();
+  let settingsSaveInFlight = 0;
+  let settingsSaveFailed = false;
+  let settingsHydrating = false;
+
+  const fieldIdToGroupId = new Map();
+  SETTINGS_GROUPS.forEach((g) => {
+    g.keys.forEach((k) => fieldIdToGroupId.set(k, g.id));
+  });
+  fieldIdToGroupId.set('base_embed_color_text', 'general');
+
+  const dirtyTrackedIds = new Set([
+    ...SETTINGS_GROUPS.flatMap((g) => g.keys),
+    'base_embed_color_text',
+  ]);
+
+  let hasUnsavedChanges = false;
+
+  function updatePendingSettingsState() {
+    hasUnsavedChanges =
+      settingsDebounceTimers.size > 0 ||
+      settingsSaveInFlight > 0 ||
+      settingsSaveFailed;
+  }
+
+  function buildSettingsPayload(keys) {
+    const payload = {};
+    keys.forEach((key) => {
+      if (key === 'base_embed_color') {
+        payload[key] = colorText?.value || colorPicker?.value || '#999999';
+        return;
+      }
+      const val = getFieldValue(key);
+      if (val !== undefined) payload[key] = val;
+    });
+    return payload;
+  }
+
+  async function performSettingsSave(keys) {
+    const payload = buildSettingsPayload(keys);
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        settingsSaveFailed = false;
+        updatePendingSettingsState();
+        return true;
+      }
+      settingsSaveFailed = true;
+      updatePendingSettingsState();
+      showToast(data.error || 'Failed to save.', 'error');
+      return false;
+    } catch (err) {
+      settingsSaveFailed = true;
+      updatePendingSettingsState();
+      showToast('Network error. Please try again.', 'error');
+      return false;
+    }
+  }
+
+  async function runSettingsSaveForGroup(groupId) {
+    const group = SETTINGS_GROUPS.find((g) => g.id === groupId);
+    if (!group) return;
+    settingsSaveInFlight++;
+    updatePendingSettingsState();
+    try {
+      await performSettingsSave(group.keys);
+    } finally {
+      settingsSaveInFlight--;
+      updatePendingSettingsState();
+    }
+  }
+
+  function scheduleDebouncedSettingsSave(groupId) {
+    if (settingsHydrating) return;
+    if (!SETTINGS_GROUPS.some((g) => g.id === groupId)) return;
+    const existing = settingsDebounceTimers.get(groupId);
+    if (existing) clearTimeout(existing);
+    const tid = setTimeout(() => {
+      settingsDebounceTimers.delete(groupId);
+      updatePendingSettingsState();
+      runSettingsSaveForGroup(groupId);
+    }, SETTINGS_DEBOUNCE_MS);
+    settingsDebounceTimers.set(groupId, tid);
+    updatePendingSettingsState();
+  }
+
+  async function flushAllPendingSettingsSaves() {
+    const pending = [...settingsDebounceTimers.keys()];
+    pending.forEach((gid) => {
+      const t = settingsDebounceTimers.get(gid);
+      if (t) clearTimeout(t);
+      settingsDebounceTimers.delete(gid);
+    });
+    updatePendingSettingsState();
+    for (const groupId of pending) {
+      await runSettingsSaveForGroup(groupId);
+    }
+  }
+
+  function onSettingsFieldActivity(e) {
+    if (settingsHydrating) return;
+    const target = e.target;
+    if (!target?.id) return;
+    if (!dirtyTrackedIds.has(target.id)) return;
+    const groupId = fieldIdToGroupId.get(target.id);
+    if (!groupId) return;
+    scheduleDebouncedSettingsSave(groupId);
+  }
+
+  function syncRedditPromotionTargetsJson() {
+    const tbody = document.getElementById('redditPromotionTargetsBody');
+    const hidden = document.getElementById('reddit_promotion_targets');
+    if (!tbody || !hidden) return;
+    const rows = [];
+    tbody.querySelectorAll('tr').forEach((tr) => {
+      const sub = tr.querySelector('.um-promo-sub')?.value?.trim();
+      const url = tr.querySelector('.um-promo-url')?.value?.trim();
+      const title = tr.querySelector('.um-promo-title')?.value?.trim() || '';
+      const body = tr.querySelector('.um-promo-body')?.value?.trim() || '';
+      const sel = tr.querySelector('.um-promo-flair');
+      const tid = sel?.value?.trim() || '';
+      let flairText = '';
+      if (tid && sel?.selectedOptions?.[0]) {
+        flairText = sel.selectedOptions[0].textContent.trim();
+      } else if (tr.dataset.flairHint) {
+        flairText = String(tr.dataset.flairHint).trim();
+      }
+      if (!sub || !url) return;
+      rows.push({
+        subreddit: sub,
+        url,
+        title,
+        body,
+        flair_text: flairText,
+        flair_template_id: tid
+      });
+    });
+    hidden.value = JSON.stringify(rows);
+  }
+
+  function redditPromotionTargetsAfterChange() {
+    if (settingsHydrating) return;
+    syncRedditPromotionTargetsJson();
+    scheduleDebouncedSettingsSave('reminders');
+  }
+
+  async function fetchRedditFlairsForRow(btn) {
+    const tr = btn.closest('tr');
+    if (!tr) return;
+    const subInput = tr.querySelector('.um-promo-sub');
+    const raw = subInput?.value?.trim() || '';
+    const sub = raw.replace(/^r\//i, '').replace(/[^A-Za-z0-9_]/g, '');
+    if (!sub) {
+      showToast('Enter a subreddit name first.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch(`/api/reddit/link-flair?subreddit=${encodeURIComponent(sub)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load flairs.');
+      const sel = tr.querySelector('.um-promo-flair');
+      if (!sel) return;
+      const prev = sel.value;
+      const hint = tr.dataset.flairHint || '';
+      sel.replaceChildren();
+      const o0 = document.createElement('option');
+      o0.value = '';
+      o0.textContent = '— None —';
+      sel.appendChild(o0);
+      for (const f of data.flairs || []) {
+        const o = document.createElement('option');
+        o.value = f.id;
+        o.textContent = f.text;
+        sel.appendChild(o);
+      }
+      if (prev && [...sel.options].some((x) => x.value === prev)) {
+        sel.value = prev;
+      } else if (hint) {
+        const low = hint.toLowerCase();
+        const match = [...sel.options].find((x) => x.value && x.textContent.toLowerCase().includes(low));
+        if (match) sel.value = match.value;
+      }
+      delete tr.dataset.flairHint;
+      redditPromotionTargetsAfterChange();
+    } catch (e) {
+      showToast(e.message || 'Could not load flairs.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function addRedditPromotionRow(data = null, silent = false) {
+    const tbody = document.getElementById('redditPromotionTargetsBody');
+    if (!tbody) return;
+
+    const sub = data?.subreddit != null ? String(data.subreddit) : '';
+    const url = data?.url != null ? String(data.url) : '';
+    const title = data?.title != null ? String(data.title) : '';
+    const body = data?.body != null ? String(data.body) : '';
+    const flair = data?.flair_text != null ? String(data.flair_text) : (data?.flairText != null ? String(data.flairText) : '');
+    const flairTid = data?.flair_template_id != null ? String(data.flair_template_id) : (data?.flairTemplateId != null ? String(data.flairTemplateId) : '');
+
+    const tr = document.createElement('tr');
+    tr.className = 'align-top';
+    if (flair && !flairTid) tr.dataset.flairHint = flair;
+
+    function wrapCell(el) {
+      const td = document.createElement('td');
+      td.className = 'py-2 pr-2';
+      td.appendChild(el);
+      return td;
+    }
+
+    const inSub = document.createElement('input');
+    inSub.type = 'text';
+    inSub.className = 'field-input um-promo-sub text-sm';
+    inSub.placeholder = 'MySubreddit';
+    inSub.value = sub;
+
+    const inUrl = document.createElement('input');
+    inUrl.type = 'url';
+    inUrl.className = 'field-input um-promo-url text-sm';
+    inUrl.placeholder = 'https://discord.gg/...';
+    inUrl.value = url;
+
+    const inTitle = document.createElement('input');
+    inTitle.type = 'text';
+    inTitle.className = 'field-input um-promo-title text-sm';
+    inTitle.placeholder = 'Use default';
+    inTitle.value = title;
+
+    const taBody = document.createElement('textarea');
+    taBody.className = 'field-input um-promo-body text-sm min-h-[52px]';
+    taBody.rows = 2;
+    taBody.placeholder = 'Use default';
+    taBody.value = body;
+
+    const flairWrap = document.createElement('div');
+    flairWrap.className = 'flex flex-col gap-1 min-w-[160px]';
+    const selFlair = document.createElement('select');
+    selFlair.className = 'field-input um-promo-flair text-sm';
+    const optNone = document.createElement('option');
+    optNone.value = '';
+    optNone.textContent = '— None —';
+    selFlair.appendChild(optNone);
+    if (flairTid) {
+      const o = document.createElement('option');
+      o.value = flairTid;
+      o.textContent = flair || flairTid;
+      selFlair.appendChild(o);
+      selFlair.value = flairTid;
+    }
+    const btnLoad = document.createElement('button');
+    btnLoad.type = 'button';
+    btnLoad.className =
+      'um-promo-flair-load px-2 py-1 rounded text-[10px] font-bold border border-[var(--c-input-border)] bg-[var(--c-input)] hover:bg-[var(--c-card-border)] transition-colors';
+    btnLoad.textContent = 'Fetch flairs';
+    flairWrap.appendChild(selFlair);
+    flairWrap.appendChild(btnLoad);
+
+    const btnRm = document.createElement('button');
+    btnRm.type = 'button';
+    btnRm.className = 'p-2 rounded-lg text-[var(--c-text-dim)] hover:text-red-400 hover:bg-red-500/10';
+    btnRm.title = 'Remove row';
+    btnRm.innerHTML = '<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 7h12M9 7v12m6-12v12M10 7l1-2h2l1 2"/></svg>';
+    btnRm.addEventListener('click', () => removeRedditPromotionRow(btnRm));
+
+    const tdLast = document.createElement('td');
+    tdLast.className = 'py-2 pr-0 text-right';
+    tdLast.appendChild(btnRm);
+
+    tr.appendChild(wrapCell(inSub));
+    tr.appendChild(wrapCell(inUrl));
+    tr.appendChild(wrapCell(inTitle));
+    tr.appendChild(wrapCell(taBody));
+    tr.appendChild(wrapCell(flairWrap));
+    tr.appendChild(tdLast);
+
+    tbody.appendChild(tr);
+
+    if (!silent) redditPromotionTargetsAfterChange();
+  }
+
+  function removeRedditPromotionRow(btn) {
+    const tr = btn.closest('tr');
+    if (tr) tr.remove();
+    redditPromotionTargetsAfterChange();
+  }
+
+  function initRedditPromotionTableFromSettingsJson(jsonStr) {
+    const tbody = document.getElementById('redditPromotionTargetsBody');
+    if (!tbody) return;
+    tbody.replaceChildren();
+    let arr = [];
+    try {
+      arr = JSON.parse(jsonStr || '[]');
+    } catch {
+      arr = [];
+    }
+    if (!Array.isArray(arr) || arr.length === 0) {
+      addRedditPromotionRow(null, true);
+    } else {
+      arr.forEach((row) => addRedditPromotionRow(row, true));
+    }
+    syncRedditPromotionTargetsJson();
+  }
+
+  function onRedditPromotionTableInput(e) {
+    if (settingsHydrating) return;
+    if (e?.target?.classList?.contains('um-promo-flair') && e.target.value) {
+      const tr = e.target.closest('tr');
+      if (tr) delete tr.dataset.flairHint;
+    }
+    syncRedditPromotionTargetsJson();
+    scheduleDebouncedSettingsSave('reminders');
+  }
+
   // ── Load settings ─────────────────────────────────────────────────────────
   async function loadSettings() {
+    settingsHydrating = true;
+    try {
     const res = await fetch('/api/settings');
     if (!res.ok) { showToast('Failed to load settings.', 'error'); return; }
     const s = await res.json();
@@ -1411,6 +1921,9 @@
       'bot_status', 'bot_status_type', 'guild_name', 'server_invite_url',
       'noobies_threshold', 'inactivity_guard_timeout_hours', 'entry_guard_account_age',
       'anti_spam_threshold', 'anti_spam_window_hours',
+      'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms',
+      'reddit_promotion_title', 'reddit_promotion_body',
+      'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment',
     ];
     plainFields.forEach(key => setFieldValue(key, s[key]));
 
@@ -1438,6 +1951,18 @@
       if (v !== undefined && v !== null && v !== '') savedMap[id] = v;
     });
     await loadGuildData(savedMap);
+
+    const targetsJson =
+      typeof s.reddit_promotion_targets === 'string'
+        ? s.reddit_promotion_targets
+        : JSON.stringify(s.reddit_promotion_targets || []);
+    initRedditPromotionTableFromSettingsJson(targetsJson);
+
+    settingsSaveFailed = false;
+    updatePendingSettingsState();
+    } finally {
+      settingsHydrating = false;
+    }
   }
 
   // ── Refresh button ────────────────────────────────────────────────────────
@@ -1458,7 +1983,8 @@
         loadDatabaseEntries(),
         loadAutoReactions(),
         loadUserSummary(true),
-        loadInvites(true)
+        loadInvites(true),
+        loadPermissionsSummary()
       ]);
       showToast('Dashboard synchronized with live data.', 'success');
     } catch (err) {
@@ -1474,42 +2000,13 @@
     }
   });
 
-  // ── Save section ──────────────────────────────────────────────────────────
-  async function saveSection(btn) {
-    const keys = btn.dataset.keys.split(',');
-    const payload = {};
-
-    keys.forEach(key => {
-      const val = getFieldValue(key);
-      if (val !== undefined) {
-        // Use the color text box value (hex string) for embed color
-        if (key === 'base_embed_color') {
-          payload[key] = colorText?.value || colorPicker?.value || '#999999';
-        } else {
-          payload[key] = val;
-        }
-      }
-    });
-
-    setButtonState(btn, 'loading');
-    try {
-      const res = await fetch('/api/settings', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        showToast('Settings saved!', 'success');
-      } else {
-        showToast(data.error || 'Failed to save.', 'error');
-      }
-    } catch (err) {
-      showToast('Network error. Please try again.', 'error');
-    } finally {
-      setButtonState(btn, 'idle');
-    }
-  }
+  document.addEventListener('input', onSettingsFieldActivity);
+  document.addEventListener('change', onSettingsFieldActivity);
+  window.addEventListener('beforeunload', (e) => {
+    if (!hasUnsavedChanges) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 
   // ── Messaging Center ──────────────────────────────────────────────────────
   const msgModeText   = document.getElementById('msg_mode_text');
@@ -1753,7 +2250,22 @@
   };
 
   window.deleteInvite = async (code) => {
-    if (!confirm(`Are you sure you want to revoke invite ${code}?`)) return;
+    let previewText = '';
+    try {
+      const p = await fetch(`/api/invites/${encodeURIComponent(code)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: true })
+      });
+      const d = await p.json().catch(() => ({}));
+      if (p.ok) previewText = d.exists ? '\nPreview: invite exists and can be revoked.' : '\nPreview: invite was not found.';
+    } catch (_) {}
+    const ok = await confirmWithModal({
+      title: 'Revoke Invite',
+      message: `Are you sure you want to revoke invite ${code}?${previewText}`,
+      confirmLabel: 'Revoke'
+    });
+    if (!ok) return;
     try {
         const res = await fetch(`/api/invites/${code}`, { method: 'DELETE' });
         if (res.ok) {
@@ -2006,7 +2518,12 @@
       showToast('Validate the backup before importing.', 'error');
       return;
     }
-    if (!confirm('Import will upsert keys from this backup into the live database. Continue?')) return;
+    const ok = await confirmWithModal({
+      title: 'Apply Database Import',
+      message: 'Import will upsert keys from this backup into the live database. Continue?',
+      confirmLabel: 'Import'
+    });
+    if (!ok) return;
     const btn = document.getElementById('applyDbJsonBtn');
     if (btn) btn.disabled = true;
     setImportDbUiStatus('Importing…', false);
@@ -2034,6 +2551,7 @@
 
   // ── User Manager System ────────────────────────────────────────────────────────
   let userManagerCache = null;
+  let userManagerSearchQuery = '';
   /** @type {Set<string>} Selected filter chip keys (AND together). */
   let userManagerSelectedChips = new Set();
 
@@ -2150,6 +2668,16 @@
     return true;
   }
 
+  function userManagerPassesSearch(u, query) {
+    if (!query) return true;
+    const q = String(query).trim().toLowerCase();
+    if (!q) return true;
+    const displayName = String(u.displayName || '').toLowerCase();
+    const username = String(u.username || '').toLowerCase();
+    const userId = String(u.id || '').toLowerCase();
+    return displayName.includes(q) || username.includes(q) || userId.includes(q);
+  }
+
   function userManagerUpdateChips() {
     if (!userManagerCache || !userManagerCache.recent) return;
     const list = userManagerCache.recent;
@@ -2192,9 +2720,10 @@
     const days = userManagerInactiveDays();
     userManagerUpdateChips();
 
-    const filtered = userManagerCache.recent.filter((u) =>
-      userManagerPassesChipFilters(u, userManagerSelectedChips)
-    );
+    const filtered = userManagerCache.recent.filter((u) => (
+      userManagerPassesChipFilters(u, userManagerSelectedChips) &&
+      userManagerPassesSearch(u, userManagerSearchQuery)
+    ));
 
     tbody.innerHTML = '';
     if (filtered.length === 0) {
@@ -2255,10 +2784,12 @@
 
         const dn = escapeHtmlUserManager(u.displayName);
         const un = escapeHtmlUserManager(u.username);
+        const userIdJs = JSON.stringify(String(u.id || ''));
+        const displayNameJs = JSON.stringify(String(u.displayName || u.username || u.id || 'User'));
 
         row.innerHTML = `
           <div class="lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center px-3 sm:px-4 py-3">
-            <div class="lg:col-span-5 flex items-start justify-between gap-2 min-w-0">
+            <div class="lg:col-span-4 flex items-start justify-between gap-2 min-w-0">
               <div class="flex items-center gap-3 min-w-0 flex-1">
                 <div class="relative shrink-0">
                   <img src="${avatarSrc}" class="w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-[var(--c-input-border)]" alt="">
@@ -2276,9 +2807,16 @@
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Last activity</span>
               <div class="text-right" title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}</div>
             </div>
-            <div class="mt-2 lg:mt-0 lg:col-span-3 text-xs text-[var(--c-text-muted)]">
+            <div class="mt-2 lg:mt-0 lg:col-span-2 text-xs text-[var(--c-text-muted)]">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Joined</span>
               <div class="text-right">${createdDate}</div>
+            </div>
+            <div class="mt-3 lg:mt-0 lg:col-span-2">
+              <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Actions</span>
+              <div class="flex justify-end gap-2">
+                <button type="button" onclick='kickUserFromManager(${userIdJs}, ${displayNameJs})' class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 transition-colors">Kick</button>
+                <button type="button" onclick='banUserFromManager(${userIdJs}, ${displayNameJs})' class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors">Ban</button>
+              </div>
             </div>
           </div>
         `;
@@ -2288,10 +2826,10 @@
 
     if (hint) {
       const allN = userManagerCache.recent.length;
-      const selective = userManagerSelectedChips.size > 0;
+      const selective = userManagerSelectedChips.size > 0 || Boolean(userManagerSearchQuery.trim());
       if (filtered.length !== allN || selective) {
         hint.classList.remove('hidden');
-        hint.textContent = `Showing ${filtered.length} of ${allN} members (${days} day${days === 1 ? '' : 's'} inactive threshold; chips use AND).`;
+        hint.textContent = `Showing ${filtered.length} of ${allN} members (${days} day${days === 1 ? '' : 's'} inactive threshold; chips use AND${userManagerSearchQuery.trim() ? '; search active' : ''}).`;
       } else {
         hint.classList.add('hidden');
         hint.textContent = '';
@@ -2313,6 +2851,15 @@
         document.getElementById('usr_total').textContent = data.total || 0;
         document.getElementById('usr_humans').textContent = data.humans || 0;
         document.getElementById('usr_bots').textContent = data.bots || 0;
+        const b = data.activityInsights?.buckets || {};
+        const under1d = Number(b.under1d ?? 0);
+        const under7dOnly = Number(b.under7d ?? 0);
+        const under30dOnly = Number(b.under30d ?? 0);
+        document.getElementById('usr_act_1d').textContent = under1d;
+        document.getElementById('usr_act_7d').textContent = under1d + under7dOnly;
+        document.getElementById('usr_act_30d').textContent = under1d + under7dOnly + under30dOnly;
+        document.getElementById('usr_act_30p').textContent = b.over30d ?? 0;
+        document.getElementById('usr_act_nodata').textContent = b.noData ?? 0;
         userManagerCache = data;
         renderUserManagerTable();
         if (data.stale) {
@@ -2331,19 +2878,106 @@
     }
   }
 
+  async function loadPermissionsSummary() {
+    try {
+      const res = await fetch('/api/permissions/summary');
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      document.getElementById('perm_members').textContent = data.members ?? '--';
+      document.getElementById('perm_admins').textContent = data.admins ?? '--';
+      document.getElementById('perm_mods').textContent = data.mods ?? '--';
+      document.getElementById('perm_kick').textContent = data.keyPermissionHolders?.kickMembers ?? '--';
+      document.getElementById('perm_ban').textContent = data.keyPermissionHolders?.banMembers ?? '--';
+    } catch {
+      showToast('Failed to load permissions panel.', 'error');
+    }
+  }
+
+  async function exportDiagnosticsBundle() {
+    try {
+      const res = await fetch('/api/maintenance/diagnostics/export');
+      if (!res.ok) throw new Error('Failed to export diagnostics bundle.');
+      const blob = await res.blob();
+      const cd = res.headers.get('content-disposition') || '';
+      const filenameMatch = /filename=\"?([^\";]+)\"?/i.exec(cd);
+      const filename = filenameMatch ? filenameMatch[1] : 'nova-diagnostics.json';
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('Diagnostics bundle exported.');
+    } catch (e) {
+      showToast(e.message || 'Failed to export diagnostics.', 'error');
+    }
+  }
+
   (function initUserManagerFilterListeners() {
     const root = userManagerRoot();
     if (!root) return;
     root.addEventListener('input', (e) => {
       if (e.target && e.target.id === 'inactivityDays') renderUserManagerTable();
+      if (e.target && e.target.id === 'userManagerSearch') {
+        userManagerSearchQuery = e.target.value || '';
+        renderUserManagerTable();
+      }
     });
   })();
+
+  async function kickUserFromManager(userId, displayName) {
+    const ok = await confirmWithModal({
+      title: 'Kick User',
+      message: `Kick ${displayName} from the server? This can be undone by re-invite.`,
+      confirmLabel: 'Kick'
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(userId)}/kick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to kick user.');
+      showToast('User kicked successfully.');
+      loadUserSummary(true);
+    } catch (e) {
+      showToast(e.message || 'Failed to kick user.', 'error');
+    }
+  }
+
+  async function banUserFromManager(userId, displayName) {
+    const ok = await confirmWithModal({
+      title: 'Ban User',
+      message: `Ban ${displayName} from the server? This action is stronger than kick.`,
+      confirmLabel: 'Ban'
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(userId)}/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Failed to ban user.');
+      showToast('User banned successfully.');
+      loadUserSummary(true);
+    } catch (e) {
+      showToast(e.message || 'Failed to ban user.', 'error');
+    }
+  }
 
   async function scanInactivityKickTargets() {
       const days = document.getElementById('inactivityDays').value;
       const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
       const btn = document.getElementById('inactivityScanBtn');
       const prevLabel = btn.textContent;
+      const dangerClasses = ['bg-red-500', 'border-red-600', 'text-white', 'shadow-[0_0_15px_rgba(239,68,68,0.25)]', 'hover:bg-red-600', 'hover:border-red-700'];
+      const neutralClasses = ['bg-[var(--c-input)]', 'border-[var(--c-input-border)]', 'text-[var(--c-label)]', 'shadow-none', 'hover:bg-[var(--c-card-border)]', 'hover:border-[var(--c-input-border)]'];
       btn.disabled = true;
       btn.textContent = 'Scanning…';
 
@@ -2377,16 +3011,27 @@
               execBtn.disabled = true;
               tbody.innerHTML = `<tr><td colspan="2" class="px-4 py-4 text-center text-[var(--c-text-dim)]">No inactive users found matching this criteria.</td></tr>`;
           }
+          // After first scan, shift to neutral "Re-Scan" state.
+          btn.classList.remove(...dangerClasses);
+          btn.classList.add(...neutralClasses);
+          btn.textContent = 'Re-Scan Users';
       } catch (err) {
           showToast('Failed to scan for Inactivity Prune targets.', 'error');
       } finally {
           btn.disabled = false;
-          btn.textContent = prevLabel;
+          if (btn.textContent === 'Scanning…') {
+            btn.textContent = prevLabel;
+          }
       }
   }
 
   async function executeInactivityKicks() {
-      if (!confirm('WARNING: This will permanently kick the listed users from the server. This action cannot be undone. Are you sure you want to proceed?')) return;
+      const ok = await confirmWithModal({
+        title: 'Execute Inactivity Prune',
+        message: 'This will permanently kick the listed users from the server. This action cannot be undone.',
+        confirmLabel: 'Execute'
+      });
+      if (!ok) return;
       
       const days = document.getElementById('inactivityDays').value;
       const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
@@ -2552,7 +3197,22 @@
   };
 
   window.deleteDbEntry = async (fullKey) => {
-    if (!confirm(`Are you sure you want to delete "${fullKey}"?\nThis action is irreversible.`)) return;
+    let previewText = '';
+    try {
+      const p = await fetch('/api/database/raw', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullKey, dryRun: true })
+      });
+      const d = await p.json().catch(() => ({}));
+      if (p.ok) previewText = `\nPreview action: ${d.action || 'delete_raw_key'}.`;
+    } catch (_) {}
+    const ok = await confirmWithModal({
+      title: 'Delete Database Entry',
+      message: `Delete "${fullKey}"? This action is irreversible.${previewText}`,
+      confirmLabel: 'Delete'
+    });
+    if (!ok) return;
     
     try {
         const res = await fetch('/api/database/raw', {
@@ -2993,7 +3653,22 @@
   }
 
   async function maintClearAllSessions() {
-    if (!confirm('This logs out every dashboard user. Continue?')) return;
+    let estimate = 'unknown';
+    try {
+      const pre = await fetch('/api/maintenance/sessions/clear-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: true })
+      });
+      const preData = await pre.json().catch(() => ({}));
+      if (pre.ok) estimate = String(preData.estimatedActiveSessionRows ?? 'unknown');
+    } catch (_) {}
+    const ok = await confirmWithModal({
+      title: 'Clear All Sessions',
+      message: `This logs out every dashboard user. Estimated active session rows: ${estimate}. Continue?`,
+      confirmLabel: 'Clear'
+    });
+    if (!ok) return;
     try {
       const res = await fetch('/api/maintenance/sessions/clear-all', {
         method: 'POST',
@@ -3179,7 +3854,6 @@
         body: JSON.stringify({
           maxPerChannel: Number.isFinite(maxPerChannel) ? maxPerChannel : 10000,
           delayMs: Number.isFinite(delayMs) ? delayMs : 300,
-          onlyMissing: true,
           dryRun,
           channelIds
         })
@@ -3216,10 +3890,19 @@
     } catch (_) {}
   }
 
-  // Attach save handlers for non-hierarchical sections
-  document.querySelectorAll('.save-btn').forEach(btn => {
-    if (btn.id !== 'sendMessageBtn') btn.addEventListener('click', () => saveSection(btn));
-  });
+  ensureNonChipButtonsHaveIcons();
+
+  (function wireRedditPromotionTargetsDelegation() {
+    const tbody = document.getElementById('redditPromotionTargetsBody');
+    if (!tbody || tbody.dataset.wired) return;
+    tbody.dataset.wired = '1';
+    tbody.addEventListener('input', onRedditPromotionTableInput);
+    tbody.addEventListener('change', onRedditPromotionTableInput);
+    tbody.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('.um-promo-flair-load');
+      if (btn) fetchRedditFlairsForRow(btn);
+    });
+  })();
 
   // ── SPA Visibility Logic ──────────────────────────────────────────────────
   function updateVisibility() {
@@ -3234,6 +3917,9 @@
             loadUserSummary(false);
         }
     }
+    if (hash === '#roles' || hash === '#permissions') {
+      loadPermissionsSummary();
+    }
 
     if (hash === '#maintenance') {
       loadMaintenanceChannels();
@@ -3245,7 +3931,33 @@
     // Smooth scroll to top on section change
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  window.addEventListener('hashchange', updateVisibility);
+  window.addEventListener('hashchange', async (e) => {
+    await flushAllPendingSettingsSaves();
+    if (!hasUnsavedChanges) {
+      updateVisibility();
+      return;
+    }
+    const ok = await confirmWithModal({
+      title: 'Unsaved Changes',
+      message: settingsSaveFailed
+        ? 'Some settings could not be saved. Continue navigating anyway?'
+        : 'You still have settings changes in progress. Continue navigating?',
+      confirmLabel: 'Discard'
+    });
+    if (ok) {
+      settingsDebounceTimers.forEach((t) => clearTimeout(t));
+      settingsDebounceTimers.clear();
+      settingsSaveFailed = false;
+      updatePendingSettingsState();
+      updateVisibility();
+      return;
+    }
+    if (e?.oldURL) {
+      const prevHash = new URL(e.oldURL).hash || '#status';
+      history.replaceState(null, '', prevHash);
+      updateVisibility();
+    }
+  });
   updateVisibility();
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -3253,5 +3965,6 @@
   loadDatabaseEntries();
   loadHealthStats();
   loadInvites();
+  loadPermissionsSummary();
   setInterval(loadHealthStats, 30000); // Refresh stats every 30s
 </script>

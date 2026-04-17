@@ -6,7 +6,16 @@ const path = require('path');
 const { ActivityType, PermissionFlagsBits } = require('discord.js');
 const requireAuth = require('../middleware/requireAuth');
 const { getSetting, setSetting, colorIntToHex } = require('../../utils/dynamicConfig');
-const { getValue, setValue, getAllInviteTagsData, getAllLastMessageTimes } = require('../../utils/database');
+const {
+  getValue,
+  setValue,
+  getAllInviteTagsData,
+  getAllLastMessageTimes,
+  setInviteTag,
+  deleteInviteTag,
+  setInviteNotificationChannel,
+  getInviteNotificationChannel
+} = require('../../utils/database');
 const { getKeyvForNamespace } = require('../../utils/dbScriptUtils');
 const {
   runSeedLastMessages,
@@ -30,9 +39,11 @@ const {
   sqliteIntegrityCheck,
   cleanupExpiredSessions,
   clearAllSessionRows,
-  sqliteRwProbe
+  sqliteRwProbe,
+  buildDiagnosticsBundle
 } = require('../../utils/maintenanceService');
 const logger = require('../../logger')('dashboard:api');
+const { redditApiRequest, isRedditConfigured } = require('../../utils/redditClient');
 
 /**
  * Extended diagnostics for GET /api/health/deep.
@@ -219,6 +230,122 @@ const INVITES_LIST_CACHE_MS = 90 * 1000;
 /** @type {{ guildId: string, expires: number, data: unknown[] } | null} */
 let invitesListCacheEntry = null;
 
+const DEFAULT_REDDIT_PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+const DEFAULT_REDDIT_PROMOTION_TITLE = '🐸 Da Frens (21+) | High-energy gaming, top-tier banter, and a strict "no lurkers" policy.';
+const DEFAULT_REDDIT_PROMOTION_BODY = `**🐸 Welcome to Da Frens!**
+
+*Where the banter is sharp, the games are sweaty, and the vibes are unmatched.*`;
+const DEFAULT_REDDIT_PROMOTION_SUBREDDITS = ['discordservers_', 'DiscordPromote', 'DiscordServerPromos'];
+/** Flair hint (substring match) used only when migrating legacy settings into `reddit_promotion_targets`. */
+const LEGACY_PROMOTION_FLAIR_HINTS = {
+  discordservers_: 'gaming',
+  DiscordPromote: 'gaming server',
+  DiscordServerPromos: 'multiple categories [please list in post description]'
+};
+const DEFAULT_NEEDAFRIEND_SUBREDDIT = 'needafriend';
+const DEFAULT_NEEDAFRIEND_THREAD_TITLE = 'Weekly Discord Server Advertisement Thread';
+const DEFAULT_NEEDAFRIEND_COMMENT = `🐸 Da Frens | 21+ High-Energy Banter & Gaming
+Join the chaos: https://discord.gg/Z9rYazqCA6`;
+const DEFAULT_REMINDER_BUMP_DELAY_MS = 2 * 60 * 60 * 1000;
+const DEFAULT_REMINDER_PROMOTE_DELAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_REMINDER_NEEDAFRIEND_DELAY_MS = 7 * 24 * 60 * 60 * 1000;
+
+function parseJsonList(val, fallback) {
+  if (!val) return fallback;
+  if (Array.isArray(val)) return val.map((v) => String(v).trim()).filter(Boolean);
+  try {
+    const parsed = JSON.parse(String(val));
+    if (Array.isArray(parsed)) return parsed.map((v) => String(v).trim()).filter(Boolean);
+  } catch {
+    /* ignore */
+  }
+  return fallback;
+}
+
+function toIntOrDefault(val, fallback, min, max) {
+  const n = parseInt(String(val), 10);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function normalizePromotionSubredditName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/^r\//i, '')
+    .replace(/[^A-Za-z0-9_]/g, '');
+}
+
+/**
+ * Validates dashboard input for /promote targets (per subreddit: link, optional title/body, flair hint).
+ * @param {unknown} val
+ * @returns {Array<{ subreddit: string, url: string, title: string, body: string, flair_text: string, flair_template_id: string }>}
+ */
+function validateAndNormalizeRedditPromotionTargets(val) {
+  let parsed = val;
+  if (typeof val === 'string') {
+    try {
+      parsed = JSON.parse(val);
+    } catch {
+      throw new Error('reddit_promotion_targets must be valid JSON.');
+    }
+  }
+  if (!Array.isArray(parsed)) {
+    throw new Error('reddit_promotion_targets must be a JSON array.');
+  }
+  if (parsed.length > 25) {
+    throw new Error('Too many promotion targets (max 25).');
+  }
+  const out = [];
+  for (const row of parsed) {
+    if (!row || typeof row !== 'object') continue;
+    const sub = normalizePromotionSubredditName(row.subreddit);
+    if (!sub || sub.length > 50) continue;
+    const url = String(row.url || row.link || '').trim();
+    if (!url || !/^https?:\/\//i.test(url)) continue;
+    const title = row.title != null ? String(row.title).trim().slice(0, 300) : '';
+    const body = row.body != null ? String(row.body).trim().slice(0, 10000) : '';
+    const flairHint = String(row.flair_text || row.flairText || '').trim().slice(0, 200);
+    const flairTemplateId = String(row.flair_template_id || row.flairTemplateId || '')
+      .trim()
+      .slice(0, 64);
+    out.push({ subreddit: sub, url, title, body, flair_text: flairHint, flair_template_id: flairTemplateId });
+  }
+  return out;
+}
+
+/**
+ * @param {string | null} rawTargets
+ * @param {string} legacyLink
+ * @param {unknown} legacySubsRaw
+ * @returns {string} JSON array string for the dashboard
+ */
+function buildRedditPromotionTargetsJsonForDashboard(rawTargets, legacyLink, legacySubsRaw) {
+  if (rawTargets) {
+    let p = rawTargets;
+    if (typeof rawTargets === 'string') {
+      try {
+        p = JSON.parse(rawTargets);
+      } catch {
+        p = null;
+      }
+    }
+    if (Array.isArray(p) && p.length > 0) {
+      return JSON.stringify(p);
+    }
+  }
+  const subs = parseJsonList(legacySubsRaw, DEFAULT_REDDIT_PROMOTION_SUBREDDITS);
+  const link = String(legacyLink || DEFAULT_REDDIT_PROMOTION_LINK).trim();
+  const rows = subs.map((sub) => ({
+    subreddit: sub,
+    url: link,
+    title: '',
+    body: '',
+    flair_text: LEGACY_PROMOTION_FLAIR_HINTS[sub] || '',
+    flair_template_id: ''
+  }));
+  return JSON.stringify(rows);
+}
+
 function invalidateInvitesListCache() {
   invitesListCacheEntry = null;
 }
@@ -362,6 +489,11 @@ async function readAllSettings() {
     noobiesRoleId, guildName, logLevel, serverInviteUrl,
     notextChannel, reminderChannel, reminderRole, pruneProtectedRoleId,
     dashboardPort, dashboardBaseUrl, dashboardCookieSecure,
+    inviteNotificationChannel,
+    redditPromotionTargetsRaw,
+    redditPromotionLink, redditPromotionTitle, redditPromotionBody, redditPromotionSubreddits,
+    needafriendSubreddit, needafriendThreadTitle, needafriendComment,
+    reminderBumpDelayMs, reminderPromoteDelayMs, reminderNeedafriendDelayMs
   ] = await Promise.all([
     getSetting('bot_status'),
     getSetting('bot_status_type'),
@@ -381,6 +513,18 @@ async function readAllSettings() {
     getValue('dashboard_port'),
     getValue('dashboard_base_url'),
     getValue('dashboard_cookie_secure'),
+    getInviteNotificationChannel(),
+    getValue('reddit_promotion_targets'),
+    getValue('reddit_promotion_link'),
+    getValue('reddit_promotion_title'),
+    getValue('reddit_promotion_body'),
+    getValue('reddit_promotion_subreddits'),
+    getValue('needafriend_subreddit'),
+    getValue('needafriend_thread_title'),
+    getValue('needafriend_comment'),
+    getValue('reminder_delay_bump_ms'),
+    getValue('reminder_delay_promote_ms'),
+    getValue('reminder_delay_needafriend_ms')
   ]);
 
   return {
@@ -398,10 +542,26 @@ async function readAllSettings() {
     notext_channel: notextChannel || '',
     reminder_channel: reminderChannel || '',
     reminder_role: reminderRole || '',
+    invite_notification_channel: inviteNotificationChannel || '',
     prune_protected_role_id: pruneProtectedRoleId || '',
     dashboard_port: dashboardPort ?? 3001,
     dashboard_base_url: dashboardBaseUrl || '',
     dashboard_cookie_secure: dashboardCookieSecure === true || dashboardCookieSecure === 'true',
+    reddit_promotion_targets: buildRedditPromotionTargetsJsonForDashboard(
+      redditPromotionTargetsRaw,
+      redditPromotionLink,
+      redditPromotionSubreddits
+    ),
+    reddit_promotion_link: String(redditPromotionLink || DEFAULT_REDDIT_PROMOTION_LINK),
+    reddit_promotion_title: String(redditPromotionTitle || DEFAULT_REDDIT_PROMOTION_TITLE),
+    reddit_promotion_body: String(redditPromotionBody || DEFAULT_REDDIT_PROMOTION_BODY),
+    reddit_promotion_subreddits: parseJsonList(redditPromotionSubreddits, DEFAULT_REDDIT_PROMOTION_SUBREDDITS).join(', '),
+    needafriend_subreddit: String(needafriendSubreddit || DEFAULT_NEEDAFRIEND_SUBREDDIT),
+    needafriend_thread_title: String(needafriendThreadTitle || DEFAULT_NEEDAFRIEND_THREAD_TITLE),
+    needafriend_comment: String(needafriendComment || DEFAULT_NEEDAFRIEND_COMMENT),
+    reminder_delay_bump_ms: toIntOrDefault(reminderBumpDelayMs, DEFAULT_REMINDER_BUMP_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000),
+    reminder_delay_promote_ms: toIntOrDefault(reminderPromoteDelayMs, DEFAULT_REMINDER_PROMOTE_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000),
+    reminder_delay_needafriend_ms: toIntOrDefault(reminderNeedafriendDelayMs, DEFAULT_REMINDER_NEEDAFRIEND_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000)
   };
 }
 
@@ -414,6 +574,44 @@ router.get('/settings', async (req, res) => {
   } catch (err) {
     logger.error('Failed to read settings.', { err });
     res.status(500).json({ error: 'Failed to read settings.' });
+  }
+});
+
+// ─── GET /api/reddit/link-flair ────────────────────────────────────────────
+/** Lists link (post) flair templates for a subreddit (OAuth; same account as /promote). */
+router.get('/reddit/link-flair', async (req, res) => {
+  const sub = normalizePromotionSubredditName(req.query.subreddit);
+  if (!sub) {
+    return res.status(400).json({ error: 'Invalid subreddit name.' });
+  }
+  if (!isRedditConfigured()) {
+    return res.status(503).json({ error: 'Reddit API is not configured on this bot.' });
+  }
+  try {
+    const flairData = await redditApiRequest('GET', `/r/${sub}/api/link_flair`);
+    if (!Array.isArray(flairData)) {
+      return res.json({ flairs: [] });
+    }
+    const flairs = flairData
+      .map((f) => {
+        const id = f.id ?? f.flair_template_id ?? f.flair_identifier;
+        if (id == null || id === '') return null;
+        const text = String(f.text ?? f.flair_text ?? '').trim() || '(no label)';
+        return { id: String(id), text };
+      })
+      .filter(Boolean);
+    res.json({ flairs });
+  } catch (err) {
+    logger.error('Reddit link_flair fetch failed.', { err, subreddit: sub });
+    const status = err.response?.status;
+    const clientErr =
+      status === 403 ||
+      status === 404 ||
+      (err.message && String(err.message).includes('SUBREDDIT'));
+    const msg = clientErr
+      ? `Could not load flairs for r/${sub}. It may be private, banned, or not found.`
+      : 'Failed to load flairs from Reddit.';
+    res.status(clientErr ? 400 : 500).json({ error: msg });
   }
 });
 
@@ -442,15 +640,51 @@ router.post('/settings', async (req, res) => {
   const dbKeys = [
     'notext_channel', 'reminder_channel', 'reminder_role', 'prune_protected_role_id',
     'dashboard_port', 'dashboard_base_url', 'dashboard_cookie_secure',
+    'invite_notification_channel',
+    'reddit_promotion_targets',
+    'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'reddit_promotion_subreddits',
+    'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment',
+    'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms'
   ];
-  const numericDbKeys = new Set(['dashboard_port']);
+  const numericDbKeys = new Set([
+    'dashboard_port',
+    'reminder_delay_bump_ms',
+    'reminder_delay_promote_ms',
+    'reminder_delay_needafriend_ms'
+  ]);
   for (const key of dbKeys) {
     if (key in body) {
       let val = body[key];
       if (val === 'true') val = true;
       if (val === 'false') val = false;
+      if (key === 'reddit_promotion_targets') {
+        try {
+          val = validateAndNormalizeRedditPromotionTargets(val);
+        } catch (e) {
+          return res.status(400).json({ error: e.message || 'Invalid reddit promotion targets.' });
+        }
+      }
+      if (key === 'reddit_promotion_subreddits') {
+        val = parseJsonList(String(val).split(',').map((v) => v.trim()).filter(Boolean), DEFAULT_REDDIT_PROMOTION_SUBREDDITS);
+      }
+      if (key === 'reddit_promotion_link' || key === 'needafriend_subreddit') {
+        val = String(val || '').trim();
+      }
+      if (key === 'reddit_promotion_title' || key === 'needafriend_thread_title') {
+        val = String(val || '').trim().slice(0, 300);
+      }
+      if (key === 'reddit_promotion_body' || key === 'needafriend_comment') {
+        val = String(val || '').trim().slice(0, 15000);
+      }
       if (numericDbKeys.has(key)) val = Number(val);
-      ops.push(setValue(key, val));
+      if (key === 'reminder_delay_bump_ms') val = toIntOrDefault(val, DEFAULT_REMINDER_BUMP_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+      if (key === 'reminder_delay_promote_ms') val = toIntOrDefault(val, DEFAULT_REMINDER_PROMOTE_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+      if (key === 'reminder_delay_needafriend_ms') val = toIntOrDefault(val, DEFAULT_REMINDER_NEEDAFRIEND_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+      if (key === 'invite_notification_channel') {
+        ops.push(setInviteNotificationChannel(val || null));
+      } else {
+        ops.push(setValue(key, val));
+      }
     }
   }
 
@@ -491,6 +725,50 @@ router.get('/guild/roles', (req, res) => {
     .map(r => ({ id: r.id, name: r.name, color: r.hexColor }));
 
   res.json(roles);
+});
+
+// ─── GET /api/permissions/summary ────────────────────────────────────────────
+router.get('/permissions/summary', async (req, res) => {
+  try {
+    const guild = req.discordClient?.guilds?.cache?.first();
+    if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
+
+    const members = await fetchGuildMembersCached(guild, { force: false });
+    let admins = 0;
+    let mods = 0;
+    let bots = 0;
+    for (const m of members.values()) {
+      if (m.user.bot) bots += 1;
+      const level = memberPrivilegeLevel(m);
+      if (level === 'admin') admins += 1;
+      else if (level === 'mod') mods += 1;
+    }
+
+    const keyPermCounts = {
+      manageRoles: 0,
+      manageChannels: 0,
+      banMembers: 0,
+      kickMembers: 0
+    };
+    for (const m of members.values()) {
+      const p = elevatedMemberPermissions(m);
+      if (p.has(PermissionFlagsBits.ManageRoles)) keyPermCounts.manageRoles += 1;
+      if (p.has(PermissionFlagsBits.ManageChannels)) keyPermCounts.manageChannels += 1;
+      if (p.has(PermissionFlagsBits.BanMembers)) keyPermCounts.banMembers += 1;
+      if (p.has(PermissionFlagsBits.KickMembers)) keyPermCounts.kickMembers += 1;
+    }
+
+    res.json({
+      members: members.size,
+      bots,
+      admins,
+      mods,
+      keyPermissionHolders: keyPermCounts
+    });
+  } catch (err) {
+    logger.error('Failed to build permissions summary.', { err });
+    res.status(500).json({ error: 'Failed to build permissions summary.' });
+  }
 });
 
 // ─── GET /api/guild/channels ─────────────────────────────────────────────────
@@ -679,11 +957,15 @@ router.post('/database/raw', async (req, res) => {
 
 router.delete('/database/raw', async (req, res) => {
   const { fullKey } = req.body;
+  const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
   if (!fullKey) {
     return res.status(400).json({ error: 'Missing fullKey in request body.' });
   }
 
   try {
+    if (dryRun) {
+      return res.json({ ok: true, dryRun: true, fullKey, action: 'delete_raw_key' });
+    }
     await deleteRawDatabaseEntry(fullKey);
     logger.info('Raw database entry deleted via dashboard.', {
       fullKey,
@@ -751,6 +1033,45 @@ router.get('/health/deep', (req, res) => {
   }
 });
 
+// ─── GET /api/maintenance/diagnostics/export ────────────────────────────────
+router.get('/maintenance/diagnostics/export', async (req, res) => {
+  try {
+    const client = req.discordClient;
+    const deep = client ? buildDeepHealthPayload(client) : {};
+    const storage = getStorageReport();
+    const safeSettings = {
+      bot_status: await getSetting('bot_status'),
+      bot_status_type: await getSetting('bot_status_type'),
+      base_embed_color: colorIntToHex((await getSetting('base_embed_color')) || 0x999999),
+      log_level: await getSetting('log_level')
+    };
+    const idSettings = {
+      reminder_channel: await getValue('reminder_channel'),
+      reminder_role: await getValue('reminder_role'),
+      notext_channel: await getValue('notext_channel'),
+      prune_protected_role_id: await getValue('prune_protected_role_id')
+    };
+    const activeJob = currentSeedJobId ? seedJobs.get(currentSeedJobId) || null : null;
+    const bundle = buildDiagnosticsBundle({
+      deepHealth: deep,
+      storageReport: storage,
+      activeJob,
+      cacheKeys: ['user_summary', 'guild_members', 'invites'],
+      safeSettings,
+      idSettings
+    });
+    const safeStamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `nova-diagnostics-${safeStamp}.json`;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    logger.info('Diagnostics bundle exported from dashboard.', { user: req.session.user?.username });
+    res.send(JSON.stringify(bundle, null, 2));
+  } catch (err) {
+    logger.error('Failed to export diagnostics bundle.', { err });
+    res.status(500).json({ error: 'Failed to export diagnostics bundle.' });
+  }
+});
+
 // ─── GET /api/reminders/live ────────────────────────────────────────────────
 router.get('/reminders/live', async (req, res) => {
   try {
@@ -778,10 +1099,14 @@ router.post('/reminders/fix', async (req, res) => {
   }
 
   try {
-    // Delays match the /fix command logic in commands/fix.js
-    let delayMs = 7200000; // 2 hours for disboard
-    if (type === 'promote') delayMs = 86400000; // 24 hours for reddit
-    if (type === 'needafriend') delayMs = NEEDAFRIEND_REMINDER_MS; // 7 days
+    // Delays are configurable via dashboard settings with sane defaults.
+    let delayMs = toIntOrDefault(await getValue('reminder_delay_bump_ms'), DEFAULT_REMINDER_BUMP_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+    if (type === 'promote') {
+      delayMs = toIntOrDefault(await getValue('reminder_delay_promote_ms'), DEFAULT_REMINDER_PROMOTE_DELAY_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+    }
+    if (type === 'needafriend') {
+      delayMs = toIntOrDefault(await getValue('reminder_delay_needafriend_ms'), NEEDAFRIEND_REMINDER_MS, 60000, 30 * 24 * 60 * 60 * 1000);
+    }
 
     // We need a mock message-like object that has the client attached
     // req.app.get('client') is where the discord client is stored
@@ -923,8 +1248,19 @@ router.post('/invites', async (req, res) => {
 // ─── DELETE /api/invites/:code ──────────────────────────────────────────────
 router.delete('/invites/:code', async (req, res) => {
   const { code } = req.params;
+  const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
   try {
     const guild = req.discordClient.guilds.cache.first();
+    if (dryRun) {
+      const invite = (await guild.invites.fetch()).find((i) => i.code === code);
+      return res.json({
+        ok: true,
+        dryRun: true,
+        action: 'revoke_invite',
+        exists: Boolean(invite),
+        code
+      });
+    }
     await guild.invites.delete(code, `Deleted via Dashboard by ${req.session.user?.username}`);
 
     // Also cleanup tag if exists
@@ -941,10 +1277,20 @@ router.delete('/invites/:code', async (req, res) => {
 // ─── POST /api/invites/tag ──────────────────────────────────────────────────
 router.post('/invites/tag', async (req, res) => {
   const { code, tag } = req.body;
+  const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
   if (!code) return res.status(400).json({ error: 'Missing code.' });
 
   try {
     const guild = req.discordClient.guilds.cache.first();
+    if (dryRun) {
+      return res.json({
+        ok: true,
+        dryRun: true,
+        action: tag ? 'set_invite_tag' : 'delete_invite_tag',
+        code,
+        tag: tag || null
+      });
+    }
     if (tag) {
       await setInviteTag(guild.id, code, tag);
     } else {
@@ -1008,6 +1354,27 @@ router.get('/users/summary', async (req, res) => {
             bots: members.filter(m => m.user.bot).size,
             humans: members.filter(m => !m.user.bot).size,
             recent: sortedMembers
+        };
+
+        const nowTs = Date.now();
+        const activeBuckets = { under1d: 0, under7d: 0, under30d: 0, over30d: 0, noData: 0 };
+        for (const m of sortedMembers) {
+          if (m.isBot) continue;
+          if (!m.lastMessageAt) {
+            activeBuckets.noData += 1;
+            continue;
+          }
+          const ageDays = Math.floor((nowTs - Number(m.lastMessageAt)) / (24 * 60 * 60 * 1000));
+          if (ageDays < 1) activeBuckets.under1d += 1;
+          else if (ageDays < 7) activeBuckets.under7d += 1;
+          else if (ageDays < 30) activeBuckets.under30d += 1;
+          else activeBuckets.over30d += 1;
+        }
+        data.activityInsights = {
+          trackedHumans: data.humans - activeBuckets.noData,
+          noDataHumans: activeBuckets.noData,
+          buckets: activeBuckets,
+          generatedAt: new Date().toISOString()
         };
 
         userSummaryCacheEntry = {
@@ -1151,6 +1518,70 @@ router.post('/users/inactivity/execute', async (req, res) => {
     }
 });
 
+// ─── POST /api/users/:userId/kick ────────────────────────────────────────────
+router.post('/users/:userId/kick', async (req, res) => {
+  try {
+    const guild = req.discordClient.guilds.cache.first();
+    if (!guild) return res.status(500).json({ error: 'Guild not found' });
+
+    const userId = String(req.params.userId || '').trim();
+    if (!userId) return res.status(400).json({ error: 'Missing user id.' });
+
+    const target = await guild.members.fetch(userId).catch(() => null);
+    if (!target) return res.status(404).json({ error: 'Member not found.' });
+    if (target.user.bot) return res.status(400).json({ error: 'Cannot kick bot accounts from this panel.' });
+    if (target.id === guild.ownerId) return res.status(400).json({ error: 'Cannot kick the server owner.' });
+
+    const botMember = guild.members.resolve(req.discordClient.user.id);
+    if (!botMember) return res.status(500).json({ error: 'Bot member not found.' });
+    if (target.roles.highest.position >= botMember.roles.highest.position) {
+      return res.status(403).json({ error: 'Target role is above or equal to the bot role.' });
+    }
+
+    const reason = String(req.body?.reason || '').trim() || `Kicked via Dashboard by ${req.session.user?.username || 'unknown user'}`;
+    await target.kick(reason);
+
+    invalidateGuildMembersCache();
+    invalidateUserSummaryCache();
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('Failed to kick member from dashboard.', { err, userId: req.params.userId });
+    res.status(500).json({ error: 'Failed to kick member.' });
+  }
+});
+
+// ─── POST /api/users/:userId/ban ─────────────────────────────────────────────
+router.post('/users/:userId/ban', async (req, res) => {
+  try {
+    const guild = req.discordClient.guilds.cache.first();
+    if (!guild) return res.status(500).json({ error: 'Guild not found' });
+
+    const userId = String(req.params.userId || '').trim();
+    if (!userId) return res.status(400).json({ error: 'Missing user id.' });
+
+    const target = await guild.members.fetch(userId).catch(() => null);
+    if (!target) return res.status(404).json({ error: 'Member not found.' });
+    if (target.user.bot) return res.status(400).json({ error: 'Cannot ban bot accounts from this panel.' });
+    if (target.id === guild.ownerId) return res.status(400).json({ error: 'Cannot ban the server owner.' });
+
+    const botMember = guild.members.resolve(req.discordClient.user.id);
+    if (!botMember) return res.status(500).json({ error: 'Bot member not found.' });
+    if (target.roles.highest.position >= botMember.roles.highest.position) {
+      return res.status(403).json({ error: 'Target role is above or equal to the bot role.' });
+    }
+
+    const reason = String(req.body?.reason || '').trim() || `Banned via Dashboard by ${req.session.user?.username || 'unknown user'}`;
+    await target.ban({ reason, deleteMessageSeconds: 0 });
+
+    invalidateGuildMembersCache();
+    invalidateUserSummaryCache();
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('Failed to ban member from dashboard.', { err, userId: req.params.userId });
+    res.status(500).json({ error: 'Failed to ban member.' });
+  }
+});
+
 // ─── GET /api/maintenance/seed-last-messages/active ─────────────────────────
 router.get('/maintenance/seed-last-messages/active', (_req, res) => {
   res.json({ active: seedJobRunning, jobId: currentSeedJobId });
@@ -1220,7 +1651,6 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
     Math.max(100, parseInt(String(body.maxPerChannel), 10) || DEFAULT_MAX_PER_CHANNEL)
   );
   const delayMs = Math.min(5000, Math.max(0, parseInt(String(body.delayMs), 10) || DEFAULT_DELAY_MS));
-  const onlyMissing = true;
   const dryRun = body.dryRun === true || body.dryRun === 'true';
   let channelIds = null;
   if (Array.isArray(body.channelIds) && body.channelIds.length > 0) {
@@ -1244,7 +1674,6 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
         maxPerChannel,
         delayMs,
         channelIds,
-        onlyMissing,
         dryRun,
         signal: currentSeedAbortController.signal,
         onProgress: async (evt) => {
@@ -1343,6 +1772,15 @@ router.post('/maintenance/cleanup', (req, res) => {
 // ─── POST /api/maintenance/sessions/clear-all ───────────────────────────────
 /** Destroys all dashboard sessions in Keyv (everyone must log in again). Body: { confirm: 'CLEAR_ALL_SESSIONS' } */
 router.post('/maintenance/sessions/clear-all', (req, res) => {
+  const dryRun = req.body?.dryRun === true || req.body?.dryRun === 'true';
+  if (dryRun) {
+    try {
+      const preview = cleanupExpiredSessions(true);
+      return res.json({ ok: true, dryRun: true, estimatedActiveSessionRows: preview.scanned });
+    } catch (err) {
+      return res.status(500).json({ error: err.message || 'Failed to preview session clear.' });
+    }
+  }
   if (req.body?.confirm !== 'CLEAR_ALL_SESSIONS') {
     return res.status(400).json({
       error: 'Confirmation required: send { "confirm": "CLEAR_ALL_SESSIONS" }.'

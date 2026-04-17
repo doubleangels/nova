@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } =
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
+const { getValue } = require('../utils/database');
 const { handleReminder, getNextReminderTimeAfterCleanup } = require('../utils/reminderUtils');
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 
@@ -36,22 +37,80 @@ Don't just sit on the sidelines! Introduce yourself, join the chat, and actually
 
 We're selective because we value the culture we've built. If you love fast-paced banter, can handle a joke, and want a crew that actually talks to each other, you've found the right spot.`;
 
-/** Subreddits to post promotions to (display name for sr param; Reddit API accepts case-insensitive) */
+/** Subreddits to post promotions to when legacy list-only settings are used (no `reddit_promotion_targets`). */
 const PROMOTION_SUBREDDITS = ['discordservers_', 'DiscordPromote', 'DiscordServerPromos'];
 
-/** Preferred flair text per subreddit (case-insensitive substring match). Falls back to first available flair if not found. */
+/** Preferred flair text per subreddit for legacy migrations only (substring match). */
 const SUBREDDIT_FLAIR_PREFERENCES = {
-  'discordservers_': 'gaming',
-  'DiscordPromote': 'gaming server',
-  'DiscordServerPromos': 'multiple categories [please list in post description]'
+  discordservers_: 'gaming',
+  DiscordPromote: 'gaming server',
+  DiscordServerPromos: 'multiple categories [please list in post description]'
 };
+
+function normalizePromotionSubredditName(name) {
+  return String(name || '')
+    .trim()
+    .replace(/^r\//i, '')
+    .replace(/[^A-Za-z0-9_]/g, '');
+}
+
+/**
+ * Resolves per-subreddit promotion rows from `reddit_promotion_targets`, or legacy link + subreddit list.
+ * @returns {Promise<Array<{ subreddit: string, url: string, title: string, body: string, flairText: string, flairTemplateId: string }>>}
+ */
+async function getPromotionTargets() {
+  const raw = await getValue('reddit_promotion_targets');
+  let parsed = raw;
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = null;
+    }
+  }
+  if (Array.isArray(parsed) && parsed.length > 0) {
+    const out = [];
+    for (const row of parsed) {
+      if (!row || typeof row !== 'object') continue;
+      const sub = normalizePromotionSubredditName(row.subreddit);
+      const url = String(row.url || row.link || '').trim();
+      if (!sub || !url) continue;
+      out.push({
+        subreddit: sub,
+        url,
+        title: row.title != null ? String(row.title).trim() : '',
+        body: row.body != null ? String(row.body) : '',
+        flairText: String(row.flair_text || row.flairText || '').trim()
+      });
+    }
+    if (out.length > 0) return out;
+  }
+
+  const link = String((await getValue('reddit_promotion_link')) || PROMOTION_LINK).trim();
+  const promotionSubredditsRaw = await getValue('reddit_promotion_subreddits');
+  const subs = Array.isArray(promotionSubredditsRaw)
+    ? promotionSubredditsRaw.map((s) => String(s).trim()).filter(Boolean)
+    : PROMOTION_SUBREDDITS;
+
+  return subs.map((sub) => ({
+    subreddit: normalizePromotionSubredditName(sub) || sub,
+    url: link,
+    title: '',
+    body: '',
+    flairText: SUBREDDIT_FLAIR_PREFERENCES[sub] || '',
+    flairTemplateId: ''
+  }));
+}
 
 /**
  * Gets the promotion title
  * @returns {Promise<string>} The promotion title
  */
 async function getPromotionTitle() {
-  return "🐸 Da Frens (21+) | High-energy gaming, top-tier banter, and a strict \"no lurkers\" policy.";
+  return String(
+    (await getValue('reddit_promotion_title')) ||
+    "🐸 Da Frens (21+) | High-energy gaming, top-tier banter, and a strict \"no lurkers\" policy."
+  );
 }
 
 /**
@@ -120,34 +179,50 @@ const PROMOTION_BODY_MAX_LEN = 10000;
  * @param {string} subredditName - Subreddit name (e.g. 'discordservers_')
  * @param {string} promotionTitle - Post title
  * @param {string} [promotionBody] - Markdown body for the link post
+ * @param {string} promotionUrl - Invite URL for the link post
+ * @param {string} [flairPreferenceText] - Substring to match against available flair labels (from dashboard)
+ * @param {string} [flairTemplateId] - Saved flair template id from the dashboard (skips fetch/match when set)
  * @returns {Promise<{ success: boolean, permalink?: string, error?: string }>}
  */
-async function postToSubreddit(subredditName, promotionTitle, promotionBody = '') {
+async function postToSubreddit(
+  subredditName,
+  promotionTitle,
+  promotionBody = '',
+  promotionUrl = '',
+  flairPreferenceText = '',
+  flairTemplateId = ''
+) {
   let flairId = null;
+  const savedTid = String(flairTemplateId || '').trim();
+  if (savedTid) {
+    flairId = savedTid;
+  }
   try {
-    const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
-    if (flairData && Array.isArray(flairData) && flairData.length > 0) {
-      const availableFlairs = flairData.map((f, i) => {
-        const id = f.id ?? f.flair_template_id ?? f.flair_identifier;
-        return {
-          index: i,
-          id,
-          flair_template_id: f.flair_template_id,
-          text: f.text ?? f.flair_text
-        };
-      });
-      logger.info(`Available flairs for r/${subredditName}:`, {
-        flairs: availableFlairs,
-        totalCount: availableFlairs.length
-      });
-      const preferredText = (SUBREDDIT_FLAIR_PREFERENCES[subredditName] || '').toLowerCase();
-      const preferred = preferredText
-        ? flairData.find(f => (f.text || f.flair_text || '').toLowerCase().includes(preferredText))
-        : null;
-      const first = flairData[0];
-      const flair = preferred || first;
-      flairId = flair.id ?? flair.flair_template_id ?? flair.flair_identifier;
-      logger.debug(`Using flair for r/${subredditName}:`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text, preferredText, matchedPreferred: !!preferred });
+    if (!flairId) {
+      const flairData = await redditApiRequest('GET', `/r/${subredditName}/api/link_flair`);
+      if (flairData && Array.isArray(flairData) && flairData.length > 0) {
+        const availableFlairs = flairData.map((f, i) => {
+          const id = f.id ?? f.flair_template_id ?? f.flair_identifier;
+          return {
+            index: i,
+            id,
+            flair_template_id: f.flair_template_id,
+            text: f.text ?? f.flair_text
+          };
+        });
+        logger.info(`Available flairs for r/${subredditName}:`, {
+          flairs: availableFlairs,
+          totalCount: availableFlairs.length
+        });
+        const preferredText = (flairPreferenceText || SUBREDDIT_FLAIR_PREFERENCES[subredditName] || '').toLowerCase();
+        const preferred = preferredText
+          ? flairData.find(f => (f.text || f.flair_text || '').toLowerCase().includes(preferredText))
+          : null;
+        const first = flairData[0];
+        const flair = preferred || first;
+        flairId = flair.id ?? flair.flair_template_id ?? flair.flair_identifier;
+        logger.debug(`Using flair for r/${subredditName}:`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text, preferredText, matchedPreferred: !!preferred });
+      }
     }
   } catch (flairErr) {
     if (flairErr.response?.status === 404 && flairErr.response?.data?.reason === 'banned') {
@@ -158,7 +233,7 @@ async function postToSubreddit(subredditName, promotionTitle, promotionBody = ''
 
   const submissionData = {
     title: promotionTitle,
-    url: PROMOTION_LINK,
+    url: String(promotionUrl || (await getValue('reddit_promotion_link')) || PROMOTION_LINK),
     sr: subredditName,
     kind: 'link',
     api_type: 'json'
@@ -234,8 +309,9 @@ module.exports = {
   },
 
   async handlePost(interaction) {
-    const promotionTitle = await getPromotionTitle();
-    const promotionBody = PROMOTION_BODY;
+    const defaultTitle = await getPromotionTitle();
+    const defaultBody = String((await getValue('reddit_promotion_body')) || PROMOTION_BODY);
+    const targets = await getPromotionTargets();
 
     // Cooldown check must happen before deferReply — once deferred publicly
     // Discord.js won't honour MessageFlags.Ephemeral on the subsequent editReply.
@@ -262,27 +338,42 @@ module.exports = {
     }
 
     await interaction.deferReply();
+
+    if (targets.length === 0) {
+      return interaction.editReply({
+        content:
+          '⚠️ No Reddit promotion targets are configured. Add at least one subreddit in the dashboard (Reminders → Reddit & NeedAFriend).'
+      });
+    }
+
     logger.info("/promote command initiated:", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
-      promotionTitle: promotionTitle,
-      promotionLink: PROMOTION_LINK,
-      hasPromotionBody: !!promotionBody
+      promotionTitle: defaultTitle,
+      targetCount: targets.length,
+      hasPromotionBody: targets.some((t) => (t.body || defaultBody).trim().length > 0)
     });
 
     try {
       logger.info("Attempting to post to Reddit:", {
-        subreddits: PROMOTION_SUBREDDITS,
-        title: promotionTitle,
-        link: PROMOTION_LINK,
-        hasBody: !!promotionBody,
+        targets: targets.map((t) => ({ subreddit: t.subreddit, hasUrl: !!t.url })),
+        defaultTitle,
         userId: interaction.user.id
       });
 
       const results = [];
-      for (const subredditName of PROMOTION_SUBREDDITS) {
-        const result = await postToSubreddit(subredditName, promotionTitle, promotionBody);
-        results.push({ subreddit: subredditName, ...result });
+      for (const t of targets) {
+        const title = t.title || defaultTitle;
+        const body = (t.body !== undefined && t.body !== '') ? t.body : defaultBody;
+        const result = await postToSubreddit(
+          t.subreddit,
+          title,
+          body,
+          t.url,
+          t.flairText,
+          t.flairTemplateId
+        );
+        results.push({ subreddit: t.subreddit, ...result });
       }
 
       const succeeded = results.filter(r => r.success);
@@ -303,8 +394,9 @@ module.exports = {
 
         await interaction.editReply({ embeds: [embed] });
 
+        const promoteDelay = Number(await getValue('reminder_delay_promote_ms')) || 86400000;
         const mockMessage = { client: interaction.client };
-        await handleReminder(mockMessage, 86400000, 'promote');
+        await handleReminder(mockMessage, promoteDelay, 'promote');
       } else {
         const errorList = failed.map(f => `r/${f.subreddit}: ${f.error}`).join('\n');
         await interaction.editReply({

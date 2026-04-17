@@ -2,6 +2,7 @@ const path = require('path');
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
+const { getValue } = require('../utils/database');
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 const { handleReminder, getNextReminderTimeAfterCleanup, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
 
@@ -26,9 +27,9 @@ function normalizeThreadTitle(title) {
  * @param {string} title
  * @returns {boolean}
  */
-function isWeeklyAdvertisementThread(title) {
+function isWeeklyAdvertisementThread(title, expectedTitle = WEEKLY_THREAD_TITLE) {
   const n = normalizeThreadTitle(title);
-  const expected = normalizeThreadTitle(WEEKLY_THREAD_TITLE);
+  const expected = normalizeThreadTitle(expectedTitle);
   if (n === expected) return true;
   return n.includes('weekly discord server advertisement');
 }
@@ -39,9 +40,11 @@ function isWeeklyAdvertisementThread(title) {
  * @returns {Promise<{ name: string, permalink: string, title: string, stickied?: boolean } | null>}
  */
 async function findWeeklyAdvertisementPost() {
+  const threadTitle = String((await getValue('needafriend_thread_title')) || WEEKLY_THREAD_TITLE);
+  const subreddit = String((await getValue('needafriend_subreddit')) || NEEDAFRIEND_SUBREDDIT);
   const endpoints = [
-    `/r/${NEEDAFRIEND_SUBREDDIT}/hot.json?limit=30`,
-    `/r/${NEEDAFRIEND_SUBREDDIT}/new.json?limit=50`
+    `/r/${subreddit}/hot.json?limit=30`,
+    `/r/${subreddit}/new.json?limit=50`
   ];
 
   const listings = await Promise.all(
@@ -52,12 +55,12 @@ async function findWeeklyAdvertisementPost() {
     (listing?.data?.children || []).map((c) => c.data).filter(Boolean)
   );
 
-  const sticky = allPosts.find((d) => d.stickied && isWeeklyAdvertisementThread(d.title));
+  const sticky = allPosts.find((d) => d.stickied && isWeeklyAdvertisementThread(d.title, threadTitle));
   if (sticky) {
     return { name: sticky.name, permalink: sticky.permalink, title: sticky.title, stickied: true };
   }
 
-  const any = allPosts.find((d) => isWeeklyAdvertisementThread(d.title));
+  const any = allPosts.find((d) => isWeeklyAdvertisementThread(d.title, threadTitle));
   if (any) {
     return { name: any.name, permalink: any.permalink, title: any.title, stickied: !!any.stickied };
   }
@@ -140,11 +143,14 @@ module.exports = {
     await interaction.deferReply();
 
     try {
+      const subreddit = String((await getValue('needafriend_subreddit')) || NEEDAFRIEND_SUBREDDIT);
+      const threadTitle = String((await getValue('needafriend_thread_title')) || WEEKLY_THREAD_TITLE);
+      const commentText = String((await getValue('needafriend_comment')) || NEEDAFRIEND_COMMENT);
       const post = await findWeeklyAdvertisementPost();
       if (!post) {
-        logger.warn('needafriend: weekly thread not found', { subreddit: NEEDAFRIEND_SUBREDDIT, expectedTitle: WEEKLY_THREAD_TITLE });
+        logger.warn('needafriend: weekly thread not found', { subreddit, expectedTitle: threadTitle });
         return interaction.editReply({
-          content: `⚠️ Could not find a post titled **${WEEKLY_THREAD_TITLE}** on r/${NEEDAFRIEND_SUBREDDIT} (checked hot and new). If the title changed, update \`WEEKLY_THREAD_TITLE\` in \`commands/needafriend.js\`.`,
+          content: `⚠️ Could not find a post titled **${threadTitle}** on r/${subreddit} (checked hot and new).`,
           flags: MessageFlags.Ephemeral
         });
       }
@@ -152,7 +158,7 @@ module.exports = {
       const response = await redditApiRequest('POST', '/api/comment', {
         api_type: 'json',
         thing_id: post.name,
-        text: NEEDAFRIEND_COMMENT
+        text: commentText
       });
 
       const parsed = parseCommentResponse(response);
@@ -166,7 +172,8 @@ module.exports = {
             `Your advertisement has been commented on the weekly thread on \`r/needafriend\`.\n\n• \`r/needafriend\`: [View thread](https://www.reddit.com${post.permalink})`
           );
         const mockMessage = { client: interaction.client };
-        await handleReminder(mockMessage, NEEDAFRIEND_REMINDER_MS, 'needafriend');
+        const needafriendDelay = Number(await getValue('reminder_delay_needafriend_ms')) || NEEDAFRIEND_REMINDER_MS;
+        await handleReminder(mockMessage, needafriendDelay, 'needafriend');
         return interaction.editReply({ embeds: [embed] });
       }
 
