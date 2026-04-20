@@ -1594,7 +1594,19 @@
 
 <!-- ─── Dashboard JavaScript ─── -->
 <script>
-  // ── Native <select> helpers (roles / channels) ───────────────────────────
+  function populateSelect(el, options, selectedValue) {
+    const want = selectedValue ?? '';
+    el.replaceChildren();
+    for (const opt of options) {
+      const o = document.createElement('option');
+      o.value = opt.value;
+      o.textContent = opt.text;
+      el.appendChild(o);
+    }
+    el.value = want;
+    const valid = want === '' || Array.from(el.options).some(o => o.value === want);
+    if (!valid) el.value = '';
+  }
 
   function setButtonState(btn, state) {
     if (!btn) return;
@@ -1674,41 +1686,6 @@
       const kind = override || inferButtonIconKind(btn);
       btn.classList.add('inline-flex', 'items-center', 'justify-center', 'gap-2');
       btn.insertAdjacentHTML('afterbegin', buildButtonIcon(kind));
-    });
-  }
-
-  function confirmWithModal({ title = 'Confirm Action', message = 'Are you sure?', confirmLabel = 'Confirm' }) {
-    return new Promise((resolve) => {
-      const modal = document.getElementById('confirmModal');
-      const backdrop = document.getElementById('confirmModalBackdrop');
-      const titleEl = document.getElementById('confirmModalTitle');
-      const messageEl = document.getElementById('confirmModalMessage');
-      const cancelBtn = document.getElementById('confirmModalCancel');
-      const confirmBtn = document.getElementById('confirmModalConfirm');
-      if (!modal || !titleEl || !messageEl || !cancelBtn || !confirmBtn) {
-        resolve(window.confirm(message));
-        return;
-      }
-
-      titleEl.textContent = title;
-      messageEl.textContent = message;
-      const confirmLabelEl = confirmBtn.querySelector('[data-btn-text]');
-      if (confirmLabelEl) confirmLabelEl.textContent = confirmLabel;
-      else confirmBtn.textContent = confirmLabel;
-      modal.classList.remove('hidden');
-
-      const cleanup = (result) => {
-        modal.classList.add('hidden');
-        cancelBtn.removeEventListener('click', onCancel);
-        confirmBtn.removeEventListener('click', onConfirm);
-        backdrop?.removeEventListener('click', onCancel);
-        resolve(result);
-      };
-      const onCancel = () => cleanup(false);
-      const onConfirm = () => cleanup(true);
-      cancelBtn.addEventListener('click', onCancel);
-      confirmBtn.addEventListener('click', onConfirm);
-      backdrop?.addEventListener('click', onCancel);
     });
   }
 
