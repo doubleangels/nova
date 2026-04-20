@@ -250,7 +250,7 @@ function createDashboard(client, options = {}) {
 
   // Routes
   app.use('/auth', require('./routes/auth'));
-  app.use('/api',  require('./routes/api'));
+  app.use('/api',  require('./routes/api').router);
   app.use('/',     require('./routes/pages'));
 
   // 404 handler

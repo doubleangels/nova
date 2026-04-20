@@ -110,6 +110,7 @@ client.login(config.token);
 if (process.env.DISCORD_CLIENT_SECRET && process.env.DASHBOARD_SESSION_SECRET) {
   (async () => {
     const createDashboard = require('./dashboard/server');
+    const { triggerAutoMigration } = require('./dashboard/routes/api');
     const envDashboardPort = parseInt(process.env.DASHBOARD_PORT || '3001', 10);
     const envDashboardBaseUrl = process.env.DASHBOARD_BASE_URL || `http://localhost:${envDashboardPort}`;
     const envCookieSecure = process.env.DASHBOARD_COOKIE_SECURE;
@@ -159,6 +160,8 @@ if (process.env.DISCORD_CLIENT_SECRET && process.env.DASHBOARD_SESSION_SECRET) {
 
       dashboardApp.listen(dashboardPort, () => {
         logger.info(`Dashboard running on port ${dashboardPort}.`, { url: dashboardBaseUrl });
+        // Start automatic background migration if needed
+        triggerAutoMigration();
       });
     } catch (err) {
       captureError(err, { source: 'dashboard', when: 'startup' });

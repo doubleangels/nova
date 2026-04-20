@@ -2456,11 +2456,13 @@ router.post('/maintenance/migrate/stop', (req, res) => {
   res.json({ ok: true, jobId: currentMigrationJobId, stopping: true });
 });
 
-// ─── POST /api/maintenance/migrate ──────────────────────────────────────────
-router.post('/maintenance/migrate', (req, res) => {
-  if (migrationJobRunning) {
-    return res.status(409).json({ error: 'A migration job is already running.', jobId: currentMigrationJobId });
-  }
+/**
+ * Internal helper to start the migration job.
+ * @param {string} actor - The user or system that started the job.
+ * @returns {string} The job ID.
+ */
+function startMigrationInternal(actor = 'system') {
+  if (migrationJobRunning) return currentMigrationJobId;
   pruneOldSeedJobs();
   const jobId = crypto.randomUUID();
   const job = {
@@ -2481,11 +2483,7 @@ router.post('/maintenance/migrate', (req, res) => {
   currentMigrationJobId = jobId;
   currentMigrationAbortController = new AbortController();
 
-  logger.info('Dashboard namespace migration job started.', {
-    jobId,
-    user: getDashboardActor(req)
-  });
-  res.json({ jobId, started: true });
+  logger.info('Database namespace migration job started.', { jobId, actor });
 
   (async () => {
     try {
@@ -2499,7 +2497,7 @@ router.post('/maintenance/migrate', (req, res) => {
       });
       if (job.stopRequested) {
         job.status = 'stopped';
-        job.error = 'Stopped by user.';
+        job.error = 'Stopped par user.';
       } else if (result.error) {
         job.status = 'error';
         job.error = result.error;
@@ -2524,6 +2522,33 @@ router.post('/maintenance/migrate', (req, res) => {
       currentMigrationAbortController = null;
     }
   })();
+
+  return jobId;
+}
+
+/**
+ * Triggers the namespace migration automatically if required.
+ * Should be called once during application startup.
+ */
+function triggerAutoMigration() {
+  try {
+    const status = getMigrationStatus();
+    if (status.migrationRequired) {
+      logger.info('Legacy keys detected; triggering background migration.');
+      startMigrationInternal('startup_auto');
+    }
+  } catch (err) {
+    logger.error('Failed to check for auto-migration on startup.', { err });
+  }
+}
+
+// ─── POST /api/maintenance/migrate ──────────────────────────────────────────
+router.post('/maintenance/migrate', (req, res) => {
+  if (migrationJobRunning) {
+    return res.status(409).json({ error: 'A migration job is already running.', jobId: currentMigrationJobId });
+  }
+  const jobId = startMigrationInternal(getDashboardActor(req));
+  res.json({ jobId, started: true });
 });
 
-module.exports = router;
+module.exports = { router, triggerAutoMigration };
