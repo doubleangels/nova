@@ -309,9 +309,13 @@ function getMigrationStatus() {
 
 /**
  * Moves legacy keys from 'main' to their new namespaces.
- * @returns {{ migrated: number, errors: string[] }}
+ * @param {object} [opts]
+ * @param {(evt: object) => void | Promise<void>} [opts.onProgress]
+ * @param {AbortSignal} [opts.signal]
+ * @returns {Promise<{ migrated: number, errors: string[] }>}
  */
-function runNamespaceMigration() {
+async function runNamespaceMigration(opts = {}) {
+  const { onProgress = async () => {}, signal } = opts;
   const sqlitePath = getSqlitePath();
   const Database = require('better-sqlite3');
   const db = new Database(sqlitePath);
@@ -326,28 +330,63 @@ function runNamespaceMigration() {
   };
 
   const results = { migrated: 0, errors: [] };
+  const emit = onProgress;
 
   try {
-    const runMigration = db.transaction(() => {
-      for (const [oldPrefix, newPrefix] of Object.entries(migrationMap)) {
-        const rows = db.prepare("SELECT key, value FROM keyv WHERE key LIKE ?").all(`${oldPrefix}%`);
-        for (const row of rows) {
-          const newKey = row.key.replace(oldPrefix, newPrefix);
-          // Insert into new namespace (UPSERT)
+    // 1. Gather all keys to migrate
+    const allLegacyKeys = [];
+    for (const [oldPrefix, newPrefix] of Object.entries(migrationMap)) {
+      const rows = db.prepare("SELECT key, value FROM keyv WHERE key LIKE ?").all(`${oldPrefix}%`);
+      for (const row of rows) {
+        allLegacyKeys.push({ key: row.key, value: row.value, oldPrefix, newPrefix });
+      }
+    }
+
+    const total = allLegacyKeys.length;
+    await emit({ type: 'start', total, percent: 0 });
+
+    if (total === 0) {
+      await emit({ type: 'done', migrated: 0, percent: 100 });
+      return results;
+    }
+
+    // 2. Migrate in small batches to allow progress reporting
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < total; i += BATCH_SIZE) {
+      if (signal?.aborted) {
+        const err = new Error('Migration aborted by user.');
+        err.name = 'AbortError';
+        throw err;
+      }
+
+      const batch = allLegacyKeys.slice(i, i + BATCH_SIZE);
+      
+      db.transaction(() => {
+        for (const item of batch) {
+          const newKey = item.key.replace(item.oldPrefix, item.newPrefix);
           db.prepare(`
             INSERT INTO keyv (key, value) VALUES (?, ?)
             ON CONFLICT(key) DO UPDATE SET value = excluded.value
-          `).run(newKey, row.value);
-          // Delete old key
-          db.prepare("DELETE FROM keyv WHERE key = ?").run(row.key);
+          `).run(newKey, item.value);
+          db.prepare("DELETE FROM keyv WHERE key = ?").run(item.key);
           results.migrated++;
         }
-      }
-    });
+      })();
 
-    runMigration();
+      const percent = Math.min(99, Math.round((results.migrated / total) * 100));
+      await emit({ 
+        type: 'progress', 
+        migrated: results.migrated, 
+        total, 
+        percent,
+        currentKey: batch[batch.length - 1].key
+      });
+    }
+
+    await emit({ type: 'done', migrated: results.migrated, percent: 100 });
     return results;
   } catch (err) {
+    if (err && err.name === 'AbortError') throw err;
     return { migrated: results.migrated, error: String(err) };
   } finally {
     db.close();

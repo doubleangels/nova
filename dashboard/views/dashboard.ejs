@@ -805,10 +805,27 @@
         We detected <strong id="legacyKeyCount" class="text-amber-500">0</strong> legacy keys in the <code class="text-[10px]">main</code> namespace. 
         Running this migration will move message counts, last-active timestamps, and invite data to dedicated namespaces for better performance and isolation.
       </p>
+
+      <!-- Progress Bar (Hidden by default) -->
+      <div id="migrationProgressWrap" class="hidden space-y-2 py-2">
+        <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+          <span id="migrationPhaseLabel" class="text-amber-500">Starting...</span>
+          <span id="migrationPercentLabel" class="text-[var(--c-text-muted)]">0%</span>
+        </div>
+        <div class="h-1.5 w-full bg-[var(--c-input)] rounded-full overflow-hidden border border-[var(--c-input-border)]">
+          <div id="migrationProgressBar" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <div id="migrationStatusLine" class="text-[10px] text-[var(--c-text-dim)] font-mono truncate">Preparing migration...</div>
+      </div>
+
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="runDatabaseMigration()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors">
+        <button type="button" id="runMigrationBtn" onclick="runDatabaseMigration()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
           Run Migration
+        </button>
+        <button type="button" id="stopMigrationBtn" onclick="stopDatabaseMigration()" class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-700 hover:bg-zinc-800 text-white transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          Stop
         </button>
       </div>
     </div>
@@ -4509,31 +4526,137 @@
     }
   }
 
+  // ─── Database Migration Logic ──────────────────────────────────────────────
+  let migrationPollTimer = null;
+  let currentMigrationJobId = null;
+
+  function migrationStopPoll() {
+    if (migrationPollTimer) {
+      clearInterval(migrationPollTimer);
+      migrationPollTimer = null;
+    }
+    currentMigrationJobId = null;
+  }
+
+  function migrationApplyJobToUI(j) {
+    const wrap = document.getElementById('migrationProgressWrap');
+    const bar = document.getElementById('migrationProgressBar');
+    const pct = document.getElementById('migrationPercentLabel');
+    const phase = document.getElementById('migrationPhaseLabel');
+    const line = document.getElementById('migrationStatusLine');
+    const btn = document.getElementById('runMigrationBtn');
+    const stopBtn = document.getElementById('stopMigrationBtn');
+
+    if (wrap) wrap.classList.remove('hidden');
+    const p = Math.max(0, Math.min(100, Number(j.percent) || 0));
+    if (bar) bar.style.width = `${p}%`;
+    if (pct) pct.textContent = `${p}%`;
+
+    let phaseText = 'Migrating';
+    if (j.status === 'done') phaseText = 'Complete';
+    else if (j.status === 'error') phaseText = 'Error';
+    else if (j.status === 'stopped') phaseText = 'Stopped';
+    if (phase) phase.textContent = phaseText;
+
+    if (line) {
+      if (j.status === 'running') {
+        line.textContent = `Moved ${j.migrated || 0} / ${j.total || '—'} keys...`;
+      } else if (j.status === 'done') {
+        line.textContent = `Finished! Migrated ${j.migrated || 0} total keys.`;
+      } else if (j.status === 'error') {
+        line.textContent = `Failed: ${j.error || 'Unknown error'}`;
+      } else if (j.status === 'stopped') {
+        line.textContent = 'Migration stopped by user.';
+      }
+    }
+
+    if (btn) btn.disabled = j.status === 'running';
+    if (stopBtn) stopBtn.classList.toggle('hidden', j.status !== 'running');
+
+    if (j.status === 'done') {
+      showToast('Database migration completed successfully!');
+      loadMigrationStatus();
+      loadStorageReport();
+    } else if (j.status === 'error') {
+      showToast(j.error || 'Migration failed.', 'error');
+    }
+  }
+
+  function migrationStartPolling(jobId) {
+    migrationStopPoll();
+    currentMigrationJobId = jobId;
+    migrationPollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/maintenance/jobs/${encodeURIComponent(jobId)}`);
+        if (!res.ok) return;
+        const j = await res.json();
+        migrationApplyJobToUI(j);
+        if (j.status === 'done' || j.status === 'error' || j.status === 'stopped') {
+          migrationStopPoll();
+        }
+      } catch (_) {}
+    }, 800);
+  }
+
   window.runDatabaseMigration = async () => {
     const ok = await confirmWithModal({
       title: 'Start Database Migration',
-      message: 'This will move legacy data to new namespaces and delete the old keys in the main namespace. It is recommended to perform a database backup first. Continue?',
+      message: 'This will move legacy data to new namespaces. The dashboard will track progress. Continue?',
       confirmLabel: 'Migrate'
     });
     if (!ok) return;
 
     try {
+      const btn = document.getElementById('runMigrationBtn');
+      if (btn) btn.disabled = true;
+      
       const res = await fetch('/api/maintenance/migrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        showToast(`Migration successful! Migrated ${data.migrated} keys.`);
-        loadMigrationStatus();
-        loadStorageReport();
+      
+      if (res.status === 409 && data.jobId) {
+        showToast('A migration is already running.');
+        migrationStartPolling(data.jobId);
+        return;
+      }
+
+      if (res.ok && data.jobId) {
+        showToast('Migration started!');
+        migrationStartPolling(data.jobId);
       } else {
-        showToast(data.error || 'Migration failed.', 'error');
+        if (btn) btn.disabled = false;
+        showToast(data.error || 'Failed to start migration.', 'error');
       }
     } catch (e) {
-      showToast('Network error while migrating.', 'error');
+      const btn = document.getElementById('runMigrationBtn');
+      if (btn) btn.disabled = false;
+      showToast('Network error while starting migration.', 'error');
     }
   };
+
+  window.stopDatabaseMigration = async () => {
+    if (!currentMigrationJobId) return;
+    try {
+      const res = await fetch('/api/maintenance/migrate/stop', { method: 'POST' });
+      if (res.ok) showToast('Stopping migration...');
+      else showToast('Failed to stop migration.', 'error');
+    } catch (e) {
+      showToast('Network error while stopping.', 'error');
+    }
+  };
+
+  async function migrationCheckActiveJob() {
+    try {
+      const res = await fetch('/api/maintenance/migration-status');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.activeJobId) {
+        migrationStartPolling(data.activeJobId);
+      }
+    } catch (_) {}
+  }
 
   function maintStopPoll() {
     if (maintSeedPollTimer) {
@@ -4801,6 +4924,7 @@
       loadStorageReport();
       loadDeepHealth();
       loadMigrationStatus();
+      migrationCheckActiveJob();
     }
 
     if (scrollToId) {

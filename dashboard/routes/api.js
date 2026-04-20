@@ -439,19 +439,26 @@ function invalidateInvitesListCache() {
 }
 
 /** Dashboard-only: backfill last_message keys from channel history (one job at a time). */
-let seedJobRunning = false;
-/** @type {string | null} */
-let currentSeedJobId = null;
-/** @type {AbortController | null} */
-let currentSeedAbortController = null;
 /** @type {Map<string, object>} */
 const seedJobs = new Map();
+/** @type {Map<string, object>} */
+const migrationJobs = new Map();
+
+/** Dashboard-only: namespace migration job state */
+let migrationJobRunning = false;
+/** @type {string | null} */
+let currentMigrationJobId = null;
+/** @type {AbortController | null} */
+let currentMigrationAbortController = null;
 
 function pruneOldSeedJobs() {
   const now = Date.now();
   const maxAge = 60 * 60 * 1000;
   for (const [id, job] of seedJobs) {
     if (job.finishedAt && now - job.finishedAt > maxAge) seedJobs.delete(id);
+  }
+  for (const [id, job] of migrationJobs) {
+    if (job.finishedAt && now - job.finishedAt > maxAge) migrationJobs.delete(id);
   }
 }
 
@@ -2119,7 +2126,7 @@ router.get('/maintenance/seed-last-messages/active', (_req, res) => {
 
 // ─── GET /api/maintenance/jobs/:id ──────────────────────────────────────────
 router.get('/maintenance/jobs/:id', (req, res) => {
-  const job = seedJobs.get(req.params.id);
+  const job = seedJobs.get(req.params.id) || migrationJobs.get(req.params.id);
   if (!job) return res.status(404).json({ error: 'Job not found.' });
   res.json(job);
 });
@@ -2424,30 +2431,99 @@ router.post('/maintenance/cache/clear', (req, res) => {
 router.get('/maintenance/migration-status', (req, res) => {
   try {
     const status = getMigrationStatus();
-    res.json(status);
+    res.json({
+      ...status,
+      activeJobId: migrationJobRunning ? currentMigrationJobId : null
+    });
   } catch (err) {
     reportDashboardError(err, req, { area: 'dashboard:api' });
     res.status(500).json({ error: 'Failed to check migration status.' });
   }
 });
 
-// ─── POST /api/maintenance/migrate ───────────────────────────────────
-router.post('/maintenance/migrate', (req, res) => {
-  try {
-    const result = runNamespaceMigration();
-    if (result.error) {
-      logger.error('Database migration failed.', { err: result.error });
-      return res.status(500).json({ error: result.error });
-    }
-    logger.info('Database migration completed successfully.', {
-      migrated: result.migrated,
-      user: getDashboardActor(req)
-    });
-    res.json({ ok: true, ...result });
-  } catch (err) {
-    reportDashboardError(err, req, { area: 'dashboard:api' });
-    res.status(500).json({ error: 'Migration process failed.' });
+// ─── POST /api/maintenance/migrate/stop ────────────────────────────────────
+router.post('/maintenance/migrate/stop', (req, res) => {
+  if (!migrationJobRunning || !currentMigrationJobId || !currentMigrationAbortController) {
+    return res.status(409).json({ error: 'No active migration job to stop.' });
   }
+  const job = migrationJobs.get(currentMigrationJobId);
+  if (job) job.stopRequested = true;
+  currentMigrationAbortController.abort();
+  logger.warn('Dashboard requested stop for migration job.', {
+    jobId: currentMigrationJobId,
+    user: req.session.user?.username
+  });
+  res.json({ ok: true, jobId: currentMigrationJobId, stopping: true });
+});
+
+// ─── POST /api/maintenance/migrate ──────────────────────────────────────────
+router.post('/maintenance/migrate', (req, res) => {
+  if (migrationJobRunning) {
+    return res.status(409).json({ error: 'A migration job is already running.', jobId: currentMigrationJobId });
+  }
+  pruneOldSeedJobs();
+  const jobId = crypto.randomUUID();
+  const job = {
+    id: jobId,
+    type: 'migration',
+    status: 'running',
+    startedAt: Date.now(),
+    finishedAt: null,
+    percent: 0,
+    migrated: 0,
+    total: 0,
+    error: null,
+    stopRequested: false
+  };
+  migrationJobs.set(jobId, job);
+
+  migrationJobRunning = true;
+  currentMigrationJobId = jobId;
+  currentMigrationAbortController = new AbortController();
+
+  logger.info('Dashboard namespace migration job started.', {
+    jobId,
+    user: getDashboardActor(req)
+  });
+  res.json({ jobId, started: true });
+
+  (async () => {
+    try {
+      const result = await runNamespaceMigration({
+        signal: currentMigrationAbortController.signal,
+        onProgress: (evt) => {
+          if (evt.percent != null) job.percent = evt.percent;
+          if (evt.total != null) job.total = evt.total;
+          if (evt.migrated != null) job.migrated = evt.migrated;
+        }
+      });
+      if (job.stopRequested) {
+        job.status = 'stopped';
+        job.error = 'Stopped by user.';
+      } else if (result.error) {
+        job.status = 'error';
+        job.error = result.error;
+      } else {
+        job.status = 'done';
+        job.percent = 100;
+        job.result = result;
+      }
+      job.finishedAt = Date.now();
+    } catch (err) {
+      if (err && err.name === 'AbortError') {
+        job.status = 'stopped';
+        job.error = 'Stopped by user.';
+      } else {
+        job.status = 'error';
+        job.error = err && err.message ? String(err.message) : String(err);
+      }
+      job.finishedAt = Date.now();
+    } finally {
+      migrationJobRunning = false;
+      currentMigrationJobId = null;
+      currentMigrationAbortController = null;
+    }
+  })();
 });
 
 module.exports = router;
