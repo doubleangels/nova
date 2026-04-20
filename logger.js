@@ -9,7 +9,18 @@ const baseLogger = pino({
       return { level: label.toUpperCase() };
     }
   },
-  timestamp: pino.stdTimeFunctions.isoTime
+  timestamp: pino.stdTimeFunctions.isoTime,
+  redact: {
+    paths: [
+      'token', 'password', 'redditPassword', 'redditClientSecret', 
+      'csrfToken', 'accessToken', 'client_id', 'clientId', 'clientSecret', 'client_secret',
+      '*.token', '*.password', '*.csrfToken', '*.accessToken', '*.client_id', '*.clientId', '*.clientSecret', '*.client_secret',
+      'err.config.headers.Authorization', 'err.config.headers.authorization',
+      'error.config.headers.Authorization', 'error.config.headers.authorization',
+      'err.response.request._headers.authorization', 'error.response.request._headers.authorization'
+    ],
+    censor: '[REDACTED]'
+  }
 });
 
 /**

@@ -36,16 +36,17 @@ function getStorageReport() {
           COUNT(*) AS rowCount,
           SUM(length(value)) AS valueBytes
         FROM keyv
+        WHERE key NOT LIKE 'sessions:%'
         GROUP BY ns
         ORDER BY valueBytes DESC`
       )
       .all();
     const topKeys = db
       .prepare(
-        `SELECT key, length(value) AS bytes FROM keyv ORDER BY bytes DESC LIMIT 15`
+        `SELECT key, length(value) AS bytes FROM keyv WHERE key NOT LIKE 'sessions:%' ORDER BY bytes DESC LIMIT 15`
       )
       .all();
-    const totalRows = db.prepare('SELECT COUNT(*) AS c FROM keyv').get().c;
+    const totalRows = db.prepare("SELECT COUNT(*) AS c FROM keyv WHERE key NOT LIKE 'sessions:%'").get().c;
     return {
       filePath: sqlitePath,
       fileBytes: stat.size,
@@ -267,6 +268,92 @@ function buildDiagnosticsBundle({
   };
 }
 
+/**
+ * Checks if any legacy keys exist in the 'main' namespace that need migration.
+ * @returns {{ migrationRequired: boolean, legacyKeyCount: number, details: Record<string, number> }}
+ */
+function getMigrationStatus() {
+  const sqlitePath = getSqlitePath();
+  const Database = require('better-sqlite3');
+  const db = new Database(sqlitePath, { readonly: true });
+  try {
+    const legacyPrefixes = [
+      'main:message_count:',
+      'main:last_message:',
+      'main:last_message_channel:',
+      'main:invite_usage:',
+      'main:invite_join_history:',
+      'main:invite_code_to_tag_map:'
+    ];
+
+    const details = {};
+    let total = 0;
+
+    for (const prefix of legacyPrefixes) {
+      const count = db.prepare("SELECT COUNT(*) AS c FROM keyv WHERE key LIKE ?").get(`${prefix}%`).c;
+      if (count > 0) {
+        details[prefix] = count;
+        total += count;
+      }
+    }
+
+    return {
+      migrationRequired: total > 0,
+      legacyKeyCount: total,
+      details
+    };
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Moves legacy keys from 'main' to their new namespaces.
+ * @returns {{ migrated: number, errors: string[] }}
+ */
+function runNamespaceMigration() {
+  const sqlitePath = getSqlitePath();
+  const Database = require('better-sqlite3');
+  const db = new Database(sqlitePath);
+
+  const migrationMap = {
+    'main:message_count:': 'messages:count:',
+    'main:last_message:': 'messages:time:',
+    'main:last_message_channel:': 'messages:channel:',
+    'main:invite_usage:': 'invites:usage:',
+    'main:invite_join_history:': 'invites:join_history:',
+    'main:invite_code_to_tag_map:': 'invites:code_to_tag_map:'
+  };
+
+  const results = { migrated: 0, errors: [] };
+
+  try {
+    const runMigration = db.transaction(() => {
+      for (const [oldPrefix, newPrefix] of Object.entries(migrationMap)) {
+        const rows = db.prepare("SELECT key, value FROM keyv WHERE key LIKE ?").all(`${oldPrefix}%`);
+        for (const row of rows) {
+          const newKey = row.key.replace(oldPrefix, newPrefix);
+          // Insert into new namespace (UPSERT)
+          db.prepare(`
+            INSERT INTO keyv (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+          `).run(newKey, row.value);
+          // Delete old key
+          db.prepare("DELETE FROM keyv WHERE key = ?").run(row.key);
+          results.migrated++;
+        }
+      }
+    });
+
+    runMigration();
+    return results;
+  } catch (err) {
+    return { migrated: results.migrated, error: String(err) };
+  } finally {
+    db.close();
+  }
+}
+
 module.exports = {
   getSqlitePath,
   getStorageReport,
@@ -275,5 +362,7 @@ module.exports = {
   cleanupExpiredSessions,
   clearAllSessionRows,
   sqliteRwProbe,
-  buildDiagnosticsBundle
+  buildDiagnosticsBundle,
+  getMigrationStatus,
+  runNamespaceMigration
 };

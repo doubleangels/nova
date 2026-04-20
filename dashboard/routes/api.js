@@ -56,7 +56,9 @@ const {
   cleanupExpiredSessions,
   clearAllSessionRows,
   sqliteRwProbe,
-  buildDiagnosticsBundle
+  buildDiagnosticsBundle,
+  getMigrationStatus,
+  runNamespaceMigration
 } = require('../../utils/maintenanceService');
 const logger = require('../../logger')('dashboard:api');
 const { redditApiRequest, isRedditConfigured } = require('../../utils/redditClient');
@@ -528,7 +530,7 @@ function getRawDatabaseEntries() {
     const namespace = colonIdx > -1 ? row.key.slice(0, colonIdx) : 'main';
     const key = colonIdx > -1 ? row.key.slice(colonIdx + 1) : row.key;
     return { fullKey: row.key, namespace, key, value };
-  });
+  }).filter(entry => entry.namespace !== 'sessions');
 }
 /**
  * Writes a JSON value back to a raw Keyv row by full key.
@@ -1097,6 +1099,10 @@ router.post('/database/raw', async (req, res) => {
     return res.status(400).json({ error: 'Missing fullKey in request body.' });
   }
 
+  if (String(fullKey).startsWith('sessions:')) {
+    return res.status(403).json({ error: 'Direct access to session data is prohibited.' });
+  }
+
   try {
     await updateRawDatabaseEntry(fullKey, value);
     if (String(fullKey).startsWith('main:config:')) {
@@ -1127,6 +1133,10 @@ router.delete('/database/raw', async (req, res) => {
     req.query?.dryRun === true;
   if (!fullKey) {
     return res.status(400).json({ error: 'Missing fullKey (send JSON body or ?fullKey=).' });
+  }
+
+  if (String(fullKey).startsWith('sessions:')) {
+    return res.status(403).json({ error: 'Direct access to session data is prohibited.' });
   }
 
   try {
@@ -2408,6 +2418,36 @@ router.post('/maintenance/cache/clear', (req, res) => {
 
   logger.info('Dashboard cleared API caches.', { cleared, user: req.session.user?.username });
   res.json({ ok: true, cleared });
+});
+
+// ─── GET /api/maintenance/migration-status ────────────────────────────
+router.get('/maintenance/migration-status', (req, res) => {
+  try {
+    const status = getMigrationStatus();
+    res.json(status);
+  } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
+    res.status(500).json({ error: 'Failed to check migration status.' });
+  }
+});
+
+// ─── POST /api/maintenance/migrate ───────────────────────────────────
+router.post('/maintenance/migrate', (req, res) => {
+  try {
+    const result = runNamespaceMigration();
+    if (result.error) {
+      logger.error('Database migration failed.', { err: result.error });
+      return res.status(500).json({ error: result.error });
+    }
+    logger.info('Database migration completed successfully.', {
+      migrated: result.migrated,
+      user: getDashboardActor(req)
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api' });
+    res.status(500).json({ error: 'Migration process failed.' });
+  }
 });
 
 module.exports = router;

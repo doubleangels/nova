@@ -15,7 +15,7 @@ const MAX_FULL_KEY_LENGTH = 255;
 const MAX_ENCODED_VALUE_BYTES = 2 * 1024 * 1024;
 
 /** First path segment of fullKey must be one of these Keyv namespaces used by Nova. */
-const ALLOWED_NAMESPACES = new Set(['main', 'invites', 'sessions', 'nova_reminders']);
+const ALLOWED_NAMESPACES = new Set(['main', 'invites', 'messages', 'nova_reminders']);
 
 const FULL_KEY_RE = /^[a-zA-Z0-9_:.\-]+$/;
 

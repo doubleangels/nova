@@ -70,33 +70,6 @@ function getPublicBotIconPath() {
   return PUBLIC_BOT_ICON_PATH;
 }
 
-router.get(PUBLIC_BOT_ICON_PATH, async (req, res) => {
-  const botIconUrl = req.discordClient?.user?.displayAvatarURL({ extension: 'png', size: 256 }) || null;
-  if (!botIconUrl) {
-    return res.status(404).send('Bot icon unavailable.');
-  }
-
-  try {
-    const upstream = await fetch(botIconUrl);
-    if (!upstream.ok) {
-      logger.warn('Failed to fetch upstream bot icon.', { status: upstream.status, botIconUrl });
-      return res.status(502).send('Failed to retrieve bot icon.');
-    }
-
-    const contentType = upstream.headers.get('content-type') || 'image/png';
-    const cacheControl = upstream.headers.get('cache-control') || 'public, max-age=300, s-maxage=300';
-    const imageBuffer = Buffer.from(await upstream.arrayBuffer());
-
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', cacheControl);
-    return res.send(imageBuffer);
-  } catch (err) {
-    reportDashboardError(err, req, { area: 'dashboard:pages', op: 'bot_icon_proxy' });
-    logger.warn('Error while proxying bot icon.', { err, botIconUrl });
-    return res.status(502).send('Failed to retrieve bot icon.');
-  }
-});
-
 router.get('/login', (req, res) => {
   const errorKey = req.query.error;
   const errorMsg = ERROR_MESSAGES[errorKey] || null;

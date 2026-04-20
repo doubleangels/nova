@@ -87,9 +87,19 @@ const inviteKeyv = new Keyv({
   namespace: 'invites'
 });
 
+// Initialize separate Keyv instance for messages namespace
+const messageKeyv = new Keyv({
+  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
+    table: 'keyv',
+    busyTimeout: 10000
+  }),
+  namespace: 'messages'
+});
+
 // Handle connection errors
 keyv.on('error', err => logger.error('Keyv connection error occurred.', { err: err }));
 inviteKeyv.on('error', err => logger.error('Invite Keyv connection error occurred.', { err: err }));
+messageKeyv.on('error', err => logger.error('Message Keyv connection error occurred.', { err: err }));
 
 // Ensure database file has correct permissions if it exists
 // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
@@ -399,7 +409,8 @@ async function setInviteUsage(guildId, inviteUsage) {
     logger.debug('Setting invite usage for guild.', {
       guildId: guildId
     });
-    await keyv.set(`invite_usage:${guildId}`, inviteUsage);
+    // Move to invites namespace, strip legacy prefix
+    await inviteKeyv.set(`usage:${guildId}`, inviteUsage);
     logger.debug('Set invite usage for guild successfully.', {
       guildId: guildId
     });
@@ -421,7 +432,8 @@ async function getInviteUsage(guildId) {
     logger.debug('Getting invite usage for guild.', {
       guildId: guildId
     });
-    const value = await keyv.get(`invite_usage:${guildId}`);
+    // Move to invites namespace, strip legacy prefix
+    const value = await inviteKeyv.get(`usage:${guildId}`);
     return value || {};
   } catch (err) {
     logger.error('Error occurred while getting invite usage for guild.', {
@@ -468,8 +480,8 @@ function isNearDuplicateInviteJoinRow(existing, incoming, windowMs) {
  */
 async function appendInviteJoinHistory(guildId, entry) {
   try {
-    const key = `invite_join_history:${guildId}`;
-    const raw = await keyv.get(key);
+    const key = `join_history:${guildId}`;
+    const raw = await inviteKeyv.get(key);
     const list = Array.isArray(raw) ? raw : [];
     const row = {
       at: entry.at || new Date().toISOString(),
@@ -492,7 +504,7 @@ async function appendInviteJoinHistory(guildId, entry) {
     }
     list.unshift(row);
     while (list.length > INVITE_JOIN_HISTORY_LIMIT) list.pop();
-    await keyv.set(key, list);
+    await inviteKeyv.set(key, list);
   } catch (err) {
     logger.error('Error appending invite join history.', { err, guildId });
   }
@@ -505,7 +517,7 @@ async function appendInviteJoinHistory(guildId, entry) {
  */
 async function getInviteJoinHistory(guildId, limit = 100) {
   try {
-    const raw = await keyv.get(`invite_join_history:${guildId}`);
+    const raw = await inviteKeyv.get(`join_history:${guildId}`);
     const list = Array.isArray(raw) ? raw : [];
     const n = Math.min(Math.max(1, Number(limit) || 100), INVITE_JOIN_HISTORY_LIMIT);
     return list.slice(0, n);
@@ -536,8 +548,8 @@ function normalizeInviteJoinHistoryRow(entry) {
  * @returns {Promise<{ added: number, total: number }>}
  */
 async function mergeInviteJoinHistoryEntries(guildId, newEntries) {
-  const key = `invite_join_history:${guildId}`;
-  const raw = await keyv.get(key);
+  const key = `join_history:${guildId}`;
+  const raw = await inviteKeyv.get(key);
   const existing = Array.isArray(raw) ? raw : [];
   const map = new Map();
   for (const e of existing) {
@@ -556,7 +568,7 @@ async function mergeInviteJoinHistoryEntries(guildId, newEntries) {
   const merged = [...map.values()]
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, INVITE_JOIN_HISTORY_LIMIT);
-  await keyv.set(key, merged);
+  await inviteKeyv.set(key, merged);
   return { added, total: merged.length };
 }
 
@@ -571,7 +583,7 @@ async function setInviteCodeToTagMap(guildId, codeToTagMap) {
     logger.debug('Setting invite code-to-tag map for guild.', {
       guildId: guildId
     });
-    await keyv.set(`invite_code_to_tag_map:${guildId}`, codeToTagMap);
+    await inviteKeyv.set(`code_to_tag_map:${guildId}`, codeToTagMap);
     logger.debug('Set invite code-to-tag map for guild successfully.', {
       guildId: guildId
     });
@@ -593,7 +605,7 @@ async function getInviteCodeToTagMap(guildId) {
     logger.debug('Getting invite code-to-tag map for guild.', {
       guildId: guildId
     });
-    const value = await keyv.get(`invite_code_to_tag_map:${guildId}`);
+    const value = await inviteKeyv.get(`code_to_tag_map:${guildId}`);
     return value || {};
   } catch (err) {
     logger.error('Error occurred while getting invite code-to-tag map for guild.', {
@@ -769,10 +781,10 @@ async function incrementMessageCount(userId) {
   const op = prev.then(async () => {
     try {
       logger.debug('Incrementing message count for user.', { userId: userId });
-      const key = `message_count:${userId}`;
-      let count = await keyv.get(key) || 0;
+      const key = `count:${userId}`;
+      let count = await messageKeyv.get(key) || 0;
       count++;
-      await keyv.set(key, count);
+      await messageKeyv.set(key, count);
       logger.debug('Incremented message count for user successfully.', {
         userId: userId,
         count: count
@@ -796,8 +808,8 @@ async function incrementMessageCount(userId) {
  */
 async function getMessageCount(userId) {
   try {
-    const key = `message_count:${userId}`;
-    return await keyv.get(key) || 0;
+    const key = `count:${userId}`;
+    return await messageKeyv.get(key) || 0;
   } catch (error) {
     logger.error('Error getting message count.', { err: error, userId });
     return 0;
@@ -812,8 +824,8 @@ async function getMessageCount(userId) {
 async function deleteMessageCount(userId) {
   try {
     logger.debug('Deleting message count for user.', { userId: userId });
-    const key = `message_count:${userId}`;
-    await keyv.delete(key);
+    const key = `count:${userId}`;
+    await messageKeyv.delete(key);
     logger.debug('Deleted message count for user successfully.', { userId: userId });
   } catch (error) {
     logger.error('Error deleting message count.', { err: error, userId });
@@ -890,9 +902,9 @@ async function updateLastMessageTime(userId, channelId) {
     
     // Only write to SQLite at most once every 5 minutes per user
     if (now - lastUpdate > 300000) {
-      await keyv.set(`last_message:${userId}`, now);
+      await messageKeyv.set(`time:${userId}`, now);
       if (channelId != null && String(channelId).trim() !== '') {
-        await keyv.set(`last_message_channel:${userId}`, String(channelId));
+        await messageKeyv.set(`channel:${userId}`, String(channelId));
       }
       userActivityCache.set(userId, now);
     }
@@ -908,7 +920,7 @@ async function updateLastMessageTime(userId, channelId) {
  */
 async function getLastMessageTime(userId) {
   try {
-    const ts = await keyv.get(`last_message:${userId}`);
+    const ts = await messageKeyv.get(`time:${userId}`);
     return ts || null;
   } catch (err) {
     logger.error('Error getting last message time.', { err, userId });
@@ -928,7 +940,7 @@ async function getAllLastMessageTimes() {
     const rows = db.prepare(`
       SELECT key, value 
       FROM keyv 
-      WHERE key LIKE 'main:last_message:%'
+      WHERE key LIKE 'messages:time:%'
     `).all();
     
     db.close();
@@ -938,7 +950,7 @@ async function getAllLastMessageTimes() {
       try {
         const parsed = JSON.parse(row.value);
         const timestamp = parsed?.value || parsed;
-        const userId = row.key.replace('main:last_message:', '');
+        const userId = row.key.replace('messages:time:', '');
         if (userId && timestamp) {
           activityMap[userId] = timestamp;
         }
@@ -965,7 +977,7 @@ async function getAllMessageCounts() {
         `
       SELECT key, value 
       FROM keyv 
-      WHERE key LIKE 'main:message_count:%'
+      WHERE key LIKE 'messages:count:%'
     `
       )
       .all();
@@ -977,7 +989,7 @@ async function getAllMessageCounts() {
       try {
         const parsed = JSON.parse(row.value);
         const n = typeof parsed === 'number' ? parsed : parsed?.value ?? parsed;
-        const userId = row.key.replace('main:message_count:', '');
+        const userId = row.key.replace('messages:count:', '');
         if (userId) out[userId] = Number(n) || 0;
       } catch (e) {}
     }
@@ -1002,7 +1014,7 @@ async function getAllLastMessageChannels() {
         `
       SELECT key, value 
       FROM keyv 
-      WHERE key LIKE 'main:last_message_channel:%'
+      WHERE key LIKE 'messages:channel:%'
     `
       )
       .all();
@@ -1014,7 +1026,7 @@ async function getAllLastMessageChannels() {
       try {
         const parsed = JSON.parse(row.value);
         const raw = parsed?.value !== undefined ? parsed.value : parsed;
-        const userId = row.key.replace('main:last_message_channel:', '');
+        const userId = row.key.replace('messages:channel:', '');
         if (userId && raw != null && String(raw).trim() !== '') out[userId] = String(raw).trim();
       } catch (e) {}
     }

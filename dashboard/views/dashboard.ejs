@@ -795,6 +795,24 @@
       <pre id="sqliteMaintPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap break-words max-h-32 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
     </div>
 
+    <!-- Migration Utility -->
+    <div id="migrationCard" class="card p-5 space-y-3 hidden lg:col-span-2 border-l-4 border-amber-500">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-[var(--c-text)]">Database Migration Available</h3>
+        <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500 text-white animate-pulse">ACTION NEEDED</span>
+      </div>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">
+        We detected <strong id="legacyKeyCount" class="text-amber-500">0</strong> legacy keys in the <code class="text-[10px]">main</code> namespace. 
+        Running this migration will move message counts, last-active timestamps, and invite data to dedicated namespaces for better performance and isolation.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick="runDatabaseMigration()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          Run Migration
+        </button>
+      </div>
+    </div>
+
     <p class="maint-group-label lg:col-span-2">Discord &amp; Dashboard Cache</p>
 
     <div class="card p-5 space-y-3">
@@ -4522,6 +4540,50 @@
     }
   }
 
+  async function loadMigrationStatus() {
+    try {
+      const res = await fetch('/api/maintenance/migration-status');
+      if (!res.ok) return;
+      const data = await res.json();
+      const card = document.getElementById('migrationCard');
+      if (data.migrationRequired) {
+        card?.classList.remove('hidden');
+        const countEl = document.getElementById('legacyKeyCount');
+        if (countEl) countEl.textContent = data.legacyKeyCount;
+      } else {
+        card?.classList.add('hidden');
+      }
+    } catch (e) {
+      console.error('Failed to load migration status', e);
+    }
+  }
+
+  window.runDatabaseMigration = async () => {
+    const ok = await confirmWithModal({
+      title: 'Start Database Migration',
+      message: 'This will move legacy data to new namespaces and delete the old keys in the main namespace. It is recommended to perform a database backup first. Continue?',
+      confirmLabel: 'Migrate'
+    });
+    if (!ok) return;
+
+    try {
+      const res = await fetch('/api/maintenance/migrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast(`Migration successful! Migrated ${data.migrated} keys.`);
+        loadMigrationStatus();
+        loadStorageReport();
+      } else {
+        showToast(data.error || 'Migration failed.', 'error');
+      }
+    } catch (e) {
+      showToast('Network error while migrating.', 'error');
+    }
+  };
+
   function maintStopPoll() {
     if (maintSeedPollTimer) {
       clearInterval(maintSeedPollTimer);
@@ -4787,6 +4849,7 @@
       maintCheckActiveJob();
       loadStorageReport();
       loadDeepHealth();
+      loadMigrationStatus();
     }
 
     if (scrollToId) {

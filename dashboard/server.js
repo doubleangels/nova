@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const { Sentry, captureError } = require('../instrument');
 const { getDashboardGuild } = require('../utils/dashboardGuild');
 const logger = require('../logger')('dashboard');
+const { encrypt, decrypt } = require('../utils/encryption');
 
 const JSON_LIMIT_DEFAULT = '2mb';
 const JSON_LIMIT_DATABASE_IMPORT = '50mb';
@@ -24,9 +25,19 @@ const apiMutationLimiter = rateLimit({
   message: { error: 'Too many dashboard API requests. Please try again shortly.' }
 });
 
+/** Baseline rate limit for all dashboard routes (per IP). */
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again after 15 minutes.'
+});
+
 // ─── SQLite-backed session store ─────────────────────────────────────────────
 // Persists sessions to the same SQLite database as the bot, so logins survive
 // bot restarts. Uses a separate 'sessions' namespace to avoid key collisions.
+// Values are encrypted at rest using AES-256-GCM.
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv        = requireDefault('keyv');
 const KeyvSqlite  = requireDefault('@keyv/sqlite');
@@ -35,13 +46,22 @@ const Store       = session.Store;
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 class KeyvSessionStore extends Store {
-  constructor() {
+  constructor(encryptionSecret) {
     super();
     const dataDir    = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
     const sqlitePath = path.join(dataDir, 'database.sqlite');
     this._kv = new Keyv({
       store: new KeyvSqlite(`sqlite://${sqlitePath}`, { table: 'keyv', busyTimeout: 10000 }),
       namespace: 'sessions',
+      serialize: (data) => encrypt(data, encryptionSecret),
+      deserialize: (data) => {
+        try {
+          return decrypt(data, encryptionSecret);
+        } catch (err) {
+          logger.warn('Failed to decrypt session data; session may be old/plain or key changed.', { err });
+          return null;
+        }
+      }
     });
     this._kv.on('error', err => logger.error('Session store error.', { err }));
   }
@@ -86,10 +106,46 @@ function createDashboard(client, options = {}) {
   // Trust proxy headers when running behind nginx / Caddy
   app.set('trust proxy', 1);
 
+  // Global rate limit for all routes
+  app.use(globalLimiter);
+
+  // Security headers via Helmet
   app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'", // Needed for inline theme/tailwind/fetch scripts
+          "https://cdn.tailwindcss.com"
+        ],
+        styleSrc: [
+          "'self'",
+          "'unsafe-inline'", // Needed for the large internal style block
+          "https://fonts.googleapis.com"
+        ],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "https://cdn.discordapp.com",
+          "https://media.discordapp.net",
+          "https://*.googleusercontent.com" // For some Google-hosted avatars or search results
+        ],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: [],
+      }
+    },
+    referrerPolicy: { policy: 'same-origin' },
+    strictTransportSecurity: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+      preload: true
+    }
   }));
+  app.use(express.static(path.join(__dirname, 'public')));
 
   // View engine + layouts
   app.set('view engine', 'ejs');
@@ -115,11 +171,13 @@ function createDashboard(client, options = {}) {
   if (!process.env.DASHBOARD_SESSION_SECRET && isDev) {
     logger.warn('DASHBOARD_SESSION_SECRET is not set; using an ephemeral development-only secret.');
   }
+  const encryptionSecret = process.env.DASHBOARD_SESSION_ENCRYPTION_KEY || sessionSecret;
+
   app.use(session({
     secret: sessionSecret || 'nova-dashboard-insecure-fallback',
     resave: false,
     saveUninitialized: false,
-    store: new KeyvSessionStore(),
+    store: new KeyvSessionStore(encryptionSecret),
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
