@@ -72,6 +72,14 @@ module.exports = {
             });
             
         } catch (error) {
+            // If interaction already expired (Unknown interaction), just log and abort
+            if (error.code === 10062) {
+                logger.warn("Interaction expired before mock command could defer/reply.", {
+                    userId: interaction.user.id,
+                    targetMessageId: interaction.targetMessage?.id
+                });
+                return;
+            }
             await this.handleError(interaction, error);
         }
     },
@@ -125,21 +133,26 @@ module.exports = {
         }
         
         try {
-            await interaction.editReply({ 
-                content: errorMessage,
-                flags: MessageFlags.Ephemeral 
-            });
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply({ 
+                    content: errorMessage,
+                    flags: MessageFlags.Ephemeral 
+                });
+            } else {
+                await interaction.reply({ 
+                    content: errorMessage,
+                    flags: MessageFlags.Ephemeral 
+                });
+            }
         } catch (followUpError) {
+            // Ignore Unknown Interaction errors during error cleanup
+            if (followUpError.code === 10062) return;
+
             logger.error("Failed to send error response for mock command.", {
                 err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id
             });
-            
-            await interaction.reply({ 
-                content: errorMessage,
-                flags: MessageFlags.Ephemeral 
-            }).catch(() => {});
         }
     }
 };

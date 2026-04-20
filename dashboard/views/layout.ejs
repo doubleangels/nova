@@ -225,6 +225,11 @@
           padding: 2px 4px;
           cursor: pointer;
         }
+
+        /* Modal & Toast Animations */
+        @keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .toast-item { animation: toast-in 0.3s cubic-bezier(0.2, 0, 0, 1); }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
       </style>
 </head>
 
@@ -276,6 +281,22 @@
         <%- body %>
       </div>
     </main>
+  </div>
+
+  <!-- Global UI Components -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+  <div id="modalContainer" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-md p-6 space-y-6 shadow-2xl animate-[modal-in_0.2s_ease-out]">
+      <div class="space-y-2">
+        <h3 id="modalTitle" class="text-lg font-bold text-[var(--c-text)]">Confirm Action</h3>
+        <p id="modalMessage" class="text-sm text-[var(--c-text-dim)] leading-relaxed"></p>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button id="modalCancel" class="px-4 py-2 rounded-lg text-sm font-bold text-[var(--c-text-muted)] hover:bg-white/5 transition-colors">Cancel</button>
+        <button id="modalConfirm" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] hover:bg-[var(--c-accent-strong)] text-white transition-colors">Confirm</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -342,6 +363,51 @@
     }
     setActiveNav();
     window.addEventListener('hashchange', setActiveNav);
+
+    // ── Global UI Helpers ──────────────────────────────────────────────────
+    window.showToast = (message, type = 'success') => {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const isError = type === 'error';
+      const colorCls = isError ? 'bg-red-500 shadow-red-500/10' : 'bg-[var(--c-accent)] shadow-purple-500/10';
+      toast.className = `toast-item pointer-events-auto px-5 py-3 rounded-xl text-sm font-medium shadow-2xl text-white ${colorCls} min-w-[240px] flex items-center justify-between gap-4 border border-white/10`;
+      toast.innerHTML = `<span>${message}</span><button onclick="this.parentElement.remove()" class="opacity-50 hover:opacity-100 transition-opacity"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        if (toast.parentElement) {
+          toast.classList.add('opacity-0', 'translate-x-10', 'transition-all', 'duration-500');
+          setTimeout(() => toast.remove(), 500);
+        }
+      }, 5000);
+    };
+
+    window.confirmWithModal = ({ title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel' }) => {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('modalContainer');
+        const titleEl = document.getElementById('modalTitle');
+        const msgEl = document.getElementById('modalMessage');
+        const confirmBtn = document.getElementById('modalConfirm');
+        const cancelBtn = document.getElementById('modalCancel');
+
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        confirmBtn.textContent = confirmLabel;
+        cancelBtn.textContent = cancelLabel;
+
+        const cleanup = (res) => {
+          modal.classList.add('hidden');
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+          resolve(res);
+        };
+
+        confirmBtn.onclick = () => cleanup(true);
+        cancelBtn.onclick = () => cleanup(false);
+        modal.onclick = (e) => { if (e.target === modal) cleanup(false); };
+        modal.classList.remove('hidden');
+      });
+    };
   </script>
 
 </body>

@@ -1595,32 +1595,6 @@
 <!-- ─── Dashboard JavaScript ─── -->
 <script>
   // ── Native <select> helpers (roles / channels) ───────────────────────────
-  function populateSelect(el, options, selectedValue) {
-    const want = selectedValue ?? '';
-    el.replaceChildren();
-    for (const opt of options) {
-      const o = document.createElement('option');
-      o.value = opt.value;
-      o.textContent = opt.text;
-      el.appendChild(o);
-    }
-    el.value = want;
-    const valid = want === '' || Array.from(el.options).some(o => o.value === want);
-    if (!valid) el.value = '';
-  }
-
-  // ── Utility ──────────────────────────────────────────────────────────────
-  function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg max-w-xs transition-all duration-300 ${
-      type === 'success'
-        ? 'bg-[var(--c-accent)] text-white'
-        : 'bg-[var(--c-accent)] opacity-60 text-white'
-    }`;
-    toast.style.opacity = '1';
-    setTimeout(() => { toast.className += ' opacity-0'; setTimeout(() => toast.classList.add('hidden'), 300); }, 3000);
-  }
 
   function setButtonState(btn, state) {
     if (!btn) return;
