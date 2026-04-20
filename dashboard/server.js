@@ -135,15 +135,11 @@ function createDashboard(client, options = {}) {
         connectSrc: ["'self'"],
         frameAncestors: ["'none'"],
         objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
+        upgradeInsecureRequests: null,
       }
     },
     referrerPolicy: { policy: 'same-origin' },
-    strictTransportSecurity: {
-      maxAge: 31536000, // 1 year
-      includeSubDomains: true,
-      preload: true
-    }
+    strictTransportSecurity: false
   }));
   app.use(express.static(path.join(__dirname, 'public')));
 
