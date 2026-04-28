@@ -362,8 +362,16 @@
   </script>
 
   <!-- Mobile top bar -->
-  <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40 bg-[var(--c-topbar)]">
-    <div class="flex items-center gap-3">
+  <div id="mobileTopbar" class="lg:hidden flex items-center gap-3 px-4 py-3 border-b sticky top-0 z-40 bg-[var(--c-topbar)]">
+    <button id="menuToggle" class="p-2 rounded-md shrink-0" style="color:var(--c-text-muted)">
+      <svg id="menuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+      <svg id="menuClose" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+    <div class="flex items-center gap-3 min-w-0">
       <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
         <img src="<%= guildIcon %>" class="w-8 h-8 rounded-lg ring-1 ring-[var(--c-ring-on-canvas)]" alt="Server icon" />
       <% } else { %>
@@ -375,14 +383,6 @@
         </p>
       </div>
     </div>
-    <button id="menuToggle" class="p-2 rounded-md" style="color:var(--c-text-muted)">
-      <svg id="menuOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
-      <svg id="menuClose" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
   </div>
 
   <div class="flex h-full min-h-screen">

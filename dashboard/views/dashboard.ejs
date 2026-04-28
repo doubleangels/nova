@@ -793,7 +793,7 @@
           <svg class="w-3.5 h-3.5 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
           Optimize
         </button>
-        <button type="button" onclick="runSqliteMaint('vacuum')" class="btn-dash-warn btn-dash-sm">
+        <button type="button" onclick="runSqliteMaint('vacuum')" class="btn-dash-secondary btn-dash-sm">
           <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
           Vacuum
         </button>
@@ -848,7 +848,7 @@
         <button type="button" onclick="clearMaintCache(['user_summary'])" class="btn-dash-secondary btn-dash-sm">User Summary</button>
         <button type="button" onclick="clearMaintCache(['guild_members'])" class="btn-dash-secondary btn-dash-sm">Member Fetch</button>
         <button type="button" onclick="clearMaintCache(['invites'])" class="btn-dash-secondary btn-dash-sm">Invites List</button>
-        <button type="button" onclick="clearMaintCache(['all'])" class="btn-dash-primary btn-dash-sm">Clear All</button>
+        <button type="button" onclick="clearMaintCache(['all'])" class="btn-dash-secondary btn-dash-sm">Clear All</button>
       </div>
     </div>
 
@@ -976,7 +976,7 @@
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes dashboard session rows whose Keyv <strong class="text-[var(--c-text-muted)]">TTL is already in the past</strong>. <strong class="text-[var(--c-text-muted)]">Active</strong> sessions are left alone. Run <strong class="text-[var(--c-text-muted)]">Dry Run</strong> first to see counts before deleting.</p>
       <div class="flex flex-wrap gap-2">
         <button type="button" onclick="maintCleanupSessions(true)" class="btn-dash-secondary btn-dash-sm">Dry Run</button>
-        <button type="button" onclick="maintCleanupSessions(false)" class="btn-dash-primary btn-dash-sm">Delete Expired</button>
+        <button type="button" onclick="maintCleanupSessions(false)" class="btn-dash-secondary btn-dash-sm">Delete Expired</button>
       </div>
       <pre id="cleanupSessionsPre" class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap max-h-28 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
     </div>
@@ -996,7 +996,7 @@
       <h3 class="text-sm font-bold text-[var(--c-text)]">Database Backup</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed max-w-3xl">Downloads a <strong class="text-[var(--c-text-muted)]">JSON snapshot</strong> of the Keyv store—the same scope as <strong class="text-[var(--c-text-muted)]">Database Explorer</strong>. Treat the file as <strong class="text-[var(--c-text-muted)]">secret</strong>; it can contain session material and tokens.</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" id="exportDbJsonBtn" onclick="exportDatabaseJson()" class="btn-dash-primary btn-dash-md">
+        <button type="button" id="exportDbJsonBtn" onclick="exportDatabaseJson()" class="btn-dash-secondary btn-dash-md">
           <svg class="w-4 h-4 shrink-0 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
           Export Database as JSON
         </button>
@@ -1013,7 +1013,7 @@
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Validate
           </button>
-          <button type="button" id="applyDbJsonBtn" onclick="applyDatabaseJsonImport()" disabled class="btn-dash-warn btn-dash-md disabled:pointer-events-none">
+          <button type="button" id="applyDbJsonBtn" onclick="applyDatabaseJsonImport()" disabled class="btn-dash-secondary btn-dash-md disabled:pointer-events-none">
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
             Import
           </button>
