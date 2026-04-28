@@ -134,13 +134,13 @@
           --glass-bg: rgba(255, 255, 255, 0.92);
           --glass-border: rgba(12, 18, 34, 0.08);
 
-          /* Keep dashboard action buttons identical to dark theme (solid fills, borders) */
-          --c-dash-btn-secondary-bg: #111117;
-          --c-dash-btn-secondary-hover: rgba(var(--c-accent-rgb), 0.12);
-          --c-dash-btn-neutral-bg: #111117;
-          --c-dash-btn-neutral-text: #d8d8e0;
-          --c-dash-btn-neutral-border: #32323c;
-          --c-dash-btn-neutral-hover-bg: #16161d;
+          /* Dashboard action buttons adapted for light theme */
+          --c-dash-btn-secondary-bg: var(--c-input);
+          --c-dash-btn-secondary-hover: var(--c-card-border);
+          --c-dash-btn-neutral-bg: var(--c-card);
+          --c-dash-btn-neutral-text: var(--c-label);
+          --c-dash-btn-neutral-border: var(--c-input-border);
+          --c-dash-btn-neutral-hover-bg: var(--c-input);
         }
 
         /* ── Shell ───────────────────────────────────────────────────────────── */
@@ -415,8 +415,8 @@
         <p id="modalMessage" class="text-sm text-[var(--c-text-dim)] leading-relaxed"></p>
       </div>
       <div class="flex justify-end gap-3">
-        <button id="modalCancel" class="px-4 py-2 rounded-lg text-sm font-bold text-[var(--c-text-muted)] hover:bg-[var(--c-nav-hover-bg)] transition-colors">Cancel</button>
-        <button id="modalConfirm" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] hover:bg-[var(--c-accent-strong)] text-white transition-colors">Confirm</button>
+        <button id="modalCancel" class="btn-dash-neutral px-4 py-2 text-sm">Cancel</button>
+        <button id="modalConfirm" class="btn-dash-primary px-4 py-2 text-sm">Confirm</button>
       </div>
     </div>
   </div>

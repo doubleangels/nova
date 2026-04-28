@@ -3,7 +3,6 @@ const requireAuth = require('../middleware/requireAuth');
 const config = require('../../config');
 const { colorIntToHex } = require('../../utils/dynamicConfig');
 const logger = require('../../logger')('dashboard:pages');
-const { reportDashboardError } = require('../sentryDashboard');
 
 const router = express.Router();
 const PUBLIC_BOT_ICON_PATH = '/assets/bot-icon.png';
