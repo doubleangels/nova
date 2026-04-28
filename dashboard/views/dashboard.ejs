@@ -730,16 +730,19 @@
           <!-- Populated by JS -->
         </tbody>
       </table>
-      <div class="p-4 bg-[var(--c-input)]/30 border-t border-[var(--c-card-border)]">
-        <button onclick="addAutoReactionRow()" class="text-xs font-bold text-[var(--c-accent)] hover:text-[var(--c-accent-strong)] transition-colors flex items-center gap-2">
+      <div class="p-4 bg-[var(--c-input)]/30 border-t border-[var(--c-card-border)] flex flex-wrap items-center justify-between gap-3">
+        <button type="button" onclick="addAutoReactionRow()" class="text-xs font-bold text-[var(--c-accent)] hover:text-[var(--c-accent-strong)] transition-colors inline-flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Add New Pattern
+        </button>
+        <button type="button" onclick="saveAutoReactions()" class="btn-dash-primary p-2.5 min-h-[44px] min-w-[44px] shrink-0" aria-label="Save patterns" title="Save patterns">
+          <svg class="w-5 h-5 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
         </button>
       </div>
     </div>
 
     <div class="mt-6 text-[11px] text-[var(--c-text-dim)] space-y-2 leading-relaxed">
-      <p>Changes save automatically.</p>
+      <p>Click the <strong class="text-[var(--c-text-muted)]">save</strong> icon when you’re finished editing.</p>
       <p><strong class="text-[var(--c-text-muted)]">Keyword mode (default):</strong> type a word or phrase — matching is <strong class="text-[var(--c-text-muted)]">case-insensitive</strong> and uses <strong class="text-[var(--c-text-muted)]">whole words</strong> (so <span class="font-mono text-[var(--c-text-muted)]">cat</span> won’t match <span class="font-mono text-[var(--c-text-muted)]">category</span>). Special regex characters are treated as plain text.</p>
       <p><strong class="text-[var(--c-text-muted)]">Regex column:</strong> turn on only for full patterns; you can still use literals like <span class="font-mono text-[var(--c-text-muted)]">/dubz/i</span>.</p>
     </div>
@@ -4405,14 +4408,7 @@
     }).join('');
   }
 
-  let autoReactionsSaveTimer = null;
   let autoReactionsSaving = false;
-  function queueAutoReactionsSave(delay = 500) {
-    clearTimeout(autoReactionsSaveTimer);
-    autoReactionsSaveTimer = setTimeout(() => {
-      saveAutoReactions();
-    }, delay);
-  }
 
   window.addAutoReactionRow = () => {
     const tbody = document.getElementById('autoReactionTableBody');
@@ -4445,7 +4441,6 @@
     if (tbody.children.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">No reactions configured. Click "Add New Pattern" to start!</td></tr>';
     }
-    queueAutoReactionsSave();
   };
 
   window.saveAutoReactions = async () => {
@@ -4482,18 +4477,6 @@
       autoReactionsSaving = false;
     }
   };
-
-  document.getElementById('autoReactionTableBody')?.addEventListener('input', (event) => {
-    if (
-      event.target?.classList?.contains('ar-pattern') ||
-      event.target?.classList?.contains('ar-emoji')
-    ) {
-      queueAutoReactionsSave();
-    }
-  });
-  document.getElementById('autoReactionTableBody')?.addEventListener('change', (event) => {
-    if (event.target?.classList?.contains('ar-use-regex')) queueAutoReactionsSave();
-  });
 
   loadAutoReactions();
   document.getElementById('refreshDbBtn')?.addEventListener('click', loadDatabaseEntries);
