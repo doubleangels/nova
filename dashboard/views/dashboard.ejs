@@ -71,7 +71,7 @@
     </div>
   </div>
 
-  <div class="mb-3">
+  <div id="status-snapshot" class="mb-3 scroll-mt-28">
     <p class="dash-cat-label">Snapshot</p>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl">Member count, <strong class="text-[var(--c-text-muted)]">Discord</strong> API latency, and host <strong class="text-[var(--c-text-muted)]">CPU / memory</strong> at a glance.</p>
   </div>
@@ -148,7 +148,7 @@
     </div>
   </div>
 
-  <div class="mt-10 mb-3">
+  <div id="status-health" class="mt-10 mb-3 scroll-mt-28">
     <p class="dash-cat-label">Service Health</p>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl"><strong class="text-[var(--c-text-muted)]">Gateway</strong>, dashboard <strong class="text-[var(--c-text-muted)]">API</strong>, and <strong class="text-[var(--c-text-muted)]">SQLite</strong> read/write checks.</p>
   </div>
@@ -167,7 +167,7 @@
     </div>
   </div>
 
-  <div class="mt-10 mb-3">
+  <div id="status-performance" class="mt-10 mb-3 scroll-mt-28">
     <p class="dash-cat-label">Performance &amp; Runtime</p>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl"><strong class="text-[var(--c-text-muted)]">Uptime</strong>, event-loop delay, and short <strong class="text-[var(--c-text-muted)]">CPU / memory</strong> trends from the dashboard poll.</p>
   </div>
@@ -201,7 +201,7 @@
     </div>
   </div>
 
-  <div class="mt-10 mb-3">
+  <div id="status-queues" class="mt-10 mb-3 scroll-mt-28">
     <p class="dash-cat-label">Queues &amp; Scheduled Reminders</p>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl">Reminder queue size and next fire times for <strong class="text-[var(--c-text-muted)]">Disboard</strong>, <strong class="text-[var(--c-text-muted)]">Reddit</strong>, and <strong class="text-[var(--c-text-muted)]">NeedAFriend</strong>.</p>
   </div>
@@ -247,7 +247,7 @@
     </div>
   </div>
 
-  <div class="mt-10 mb-3">
+  <div id="status-shortcuts" class="mt-10 mb-3 scroll-mt-28">
     <p class="dash-cat-label">Navigate</p>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5 max-w-2xl">Quick links to settings and tools (same destinations as the sidebar).</p>
   </div>
@@ -304,7 +304,7 @@
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Name, invite link, embed color, and the bot’s <strong class="text-[var(--c-text-muted)]">Discord activity</strong> line.</p>
   </div>
 
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
+  <div id="general-settings" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
       <div>
@@ -368,7 +368,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
       
       <!-- Member Management Roles -->
-      <div class="space-y-5">
+      <div id="roles-member-onboarding" class="space-y-5 scroll-mt-28">
         
         <div>
           <label class="field-label">Noobies Role</label>
@@ -390,7 +390,7 @@
       </div>
 
       <!-- Command & Assistant Roles -->
-      <div class="space-y-5">
+      <div id="roles-give-perms" class="space-y-5 scroll-mt-28">
         
         <div>
           <label class="field-label">Fren Role</label>
@@ -406,7 +406,7 @@
       </div>
 
       <!-- Validation Roles -->
-      <div class="sm:col-span-2 space-y-5">
+      <div id="roles-validation" class="sm:col-span-2 space-y-5 scroll-mt-28">
         
         <div class="max-w-md">
           <label class="field-label">Permission Reference Role</label>
@@ -430,7 +430,7 @@
   </div>
 
   <!-- Anti-Spam -->
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4">
+  <div id="moderation-anti-spam" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4 scroll-mt-28">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Anti-Spam</h3>
@@ -461,7 +461,7 @@
   </div>
 
   <!-- Inactivity Guard -->
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4">
+  <div id="moderation-inactivity-guard" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4 scroll-mt-28">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Inactivity Guard</h3>
@@ -482,7 +482,7 @@
   </div>
 
   <!-- Entry Guard -->
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4">
+  <div id="moderation-entry-guard" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-4 scroll-mt-28">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="card-sub-title text-base font-semibold">Entry Guard</h3>
@@ -516,7 +516,7 @@
   </div>
 
   <!-- Live Reminders Table / Controls -->
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-6">
+  <div id="reminders-active-timers" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mb-6 scroll-mt-28">
       <div class="flex items-center justify-between mb-4">
           <div>
               <h3 class="font-bold text-sm">Active Timers</h3>
@@ -568,7 +568,7 @@
           </div>
       </div>
   </div>
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
+  <div id="reminders-channels" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
     <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mb-5">
       Where reminders post, which role gets pinged, invite join alerts, and per-schedule <strong class="text-[var(--c-text-muted)]">delay</strong> overrides (hours).
     </p>
@@ -604,7 +604,7 @@
     </div>
   </div>
 
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6">
+  <div id="reminders-reddit" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6 scroll-mt-28">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Reddit &amp; NeedAFriend</h3>
@@ -683,7 +683,7 @@
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed"><strong class="text-[var(--c-text-muted)]">Media-only</strong> channels and keyword or regex <strong class="text-[var(--c-text-muted)]">auto-reactions</strong>.</p>
   </div>
 
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
+  <div id="social-restricted" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Restricted Channels (Media Only)</h3>
@@ -702,7 +702,7 @@
     </div>
   </div>
 
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6">
+  <div id="social-auto-reactions" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6 scroll-mt-28">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Keywords &amp; Auto-Reactions</h3>
@@ -754,7 +754,7 @@
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <p class="maint-group-label lg:col-span-2">Diagnostics &amp; SQLite</p>
+    <p id="maintenance-diagnostics" class="maint-group-label lg:col-span-2 scroll-mt-28">Diagnostics &amp; SQLite</p>
 
     <div class="card p-5 space-y-3 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Deep Health</h3>
@@ -826,7 +826,7 @@
       </div>
     </div>
 
-    <p class="maint-group-label lg:col-span-2">Discord &amp; Dashboard Cache</p>
+    <p id="maintenance-discord-cache" class="maint-group-label lg:col-span-2 scroll-mt-28">Discord &amp; Dashboard Cache</p>
 
     <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Discord Alignment</h3>
@@ -846,7 +846,7 @@
       </div>
     </div>
 
-    <p class="maint-group-label lg:col-span-2">Backfill &amp; Channel Jobs</p>
+    <p id="maintenance-backfill" class="maint-group-label lg:col-span-2 scroll-mt-28">Backfill &amp; Channel Jobs</p>
 
     <div class="card p-5 space-y-3 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Seed Join History</h3>
@@ -963,7 +963,7 @@
       <div id="maintSeedErrors" class="hidden text-[11px] text-red-400/90 font-mono whitespace-pre-wrap"></div>
     </div>
 
-    <p class="maint-group-label lg:col-span-2">Sessions &amp; Keyv</p>
+    <p id="maintenance-sessions" class="maint-group-label lg:col-span-2 scroll-mt-28">Sessions &amp; Keyv</p>
 
     <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Safe Cleanup</h3>
@@ -984,7 +984,7 @@
       </button>
     </div>
 
-    <p class="maint-group-label lg:col-span-2">Backup &amp; Restore</p>
+    <p id="maintenance-backup" class="maint-group-label lg:col-span-2 scroll-mt-28">Backup &amp; Restore</p>
 
     <div class="card p-5 space-y-3 lg:col-span-2">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Database Backup</h3>
@@ -1029,7 +1029,7 @@
     </h2>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Send <strong class="text-[var(--c-text-muted)]">plain text</strong> or a <strong class="text-[var(--c-text-muted)]">rich embed</strong> as the bot to any channel you can select.</p>
   </div>
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
+  <div id="messaging-composer" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
     <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mb-6">Uses your chosen channel; content is sent through the dashboard API (not stored as a draft).</p>
     
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
@@ -1124,7 +1124,7 @@
   </div>
   
   <!-- Invite List -->
-  <div class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden">
+  <div id="invites-active" class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden scroll-mt-28">
     <div class="hidden lg:grid lg:grid-cols-12 gap-4 px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-dim)] font-bold items-center">
         <div class="lg:col-span-3">Code / Tag</div>
         <div class="lg:col-span-2 text-center">Channel</div>
@@ -1137,7 +1137,7 @@
     </div>
   </div>
 
-  <div class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden mt-6">
+  <div id="invites-recent-joins" class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden mt-6 scroll-mt-28">
     <div class="px-5 py-4 border-b border-[var(--c-card-border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--c-input)]/30">
       <div>
         <h3 class="font-bold text-sm text-[var(--c-text)]">Recent Joins</h3>
@@ -1219,7 +1219,7 @@
 
 <!-- ══════════════════════════════════════════════════════════ ADVANCED DATABASE EDITOR -->
 <section id="database" class="mb-10 page-section hidden">
-  <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+  <div id="database-browse" class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between scroll-mt-28">
     <div class="min-w-0">
         <h2 class="section-heading mb-1">
             <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
@@ -1269,7 +1269,7 @@
 
 <!-- ─── USERS SECTION ───────────────────────────────────────────────────────── -->
 <section id="users" class="page-section hidden space-y-8 mt-8 mb-10">
-  <div class="card bg-[var(--c-input)]/50 border-dashed">
+  <div id="users-user-manager" class="card bg-[var(--c-input)]/50 border-dashed scroll-mt-28">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
               <h2 class="section-heading mb-1">User Manager</h2>
@@ -4892,19 +4892,47 @@
   })();
 
   // ── SPA Visibility Logic ──────────────────────────────────────────────────
+  /** Longest-first so `users` wins over hypothetical shorter prefixes. */
+  const DASHBOARD_SECTION_IDS = [
+    'maintenance',
+    'moderation',
+    'reminders',
+    'messaging',
+    'database',
+    'invites',
+    'general',
+    'status',
+    'roles',
+    'social',
+    'users'
+  ];
+
   function normalizeDashboardNavHash(raw) {
-    let h = raw || '#status';
+    let h = (raw || '#status').split('?')[0] || '#status';
     if (h === '#inactivity') {
       if (window.location.hash === '#inactivity') {
         history.replaceState(null, '', '#users-inactivity-prune');
       }
       h = '#users-inactivity-prune';
     }
-    if (h === '#users-inactivity-prune') {
-      return { sectionHash: '#users', scrollToId: 'users-inactivity-prune' };
+
+    const slug = h.startsWith('#') ? h.slice(1) : h;
+    if (!slug) return { sectionHash: '#status', scrollToId: null };
+
+    if (DASHBOARD_SECTION_IDS.includes(slug)) {
+      return { sectionHash: `#${slug}`, scrollToId: null };
     }
+
+    for (const sid of DASHBOARD_SECTION_IDS) {
+      if (slug.startsWith(`${sid}-`)) {
+        return { sectionHash: `#${sid}`, scrollToId: slug };
+      }
+    }
+
     return { sectionHash: h, scrollToId: null };
   }
+
+  window.dashboardResolveNavHash = normalizeDashboardNavHash;
 
   function updateVisibility() {
     const { sectionHash, scrollToId } = normalizeDashboardNavHash(window.location.hash);

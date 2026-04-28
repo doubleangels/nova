@@ -165,6 +165,29 @@
           color: var(--c-nav-active-text) !important;
         }
 
+        .sb-sublink {
+          display: block;
+          font-size: 11px;
+          font-weight: 600;
+          line-height: 1.25;
+          padding: 0.35rem 0.5rem 0.35rem 0.25rem;
+          margin-left: 0.125rem;
+          border-radius: 0.375rem;
+          color: var(--c-text-dim);
+          text-decoration: none;
+          transition: color 0.15s ease, background-color 0.15s ease;
+        }
+
+        .sb-sublink:hover {
+          color: var(--c-nav-hover-text);
+          background-color: var(--c-nav-hover-bg);
+        }
+
+        .sb-sublink.active {
+          color: var(--c-nav-active-text);
+          background-color: var(--c-nav-active-bg);
+        }
+
         .brand-accent {
           color: var(--c-accent-strong) !important;
         }
@@ -419,17 +442,34 @@
     });
     mobileOverlay?.addEventListener('click', closeMenu);
 
-    // ── Active nav ─────────────────────────────────────────────────────────────
+    // ── Active nav (primary section + optional subsections; hashes resolved in dashboard.ejs) ──
     function setActiveNav() {
       const hash = window.location.hash || '#status';
-      document.querySelectorAll('.sidebar-link').forEach(l => l.classList.toggle('active', l.getAttribute('href') === hash));
+      const resolved =
+        typeof window.dashboardResolveNavHash === 'function'
+          ? window.dashboardResolveNavHash(hash)
+          : { sectionHash: hash, scrollToId: null };
+      const primaryHash = resolved.sectionHash || hash;
+
+      document.querySelectorAll('.sb-nav-group').forEach((group) => {
+        const primary = group.querySelector('a.sidebar-link--primary');
+        const subWrap = group.querySelector('.sb-sublinks');
+        if (!primary) return;
+        const href = primary.getAttribute('href');
+        const isActiveSection = href === primaryHash;
+        primary.classList.toggle('active', isActiveSection);
+        if (subWrap) {
+          subWrap.classList.toggle('hidden', !isActiveSection);
+          subWrap.querySelectorAll('.sb-sublink').forEach((sub) => {
+            sub.classList.toggle('active', sub.getAttribute('href') === hash);
+          });
+        }
+      });
+
       if (window.innerWidth < 1024 && mobileSidebar && !mobileSidebar.classList.contains('hidden')) {
         closeMenu();
       }
     }
-    setActiveNav();
-    window.addEventListener('hashchange', setActiveNav);
-
     setActiveNav();
     window.addEventListener('hashchange', setActiveNav);
   </script>
