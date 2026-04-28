@@ -38,7 +38,7 @@
 
 <!-- Confirmation modal -->
 <div id="confirmModal" class="hidden fixed inset-0 z-50">
-  <div class="absolute inset-0 bg-black/60" id="confirmModalBackdrop"></div>
+  <div class="absolute inset-0 bg-[var(--c-overlay-scrim)] backdrop-blur-[2px]" id="confirmModalBackdrop"></div>
   <div class="absolute inset-0 flex items-center justify-center p-4">
     <div class="w-full max-w-md card">
       <h3 id="confirmModalTitle" class="text-sm font-bold text-[var(--c-text)]">Confirm Action</h3>
@@ -65,7 +65,7 @@
             <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
         </div>
         <div>
-            <h2 class="text-2xl font-bold border-b border-white/5 pb-1 inline-block">Welcome back, <%= displayName %>!</h2>
+            <h2 class="text-2xl font-bold border-b border-[var(--c-card-border)] pb-1 inline-block">Welcome back, <%= displayName %>!</h2>
             <p class="text-sm text-[var(--c-text-dim)]">Here's what's happening with Nova and <span class="text-[var(--c-accent)] font-semibold"><%= guildName %></span>.</p>
         </div>
     </div>
@@ -1145,7 +1145,7 @@
         <div class="lg:col-span-2 text-center">Expires</div>
         <div class="lg:col-span-3 text-right">Actions</div>
     </div>
-    <div id="inviteTableBody" class="divide-y divide-white/5">
+    <div id="inviteTableBody" class="divide-y divide-[var(--c-subtle-divide)]">
         <div class="px-5 py-10 text-center text-xs text-[var(--c-text-dim)]">Loading invites...</div>
     </div>
   </div>
@@ -1168,7 +1168,7 @@
       <div class="lg:col-span-5">Member</div>
       <div class="lg:col-span-4">Source</div>
     </div>
-    <div id="inviteJoinHistoryBody" class="divide-y divide-white/5">
+    <div id="inviteJoinHistoryBody" class="divide-y divide-[var(--c-subtle-divide)]">
       <div class="px-5 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading history…</div>
     </div>
   </div>
@@ -1372,7 +1372,7 @@
               </div>
               <div class="lg:col-span-2 text-right">Actions</div>
           </div>
-          <div id="userTableBody" role="list" class="divide-y divide-white/5">
+          <div id="userTableBody" role="list" class="divide-y divide-[var(--c-subtle-divide)]">
               <div role="listitem" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">Loading users...</div>
           </div>
       </div>
@@ -1415,7 +1415,7 @@
           </div>
           <div class="max-h-64 overflow-y-auto overflow-x-auto">
               <table class="w-full text-left text-xs min-w-[280px]">
-                  <tbody id="inactivityResultsBody" class="divide-y divide-white/5">
+                  <tbody id="inactivityResultsBody" class="divide-y divide-[var(--c-subtle-divide)]">
                   </tbody>
               </table>
           </div>
@@ -1493,6 +1493,10 @@
   }
   .tabular-nums {
     font-variant-numeric: tabular-nums;
+  }
+  /* User Manager / inactivity rows (built in JS — use CSS var for theme) */
+  .um-row-hover:hover {
+    background-color: var(--c-row-hover);
   }
   .field-label {
     display: block;
@@ -1773,17 +1777,21 @@
   }
   function applyAccentTheme(baseHex) {
     const base = normalizeHex(baseHex);
-    const strong = mix(base, '#FFFFFF', 0.18);
-    const text = mix(base, '#FFFFFF', 0.45);
+    const light = document.documentElement.getAttribute('data-theme') === 'light';
+    const strong = light ? mix(base, '#000000', 0.12) : mix(base, '#FFFFFF', 0.18);
+    const text = light ? mix(base, '#0f172a', 0.35) : mix(base, '#FFFFFF', 0.45);
     const rgb = hexToRgb(base);
     const root = document.documentElement;
+    const softBgA = light ? 0.11 : 0.2;
+    const softRingA = light ? 0.2 : 0.32;
+    const navBgA = light ? 0.12 : 0.22;
     root.style.setProperty('--c-accent', base);
     root.style.setProperty('--c-accent-strong', strong);
     root.style.setProperty('--c-accent-text', text);
-    root.style.setProperty('--c-accent-soft-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22)`);
-    root.style.setProperty('--c-accent-soft-ring', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.35)`);
-    root.style.setProperty('--c-nav-active-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22)`);
-    root.style.setProperty('--c-nav-active-text', text);
+    root.style.setProperty('--c-accent-soft-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${softBgA})`);
+    root.style.setProperty('--c-accent-soft-ring', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${softRingA})`);
+    root.style.setProperty('--c-nav-active-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${navBgA})`);
+    root.style.setProperty('--c-nav-active-text', light ? base : text);
   }
 
   colorPicker?.addEventListener('input', () => {
@@ -1804,6 +1812,12 @@
       colorPicker.value = v;
       applyAccentTheme(v);
     }
+  });
+
+  window.addEventListener('dashboard-theme-changed', () => {
+    const v = colorText?.value;
+    if (v && /^#[0-9A-Fa-f]{6}$/i.test(v)) applyAccentTheme(v);
+    else if (colorPicker?.value) applyAccentTheme(colorPicker.value);
   });
 
   // ── Load guild roles/channels ─────────────────────────────────────────────
@@ -3487,7 +3501,7 @@
             ? ' border-l-[3px] border-l-red-500 bg-red-500/[0.08] hover:bg-red-500/[0.12]'
             : privilege === 'mod'
               ? ' border-l-[3px] border-l-yellow-500 bg-yellow-500/[0.07] hover:bg-yellow-500/[0.11]'
-              : ' border-l-[3px] border-l-transparent hover:bg-white/[0.02]';
+              : ' border-l-[3px] border-l-transparent um-row-hover';
         row.className = 'transition-colors' + rowTint;
 
         const avatarSrc = u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png';
@@ -3808,7 +3822,7 @@
               execBtn.disabled = false;
               execBtn.classList.remove('opacity-50', 'cursor-not-allowed');
               tbody.innerHTML = data.targets.map(t => `
-                  <tr class="hover:bg-white/[0.02] transition-colors">
+                  <tr class="um-row-hover transition-colors">
                       <td class="px-4 py-2 font-medium text-[var(--c-text)]">${escapeHtml(t.displayName)} <span class="text-[10px] text-[var(--c-text-dim)]">@${escapeHtml(t.username)}</span></td>
                       <td class="px-4 py-2 text-right text-red-400 opacity-80">${escapeHtml(t.reason)}</td>
                   </tr>

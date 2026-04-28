@@ -49,64 +49,92 @@
           --c-accent-text: #c4b5fd;
           <% } %>
 
-          --c-bg: #050506;
-          --c-sidebar: #0d0d10;
-          --c-sidebar-border: #1f1f24;
-          --c-topbar: #0d0d10;
-          --c-topbar-border: #1f1f24;
-          --c-text: #f3f4f6;
-          --c-text-muted: #a1a1aa;
-          --c-text-dim: #71717a;
-          --c-nav-text: #d4d4d8;
-          --c-nav-hover-bg: #1b1b20;
+          /* Surfaces: cool-neutral dark — clearer steps between bg / chrome / cards */
+          --c-bg: #070708;
+          --c-sidebar: #0b0b0e;
+          --c-sidebar-border: #1a1a22;
+          --c-topbar: #0b0b0e;
+          --c-topbar-border: #1a1a22;
+          --c-text: #f4f4f5;
+          --c-text-muted: #a1a1ad;
+          --c-text-dim: #6e6e7a;
+          --c-nav-text: #d4d4dc;
+          --c-nav-hover-bg: #15151b;
           --c-nav-hover-text: #ffffff;
           --c-nav-active-bg: rgba(var(--c-accent-rgb), 0.22);
           --c-nav-active-text: #ffffff;
-          /* component tokens (consumed by dashboard.ejs) */
-          --c-card: #101014;
-          --c-card-border: #24242a;
-          --c-input: #18181d;
-          --c-input-border: #32323a;
-          --c-input-text: #ffffff;
-          --c-input-ph: #52525b;
-          --c-label: #d4d4d8;
-          --c-hint: #71717a;
-          --c-toggle-off: #3f3f46;
-          
-          /* Glassmorphism */
-          --glass-bg: rgba(16, 16, 20, 0.75);
-          --glass-border: rgba(255, 255, 255, 0.05);
-          --glass-blur: 12px;
+          --c-card: #111117;
+          --c-card-border: #27272f;
+          --c-input: #16161d;
+          --c-input-border: #32323c;
+          --c-input-text: #fafafa;
+          --c-input-ph: #5b5b66;
+          --c-label: #d8d8e0;
+          --c-hint: #6f6f7a;
+          --c-toggle-off: #3a3a44;
+
+          --c-overlay-scrim: rgba(2, 4, 10, 0.62);
+          --c-card-hover-shadow: rgba(0, 0, 0, 0.55);
+          --c-blob-secondary: #3555ff;
+          --c-ring-on-canvas: rgba(255, 255, 255, 0.1);
+          --c-sidebar-veil: rgba(255, 255, 255, 0.03);
+          --c-row-hover: rgba(255, 255, 255, 0.04);
+          --c-subtle-divide: rgba(255, 255, 255, 0.06);
+
+          --glass-bg: rgba(12, 12, 16, 0.82);
+          --glass-border: rgba(255, 255, 255, 0.06);
+          --glass-blur: 14px;
         }
 
         html[data-theme="light"] {
-          --c-bg: #f1f5f9;
-          --c-sidebar: #ffffff;
-          --c-sidebar-border: #e2e8f0;
-          --c-topbar: #ffffff;
-          --c-topbar-border: #e2e8f0;
-          --c-text: #0f172a;
-          --c-text-muted: #475569;
-          --c-text-dim: #94a3b8;
-          --c-nav-text: #334155;
-          --c-nav-hover-bg: #f1f5f9;
-          --c-nav-hover-text: #0f172a;
-          --c-nav-active-bg: rgba(var(--c-accent-rgb), 0.08);
+          --c-bg: #ebeef4;
+          --c-sidebar: #fafbfc;
+          --c-sidebar-border: #dde2eb;
+          --c-topbar: #fafbfc;
+          --c-topbar-border: #dde2eb;
+          --c-text: #0c1220;
+          --c-text-muted: #3d4a5f;
+          --c-text-dim: #5a677a;
+          --c-nav-text: #2a3648;
+          --c-nav-hover-bg: #e8ecf3;
+          --c-nav-hover-text: #0c1220;
+          --c-nav-active-bg: rgba(var(--c-accent-rgb), 0.11);
           --c-nav-active-text: var(--c-accent);
           --c-card: #ffffff;
-          --c-card-border: #e2e8f0;
-          --c-input: #f8fafc;
-          --c-input-border: #cbd5e1;
-          --c-input-text: #0f172a;
-          --c-input-ph: #94a3b8;
-          --c-label: #334155;
-          --c-hint: #94a3b8;
-          --c-toggle-off: #cbd5e1;
+          --c-card-border: #dfe3ec;
+          --c-input: #f4f6f9;
+          --c-input-border: #c3cad6;
+          --c-input-text: #0c1220;
+          --c-input-ph: #6b7788;
+          --c-label: #273143;
+          --c-hint: #5a677a;
+          --c-toggle-off: #c3cad6;
+
+          --c-accent-soft-bg: rgba(var(--c-accent-rgb), 0.1);
+          --c-accent-soft-ring: rgba(var(--c-accent-rgb), 0.2);
+
+          --c-overlay-scrim: rgba(12, 18, 34, 0.45);
+          --c-card-hover-shadow: rgba(15, 23, 42, 0.11);
+          --c-blob-secondary: #5b6cff;
+          --c-ring-on-canvas: rgba(12, 18, 34, 0.1);
+          --c-sidebar-veil: rgba(12, 18, 34, 0.04);
+          --c-row-hover: rgba(12, 18, 34, 0.05);
+          --c-subtle-divide: rgba(12, 18, 34, 0.08);
+
+          --glass-bg: rgba(255, 255, 255, 0.92);
+          --glass-border: rgba(12, 18, 34, 0.08);
         }
 
         /* ── Shell ───────────────────────────────────────────────────────────── */
         html {
           font-family: Inter, ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          color-scheme: dark;
+          scrollbar-color: var(--c-card-border) var(--c-bg);
+          scrollbar-width: thin;
+        }
+
+        html[data-theme="light"] {
+          color-scheme: light;
         }
 
         body {
@@ -201,7 +229,7 @@
         }
 
         .premium-card:hover {
-          box-shadow: 0 12px 40px -12px rgba(0,0,0,0.5);
+          box-shadow: 0 18px 50px -18px var(--c-card-hover-shadow);
         }
 
         .glass-panel {
@@ -242,7 +270,7 @@
         }
 
         .blob-1 { width: 500px; height: 500px; background: var(--c-accent); top: -200px; right: -100px; }
-        .blob-2 { width: 400px; height: 400px; background: #3b82f6; bottom: -100px; left: -100px; }
+        .blob-2 { width: 400px; height: 400px; background: var(--c-blob-secondary); bottom: -100px; left: -100px; }
 
         input[type="color"] {
           padding: 2px 4px;
@@ -319,7 +347,7 @@
   <div id="mobileTopbar" class="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-40 bg-[var(--c-topbar)]">
     <div class="flex items-center gap-3">
       <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
-        <img src="<%= guildIcon %>" class="w-8 h-8 rounded-lg ring-1 ring-white/10" alt="Server icon" />
+        <img src="<%= guildIcon %>" class="w-8 h-8 rounded-lg ring-1 ring-[var(--c-ring-on-canvas)]" alt="Server icon" />
       <% } else { %>
         <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs" style="background:var(--c-accent)">N</div>
       <% } %>
@@ -346,7 +374,7 @@
     </aside>
 
     <!-- Mobile overlay + sidebar -->
-    <div id="mobileOverlay" class="hidden fixed inset-0 bg-black/60 z-20 lg:hidden w-full h-full"></div>
+    <div id="mobileOverlay" class="hidden fixed inset-0 z-20 lg:hidden w-full h-full bg-[var(--c-overlay-scrim)] backdrop-blur-[2px]"></div>
     <aside id="mobileSidebar" class="hidden flex-col fixed top-0 left-0 h-full w-64 border-r z-30 overflow-y-auto pt-[56px] pb-6 lg:hidden">
       <%- include('partials/sidebar') %>
     </aside>
@@ -362,14 +390,14 @@
   <!-- Global UI Components -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
-  <div id="modalContainer" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+  <div id="modalContainer" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-[var(--c-overlay-scrim)] backdrop-blur-sm">
     <div class="glass-panel w-full max-w-md p-6 space-y-6 shadow-2xl animate-[modal-in_0.2s_ease-out]">
       <div class="space-y-2">
         <h3 id="modalTitle" class="text-lg font-bold text-[var(--c-text)]">Confirm Action</h3>
         <p id="modalMessage" class="text-sm text-[var(--c-text-dim)] leading-relaxed"></p>
       </div>
       <div class="flex justify-end gap-3">
-        <button id="modalCancel" class="px-4 py-2 rounded-lg text-sm font-bold text-[var(--c-text-muted)] hover:bg-white/5 transition-colors">Cancel</button>
+        <button id="modalCancel" class="px-4 py-2 rounded-lg text-sm font-bold text-[var(--c-text-muted)] hover:bg-[var(--c-nav-hover-bg)] transition-colors">Cancel</button>
         <button id="modalConfirm" class="px-4 py-2 rounded-lg text-sm font-bold bg-[var(--c-accent)] hover:bg-[var(--c-accent-strong)] text-white transition-colors">Confirm</button>
       </div>
     </div>
@@ -407,6 +435,7 @@
       const moon = document.getElementById('themeIconMoon');
       if (sun) sun.style.display = theme === 'dark' ? '' : 'none';
       if (moon) moon.style.display = theme === 'light' ? '' : 'none';
+      window.dispatchEvent(new CustomEvent('dashboard-theme-changed', { detail: { theme } }));
     }
     // Re-apply after DOM is ready (inline script at top handled the pre-paint case)
     applyTheme(localStorage.getItem('dashboard-theme') || 'dark');

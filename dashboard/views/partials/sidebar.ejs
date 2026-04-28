@@ -1,10 +1,10 @@
 <!-- Sidebar header -->
-<div class="sb-header p-6 border-b border-white/5 bg-white/[0.02] hidden lg:flex flex-col">
+<div class="sb-header p-6 border-b border-[var(--c-sidebar-border)] bg-[var(--c-sidebar-veil)] hidden lg:flex flex-col">
   <div class="flex items-center gap-3">
     <% if (typeof guildIcon !== 'undefined' && guildIcon) { %>
       <div class="relative group">
         <div class="absolute inset-0 bg-[var(--c-accent)] blur-lg opacity-20 group-hover:opacity-40 transition-opacity"></div>
-        <img src="<%= guildIcon %>" class="relative w-10 h-10 rounded-xl ring-1 ring-white/10" alt="Server icon" />
+        <img src="<%= guildIcon %>" class="relative w-10 h-10 rounded-xl ring-1 ring-[var(--c-ring-on-canvas)]" alt="Server icon" />
       </div>
     <% } else { %>
       <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
@@ -215,13 +215,13 @@
 
 <!-- User info at bottom -->
 <% if (typeof user !== 'undefined' && user) { %>
-  <div class="sb-footer border-t border-white/5 p-4 bg-white/[0.01]">
+  <div class="sb-footer border-t border-[var(--c-sidebar-border)] p-4 bg-[var(--c-sidebar-veil)]">
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3 min-w-0">
         <div class="relative">
             <% if (user.avatar) { %>
                 <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png?size=32"
-                    class="w-8 h-8 rounded-lg flex-shrink-0 ring-1 ring-white/10" alt="Avatar" />
+                    class="w-8 h-8 rounded-lg flex-shrink-0 ring-1 ring-[var(--c-ring-on-canvas)]" alt="Avatar" />
             <% } else { %>
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs text-white flex-shrink-0"
                     style="background:var(--c-accent)">
