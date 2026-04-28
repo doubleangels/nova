@@ -1531,19 +1531,19 @@
     gap: 0.375rem;
     font-weight: 700;
     border-radius: 0.5rem;
-    background: var(--c-card);
+    background: var(--c-dash-btn-secondary-bg);
     color: var(--c-accent) !important;
     border: 1px solid var(--c-accent);
     transition: background-color 0.15s ease, opacity 0.15s ease;
   }
   .btn-dash-secondary:hover:not(:disabled) {
-    background: var(--c-accent-soft-bg);
+    background: var(--c-dash-btn-secondary-hover);
   }
   .btn-dash-secondary:disabled {
     opacity: 0.55;
     cursor: not-allowed;
-    border-color: var(--c-input-border);
-    background: var(--c-card);
+    border-color: var(--c-dash-btn-neutral-border);
+    background: var(--c-dash-btn-secondary-bg);
     color: var(--c-text-dim) !important;
   }
 
@@ -1554,13 +1554,13 @@
     gap: 0.375rem;
     font-weight: 700;
     border-radius: 0.5rem;
-    background: var(--c-card);
-    color: var(--c-label) !important;
-    border: 1px solid var(--c-input-border);
+    background: var(--c-dash-btn-neutral-bg);
+    color: var(--c-dash-btn-neutral-text) !important;
+    border: 1px solid var(--c-dash-btn-neutral-border);
     transition: background-color 0.15s ease;
   }
   .btn-dash-neutral:hover:not(:disabled) {
-    background: var(--c-input);
+    background: var(--c-dash-btn-neutral-hover-bg);
   }
   .btn-dash-neutral:disabled {
     opacity: 0.5;
@@ -1587,8 +1587,8 @@
   .btn-dash-warn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
-    border-color: var(--c-input-border);
-    background: var(--c-card);
+    border-color: var(--c-dash-btn-neutral-border);
+    background: var(--c-dash-btn-neutral-bg);
     color: var(--c-text-dim) !important;
   }
 

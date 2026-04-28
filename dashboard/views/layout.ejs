@@ -84,6 +84,14 @@
           --glass-bg: rgba(12, 12, 16, 0.82);
           --glass-border: rgba(255, 255, 255, 0.06);
           --glass-blur: 14px;
+
+          /* btn-dash-*: same surfaces as --c-card / --c-input in dark */
+          --c-dash-btn-secondary-bg: var(--c-card);
+          --c-dash-btn-secondary-hover: var(--c-accent-soft-bg);
+          --c-dash-btn-neutral-bg: var(--c-card);
+          --c-dash-btn-neutral-text: var(--c-label);
+          --c-dash-btn-neutral-border: var(--c-input-border);
+          --c-dash-btn-neutral-hover-bg: var(--c-input);
         }
 
         html[data-theme="light"] {
@@ -125,6 +133,14 @@
 
           --glass-bg: rgba(255, 255, 255, 0.92);
           --glass-border: rgba(12, 18, 34, 0.08);
+
+          /* Keep dashboard action buttons identical to dark theme (solid fills, borders) */
+          --c-dash-btn-secondary-bg: #111117;
+          --c-dash-btn-secondary-hover: rgba(var(--c-accent-rgb), 0.12);
+          --c-dash-btn-neutral-bg: #111117;
+          --c-dash-btn-neutral-text: #d8d8e0;
+          --c-dash-btn-neutral-border: #32323c;
+          --c-dash-btn-neutral-hover-bg: #16161d;
         }
 
         /* ── Shell ───────────────────────────────────────────────────────────── */
