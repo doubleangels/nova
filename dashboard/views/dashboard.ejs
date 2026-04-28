@@ -1368,8 +1368,8 @@
               <div class="lg:col-span-3 text-right">
                   <button type="button" data-um-sort="activity" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by last recorded message">Last activity <span id="um_sort_ico_act" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
               </div>
-              <div class="lg:col-span-2 text-right">
-                  <button type="button" data-um-sort="joined" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by server join date">Joined <span id="um_sort_ico_join" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
+              <div class="lg:col-span-2 text-left pl-4">
+                  <button type="button" data-um-sort="joined" class="inline-flex items-center gap-1 justify-start w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by server join date">Joined <span id="um_sort_ico_join" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
               </div>
               <div class="lg:col-span-2 text-right">Actions</div>
           </div>
@@ -3720,7 +3720,7 @@
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Last activity</span>
               <div title="${escapeHtmlUserManager(lastCellTitle)}">${lastCellHtml}${lastSubHtml}</div>
             </div>
-            <div class="mt-3 lg:mt-0 lg:col-span-2 text-xs text-[var(--c-text-muted)] text-center lg:text-right">
+            <div class="mt-3 lg:mt-0 lg:col-span-2 text-xs text-[var(--c-text-muted)] text-center lg:text-left pl-0 lg:pl-4">
               <span class="block lg:hidden text-[9px] font-bold uppercase tracking-wider text-[var(--c-text-dim)] mb-1">Joined</span>
               <div>${createdDate}</div>
             </div>
