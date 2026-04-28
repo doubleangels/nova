@@ -1323,26 +1323,26 @@
       </div>
 
       <div class="mb-6 p-4 bg-[var(--c-card)] rounded-xl border border-[var(--c-accent-soft-ring)] space-y-3">
-          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — <strong class="text-[var(--c-text-muted)]">every</strong> highlighted chip must match (AND). Counts are the full roster. “Humans” + “Bots” together ignores member type. <strong class="text-[var(--c-text-muted)]">Inactive</strong> uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> (Inactivity Prune card below). Sort applies to the table below.</p>
+          <p class="text-[10px] text-[var(--c-text-dim)] leading-relaxed">Click chips to combine filters — most chips use <strong class="text-[var(--c-text-muted)]">AND</strong> (every highlighted rule must match). <strong class="text-[var(--c-text-muted)]">Admin + Mod</strong> together means <strong class="text-[var(--c-text-muted)]">either</strong> staff tier. “Humans” + “Bots” together ignores member type. Counts are the full roster. <strong class="text-[var(--c-text-muted)]">Inactive</strong> uses <strong class="text-[var(--c-text-muted)]">Days of Inactivity</strong> (Inactivity Prune card below). Sort applies to the table below.</p>
           <div class="relative">
               <svg class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-text-dim)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <input type="search" id="userManagerSearch" class="field-input field-input-with-icon min-h-[40px]" placeholder="Search members by display name, username, or ID" />
+              <input type="search" id="userManagerSearch" class="field-input field-input-with-icon min-h-[40px]" placeholder="Search members by display name, username, or ID" autocomplete="off" />
           </div>
           <div class="flex flex-wrap items-center gap-2">
-              <button type="button" data-um-chip="admin" onclick="userManagerToggleChip('admin')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-red-500/40 bg-red-500/10 text-[11px] font-bold text-red-400 hover:bg-red-500/20 transition-all" aria-pressed="false">Admin <span id="usr_chip_admin" class="font-mono">0</span></button>
-              <button type="button" data-um-chip="mod" onclick="userManagerToggleChip('mod')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-[11px] font-bold text-yellow-400 hover:bg-yellow-500/20 transition-all" aria-pressed="false">Mod <span id="usr_chip_mod" class="font-mono">0</span></button>
-              <button type="button" data-um-chip="humans" onclick="userManagerToggleChip('humans')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all" aria-pressed="false">Humans <span id="usr_chip_um_humans" class="font-mono">0</span></button>
-              <button type="button" data-um-chip="bots" onclick="userManagerToggleChip('bots')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-blue-500/40 bg-blue-500/10 text-[11px] font-bold text-blue-400 hover:bg-blue-500/20 transition-all" aria-pressed="false">Bots <span id="usr_chip_um_bots" class="font-mono">0</span></button>
-              <button type="button" data-um-chip="safe" onclick="userManagerToggleChip('safe')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[11px] font-bold text-[var(--c-accent-text)] hover:opacity-90 transition-all" aria-pressed="false">Safe <span id="usr_chip_safe" class="font-mono">0</span></button>
-              <button type="button" data-um-chip="inactive" onclick="userManagerToggleChip('inactive')" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-orange-500/40 bg-orange-500/10 text-[11px] font-bold text-orange-300 hover:bg-orange-500/20 transition-all" aria-pressed="false">Inactive <span id="usr_chip_inactive" class="font-mono">0</span></button>
-              <button type="button" onclick="userManagerResetFilters()" class="w-full sm:w-auto sm:ml-auto min-h-[40px] px-3 py-2 text-[10px] font-bold tracking-wide text-[var(--c-text-dim)] hover:text-[var(--c-text)] underline decoration-dotted text-center sm:text-left">Clear Chips</button>
+              <button type="button" data-um-chip="admin" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-red-500/40 bg-red-500/10 text-[11px] font-bold text-red-400 hover:bg-red-500/20 transition-all" aria-pressed="false">Admin <span id="usr_chip_admin" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="mod" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-[11px] font-bold text-yellow-400 hover:bg-yellow-500/20 transition-all" aria-pressed="false">Mod <span id="usr_chip_mod" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="humans" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all" aria-pressed="false">Humans <span id="usr_chip_um_humans" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="bots" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-blue-500/40 bg-blue-500/10 text-[11px] font-bold text-blue-400 hover:bg-blue-500/20 transition-all" aria-pressed="false">Bots <span id="usr_chip_um_bots" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="safe" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-accent-soft-bg)] text-[11px] font-bold text-[var(--c-accent-text)] hover:opacity-90 transition-all" aria-pressed="false">Safe <span id="usr_chip_safe" class="font-mono">0</span></button>
+              <button type="button" data-um-chip="inactive" class="um-chip-btn min-h-[40px] px-3 py-2 rounded-lg border border-orange-500/40 bg-orange-500/10 text-[11px] font-bold text-orange-300 hover:bg-orange-500/20 transition-all" aria-pressed="false">Inactive <span id="usr_chip_inactive" class="font-mono">0</span></button>
+              <button type="button" id="userManagerClearChipsBtn" class="w-full sm:w-auto sm:ml-auto min-h-[40px] px-3 py-2 text-[10px] font-bold tracking-wide text-[var(--c-text-dim)] hover:text-[var(--c-text)] underline decoration-dotted text-center sm:text-left">Clear Chips</button>
           </div>
           <div class="flex lg:hidden flex-wrap items-center gap-2 pt-1">
               <span class="text-[9px] uppercase font-bold text-[var(--c-text-dim)] tracking-wider">Sort</span>
-              <button type="button" onclick="userManagerToggleSort('activity')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Last activity <span id="um_sort_ico_act_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
-              <button type="button" onclick="userManagerToggleSort('joined')" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Joined <span id="um_sort_ico_join_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
+              <button type="button" data-um-sort="activity" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Last activity <span id="um_sort_ico_act_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
+              <button type="button" data-um-sort="joined" class="min-h-[36px] px-2.5 py-1.5 rounded-lg border border-[var(--c-accent-soft-ring)] bg-[var(--c-input)] text-[10px] font-bold text-[var(--c-text-muted)] hover:border-[var(--c-accent)]">Joined <span id="um_sort_ico_join_m" class="font-mono text-[var(--c-accent-text)]"></span></button>
           </div>
           <p id="userManagerFilterHint" class="text-[10px] text-[var(--c-text-dim)] font-medium hidden"></p>
       </div>
@@ -1352,10 +1352,10 @@
               <div class="lg:col-span-4">User</div>
               <div class="lg:col-span-1 text-center" title="Protected from Inactivity Prune (safe role)">Safe</div>
               <div class="lg:col-span-3 text-right">
-                  <button type="button" onclick="userManagerToggleSort('activity')" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by last recorded message">Last activity <span id="um_sort_ico_act" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
+                  <button type="button" data-um-sort="activity" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by last recorded message">Last activity <span id="um_sort_ico_act" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
               </div>
               <div class="lg:col-span-2 text-right">
-                  <button type="button" onclick="userManagerToggleSort('joined')" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by server join date">Joined <span id="um_sort_ico_join" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
+                  <button type="button" data-um-sort="joined" class="inline-flex items-center gap-1 justify-end w-full text-[9px] uppercase tracking-widest font-bold text-[var(--c-text-muted)] hover:text-[var(--c-accent-text)] transition-colors" title="Sort by server join date">Joined <span id="um_sort_ico_join" class="font-mono normal-case text-[var(--c-accent-text)]"></span></button>
               </div>
               <div class="lg:col-span-2 text-right">Actions</div>
           </div>
@@ -3318,8 +3318,18 @@
     const p = userManagerPrivilege(u);
     const days = userManagerInactiveDays();
 
-    if (chips.has('admin') && p !== 'admin') return false;
-    if (chips.has('mod') && p !== 'mod') return false;
+    const wantAdmin = chips.has('admin');
+    const wantMod = chips.has('mod');
+    if (wantAdmin || wantMod) {
+      // One staff chip: match that level. Both: treat as "any staff" (AND on admin+mod was impossible).
+      if (wantAdmin && wantMod) {
+        if (p !== 'admin' && p !== 'mod') return false;
+      } else if (wantAdmin && p !== 'admin') {
+        return false;
+      } else if (wantMod && p !== 'mod') {
+        return false;
+      }
+    }
 
     if (chips.has('safe') && !u.hasSafeRole) return false;
 
@@ -3387,6 +3397,7 @@
   function renderUserManagerTable() {
     if (!userManagerCache || !userManagerCache.recent) return;
     const tbody = document.getElementById('userTableBody');
+    if (!tbody) return;
     const hint = document.getElementById('userManagerFilterHint');
     const days = userManagerInactiveDays();
     userManagerUpdateChips();
@@ -3631,12 +3642,36 @@
 
   (function initUserManagerFilterListeners() {
     const root = userManagerRoot();
-    if (!root) return;
+    if (!root || root.dataset.umFilterWired) return;
+    root.dataset.umFilterWired = '1';
+
     root.addEventListener('input', (e) => {
-      if (e.target && e.target.id === 'inactivityDays') renderUserManagerTable();
-      if (e.target && e.target.id === 'userManagerSearch') {
-        userManagerSearchQuery = e.target.value || '';
+      const t = e.target;
+      if (!t || !root.contains(t)) return;
+      if (t.id === 'inactivityDays') renderUserManagerTable();
+      if (t.id === 'userManagerSearch') {
+        userManagerSearchQuery = t.value || '';
         renderUserManagerTable();
+      }
+    });
+
+    root.addEventListener('click', (e) => {
+      const t = e.target;
+      if (!t || !root.contains(t)) return;
+      const chipBtn = t.closest('[data-um-chip]');
+      if (chipBtn && root.contains(chipBtn)) {
+        const key = chipBtn.getAttribute('data-um-chip');
+        if (key) userManagerToggleChip(key);
+        return;
+      }
+      if (t.closest('#userManagerClearChipsBtn')) {
+        userManagerResetFilters();
+        return;
+      }
+      const sortBtn = t.closest('[data-um-sort]');
+      if (sortBtn && root.contains(sortBtn)) {
+        const sk = sortBtn.getAttribute('data-um-sort');
+        if (sk === 'activity' || sk === 'joined') userManagerToggleSort(sk);
       }
     });
   })();
