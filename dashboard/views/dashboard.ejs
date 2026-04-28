@@ -302,7 +302,17 @@
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Name, invite link, embed color, and the bot’s <strong class="text-[var(--c-text-muted)]">Discord activity</strong> line.</p>
   </div>
 
-  <div id="general-settings" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
+  <div id="general-settings" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28" data-save-card="general">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Server Identity</h3>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Save when you want the bot name, invite, accent color, or activity updated.</p>
+      </div>
+      <button type="button" data-settings-save="general" class="section-save-btn btn-dash-secondary btn-dash-sm w-full sm:w-auto" disabled>
+        <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        <span data-btn-text>Saved</span>
+      </button>
+    </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
       <div>
@@ -362,12 +372,18 @@
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Roles for <strong class="text-[var(--c-text-muted)]">new members</strong>, <code class="text-[10px]">/giveperms</code>, and <code class="text-[10px]">/newuser</code> permission checks.</p>
   </div>
   
-  <div class="premium-card p-6 border-l-4 border-[var(--c-accent)]">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-      
-      <!-- Member Management Roles -->
-      <div id="roles-member-onboarding" class="space-y-5 scroll-mt-28">
-        <h3 class="font-bold text-sm text-[var(--c-text)]">Member Management Roles</h3>
+  <div id="roles-member-onboarding" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28" data-save-card="roles">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Member Management Roles</h3>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Roles applied to new members and returning members, plus the message threshold for graduating from Noobies.</p>
+      </div>
+      <button type="button" data-settings-save="roles" class="section-save-btn btn-dash-secondary btn-dash-sm w-full sm:w-auto" disabled>
+        <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        <span data-btn-text>Saved</span>
+      </button>
+    </div>
+    <div class="space-y-5">
         <div>
           <label class="field-label">Noobies Role</label>
           <select id="noobies_role_id" class="field-input role-select"></select>
@@ -385,11 +401,16 @@
           <input type="number" id="noobies_threshold" min="1" max="5000" class="field-input" />
           <p class="field-hint">Number of messages needed to lose the Noobies role (default: 100).</p>
         </div>
-      </div>
+    </div>
+  </div>
 
-      <!-- Command & Assistant Roles -->
-      <div id="roles-give-perms" class="space-y-5 scroll-mt-28">
-        <h3 class="font-bold text-sm text-[var(--c-text)]">Command &amp; Assistant Roles</h3>
+  <div id="roles-give-perms" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6 scroll-mt-28">
+    <div class="mb-5">
+      <h3 class="card-sub-title text-base font-semibold">Command &amp; Assistant Roles</h3>
+      <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Permission scaffolding for `/giveperms` role creation and automation helpers.</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+      <div class="space-y-5">
         <div>
           <label class="field-label">Fren Role</label>
           <select id="give_perms_fren_role_id" class="field-input role-select"></select>
@@ -402,17 +423,18 @@
           <p class="field-hint">Determines the hierarchy position of new custom roles.</p>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Validation Roles -->
-      <div id="roles-validation" class="sm:col-span-2 space-y-5 scroll-mt-28">
-        <h3 class="font-bold text-sm text-[var(--c-text)]">Validation Roles</h3>
-        <div class="max-w-md">
+  <div id="roles-validation" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6 scroll-mt-28">
+    <div class="mb-5">
+      <h3 class="card-sub-title text-base font-semibold">Validation Roles</h3>
+      <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Reference roles used for permission-diff checks and onboarding validation flows.</p>
+    </div>
+    <div class="max-w-md">
           <label class="field-label">Permission Reference Role</label>
           <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
           <p class="field-hint">Used by /newuser to highlight significant permission differences.</p>
-        </div>
-      </div>
-
     </div>
   </div>
 </section>
@@ -434,10 +456,16 @@
         <h3 class="card-sub-title text-base font-semibold">Anti-Spam</h3>
         <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Warns when the same content is repeated across channels inside the tracking window.</p>
       </div>
-      <label class="toggle">
-        <input type="checkbox" id="anti_spam_enabled" />
-        <span class="toggle-slider"></span>
-      </label>
+      <div class="flex items-center gap-3">
+        <button type="button" data-settings-save="moderation_spam" class="section-save-btn btn-dash-secondary btn-dash-sm" disabled>
+          <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span data-btn-text>Saved</span>
+        </button>
+        <label class="toggle">
+          <input type="checkbox" id="anti_spam_enabled" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
@@ -465,10 +493,16 @@
         <h3 class="card-sub-title text-base font-semibold">Inactivity Guard</h3>
         <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Kicks members with <strong class="text-[var(--c-text-muted)]">no messages</strong> longer than your silence window (uses last-message tracking when available).</p>
       </div>
-      <label class="toggle">
-        <input type="checkbox" id="inactivity_guard_enabled" />
-        <span class="toggle-slider"></span>
-      </label>
+      <div class="flex items-center gap-3">
+        <button type="button" data-settings-save="moderation_inactivity" class="section-save-btn btn-dash-secondary btn-dash-sm" disabled>
+          <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span data-btn-text>Saved</span>
+        </button>
+        <label class="toggle">
+          <input type="checkbox" id="inactivity_guard_enabled" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
@@ -486,10 +520,16 @@
         <h3 class="card-sub-title text-base font-semibold">Entry Guard</h3>
         <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Kicks joins when the Discord account is <strong class="text-[var(--c-text-muted)]">newer</strong> than your minimum age in days.</p>
       </div>
-      <label class="toggle">
-        <input type="checkbox" id="entry_guard_enabled" />
-        <span class="toggle-slider"></span>
-      </label>
+      <div class="flex items-center gap-3">
+        <button type="button" data-settings-save="moderation_entry" class="section-save-btn btn-dash-secondary btn-dash-sm" disabled>
+          <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span data-btn-text>Saved</span>
+        </button>
+        <label class="toggle">
+          <input type="checkbox" id="entry_guard_enabled" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
@@ -566,12 +606,18 @@
           </div>
       </div>
   </div>
-  <div id="reminders-channels" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
-    <div class="mb-4">
-      <h3 class="font-bold text-sm text-[var(--c-text)]">Reminder Channel &amp; Role</h3>
-      <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">
-      Where reminders post, which role gets pinged, invite join alerts, and per-schedule <strong class="text-[var(--c-text-muted)]">delay</strong> overrides (hours).
-    </p>
+  <div id="reminders-channels" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28" data-save-card="reminders_channels">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+      <div>
+        <h3 class="font-bold text-sm text-[var(--c-text)]">Reminder Channel &amp; Role</h3>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">
+        Where reminders post, which role gets pinged, invite join alerts, and per-schedule <strong class="text-[var(--c-text-muted)]">delay</strong> overrides (hours).
+      </p>
+      </div>
+      <button type="button" data-settings-save="reminders_channels" class="section-save-btn btn-dash-secondary btn-dash-sm w-full sm:w-auto" disabled>
+        <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        <span data-btn-text>Saved</span>
+      </button>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
@@ -605,12 +651,16 @@
     </div>
   </div>
 
-  <div id="reminders-reddit" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6 scroll-mt-28">
+  <div id="reminders-reddit" class="premium-card p-6 border-l-4 border-[var(--c-accent)] mt-6 scroll-mt-28" data-save-card="reminders_reddit">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="font-bold text-base">Reddit &amp; NeedAFriend</h3>
         <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Shared invite and post defaults for <code class="text-[10px]">/promote</code>, per-subreddit flair rows, and the <strong class="text-[var(--c-text-muted)]">NeedAFriend</strong> weekly thread fields.</p>
       </div>
+      <button type="button" data-settings-save="reminders_reddit" class="section-save-btn btn-dash-secondary btn-dash-sm shrink-0" disabled>
+        <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        <span data-btn-text>Saved</span>
+      </button>
     </div>
 
     <div class="mb-6 p-5 rounded-xl border border-[var(--c-accent-soft-ring)] bg-[var(--c-card)]/70 space-y-5">
@@ -690,8 +740,14 @@
         <h3 class="font-bold text-base">Restricted Channels (Media Only)</h3>
         <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Keeps a channel to <strong class="text-[var(--c-text-muted)]">GIFs, stickers, and reactions</strong> by removing plain text posts.</p>
       </div>
-      <div class="w-10 h-10 rounded-full bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)]">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div class="flex items-center gap-3">
+        <button type="button" data-settings-save="social_notext" class="section-save-btn btn-dash-secondary btn-dash-sm" disabled>
+          <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span data-btn-text>Saved</span>
+        </button>
+        <div class="w-10 h-10 rounded-full bg-[var(--c-accent)]/10 flex items-center justify-center text-[var(--c-accent)]">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
       </div>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 py-2">
@@ -733,8 +789,9 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Add New Pattern
         </button>
-        <button type="button" onclick="saveAutoReactions()" class="btn-dash-primary p-2.5 min-h-[44px] min-w-[44px] shrink-0" aria-label="Save patterns" title="Save patterns">
-          <svg class="w-5 h-5 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        <button type="button" id="saveAutoReactionsBtn" onclick="saveAutoReactions()" class="section-save-btn btn-dash-secondary btn-dash-sm min-h-[44px] shrink-0" disabled>
+          <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span data-btn-text>Saved</span>
         </button>
       </div>
     </div>
@@ -1033,10 +1090,16 @@
     </h2>
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Send <strong class="text-[var(--c-text-muted)]">plain text</strong> or a <strong class="text-[var(--c-text-muted)]">rich embed</strong> as the bot to any channel you can select.</p>
   </div>
-  <div id="messaging-composer" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
-    <div class="mb-4">
-      <h3 class="card-sub-title text-base font-semibold">Send as the bot</h3>
-      <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Uses your chosen channel; content is sent through the dashboard API (not stored as a draft).</p>
+  <div id="messaging-composer" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28" data-save-card="messaging">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+      <div>
+        <h3 class="card-sub-title text-base font-semibold">Send as the bot</h3>
+        <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Uses your chosen channel; content is sent through the dashboard API (not stored as a draft).</p>
+      </div>
+      <button type="button" data-settings-save="messaging" class="section-save-btn btn-dash-secondary btn-dash-sm w-full sm:w-auto" disabled>
+        <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        <span data-btn-text>Saved</span>
+      </button>
     </div>
     
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
@@ -1380,10 +1443,16 @@
 
   </div>
 
-  <div id="users-inactivity-prune" class="card p-6 scroll-mt-28 border border-red-500/20">
-      <div class="flex flex-col mb-4">
-          <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
-          <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed font-bold">Scan and kick members past your inactivity threshold (uses last-message data when present).</p>
+  <div id="users-inactivity-prune" class="card p-6 scroll-mt-28 border border-red-500/20" data-save-card="user_manager_prune">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 class="section-heading mb-1 !text-red-400 before:!bg-red-500">Inactivity Prune</h2>
+            <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed font-bold">Scan and kick members past your inactivity threshold (uses last-message data when present).</p>
+          </div>
+          <button type="button" data-settings-save="user_manager_prune" class="section-save-btn btn-dash-secondary btn-dash-sm w-full sm:w-auto" disabled>
+            <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            <span data-btn-text>Saved</span>
+          </button>
       </div>
 
       <div class="grid grid-cols-1 md:max-w-md gap-6 mb-6">
@@ -1655,6 +1724,29 @@
     border-color: #22c55e !important;
     box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35), 0 0 14px rgba(34, 197, 94, 0.22) !important;
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .section-save-btn {
+    min-height: 40px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  .section-save-btn.is-dirty {
+    background: var(--c-accent);
+    border-color: var(--c-accent);
+    color: #fff !important;
+  }
+  .section-save-btn.is-failed {
+    background: #d97706;
+    border-color: #d97706;
+    color: #fff !important;
+  }
+  .section-save-btn.is-clean:not(:disabled) {
+    background: var(--c-dash-btn-secondary-bg);
+    color: var(--c-accent) !important;
+  }
+  [data-save-card].has-unsaved-changes {
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.45), 0 0 0 4px rgba(245, 158, 11, 0.09);
   }
   select.field-input { cursor: pointer; }
   .field-hint {
@@ -1978,30 +2070,30 @@
     return map;
   }
 
-  // ── Debounced settings persistence (replaces manual Save buttons) ─────────
+  // ── Manual section save state ──────────────────────────────────────────────
   const SETTINGS_GROUPS = [
     { id: 'general', keys: ['guild_name', 'server_invite_url', 'base_embed_color', 'bot_status', 'bot_status_type'] },
     { id: 'roles', keys: ['noobies_role_id', 'noobies_threshold', 'newuser_been_in_server_before_role_id', 'give_perms_fren_role_id', 'give_perms_position_above_role_id', 'newuser_permission_diff_role_id'] },
     { id: 'moderation_spam', keys: ['anti_spam_enabled', 'anti_spam_threshold', 'anti_spam_window_hours', 'anti_spam_channel_id'] },
     { id: 'moderation_inactivity', keys: ['inactivity_guard_enabled', 'inactivity_guard_timeout_hours'] },
     { id: 'moderation_entry', keys: ['entry_guard_enabled', 'entry_guard_account_age'] },
-    { id: 'reminders', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms', 'reddit_promotion_targets', 'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
+    { id: 'reminders_channels', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms'] },
+    { id: 'reminders_reddit', keys: ['reddit_promotion_targets', 'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
     { id: 'social_notext', keys: ['notext_channel'] },
     { id: 'user_manager_prune', keys: ['prune_protected_role_id'] },
     { id: 'messaging', keys: ['msg_channel_id'] },
   ];
-  const SETTINGS_DEBOUNCE_MS = 650;
   const REMINDER_DELAY_HOUR_KEYS = new Set([
     'reminder_delay_bump_ms',
     'reminder_delay_promote_ms',
     'reminder_delay_needafriend_ms',
   ]);
   const MS_PER_HOUR = 60 * 60 * 1000;
-  const settingsDebounceTimers = new Map();
-  const pendingChangedSettingsKeys = new Map();
   const saveGlowTimers = new Map();
-  let settingsSaveInFlight = 0;
-  let settingsSaveFailed = false;
+  const savedGroupSnapshots = new Map();
+  const settingsDirtyGroups = new Set();
+  const settingsGroupsSaving = new Set();
+  const settingsFailedGroups = new Set();
   let settingsHydrating = false;
 
   const fieldIdToGroupId = new Map();
@@ -2019,9 +2111,65 @@
 
   function updatePendingSettingsState() {
     hasUnsavedChanges =
-      settingsDebounceTimers.size > 0 ||
-      settingsSaveInFlight > 0 ||
-      settingsSaveFailed;
+      settingsDirtyGroups.size > 0 ||
+      settingsGroupsSaving.size > 0 ||
+      settingsFailedGroups.size > 0 ||
+      dbDirtyRows.size > 0 ||
+      dbRowsSaving.size > 0 ||
+      dbSaveFailures.size > 0 ||
+      autoReactionsDirty ||
+      autoReactionsSaving ||
+      autoReactionsSaveFailed;
+  }
+
+  function getSettingsGroup(groupId) {
+    return SETTINGS_GROUPS.find((g) => g.id === groupId) || null;
+  }
+
+  function getSettingsGroupSnapshot(groupId) {
+    const group = getSettingsGroup(groupId);
+    if (!group) return '';
+    return JSON.stringify(buildSettingsPayload(group.keys));
+  }
+
+  function updateSettingsSaveUi(groupId) {
+    const btn = document.querySelector(`[data-settings-save="${groupId}"]`);
+    const card = document.querySelector(`[data-save-card="${groupId}"]`);
+    if (!btn) return;
+    const label = btn.querySelector('[data-btn-text]');
+    const isDirty = settingsDirtyGroups.has(groupId);
+    const isSaving = settingsGroupsSaving.has(groupId);
+    const isFailed = settingsFailedGroups.has(groupId);
+
+    btn.classList.toggle('is-dirty', isDirty && !isSaving && !isFailed);
+    btn.classList.toggle('is-failed', isFailed && !isSaving);
+    btn.classList.toggle('is-clean', !isDirty && !isFailed && !isSaving);
+    btn.disabled = isSaving || (!isDirty && !isFailed);
+    if (label) {
+      label.textContent = isSaving ? 'Saving…' : isFailed ? 'Retry Save' : isDirty ? 'Save Changes' : 'Saved';
+    }
+    if (card) {
+      card.classList.toggle('has-unsaved-changes', isDirty || isFailed);
+    }
+  }
+
+  function refreshAllSettingsSaveUi() {
+    SETTINGS_GROUPS.forEach((group) => updateSettingsSaveUi(group.id));
+  }
+
+  function recomputeSettingsGroupState(groupId) {
+    if (settingsHydrating) return;
+    const current = getSettingsGroupSnapshot(groupId);
+    const saved = savedGroupSnapshots.get(groupId);
+    if (saved == null) return;
+    if (current === saved) {
+      settingsDirtyGroups.delete(groupId);
+      settingsFailedGroups.delete(groupId);
+    } else {
+      settingsDirtyGroups.add(groupId);
+    }
+    updateSettingsSaveUi(groupId);
+    updatePendingSettingsState();
   }
 
   function buildSettingsPayload(keys) {
@@ -2090,72 +2238,45 @@
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        settingsSaveFailed = false;
         glowSavedFields(keys);
-        updatePendingSettingsState();
         return true;
       }
-      settingsSaveFailed = true;
-      updatePendingSettingsState();
       showToast(data.error || 'Failed to save.', 'error');
       return false;
     } catch (err) {
-      settingsSaveFailed = true;
-      updatePendingSettingsState();
       showToast('Network error. Please try again.', 'error');
       return false;
     }
   }
 
   async function runSettingsSaveForGroup(groupId) {
-    const group = SETTINGS_GROUPS.find((g) => g.id === groupId);
+    if (settingsHydrating) return;
+    const group = getSettingsGroup(groupId);
     if (!group) return;
-    const pending = pendingChangedSettingsKeys.get(groupId);
-    const keysToSave = pending && pending.size > 0 ? Array.from(pending) : group.keys;
-    pendingChangedSettingsKeys.delete(groupId);
-    settingsSaveInFlight++;
+    const snapshotBeforeSave = getSettingsGroupSnapshot(groupId);
+    settingsGroupsSaving.add(groupId);
+    settingsFailedGroups.delete(groupId);
+    updateSettingsSaveUi(groupId);
     updatePendingSettingsState();
     try {
-      await performSettingsSave(keysToSave);
-    } finally {
-      settingsSaveInFlight--;
-      updatePendingSettingsState();
-    }
-  }
-
-  function scheduleDebouncedSettingsSave(groupId, changedKey = null) {
-    if (settingsHydrating) return;
-    const group = SETTINGS_GROUPS.find((g) => g.id === groupId);
-    if (!group) return;
-    if (changedKey) {
-      const normalizedKey = changedKey === 'base_embed_color_text' ? 'base_embed_color' : changedKey;
-      if (group.keys.includes(normalizedKey)) {
-        const set = pendingChangedSettingsKeys.get(groupId) || new Set();
-        set.add(normalizedKey);
-        pendingChangedSettingsKeys.set(groupId, set);
+      const ok = await performSettingsSave(group.keys);
+      if (!ok) {
+        settingsFailedGroups.add(groupId);
+        return;
       }
-    }
-    const existing = settingsDebounceTimers.get(groupId);
-    if (existing) clearTimeout(existing);
-    const tid = setTimeout(() => {
-      settingsDebounceTimers.delete(groupId);
+      savedGroupSnapshots.set(groupId, snapshotBeforeSave);
+      const currentSnapshot = getSettingsGroupSnapshot(groupId);
+      if (currentSnapshot === snapshotBeforeSave) {
+        settingsDirtyGroups.delete(groupId);
+      } else {
+        settingsDirtyGroups.add(groupId);
+      }
+      settingsFailedGroups.delete(groupId);
+      showToast('Changes saved.');
+    } finally {
+      settingsGroupsSaving.delete(groupId);
+      updateSettingsSaveUi(groupId);
       updatePendingSettingsState();
-      runSettingsSaveForGroup(groupId);
-    }, SETTINGS_DEBOUNCE_MS);
-    settingsDebounceTimers.set(groupId, tid);
-    updatePendingSettingsState();
-  }
-
-  async function flushAllPendingSettingsSaves() {
-    const pending = [...settingsDebounceTimers.keys()];
-    pending.forEach((gid) => {
-      const t = settingsDebounceTimers.get(gid);
-      if (t) clearTimeout(t);
-      settingsDebounceTimers.delete(gid);
-    });
-    updatePendingSettingsState();
-    for (const groupId of pending) {
-      await runSettingsSaveForGroup(groupId);
     }
   }
 
@@ -2166,7 +2287,7 @@
     if (!dirtyTrackedIds.has(target.id)) return;
     const groupId = fieldIdToGroupId.get(target.id);
     if (!groupId) return;
-    scheduleDebouncedSettingsSave(groupId, target.id);
+    recomputeSettingsGroupState(groupId);
   }
 
   function syncRedditPromotionTargetsJson() {
@@ -2197,7 +2318,7 @@
   function redditPromotionTargetsAfterChange() {
     if (settingsHydrating) return;
     syncRedditPromotionTargetsJson();
-    scheduleDebouncedSettingsSave('reminders', 'reddit_promotion_targets');
+    recomputeSettingsGroupState('reminders_reddit');
   }
 
   async function fetchRedditFlairsForRow(btn) {
@@ -2349,7 +2470,7 @@
       if (tr) delete tr.dataset.flairHint;
     }
     syncRedditPromotionTargetsJson();
-    scheduleDebouncedSettingsSave('reminders', 'reddit_promotion_targets');
+    recomputeSettingsGroupState('reminders_reddit');
   }
 
   // ── Load settings ─────────────────────────────────────────────────────────
@@ -2408,7 +2529,12 @@
         : JSON.stringify(s.reddit_promotion_targets || []);
     initRedditPromotionTableFromSettingsJson(targetsJson);
 
-    settingsSaveFailed = false;
+    SETTINGS_GROUPS.forEach((group) => {
+      savedGroupSnapshots.set(group.id, getSettingsGroupSnapshot(group.id));
+      settingsDirtyGroups.delete(group.id);
+      settingsFailedGroups.delete(group.id);
+    });
+    refreshAllSettingsSaveUi();
     updatePendingSettingsState();
     } finally {
       settingsHydrating = false;
@@ -2451,6 +2577,13 @@
 
   document.addEventListener('input', onSettingsFieldActivity);
   document.addEventListener('change', onSettingsFieldActivity);
+  document.querySelectorAll('[data-settings-save]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const groupId = btn.getAttribute('data-settings-save');
+      if (groupId) runSettingsSaveForGroup(groupId);
+    });
+  });
+  refreshAllSettingsSaveUi();
   window.addEventListener('beforeunload', (e) => {
     if (!hasUnsavedChanges) return;
     e.preventDefault();
@@ -3012,15 +3145,23 @@
 
   // ── Advanced Database Explorer ───────────────────────────────────────────
   let allDbEntries = [];
+  let dbNamespaceStats = [];
   let curNamespace = 'main';
-  let dbPage = 1;
   let expandedCats = new Set(['config', 'tags', 'general']);
-  const autoSaveTimers = new Map();
+  const savedDbRowValues = new Map();
+  const dbDirtyRows = new Set();
+  const dbRowsSaving = new Set();
+  const dbSaveFailures = new Set();
+  let dbSearchDebounceTimer = null;
+  let dbSearchQuery = '';
+  let dbCurrentOffset = 0;
+  let dbCurrentLimit = 200;
+  let dbHasMore = false;
 
   window.switchNamespace = function switchNamespace(ns) {
     curNamespace = ns;
-    dbPage = 1;
-    renderDbExplorer();
+    dbCurrentOffset = 0;
+    loadDatabaseEntries();
   };
 
   function wireDbNamespaceNav() {
@@ -3070,6 +3211,88 @@
     return trimmed;
   }
 
+  function updateDbRowUi(fullKey) {
+    const btn = document.querySelector(`[data-db-save-full-key="${CSS.escape(fullKey)}"]`);
+    const textarea = document.querySelector(`textarea.db-explorer-value[data-db-full-key="${CSS.escape(fullKey)}"]`);
+    const statusEl = document.getElementById(`status-${fullKey.replace(/:/g, '-')}`);
+    if (!btn) return;
+    const label = btn.querySelector('[data-btn-text]');
+    const isDirty = dbDirtyRows.has(fullKey);
+    const isSaving = dbRowsSaving.has(fullKey);
+    const isFailed = dbSaveFailures.has(fullKey);
+    btn.classList.toggle('is-dirty', isDirty && !isSaving && !isFailed);
+    btn.classList.toggle('is-failed', isFailed && !isSaving);
+    btn.classList.toggle('is-clean', !isDirty && !isFailed && !isSaving);
+    btn.disabled = isSaving || (!isDirty && !isFailed);
+    if (label) {
+      label.textContent = isSaving ? 'Saving…' : isFailed ? 'Retry Save' : isDirty ? 'Save' : 'Saved';
+    }
+    if (statusEl) {
+      statusEl.classList.remove('opacity-0', 'opacity-80', 'animate-pulse');
+      if (isFailed) {
+        statusEl.classList.add('opacity-80');
+      } else if (isDirty || isSaving) {
+        statusEl.classList.add('opacity-80');
+        if (isDirty) statusEl.classList.add('animate-pulse');
+      } else {
+        statusEl.classList.add('opacity-0');
+      }
+    }
+  }
+
+  function markDbRowDirty(fullKey, valueStr) {
+    const saved = savedDbRowValues.get(fullKey);
+    if (saved == null) return;
+    if (valueStr === saved) {
+      dbDirtyRows.delete(fullKey);
+      dbSaveFailures.delete(fullKey);
+    } else {
+      dbDirtyRows.add(fullKey);
+    }
+    updateDbRowUi(fullKey);
+    updatePendingSettingsState();
+  }
+
+  async function saveDbEntry(fullKey) {
+    const textarea = document.querySelector(`textarea.db-explorer-value[data-db-full-key="${CSS.escape(fullKey)}"]`);
+    if (!textarea) return;
+    dbRowsSaving.add(fullKey);
+    dbSaveFailures.delete(fullKey);
+    updateDbRowUi(fullKey);
+    updatePendingSettingsState();
+    try {
+      let value;
+      try {
+        value = parseDbValue(textarea.value);
+      } catch {
+        value = textarea.value;
+      }
+      const res = await fetch('/api/database/raw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullKey, value })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        dbSaveFailures.add(fullKey);
+        showToast(data.error || 'Failed to save database entry.', 'error');
+        return;
+      }
+      savedDbRowValues.set(fullKey, textarea.value);
+      dbDirtyRows.delete(fullKey);
+      dbSaveFailures.delete(fullKey);
+      updateDbRowUi(fullKey);
+      showToast('Database entry saved.');
+    } catch {
+      dbSaveFailures.add(fullKey);
+      showToast('Network error while saving database entry.', 'error');
+    } finally {
+      dbRowsSaving.delete(fullKey);
+      updateDbRowUi(fullKey);
+      updatePendingSettingsState();
+    }
+  }
+
   async function loadDatabaseEntries() {
     const refreshIcon = document.getElementById('refreshDbIcon');
     if (refreshIcon) {
@@ -3078,17 +3301,38 @@
     }
     
     try {
-      const res = await fetch('/api/database/raw');
+      const params = new URLSearchParams();
+      params.set('namespace', curNamespace);
+      params.set('limit', String(dbCurrentLimit));
+      params.set('offset', String(dbCurrentOffset));
+      if (dbSearchQuery) params.set('search', dbSearchQuery);
+      const res = await fetch(`/api/database/raw?${params.toString()}`);
       if (!res.ok) throw new Error();
-      allDbEntries = await res.json();
+      const payload = await res.json();
+      const incomingEntries = Array.isArray(payload.entries) ? payload.entries : [];
+      allDbEntries = dbCurrentOffset > 0 ? [...allDbEntries, ...incomingEntries] : incomingEntries;
+      dbNamespaceStats = Array.isArray(payload.namespaces) ? payload.namespaces : [];
+      dbHasMore = Number(payload.total || 0) > (Number(payload.offset || 0) + incomingEntries.length);
       
-      // Ensure current namespace still exists, else pick first available
-      const namespaces = [...new Set(allDbEntries.map(e => e.namespace))];
+      const namespaces = dbNamespaceStats.map((row) => row.namespace);
       if (namespaces.length > 0 && !namespaces.includes(curNamespace)) {
           curNamespace = namespaces[0];
+          dbCurrentOffset = 0;
+          return loadDatabaseEntries();
       }
+
+      if (dbCurrentOffset === 0) {
+        savedDbRowValues.clear();
+        dbDirtyRows.clear();
+        dbRowsSaving.clear();
+        dbSaveFailures.clear();
+      }
+      incomingEntries.forEach((entry) => {
+        savedDbRowValues.set(entry.fullKey, displayDbValue(entry.value));
+      });
       
       renderDbExplorer();
+      updatePendingSettingsState();
     } catch {
       showToast('Failed to load database entries.', 'error');
     } finally {
@@ -4025,14 +4269,10 @@
   function renderDbExplorer() {
     const nsList  = document.getElementById('dbNamespaceList');
     const content = document.getElementById('dbContentArea');
-    const search  = document.getElementById('dbSearch').value.toLowerCase();
-    
-    // 1. Group Data
-    const namespaces = [...new Set(allDbEntries.map(e => e.namespace))].sort();
-    const nsCounts = {};
-    allDbEntries.forEach(e => nsCounts[e.namespace] = (nsCounts[e.namespace] || 0) + 1);
+    const namespaces = dbNamespaceStats.map((row) => row.namespace);
+    const nsCounts = Object.fromEntries(dbNamespaceStats.map((row) => [row.namespace, row.count]));
 
-    // 2. Render Namespace Sidebar (delegated click on #dbNamespaceList — no inline handlers)
+    // 1. Render namespace sidebar
     nsList.innerHTML =
       namespaces
         .map((ns) => {
@@ -4052,21 +4292,15 @@
         .join('') ||
       '<div class="p-4 text-center text-xs text-[var(--c-text-dim)] w-full min-w-[200px] flex-shrink-0">No namespaces found</div>';
 
-    // 3. Filter and Group by Category for current namespace
-    const filtered = allDbEntries.filter(e => {
-        if (e.namespace !== curNamespace) return false;
-        if (!search) return true;
-        return e.key.toLowerCase().includes(search) || valueToSearchText(e.value).toLowerCase().includes(search);
-    });
-
+    // 2. Group the current page by category
     const groups = {};
-    filtered.forEach(e => {
+    allDbEntries.forEach(e => {
         const cat = getCategory(e.key);
         if (!groups[cat]) groups[cat] = [];
         groups[cat].push(e);
     });
 
-    // 4. Render Content
+    // 3. Render content
     const sortedCats = Object.keys(groups).sort((a,b) => {
         if (a === 'config') return -1;
         if (b === 'config') return 1;
@@ -4075,7 +4309,7 @@
     });
 
     if (sortedCats.length === 0) {
-        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border border-dashed border-[var(--c-accent-soft-ring)]">No entries found in "${escapeHtml(curNamespace)}" match your search.</div>`;
+        content.innerHTML = `<div class="card p-12 text-center text-[var(--c-text-dim)] bg-transparent border border-dashed border-[var(--c-accent-soft-ring)]">No entries found in "${escapeHtml(curNamespace)}"${dbSearchQuery ? ' match your search' : ''}.</div>`;
         return;
     }
 
@@ -4114,6 +4348,10 @@
                                                         data-db-full-key="${escapeHtml(e.fullKey)}"
                                                     >${escapeHtml(displayDbValue(e.value))}</textarea>
                                                 </div>
+                                                <button type="button" data-db-save-full-key="${escapeHtml(e.fullKey)}" class="section-save-btn btn-dash-secondary btn-dash-sm min-h-[44px] self-end sm:self-start shrink-0 sm:opacity-0 sm:group-hover:opacity-100" disabled>
+                                                    <svg class="w-4 h-4 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                                    <span data-btn-text>Saved</span>
+                                                </button>
                                                 <button type="button" data-db-full-key="${escapeHtml(e.fullKey)}" class="p-2.5 min-h-[44px] min-w-[44px] sm:min-w-0 sm:min-h-0 sm:p-2 self-end sm:self-start text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-input)] rounded-lg transition-all sm:opacity-0 sm:group-hover:opacity-100 shrink-0" title="Delete entry">
                                                     <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                 </button>
@@ -4141,10 +4379,18 @@
       if (!fk) return;
       ta.addEventListener('input', function onDbExplorerInput() {
         window.autoResize(this);
-        window.scheduleSave(fk, this.value);
+        markDbRowDirty(fk, this.value);
       });
       ta.addEventListener('focus', function onDbExplorerFocus() {
         window.autoResize(this);
+      });
+      updateDbRowUi(fk);
+    });
+    content.querySelectorAll('#dbContentArea button[data-db-save-full-key]').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const fk = btn.getAttribute('data-db-save-full-key');
+        if (fk) saveDbEntry(fk);
       });
     });
     content.querySelectorAll('#dbContentArea button[data-db-full-key]').forEach((btn) => {
@@ -4155,10 +4401,24 @@
       });
     });
 
-    // Trigger initial resize for visible textareas
-    setTimeout(() => {
-        document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
-    }, 10);
+    requestAnimationFrame(() => {
+      document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
+    });
+    if (dbHasMore) {
+      const loadMoreWrap = document.createElement('div');
+      loadMoreWrap.className = 'flex justify-center pt-2';
+      loadMoreWrap.innerHTML = `
+        <button type="button" id="dbLoadMoreBtn" class="btn-dash-secondary btn-dash-sm">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+          Load More Entries
+        </button>
+      `;
+      content.appendChild(loadMoreWrap);
+      document.getElementById('dbLoadMoreBtn')?.addEventListener('click', async () => {
+        dbCurrentOffset += dbCurrentLimit;
+        await loadDatabaseEntries();
+      });
+    }
     ensureNonChipButtonsHaveIcons();
   }
 
@@ -4166,17 +4426,10 @@
     if (expandedCats.has(cat)) expandedCats.delete(cat); 
     else expandedCats.add(cat); 
     renderDbExplorer(); 
-    // Trigger resize after re-rendering
-    setTimeout(() => {
-        document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
-    }, 50);
   };
   window.expandAllCategories = () => { 
-    [...new Set(allDbEntries.filter(e => e.namespace === curNamespace).map(e => getCategory(e.key)))].forEach(c => expandedCats.add(c)); 
+    [...new Set(allDbEntries.map(e => getCategory(e.key)))].forEach(c => expandedCats.add(c)); 
     renderDbExplorer(); 
-    setTimeout(() => {
-        document.querySelectorAll('#dbContentArea textarea').forEach(autoResize);
-    }, 50);
   };
   window.collapseAllCategories = () => { expandedCats.clear(); renderDbExplorer(); };
 
@@ -4221,58 +4474,14 @@
     }
   };
 
-  window.scheduleSave = (fullKey, valueStr) => {
-    const statusId = `status-${fullKey.replace(/:/g, '-')}`;
-    const statusEl = document.getElementById(statusId);
-    
-    // Show "dirty" state
-    if (statusEl) {
-        statusEl.classList.remove('bg-[var(--c-accent)]', 'opacity-0');
-        statusEl.classList.add('bg-[var(--c-accent)]', 'opacity-80', 'animate-pulse');
-    }
-
-    if (autoSaveTimers.has(fullKey)) clearTimeout(autoSaveTimers.get(fullKey));
-
-    autoSaveTimers.set(fullKey, setTimeout(async () => {
-        let value;
-        try {
-            value = parseDbValue(valueStr);
-        } catch {
-            value = valueStr;
-        }
-
-        if (statusEl) {
-            statusEl.classList.remove('animate-pulse');
-            statusEl.classList.add('bg-[var(--c-accent)]'); // Saving state
-        }
-
-        try {
-            const res = await fetch('/api/database/raw', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fullKey, value })
-            });
-            if (res.ok) {
-                if (statusEl) {
-                    statusEl.classList.remove('bg-[var(--c-accent)]');
-                    statusEl.classList.add('bg-[var(--c-accent)]');
-                    setTimeout(() => statusEl.classList.add('opacity-0'), 2000);
-                }
-            } else {
-                showToast('Failed to auto-save change.', 'error');
-                if (statusEl) {
-                    statusEl.classList.add('bg-[var(--c-accent)]');
-                }
-            }
-        } catch {
-            if (statusEl) {
-                statusEl.classList.add('bg-[var(--c-accent)]');
-            }
-        }
-    }, 1500));
-  };
-
-  document.getElementById('dbSearch')?.addEventListener('input', renderDbExplorer);
+  document.getElementById('dbSearch')?.addEventListener('input', (e) => {
+    dbSearchQuery = String(e.target?.value || '').trim().toLowerCase();
+    dbCurrentOffset = 0;
+    if (dbSearchDebounceTimer) clearTimeout(dbSearchDebounceTimer);
+    dbSearchDebounceTimer = setTimeout(() => {
+      loadDatabaseEntries();
+    }, 180);
+  });
 
   // ── Live Reminders System ───────────────────────────────────────────────────
   let liveReminders = { bump: null, promote: null, needafriend: null };
@@ -4361,6 +4570,10 @@
       if (res.ok) {
         const reactions = await res.json();
         renderAutoReactions(reactions);
+        savedAutoReactionsSnapshot = JSON.stringify(reactions);
+        autoReactionsDirty = false;
+        autoReactionsSaveFailed = false;
+        updateAutoReactionsSaveUi();
       }
     } catch (e) {
       console.error('Failed to load auto-reactions', e);
@@ -4407,6 +4620,44 @@
   }
 
   let autoReactionsSaving = false;
+  let autoReactionsDirty = false;
+  let autoReactionsSaveFailed = false;
+  let savedAutoReactionsSnapshot = '[]';
+
+  function collectAutoReactionsPayload() {
+    const rows = document.querySelectorAll('#autoReactionTableBody tr');
+    const reactions = [];
+    rows.forEach((row) => {
+      const pattern = row.querySelector('.ar-pattern')?.value.trim();
+      const emoji = row.querySelector('.ar-emoji')?.value.trim();
+      const useRegex = row.querySelector('.ar-use-regex')?.checked;
+      if (!pattern || !emoji) return;
+      if (useRegex) reactions.push({ mode: 'regex', regex: pattern, emoji });
+      else reactions.push({ mode: 'keyword', keyword: pattern, emoji });
+    });
+    return reactions;
+  }
+
+  function updateAutoReactionsSaveUi() {
+    const btn = document.getElementById('saveAutoReactionsBtn');
+    if (!btn) return;
+    const label = btn.querySelector('[data-btn-text]');
+    btn.classList.toggle('is-dirty', autoReactionsDirty && !autoReactionsSaving && !autoReactionsSaveFailed);
+    btn.classList.toggle('is-failed', autoReactionsSaveFailed && !autoReactionsSaving);
+    btn.classList.toggle('is-clean', !autoReactionsDirty && !autoReactionsSaveFailed && !autoReactionsSaving);
+    btn.disabled = autoReactionsSaving || (!autoReactionsDirty && !autoReactionsSaveFailed);
+    if (label) {
+      label.textContent = autoReactionsSaving ? 'Saving…' : autoReactionsSaveFailed ? 'Retry Save' : autoReactionsDirty ? 'Save Changes' : 'Saved';
+    }
+    updatePendingSettingsState();
+  }
+
+  function markAutoReactionsDirty() {
+    const currentSnapshot = JSON.stringify(collectAutoReactionsPayload());
+    autoReactionsDirty = currentSnapshot !== savedAutoReactionsSnapshot;
+    if (!autoReactionsDirty) autoReactionsSaveFailed = false;
+    updateAutoReactionsSaveUi();
+  }
 
   window.addAutoReactionRow = () => {
     const tbody = document.getElementById('autoReactionTableBody');
@@ -4431,6 +4682,7 @@
       </td>
     `;
     tbody.appendChild(tr);
+    markAutoReactionsDirty();
   };
 
   window.removeAutoReactionRow = (btn) => {
@@ -4439,22 +4691,15 @@
     if (tbody.children.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" class="px-4 py-8 text-center text-xs text-[var(--c-text-dim)]">No reactions configured. Click "Add New Pattern" to start!</td></tr>';
     }
+    markAutoReactionsDirty();
   };
 
   window.saveAutoReactions = async () => {
     if (autoReactionsSaving) return;
     autoReactionsSaving = true;
-    const rows = document.querySelectorAll('#autoReactionTableBody tr');
-    const reactions = [];
-    
-    rows.forEach((row) => {
-      const pattern = row.querySelector('.ar-pattern')?.value.trim();
-      const emoji = row.querySelector('.ar-emoji')?.value.trim();
-      const useRegex = row.querySelector('.ar-use-regex')?.checked;
-      if (!pattern || !emoji) return;
-      if (useRegex) reactions.push({ mode: 'regex', regex: pattern, emoji });
-      else reactions.push({ mode: 'keyword', keyword: pattern, emoji });
-    });
+    autoReactionsSaveFailed = false;
+    updateAutoReactionsSaveUi();
+    const reactions = collectAutoReactionsPayload();
 
     try {
       const res = await fetch('/api/fun/auto-reactions', {
@@ -4463,19 +4708,27 @@
         body: JSON.stringify({ reactions })
       });
       if (res.ok) {
+        savedAutoReactionsSnapshot = JSON.stringify(reactions);
+        autoReactionsDirty = false;
+        autoReactionsSaveFailed = false;
         showToast('Auto-reactions saved successfully.');
         loadAutoReactions();
       } else {
         const data = await res.json().catch(() => ({}));
+        autoReactionsSaveFailed = true;
         showToast(data.error || 'Failed to save auto-reactions.', 'error');
       }
     } catch (e) {
+      autoReactionsSaveFailed = true;
       showToast('Network error while saving.', 'error');
     } finally {
       autoReactionsSaving = false;
+      updateAutoReactionsSaveUi();
     }
   };
 
+  document.getElementById('autoReactionTableBody')?.addEventListener('input', markAutoReactionsDirty);
+  document.getElementById('autoReactionTableBody')?.addEventListener('change', markAutoReactionsDirty);
   loadAutoReactions();
   document.getElementById('refreshDbBtn')?.addEventListener('click', loadDatabaseEntries);
 
@@ -5178,24 +5431,36 @@
     }
     ensureNonChipButtonsHaveIcons();
   }
+
+  async function discardAllUnsavedChanges() {
+    settingsDirtyGroups.clear();
+    settingsFailedGroups.clear();
+    dbDirtyRows.clear();
+    dbSaveFailures.clear();
+    autoReactionsDirty = false;
+    autoReactionsSaveFailed = false;
+    refreshAllSettingsSaveUi();
+    updateAutoReactionsSaveUi();
+    updatePendingSettingsState();
+    await Promise.all([
+      loadSettings(),
+      loadDatabaseEntries(),
+      loadAutoReactions()
+    ]);
+  }
+
   window.addEventListener('hashchange', async (e) => {
-    await flushAllPendingSettingsSaves();
     if (!hasUnsavedChanges) {
       updateVisibility();
       return;
     }
     const ok = await confirmWithModal({
       title: 'Unsaved Changes',
-      message: settingsSaveFailed
-        ? 'Some settings could not be saved. Continue navigating anyway?'
-        : 'You still have settings changes in progress. Continue navigating?',
+      message: 'You have edits that have not been saved yet. Continue and discard them?',
       confirmLabel: 'Discard'
     });
     if (ok) {
-      settingsDebounceTimers.forEach((t) => clearTimeout(t));
-      settingsDebounceTimers.clear();
-      settingsSaveFailed = false;
-      updatePendingSettingsState();
+      await discardAllUnsavedChanges();
       updateVisibility();
       return;
     }

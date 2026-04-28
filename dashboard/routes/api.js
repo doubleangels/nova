@@ -537,31 +537,76 @@ function applySeedJobProgress(job, evt) {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+function decodeRawDatabaseValue(rawValue) {
+  try {
+    const parsed = JSON.parse(rawValue);
+    return parsed?.value !== undefined ? parsed.value : parsed;
+  } catch {
+    return rawValue;
+  }
+}
+
 /**
- * Reads all raw key-value entries from the SQLite database.
+ * Reads filtered raw key-value entries from the SQLite database.
  * Uses Node's built-in SQLite driver to access Keyv's underlying table.
- * @returns {Array<{fullKey: string, namespace: string, key: string, value: any}>}
+ * @param {{ namespace?: string|null, search?: string|null, limit?: number, offset?: number }} [options]
+ * @returns {{ entries: Array<{fullKey: string, namespace: string, key: string, value: any}>, namespaces: Array<{namespace: string, count: number}>, total: number, limit: number, offset: number }}
  */
-function getRawDatabaseEntries() {
+function getRawDatabaseEntries(options = {}) {
+  const namespace = options.namespace ? String(options.namespace).trim() : '';
+  const search = options.search ? String(options.search).trim().toLowerCase() : '';
+  const limit = Math.min(500, Math.max(25, Number(options.limit) || 200));
+  const offset = Math.max(0, Number(options.offset) || 0);
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
   const db = new DatabaseSync(sqlitePath, { readOnly: true });
   try {
-    const rows = db.prepare('SELECT key, value FROM keyv').all();
-    return rows.map(row => {
-      let value;
-      try {
-        const parsed = JSON.parse(row.value);
-        value = parsed?.value !== undefined ? parsed.value : parsed;
-      } catch {
-        value = row.value;
-      }
-      // key format: "namespace:rest" or just "key"
+    const namespaceRows = db.prepare(`
+      SELECT
+        CASE WHEN instr(key, ':') > 0 THEN substr(key, 1, instr(key, ':') - 1) ELSE 'main' END AS namespace,
+        COUNT(*) AS count
+      FROM keyv
+      WHERE key NOT LIKE 'sessions:%'
+      GROUP BY namespace
+      ORDER BY CASE WHEN namespace = 'main' THEN 0 ELSE 1 END, namespace COLLATE NOCASE
+    `).all();
+
+    const where = [`key NOT LIKE 'sessions:%'`];
+    const params = [];
+    if (namespace) {
+      where.push(`(CASE WHEN instr(key, ':') > 0 THEN substr(key, 1, instr(key, ':') - 1) ELSE 'main' END) = ?`);
+      params.push(namespace);
+    }
+    if (search) {
+      where.push(`(lower(key) LIKE ? OR lower(value) LIKE ?)`);
+      const like = `%${search}%`;
+      params.push(like, like);
+    }
+    const whereSql = where.join(' AND ');
+    const totalRow = db.prepare(`SELECT COUNT(*) AS count FROM keyv WHERE ${whereSql}`).get(...params);
+    const rows = db.prepare(`
+      SELECT key, value
+      FROM keyv
+      WHERE ${whereSql}
+      ORDER BY key COLLATE NOCASE
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    const entries = rows.map((row) => {
+      const value = decodeRawDatabaseValue(row.value);
       const colonIdx = row.key.indexOf(':');
       const namespace = colonIdx > -1 ? row.key.slice(0, colonIdx) : 'main';
       const key = colonIdx > -1 ? row.key.slice(colonIdx + 1) : row.key;
       return { fullKey: row.key, namespace, key, value };
-    }).filter(entry => entry.namespace !== 'sessions');
+    });
+
+    return {
+      entries,
+      namespaces: namespaceRows.map((row) => ({ namespace: row.namespace, count: Number(row.count) || 0 })),
+      total: Number(totalRow?.count || 0),
+      limit,
+      offset
+    };
   } finally {
     db.close();
   }
@@ -988,8 +1033,15 @@ router.get('/me', (req, res) => {
 
 router.get('/database/raw', async (req, res) => {
   try {
-    const entries = await getRawDatabaseEntries();
-    res.json(entries);
+    const limitRaw = parseInt(String(req.query.limit || '200'), 10);
+    const offsetRaw = parseInt(String(req.query.offset || '0'), 10);
+    const result = await getRawDatabaseEntries({
+      namespace: req.query.namespace || '',
+      search: req.query.search || '',
+      limit: Number.isFinite(limitRaw) ? limitRaw : 200,
+      offset: Number.isFinite(offsetRaw) ? offsetRaw : 0
+    });
+    res.json(result);
   } catch (err) {
     reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to get raw database entries.', { err });
