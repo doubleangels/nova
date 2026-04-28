@@ -110,8 +110,10 @@
           --c-hint: #5a677a;
           --c-toggle-off: #c3cad6;
 
-          --c-accent-soft-bg: rgba(var(--c-accent-rgb), 0.1);
-          --c-accent-soft-ring: rgba(var(--c-accent-rgb), 0.2);
+          /* Dark theme uses --c-accent-text as a *light* tint on dark UI; light needs the real accent. */
+          --c-accent-text: var(--c-accent);
+          --c-accent-soft-bg: rgba(var(--c-accent-rgb), 0.13);
+          --c-accent-soft-ring: rgba(var(--c-accent-rgb), 0.22);
 
           --c-overlay-scrim: rgba(12, 18, 34, 0.45);
           --c-card-hover-shadow: rgba(15, 23, 42, 0.11);
