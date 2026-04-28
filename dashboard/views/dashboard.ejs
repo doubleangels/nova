@@ -185,7 +185,7 @@
         <span id="health_cpu_trend_latest" class="text-[10px] font-bold text-[var(--c-label)]">--%</span>
       </div>
       <svg id="health_cpu_trend" viewBox="0 0 120 28" class="w-full h-8 mt-2">
-        <polyline points="" fill="none" stroke="var(--c-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <path d="" fill="none" stroke="var(--c-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
     </div>
     <div class="card p-4">
@@ -194,7 +194,7 @@
         <span id="health_mem_trend_latest" class="text-[10px] font-bold text-[var(--c-label)]">-- MB</span>
       </div>
       <svg id="health_mem_trend" viewBox="0 0 120 28" class="w-full h-8 mt-2">
-        <polyline points="" fill="none" stroke="var(--c-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <path d="" fill="none" stroke="var(--c-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
     </div>
   </div>
@@ -2703,8 +2703,8 @@
 
   function renderTrend(svgId, values) {
     const svg = document.getElementById(svgId);
-    const polyline = svg?.querySelector('polyline');
-    if (!svg || !polyline || values.length === 0) return;
+    const path = svg?.querySelector('path');
+    if (!svg || !path || values.length === 0) return;
     const w = 120;
     const h = 28;
     const min = Math.min(...values);
@@ -2713,9 +2713,24 @@
     const points = values.map((v, i) => {
       const x = values.length === 1 ? 0 : (i / (values.length - 1)) * w;
       const y = h - (((v - min) / range) * (h - 2) + 1);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    polyline.setAttribute('points', points);
+      return { x, y };
+    });
+    if (points.length === 1) {
+      const p = points[0];
+      path.setAttribute('d', `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`);
+      return;
+    }
+    const d = [`M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`];
+    for (let i = 0; i < points.length - 1; i++) {
+      const current = points[i];
+      const next = points[i + 1];
+      const midX = ((current.x + next.x) / 2).toFixed(1);
+      const midY = ((current.y + next.y) / 2).toFixed(1);
+      d.push(`Q ${current.x.toFixed(1)} ${current.y.toFixed(1)} ${midX} ${midY}`);
+    }
+    const last = points[points.length - 1];
+    d.push(`T ${last.x.toFixed(1)} ${last.y.toFixed(1)}`);
+    path.setAttribute('d', d.join(' '));
   }
 
   function setBadge(el, label, healthy) {
