@@ -312,6 +312,21 @@ function invalidateGuildMembersCache() {
     guildMembersInflight = null;
 }
 
+/**
+ * Resolve the bot's guild member after a member list fetch (same pattern as single-member kick).
+ * @param {import('discord.js').Guild} guild
+ * @param {import('discord.js').Client} client
+ */
+async function resolveDashboardBotMember(guild, client) {
+  const id = client.user?.id;
+  if (!id) return null;
+  let m = guild.members.resolve(id);
+  if (!m) {
+    m = await guild.members.fetch(id).catch(() => null);
+  }
+  return m;
+}
+
 /** REST: guild.invites.fetch() is easy to 429 when the dashboard refreshes often. */
 const INVITES_LIST_CACHE_MS = 90 * 1000;
 /** @type {{ guildId: string, expires: number, data: unknown[] } | null} */
@@ -1929,11 +1944,19 @@ router.get('/users/inactivity/dry-run', async (req, res) => {
         
         const members = await fetchGuildMembersCached(guild, { force: false });
         const activityMap = await getAllLastMessageTimes();
-        
+
+        const botMember = await resolveDashboardBotMember(guild, req.discordClient);
+        if (!botMember) {
+            return res.status(500).json({ error: 'Bot member not found in this server.' });
+        }
+        const botRolePos = botMember.roles.highest.position;
+
         const inactivityTargets = [];
         members.forEach(m => {
             if (m.user.bot) return;
             if (excludedRole && m.roles.cache.has(excludedRole)) return;
+            if (m.id === guild.ownerId) return;
+            if (m.roles.highest.position >= botRolePos) return;
 
             const lastActivity = activityMap[m.id];
 
@@ -1982,14 +2005,18 @@ router.post('/users/inactivity/execute', async (req, res) => {
         
         const members = await fetchGuildMembersCached(guild, { force: true });
         const activityMap = await getAllLastMessageTimes();
-        
+
+        const botMember = await resolveDashboardBotMember(guild, req.discordClient);
+        if (!botMember) {
+            return res.status(500).json({ error: 'Bot member not found in this server.' });
+        }
+        const botRolePos = botMember.roles.highest.position;
+
         const inactivityTargets = [];
         members.forEach(m => {
             if (m.user.bot) return;
             if (excludedRole && m.roles.cache.has(excludedRole)) return;
             if (m.id === guild.ownerId) return;
-
-            const botRolePos = guild.members.resolve(req.discordClient.user.id).roles.highest.position;
             if (m.roles.highest.position >= botRolePos) return;
 
             const lastActivity = activityMap[m.id];

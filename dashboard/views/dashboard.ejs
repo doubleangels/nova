@@ -3696,10 +3696,10 @@
       btn.textContent = 'Scanning…';
 
       try {
-          const res = await fetch(`/api/users/inactivity/dry-run?days=${days}&excludedRole=${excludedRole}`);
-          const data = await res.json();
+          const res = await fetch(`/api/users/inactivity/dry-run?days=${encodeURIComponent(days)}&excludedRole=${encodeURIComponent(excludedRole)}`);
+          const data = await res.json().catch(() => ({}));
           
-          if (!res.ok) throw new Error(data.error);
+          if (!res.ok) throw new Error(data.error || `Scan failed (${res.status}).`);
 
           const container = document.getElementById('inactivityResultsContainer');
           const countSpan = document.getElementById('inactivityTargetCount');
@@ -3730,7 +3730,7 @@
           btn.classList.add(...neutralClasses);
           btn.textContent = 'Re-Scan Users';
       } catch (err) {
-          showToast('Failed to scan for Inactivity Prune targets.', 'error');
+          showToast(err.message || 'Failed to scan for Inactivity Prune targets.', 'error');
       } finally {
           btn.disabled = false;
           if (btn.textContent === 'Scanning…') {
@@ -3751,7 +3751,8 @@
       const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
       const btn = document.getElementById('inactivityExecuteBtn');
       const scanBtn = document.getElementById('inactivityScanBtn');
-      
+      const prevExecLabel = btn.textContent;
+
       btn.disabled = true;
       btn.textContent = 'Executing Inactivity Prune...';
       scanBtn.disabled = true;
@@ -3762,9 +3763,9 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ days, excludedRole })
           });
-          const data = await res.json();
+          const data = await res.json().catch(() => ({}));
           
-          if (!res.ok) throw new Error(data.error);
+          if (!res.ok) throw new Error(data.error || `Execute failed (${res.status}).`);
           
           showToast(`Successfully kicked ${data.kicked} users. ${data.failed > 0 ? `(${data.failed} failed)` : ''}`, 'success');
           
@@ -3772,10 +3773,13 @@
           btn.classList.add('hidden');
           loadUserSummary(true);
       } catch (err) {
-          showToast('Failed to execute Inactivity Prune.', 'error');
+          showToast(err.message || 'Failed to execute Inactivity Prune.', 'error');
       } finally {
           btn.disabled = false;
           scanBtn.disabled = false;
+          if (btn.textContent === 'Executing Inactivity Prune...') {
+            btn.textContent = prevExecLabel;
+          }
       }
   }
 

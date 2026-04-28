@@ -119,6 +119,9 @@ function createDashboard(client, options = {}) {
           "'unsafe-inline'", // Needed for inline theme/tailwind/fetch scripts
           "https://cdn.tailwindcss.com"
         ],
+        // Helmet defaults to script-src-attr 'none', which blocks every onclick= in dashboard.ejs.
+        // script-src 'unsafe-inline' does not apply to inline event handlers (CSP Level 3).
+        scriptSrcAttr: ["'unsafe-inline'"],
         styleSrc: [
           "'self'",
           "'unsafe-inline'", // Needed for the large internal style block
