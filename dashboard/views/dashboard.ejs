@@ -369,7 +369,7 @@
       
       <!-- Member Management Roles -->
       <div id="roles-member-onboarding" class="space-y-5 scroll-mt-28">
-        
+        <h3 class="font-bold text-sm text-[var(--c-text)]">Member Management Roles</h3>
         <div>
           <label class="field-label">Noobies Role</label>
           <select id="noobies_role_id" class="field-input role-select"></select>
@@ -391,7 +391,7 @@
 
       <!-- Command & Assistant Roles -->
       <div id="roles-give-perms" class="space-y-5 scroll-mt-28">
-        
+        <h3 class="font-bold text-sm text-[var(--c-text)]">Command &amp; Assistant Roles</h3>
         <div>
           <label class="field-label">Fren Role</label>
           <select id="give_perms_fren_role_id" class="field-input role-select"></select>
@@ -407,7 +407,7 @@
 
       <!-- Validation Roles -->
       <div id="roles-validation" class="sm:col-span-2 space-y-5 scroll-mt-28">
-        
+        <h3 class="font-bold text-sm text-[var(--c-text)]">Validation Roles</h3>
         <div class="max-w-md">
           <label class="field-label">Permission Reference Role</label>
           <select id="newuser_permission_diff_role_id" class="field-input role-select"></select>
@@ -569,9 +569,12 @@
       </div>
   </div>
   <div id="reminders-channels" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
-    <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mb-5">
+    <div class="mb-4">
+      <h3 class="font-bold text-sm text-[var(--c-text)]">Reminder Channel &amp; Role</h3>
+      <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">
       Where reminders post, which role gets pinged, invite join alerts, and per-schedule <strong class="text-[var(--c-text-muted)]">delay</strong> overrides (hours).
     </p>
+    </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
       <div>
         <label class="field-label">Reminder Channel</label>
@@ -1030,7 +1033,10 @@
     <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Send <strong class="text-[var(--c-text-muted)]">plain text</strong> or a <strong class="text-[var(--c-text-muted)]">rich embed</strong> as the bot to any channel you can select.</p>
   </div>
   <div id="messaging-composer" class="premium-card p-6 border-l-4 border-[var(--c-accent)] scroll-mt-28">
-    <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mb-6">Uses your chosen channel; content is sent through the dashboard API (not stored as a draft).</p>
+    <div class="mb-4">
+      <h3 class="card-sub-title text-base font-semibold">Send as the bot</h3>
+      <p class="card-sub-desc text-[11px] text-[var(--c-text-dim)] leading-relaxed mt-0.5">Uses your chosen channel; content is sent through the dashboard API (not stored as a draft).</p>
+    </div>
     
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-8">
       <!-- Controls -->
@@ -1115,8 +1121,12 @@
       </svg>
       Invite Manager
     </h2>
-    <div class="flex items-center gap-2">
-        <button onclick="openInviteModal()" class="px-3 py-1.5 bg-[var(--c-accent)] text-white rounded-lg text-xs font-semibold hover:bg-[var(--c-accent-strong)] transition-colors flex items-center gap-2">
+    <div class="flex flex-wrap items-center justify-end gap-2">
+        <button type="button" onclick="void revokeNonNovaInvites()" class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors inline-flex items-center gap-2" title="Delete every invite not created by this bot (keeps Nova-created links)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Revoke non-Nova
+        </button>
+        <button type="button" onclick="openInviteModal()" class="px-3 py-1.5 bg-[var(--c-accent)] text-white rounded-lg text-xs font-semibold hover:bg-[var(--c-accent-strong)] transition-colors flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Create Invite
         </button>
@@ -1125,6 +1135,9 @@
   
   <!-- Invite List -->
   <div id="invites-active" class="bg-[var(--c-card)] border border-[var(--c-accent-soft-ring)] rounded-xl overflow-hidden scroll-mt-28">
+    <div class="px-5 py-4 border-b border-[var(--c-card-border)] bg-[var(--c-input)]/30">
+      <h3 class="font-bold text-sm text-[var(--c-text)]">Active Invites</h3>
+    </div>
     <div class="hidden lg:grid lg:grid-cols-12 gap-4 px-5 py-2.5 border-b border-[var(--c-card-border)] bg-[var(--c-input)] text-[9px] uppercase tracking-widest text-[var(--c-text-dim)] font-bold items-center">
         <div class="lg:col-span-3">Code / Tag</div>
         <div class="lg:col-span-2 text-center">Channel</div>
@@ -2527,6 +2540,51 @@
     }
   }
 
+  window.revokeNonNovaInvites = async function revokeNonNovaInvites() {
+    try {
+      const preview = await fetch('/api/invites/revoke-external', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: true })
+      });
+      const d = await preview.json().catch(() => ({}));
+      if (!preview.ok) throw new Error(d.error || 'Could not list invites to revoke.');
+      const n = Number(d.count) || 0;
+      if (n === 0) {
+        showToast('Nothing to revoke — every active invite was created by Nova.', 'success');
+        return;
+      }
+      const samples = Array.isArray(d.sampleCodes) ? d.sampleCodes : [];
+      const sampleLine =
+        samples.length > 0
+          ? `\n\nSample code(s): ${samples.map((c) => String(c)).join(', ')}${n > samples.length ? ' …' : ''}`
+          : '';
+      const ok = await confirmWithModal({
+        title: 'Revoke non-Nova invites',
+        message: `Delete ${n} invite link(s) whose creator is not this bot? Invites created by Nova stay active. Stored Nova tags for deleted codes are removed.${sampleLine}`,
+        confirmLabel: `Revoke ${n}`
+      });
+      if (!ok) return;
+      const exec = await fetch('/api/invites/revoke-external', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dryRun: false })
+      });
+      const out = await exec.json().catch(() => ({}));
+      if (!exec.ok) throw new Error(out.error || 'Revoke failed.');
+      const revoked = out.revoked ?? 0;
+      const failed = out.failed ?? 0;
+      if (failed > 0) {
+        showToast(`Revoked ${revoked} invite(s); ${failed} could not be deleted (rate limit or missing).`, 'error');
+      } else {
+        showToast(`Revoked ${revoked} invite(s).`, 'success');
+      }
+      loadInvites(true);
+    } catch (e) {
+      showToast(e.message || 'Could not revoke invites.', 'error');
+    }
+  };
+
   function formatJoinSourceRow(row) {
     const src = String(row.source || 'unknown');
     if (src === 'baseline') {
@@ -2651,7 +2709,7 @@
                         <span class="text-sm font-mono font-bold text-[var(--c-accent)]">${safeCode}</span>
                         ${inv.tagName ? `<span class="px-1.5 py-0.5 bg-[var(--c-accent-soft-bg)] text-[var(--c-accent-text)] text-[10px] font-bold rounded uppercase tracking-wider">${safeTagName}</span>` : ''}
                     </div>
-                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1 truncate text-center lg:text-left">Added by ${safeInviter}</div>
+                    <div class="text-[10px] text-[var(--c-text-dim)] mt-1 truncate text-center lg:text-left">${inv.fromNova ? '<span class="text-emerald-400/90 font-bold mr-1">Nova</span>' : ''}Added by ${safeInviter}</div>
                 </div>
                 
                 <div class="mt-3 lg:mt-0 lg:col-span-2 text-center">

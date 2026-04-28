@@ -1662,6 +1662,7 @@ router.get('/invites', async (req, res) => {
 
     const invites = await guild.invites.fetch();
     const tags = await getAllInviteTagsData();
+    const botUserId = req.discordClient?.user?.id || null;
 
     // Create a map for quick lookup
     const tagMap = {};
@@ -1672,6 +1673,8 @@ router.get('/invites', async (req, res) => {
       channel: inv.channel?.name || 'Unknown',
       channelId: inv.channel?.id,
       inviter: inv.inviter?.username || 'System',
+      inviterId: inv.inviterId ?? inv.inviter?.id ?? null,
+      fromNova: Boolean(botUserId && inv.inviterId === botUserId),
       uses: inv.uses,
       maxUses: inv.maxUses,
       expiresAt: inv.expiresAt ? inv.expiresAt.toISOString() : null,
@@ -1732,6 +1735,71 @@ router.post('/invites', async (req, res) => {
     reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to create invite.', { err });
     res.status(500).json({ error: 'Failed to create invite.' });
+  }
+});
+
+// ─── POST /api/invites/revoke-external ───────────────────────────────────────
+/** Revoke every guild invite whose inviter is not this bot (dashboard + bot-created invites stay if inviter is Nova). */
+router.post('/invites/revoke-external', async (req, res) => {
+  try {
+    const guild = req.dashboardGuild;
+    if (!guild) return res.status(503).json({ error: 'Guild not available.' });
+    const botUserId = req.discordClient?.user?.id;
+    if (!botUserId) return res.status(503).json({ error: 'Bot client not ready.' });
+
+    const dryRun =
+      req.body?.dryRun === true ||
+      req.body?.dryRun === 'true' ||
+      String(req.query?.dryRun || '') === '1';
+
+    const invites = await guild.invites.fetch();
+    const toRevoke = [];
+    for (const inv of invites.values()) {
+      if (inv.inviterId !== botUserId) toRevoke.push(inv.code);
+    }
+
+    if (dryRun) {
+      return res.json({
+        ok: true,
+        dryRun: true,
+        count: toRevoke.length,
+        sampleCodes: toRevoke.slice(0, 15)
+      });
+    }
+
+    const actor = getDashboardActor(req);
+    let revoked = 0;
+    const failures = [];
+    for (const code of toRevoke) {
+      try {
+        await guild.invites.delete(code, `Bulk revoke non-Nova invites via Dashboard by ${actor}`);
+        await deleteInviteTag(guild.id, code);
+        revoked += 1;
+      } catch (e) {
+        failures.push({ code, error: e?.message || String(e) });
+      }
+    }
+
+    invalidateInvitesListCache();
+    logger.info('Dashboard bulk-revoked non-bot invites.', {
+      guildId: guild.id,
+      attempted: toRevoke.length,
+      revoked,
+      failed: failures.length,
+      user: actor
+    });
+
+    res.json({
+      ok: true,
+      attempted: toRevoke.length,
+      revoked,
+      failed: failures.length,
+      failures: failures.slice(0, 20)
+    });
+  } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api', op: 'invites_revoke_external' });
+    logger.error('Failed to bulk-revoke external invites.', { err });
+    res.status(500).json({ error: err?.message || 'Failed to revoke invites.' });
   }
 });
 
