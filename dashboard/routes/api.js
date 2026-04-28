@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const { monitorEventLoopDelay } = require('perf_hooks');
 const path = require('path');
+const { DatabaseSync } = require('node:sqlite');
 const { ActivityType, PermissionFlagsBits } = require('discord.js');
 const { GatewayRateLimitError } = require('@discordjs/util');
 const { fetchAllGuildMembersViaRest } = require('../../utils/guildMembersRest');
@@ -538,28 +539,32 @@ function applySeedJobProgress(job, evt) {
 
 /**
  * Reads all raw key-value entries from the SQLite database.
- * Uses better-sqlite3 directly to access Keyv's underlying table.
+ * Uses Node's built-in SQLite driver to access Keyv's underlying table.
  * @returns {Array<{fullKey: string, namespace: string, key: string, value: any}>}
  */
 function getRawDatabaseEntries() {
-  const Database = require('better-sqlite3');
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
-  const db = new Database(sqlitePath, { readonly: true });
-  const rows = db.prepare('SELECT key, value FROM keyv').all();
-  db.close();
-  return rows.map(row => {
-    let value;
-    try {
-      const parsed = JSON.parse(row.value);
-      value = parsed?.value !== undefined ? parsed.value : parsed;
-    } catch { value = row.value; }
-    // key format: "namespace:rest" or just "key"
-    const colonIdx = row.key.indexOf(':');
-    const namespace = colonIdx > -1 ? row.key.slice(0, colonIdx) : 'main';
-    const key = colonIdx > -1 ? row.key.slice(colonIdx + 1) : row.key;
-    return { fullKey: row.key, namespace, key, value };
-  }).filter(entry => entry.namespace !== 'sessions');
+  const db = new DatabaseSync(sqlitePath, { readOnly: true });
+  try {
+    const rows = db.prepare('SELECT key, value FROM keyv').all();
+    return rows.map(row => {
+      let value;
+      try {
+        const parsed = JSON.parse(row.value);
+        value = parsed?.value !== undefined ? parsed.value : parsed;
+      } catch {
+        value = row.value;
+      }
+      // key format: "namespace:rest" or just "key"
+      const colonIdx = row.key.indexOf(':');
+      const namespace = colonIdx > -1 ? row.key.slice(0, colonIdx) : 'main';
+      const key = colonIdx > -1 ? row.key.slice(colonIdx + 1) : row.key;
+      return { fullKey: row.key, namespace, key, value };
+    }).filter(entry => entry.namespace !== 'sessions');
+  } finally {
+    db.close();
+  }
 }
 /**
  * Writes a JSON value back to a raw Keyv row by full key.
@@ -567,13 +572,15 @@ function getRawDatabaseEntries() {
  * @param {any} value - The new value (will be JSON-encoded in Keyv format)
  */
 async function updateRawDatabaseEntry(fullKey, value) {
-  const Database = require('better-sqlite3');
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
-  const db = new Database(sqlitePath);
-  const encoded = JSON.stringify({ value, expires: null });
-  db.prepare('UPDATE keyv SET value = ? WHERE key = ?').run(encoded, fullKey);
-  db.close();
+  const db = new DatabaseSync(sqlitePath);
+  try {
+    const encoded = JSON.stringify({ value, expires: null });
+    db.prepare('UPDATE keyv SET value = ? WHERE key = ?').run(encoded, fullKey);
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -581,12 +588,14 @@ async function updateRawDatabaseEntry(fullKey, value) {
  * @param {string} fullKey - The raw key as stored in SQLite.
  */
 async function deleteRawDatabaseEntry(fullKey) {
-  const Database = require('better-sqlite3');
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
-  const db = new Database(sqlitePath);
-  db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey);
-  db.close();
+  const db = new DatabaseSync(sqlitePath);
+  try {
+    db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey);
+  } finally {
+    db.close();
+  }
 }
 
 const ACTIVITY_TYPE_MAP = {
