@@ -22,22 +22,6 @@
       </svg>
       Refresh
     </button>
-    <!-- Theme toggle -->
-    <button id="themeToggleBtn" title="Toggle light/dark theme"
-      style="display:flex;align-items:center;justify-content:center;width:2.375rem;height:2.375rem;background:var(--c-input);border:1px solid var(--c-input-border);border-radius:0.5rem;cursor:pointer;transition:background-color 0.2s;flex-shrink:0;color:var(--c-label)">
-      <!-- Sun — shown in dark mode -->
-      <svg id="themeIconSun" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem" fill="none"
-        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10A5 5 0 0012 7z" />
-      </svg>
-      <!-- Moon — shown in light mode, hidden by default -->
-      <svg id="themeIconMoon" xmlns="http://www.w3.org/2000/svg" style="width:1rem;height:1rem;display:none" fill="none"
-        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round"
-          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-      </svg>
-    </button>
   </div>
 </div>
 
@@ -2593,22 +2577,20 @@
   }
   function applyAccentTheme(baseHex) {
     const base = normalizeHex(baseHex);
-    const light = document.documentElement.getAttribute('data-theme') === 'light';
-    const strong = light ? mix(base, '#000000', 0.12) : mix(base, '#FFFFFF', 0.18);
-    /* Light: keep full accent for labels on soft fills (mixing toward slate looked “pastel”). */
-    const text = light ? base : mix(base, '#FFFFFF', 0.45);
+    const strong = mix(base, '#FFFFFF', 0.18);
+    const text = mix(base, '#FFFFFF', 0.45);
     const rgb = hexToRgb(base);
     const root = document.documentElement;
-    const softBgA = light ? 0.14 : 0.2;
-    const softRingA = light ? 0.22 : 0.32;
-    const navBgA = light ? 0.12 : 0.22;
+    const softBgA = 0.2;
+    const softRingA = 0.32;
+    const navBgA = 0.22;
     root.style.setProperty('--c-accent', base);
     root.style.setProperty('--c-accent-strong', strong);
     root.style.setProperty('--c-accent-text', text);
     root.style.setProperty('--c-accent-soft-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${softBgA})`);
     root.style.setProperty('--c-accent-soft-ring', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${softRingA})`);
     root.style.setProperty('--c-nav-active-bg', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${navBgA})`);
-    root.style.setProperty('--c-nav-active-text', light ? base : text);
+    root.style.setProperty('--c-nav-active-text', text);
   }
 
   colorPicker?.addEventListener('input', () => {
@@ -2631,11 +2613,7 @@
     }
   });
 
-  window.addEventListener('dashboard-theme-changed', () => {
-    const v = colorText?.value;
-    if (v && /^#[0-9A-Fa-f]{6}$/i.test(v)) applyAccentTheme(v);
-    else if (colorPicker?.value) applyAccentTheme(colorPicker.value);
-  });
+
 
   // ── Load guild roles/channels ─────────────────────────────────────────────
   // savedSelectValues: optional map of { id -> value } to restore after repopulating
