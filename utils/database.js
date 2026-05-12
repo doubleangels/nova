@@ -551,25 +551,21 @@ async function mergeInviteJoinHistoryEntries(guildId, newEntries) {
   const key = `join_history:${guildId}`;
   const raw = await inviteKeyv.get(key);
   const existing = Array.isArray(raw) ? raw : [];
-  const map = new Map();
-  for (const e of existing) {
-    const n = normalizeInviteJoinHistoryRow(e);
-    map.set(`${n.userId}|${n.at}`, n);
-  }
+  const merged = existing.map(normalizeInviteJoinHistoryRow);
   let added = 0;
   for (const e of newEntries) {
     const n = normalizeInviteJoinHistoryRow(e);
-    const k = `${n.userId}|${n.at}`;
-    if (!map.has(k)) {
-      map.set(k, n);
+    const dup = merged.some((row) => isNearDuplicateInviteJoinRow(row, n, INVITE_JOIN_HISTORY_DEDUP_MS));
+    if (!dup) {
+      merged.push(n);
       added++;
     }
   }
-  const merged = [...map.values()]
+  const finalRows = merged
     .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     .slice(0, INVITE_JOIN_HISTORY_LIMIT);
-  await inviteKeyv.set(key, merged);
-  return { added, total: merged.length };
+  await inviteKeyv.set(key, finalRows);
+  return { added, total: finalRows.length };
 }
 
 /**

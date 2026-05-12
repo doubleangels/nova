@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -291,13 +291,6 @@ module.exports = {
    */
   async execute(interaction) {
     try {
-      if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-        return await interaction.reply({
-          content: '⚠️ Only server administrators can run this command.',
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
       if (!this.validateConfiguration()) {
         return await interaction.reply({
           content: "⚠️ This command is not properly configured. Please contact an administrator.",

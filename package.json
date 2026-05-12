@@ -1,0 +1,55 @@
+{
+  "name": "nova",
+  "version": "1.0.0",
+  "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
+  "main": "index.js",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "doppler run -- node index.js",
+    "dev": "doppler run -- nodemon --watch . --ext js,ejs --ignore node_modules --ignore data index.js",
+    "update": "npm outdated && npm update --save",
+    "set-value": "node set-value.js",
+    "remove-value": "node remove-value.js",
+    "list-values": "node list-values.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doubleangels/nova.git"
+  },
+  "author": "doubleangels",
+  "bugs": {
+    "url": "https://github.com/doubleangels/nova/issues"
+  },
+  "homepage": "https://github.com/doubleangels/nova#readme",
+  "overrides": {
+    "@tootallnate/once": ">=3.0.1",
+    "tar": ">=7.5.10",
+    "undici": ">=6.23.0",
+    "minimatch": ">=10.2.3",
+    "@isaacs/brace-expansion": ">=5.0.1"
+  },
+  "dependencies": {
+    "@keyv/sqlite": "^4.0.8",
+    "@sentry/node": "^10.53.1",
+    "axios": "^1.16.0",
+    "better-sqlite3": "^12.10.0",
+    "dayjs": "^1.11.20",
+    "discord.js": "^14.26.4",
+    "dotenv": "^17.4.2",
+    "ejs": "^5.0.2",
+    "express": "^5.2.1",
+    "express-ejs-layouts": "^2.5.1",
+    "express-rate-limit": "^8.5.1",
+    "express-session": "^1.19.0",
+    "he": "^1.2.0",
+    "helmet": "^8.1.0",
+    "keyv": "^5.6.0",
+    "node-cache": "^5.1.2",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

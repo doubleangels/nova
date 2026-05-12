@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const { monitorEventLoopDelay } = require('perf_hooks');
 const path = require('path');
+const { DatabaseSync } = require('node:sqlite');
 const { ActivityType, PermissionFlagsBits } = require('discord.js');
 const { GatewayRateLimitError } = require('@discordjs/util');
 const { fetchAllGuildMembersViaRest } = require('../../utils/guildMembersRest');
@@ -312,6 +313,21 @@ function invalidateGuildMembersCache() {
     guildMembersInflight = null;
 }
 
+/**
+ * Resolve the bot's guild member after a member list fetch (same pattern as single-member kick).
+ * @param {import('discord.js').Guild} guild
+ * @param {import('discord.js').Client} client
+ */
+async function resolveDashboardBotMember(guild, client) {
+  const id = client.user?.id;
+  if (!id) return null;
+  let m = guild.members.resolve(id);
+  if (!m) {
+    m = await guild.members.fetch(id).catch(() => null);
+  }
+  return m;
+}
+
 /** REST: guild.invites.fetch() is easy to 429 when the dashboard refreshes often. */
 const INVITES_LIST_CACHE_MS = 90 * 1000;
 /** @type {{ guildId: string, expires: number, data: unknown[] } | null} */
@@ -458,6 +474,13 @@ let currentMigrationJobId = null;
 /** @type {AbortController | null} */
 let currentMigrationAbortController = null;
 
+/** Dashboard-only: seed last-message backfill (one job at a time) */
+let seedJobRunning = false;
+/** @type {string | null} */
+let currentSeedJobId = null;
+/** @type {AbortController | null} */
+let currentSeedAbortController = null;
+
 function pruneOldSeedJobs() {
   const now = Date.now();
   const maxAge = 60 * 60 * 1000;
@@ -521,30 +544,79 @@ function applySeedJobProgress(job, evt) {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+function decodeRawDatabaseValue(rawValue) {
+  try {
+    const parsed = JSON.parse(rawValue);
+    return parsed?.value !== undefined ? parsed.value : parsed;
+  } catch {
+    return rawValue;
+  }
+}
+
 /**
- * Reads all raw key-value entries from the SQLite database.
- * Uses better-sqlite3 directly to access Keyv's underlying table.
- * @returns {Array<{fullKey: string, namespace: string, key: string, value: any}>}
+ * Reads filtered raw key-value entries from the SQLite database.
+ * Uses Node's built-in SQLite driver to access Keyv's underlying table.
+ * @param {{ namespace?: string|null, search?: string|null, limit?: number, offset?: number }} [options]
+ * @returns {{ entries: Array<{fullKey: string, namespace: string, key: string, value: any}>, namespaces: Array<{namespace: string, count: number}>, total: number, limit: number, offset: number }}
  */
-function getRawDatabaseEntries() {
-  const Database = require('better-sqlite3');
+function getRawDatabaseEntries(options = {}) {
+  const namespace = options.namespace ? String(options.namespace).trim() : '';
+  const search = options.search ? String(options.search).trim().toLowerCase() : '';
+  const limit = Math.min(500, Math.max(25, Number(options.limit) || 200));
+  const offset = Math.max(0, Number(options.offset) || 0);
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
-  const db = new Database(sqlitePath, { readonly: true });
-  const rows = db.prepare('SELECT key, value FROM keyv').all();
-  db.close();
-  return rows.map(row => {
-    let value;
-    try {
-      const parsed = JSON.parse(row.value);
-      value = parsed?.value !== undefined ? parsed.value : parsed;
-    } catch { value = row.value; }
-    // key format: "namespace:rest" or just "key"
-    const colonIdx = row.key.indexOf(':');
-    const namespace = colonIdx > -1 ? row.key.slice(0, colonIdx) : 'main';
-    const key = colonIdx > -1 ? row.key.slice(colonIdx + 1) : row.key;
-    return { fullKey: row.key, namespace, key, value };
-  }).filter(entry => entry.namespace !== 'sessions');
+  const db = new DatabaseSync(sqlitePath, { readOnly: true });
+  try {
+    const namespaceRows = db.prepare(`
+      SELECT
+        CASE WHEN instr(key, ':') > 0 THEN substr(key, 1, instr(key, ':') - 1) ELSE 'main' END AS namespace,
+        COUNT(*) AS count
+      FROM keyv
+      WHERE key NOT LIKE 'sessions:%'
+      GROUP BY namespace
+      ORDER BY CASE WHEN namespace = 'main' THEN 0 ELSE 1 END, namespace COLLATE NOCASE
+    `).all();
+
+    const where = [`key NOT LIKE 'sessions:%'`];
+    const params = [];
+    if (namespace) {
+      where.push(`(CASE WHEN instr(key, ':') > 0 THEN substr(key, 1, instr(key, ':') - 1) ELSE 'main' END) = ?`);
+      params.push(namespace);
+    }
+    if (search) {
+      where.push(`(lower(key) LIKE ? OR lower(value) LIKE ?)`);
+      const like = `%${search}%`;
+      params.push(like, like);
+    }
+    const whereSql = where.join(' AND ');
+    const totalRow = db.prepare(`SELECT COUNT(*) AS count FROM keyv WHERE ${whereSql}`).get(...params);
+    const rows = db.prepare(`
+      SELECT key, value
+      FROM keyv
+      WHERE ${whereSql}
+      ORDER BY key COLLATE NOCASE
+      LIMIT ? OFFSET ?
+    `).all(...params, limit, offset);
+
+    const entries = rows.map((row) => {
+      const value = decodeRawDatabaseValue(row.value);
+      const colonIdx = row.key.indexOf(':');
+      const namespace = colonIdx > -1 ? row.key.slice(0, colonIdx) : 'main';
+      const key = colonIdx > -1 ? row.key.slice(colonIdx + 1) : row.key;
+      return { fullKey: row.key, namespace, key, value };
+    });
+
+    return {
+      entries,
+      namespaces: namespaceRows.map((row) => ({ namespace: row.namespace, count: Number(row.count) || 0 })),
+      total: Number(totalRow?.count || 0),
+      limit,
+      offset
+    };
+  } finally {
+    db.close();
+  }
 }
 /**
  * Writes a JSON value back to a raw Keyv row by full key.
@@ -552,13 +624,15 @@ function getRawDatabaseEntries() {
  * @param {any} value - The new value (will be JSON-encoded in Keyv format)
  */
 async function updateRawDatabaseEntry(fullKey, value) {
-  const Database = require('better-sqlite3');
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
-  const db = new Database(sqlitePath);
-  const encoded = JSON.stringify({ value, expires: null });
-  db.prepare('UPDATE keyv SET value = ? WHERE key = ?').run(encoded, fullKey);
-  db.close();
+  const db = new DatabaseSync(sqlitePath);
+  try {
+    const encoded = JSON.stringify({ value, expires: null });
+    db.prepare('UPDATE keyv SET value = ? WHERE key = ?').run(encoded, fullKey);
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -566,12 +640,14 @@ async function updateRawDatabaseEntry(fullKey, value) {
  * @param {string} fullKey - The raw key as stored in SQLite.
  */
 async function deleteRawDatabaseEntry(fullKey) {
-  const Database = require('better-sqlite3');
   const dataDir = process.env.DATA_DIR || require('path').resolve(process.cwd(), 'data');
   const sqlitePath = require('path').join(dataDir, 'database.sqlite');
-  const db = new Database(sqlitePath);
-  db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey);
-  db.close();
+  const db = new DatabaseSync(sqlitePath);
+  try {
+    db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey);
+  } finally {
+    db.close();
+  }
 }
 
 const ACTIVITY_TYPE_MAP = {
@@ -964,8 +1040,15 @@ router.get('/me', (req, res) => {
 
 router.get('/database/raw', async (req, res) => {
   try {
-    const entries = await getRawDatabaseEntries();
-    res.json(entries);
+    const limitRaw = parseInt(String(req.query.limit || '200'), 10);
+    const offsetRaw = parseInt(String(req.query.offset || '0'), 10);
+    const result = await getRawDatabaseEntries({
+      namespace: req.query.namespace || '',
+      search: req.query.search || '',
+      limit: Number.isFinite(limitRaw) ? limitRaw : 200,
+      offset: Number.isFinite(offsetRaw) ? offsetRaw : 0
+    });
+    res.json(result);
   } catch (err) {
     reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to get raw database entries.', { err });
@@ -1654,6 +1737,7 @@ router.get('/invites', async (req, res) => {
 
     const invites = await guild.invites.fetch();
     const tags = await getAllInviteTagsData();
+    const botUserId = req.discordClient?.user?.id || null;
 
     // Create a map for quick lookup
     const tagMap = {};
@@ -1664,6 +1748,8 @@ router.get('/invites', async (req, res) => {
       channel: inv.channel?.name || 'Unknown',
       channelId: inv.channel?.id,
       inviter: inv.inviter?.username || 'System',
+      inviterId: inv.inviterId ?? inv.inviter?.id ?? null,
+      fromNova: Boolean(botUserId && inv.inviterId === botUserId),
       uses: inv.uses,
       maxUses: inv.maxUses,
       expiresAt: inv.expiresAt ? inv.expiresAt.toISOString() : null,
@@ -1724,6 +1810,71 @@ router.post('/invites', async (req, res) => {
     reportDashboardError(err, req, { area: 'dashboard:api' });
     logger.error('Failed to create invite.', { err });
     res.status(500).json({ error: 'Failed to create invite.' });
+  }
+});
+
+// ─── POST /api/invites/revoke-external ───────────────────────────────────────
+/** Revoke every guild invite whose inviter is not this bot (dashboard + bot-created invites stay if inviter is Nova). */
+router.post('/invites/revoke-external', async (req, res) => {
+  try {
+    const guild = req.dashboardGuild;
+    if (!guild) return res.status(503).json({ error: 'Guild not available.' });
+    const botUserId = req.discordClient?.user?.id;
+    if (!botUserId) return res.status(503).json({ error: 'Bot client not ready.' });
+
+    const dryRun =
+      req.body?.dryRun === true ||
+      req.body?.dryRun === 'true' ||
+      String(req.query?.dryRun || '') === '1';
+
+    const invites = await guild.invites.fetch();
+    const toRevoke = [];
+    for (const inv of invites.values()) {
+      if (inv.inviterId !== botUserId) toRevoke.push(inv.code);
+    }
+
+    if (dryRun) {
+      return res.json({
+        ok: true,
+        dryRun: true,
+        count: toRevoke.length,
+        sampleCodes: toRevoke.slice(0, 15)
+      });
+    }
+
+    const actor = getDashboardActor(req);
+    let revoked = 0;
+    const failures = [];
+    for (const code of toRevoke) {
+      try {
+        await guild.invites.delete(code, `Bulk revoke non-Nova invites via Dashboard by ${actor}`);
+        await deleteInviteTag(guild.id, code);
+        revoked += 1;
+      } catch (e) {
+        failures.push({ code, error: e?.message || String(e) });
+      }
+    }
+
+    invalidateInvitesListCache();
+    logger.info('Dashboard bulk-revoked non-bot invites.', {
+      guildId: guild.id,
+      attempted: toRevoke.length,
+      revoked,
+      failed: failures.length,
+      user: actor
+    });
+
+    res.json({
+      ok: true,
+      attempted: toRevoke.length,
+      revoked,
+      failed: failures.length,
+      failures: failures.slice(0, 20)
+    });
+  } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api', op: 'invites_revoke_external' });
+    logger.error('Failed to bulk-revoke external invites.', { err });
+    res.status(500).json({ error: err?.message || 'Failed to revoke invites.' });
   }
 });
 
@@ -1936,11 +2087,19 @@ router.get('/users/inactivity/dry-run', async (req, res) => {
         
         const members = await fetchGuildMembersCached(guild, { force: false });
         const activityMap = await getAllLastMessageTimes();
-        
+
+        const botMember = await resolveDashboardBotMember(guild, req.discordClient);
+        if (!botMember) {
+            return res.status(500).json({ error: 'Bot member not found in this server.' });
+        }
+        const botRolePos = botMember.roles.highest.position;
+
         const inactivityTargets = [];
         members.forEach(m => {
             if (m.user.bot) return;
             if (excludedRole && m.roles.cache.has(excludedRole)) return;
+            if (m.id === guild.ownerId) return;
+            if (m.roles.highest.position >= botRolePos) return;
 
             const lastActivity = activityMap[m.id];
 
@@ -1989,14 +2148,18 @@ router.post('/users/inactivity/execute', async (req, res) => {
         
         const members = await fetchGuildMembersCached(guild, { force: true });
         const activityMap = await getAllLastMessageTimes();
-        
+
+        const botMember = await resolveDashboardBotMember(guild, req.discordClient);
+        if (!botMember) {
+            return res.status(500).json({ error: 'Bot member not found in this server.' });
+        }
+        const botRolePos = botMember.roles.highest.position;
+
         const inactivityTargets = [];
         members.forEach(m => {
             if (m.user.bot) return;
             if (excludedRole && m.roles.cache.has(excludedRole)) return;
             if (m.id === guild.ownerId) return;
-
-            const botRolePos = guild.members.resolve(req.discordClient.user.id).roles.highest.position;
             if (m.roles.highest.position >= botRolePos) return;
 
             const lastActivity = activityMap[m.id];
