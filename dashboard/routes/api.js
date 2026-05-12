@@ -474,12 +474,7 @@ let currentMigrationJobId = null;
 /** @type {AbortController | null} */
 let currentMigrationAbortController = null;
 
-/** Dashboard-only: seed last-message backfill (one job at a time) */
-let seedJobRunning = false;
-/** @type {string | null} */
-let currentSeedJobId = null;
-/** @type {AbortController | null} */
-let currentSeedAbortController = null;
+
 
 function pruneOldSeedJobs() {
   const now = Date.now();
