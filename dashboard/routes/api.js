@@ -444,6 +444,13 @@ const seedJobs = new Map();
 /** @type {Map<string, object>} */
 const migrationJobs = new Map();
 
+/** Dashboard-only: backfill last_message keys from channel history (one job at a time). */
+let seedJobRunning = false;
+/** @type {string | null} */
+let currentSeedJobId = null;
+/** @type {AbortController | null} */
+let currentSeedAbortController = null;
+
 /** Dashboard-only: namespace migration job state */
 let migrationJobRunning = false;
 /** @type {string | null} */

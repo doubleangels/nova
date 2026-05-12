@@ -14,8 +14,6 @@
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <!-- Apply saved theme before paint to prevent flash -->
-      <script>(function () { var t = localStorage.getItem('dashboard-theme') || 'dark'; document.documentElement.setAttribute('data-theme', t); })()</script>
       <script src="https://cdn.tailwindcss.com"></script>
       <script>
         tailwind.config = {
@@ -78,32 +76,6 @@
           --glass-border: rgba(255, 255, 255, 0.05);
           --glass-blur: 12px;
         }
-
-        html[data-theme="light"] {
-          --c-bg: #f1f5f9;
-          --c-sidebar: #ffffff;
-          --c-sidebar-border: #e2e8f0;
-          --c-topbar: #ffffff;
-          --c-topbar-border: #e2e8f0;
-          --c-text: #0f172a;
-          --c-text-muted: #475569;
-          --c-text-dim: #94a3b8;
-          --c-nav-text: #334155;
-          --c-nav-hover-bg: #f1f5f9;
-          --c-nav-hover-text: #0f172a;
-          --c-nav-active-bg: rgba(var(--c-accent-rgb), 0.08);
-          --c-nav-active-text: var(--c-accent);
-          --c-card: #ffffff;
-          --c-card-border: #e2e8f0;
-          --c-input: #f8fafc;
-          --c-input-border: #cbd5e1;
-          --c-input-text: #0f172a;
-          --c-input-ph: #94a3b8;
-          --c-label: #334155;
-          --c-hint: #94a3b8;
-          --c-toggle-off: #cbd5e1;
-        }
-
         /* ── Shell ───────────────────────────────────────────────────────────── */
         html {
           font-family: Inter, ui-sans-serif, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -213,11 +185,6 @@
           z-index: -1;
           opacity: 0.15;
         }
-
-        html[data-theme="light"] .ambient-blob {
-          opacity: 0.05;
-        }
-
         .blob-1 { width: 500px; height: 500px; background: var(--c-accent); top: -200px; right: -100px; }
         .blob-2 { width: 400px; height: 400px; background: #3b82f6; bottom: -100px; left: -100px; }
 
@@ -375,24 +342,6 @@
       if (!headers.has('x-csrf-token')) headers.set('x-csrf-token', csrfToken);
       return _nativeFetch(input, { ...init, headers });
     };
-
-    // ── Theme ──────────────────────────────────────────────────────────────────
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('dashboard-theme', theme);
-      const sun = document.getElementById('themeIconSun');
-      const moon = document.getElementById('themeIconMoon');
-      if (sun) sun.style.display = theme === 'dark' ? '' : 'none';
-      if (moon) moon.style.display = theme === 'light' ? '' : 'none';
-    }
-    // Re-apply after DOM is ready (inline script at top handled the pre-paint case)
-    applyTheme(localStorage.getItem('dashboard-theme') || 'dark');
-
-    document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
-      const t = document.documentElement.getAttribute('data-theme') || 'dark';
-      applyTheme(t === 'dark' ? 'light' : 'dark');
-    });
-
     // ── Mobile menu ────────────────────────────────────────────────────────────
     const menuToggle = document.getElementById('menuToggle');
     const mobileOverlay = document.getElementById('mobileOverlay');

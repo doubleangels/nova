@@ -40,6 +40,12 @@
           overflow: hidden;
         }
 
+        @keyframes float {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
         /* Ambient background blobs */
         .bg-blob {
           position: fixed;
@@ -47,6 +53,8 @@
           filter: blur(80px);
           pointer-events: none;
           z-index: 0;
+          animation: float 20s ease-in-out infinite;
+          transform-origin: center;
         }
 
         .bg-blob-1 {
@@ -94,7 +102,7 @@
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 2rem;
           padding: 3rem 2.5rem;
-          backdrop-filter: blur(24px);
+          backdrop-filter: blur(32px);
           box-shadow:
             0 0 0 1px rgba(var(--c-accent-rgb), 0.1),
             0 25px 50px -12px rgba(0, 0, 0, 0.7);
@@ -190,22 +198,22 @@
           gap: 0.75rem;
           width: 100%;
           padding: 1rem 1.5rem;
-          background: var(--c-accent);
+          background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 100%), var(--c-accent);
           border-radius: 1rem;
           font-size: 0.9375rem;
           font-weight: 700;
           color: #fff;
           text-decoration: none;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 4px 20px rgba(var(--c-accent-rgb), 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 20px rgba(var(--c-accent-rgb), 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+          border: 1px solid rgba(0, 0, 0, 0.2);
         }
 
         .discord-btn:hover {
-          background: var(--c-accent);
+          background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%), var(--c-accent);
           filter: brightness(1.1);
           transform: translateY(-2px);
-          box-shadow: 0 10px 30px rgba(var(--c-accent-rgb), 0.4);
+          box-shadow: 0 10px 30px rgba(var(--c-accent-rgb), 0.5), inset 0 1px 0 rgba(255,255,255,0.3);
         }
 
         .discord-btn:active {

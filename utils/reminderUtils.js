@@ -300,6 +300,15 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     const scheduledTime = dayjs().add(delay, 'millisecond');
     const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 
+    logger.info('handleReminder called', { 
+      type, 
+      delay: `${delay}ms`, 
+      scheduledTime: scheduledTime.toISOString(),
+      unixTimestamp,
+      hasMessage: !!message,
+      hasClient: !!(message?.client)
+    });
+
     const reminderId = randomUUID();
 
     let channel;
@@ -385,45 +394,31 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
       reminderId: reminderId
     });
     
-    // Verify the reminder was saved by reading it back
+    // Verify the reminder survived
     const savedReminder = await reminderKeyv.get(`reminder:${reminderId}`);
     if (!savedReminder || savedReminder.reminder_id !== reminderId) {
-      logger.error("Failed to verify reminder was saved to database:", {
-        reminderId,
-        savedReminder,
-        expectedId: reminderId
-      });
+      logger.error('Failed to verify reminder data in database!', { reminderId, type });
       throw new Error("Failed to verify reminder was saved to database");
     }
     
+    logger.debug('Reminder data verified in database', { reminderId, type });
+
     // Update the list to contain ONLY this new reminder ID
     // Since we cleaned up all old reminders above, the list should now only contain this one
     const listKey = `reminders:${type}:list`;
     const newList = [reminderId];
     await reminderKeyv.set(listKey, newList);
-    logger.debug('Set reminder list for type to contain only new reminder.', {
-      type: type,
-      reminderCount: newList.length,
-      list: newList
-    });
     
     // Verify the reminder is in the list
     const verifyList = await reminderKeyv.get(listKey) || [];
     if (!verifyList.includes(reminderId)) {
-      logger.warn('Reminder was not found in list after setting, attempting to fix.', {
-        reminderId: reminderId,
-        list: verifyList
-      });
-      // Try to set it again
-      await reminderKeyv.set(listKey, [reminderId]);
-      
-      // Verify again
+      // Retry once for potential race conditions
+      logger.warn('Initial list verification failed, retrying...', { reminderId, type, listKey });
+      await new Promise(r => setTimeout(r, 50));
+      await reminderKeyv.set(listKey, newList);
       const verifyList2 = await reminderKeyv.get(listKey) || [];
       if (!verifyList2.includes(reminderId)) {
-        logger.error('CRITICAL: Failed to persist reminder to list after multiple attempts.', {
-          reminderId: reminderId,
-          list: verifyList2
-        });
+        logger.error('CRITICAL: Failed to persist reminder to list after retry!', { reminderId, type, listKey });
         throw new Error(`Failed to persist reminder ${reminderId} to list`);
       } else {
         logger.info('Successfully set reminder in list after retry.', {

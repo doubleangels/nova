@@ -1,0 +1,21 @@
+--- MAIN NAMESPACE SETTINGS (with and without prefix) ---
+reminder_channel: undefined | config:reminder_channel: 1334110271232282654
+reminder_role: undefined | config:reminder_role: 1478591097461543004
+reminder_delay_bump_ms: undefined | config:reminder_delay_bump_ms: undefined
+reminder_delay_promote_ms: undefined | config:reminder_delay_promote_ms: undefined
+reminder_delay_needafriend_ms: undefined | config:reminder_delay_needafriend_ms: undefined
+
+--- NOVA_REMINDERS NAMESPACE ---
+reminders:bump:list: [ 'f805d55f-b49a-4702-8505-6cbc9afc645c' ]
+  reminder:f805d55f-b49a-4702-8505-6cbc9afc645c: {
+  reminder_id: 'f805d55f-b49a-4702-8505-6cbc9afc645c',
+  remind_at: '2026-04-21T01:14:53.606Z',
+  type: 'bump'
+}
+reminders:promote:list: undefined
+reminders:needafriend:list: [ '7129d522-47e7-4c4e-9381-337f4ed308c2' ]
+  reminder:7129d522-47e7-4c4e-9381-337f4ed308c2: {
+  reminder_id: '7129d522-47e7-4c4e-9381-337f4ed308c2',
+  remind_at: '2026-04-27T23:14:49.450Z',
+  type: 'needafriend'
+}

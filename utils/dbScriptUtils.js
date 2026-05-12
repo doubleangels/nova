@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Configuration constants
-const NAMESPACES = ['main', 'invites'];
+const NAMESPACES = ['main', 'invites', 'nova_reminders'];
 const KNOWN_SECTIONS = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:', 'former_member:'];
 
 // Ensure data directory exists
