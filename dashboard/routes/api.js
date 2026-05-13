@@ -29,38 +29,8 @@ const {
   invalidateConfigCacheKey
 } = require('../../utils/database');
 const { getKeyvForNamespace } = require('../../utils/dbScriptUtils');
-const {
-  runSeedLastMessages,
-  DEFAULT_MAX_PER_CHANNEL,
-  DEFAULT_DELAY_MS
-} = require('../../utils/seedLastMessagesFromHistory');
-const {
-  normalizeAutoReactionRegex,
-  keywordToWordBoundaryPattern
-} = require('../../utils/autoReactionRegex');
-const {
-  parseBackupPayload,
-  validateNovaKeyvBackup,
-  applyNovaKeyvBackupEntries
-} = require('../../utils/novaKeyvBackup');
-const { 
-  getLatestReminderData, 
-  handleReminder, 
-  NEEDAFRIEND_REMINDER_MS,
-  getReminderBacklogSummary
-} = require('../../utils/reminderUtils');
-const {
-  getSqlitePath,
-  getStorageReport,
-  runSqliteMaintenance,
-  sqliteIntegrityCheck,
-  cleanupExpiredSessions,
-  clearAllSessionRows,
-  sqliteRwProbe,
-  buildDiagnosticsBundle,
-  getMigrationStatus,
-  runNamespaceMigration
-} = require('../../utils/maintenanceService');
+const { runInactivityPrune } = require('../../utils/inactivityPruneTask');
+const { runDuplicateInviteCleanup } = require('../../utils/inviteCleanupTask');
 const logger = require('../../logger')('dashboard:api');
 const { redditApiRequest, isRedditConfigured } = require('../../utils/redditClient');
 const { reportDashboardError } = require('../sentryDashboard');
@@ -454,11 +424,8 @@ function invalidateInvitesListCache() {
   invitesListCacheEntry = null;
 }
 
-/** Dashboard-only: backfill last_message keys from channel history (one job at a time). */
-/** @type {Map<string, object>} */
-const seedJobs = new Map();
-/** @type {Map<string, object>} */
-const migrationJobs = new Map();
+const pruneJobs = new Map();
+const inviteCleanupJobs = new Map();
 
 /** Dashboard-only: backfill last_message keys from channel history (one job at a time). */
 let seedJobRunning = false;
@@ -474,9 +441,21 @@ let currentMigrationJobId = null;
 /** @type {AbortController | null} */
 let currentMigrationAbortController = null;
 
+/** Dashboard-only: inactivity prune job state */
+let pruneJobRunning = false;
+/** @type {string | null} */
+let currentPruneJobId = null;
+/** @type {AbortController | null} */
+let currentPruneAbortController = null;
 
+/** Dashboard-only: invite cleanup job state */
+let inviteCleanupJobRunning = false;
+/** @type {string | null} */
+let currentInviteCleanupJobId = null;
+/** @type {AbortController | null} */
+let currentInviteCleanupAbortController = null;
 
-function pruneOldSeedJobs() {
+function pruneOldJobs() {
   const now = Date.now();
   const maxAge = 60 * 60 * 1000;
   for (const [id, job] of seedJobs) {
@@ -484,6 +463,12 @@ function pruneOldSeedJobs() {
   }
   for (const [id, job] of migrationJobs) {
     if (job.finishedAt && now - job.finishedAt > maxAge) migrationJobs.delete(id);
+  }
+  for (const [id, job] of pruneJobs) {
+    if (job.finishedAt && now - job.finishedAt > maxAge) pruneJobs.delete(id);
+  }
+  for (const [id, job] of inviteCleanupJobs) {
+    if (job.finishedAt && now - job.finishedAt > maxAge) inviteCleanupJobs.delete(id);
   }
 }
 
@@ -2130,6 +2115,9 @@ router.get('/users/inactivity/dry-run', async (req, res) => {
 
 // ─── POST /api/users/inactivity/execute ──────────────────────────────────────
 router.post('/users/inactivity/execute', async (req, res) => {
+    if (pruneJobRunning) {
+        return res.status(409).json({ error: 'A prune job is already running.', jobId: currentPruneJobId });
+    }
     try {
         const guild = req.dashboardGuild;
         if (!guild) return res.status(500).json({ error: 'Guild not found' });
@@ -2138,9 +2126,6 @@ router.post('/users/inactivity/execute', async (req, res) => {
         let excludedRole = String(req.body.excludedRole || '').trim();
         if (!excludedRole) excludedRole = (await getValue('prune_protected_role_id')) || '';
         
-        const inactivityThresholdMs = days * 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        
         const members = await fetchGuildMembersCached(guild, { force: true });
         const activityMap = await getAllLastMessageTimes();
 
@@ -2148,62 +2133,82 @@ router.post('/users/inactivity/execute', async (req, res) => {
         if (!botMember) {
             return res.status(500).json({ error: 'Bot member not found in this server.' });
         }
-        const botRolePos = botMember.roles.highest.position;
 
-        const inactivityTargets = [];
-        members.forEach(m => {
-            if (m.user.bot) return;
-            if (excludedRole && m.roles.cache.has(excludedRole)) return;
-            if (m.id === guild.ownerId) return;
-            if (m.roles.highest.position >= botRolePos) return;
+        pruneOldJobs();
+        const jobId = crypto.randomUUID();
+        const username = getDashboardActor(req);
+        const job = {
+            id: jobId,
+            type: 'inactivity_prune',
+            status: 'running',
+            startedAt: Date.now(),
+            finishedAt: null,
+            percent: 0,
+            kicked: 0,
+            failed: 0,
+            total: 0,
+            lastKickedTag: null,
+            error: null,
+            stopRequested: false
+        };
+        pruneJobs.set(jobId, job);
 
-            const lastActivity = activityMap[m.id];
-            if (lastActivity) {
-                if (now - lastActivity > inactivityThresholdMs) inactivityTargets.push(m);
-            } else {
-                const joinTs = m.joinedTimestamp || 0;
-                if (now - joinTs > inactivityThresholdMs) inactivityTargets.push(m);
-            }
-        });
+        pruneJobRunning = true;
+        currentPruneJobId = jobId;
+        currentPruneAbortController = new AbortController();
 
-        if (inactivityTargets.length === 0) {
-            logger.info('Dashboard inactivity prune executed (no targets).', {
-              guildId: guild.id,
-              days,
-              kicked: 0,
-              failed: 0,
-              user: getDashboardActor(req)
-            });
-            return res.json({ success: true, kicked: 0, failed: 0 });
-        }
+        logger.info('Dashboard inactivity prune job started.', { jobId, days, user: username });
 
-        // We run kicks synchronously with 250ms sleep to avoid Discord API 429
-        let kicked = 0;
-        let failed = 0;
-        for (const m of inactivityTargets) {
+        (async () => {
             try {
-                await m.kick(INACTIVITY_KICK_REASON);
-                kicked++;
-            } catch (kErr) {
-                failed++;
+                await runInactivityPrune({
+                    guild,
+                    days,
+                    excludedRole,
+                    botMember,
+                    activityMap,
+                    members,
+                    signal: currentPruneAbortController.signal,
+                    onProgress: async (evt) => {
+                        if (evt.percent != null) job.percent = evt.percent;
+                        if (evt.total != null) job.total = evt.total;
+                        if (evt.kicked != null) job.kicked = evt.kicked;
+                        if (evt.failed != null) job.failed = evt.failed;
+                        if (evt.lastKickedTag != null) job.lastKickedTag = evt.lastKickedTag;
+                    }
+                });
+                if (job.stopRequested) {
+                    job.status = 'stopped';
+                    job.error = 'Stopped by user.';
+                } else {
+                    job.status = 'done';
+                    job.percent = 100;
+                }
+                job.finishedAt = Date.now();
+                logger.info('Dashboard inactivity prune job completed.', { jobId, kicked: job.kicked, failed: job.failed });
+            } catch (err) {
+                if (err && err.name === 'AbortError') {
+                    job.status = 'stopped';
+                    job.error = 'Stopped by user.';
+                } else {
+                    job.status = 'error';
+                    job.error = err && err.message ? String(err.message) : String(err);
+                    logger.error('Dashboard inactivity prune job failed.', { jobId, err });
+                }
+                job.finishedAt = Date.now();
+            } finally {
+                pruneJobRunning = false;
+                currentPruneJobId = null;
+                currentPruneAbortController = null;
+                invalidateGuildMembersCache();
+                invalidateUserSummaryCache();
             }
-            await new Promise(r => setTimeout(r, 250));
-        }
+        })();
 
-        invalidateGuildMembersCache();
-        invalidateUserSummaryCache();
-
-        logger.info('Dashboard inactivity prune executed.', {
-          guildId: guild.id,
-          days,
-          kicked,
-          failed,
-          user: getDashboardActor(req)
-        });
-        res.json({ success: true, kicked, failed });
+        res.json({ jobId, started: true });
     } catch (e) {
         reportDashboardError(e, req, { area: 'dashboard:api', op: 'inactivity_execute' });
-        logger.error('Failed to execute the inactivity prune from the dashboard.', { err: e, path: req.path });
+        logger.error('Failed to start inactivity prune job.', { err: e, path: req.path });
         res.status(500).json({ error: e.message });
     }
 });
@@ -2291,7 +2296,8 @@ router.get('/maintenance/seed-last-messages/active', (_req, res) => {
 
 // ─── GET /api/maintenance/jobs/:id ──────────────────────────────────────────
 router.get('/maintenance/jobs/:id', (req, res) => {
-  const job = seedJobs.get(req.params.id) || migrationJobs.get(req.params.id);
+  const id = req.params.id;
+  const job = seedJobs.get(id) || migrationJobs.get(id) || pruneJobs.get(id) || inviteCleanupJobs.get(id);
   if (!job) return res.status(404).json({ error: 'Job not found.' });
   res.json(job);
 });
@@ -2313,6 +2319,46 @@ router.post('/maintenance/seed-last-messages/stop', (req, res) => {
   res.json({ ok: true, jobId: currentSeedJobId, stopping: true });
 });
 
+// ─── GET /api/users/inactivity/active ───────────────────────────────────────
+router.get('/users/inactivity/active', (_req, res) => {
+  res.json({ active: pruneJobRunning, jobId: currentPruneJobId });
+});
+
+// ─── POST /api/users/inactivity/stop ────────────────────────────────────────
+router.post('/users/inactivity/stop', (req, res) => {
+  if (!pruneJobRunning || !currentPruneJobId || !currentPruneAbortController) {
+    return res.status(409).json({ error: 'No active prune job to stop.' });
+  }
+  const job = pruneJobs.get(currentPruneJobId);
+  if (job) job.stopRequested = true;
+  currentPruneAbortController.abort();
+  logger.warn('Dashboard requested stop for inactivity prune job.', {
+    jobId: currentPruneJobId,
+    user: req.session.user?.username
+  });
+  res.json({ ok: true, jobId: currentPruneJobId, stopping: true });
+});
+
+// ─── GET /api/maintenance/invites/cleanup/active ────────────────────────────
+router.get('/maintenance/invites/cleanup/active', (_req, res) => {
+  res.json({ active: inviteCleanupJobRunning, jobId: currentInviteCleanupJobId });
+});
+
+// ─── POST /api/maintenance/invites/cleanup/stop ─────────────────────────────
+router.post('/maintenance/invites/cleanup/stop', (req, res) => {
+  if (!inviteCleanupJobRunning || !currentInviteCleanupJobId || !currentInviteCleanupAbortController) {
+    return res.status(409).json({ error: 'No active invite cleanup job to stop.' });
+  }
+  const job = inviteCleanupJobs.get(currentInviteCleanupJobId);
+  if (job) job.stopRequested = true;
+  currentInviteCleanupAbortController.abort();
+  logger.warn('Dashboard requested stop for invite cleanup job.', {
+    jobId: currentInviteCleanupJobId,
+    user: req.session.user?.username
+  });
+  res.json({ ok: true, jobId: currentInviteCleanupJobId, stopping: true });
+});
+
 // ─── POST /api/maintenance/seed-last-messages ───────────────────────────────
 router.post('/maintenance/seed-last-messages', (req, res) => {
   if (seedJobRunning) {
@@ -2321,7 +2367,7 @@ router.post('/maintenance/seed-last-messages', (req, res) => {
   const guild = req.dashboardGuild;
   if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
 
-  pruneOldSeedJobs();
+  pruneOldJobs();
   const jobId = crypto.randomUUID();
   const job = {
     id: jobId,
@@ -2534,6 +2580,87 @@ router.post('/maintenance/sessions/clear-all', (req, res) => {
   }
 });
 
+// ─── POST /api/maintenance/invites/cleanup ──────────────────────────────────
+router.post('/maintenance/invites/cleanup', (req, res) => {
+  if (inviteCleanupJobRunning) {
+    return res.status(409).json({ error: 'An invite cleanup job is already running.', jobId: currentInviteCleanupJobId });
+  }
+  try {
+    const guild = req.dashboardGuild;
+    if (!guild) return res.status(503).json({ error: 'Bot guild not available.' });
+
+    pruneOldJobs();
+    const jobId = crypto.randomUUID();
+    const username = getDashboardActor(req);
+    const job = {
+      id: jobId,
+      type: 'invite_cleanup',
+      status: 'running',
+      startedAt: Date.now(),
+      finishedAt: null,
+      percent: 0,
+      deleted: 0,
+      failed: 0,
+      total: 0,
+      lastDeletedCode: null,
+      error: null,
+      stopRequested: false
+    };
+    inviteCleanupJobs.set(jobId, job);
+
+    inviteCleanupJobRunning = true;
+    currentInviteCleanupJobId = jobId;
+    currentInviteCleanupAbortController = new AbortController();
+
+    logger.info('Dashboard invite cleanup job started.', { jobId, user: username });
+
+    (async () => {
+      try {
+        await runDuplicateInviteCleanup({
+          guild,
+          signal: currentInviteCleanupAbortController.signal,
+          onProgress: async (evt) => {
+            if (evt.percent != null) job.percent = evt.percent;
+            if (evt.total != null) job.total = evt.total;
+            if (evt.deleted != null) job.deleted = evt.deleted;
+            if (evt.failed != null) job.failed = evt.failed;
+            if (evt.lastDeletedCode != null) job.lastDeletedCode = evt.lastDeletedCode;
+          }
+        });
+        if (job.stopRequested) {
+          job.status = 'stopped';
+          job.error = 'Stopped by user.';
+        } else {
+          job.status = 'done';
+          job.percent = 100;
+        }
+        job.finishedAt = Date.now();
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          job.status = 'stopped';
+          job.error = 'Stopped by user.';
+        } else {
+          job.status = 'error';
+          job.error = err && err.message ? String(err.message) : String(err);
+          logger.error('Dashboard invite cleanup job failed.', { jobId, err });
+        }
+        job.finishedAt = Date.now();
+      } finally {
+        inviteCleanupJobRunning = false;
+        currentInviteCleanupJobId = null;
+        currentInviteCleanupAbortController = null;
+        invalidateInvitesListCache();
+      }
+    })();
+
+    res.json({ jobId, started: true });
+  } catch (err) {
+    reportDashboardError(err, req, { area: 'dashboard:api', op: 'invite_cleanup' });
+    logger.error('Failed to start invite cleanup job.', { err });
+    res.status(500).json({ error: err.message || 'Failed to start job.' });
+  }
+});
+
 // ─── POST /api/maintenance/discord/resync ───────────────────────────────────
 router.post('/maintenance/discord/resync', async (req, res) => {
   const guild = req.dashboardGuild;
@@ -2628,7 +2755,7 @@ router.post('/maintenance/migrate/stop', (req, res) => {
  */
 function startMigrationInternal(actor = 'system') {
   if (migrationJobRunning) return currentMigrationJobId;
-  pruneOldSeedJobs();
+  pruneOldJobs();
   const jobId = crypto.randomUUID();
   const job = {
     id: jobId,

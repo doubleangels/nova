@@ -1335,6 +1335,47 @@
         class="hidden text-[10px] text-[var(--c-text-muted)] font-mono whitespace-pre-wrap max-h-28 overflow-y-auto p-3 rounded-lg bg-[var(--c-input)] border border-[var(--c-input-border)] mt-2"></pre>
     </div>
 
+    <div id="maintenance-invite-cleanup" class="card p-5 space-y-4 scroll-mt-28">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-[var(--c-text)]">Invite Cleanup</h3>
+        <span id="maintInviteCleanupPhaseLabel"
+          class="text-[9px] uppercase font-bold tracking-widest text-[var(--c-accent)] opacity-80">Idle</span>
+      </div>
+      <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Identifies and removes <span>duplicate</span>
+        invite links pointing to the same destination with identical settings. Preserves the most used link.</p>
+
+      <div id="maintInviteCleanupProgressWrap" class="hidden space-y-2.5 pt-1">
+        <div class="flex items-center justify-between text-[10px] font-bold">
+          <span id="maintInviteCleanupStatusLine" class="text-[var(--c-text-dim)] truncate mr-4">Initializing cleanup...</span>
+          <span id="maintInviteCleanupPercentLabel" class="text-[var(--c-accent)] shrink-0">0%</span>
+        </div>
+        <div class="h-1.5 w-full bg-[var(--c-input)] rounded-full overflow-hidden border border-[var(--c-input-border)]">
+          <div id="maintInviteCleanupProgressBar"
+            class="h-full bg-gradient-to-r from-[var(--c-accent)] to-[var(--c-accent-light)] transition-all duration-500 shadow-[0_0_8px_var(--c-accent-glow)]"
+            style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" id="maintStartInviteCleanupBtn" onclick="startInviteCleanup()"
+          class="btn-dash-primary btn-dash-md">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Run Cleanup
+        </button>
+        <button type="button" id="maintStopInviteCleanupBtn" onclick="stopInviteCleanup()"
+          class="btn-dash-danger btn-dash-md hidden">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 9v6m4-6v6m-9-4h18c1.104 0 2-.896 2-2V7c0-1.104-.896-2-2-2H5c-1.104 0-2 .896-2 2v10c0 1.104.896 2 2 2h18c1.104 0 2-.896 2-2V9" />
+          </svg>
+          Stop
+        </button>
+      </div>
+    </div>
+
     <div class="card p-5 space-y-3">
       <h3 class="text-sm font-bold text-[var(--c-text)]">Session Hygiene</h3>
       <p class="text-[11px] text-[var(--c-text-dim)] leading-relaxed">Deletes <span>every</span> stored dashboard login
@@ -4753,6 +4794,82 @@
     }
   }
 
+  let inactivityPollTimer = null;
+
+  function inactivityStopPoll() {
+    if (inactivityPollTimer) {
+      clearInterval(inactivityPollTimer);
+      inactivityPollTimer = null;
+    }
+  }
+
+  function inactivityApplyJobToUI(j) {
+    const wrap = document.getElementById('inactivityProgressWrap');
+    const bar = document.getElementById('inactivityProgressBar');
+    const pct = document.getElementById('inactivityPercentLabel');
+    const phase = document.getElementById('inactivityPhaseLabel');
+    const line = document.getElementById('inactivityStatusLine');
+    const execBtn = document.getElementById('inactivityExecuteBtn');
+    const stopBtn = document.getElementById('inactivityStopBtn');
+    const scanBtn = document.getElementById('inactivityScanBtn');
+
+    if (wrap) wrap.classList.remove('hidden');
+    const p = Math.max(0, Math.min(100, Number(j.percent) || 0));
+    if (bar) bar.style.width = `${p}%`;
+    if (pct) pct.textContent = `${p}%`;
+
+    let phaseText = 'Pruning Members...';
+    if (j.status === 'done') phaseText = 'Prune Complete';
+    else if (j.status === 'error') phaseText = 'Prune Error';
+    else if (j.status === 'stopped') phaseText = 'Prune Stopped';
+    if (phase) phase.textContent = phaseText;
+
+    if (line) {
+      const tag = j.lastKickedTag ? `Last kicked: @${j.lastKickedTag}` : 'Starting...';
+      const cur = (j.kicked || 0) + (j.failed || 0);
+      const tot = j.total || 0;
+      line.textContent = `${tag} · ${j.kicked || 0} kicked · ${j.failed || 0} failed · ${cur}/${tot}`;
+    }
+
+    if (execBtn) execBtn.disabled = j.status === 'running';
+    if (stopBtn) stopBtn.classList.toggle('hidden', j.status !== 'running');
+    if (scanBtn) scanBtn.disabled = j.status === 'running';
+
+    if (j.status === 'done') {
+      showToast(`Inactivity prune finished: ${j.kicked} kicked, ${j.failed} failed.`, 'success');
+      loadUserSummary(true);
+    } else if (j.status === 'error') {
+      showToast(j.error || 'Prune failed.', 'error');
+    } else if (j.status === 'stopped') {
+      showToast('Prune stopped by user.');
+    }
+  }
+
+  function inactivityStartPolling(jobId) {
+    inactivityStopPoll();
+    inactivityPollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/maintenance/jobs/${encodeURIComponent(jobId)}`);
+        if (!res.ok) return;
+        const j = await res.json();
+        inactivityApplyJobToUI(j);
+        if (j.status === 'done' || j.status === 'error' || j.status === 'stopped') {
+          inactivityStopPoll();
+        }
+      } catch (_) { }
+    }, 1000);
+  }
+
+  async function stopInactivityPrune() {
+    try {
+      const res = await fetch('/api/users/inactivity/stop', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to stop prune.');
+      showToast('Stop requested...');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
   async function scanInactivityKickTargets() {
     const days = document.getElementById('inactivityDays').value;
     const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
@@ -4818,12 +4935,8 @@
     const days = document.getElementById('inactivityDays').value;
     const excludedRole = document.getElementById('prune_protected_role_id')?.value || '';
     const btn = document.getElementById('inactivityExecuteBtn');
-    const scanBtn = document.getElementById('inactivityScanBtn');
-    const prevExecLabel = btn.textContent;
 
-    btn.disabled = true;
-    btn.textContent = 'Executing Inactivity Prune...';
-    scanBtn.disabled = true;
+    if (btn) btn.disabled = true;
 
     try {
       const res = await fetch('/api/users/inactivity/execute', {
@@ -4833,22 +4946,31 @@
       });
       const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) throw new Error(data.error || `Execute failed (${res.status}).`);
-
-      showToast(`Successfully kicked ${data.kicked} users. ${data.failed > 0 ? `(${data.failed} failed)` : ''}`, 'success');
-
-      document.getElementById('inactivityResultsContainer').classList.add('hidden');
-      btn.classList.add('hidden');
-      loadUserSummary(true);
-    } catch (err) {
-      showToast(err.message || 'Failed to execute Inactivity Prune.', 'error');
-    } finally {
-      btn.disabled = false;
-      scanBtn.disabled = false;
-      if (btn.textContent === 'Executing Inactivity Prune...') {
-        btn.textContent = prevExecLabel;
+      if (res.status === 409) {
+        showToast(data.error || 'A prune job is already running.', 'error');
+        if (data.jobId) inactivityStartPolling(data.jobId);
+        return;
       }
+      if (!res.ok) throw new Error(data.error || `Execute failed (${res.status}).`);
+      
+      if (data.jobId) {
+        inactivityStartPolling(data.jobId);
+        showToast('Inactivity prune started.', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to start inactivity prune job.', 'error');
+      if (btn) btn.disabled = false;
     }
+  }
+
+  async function inactivityCheckActiveJob() {
+    if (inactivityPollTimer) return;
+    try {
+      const res = await fetch('/api/users/inactivity/active');
+      if (!res.ok) return;
+      const { active, jobId } = await res.json();
+      if (active && jobId) inactivityStartPolling(jobId);
+    } catch (_) { }
   }
 
   function getCategory(key) {
@@ -5324,6 +5446,7 @@
 
   // ── Maintenance (cache + seed last messages) ───────────────────────────────
   let maintSeedPollTimer = null;
+  let inviteCleanupPollTimer = null;
   let maintCurrentJobId = null;
 
   function maintOnAllChannelsChange() {
@@ -5851,6 +5974,119 @@
     }
   }
 
+  function inviteCleanupStopPoll() {
+    if (inviteCleanupPollTimer) {
+      clearInterval(inviteCleanupPollTimer);
+      inviteCleanupPollTimer = null;
+    }
+  }
+
+  function inviteCleanupApplyJobToUI(j) {
+    const wrap = document.getElementById('maintInviteCleanupProgressWrap');
+    const bar = document.getElementById('maintInviteCleanupProgressBar');
+    const pct = document.getElementById('maintInviteCleanupPercentLabel');
+    const phase = document.getElementById('maintInviteCleanupPhaseLabel');
+    const line = document.getElementById('maintInviteCleanupStatusLine');
+    const btn = document.getElementById('maintStartInviteCleanupBtn');
+    const stopBtn = document.getElementById('maintStopInviteCleanupBtn');
+
+    if (wrap) wrap.classList.remove('hidden');
+    const p = Math.max(0, Math.min(100, Number(j.percent) || 0));
+    if (bar) bar.style.width = `${p}%`;
+    if (pct) pct.textContent = `${p}%`;
+
+    let phaseText = 'Running';
+    if (j.status === 'done') phaseText = 'Complete';
+    else if (j.status === 'error') phaseText = 'Error';
+    else if (j.status === 'stopped') phaseText = 'Stopped';
+    if (phase) phase.textContent = phaseText;
+
+    if (line) {
+      if (j.status === 'running' && (j.percent || 0) < 10) {
+        line.textContent = 'Analyzing invites...';
+      } else {
+        const code = j.lastDeletedCode ? `Deleted: ${j.lastDeletedCode}` : 'Starting...';
+        const cur = j.deleted + j.failed;
+        const tot = j.total || 0;
+        line.textContent = `${code} · ${j.deleted} deleted · ${j.failed} failed · ${cur}/${tot}`;
+      }
+    }
+
+    if (btn) btn.disabled = j.status === 'running';
+    if (stopBtn) stopBtn.classList.toggle('hidden', j.status !== 'running');
+
+    if (j.status === 'done') {
+      showToast(`Invite cleanup finished: ${j.deleted} deleted, ${j.failed} failed.`, 'success');
+    } else if (j.status === 'error') {
+      showToast(j.error || 'Invite cleanup failed.', 'error');
+    } else if (j.status === 'stopped') {
+      showToast('Invite cleanup stopped by user.');
+    }
+  }
+
+  function inviteCleanupStartPolling(jobId) {
+    inviteCleanupStopPoll();
+    inviteCleanupPollTimer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/maintenance/jobs/${encodeURIComponent(jobId)}`);
+        if (!res.ok) return;
+        const j = await res.json();
+        inviteCleanupApplyJobToUI(j);
+        if (j.status === 'done' || j.status === 'error' || j.status === 'stopped') {
+          inviteCleanupStopPoll();
+        }
+      } catch (_) { }
+    }, 1000);
+  }
+
+  async function stopInviteCleanup() {
+    try {
+      const res = await fetch('/api/maintenance/invites/cleanup/stop', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to stop cleanup.');
+      showToast('Stop requested...');
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function startInviteCleanup() {
+    const btn = document.getElementById('maintStartInviteCleanupBtn');
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/maintenance/invites/cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 409) {
+        showToast(data.error || 'A cleanup job is already running.', 'error');
+        if (data.jobId) inviteCleanupStartPolling(data.jobId);
+        return;
+      }
+      if (!res.ok) throw new Error(data.error || `Cleanup failed (${res.status}).`);
+      
+      if (data.jobId) {
+        inviteCleanupStartPolling(data.jobId);
+        showToast('Invite cleanup started.', 'success');
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to start invite cleanup job.', 'error');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function inviteCleanupCheckActiveJob() {
+    if (inviteCleanupPollTimer) return;
+    try {
+      const res = await fetch('/api/maintenance/invites/cleanup/active');
+      if (!res.ok) return;
+      const { active, jobId } = await res.json();
+      if (active && jobId) inviteCleanupStartPolling(jobId);
+    } catch (_) { }
+  }
+
   async function startMaintSeed() {
     const btn = document.getElementById('maintStartSeedBtn');
     const strategy = document.getElementById('maintSeedStrategy')?.value || 'channel_scan';
@@ -5932,6 +6168,8 @@
         maintStartPolling(jobId);
       }
     } catch (_) { }
+    inactivityCheckActiveJob();
+    inviteCleanupCheckActiveJob();
   }
 
   ensureNonChipButtonsHaveIcons();
@@ -6069,6 +6307,11 @@
   loadHealthStats();
   loadInvites();
   loadInviteJoinHistory();
-  const HEALTH_STATS_POLL_MS = 1000; // status cards: uptime, loop, trends, queue (1s)
-  setInterval(loadHealthStats, HEALTH_STATS_POLL_MS);
+  const HEALTH_STATS_POLL_MS = 3000; // status cards: uptime, loop, trends, queue (3s)
+  setInterval(() => {
+    const statusSection = document.getElementById('status');
+    if (statusSection && !statusSection.classList.contains('hidden') && !document.hidden) {
+      loadHealthStats();
+    }
+  }, HEALTH_STATS_POLL_MS);
 </script>
