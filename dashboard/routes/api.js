@@ -46,6 +46,10 @@ const logger = require('../../logger')('dashboard:api');
 const { redditApiRequest, isRedditConfigured } = require('../../utils/redditClient');
 const { reportDashboardError } = require('../sentryDashboard');
 const { getDashboardGuild } = require('../../utils/dashboardGuild');
+const {
+  normalizeAutoReactionRegex,
+  keywordToWordBoundaryPattern
+} = require('../../utils/autoReactionRegex');
 
 /**
  * Extended diagnostics for GET /api/health/deep.
@@ -177,8 +181,9 @@ router.use(async (req, res, next) => {
       return next();
     }
     const member = guild.members.cache.get(userId) || await guild.members.fetch(userId).catch(() => null);
-    if (!member) {
+    if (!member || typeof member.permissions?.has !== 'function') {
       apiAuthzCache.set(cacheKey, { expires: now + API_AUTHZ_CACHE_MS, allowed: false });
+      logger.warn('Dashboard access denied: member permissions unavailable.', { userId, guildId: guild.id });
       return res.status(403).json({ error: 'Dashboard access denied.' });
     }
     // Match OAuth login policy in dashboard/routes/auth.js (Administrator only).
@@ -195,8 +200,6 @@ router.use(async (req, res, next) => {
   }
 });
 
-const INACTIVITY_KICK_REASON =
-    'Inactivity - We kick members who are inactive; we want an active community more than a large one! Feel free to rejoin if you wish!';
 
 /** Permissions granted beyond the @everyone baseline (avoids marking everyone "mod" when @everyone is permissive). */
 function elevatedMemberPermissions(member) {
