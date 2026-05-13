@@ -2616,8 +2616,10 @@ router.post('/maintenance/invites/cleanup', (req, res) => {
 
     (async () => {
       try {
+        const inviteKeyv = getKeyvForNamespace('invites');
         await runDuplicateInviteCleanup({
-          guild,
+          guildId: guild.id,
+          inviteKeyv,
           signal: currentInviteCleanupAbortController.signal,
           onProgress: async (evt) => {
             if (evt.percent != null) job.percent = evt.percent;
