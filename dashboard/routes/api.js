@@ -440,6 +440,9 @@ function invalidateInvitesListCache() {
 
 const pruneJobs = new Map();
 const inviteCleanupJobs = new Map();
+const seedJobs = new Map();
+const migrationJobs = new Map();
+
 
 /** Dashboard-only: backfill last_message keys from channel history (one job at a time). */
 let seedJobRunning = false;
