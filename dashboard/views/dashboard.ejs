@@ -3110,7 +3110,9 @@
         'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms',
         'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body',
         'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment',
+        'inactivity_kick_reason', 'inactivityDays',
       ];
+
       const settingsForDisplay = { ...s };
       REMINDER_DELAY_HOUR_KEYS.forEach((key) => {
         const rawMs = Number(s[key]);

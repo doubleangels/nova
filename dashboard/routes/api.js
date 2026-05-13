@@ -690,8 +690,11 @@ async function readAllSettings() {
     entryGuardAccountAge,
     noobiesThreshold,
     msgChannelId,
+    inactivityKickReason,
+    inactivityDays,
   ] = await Promise.all([
     getSetting('bot_status'),
+
     getSetting('bot_status_type'),
     getSetting('base_embed_color'),
     getSetting('give_perms_fren_role_id'),
@@ -731,7 +734,10 @@ async function readAllSettings() {
     getValue('entry_guard_account_age'),
     getValue('noobies_threshold'),
     getValue('msg_channel_id'),
+    getSetting('inactivity_kick_reason'),
+    getValue('inactivityDays'),
   ]);
+
 
   return {
     bot_status: botStatus || '',
@@ -778,7 +784,10 @@ async function readAllSettings() {
     entry_guard_account_age: toIntOrDefault(entryGuardAccountAge, 7, 1, 365),
     noobies_threshold: toIntOrDefault(noobiesThreshold, 100, 1, 5000),
     msg_channel_id: msgChannelId || '',
+    inactivity_kick_reason: inactivityKickReason || '',
+    inactivityDays: inactivityDays ?? 30,
   };
+
 }
 
 // ─── GET /api/settings ───────────────────────────────────────────────────────
@@ -852,7 +861,9 @@ router.post('/settings', async (req, res) => {
     'give_perms_fren_role_id', 'give_perms_position_above_role_id',
     'newuser_been_in_server_before_role_id', 'newuser_permission_diff_role_id',
     'noobies_role_id', 'guild_name', 'log_level', 'server_invite_url',
+    'inactivity_kick_reason',
   ];
+
   for (const key of dynamicKeys) {
     if (key in body) ops.push(setSetting(key, body[key]));
   }
@@ -870,7 +881,9 @@ router.post('/settings', async (req, res) => {
     'inactivity_guard_enabled', 'inactivity_guard_timeout_hours',
     'entry_guard_enabled', 'entry_guard_account_age',
     'noobies_threshold', 'msg_channel_id',
+    'inactivityDays',
   ];
+
   const numericDbKeys = new Set([
     'dashboard_port',
     'reminder_delay_bump_ms',
@@ -881,7 +894,9 @@ router.post('/settings', async (req, res) => {
     'inactivity_guard_timeout_hours',
     'entry_guard_account_age',
     'noobies_threshold',
+    'inactivityDays',
   ]);
+
   for (const key of dbKeys) {
     if (key in body) {
       let val = body[key];
@@ -915,7 +930,9 @@ router.post('/settings', async (req, res) => {
       if (key === 'inactivity_guard_timeout_hours') val = toIntOrDefault(val, 24, 1, 72);
       if (key === 'entry_guard_account_age') val = toIntOrDefault(val, 7, 1, 365);
       if (key === 'noobies_threshold') val = toIntOrDefault(val, 100, 1, 5000);
+      if (key === 'inactivityDays') val = toIntOrDefault(val, 30, 1, 730);
       if (key === 'msg_channel_id') val = String(val || '').trim();
+
       if (key === 'anti_spam_channel_id') val = String(val || '').trim();
       if (key === 'anti_spam_enabled' || key === 'inactivity_guard_enabled' || key === 'entry_guard_enabled') {
         val = val === true || val === 'true';
@@ -2142,7 +2159,8 @@ router.post('/users/inactivity/execute', async (req, res) => {
         const days = parseInt(req.body.days) || 30;
         let excludedRole = String(req.body.excludedRole || '').trim();
         if (!excludedRole) excludedRole = (await getValue('prune_protected_role_id')) || '';
-        const kickReason = (await getValue('inactivity_kick_reason')) || '';
+        const kickReason = (await getSetting('inactivity_kick_reason')) || '';
+
         
         const members = await fetchGuildMembersCached(guild, { force: true });
         const activityMap = await getAllLastMessageTimes();
