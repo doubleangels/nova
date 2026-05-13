@@ -31,6 +31,17 @@ const {
 const { getKeyvForNamespace } = require('../../utils/dbScriptUtils');
 const { runInactivityPrune } = require('../../utils/inactivityPruneTask');
 const { runDuplicateInviteCleanup } = require('../../utils/inviteCleanupTask');
+const {
+  getSqlitePath,
+  getStorageReport,
+  sqliteIntegrityCheck,
+  sqliteRwProbe,
+  buildDiagnosticsBundle,
+  getMigrationStatus,
+  runNamespaceMigration
+} = require('../../utils/maintenanceService');
+const { getReminderBacklogSummary, getLatestReminderData } = require('../../utils/reminderUtils');
+const { runSeedLastMessages } = require('../../utils/seedLastMessagesFromHistory');
 const logger = require('../../logger')('dashboard:api');
 const { redditApiRequest, isRedditConfigured } = require('../../utils/redditClient');
 const { reportDashboardError } = require('../sentryDashboard');
