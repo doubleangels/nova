@@ -6,10 +6,9 @@ const { getValue } = require('../utils/database');
 const { handleReminder, getNextReminderTimeAfterCleanup } = require('../utils/reminderUtils');
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 
-const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
-
-/** Markdown body text for Reddit link posts (below the invite URL). */
-const PROMOTION_BODY = `**🐸 Welcome to Da Frens!**
+// Default values for promotions if not set in the database
+const DEFAULT_PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+const DEFAULT_PROMOTION_BODY = `**🐸 Welcome to Da Frens!**
 
 *Where the banter is sharp, the games are sweaty, and the vibes are unmatched.*
 
@@ -70,7 +69,7 @@ async function getPromotionTargets() {
     }
   }
   if (Array.isArray(parsed) && parsed.length > 0) {
-    const globalLink = String((await getValue('reddit_promotion_link')) || PROMOTION_LINK).trim();
+    const globalLink = String((await getValue('reddit_promotion_link')) || DEFAULT_PROMOTION_LINK).trim();
     const out = [];
     for (const row of parsed) {
       if (!row || typeof row !== 'object') continue;
@@ -89,7 +88,7 @@ async function getPromotionTargets() {
     if (out.length > 0) return out;
   }
 
-  const link = String((await getValue('reddit_promotion_link')) || PROMOTION_LINK).trim();
+  const link = String((await getValue('reddit_promotion_link')) || DEFAULT_PROMOTION_LINK).trim();
   const promotionSubredditsRaw = await getValue('reddit_promotion_subreddits');
   const subs = Array.isArray(promotionSubredditsRaw)
     ? promotionSubredditsRaw.map((s) => String(s).trim()).filter(Boolean)
@@ -307,8 +306,7 @@ module.exports = {
 
   async handlePost(interaction) {
     const defaultTitle = await getPromotionTitle();
-    const defaultBodyRaw = String((await getValue('reddit_promotion_body')) || '').trim();
-    const defaultBody = defaultBodyRaw || PROMOTION_BODY;
+    const defaultBody = String((await getValue('reddit_promotion_body')) || DEFAULT_PROMOTION_BODY).trim();
     const targets = await getPromotionTargets();
 
     // Cooldown check must happen before deferReply — once deferred publicly

@@ -15,7 +15,8 @@ function abortError() {
   return e;
 }
 
-const INACTIVITY_KICK_REASON =
+// Default kick reason if none is provided via the database or API call
+const DEFAULT_INACTIVITY_KICK_REASON =
   'Inactivity - We kick members who are inactive; we want an active community more than a large one! Feel free to rejoin if you wish!';
 
 /**
@@ -36,6 +37,7 @@ async function runInactivityPrune({
   botMember,
   activityMap,
   members,
+  kickReason = DEFAULT_INACTIVITY_KICK_REASON,
   signal = null,
   onProgress = async () => {}
 }) {
@@ -85,7 +87,7 @@ async function runInactivityPrune({
     
     const m = inactivityTargets[i];
     try {
-      await m.kick(INACTIVITY_KICK_REASON);
+      await m.kick(kickReason || DEFAULT_INACTIVITY_KICK_REASON);
       kicked++;
     } catch (err) {
       failed++;
@@ -123,5 +125,5 @@ async function runInactivityPrune({
 
 module.exports = {
   runInactivityPrune,
-  INACTIVITY_KICK_REASON
+  DEFAULT_INACTIVITY_KICK_REASON
 };

@@ -2136,6 +2136,7 @@ router.post('/users/inactivity/execute', async (req, res) => {
         const days = parseInt(req.body.days) || 30;
         let excludedRole = String(req.body.excludedRole || '').trim();
         if (!excludedRole) excludedRole = (await getValue('prune_protected_role_id')) || '';
+        const kickReason = (await getValue('inactivity_kick_reason')) || '';
         
         const members = await fetchGuildMembersCached(guild, { force: true });
         const activityMap = await getAllLastMessageTimes();
@@ -2179,6 +2180,7 @@ router.post('/users/inactivity/execute', async (req, res) => {
                     botMember,
                     activityMap,
                     members,
+                    kickReason,
                     signal: currentPruneAbortController.signal,
                     onProgress: async (evt) => {
                         if (evt.percent != null) job.percent = evt.percent;

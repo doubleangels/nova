@@ -34,6 +34,9 @@ const CONFIG_PROPERTY_MAP = {
   guild_name: 'guildName',
   log_level: 'logLevel',
   server_invite_url: 'serverInviteUrl',
+  reddit_promotion_link: 'redditPromotionLink',
+  reddit_promotion_body: 'redditPromotionBody',
+  inactivity_kick_reason: 'inactivityKickReason',
 };
 
 /** All keys managed by this module. */
@@ -164,6 +167,9 @@ async function seedAllFromEnv() {
     ['guild_name', process.env.GUILD_NAME || 'Da Frens'],
     ['log_level', process.env.LOG_LEVEL || 'info'],
     ['server_invite_url', process.env.SERVER_INVITE_URL],
+    ['reddit_promotion_link', process.env.REDDIT_PROMOTION_LINK],
+    ['reddit_promotion_body', process.env.REDDIT_PROMOTION_BODY],
+    ['inactivity_kick_reason', process.env.INACTIVITY_KICK_REASON],
   ];
   await Promise.all(seeds.map(([key, val]) => seedFromEnv(key, val)));
   logger.info('Dynamic config seeded — non-sensitive settings loaded from DB / env.');

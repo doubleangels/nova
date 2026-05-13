@@ -1986,6 +1986,11 @@
         <p class="field-hint">Members with this role are never targeted by Inactivity Prune and are marked as Safe in
           User Manager.</p>
       </div>
+      <div class="sm:col-span-2">
+        <label class="field-label">Inactivity Kick Message</label>
+        <textarea id="inactivity_kick_reason" rows="3" class="field-input" placeholder="Enter the reason shown to kicked members..."></textarea>
+        <p class="field-hint">Reason provided to Discord when kicking inactive members. They will see this if they have DMs enabled or in their audit log.</p>
+      </div>
     </div>
     <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3">
       <button type="button" id="inactivityScanBtn" onclick="scanInactivityKickTargets()"
@@ -2697,7 +2702,7 @@
     { id: 'reminders_channels', keys: ['reminder_channel', 'reminder_role', 'invite_notification_channel', 'reminder_delay_bump_ms', 'reminder_delay_promote_ms', 'reminder_delay_needafriend_ms'] },
     { id: 'reminders_reddit', keys: ['reddit_promotion_targets', 'reddit_promotion_link', 'reddit_promotion_title', 'reddit_promotion_body', 'needafriend_subreddit', 'needafriend_thread_title', 'needafriend_comment'] },
     { id: 'social_notext', keys: ['notext_channel'] },
-    { id: 'user_manager_prune', keys: ['prune_protected_role_id'] },
+    { id: 'user_manager_prune', keys: ['inactivity_kick_reason', 'inactivityDays', 'prune_protected_role_id'] },
     { id: 'messaging', keys: ['msg_channel_id'] },
   ];
   const REMINDER_DELAY_HOUR_KEYS = new Set([
