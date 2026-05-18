@@ -21,16 +21,16 @@ require('dotenv').config();
  * @property {string} botStatusType - Bot activity type (from BOT_STATUS_TYPE env var)
  * @property {string} clientId - Discord application client ID
  * @property {string} token - Discord bot token (from DISCORD_BOT_TOKEN env var)
- * @property {string} givePermsFrenRoleId - Role ID for Fren role (from GIVE_PERMS_FREN_ROLE_ID env var)
- * @property {string} givePermsPositionAboveRoleId - Role ID for permission management (from GIVE_PERMS_POSITION_ABOVE_ROLE_ID env var)
+ * @property {string} memberFrenRoleId - Role ID for Fren role (from MEMBER_FREN_ROLE_ID env var)
+ * @property {string} customRolePositioningAnchorId - Role ID for positioning custom roles (from CUSTOM_ROLE_POSITIONING_ANCHOR_ID env var)
  * @property {string} googleApiKey - Google API key for search functionality (from GOOGLE_API_KEY env var)
  * @property {string} deeplApiKey - DeepL API key for translation functionality (from DEEPL_API_KEY env var)
  * @property {string} guildName - Guild name (from GUILD_NAME env var, default: 'Da Frens')
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images (from IMAGE_SEARCH_ENGINE_ID env var)
  * @property {string} logLevel - Logging level (from LOG_LEVEL env var, default: 'info')
  * @property {string} malClientId - MyAnimeList API client ID (from MAL_CLIENT_ID env var)
- * @property {string} newUserBeenInServerBeforeRoleId - Role ID for "been in server before" in /newuser (from NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID env var)
- * @property {string} newUserPermissionDiffRoleId - Role ID to compare permissions against in /newuser (from NEWUSER_PERMISSION_DIFF_ROLE_ID env var)
+ * @property {string} returningMemberRoleId - Role ID for members who've been in server before (from RETURNING_MEMBER_ROLE_ID env var)
+ * @property {string} permissionBenchmarkRoleId - Role ID to compare permissions against (from PERMISSION_BENCHMARK_ROLE_ID env var)
  * @property {string} noobiesRoleId - Role ID for Noobies role assigned to users with <100 messages (from NOOBIES_ROLE_ID env var)
  * @property {string} omdbApiKey - OMDB API key for movie information (from OMDB_API_KEY env var)
  * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information (from PIRATEWEATHER_API_KEY env var)
@@ -67,9 +67,9 @@ module.exports = {
   // Authentication token for your Discord bot
   token: process.env.DISCORD_BOT_TOKEN,
   // Discord role ID to assign alongside custom roles
-  givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
-  // Discord role ID that new roles should be positioned above
-  givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
+  memberFrenRoleId: process.env.MEMBER_FREN_ROLE_ID,
+  // Discord role ID that custom roles should be positioned above
+  customRolePositioningAnchorId: process.env.CUSTOM_ROLE_POSITIONING_ANCHOR_ID,
   // API key for Google services
   googleApiKey: process.env.GOOGLE_API_KEY,
   // API key for DeepL translation service
@@ -82,10 +82,10 @@ module.exports = {
   logLevel: process.env.LOG_LEVEL || 'info',
   // Client ID for MyAnimeList API
   malClientId: process.env.MAL_CLIENT_ID,
-  // Role ID for "been in server before" (returning member) in /newuser
-  newUserBeenInServerBeforeRoleId: process.env.NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID,
-  // Role ID to compare member permissions against in /newuser embed
-  newUserPermissionDiffRoleId: process.env.NEWUSER_PERMISSION_DIFF_ROLE_ID,
+  // Role ID for members who've been in server before (returning members)
+  returningMemberRoleId: process.env.RETURNING_MEMBER_ROLE_ID,
+  // Role ID to use as permission comparison benchmark
+  permissionBenchmarkRoleId: process.env.PERMISSION_BENCHMARK_ROLE_ID,
   // Role ID for Noobies role assigned to users with <100 messages
   noobiesRoleId: process.env.NOOBIES_ROLE_ID,
   // API key for Open Movie Database
@@ -114,13 +114,13 @@ module.exports = {
 const REQUIRED_ENV_VARS = [
   'DISCORD_BOT_TOKEN',
   'BOT_STATUS',
-  'GIVE_PERMS_FREN_ROLE_ID',
-  'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
+  'MEMBER_FREN_ROLE_ID',
+  'CUSTOM_ROLE_POSITIONING_ANCHOR_ID',
   'GOOGLE_API_KEY',
   'IMAGE_SEARCH_ENGINE_ID',
   'MAL_CLIENT_ID',
-  'NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID',
-  'NEWUSER_PERMISSION_DIFF_ROLE_ID',
+  'RETURNING_MEMBER_ROLE_ID',
+  'PERMISSION_BENCHMARK_ROLE_ID',
   'NOOBIES_ROLE_ID',
   'OMDB_API_KEY',
   'PIRATEWEATHER_API_KEY',

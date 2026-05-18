@@ -19,9 +19,9 @@ describe('Search Pagination Integration', () => {
     jest.doMock('../../logger', () => () => mockLogger);
 
     mockConfig = {
-      newUserBeenInServerBeforeRoleId: 'returning-role',
+      returningMemberRoleId: 'returning-role',
       noobiesRoleId: 'noobie-role',
-      givePermsFrenRoleId: 'fren-role'
+      memberFrenRoleId: 'fren-role'
     };
     jest.doMock('../../config', () => mockConfig);
 

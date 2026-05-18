@@ -52,7 +52,7 @@ describe('messageCreate event', () => {
 
     mockConfig = {
       noobiesRoleId: 'role-noob',
-      givePermsFrenRoleId: 'role-fren'
+      memberFrenRoleId: 'role-fren'
     };
     jest.doMock('../../config', () => mockConfig);
 

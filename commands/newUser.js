@@ -103,8 +103,8 @@ module.exports = {
             inline: true
           });
         }
-        const diffRole = config.newUserPermissionDiffRoleId
-          ? member.guild.roles.cache.get(config.newUserPermissionDiffRoleId)
+        const diffRole = config.permissionBenchmarkRoleId
+          ? member.guild.roles.cache.get(config.permissionBenchmarkRoleId)
           : null;
         if (diffRole) {
           const memberPerms = member.permissions.toArray();

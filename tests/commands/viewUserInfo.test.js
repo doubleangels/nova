@@ -10,7 +10,7 @@ jest.mock('../../logger', () => () => mockLogger);
 
 let mockConfig = {
   baseEmbedColor: 0x112233,
-  newUserPermissionDiffRoleId: 'diff-role-id'
+  permissionBenchmarkRoleId: 'diff-role-id'
 };
 jest.mock('../../config', () => mockConfig);
 
@@ -25,7 +25,7 @@ describe('viewUserInfo command', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockConfig.baseEmbedColor = 0x112233;
-    mockConfig.newUserPermissionDiffRoleId = 'diff-role-id';
+    mockConfig.permissionBenchmarkRoleId = 'diff-role-id';
     viewUserInfoCommand = require('../../commands/viewUserInfo');
   });
 
@@ -103,7 +103,7 @@ describe('viewUserInfo command', () => {
     });
 
     it('should fall back to fetching member if not cached, and handle returning = false, no timeout/booster/diffRole', async () => {
-      mockConfig.newUserPermissionDiffRoleId = null;
+      mockConfig.permissionBenchmarkRoleId = null;
       const mockInteraction = createMockInteraction();
       mockInteraction.targetUser = {
         id: 'user-id-2',

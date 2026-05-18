@@ -28,7 +28,7 @@ describe('Reminder Cycle Integration', () => {
 
     mockConfig = {
       noobiesRoleId: 'noobie-role',
-      givePermsFrenRoleId: 'fren-role'
+      memberFrenRoleId: 'fren-role'
     };
     jest.doMock('../../config', () => mockConfig);
 

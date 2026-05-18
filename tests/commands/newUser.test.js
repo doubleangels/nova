@@ -18,7 +18,7 @@ describe('newUser command', () => {
     jest.doMock('../../logger', () => () => mockLogger);
 
     mockConfig = {
-      newUserPermissionDiffRoleId: 'diff-role-123',
+      permissionBenchmarkRoleId: 'diff-role-123',
       baseEmbedColor: '#c03728'
     };
     jest.doMock('../../config', () => mockConfig);

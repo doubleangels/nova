@@ -186,50 +186,50 @@ module.exports = {
      */
     async createAndAssignRoles(interaction, roleName, colorDecimal, targetMember) {
         // Get role IDs from environment variables
-        const positionAboveRoleIdRaw = config.givePermsPositionAboveRoleId;
-        const frenRoleIdRaw = config.givePermsFrenRoleId;
+        const customRolePositioningAnchorId = config.customRolePositioningAnchorId;
+        const memberFrenRoleId = config.memberFrenRoleId;
         
-        // Check if position above role ID is valid (not null, not undefined, not empty string)
-        if (!positionAboveRoleIdRaw || (typeof positionAboveRoleIdRaw === 'string' && positionAboveRoleIdRaw.trim().length === 0)) {
-            logger.error("Position above role not configured:", { 
-                envVar: 'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
-                value: positionAboveRoleIdRaw,
-                type: typeof positionAboveRoleIdRaw
+        // Check if positioning anchor role ID is valid (not null, not undefined, not empty string)
+        if (!customRolePositioningAnchorId || (typeof customRolePositioningAnchorId === 'string' && customRolePositioningAnchorId.trim().length === 0)) {
+            logger.error("Positioning anchor role not configured:", { 
+                envVar: 'CUSTOM_ROLE_POSITIONING_ANCHOR_ID',
+                value: customRolePositioningAnchorId,
+                type: typeof customRolePositioningAnchorId
             });
             return {
                 success: false,
-                message: "⚠️ The position reference role is not configured. Please set `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` environment variable with a valid role ID."
+                message: "⚠️ The position reference role is not configured. Please set `CUSTOM_ROLE_POSITIONING_ANCHOR_ID` environment variable with a valid role ID."
             };
         }
         
-        // Check if fren role ID is valid (not null, not undefined, not empty string)
-        if (!frenRoleIdRaw || (typeof frenRoleIdRaw === 'string' && frenRoleIdRaw.trim().length === 0)) {
-            logger.error("Fren role not configured:", { 
-                envVar: 'GIVE_PERMS_FREN_ROLE_ID',
-                value: frenRoleIdRaw,
-                type: typeof frenRoleIdRaw
+        // Check if member fren role ID is valid (not null, not undefined, not empty string)
+        if (!memberFrenRoleId || (typeof memberFrenRoleId === 'string' && memberFrenRoleId.trim().length === 0)) {
+            logger.error("Member fren role not configured:", { 
+                envVar: 'MEMBER_FREN_ROLE_ID',
+                value: memberFrenRoleId,
+                type: typeof memberFrenRoleId
             });
             return {
                 success: false,
-                message: "⚠️ The fren role is not configured. Please set `GIVE_PERMS_FREN_ROLE_ID` environment variable with a valid role ID."
+                message: "⚠️ The member fren role is not configured. Please set `MEMBER_FREN_ROLE_ID` environment variable with a valid role ID."
             };
         }
         
         // Convert to string and trim whitespace
-        const positionAboveRoleId = String(positionAboveRoleIdRaw).trim();
-        const frenRoleId = String(frenRoleIdRaw).trim();
+        const positionAnchorRoleId = String(customRolePositioningAnchorId).trim();
+        const frenRoleId = String(memberFrenRoleId).trim();
         
         // Parallelize role fetches
         const [positionRole, additionalRole] = await Promise.all([
-            interaction.guild.roles.fetch(positionAboveRoleId).catch(() => null),
+            interaction.guild.roles.fetch(positionAnchorRoleId).catch(() => null),
             interaction.guild.roles.fetch(frenRoleId).catch(() => null)
         ]);
         
         if (!positionRole) {
-            logger.error("Reference role not found.", { roleId: positionAboveRoleId });
+            logger.error("Reference role not found.", { roleId: positionAnchorRoleId });
             return {
                 success: false,
-                message: `⚠️ The reference role (ID: ${positionAboveRoleId}) was not found in this server.`
+                message: `⚠️ The reference role (ID: ${positionAnchorRoleId}) was not found in this server.`
             };
         }
         

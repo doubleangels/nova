@@ -30,7 +30,7 @@ describe('ready event', () => {
       botStatus: null,
       botStatusType: null,
       noobiesRoleId: null,
-      givePermsFrenRoleId: null
+      memberFrenRoleId: null
     };
     jest.doMock('../../config', () => mockConfig);
 

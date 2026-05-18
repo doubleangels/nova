@@ -17,8 +17,8 @@ describe('giveperms command unit tests', () => {
     jest.doMock('../../logger', () => () => mockLogger);
 
     mockConfig = {
-      givePermsPositionAboveRoleId: 'ref-role-id',
-      givePermsFrenRoleId: 'fren-role-id'
+      customRolePositioningAnchorId: 'ref-role-id',
+      memberFrenRoleId: 'fren-role-id'
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -208,15 +208,15 @@ describe('giveperms command unit tests', () => {
     };
 
     // Missing position role ID
-    mockConfig.givePermsPositionAboveRoleId = '';
+    mockConfig.customRolePositioningAnchorId = '';
     await givePermsCommand.execute(mockInteraction);
     expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('position reference role is not configured')
     }));
 
     // Missing fren role ID
-    mockConfig.givePermsPositionAboveRoleId = 'ref-role-id';
-    mockConfig.givePermsFrenRoleId = '';
+    mockConfig.customRolePositioningAnchorId = 'ref-role-id';
+    mockConfig.memberFrenRoleId = '';
     await givePermsCommand.execute(mockInteraction);
     expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('fren role is not configured')

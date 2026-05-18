@@ -51,9 +51,9 @@ describe('guildMemberAdd event', () => {
     jest.doMock('../../utils/trollModeUtils', () => mockTrollModeUtils);
 
     mockConfig = {
-      newUserBeenInServerBeforeRoleId: 'returning-role',
+      returningMemberRoleId: 'returning-role',
       noobiesRoleId: 'noobie-role',
-      givePermsFrenRoleId: 'fren-role',
+      memberFrenRoleId: 'fren-role',
       baseEmbedColor: 0xff0000
     };
     jest.doMock('../../config', () => mockConfig);
@@ -255,8 +255,8 @@ describe('guildMemberAdd event', () => {
       );
     });
 
-    it('should skip beenInServerBefore role check if newUserBeenInServerBeforeRoleId config is falsy', async () => {
-      mockConfig.newUserBeenInServerBeforeRoleId = null;
+    it('should skip beenInServerBefore role check if returningMemberRoleId config is falsy', async () => {
+      mockConfig.returningMemberRoleId = null;
 
       const mockMember = {
         id: 'user-123',
