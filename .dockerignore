@@ -119,15 +119,6 @@ __tests__
 *.test.js
 *.spec.js
 
-# Database scripts (development utilities)
-set-value.js
-remove-value.js
-list-values.js
-prune-db.js
-
-# Deployment scripts (dev-only)
-deploy-commands.js
-
 # Docker
 Dockerfile
 .dockerignore
