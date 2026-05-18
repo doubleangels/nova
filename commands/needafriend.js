@@ -97,8 +97,7 @@ function formatRedditCommentError(err) {
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('needafriend')
-    .setDescription('Comment on the r/needafriend weekly Discord server advertisement thread.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription('Comment on the r/needafriend weekly Discord server advertisement thread.'),
 
   async execute(interaction) {
     if (!isRedditConfigured()) {

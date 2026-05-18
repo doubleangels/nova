@@ -195,8 +195,7 @@ async function postToSubreddit(subredditName, promotionTitle, promotionBody = ''
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('promote')
-    .setDescription('Post your server advertisement to Reddit.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    .setDescription('Post your server advertisement to Reddit.'),
 
   /**
    * Executes the promote command.
