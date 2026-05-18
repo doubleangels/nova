@@ -123,6 +123,35 @@ describe('inviteCreate event', () => {
     });
   });
 
+  it('should use 0 for uses if not provided in invite object', async () => {
+    const mockGuild = createMockGuild({ id: 'guild-1' });
+    mockGuild.members = {
+      me: {
+        permissions: {
+          has: jest.fn().mockReturnValue(true)
+        }
+      }
+    };
+
+    const mockInvite = {
+      code: 'mycode',
+      guild: mockGuild,
+      inviter: { id: 'user-1' }
+      // uses is missing/undefined
+    };
+
+    mockDatabase.getInviteCodeToTagMap.mockResolvedValue({
+      'mycode': 'mytag'
+    });
+    mockDatabase.getInviteUsage.mockResolvedValue({});
+
+    await inviteCreateEvent.execute(mockInvite);
+
+    expect(mockDatabase.setInviteUsage).toHaveBeenCalledWith('guild-1', {
+      'mycode': 0
+    });
+  });
+
   it('should capture errors and not throw', async () => {
     const mockGuild = createMockGuild({ id: 'guild-1' });
     mockGuild.members = {

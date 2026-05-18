@@ -52,6 +52,14 @@ describe('locationUtils', () => {
       expect(locationUtils.formatErrorMessage('Paris', 'Geocoding failed: OVER_QUERY_LIMIT')).toBe('⚠️ Too many requests. Please try again later.');
     });
 
+    it('should handle REQUEST_DENIED', () => {
+      expect(locationUtils.formatErrorMessage('Paris', 'Geocoding failed: REQUEST_DENIED')).toBe('⚠️ API access denied. Please check API configuration.');
+    });
+
+    it('should handle INVALID_REQUEST', () => {
+      expect(locationUtils.formatErrorMessage('London', 'Geocoding failed: INVALID_REQUEST')).toBe('⚠️ Invalid location: London');
+    });
+
     it('should handle generic error', () => {
       expect(locationUtils.formatErrorMessage('Mars', 'Error occurred')).toBe('⚠️ Failed to get timezone information for Mars');
     });
@@ -106,12 +114,43 @@ describe('locationUtils', () => {
         expect(mockAxios.get).toHaveBeenCalledTimes(2);
       });
 
+      it('should hit geocoding cache on subsequent calls for same location', async () => {
+        mockAxios.get.mockResolvedValueOnce(mockGeocodeResponse);
+        
+        // 1st call - cache miss
+        const res1 = await locationUtils.getGeocodingData('CachePlace');
+        expect(res1.error).toBe(false);
+        expect(mockAxios.get).toHaveBeenCalledTimes(1);
+        
+        // 2nd call - cache hit
+        const res2 = await locationUtils.getGeocodingData('CachePlace');
+        expect(res2.error).toBe(false);
+        expect(mockAxios.get).toHaveBeenCalledTimes(1); // not called again
+      });
+
       it('should return error on failure', async () => {
         mockAxios.get.mockResolvedValueOnce({ data: { status: 'ZERO_RESULTS' } });
         const result = await locationUtils.getGeocodingData('FakePlace123');
         
         expect(result.error).toBe(true);
         expect(result.type).toContain('Geocoding failed: ZERO_RESULTS');
+      });
+
+      it('should throw error when rate limit is exceeded', async () => {
+        // Mock get response for all requests
+        mockAxios.get.mockResolvedValue(mockGeocodeResponse);
+        
+        // Loop 50 times to hit the rate limit threshold
+        const promises = [];
+        for (let i = 0; i < 50; i++) {
+          promises.push(locationUtils.getGeocodingData(`Place_${i}`));
+        }
+        await Promise.all(promises);
+        
+        // The 51st call should trigger rate limit error
+        const result = await locationUtils.getGeocodingData('Place_51');
+        expect(result.error).toBe(true);
+        expect(result.type).toBe('Rate limit exceeded. Please try again later.');
       });
     });
 
@@ -124,12 +163,36 @@ describe('locationUtils', () => {
         expect(result.timezoneId).toBe('Asia/Tokyo');
       });
 
+      it('should hit timezone cache on subsequent calls for same coordinates', async () => {
+        mockAxios.get.mockResolvedValueOnce(mockTimezoneResponse);
+        
+        // 1st call - cache miss
+        const res1 = await locationUtils.getTimezoneData({ lat: 10, lng: 20 });
+        expect(res1.error).toBe(false);
+        expect(mockAxios.get).toHaveBeenCalledTimes(1);
+        
+        // 2nd call - cache hit
+        const res2 = await locationUtils.getTimezoneData({ lat: 10, lng: 20 });
+        expect(res2.error).toBe(false);
+        expect(mockAxios.get).toHaveBeenCalledTimes(1); // not called again
+      });
+
       it('should return error for invalid coordinates', async () => {
         const result = await locationUtils.getTimezoneData({ lat: 100, lng: 200 });
         
         expect(result.error).toBe(true);
         expect(result.type).toBe('Invalid coordinates provided');
         expect(mockAxios.get).not.toHaveBeenCalled();
+      });
+
+      it('should return error if timezone lookup status is not OK', async () => {
+        mockAxios.get.mockResolvedValueOnce({
+          data: { status: 'INVALID_REQUEST' }
+        });
+        
+        const result = await locationUtils.getTimezoneData({ lat: 10, lng: 20 });
+        expect(result.error).toBe(true);
+        expect(result.type).toContain('Timezone lookup failed: INVALID_REQUEST');
       });
     });
 
@@ -154,6 +217,25 @@ describe('locationUtils', () => {
         
         expect(result.error).toBe(true);
         expect(result.errorType).toContain('Geocoding failed');
+      });
+
+      it('should fallback to location name when formatted_address is missing', async () => {
+        mockAxios.get
+          .mockResolvedValueOnce({
+            data: {
+              status: 'OK',
+              results: [{
+                geometry: { location: { lat: 35.6762, lng: 139.6503 } }
+                // formatted_address is missing
+              }]
+            }
+          })
+          .mockResolvedValueOnce(mockTimezoneResponse);
+
+        const result = await locationUtils.getUtcOffset('TokyoCityNoAddress');
+        
+        expect(result.error).toBe(false);
+        expect(result.placeName).toBe('TokyoCityNoAddress');
       });
     });
   });

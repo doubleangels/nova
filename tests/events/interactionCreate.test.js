@@ -97,6 +97,23 @@ describe('interactionCreate event', () => {
       expect(mockInstrument.captureError).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalled();
     });
+
+    it('should do nothing if command does not have autocomplete method', async () => {
+      const mockCommand = {};
+      const mockInteraction = createMockInteraction({
+        commandName: 'myCommand'
+      });
+      mockInteraction.isButton = jest.fn().mockReturnValue(false);
+      mockInteraction.isAutocomplete = jest.fn().mockReturnValue(true);
+      mockInteraction.client = {
+        commands: new Collection([['myCommand', mockCommand]])
+      };
+
+      await interactionCreateEvent.execute(mockInteraction);
+
+      expect(mockLogger.error).not.toHaveBeenCalled();
+      expect(mockInstrument.captureError).not.toHaveBeenCalled();
+    });
   });
 
   describe('command execution', () => {

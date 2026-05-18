@@ -218,6 +218,118 @@ describe('guildMemberAdd event', () => {
       expect(mockInstrument.captureError).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith('Error occurred while processing new member.', expect.any(Object));
     });
+
+    it('should fallback to 4 hours if mute_mode_kick_time_hours is falsy', async () => {
+      const mockMember = {
+        id: 'user-123',
+        user: { bot: false, tag: 'User#1234' },
+        joinedAt: new Date(),
+        client: 'mock-client',
+        guild: { id: 'guild-123' },
+        roles: {
+          cache: new Collection(),
+          add: jest.fn().mockResolvedValue()
+        }
+      };
+
+      mockTrollModeUtils.checkAccountAge.mockResolvedValue(true);
+      mockDatabase.addMuteModeUser.mockResolvedValue();
+      mockDatabase.addSpamModeJoinTime.mockResolvedValue();
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return true;
+        if (key === 'mute_mode_kick_time_hours') return null; // falsy
+        return null;
+      });
+      mockMuteModeUtils.scheduleMuteKick.mockResolvedValue();
+      mockDatabase.isFormerMember.mockResolvedValue(false);
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue(null);
+
+      await guildMemberAddEvent.execute(mockMember);
+
+      expect(mockMuteModeUtils.scheduleMuteKick).toHaveBeenCalledWith(
+        'user-123',
+        mockMember.joinedAt,
+        4, // fallback
+        'mock-client',
+        'guild-123'
+      );
+    });
+
+    it('should skip beenInServerBefore role check if newUserBeenInServerBeforeRoleId config is falsy', async () => {
+      mockConfig.newUserBeenInServerBeforeRoleId = null;
+
+      const mockMember = {
+        id: 'user-123',
+        user: { bot: false, tag: 'User#1234' },
+        joinedAt: new Date(),
+        client: 'mock-client',
+        guild: { id: 'guild-123' },
+        roles: {
+          cache: new Collection(),
+          add: jest.fn().mockResolvedValue()
+        }
+      };
+
+      mockTrollModeUtils.checkAccountAge.mockResolvedValue(true);
+      mockDatabase.addMuteModeUser.mockResolvedValue();
+      mockDatabase.addSpamModeJoinTime.mockResolvedValue();
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue(null);
+
+      await guildMemberAddEvent.execute(mockMember);
+
+      expect(mockDatabase.isFormerMember).not.toHaveBeenCalled();
+    });
+
+    it('should skip Noobies role assignment if roles config are missing', async () => {
+      mockConfig.noobiesRoleId = null;
+
+      const mockMember = {
+        id: 'user-123',
+        user: { bot: false, tag: 'User#1234' },
+        joinedAt: new Date(),
+        client: 'mock-client',
+        guild: { id: 'guild-123' },
+        roles: {
+          cache: new Collection(),
+          add: jest.fn().mockResolvedValue()
+        }
+      };
+
+      mockTrollModeUtils.checkAccountAge.mockResolvedValue(true);
+      mockDatabase.addMuteModeUser.mockResolvedValue();
+      mockDatabase.addSpamModeJoinTime.mockResolvedValue();
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue(null);
+
+      await guildMemberAddEvent.execute(mockMember);
+
+      expect(mockMember.roles.add).not.toHaveBeenCalled();
+    });
+
+    it('should skip Noobies role assignment if joining member already has Fren role', async () => {
+      const mockMember = {
+        id: 'user-123',
+        user: { bot: false, tag: 'User#1234' },
+        joinedAt: new Date(),
+        client: 'mock-client',
+        guild: { id: 'guild-123' },
+        roles: {
+          cache: new Collection([['fren-role', { id: 'fren-role' }]]),
+          add: jest.fn().mockResolvedValue()
+        }
+      };
+
+      mockTrollModeUtils.checkAccountAge.mockResolvedValue(true);
+      mockDatabase.addMuteModeUser.mockResolvedValue();
+      mockDatabase.addSpamModeJoinTime.mockResolvedValue();
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue(null);
+
+      await guildMemberAddEvent.execute(mockMember);
+
+      expect(mockMember.roles.add).not.toHaveBeenCalled();
+    });
   });
 
   describe('checkTaggedInvite', () => {
@@ -833,6 +945,350 @@ describe('guildMemberAdd event', () => {
       // Cover lines 414-415
       expect(mockInstrument.captureError).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith('Error occurred while checking tagged invite.', expect.any(Object));
+    });
+
+    it('should handle undefined invite.uses in currentUsage check and skip notification if increase is not positive', async () => {
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123' }] // uses is undefined/falsy
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 0 }); // increase = 0 - 0 = 0
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code123': 'mytag' });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Comparing tagged invite usage counts.'),
+        expect.objectContaining({ increase: 0 })
+      );
+    });
+
+    it('should skip invite notification if increase is less than maxIncrease', async () => {
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123', uses: 2 }],
+            ['code456', { code: 'code456', uses: 3 }]
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 1, 'code456': 1 }); // increase for 123 is 1, for 456 is 2
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code123': 'tag1', 'code456': 'tag2' });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      // code456 has larger increase (2 > 1), so usedInviteCode will be code456
+      expect(mockLogger.debug).toHaveBeenCalledWith('Detected used invite code.', { inviteCode: 'code456' });
+    });
+
+    it('should skip invite notification if getInviteTag returns null or code mismatch', async () => {
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123', uses: 2 }]
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 1 });
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code123': 'mytag' });
+      mockDatabase.getInviteTag.mockResolvedValue({
+        code: 'mismatch-code', // mismatch!
+        name: 'My Special Tag'
+      });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Detected used invite code.',
+        { inviteCode: 'code123' }
+      );
+    });
+
+    it('should fallback to baseEmbedColor 0 if baseEmbedColor config is falsy', async () => {
+      mockConfig.baseEmbedColor = null;
+
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        }),
+        send: jest.fn().mockResolvedValue({ id: 'msg-123' })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123', uses: 2 }]
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        displayName: 'UserDisplayName',
+        user: {
+          tag: 'User#1234',
+          id: 'user-123',
+          username: 'user123',
+          displayAvatarURL: jest.fn().mockReturnValue('http://avatar.link')
+        }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 1 });
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code123': 'mytag' });
+      mockDatabase.getInviteTag.mockResolvedValue({
+        code: 'code123',
+        name: 'My Special Tag'
+      });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockChannel.send).toHaveBeenCalled();
+      const sendCallArg = mockChannel.send.mock.calls[0][0];
+      expect(sendCallArg.embeds[0].data.color).toBe(0);
+    });
+
+    it('should skip code if increase is not greater than maxIncrease', async () => {
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123', uses: 3 }],
+            ['code456', { code: 'code456', uses: 2 }]
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 1, 'code456': 1 });
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code123': 'tag1', 'code456': 'tag2' });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith('Detected used invite code.', { inviteCode: 'code123' });
+    });
+
+    it('should handle falsy tagName when resolved via codeToTagMap dynamically', async () => {
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123', uses: 2 }]
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      let accessCount = 0;
+      const codeToTagMap = {
+        get code123() {
+          accessCount++;
+          return accessCount === 1 ? 'mytag' : undefined;
+        }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 1 });
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue(codeToTagMap);
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockDatabase.getInviteTag).not.toHaveBeenCalled();
+    });
+
+    it('should fallback to tagName if inviteTag.name is falsy', async () => {
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        }),
+        send: jest.fn().mockResolvedValue({ id: 'msg-123' })
+      };
+
+      const mockGuild = {
+        id: 'guild-123',
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue(new Collection([
+            ['code123', { code: 'code123', uses: 2 }]
+          ]))
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        displayName: 'UserDisplayName',
+        user: {
+          tag: 'User#1234',
+          id: 'user-123',
+          username: 'user123',
+          displayAvatarURL: jest.fn().mockReturnValue('http://avatar.link')
+        }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 1 });
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code123': 'mytag' });
+      mockDatabase.getInviteTag.mockResolvedValue({
+        code: 'code123',
+        name: '' // empty/falsy
+      });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockChannel.send).toHaveBeenCalled();
+      const sendCallArg = mockChannel.send.mock.calls[0][0];
+      const inviteTagField = sendCallArg.embeds[0].data.fields.find(f => f.name === 'Invite Tag');
+      expect(inviteTagField.value).toBe('mytag');
     });
   });
 });

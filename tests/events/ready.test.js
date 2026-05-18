@@ -316,6 +316,67 @@ describe('ready event', () => {
       );
     });
 
+    it('should handle invites without uses count and use 0 as default', async () => {
+      const mockInvite1 = { code: 'abc' }; // uses is missing
+      const mockGuild = {
+        id: 'guild-1',
+        name: 'Guild 1',
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockResolvedValue({
+            each: jest.fn().mockImplementation((cb) => cb(mockInvite1))
+          })
+        }
+      };
+      const mockClient = {
+        user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+        guilds: {
+          cache: {
+            first: jest.fn().mockReturnValue(mockGuild)
+          }
+        }
+      };
+
+      await readyEvent.execute(mockClient);
+
+      expect(mockDatabase.setInviteUsage).toHaveBeenCalledWith('guild-1', { abc: 0 });
+    });
+
+    it('should do nothing if guild invites fetch catches and returns null', async () => {
+      const mockGuild = {
+        id: 'guild-1',
+        name: 'Guild 1',
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockRejectedValue(new Error('Fetch failed'))
+        }
+      };
+      const mockClient = {
+        user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+        guilds: {
+          cache: {
+            first: jest.fn().mockReturnValue(mockGuild)
+          }
+        }
+      };
+
+      await readyEvent.execute(mockClient);
+
+      expect(mockDatabase.setInviteUsage).not.toHaveBeenCalled();
+    });
+
     it('should catch and log error if initializeInviteUsage throws', async () => {
       const mockClient = {
         user: { tag: 'TestBot#1234', setActivity: jest.fn() },

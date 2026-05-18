@@ -101,6 +101,59 @@ describe('redditClient', () => {
       }));
     });
 
+    it('should format data for PUT requests', async () => {
+      mockAxios.post.mockResolvedValueOnce({
+        data: { access_token: 'token123', expires_in: 3600 }
+      });
+      mockAxios.mockResolvedValueOnce({
+        data: { success: true }
+      });
+
+      await redditClient.redditApiRequest('PUT', '/api/test', { key: 'value' });
+      
+      expect(mockAxios).toHaveBeenCalledWith(expect.objectContaining({
+        method: 'PUT',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }),
+        data: 'key=value'
+      }));
+    });
+
+    it('should NOT format data for GET requests even if data is provided', async () => {
+      mockAxios.post.mockResolvedValueOnce({
+        data: { access_token: 'token123', expires_in: 3600 }
+      });
+      mockAxios.mockResolvedValueOnce({
+        data: { success: true }
+      });
+
+      await redditClient.redditApiRequest('GET', '/api/test', { key: 'value' });
+      
+      expect(mockAxios).toHaveBeenCalledWith(expect.objectContaining({
+        method: 'GET',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token123'
+        })
+      }));
+      // Verify Content-Type is not present
+      const callArg = mockAxios.mock.calls[0][0];
+      expect(callArg.headers['Content-Type']).toBeUndefined();
+    });
+
+    it('should fallback to default expiry if expires_in is missing in token response', async () => {
+      mockAxios.post.mockResolvedValueOnce({
+        data: { access_token: 'token123' } // expires_in is missing
+      });
+      mockAxios.mockResolvedValueOnce({
+        data: { success: true }
+      });
+
+      await redditClient.redditApiRequest('GET', '/api/test');
+      
+      expect(mockAxios.post).toHaveBeenCalledTimes(1);
+    });
+
     it('should retry on 401 error', async () => {
       mockAxios.post
         .mockResolvedValueOnce({ data: { access_token: 'old_token', expires_in: 3600 } })
@@ -123,6 +176,20 @@ describe('redditClient', () => {
       mockAxios.post.mockRejectedValueOnce(new Error('Network error'));
       
       await expect(redditClient.redditApiRequest('GET', '/api/test')).rejects.toThrow('Failed to authenticate with Reddit API');
+    });
+
+    it('should throw error if token fetch response does not contain access token', async () => {
+      mockAxios.post.mockResolvedValueOnce({
+        data: {} // no access_token
+      });
+
+      await expect(redditClient.redditApiRequest('GET', '/api/test')).rejects.toThrow('Failed to authenticate with Reddit API');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to get Reddit OAuth token',
+        expect.objectContaining({
+          err: expect.any(Error)
+        })
+      );
     });
 
     it('should throw error if request fails with non-401', async () => {
