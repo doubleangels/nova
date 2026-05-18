@@ -1,0 +1,514 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for nova/config.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">nova</a> config.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/16</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/14</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/4</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/14</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >require('dotenv').config();</span>
+&nbsp;
+/**
+ * @typedef {Object} BotSettings
+ * @property {boolean} deployCommandsOnStart - Whether to deploy slash commands on bot startup
+ * @property {boolean} rescheduleReminderOnStart - Whether to reschedule reminders on bot startup
+ * @property {boolean} rescheduleAllMuteKicksOnStart - Whether to reschedule mute kicks on bot startup
+ * @property {string[]} disabledCommands - Array of command names that are disabled
+ * 
+ * @example
+ * // To disable commands, add their names to the disabledCommands array:
+ * // disabledCommands: ['promote', 'invite']
+ * // Disabled commands will not be deployed/updated to Discord on bot startup
+ */
+&nbsp;
+/**
+ * @typedef {Object} BotConfig
+ * @property {BotSettings} settings - Bot behavior settings
+ * @property {number} baseEmbedColor - Base embed color (hex number, from BASE_EMBED_COLOR env var)
+ * @property {string} botStatus - Bot activity status text (from BOT_STATUS env var)
+ * @property {string} botStatusType - Bot activity type (from BOT_STATUS_TYPE env var)
+ * @property {string} clientId - Discord application client ID
+ * @property {string} token - Discord bot token (from DISCORD_BOT_TOKEN env var)
+ * @property {string} givePermsFrenRoleId - Role ID for Fren role (from GIVE_PERMS_FREN_ROLE_ID env var)
+ * @property {string} givePermsPositionAboveRoleId - Role ID for permission management (from GIVE_PERMS_POSITION_ABOVE_ROLE_ID env var)
+ * @property {string} googleApiKey - Google API key for search functionality (from GOOGLE_API_KEY env var)
+ * @property {string} guildName - Guild name (from GUILD_NAME env var, default: 'Da Frens')
+ * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images (from IMAGE_SEARCH_ENGINE_ID env var)
+ * @property {string} logLevel - Logging level (from LOG_LEVEL env var, default: 'info')
+ * @property {string} malClientId - MyAnimeList API client ID (from MAL_CLIENT_ID env var)
+ * @property {string} newUserBeenInServerBeforeRoleId - Role ID for "been in server before" in /newuser (from NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID env var)
+ * @property {string} newUserPermissionDiffRoleId - Role ID to compare permissions against in /newuser (from NEWUSER_PERMISSION_DIFF_ROLE_ID env var)
+ * @property {string} noobiesRoleId - Role ID for Noobies role assigned to users with &lt;100 messages (from NOOBIES_ROLE_ID env var)
+ * @property {string} omdbApiKey - OMDB API key for movie information (from OMDB_API_KEY env var)
+ * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information (from PIRATEWEATHER_API_KEY env var)
+ * @property {string} redditClientId - Reddit API client ID (from REDDIT_CLIENT_ID env var)
+ * @property {string} redditClientSecret - Reddit API client secret (from REDDIT_CLIENT_SECRET env var)
+ * @property {string} redditPassword - Reddit password for API authentication (from REDDIT_PASSWORD env var)
+ * @property {string} redditUsername - Reddit username for API authentication (from REDDIT_USERNAME env var)
+ * @property {string} searchEngineId - Google Custom Search Engine ID for web searches (from SEARCH_ENGINE_ID env var)
+ * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
+ * // Spotify integration removed
+ */
+&nbsp;
+/** @type {BotConfig} */
+<span class="cstat-no" title="statement not covered" >module.exports = {</span>
+  settings: {
+    deployCommandsOnStart: true,
+    rescheduleReminderOnStart: true,
+    rescheduleAllMuteKicksOnStart: true,
+    disabledCommands: [],
+  },
+  // Base embed color in hex format (e.g., CD41FF or #CD41FF); default #999999
+  baseEmbedColor: (<span class="fstat-no" title="function not covered" >()</span> =&gt; {
+    const colorStr = <span class="cstat-no" title="statement not covered" >(process.env.BASE_EMBED_COLOR || '#999999').trim();</span>
+    // Remove # or 0x prefix if present
+    const cleanColor = <span class="cstat-no" title="statement not covered" >colorStr.replace(/^#/, '').replace(/^0x/i, '');</span>
+    const parsed = <span class="cstat-no" title="statement not covered" >parseInt(cleanColor, 16);</span>
+<span class="cstat-no" title="statement not covered" >    return isNaN(parsed) ? 0x999999 : parsed;</span>
+  })(),
+  // Bot activity status text
+  botStatus: process.env.BOT_STATUS,
+  // Bot activity type (playing, watching, listening, streaming, competing)
+  botStatusType: process.env.BOT_STATUS_TYPE || 'watching',
+  clientId: "1280311987154456657",
+  // Authentication token for your Discord bot
+  token: process.env.DISCORD_BOT_TOKEN,
+  // Discord role ID to assign alongside custom roles
+  givePermsFrenRoleId: process.env.GIVE_PERMS_FREN_ROLE_ID,
+  // Discord role ID that new roles should be positioned above
+  givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
+  // API key for Google services
+  googleApiKey: process.env.GOOGLE_API_KEY,
+  // Name of the guild/server
+  guildName: process.env.GUILD_NAME || 'Da Frens',
+  // Google Custom Search Engine ID for image searches
+  imageSearchEngineId: process.env.IMAGE_SEARCH_ENGINE_ID,
+  // Determines the verbosity of logs (error, warn, info, debug)
+  logLevel: process.env.LOG_LEVEL || 'info',
+  // Client ID for MyAnimeList API
+  malClientId: process.env.MAL_CLIENT_ID,
+  // Role ID for "been in server before" (returning member) in /newuser
+  newUserBeenInServerBeforeRoleId: process.env.NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID,
+  // Role ID to compare member permissions against in /newuser embed
+  newUserPermissionDiffRoleId: process.env.NEWUSER_PERMISSION_DIFF_ROLE_ID,
+  // Role ID for Noobies role assigned to users with &lt;100 messages
+  noobiesRoleId: process.env.NOOBIES_ROLE_ID,
+  // API key for Open Movie Database
+  omdbApiKey: process.env.OMDB_API_KEY,
+  // API key for PirateWeather forecast service
+  pirateWeatherApiKey: process.env.PIRATEWEATHER_API_KEY,
+  // Client ID for Reddit API
+  redditClientId: process.env.REDDIT_CLIENT_ID,
+  // Client Secret for Reddit API
+  redditClientSecret: process.env.REDDIT_CLIENT_SECRET,
+  // Reddit password for API authentication
+  redditPassword: process.env.REDDIT_PASSWORD,
+  // Reddit username for API authentication
+  redditUsername: process.env.REDDIT_USERNAME,
+  // Google Custom Search Engine ID for web searches
+  searchEngineId: process.env.SEARCH_ENGINE_ID,
+  // Server invite URL for kick messages
+  serverInviteUrl: process.env.SERVER_INVITE_URL,
+  // Spotify integration removed
+};
+&nbsp;
+// Optional (not required to start): SENTRY_DSN — error monitoring (@sentry/node, see instrument.js).
+// Sentry environment uses NODE_ENV (default production). Release is set from package.json name + version in instrument.js.
+&nbsp;
+// Required env vars (no default); bot fails to start if any are missing
+const REQUIRED_ENV_VARS = <span class="cstat-no" title="statement not covered" >[</span>
+  'DISCORD_BOT_TOKEN',
+  'BOT_STATUS',
+  'GIVE_PERMS_FREN_ROLE_ID',
+  'GIVE_PERMS_POSITION_ABOVE_ROLE_ID',
+  'GOOGLE_API_KEY',
+  'IMAGE_SEARCH_ENGINE_ID',
+  'MAL_CLIENT_ID',
+  'NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID',
+  'NEWUSER_PERMISSION_DIFF_ROLE_ID',
+  'NOOBIES_ROLE_ID',
+  'OMDB_API_KEY',
+  'PIRATEWEATHER_API_KEY',
+  'REDDIT_CLIENT_ID',
+  'REDDIT_CLIENT_SECRET',
+  'REDDIT_PASSWORD',
+  'REDDIT_USERNAME',
+  'SEARCH_ENGINE_ID',
+  'SERVER_INVITE_URL',
+  // Spotify env vars removed
+];
+&nbsp;
+function <span class="fstat-no" title="function not covered" >isSet(</span>value) {
+<span class="cstat-no" title="statement not covered" >  return value != null &amp;&amp; String(value).trim() !== '';</span>
+}
+&nbsp;
+const missing = <span class="cstat-no" title="statement not covered" >REQUIRED_ENV_VARS.filter(<span class="fstat-no" title="function not covered" >na</span>me =&gt; <span class="cstat-no" title="statement not covered" >!isSet(process.env[name]))</span>;</span>
+<span class="cstat-no" title="statement not covered" >if (missing.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >  console.error('Missing required environment variable(s). Bot cannot start.');</span>
+<span class="cstat-no" title="statement not covered" >  console.error('Set the following in your .env or environment:');</span>
+<span class="cstat-no" title="statement not covered" >  missing.forEach(<span class="fstat-no" title="function not covered" >na</span>me =&gt; <span class="cstat-no" title="statement not covered" >console.error(`  - ${name}`))</span>;</span>
+<span class="cstat-no" title="statement not covered" >  process.exit(1);</span>
+}
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-05-18T20:03:21.969Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

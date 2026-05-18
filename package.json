@@ -8,7 +8,10 @@
     "update": "npm outdated && npm update --save",
     "set-value": "node set-value.js",
     "remove-value": "node remove-value.js",
-    "list-values": "node list-values.js"
+    "list-values": "node list-values.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
   },
   "repository": {
     "type": "git",
@@ -23,7 +26,6 @@
     "@tootallnate/once": ">=3.0.1",
     "tar": ">=7.5.10",
     "undici": "~6.25.0",
-    "minimatch": ">=10.2.3",
     "@isaacs/brace-expansion": ">=5.0.1"
   },
   "dependencies": {
@@ -38,5 +40,10 @@
     "keyv": "^5.6.0",
     "node-cache": "^5.1.2",
     "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-mock-extended": "^3.0.5",
+    "@types/jest": "^29.5.8"
   }
 }
