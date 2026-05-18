@@ -59,9 +59,14 @@ describe('colorUtils', () => {
     });
 
     it('should throw error if color value is out of valid range', () => {
-      // hexToDecimal technically wouldn't reach this because validateAndNormalizeColor
-      // restricts to #FFFFFF max anyway, but we can test the internal decimal check if we mock it
-      // For now, testing normal boundaries is fine.
+      const colorUtils = require('../../utils/colorUtils');
+      const spy = jest.spyOn(colorUtils, 'validateAndNormalizeColor').mockReturnValue({
+        success: true,
+        normalizedColor: '#1000000' // 7 digits, parsed value is 0x1000000 > 0xFFFFFF
+      });
+
+      expect(() => colorUtils.hexToDecimal('#1000000')).toThrow('⚠️ Color value is out of valid range.');
+      spy.mockRestore();
     });
   });
 });

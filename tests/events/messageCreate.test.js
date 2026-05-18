@@ -164,13 +164,16 @@ describe('messageCreate event', () => {
 
     describe('no-text channel enforcement', () => {
       it('should delete message if in no-text channel and has no allowed content', async () => {
+        const attachment1 = { url: 'document.pdf', contentType: 'application/pdf' };
+        const attachmentsCollection = new Collection([['att-1', attachment1]]);
+
         const mockMessage = {
           partial: false,
           author: { id: 'user-1', tag: 'User#1234', bot: false },
           channel: { id: 'chan-notext', name: 'notext' },
           channelId: 'chan-notext',
           content: 'pure text message',
-          attachments: new Collection(),
+          attachments: attachmentsCollection,
           stickers: new Collection(),
           delete: jest.fn().mockResolvedValue()
         };
@@ -183,17 +186,23 @@ describe('messageCreate event', () => {
 
         await messageCreateEvent.execute(mockMessage);
 
+        // Cover line 127 mapping contentType
         expect(mockMessage.delete).toHaveBeenCalled();
+        expect(mockLogger.debug).toHaveBeenCalledWith(
+          expect.stringContaining('Deleted message with no allowed content in no-text channel.'),
+          expect.any(Object)
+        );
       });
 
-      it('should NOT delete if in no-text channel but has gif attachment', async () => {
+      it('should NOT delete if in no-text channel but has gif attachment or image', async () => {
+        const attachmentGif = { url: 'image.gif', contentType: 'image/gif' };
         const mockMessage = {
           partial: false,
           author: { id: 'user-1', tag: 'User#1234', bot: false },
           channel: { id: 'chan-notext', name: 'notext' },
           channelId: 'chan-notext',
-          content: 'text with gif link https://media.tenor.com/abc.gif',
-          attachments: new Collection(),
+          content: 'text with gif attachment',
+          attachments: new Collection([['gif-1', attachmentGif]]),
           stickers: new Collection(),
           delete: jest.fn()
         };
@@ -474,6 +483,85 @@ describe('messageCreate event', () => {
 
       expect(mockMessage.fetch).toHaveBeenCalled();
       expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+    });
+
+    it('should handle fetch rejection gracefully when embeds description is missing', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'disboard-123', tag: 'Disboard#0000', bot: true },
+        channel: { id: 'chan-1', name: 'general' },
+        content: '',
+        embeds: [{
+          title: 'Some embed'
+        }],
+        fetch: jest.fn().mockRejectedValue(new Error('Discord API disconnect'))
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      // Cover line 271
+      expect(mockMessage.fetch).toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Could not fetch message for Disboard check.'),
+        expect.any(Object)
+      );
+    });
+
+    it('should log debug when no embeds are available for Disboard check', async () => {
+      let embedsCallCount = 0;
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-123', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'Just normal message',
+        get embeds() {
+          embedsCallCount++;
+          if (embedsCallCount === 1) {
+            return [{ title: 'Some Embed' }];
+          }
+          return [];
+        }
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      // Cover lines 292-298
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('No message embeds available for Disboard check.'),
+        expect.any(Object)
+      );
+    });
+
+    it('should catch error and log it if checkForBumpMessages throws globally', async () => {
+      let embedsCallCount = 0;
+      const mockMessage = {
+        partial: false,
+        author: { id: 'disboard-123', tag: 'Disboard#0000', bot: true },
+        channel: { id: 'chan-1', name: 'general' },
+        content: '',
+        get embeds() {
+          embedsCallCount++;
+          if (embedsCallCount <= 3) {
+            return [{ title: 'Some Embed' }];
+          }
+          throw new Error('Embeds getter crashed inside checkForBumpMessages try block');
+        }
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await expect(messageCreateEvent.execute(mockMessage)).resolves.not.toThrow();
+
+      // Cover lines 300-307
+      expect(mockInstrument.captureError).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to process bump message.', expect.any(Object));
     });
   });
 });

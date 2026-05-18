@@ -182,5 +182,28 @@ describe('newUser command', () => {
         content: '⚠️ An unexpected error occurred. Please try again later.'
       }));
     });
+
+    it('should log an error if editReply throws an error inside execute catch block', async () => {
+      const targetUser = {
+        id: 'target-123',
+        username: 'targetuser',
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        displayAvatarURL: jest.fn().mockImplementation(() => {
+          throw new Error('Some execution error');
+        })
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getUser: jest.fn().mockReturnValue(targetUser)
+        }
+      });
+      mockInteraction.editReply.mockRejectedValue(new Error('Discord connection dropped'));
+
+      await newUserCommand.execute(mockInteraction);
+
+      // Cover lines 168-174
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error reply.', expect.any(Object));
+    });
   });
 });

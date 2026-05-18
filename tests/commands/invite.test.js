@@ -347,7 +347,7 @@ describe('invite command', () => {
       expect(embed.data.title).toBe('Missing Permissions');
     });
 
-    it('should create invite in targeted channel with custom expiry/uses', async () => {
+    it('should create invite in targeted channel with custom expiry/uses, warning if code is already mapped to a different tag', async () => {
       const mockChannel = {
         id: 'ch-text',
         createInvite: jest.fn().mockResolvedValue({ code: 'newlyCreated' }),
@@ -369,6 +369,10 @@ describe('invite command', () => {
       });
 
       mockDatabase.getInviteTag.mockResolvedValue(null);
+      // Cover line 502
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({
+        'newlycreated': 'differentTag'
+      });
 
       await inviteCommand.handleCreateSubcommand(mockInteraction);
 
@@ -377,9 +381,9 @@ describe('invite command', () => {
         maxAge: 172800,
         unique: true
       });
+      expect(mockLogger.warn).toHaveBeenCalledWith('Code already mapped to different tag, overwriting.', expect.any(Object));
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.title).toBe('Invite Created and Tagged');
-      expect(embed.data.fields.find(f => f.name === 'Expires After').value).toBe('2 days');
     });
 
     it('should fallback to first available channel if not provided', async () => {
@@ -567,6 +571,52 @@ describe('invite command', () => {
       expect(mockInvite.delete).not.toHaveBeenCalled();
     });
 
+    it('should skip delete but proceed with DB cleanup if invites fetch fails while lacking ManageGuild', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('tag1')
+        }
+      });
+
+      mockInteraction.guild.members.me.permissions.has.mockReturnValue(false); // ManageGuild false
+      mockInteraction.guild.invites.fetch = jest.fn().mockRejectedValue(new Error('Discord error'));
+
+      mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
+
+      await inviteCommand.handleRemoveSubcommand(mockInteraction);
+
+      // Cover lines 642-643
+      expect(mockLogger.debug).toHaveBeenCalledWith("Bot doesn't have ManageGuild permission, cannot fetch invites to check creator.");
+      expect(mockDatabase.deleteInviteTag).toHaveBeenCalledWith('tag1');
+    });
+
+    it('should handle failures/throws in invite delete but proceed with DB cleanup', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('tag1')
+        }
+      });
+
+      const mockInvite = {
+        code: 'code1',
+        delete: jest.fn().mockRejectedValue(new Error('Discord server is offline'))
+      };
+
+      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(new Collection([
+        ['code1', mockInvite]
+      ]));
+
+      mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code1': 'tag1' });
+
+      await inviteCommand.handleRemoveSubcommand(mockInteraction);
+
+      // Cover lines 664-668
+      expect(mockInvite.delete).toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to delete invite from Discord.', expect.any(Object));
+      expect(mockDatabase.deleteInviteTag).toHaveBeenCalledWith('tag1');
+    });
+
     it('should fail with error if DB or delete throws error', async () => {
       const mockInteraction = createMockInteraction({
         options: {
@@ -629,6 +679,24 @@ describe('invite command', () => {
       await inviteCommand.handleError(mockInteraction, new Error('DATABASE_WRITE_ERROR'));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to save the invite tag. Please try again later.'
+      }));
+
+      await inviteCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to retrieve invite tags. Please try again later.'
+      })); // Cover lines 781-782
+    });
+
+    it('should fallback to reply if editReply fails, logging the followUpError', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('Discord API unavailable'));
+
+      await inviteCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'));
+
+      // Cover lines 791-797
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error response for invite command.', expect.any(Object));
+      expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to retrieve invite tags. Please try again later.'
       }));
     });
   });

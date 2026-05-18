@@ -245,5 +245,42 @@ describe('reminder command', () => {
         content: '⚠️ Reminder configuration is incomplete. Please set up the reminder channel first.'
       }));
     });
+
+    it('should reply with correct message for DATABASE_READ_ERROR', async () => {
+      const mockInteraction = createMockInteraction();
+      await reminderCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to retrieve reminder settings. Please try again later.'
+      })); // Cover line 277
+    });
+
+    it('should reply with correct message for DATABASE_WRITE_ERROR', async () => {
+      const mockInteraction = createMockInteraction();
+      await reminderCommand.handleError(mockInteraction, new Error('DATABASE_WRITE_ERROR'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to update reminder settings. Please try again later.'
+      })); // Cover line 279
+    });
+
+    it('should handle unexpected errors', async () => {
+      const mockInteraction = createMockInteraction();
+      await reminderCommand.handleError(mockInteraction, new Error('some other error'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ An unexpected error occurred while managing reminders. Please try again later.'
+      }));
+    });
+
+    it('should fallback to reply if editReply throws an error inside handleError', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('Discord interaction failed'));
+
+      await reminderCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'));
+
+      // Cover lines 292-298
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error response for reminder command.', expect.any(Object));
+      expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to retrieve reminder settings. Please try again later.'
+      }));
+    });
   });
 });

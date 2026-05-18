@@ -51,7 +51,7 @@ module.exports = {
         };
         
         const typeKey = botStatusType.toLowerCase().trim();
-        const activityType = activityTypeMap[typeKey] || ActivityType.Watching;
+        const activityType = activityTypeMap[typeKey] !== undefined ? activityTypeMap[typeKey] : ActivityType.Watching;
         botActivity = {
           name: statusName,
           type: activityType

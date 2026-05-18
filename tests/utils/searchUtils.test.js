@@ -128,5 +128,85 @@ describe('searchUtils', () => {
       const callArgs = mockInteraction.editReply.mock.calls[1][0];
       expect(callArgs.components[0].components[0].data.disabled).toBe(true);
     });
+
+    it('should handle custom button labels and emojis in options', async () => {
+      const options = {
+        prevEmoji: '👈',
+        nextEmoji: '👉',
+        prevLabel: 'Custom Prev',
+        nextLabel: 'Custom Next',
+        buttonStyle: ButtonStyle.Danger
+      };
+      await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger, options);
+      
+      expect(mockInteraction.editReply).toHaveBeenCalled();
+      const callArgs = mockInteraction.editReply.mock.calls[0][0];
+      expect(callArgs.components[0].components[0].data.emoji.name).toBe('👈');
+      expect(callArgs.components[0].components[0].data.label).toBe('Custom Prev');
+      expect(callArgs.components[0].components[0].data.style).toBe(ButtonStyle.Danger);
+
+      // Trigger 'end' to cover disable path with emoji/label options too
+      await collectorEmitter.listeners['end']({ size: 0 });
+      expect(mockInteraction.editReply).toHaveBeenCalledTimes(2);
+      const endCallArgs = mockInteraction.editReply.mock.calls[1][0];
+      expect(endCallArgs.components[0].components[0].data.emoji.name).toBe('👈');
+      expect(endCallArgs.components[0].components[0].data.label).toBe('Custom Prev');
+    });
+
+    it('should handle custom emojis with default labels in options', async () => {
+      const options = {
+        prevEmoji: '👈',
+        nextEmoji: '👉'
+      };
+      await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger, options);
+      
+      const callArgs = mockInteraction.editReply.mock.calls[0][0];
+      expect(callArgs.components[0].components[0].data.emoji.name).toBe('👈');
+      expect(callArgs.components[0].components[0].data.label).toBeUndefined(); // skipped label setting because label is default ◀
+
+      await collectorEmitter.listeners['end']({ size: 0 });
+      const endCallArgs = mockInteraction.editReply.mock.calls[1][0];
+      expect(endCallArgs.components[0].components[0].data.emoji.name).toBe('👈');
+      expect(endCallArgs.components[0].components[0].data.label).toBeUndefined();
+    });
+
+    it('should ignore unknown button click types', async () => {
+      await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger);
+      
+      const mockButtonInteraction = {
+        customId: 'test_other_user-123_123',
+        user: { id: 'user-123' },
+        update: jest.fn().mockResolvedValue(true)
+      };
+
+      await collectorEmitter.listeners['collect'](mockButtonInteraction);
+      expect(mockButtonInteraction.update).toHaveBeenCalled();
+    });
+
+    it('should filter correct interactions', async () => {
+      await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger);
+      
+      const collectorOptions = mockMessage.createMessageComponentCollector.mock.calls[0][0];
+      const filter = collectorOptions.filter;
+      
+      expect(filter({ customId: 'test_prev_user-123_123' })).toBe(true);
+      expect(filter({ customId: 'test_next_user-123_123' })).toBe(true);
+      expect(filter({ customId: 'other_prev_user-123_123' })).toBe(false);
+      expect(filter({ customId: 'test_prev_other-456_123' })).toBe(false);
+    });
+
+    it('should catch and log error if editReply fails on collector end', async () => {
+      await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger);
+      
+      mockInteraction.editReply.mockRejectedValueOnce(new Error('Discord API Error'));
+      
+      // Trigger 'end'
+      await collectorEmitter.listeners['end']({ size: 1 });
+      
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to update timed out message.',
+        expect.any(Object)
+      );
+    });
   });
 });

@@ -116,6 +116,31 @@ describe('messageReactionAdd event', () => {
       });
     });
 
+    it('should log warn and throw if message is null/undefined', async () => {
+      let messageAccessCount = 0;
+      const mockReaction = {
+        partial: false,
+        emoji: { name: '🇺🇸' },
+        get message() {
+          messageAccessCount++;
+          if (messageAccessCount === 1) {
+            return { id: 'msg-1' };
+          }
+          return null;
+        }
+      };
+      const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+      mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+      mockLanguageUtils.getLanguageInfo.mockReturnValue({ code: 'en', name: 'English' });
+
+      await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+      // Cover lines 97-101
+      expect(mockLogger.warn).toHaveBeenCalledWith('Message not found for translation.', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message', expect.any(Object));
+    });
+
     it('should reply with error if message content is empty', async () => {
       const mockReaction = {
         partial: false,
@@ -136,7 +161,7 @@ describe('messageReactionAdd event', () => {
       });
     });
 
-    it('should translate successfully and reply with the embed', async () => {
+    it('should translate successfully and reply with the embed (guild member highest role color)', async () => {
       const mockReaction = {
         partial: false,
         emoji: { name: '🇺🇸' },
@@ -186,6 +211,52 @@ describe('messageReactionAdd event', () => {
           footer: { text: 'Translation requested by: User#1234' }
         })]
       });
+    });
+
+    it('should translate successfully with default color if message has no guild, no member, or highest role has color 0', async () => {
+      const testCases = [
+        { guild: null }, // no guild
+        { guild: { members: { cache: { get: () => null } } } }, // no member
+        { guild: { members: { cache: { get: () => ({ roles: { highest: { color: 0 } } }) } } } } // highest role color 0
+      ];
+
+      mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+      mockLanguageUtils.getLanguageInfo.mockReturnValue({ code: 'en', name: 'English' });
+
+      mockAxios.post.mockResolvedValue({
+        data: {
+          data: {
+            translations: [
+              { translatedText: 'Hello' }
+            ]
+          }
+        }
+      });
+
+      for (const testCase of testCases) {
+        const mockReaction = {
+          partial: false,
+          emoji: { name: '🇺🇸' },
+          message: {
+            id: 'msg-1',
+            content: 'Hola',
+            reply: jest.fn().mockResolvedValue(),
+            guild: testCase.guild
+          }
+        };
+        const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+        await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+        // Check if embed color is 0x0099ff (default color)
+        expect(mockReaction.message.reply).toHaveBeenCalledWith({
+          embeds: [expect.objectContaining({
+            color: 0x0099ff,
+            title: 'Translation to English 🇺🇸',
+            description: 'Hello'
+          })]
+        });
+      }
     });
 
     it('should handle Google translation API 403 error specifically', async () => {

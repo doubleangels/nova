@@ -139,6 +139,30 @@ describe('spamMode command', () => {
       const warningField = embed.data.fields.find(f => f.name === 'Warning Channel');
       expect(warningField.value).toBe('⚠️ Not set!');
     });
+
+    it('should display status when enabled with 1 hour singular form and no warning channel', async () => {
+      const mockInteraction = createMockInteraction({
+        guild: {
+          channels: {
+            cache: new Collection()
+          }
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'spam_mode_enabled') return true;
+        if (key === 'spam_mode_threshold') return '3';
+        if (key === 'spam_mode_window_hours') return '1';
+        if (key === 'spam_mode_channel_id') return null;
+        return null;
+      });
+
+      await spamModeCommand.handleStatusSubcommand(mockInteraction);
+
+      // Cover line 278
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.description).toBe('Spam configuration is incomplete.');
+    });
   });
 
   describe('handleSetSubcommand', () => {
@@ -194,6 +218,74 @@ describe('spamMode command', () => {
       expect(mockDatabase.setValue).not.toHaveBeenCalledWith('spam_mode_threshold', expect.any(Number));
       expect(mockDatabase.setValue).not.toHaveBeenCalledWith('spam_mode_window_hours', expect.any(Number));
     });
+
+    it('should recover displayWarningChannel from guild cache when not provided as option but set in db', async () => {
+      const mockChannel = { id: 'ch-db-warn', toString: () => '<#ch-db-warn>' };
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(true),
+          getInteger: jest.fn().mockImplementation((name) => {
+            if (name === 'threshold') return 3;
+            if (name === 'window') return 1; // 1 hour singular form
+            return null;
+          }),
+          getChannel: jest.fn().mockReturnValue(null) // not provided
+        },
+        guild: {
+          channels: {
+            cache: new Collection([['ch-db-warn', mockChannel]])
+          }
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'spam_mode_enabled') return true;
+        if (key === 'spam_mode_threshold') return '3';
+        if (key === 'spam_mode_window_hours') return '4';
+        if (key === 'spam_mode_channel_id') return 'ch-db-warn';
+        return null;
+      });
+
+      await spamModeCommand.handleSetSubcommand(mockInteraction);
+
+      // Cover line 148
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const warningField = embed.data.fields.find(f => f.name === 'Warning Channel');
+      expect(warningField.value).toBe('<#ch-db-warn>');
+    });
+
+    it('should set spam mode to enabled but with incomplete warning channel settings', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(true),
+          getInteger: jest.fn().mockImplementation((name) => {
+            if (name === 'threshold') return 3;
+            if (name === 'window') return 12;
+            return null;
+          }),
+          getChannel: jest.fn().mockReturnValue(null) // not provided
+        },
+        guild: {
+          channels: {
+            cache: new Collection()
+          }
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'spam_mode_enabled') return true;
+        if (key === 'spam_mode_threshold') return '3';
+        if (key === 'spam_mode_window_hours') return '4';
+        if (key === 'spam_mode_channel_id') return null; // not set
+        return null;
+      });
+
+      await spamModeCommand.handleSetSubcommand(mockInteraction);
+
+      // Cover line 315
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.description).toBe('Spam configuration is incomplete.');
+    });
   });
 
   describe('getCurrentSettings', () => {
@@ -240,6 +332,51 @@ describe('spamMode command', () => {
       await spamModeCommand.handleError(mockInteraction, new Error('unexpected error'));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ An unexpected error occurred while managing spam mode settings. Please try again later.'
+      }));
+    });
+
+    it('should reply with correct message for DATABASE_READ_ERROR', async () => {
+      const mockInteraction = createMockInteraction();
+      await spamModeCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to retrieve spam mode settings. Please try again later.'
+      }));
+    });
+
+    it('should reply with correct message for DATABASE_WRITE_ERROR', async () => {
+      const mockInteraction = createMockInteraction();
+      await spamModeCommand.handleError(mockInteraction, new Error('DATABASE_WRITE_ERROR'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to update spam mode settings. Please try again later.'
+      })); // Cover line 344
+    });
+
+    it('should reply with correct message for PERMISSION_DENIED', async () => {
+      const mockInteraction = createMockInteraction();
+      await spamModeCommand.handleError(mockInteraction, new Error('PERMISSION_DENIED'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: "⚠️ You don't have permission to manage spam mode settings."
+      })); // Cover line 346
+    });
+
+    it('should reply with correct message for INVALID_SETTINGS', async () => {
+      const mockInteraction = createMockInteraction();
+      await spamModeCommand.handleError(mockInteraction, new Error('INVALID_SETTINGS'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Invalid spam mode settings provided.'
+      })); // Cover line 348
+    });
+
+    it('should fallback to reply if editReply throws an error inside handleError', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('Discord interaction failed'));
+
+      await spamModeCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'));
+
+      // Cover lines 357-363
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error response for spammode command.', expect.any(Object));
+      expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ Failed to retrieve spam mode settings. Please try again later.'
       }));
     });
   });

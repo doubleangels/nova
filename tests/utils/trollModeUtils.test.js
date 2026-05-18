@@ -48,7 +48,7 @@ describe('trollModeUtils', () => {
     it('should return false if account is newer than required age', async () => {
       mockDatabase.getValue.mockImplementation(async (key) => {
         if (key === 'troll_mode_enabled') return true;
-        if (key === 'troll_mode_account_age') return '30';
+        // troll_mode_account_age is null -> falls back to 30
         return null;
       });
       // 10 days old
@@ -67,7 +67,7 @@ describe('trollModeUtils', () => {
 
   describe('performKick', () => {
     it('should send DM and kick user', async () => {
-      mockDatabase.getValue.mockResolvedValue('30'); // troll_mode_account_age
+      mockDatabase.getValue.mockResolvedValue(null); // falls back to 30
       mockMember.user.createdAt = dayjs().subtract(10, 'day').toDate();
 
       await trollModeUtils.performKick(mockMember);
@@ -84,6 +84,16 @@ describe('trollModeUtils', () => {
       await trollModeUtils.performKick(mockMember);
 
       expect(mockMember.kick).toHaveBeenCalledWith('Account age does not meet server requirements.');
+    });
+
+    it('should log and throw error if kick fails', async () => {
+      mockDatabase.getValue.mockResolvedValue('30');
+      mockMember.user.createdAt = dayjs().subtract(10, 'day').toDate();
+      const kickError = new Error('Kick permissions denied');
+      mockMember.kick.mockRejectedValue(kickError);
+
+      await expect(trollModeUtils.performKick(mockMember)).rejects.toThrow('Kick permissions denied');
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to kick member.', expect.any(Object));
     });
   });
 });

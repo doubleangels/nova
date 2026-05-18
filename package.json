@@ -9,6 +9,7 @@
     "set-value": "node set-value.js",
     "remove-value": "node remove-value.js",
     "list-values": "node list-values.js",
+    "prune-db": "node prune-db.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"

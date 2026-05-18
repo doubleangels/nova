@@ -51,7 +51,7 @@ function validateAndNormalizeColor(colorHex, logger = null) {
  * @returns {number} The decimal representation of the hex color
  */
 function hexToDecimal(hexColor) {
-    const validation = validateAndNormalizeColor(hexColor);
+    const validation = module.exports.validateAndNormalizeColor(hexColor);
     if (!validation.success) {
         throw new Error("⚠️ Invalid color format provided.");
     }
