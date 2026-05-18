@@ -38,7 +38,7 @@ describe('Spam Detection and Moderation Button Flow Integration', () => {
     jest.doMock('../../utils/database', () => mockDatabase);
 
     mockConfig = {
-      noobiesRoleId: 'noobie-role',
+      newMemberRoleId: 'noobie-role',
       memberFrenRoleId: 'fren-role',
       spamLogsChannelId: 'spam-logs-123'
     };

@@ -117,14 +117,14 @@ module.exports = {
         });
       }
 
-      // Check and log NOOBIES tracking status
-      if (config.noobiesRoleId && config.givePermsFrenRoleId) {
-        logger.info('Noobie message tracking initialized.', {
-          noobiesRoleId: config.noobiesRoleId,
-          frenRoleId: config.givePermsFrenRoleId
+      // Check and log New Member tracking status
+      if (config.newMemberRoleId && config.memberFrenRoleId) {
+        logger.info('New Member message tracking initialized.', {
+          newMemberRoleId: config.newMemberRoleId,
+          frenRoleId: config.memberFrenRoleId
         });
       } else {
-        logger.warn('Noobie message tracking is disabled (missing role IDs in config).');
+        logger.warn('New Member message tracking is disabled (missing role IDs in config).');
       }
 
       logger.info('Bot is ready and all systems are initialized.');

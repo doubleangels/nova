@@ -214,10 +214,10 @@ async function processUserMessage(message) {
     const shouldHaveNoobiesRole = messageCount < 100;
 
     if (shouldHaveNoobiesRole && !hasNoobiesRole) {
-      await message.member.roles.add(noobiesRoleId, 'Assigned Noobies role automatically (< 100 messages)');
+      await message.member.roles.add(newMemberRoleId, 'Assigned New Member role automatically (< 100 messages)');
       logger.debug('Assigned Noobies role.', { userId: message.author.id, messageCount });
     } else if (!shouldHaveNoobiesRole && hasNoobiesRole) {
-      await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (>= 100 messages)');
+      await message.member.roles.remove(newMemberRoleId, 'Removed New Member role automatically (>= 100 messages)');
       logger.debug('Removed Noobies role.', { userId: message.author.id, messageCount });
       // Delete message count from database since they passed the threshold
       await deleteMessageCount(message.author.id);

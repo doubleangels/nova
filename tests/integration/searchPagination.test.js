@@ -20,7 +20,7 @@ describe('Search Pagination Integration', () => {
 
     mockConfig = {
       returningMemberRoleId: 'returning-role',
-      noobiesRoleId: 'noobie-role',
+      newMemberRoleId: 'noobie-role',
       memberFrenRoleId: 'fren-role'
     };
     jest.doMock('../../config', () => mockConfig);

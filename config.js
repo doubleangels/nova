@@ -31,7 +31,7 @@ require('dotenv').config();
  * @property {string} malClientId - MyAnimeList API client ID (from MAL_CLIENT_ID env var)
  * @property {string} returningMemberRoleId - Role ID for members who've been in server before (from RETURNING_MEMBER_ROLE_ID env var)
  * @property {string} permissionBenchmarkRoleId - Role ID to compare permissions against (from PERMISSION_BENCHMARK_ROLE_ID env var)
- * @property {string} noobiesRoleId - Role ID for Noobies role assigned to users with <100 messages (from NOOBIES_ROLE_ID env var)
+ * @property {string} newMemberRoleId - Role ID for New Member role assigned to users with <100 messages (from NEW_MEMBER_ROLE_ID env var)
  * @property {string} omdbApiKey - OMDB API key for movie information (from OMDB_API_KEY env var)
  * @property {string} pirateWeatherApiKey - Pirate Weather API key for weather information (from PIRATEWEATHER_API_KEY env var)
  * @property {string} redditClientId - Reddit API client ID (from REDDIT_CLIENT_ID env var)
@@ -87,7 +87,7 @@ module.exports = {
   // Role ID to use as permission comparison benchmark
   permissionBenchmarkRoleId: process.env.PERMISSION_BENCHMARK_ROLE_ID,
   // Role ID for Noobies role assigned to users with <100 messages
-  noobiesRoleId: process.env.NOOBIES_ROLE_ID,
+  newMemberRoleId: process.env.NEW_MEMBER_ROLE_ID,
   // API key for Open Movie Database
   omdbApiKey: process.env.OMDB_API_KEY,
   // API key for PirateWeather forecast service
@@ -121,7 +121,7 @@ const REQUIRED_ENV_VARS = [
   'MAL_CLIENT_ID',
   'RETURNING_MEMBER_ROLE_ID',
   'PERMISSION_BENCHMARK_ROLE_ID',
-  'NOOBIES_ROLE_ID',
+  'NEW_MEMBER_ROLE_ID',
   'OMDB_API_KEY',
   'PIRATEWEATHER_API_KEY',
   'REDDIT_CLIENT_ID',

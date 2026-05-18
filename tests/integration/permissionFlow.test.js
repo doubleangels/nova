@@ -18,7 +18,8 @@ describe('Permission and Role Assignment Flow Integration', () => {
 
     mockConfig = {
       customRolePositioningAnchorId: 'ref-role-id',
-      memberFrenRoleId: 'fren-role-id'
+      memberFrenRoleId: 'fren-role-id',
+      newMemberRoleId: 'noobie-role-id'
     };
     jest.doMock('../../config', () => mockConfig);
 

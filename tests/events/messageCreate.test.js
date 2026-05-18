@@ -51,7 +51,7 @@ describe('messageCreate event', () => {
     jest.doMock('../../utils/spamModeUtils', () => mockSpamModeUtils);
 
     mockConfig = {
-      noobiesRoleId: 'role-noob',
+      newMemberRoleId: 'role-noob',
       memberFrenRoleId: 'role-fren'
     };
     jest.doMock('../../config', () => mockConfig);
@@ -277,7 +277,7 @@ describe('messageCreate event', () => {
 
   describe('processUserMessage role assignment', () => {
     it('should ignore if roles are not configured', async () => {
-      mockConfig.noobiesRoleId = null;
+      mockConfig.newMemberRoleId = null;
       mockConfig.givePermsFrenRoleId = null;
 
       const mockMessage = {

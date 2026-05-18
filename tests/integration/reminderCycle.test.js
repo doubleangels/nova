@@ -27,7 +27,7 @@ describe('Reminder Cycle Integration', () => {
     jest.doMock('../../instrument', () => mockInstrument);
 
     mockConfig = {
-      noobiesRoleId: 'noobie-role',
+      newMemberRoleId: 'noobie-role',
       memberFrenRoleId: 'fren-role'
     };
     jest.doMock('../../config', () => mockConfig);

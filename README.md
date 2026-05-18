@@ -69,7 +69,7 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `GIVE_PERMS_POSITION_ABOVE_ROLE_ID`
 - `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID`
 - `NEWUSER_PERMISSION_DIFF_ROLE_ID`
-- `NOOBIES_ROLE_ID`
+- `NEW_MEMBER_ROLE_ID`
 - `GOOGLE_API_KEY`
 - `GUILD_NAME`
 - `IMAGE_SEARCH_ENGINE_ID`

@@ -81,7 +81,7 @@ module.exports = {
 
       // Assign Noobies role immediately on join (new members have 0 messages and will qualify)
       // This ensures the role exists from the moment they join, not just after their first message
-      if (config.noobiesRoleId && config.givePermsFrenRoleId) {
+      if (config.newMemberRoleId && config.memberFrenRoleId) {
         const hasFrenRole = member.roles.cache.has(config.givePermsFrenRoleId);
         if (!hasFrenRole) {
           await member.roles.add(config.noobiesRoleId, 'Assigned Noobies role on join (< 100 messages, no Fren role)').catch(err => {

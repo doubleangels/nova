@@ -29,7 +29,7 @@ describe('ready event', () => {
     mockConfig = {
       botStatus: null,
       botStatusType: null,
-      noobiesRoleId: null,
+      newMemberRoleId: null,
       memberFrenRoleId: null
     };
     jest.doMock('../../config', () => mockConfig);
@@ -188,7 +188,7 @@ describe('ready event', () => {
   });
 
   it('should log info if noobie role settings are present', async () => {
-    mockConfig.noobiesRoleId = 'role-1';
+    mockConfig.newMemberRoleId = 'role-1';
     mockConfig.givePermsFrenRoleId = 'role-2';
 
     const mockClient = {
