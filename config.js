@@ -24,6 +24,7 @@ require('dotenv').config();
  * @property {string} givePermsFrenRoleId - Role ID for Fren role (from GIVE_PERMS_FREN_ROLE_ID env var)
  * @property {string} givePermsPositionAboveRoleId - Role ID for permission management (from GIVE_PERMS_POSITION_ABOVE_ROLE_ID env var)
  * @property {string} googleApiKey - Google API key for search functionality (from GOOGLE_API_KEY env var)
+ * @property {string} deeplApiKey - DeepL API key for translation functionality (from DEEPL_API_KEY env var)
  * @property {string} guildName - Guild name (from GUILD_NAME env var, default: 'Da Frens')
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images (from IMAGE_SEARCH_ENGINE_ID env var)
  * @property {string} logLevel - Logging level (from LOG_LEVEL env var, default: 'info')
@@ -71,6 +72,8 @@ module.exports = {
   givePermsPositionAboveRoleId: process.env.GIVE_PERMS_POSITION_ABOVE_ROLE_ID,
   // API key for Google services
   googleApiKey: process.env.GOOGLE_API_KEY,
+  // API key for DeepL translation service
+  deeplApiKey: process.env.DEEPL_API_KEY,
   // Name of the guild/server
   guildName: process.env.GUILD_NAME || 'Da Frens',
   // Google Custom Search Engine ID for image searches

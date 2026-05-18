@@ -117,15 +117,18 @@ async function handleTranslationRequest(reaction, user) {
     });
 
     const response = await axios.post(
-      `https://translation.googleapis.com/language/translate/v2?key=${config.googleApiKey}`,
+      'https://api-free.deepl.com/v1/translate',
+      null,
       {
-        q: originalText,
-        target: languageInfo.code,
-        format: 'text'
+        params: {
+          auth_key: config.deeplApiKey,
+          text: originalText,
+          target_lang: languageInfo.code.toUpperCase()
+        }
       }
     );
 
-    const translatedText = response.data.data.translations[0].translatedText;
+    const translatedText = response.data.translations[0].text;
     logger.debug('Translation API response received successfully.', {
       targetLanguage: languageInfo.code,
       translatedLength: translatedText.length,

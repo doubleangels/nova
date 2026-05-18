@@ -29,7 +29,7 @@ describe('messageReactionAdd event', () => {
     jest.doMock('../../utils/languageUtils', () => mockLanguageUtils);
 
     mockConfig = {
-      googleApiKey: 'google-key-123'
+      deeplApiKey: 'deepl-key-123'
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -189,19 +189,24 @@ describe('messageReactionAdd event', () => {
 
       mockAxios.post.mockResolvedValue({
         data: {
-          data: {
-            translations: [
-              { translatedText: 'Hello' }
-            ]
-          }
+          translations: [
+            { text: 'Hello' }
+          ]
         }
       });
 
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockAxios.post).toHaveBeenCalledWith(
-        'https://translation.googleapis.com/language/translate/v2?key=google-key-123',
-        { q: 'Hola', target: 'en', format: 'text' }
+        'https://api-free.deepl.com/v1/translate',
+        null,
+        {
+          params: {
+            auth_key: 'deepl-key-123',
+            text: 'Hola',
+            target_lang: 'EN'
+          }
+        }
       );
       expect(mockReaction.message.reply).toHaveBeenCalledWith({
         embeds: [expect.objectContaining({
@@ -225,11 +230,9 @@ describe('messageReactionAdd event', () => {
 
       mockAxios.post.mockResolvedValue({
         data: {
-          data: {
-            translations: [
-              { translatedText: 'Hello' }
-            ]
-          }
+          translations: [
+            { text: 'Hello' }
+          ]
         }
       });
 
