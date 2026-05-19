@@ -247,31 +247,7 @@ function buildSpamWarningPayload(user, occurrences, dmSent) {
 // ── Core user-state helpers ───────────────────────────────────────────────────
 
 /**
- * Checks if a user is still within the spam-mode tracking window.
- * @param {string} userId
- * @returns {Promise<{isNew: boolean, timeRemaining: number|null}>}
- */
-async function isNewUser(userId) {
-  try {
-    const joinTime = await getSpamModeJoinTime(userId);
-    if (!joinTime) return { isNew: false, timeRemaining: null };
-
-    let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
-    if (!windowHours) windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-
-    const windowMs = windowHours * 60 * 60 * 1000;
-    const timeSinceJoin = dayjs().diff(dayjs(joinTime));
-    const timeRemaining = windowMs - timeSinceJoin;
-
-    return {
-      isNew: timeRemaining > 0,
-      timeRemaining: timeRemaining > 0 ? timeRemaining : null
-    };
-  } catch (error) {
-    logger.error('Error checking if user is new', { err: error, userId });
-    return { isNew: false, timeRemaining: null };
-  }
-}
+// ── Core user-state helpers ───────────────────────────────────────────────────
 
 /**
  * Removes stale message occurrences from in-memory tracking for one user.
@@ -310,8 +286,20 @@ async function trackNewUserMessage(message) {
     const userId = message.author.id;
 
     // ── Is this user still in the new-user window? ────────────────────────
-    const { isNew, timeRemaining } = await isNewUser(userId);
-    if (!isNew) {
+    const joinTime = await getSpamModeJoinTime(userId);
+    if (!joinTime) {
+      // Exit immediately. This user is not being monitored, so we avoid any delete or write database queries!
+      return;
+    }
+
+    let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
+    if (!windowHours) windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
+    const windowMs = windowHours * 60 * 60 * 1000;
+
+    const timeSinceJoin = dayjs().diff(dayjs(joinTime));
+    const timeRemaining = windowMs - timeSinceJoin;
+
+    if (timeRemaining <= 0) {
       logger.debug('Spam mode: User is not new, removing from tracking.', { userId });
       await removeSpamModeJoinTime(userId);
       return;
@@ -370,17 +358,6 @@ async function trackNewUserMessage(message) {
 
     const normalizedContent = normalizeContent(contentWithoutEmotes);
     if (normalizedContent.length === 0) return;
-
-    // ── Fetch user's join time and window config ──────────────────────────
-    const joinTime = await getSpamModeJoinTime(userId);
-    if (!joinTime) {
-      logger.debug('Spam mode: User not found in spam mode tracking, skipping.', { userId });
-      return;
-    }
-
-    let windowHours = parseInt(await getValue('spam_mode_window_hours'), 10);
-    if (!windowHours) windowHours = parseInt(await getValue('mute_mode_kick_time_hours'), 10) || 4;
-    const windowMs = windowHours * 60 * 60 * 1000;
 
     // Base threshold from config (default: 3)
     const baseThreshold = parseInt(await getValue('spam_mode_threshold'), 10) || 3;

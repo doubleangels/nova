@@ -65,15 +65,15 @@ module.exports = {
       }
 
       // Assign "been in server before" role only to returning members (if they have the role, they're not new)
-      if (config.newUserBeenInServerBeforeRoleId) {
+      if (config.returningMemberRoleId) {
         const returning = await isFormerMember(member.id);
         if (returning) {
-          await member.roles.add(config.newUserBeenInServerBeforeRoleId).catch(err => {
+          await member.roles.add(config.returningMemberRoleId).catch(err => {
             logger.warn('Could not add been-in-server-before role on re-join.', {
               err: err.message,
               guildId: member.guild.id,
               userId: member.id,
-              roleId: config.newUserBeenInServerBeforeRoleId
+              roleId: config.returningMemberRoleId
             });
           });
         }
@@ -82,14 +82,14 @@ module.exports = {
       // Assign Noobies role immediately on join (new members have 0 messages and will qualify)
       // This ensures the role exists from the moment they join, not just after their first message
       if (config.newMemberRoleId && config.memberFrenRoleId) {
-        const hasFrenRole = member.roles.cache.has(config.givePermsFrenRoleId);
+        const hasFrenRole = member.roles.cache.has(config.memberFrenRoleId);
         if (!hasFrenRole) {
-          await member.roles.add(config.noobiesRoleId, 'Assigned Noobies role on join (< 100 messages, no Fren role)').catch(err => {
+          await member.roles.add(config.newMemberRoleId, 'Assigned Noobies role on join (< 100 messages, no Fren role)').catch(err => {
             logger.warn('Could not add Noobies role on join.', {
               err: err.message,
               guildId: member.guild.id,
               userId: member.id,
-              roleId: config.noobiesRoleId
+              roleId: config.newMemberRoleId
             });
           });
           logger.debug('Assigned Noobies role on member join.', { userId: member.id });

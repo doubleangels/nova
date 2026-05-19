@@ -19,9 +19,9 @@ describe('Invite Tracking Integration Flow', () => {
     jest.doMock('../../logger', () => () => mockLogger);
 
     mockConfig = {
-      newUserBeenInServerBeforeRoleId: 'returning-role',
-      noobiesRoleId: 'noobie-role',
-      givePermsFrenRoleId: 'fren-role',
+      returningMemberRoleId: 'returning-role',
+      newMemberRoleId: 'noobie-role',
+      memberFrenRoleId: 'fren-role',
       baseEmbedColor: 0x00ff00
     };
     jest.doMock('../../config', () => mockConfig);

@@ -1,9 +1,16 @@
 const { captureError, closeSentry } = require('./instrument');
-const { Client, Collection, GatewayIntentBits } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, Options } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
+
+// Configure global HTTP and HTTPS Keep-Alive agents for Axios
+const http = require('http');
+const https = require('https');
+const axios = require('axios');
+axios.defaults.httpAgent = new http.Agent({ keepAlive: true });
+axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 
 // Log the base embed color on startup for debugging
 if (config.baseEmbedColor) {
@@ -23,7 +30,16 @@ const BOT_INTENTS = [
 
 /** @type {Client} Discord client instance */
 const client = new Client({
-  intents: BOT_INTENTS
+  intents: BOT_INTENTS,
+  makeCache: Options.cacheWithLimits({
+    MessageManager: 50,
+    ThreadManager: 50,
+    GuildMemberManager: 50,
+    UserManager: 50,
+    PresenceManager: 0,
+    VoiceStateManager: 0,
+    ReactionManager: 0,
+  })
 });
 
 /** @type {Collection<string, Command>} Collection of registered commands */

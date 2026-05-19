@@ -282,7 +282,7 @@ describe('guildMemberAdd event', () => {
     });
 
     it('should skip Noobies role assignment if roles config are missing', async () => {
-      mockConfig.noobiesRoleId = null;
+      mockConfig.newMemberRoleId = null;
 
       const mockMember = {
         id: 'user-123',

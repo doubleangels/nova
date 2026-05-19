@@ -278,7 +278,7 @@ describe('messageCreate event', () => {
   describe('processUserMessage role assignment', () => {
     it('should ignore if roles are not configured', async () => {
       mockConfig.newMemberRoleId = null;
-      mockConfig.givePermsFrenRoleId = null;
+      mockConfig.memberFrenRoleId = null;
 
       const mockMessage = {
         partial: false,
@@ -403,7 +403,7 @@ describe('messageCreate event', () => {
 
       expect(mockMember.roles.add).not.toHaveBeenCalled();
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping Noobies role check due to message count DB error.'),
+        expect.stringContaining('Skipping New Member role check due to message count DB error.'),
         expect.any(Object)
       );
     });

@@ -37,6 +37,13 @@ module.exports = {
         }
       }
 
+      if (message.author?.bot || message.webhookId) {
+        if (message.embeds?.length > 0) {
+          await checkForBumpMessages(message);
+        }
+        return;
+      }
+
       logger.debug("Message received from user.", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
@@ -181,20 +188,20 @@ async function processUserMessage(message) {
   if (message.webhookId || !message.author || message.author.bot) return;
 
   try {
-    const { noobiesRoleId, givePermsFrenRoleId: frenRoleId } = config;
+    const { newMemberRoleId, memberFrenRoleId: frenRoleId } = config;
 
     // Check if roles are configured
-    if (!noobiesRoleId || !frenRoleId) return;
+    if (!newMemberRoleId || !frenRoleId) return;
 
     if (!message.member) return; // Happens sometimes in DM or uncached members
 
     const hasFrenRole = message.member.roles.cache.has(frenRoleId);
-    const hasNoobiesRole = message.member.roles.cache.has(noobiesRoleId);
+    const hasNoobiesRole = message.member.roles.cache.has(newMemberRoleId);
 
     if (hasFrenRole) {
       if (hasNoobiesRole) {
-        await message.member.roles.remove(noobiesRoleId, 'Removed Noobies role automatically (has Fren role)');
-        logger.debug('Removed Noobies role.', { userId: message.author.id });
+        await message.member.roles.remove(newMemberRoleId, 'Removed New Member role automatically (has Fren role)');
+        logger.debug('Removed New Member role.', { userId: message.author.id });
       }
       // Only delete the message count once if it actually exists — avoids a no-op DB call on every message
       const existingCount = await getMessageCount(message.author.id);
@@ -208,17 +215,17 @@ async function processUserMessage(message) {
     const messageCount = await incrementMessageCount(message.author.id);
     if (messageCount === null) {
       // DB error occurred — skip role logic to avoid making incorrect role decisions
-      logger.warn('Skipping Noobies role check due to message count DB error.', { userId: message.author.id });
+      logger.warn('Skipping New Member role check due to message count DB error.', { userId: message.author.id });
       return;
     }
     const shouldHaveNoobiesRole = messageCount < 100;
 
     if (shouldHaveNoobiesRole && !hasNoobiesRole) {
       await message.member.roles.add(newMemberRoleId, 'Assigned New Member role automatically (< 100 messages)');
-      logger.debug('Assigned Noobies role.', { userId: message.author.id, messageCount });
+      logger.debug('Assigned New Member role.', { userId: message.author.id, messageCount });
     } else if (!shouldHaveNoobiesRole && hasNoobiesRole) {
       await message.member.roles.remove(newMemberRoleId, 'Removed New Member role automatically (>= 100 messages)');
-      logger.debug('Removed Noobies role.', { userId: message.author.id, messageCount });
+      logger.debug('Removed New Member role.', { userId: message.author.id, messageCount });
       // Delete message count from database since they passed the threshold
       await deleteMessageCount(message.author.id);
     }

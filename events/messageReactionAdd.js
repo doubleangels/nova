@@ -28,6 +28,11 @@ module.exports = {
         return;
       }
 
+      const emojiName = reaction.emoji.name;
+      if (!isValidTranslationFlag(emojiName)) {
+        return;
+      }
+
       if (reaction.partial) {
         try {
           await reaction.fetch();

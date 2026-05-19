@@ -62,7 +62,7 @@ describe('spamModeUtils', () => {
     it('should ignore users not in spam mode', async () => {
       mockDatabase.getSpamModeJoinTime.mockResolvedValue(null);
       await spamModeUtils.trackNewUserMessage(mockMessage);
-      expect(mockDatabase.removeSpamModeJoinTime).toHaveBeenCalledWith(mockMessage.author.id);
+      expect(mockDatabase.removeSpamModeJoinTime).not.toHaveBeenCalled();
     });
 
     it('should remove users who are past their window', async () => {

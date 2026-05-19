@@ -54,12 +54,12 @@ describe('messageReactionAdd event', () => {
     const mockReaction = {
       partial: true,
       fetch: jest.fn().mockResolvedValue(),
-      emoji: { name: '😊' },
+      emoji: { name: '🇺🇸' },
       message: { id: 'msg-1' }
     };
     const mockUser = { bot: false, id: 'user-1' };
 
-    mockLanguageUtils.isValidTranslationFlag.mockReturnValue(false);
+    mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
 
     await messageReactionAddEvent.execute(mockReaction, mockUser);
 
@@ -70,10 +70,12 @@ describe('messageReactionAdd event', () => {
     const mockReaction = {
       partial: true,
       fetch: jest.fn().mockRejectedValue(new Error('Fetch fail')),
-      emoji: { name: '😊' },
+      emoji: { name: '🇺🇸' },
       message: { id: 'msg-1' }
     };
     const mockUser = { bot: false, id: 'user-1' };
+
+    mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
 
     await messageReactionAddEvent.execute(mockReaction, mockUser);
 
@@ -93,7 +95,7 @@ describe('messageReactionAdd event', () => {
 
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
-      expect(mockLogger.info).toHaveBeenCalledWith('Successfully processed reaction from user.', expect.any(Object));
+      expect(mockLogger.info).not.toHaveBeenCalled();
     });
 
     it('should reply with error if flag is valid but language info is not found', async () => {

@@ -183,13 +183,13 @@ describe('ready event', () => {
     await readyEvent.execute(mockClient);
 
     expect(mockLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Noobie message tracking is disabled')
+      expect.stringContaining('New Member message tracking is disabled')
     );
   });
 
   it('should log info if noobie role settings are present', async () => {
     mockConfig.newMemberRoleId = 'role-1';
-    mockConfig.givePermsFrenRoleId = 'role-2';
+    mockConfig.memberFrenRoleId = 'role-2';
 
     const mockClient = {
       user: { tag: 'TestBot#1234', setActivity: jest.fn() },
@@ -203,7 +203,7 @@ describe('ready event', () => {
     await readyEvent.execute(mockClient);
 
     expect(mockLogger.info).toHaveBeenCalledWith(
-      expect.stringContaining('Noobie message tracking initialized.'),
+      expect.stringContaining('New Member message tracking initialized.'),
       expect.any(Object)
     );
   });
