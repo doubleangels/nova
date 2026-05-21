@@ -32,41 +32,29 @@ describe('wikipedia command', () => {
         }
       });
 
-      mockAxios.get
-        .mockResolvedValueOnce({
-          data: {
-            query: {
-              search: [
-                { title: 'JavaScript' }
-              ]
+      const mockSummaryResponse = {
+        data: {
+          title: 'JavaScript',
+          extract: 'JavaScript is a programming language.',
+          content_urls: {
+            desktop: {
+              page: 'https://en.wikipedia.org/wiki/JavaScript'
             }
           }
-        })
-        .mockResolvedValueOnce({
-          data: {
-            query: {
-              pages: {
-                '9845': {
-                  extract: 'JavaScript is a programming language.'
-                }
-              }
-            }
-          }
-        });
+        }
+      };
+
+      mockAxios.get.mockResolvedValueOnce(mockSummaryResponse);
 
       await wikipediaCommand.execute(mockInteraction);
 
       expect(mockInteraction.deferReply).toHaveBeenCalled();
-      expect(mockAxios.get).toHaveBeenNthCalledWith(1, 'https://en.wikipedia.org/w/api.php', expect.objectContaining({
-        params: expect.objectContaining({
-          srsearch: 'JavaScript'
+      expect(mockAxios.get).toHaveBeenCalledWith(
+        'https://en.wikipedia.org/api/rest_v1/page/summary/JavaScript',
+        expect.objectContaining({
+          timeout: 10000
         })
-      }));
-      expect(mockAxios.get).toHaveBeenNthCalledWith(2, 'https://en.wikipedia.org/w/api.php', expect.objectContaining({
-        params: expect.objectContaining({
-          titles: 'JavaScript'
-        })
-      }));
+      );
 
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
@@ -89,27 +77,13 @@ describe('wikipedia command', () => {
 
       const longSummary = 'a'.repeat(1100);
 
-      mockAxios.get
-        .mockResolvedValueOnce({
-          data: {
-            query: {
-              search: [
-                { title: 'LongArticle' }
-              ]
-            }
-          }
-        })
-        .mockResolvedValueOnce({
-          data: {
-            query: {
-              pages: {
-                '1234': {
-                  extract: longSummary
-                }
-              }
-            }
-          }
-        });
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          extract: longSummary,
+          title: 'LongArticle',
+          content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/LongArticle' } }
+        }
+      });
 
       await wikipediaCommand.execute(mockInteraction);
 
@@ -126,11 +100,7 @@ describe('wikipedia command', () => {
       });
 
       mockAxios.get.mockResolvedValueOnce({
-        data: {
-          query: {
-            search: []
-          }
-        }
+        data: {}
       });
 
       await wikipediaCommand.execute(mockInteraction);

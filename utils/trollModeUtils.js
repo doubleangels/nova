@@ -13,12 +13,15 @@ const config = require('../config');
  */
 async function checkAccountAge(member) {
   try {
-    const trollModeEnabled = await getValue('troll_mode_enabled');
+    const [trollModeEnabled, trollModeAccountAge] = await Promise.all([
+      getValue('troll_mode_enabled'),
+      getValue('troll_mode_account_age')
+    ]);
     if (!trollModeEnabled) {
       return true;
     }
 
-    const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
+    const requiredAge = parseInt(trollModeAccountAge, 10) || 30;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
 
     logger.debug('Checking account age for user.', {

@@ -4,6 +4,22 @@ const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getValue, setValue, getAllInviteTagsData, getInviteCodeToTagMap, setInviteCodeToTagMap } = require('../utils/database');
 
+let inviteTagsAutocompleteCache = { tags: [], expiresAt: 0 };
+const INVITE_TAGS_CACHE_TTL_MS = 30_000;
+
+async function getCachedInviteTagsForAutocomplete() {
+  if (Date.now() < inviteTagsAutocompleteCache.expiresAt) {
+    return inviteTagsAutocompleteCache.tags;
+  }
+  const tags = await getAllInviteTagsData();
+  inviteTagsAutocompleteCache = { tags, expiresAt: Date.now() + INVITE_TAGS_CACHE_TTL_MS };
+  return tags;
+}
+
+function invalidateInviteTagsAutocompleteCache() {
+  inviteTagsAutocompleteCache = { tags: [], expiresAt: 0 };
+}
+
 /**
  * Command module for managing invite codes with tags/names.
  * Allows users to store and retrieve invite codes with custom names.
@@ -192,9 +208,9 @@ module.exports = {
     // (skip check for "Vanity" tag since vanity invites may not appear in the invite list)
     if (tagName.toLowerCase() !== 'vanity') {
       try {
-        const invites = await interaction.guild.invites.fetch();
-        const inviteExists = invites.some(inv => inv.code.toLowerCase() === cleanCode.toLowerCase());
-        if (!inviteExists) {
+        await interaction.guild.invites.fetch(cleanCode);
+      } catch (fetchError) {
+        if (fetchError.code === 10006) {
           const embed = new EmbedBuilder()
             .setColor(0xFF0000)
             .setTitle('Invite Not Found')
@@ -203,12 +219,10 @@ module.exports = {
           await interaction.editReply({ embeds: [embed] });
           return;
         }
-      } catch (fetchError) {
         logger.warn('Failed to validate invite existence, proceeding anyway.', {
           err: fetchError,
           code: cleanCode
         });
-        // Continue if we can't validate (e.g., no permissions)
       }
     } else {
       logger.debug('Skipping invite existence check for Vanity tag.', {
@@ -228,6 +242,7 @@ module.exports = {
     };
 
     await setInviteTag(tagName, inviteData);
+    invalidateInviteTagsAutocompleteCache();
 
     // Update code-to-tag mapping for quick lookups
     const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
@@ -492,6 +507,7 @@ module.exports = {
       };
 
       await setInviteTag(tagName, inviteData);
+    invalidateInviteTagsAutocompleteCache();
 
       // Update code-to-tag mapping
       const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
@@ -617,48 +633,26 @@ module.exports = {
       // Try to delete the invite from Discord if we have the code
       if (inviteTag.code) {
         try {
-          // Check if bot has permission to manage invites OR if bot created the invite
           const botMember = interaction.guild.members.me;
           const hasManageGuild = botMember?.permissions.has('ManageGuild');
+          const invite = await interaction.guild.invites.fetch(inviteTag.code).catch(() => null);
 
-          if (!hasManageGuild) {
-            // Fetch invites to check if bot created this one
-            const invites = await interaction.guild.invites.fetch().catch(() => null);
-            if (invites) {
-              const invite = invites.find(inv => inv.code === inviteTag.code);
-              // Check if bot created the invite (inviter is the bot)
-              if (invite && invite.inviter && invite.inviter.id === botMember?.id) {
-                // Bot created it, can delete
-                await invite.delete('Removed via /invite remove command');
-                inviteDeleted = true;
-                logger.debug('Deleted invite from Discord server (bot created it).', {
-                  inviteCode: inviteTag.code
-                });
-              } else {
-                logger.debug("Bot doesn't have ManageGuild permission and didn't create invite, cannot delete.");
-                inviteDeleteError = "Bot lacks ManageGuild permission and didn't create this invite";
-              }
-            } else {
-              logger.debug("Bot doesn't have ManageGuild permission, cannot fetch invites to check creator.");
-              inviteDeleteError = "Bot lacks ManageGuild permission";
-            }
-          } else {
-            // Bot has ManageGuild permission, can delete any invite
-            const invites = await interaction.guild.invites.fetch();
-            const invite = invites.find(inv => inv.code === inviteTag.code);
-
-            if (invite) {
+          if (invite) {
+            if (hasManageGuild || invite.inviter?.id === botMember?.id) {
               await invite.delete('Removed via /invite remove command');
               inviteDeleted = true;
               logger.debug('Deleted invite from Discord server.', {
                 inviteCode: inviteTag.code
               });
             } else {
-              logger.debug('Invite not found in server, may have already been deleted.', {
-                inviteCode: inviteTag.code
-              });
-              inviteDeleteError = "Invite not found in server";
+              logger.debug("Bot doesn't have ManageGuild permission and didn't create invite, cannot delete.");
+              inviteDeleteError = "Bot lacks ManageGuild permission and didn't create this invite";
             }
+          } else {
+            logger.debug('Invite not found in server, may have already been deleted.', {
+              inviteCode: inviteTag.code
+            });
+            inviteDeleteError = "Invite not found in server";
           }
         } catch (deleteError) {
           logger.warn('Failed to delete invite from Discord.', {
@@ -671,6 +665,7 @@ module.exports = {
 
       // Delete the invite tag from database
       await deleteInviteTag(tagName);
+      invalidateInviteTagsAutocompleteCache();
 
       // Remove from code-to-tag mapping
       const codeToTagMap = await getInviteCodeToTagMap(interaction.guildId) || {};
@@ -733,7 +728,7 @@ module.exports = {
 
     if (focusedOption.name === 'name') {
       try {
-        const tags = await getAllInviteTagsData();
+        const tags = await getCachedInviteTagsForAutocomplete();
         const query = focusedOption.value.toLowerCase();
 
         // Filter tags that match the query

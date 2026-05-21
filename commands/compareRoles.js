@@ -12,6 +12,11 @@ function formatPermissionName(key) {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
 }
 
+function truncateEmbedField(text, maxLength = 1024) {
+  if (!text || text.length <= maxLength) return text || 'None';
+  return `${text.slice(0, maxLength - 3)}...`;
+}
+
 /**
  * Command module for comparing two roles' permissions.
  * Shows which permissions are shared (duplicates) between the roles.
@@ -71,10 +76,11 @@ module.exports = {
 
       const permsOne = roleOne.permissions.toArray();
       const permsTwo = roleTwo.permissions.toArray();
+      const permsTwoSet = new Set(permsTwo);
 
-      const sharedRaw = permsOne.filter(p => permsTwo.includes(p));
-      const onlyOneRaw = permsOne.filter(p => !permsTwo.includes(p));
-      const onlyTwoRaw = permsTwo.filter(p => !permsOne.includes(p));
+      const sharedRaw = permsOne.filter((p) => permsTwoSet.has(p));
+      const onlyOneRaw = permsOne.filter((p) => !permsTwoSet.has(p));
+      const onlyTwoRaw = permsTwo.filter((p) => !new Set(permsOne).has(p));
 
       const sharedFormatted = sharedRaw.map(formatPermissionName).sort();
       const onlyOneFormatted = onlyOneRaw.map(formatPermissionName).sort();
@@ -93,23 +99,23 @@ module.exports = {
         },
         {
           name: 'Shared permissions',
-          value: sharedFormatted.length > 0
-            ? sharedFormatted.join(', ')
-            : 'None',
+          value: truncateEmbedField(
+            sharedFormatted.length > 0 ? sharedFormatted.join(', ') : 'None'
+          ),
           inline: false
         },
         {
           name: 'Only in Role 1',
-          value: onlyOneFormatted.length > 0
-            ? onlyOneFormatted.join(', ')
-            : 'None',
+          value: truncateEmbedField(
+            onlyOneFormatted.length > 0 ? onlyOneFormatted.join(', ') : 'None'
+          ),
           inline: false
         },
         {
           name: 'Only in Role 2',
-          value: onlyTwoFormatted.length > 0
-            ? onlyTwoFormatted.join(', ')
-            : 'None',
+          value: truncateEmbedField(
+            onlyTwoFormatted.length > 0 ? onlyTwoFormatted.join(', ') : 'None'
+          ),
           inline: false
         }
       ];

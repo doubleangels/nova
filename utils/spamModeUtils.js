@@ -10,6 +10,7 @@ const {
 } = require('discord.js');
 const dayjs = require('dayjs');
 const { getValue, getSpamModeJoinTime, removeSpamModeJoinTime } = require('./database');
+const { runWithConcurrency } = require('./asyncUtils');
 
 // ── In-memory tracking stores ─────────────────────────────────────────────────
 
@@ -510,35 +511,49 @@ async function deleteOffendingMessages(guild, occurrences) {
   let deletedCount = 0;
   let failedCount = 0;
 
-  for (const occurrence of toDelete) {
-    try {
-      const channel = await guild.channels.fetch(occurrence.channelId).catch(() => null);
-      if (!channel) { failedCount++; continue; }
+  const deleteResults = await runWithConcurrency(
+    toDelete.map((occurrence) => async () => {
+      try {
+        const channel = guild.channels.cache.get(occurrence.channelId)
+          ?? await guild.channels.fetch(occurrence.channelId).catch(() => null);
+        if (!channel) {
+          failedCount++;
+          return false;
+        }
 
-      const msg = await channel.messages.fetch(occurrence.messageId).catch(() => null);
-      if (!msg) { failedCount++; continue; }
+        const msg = await channel.messages.fetch(occurrence.messageId).catch(() => null);
+        if (!msg) {
+          failedCount++;
+          return false;
+        }
 
-      await msg.delete();
-      deletedCount++;
-      logger.debug('Deleted spam message from channel.', {
-        messageId: occurrence.messageId,
-        channelName: occurrence.channelName
-      });
-    } catch (error) {
-      logger.warn('Failed to delete message from channel.', {
-        err: error,
-        messageId: occurrence.messageId,
-        channelId: occurrence.channelId,
-        channelName: occurrence.channelName
-      });
-      failedCount++;
-    }
-  }
+        await msg.delete();
+        deletedCount++;
+        logger.debug('Deleted spam message from channel.', {
+          messageId: occurrence.messageId,
+          channelName: occurrence.channelName
+        });
+        return true;
+      } catch (error) {
+        logger.warn('Failed to delete message from channel.', {
+          err: error,
+          messageId: occurrence.messageId,
+          channelId: occurrence.channelId,
+          channelName: occurrence.channelName
+        });
+        failedCount++;
+        return false;
+      }
+    }),
+    3
+  );
+  void deleteResults;
 
   // Fetch the most-recent message so the caller can reply to it
   let mostRecentMessage = null;
   try {
-    const channel = await guild.channels.fetch(mostRecentOccurrence.channelId).catch(() => null);
+    const channel = guild.channels.cache.get(mostRecentOccurrence.channelId)
+      ?? await guild.channels.fetch(mostRecentOccurrence.channelId).catch(() => null);
     if (channel) {
       mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
     }

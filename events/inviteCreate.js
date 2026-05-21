@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const { getInviteUsage, setInviteUsage, getInviteCodeToTagMap } = require('../utils/database');
+const { patchInviteUsage } = require('../utils/inviteCache');
 
 module.exports = {
   name: Events.InviteCreate,
@@ -48,6 +49,7 @@ module.exports = {
       
       // Add the new tagged invite to tracking with its current usage count (0 for new invites)
       currentUsage[invite.code] = invite.uses || 0;
+      patchInviteUsage(invite.guild.id, invite.code, invite.uses || 0);
       
       // Update the invite usage tracking
       await setInviteUsage(invite.guild.id, currentUsage);

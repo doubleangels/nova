@@ -10,7 +10,12 @@ function createMockInteraction(overrides = {}) {
     id: 'guild-123',
     name: 'Test Guild',
     invites: {
-      fetch: jest.fn().mockResolvedValue(new Collection())
+      fetch: jest.fn().mockImplementation((code) => {
+        if (typeof code === 'string') {
+          return Promise.resolve({ code, uses: 0, delete: jest.fn() });
+        }
+        return Promise.resolve(new Collection());
+      })
     },
     members: {
       fetch: jest.fn(),
@@ -188,9 +193,7 @@ describe('invite command', () => {
         }
       });
 
-      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(new Collection([
-        ['otherCode', { code: 'otherCode' }]
-      ]));
+      mockInteraction.guild.invites.fetch = jest.fn().mockRejectedValue(Object.assign(new Error('Unknown Invite'), { code: 10006 }));
       mockDatabase.getInviteTag.mockResolvedValue(null);
 
       await inviteCommand.handleTagSubcommand(mockInteraction);
@@ -505,9 +508,10 @@ describe('invite command', () => {
         delete: jest.fn().mockResolvedValue(true)
       };
 
-      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(new Collection([
-        ['code1', mockInvite]
-      ]));
+      mockInteraction.guild.invites.fetch = jest.fn().mockImplementation((code) => {
+        if (code === 'code1') return Promise.resolve(mockInvite);
+        return Promise.resolve(new Collection());
+      });
 
       mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
       mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code1': 'tag1' });
@@ -534,9 +538,10 @@ describe('invite command', () => {
 
       mockInteraction.guild.members.me.permissions.has.mockReturnValue(false); // ManageGuild false
       mockInteraction.guild.members.me.id = 'bot-123';
-      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(new Collection([
-        ['code1', mockInvite]
-      ]));
+      mockInteraction.guild.invites.fetch = jest.fn().mockImplementation((code) => {
+        if (code === 'code1') return Promise.resolve(mockInvite);
+        return Promise.resolve(new Collection());
+      });
 
       mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
 
@@ -560,9 +565,10 @@ describe('invite command', () => {
 
       mockInteraction.guild.members.me.permissions.has.mockReturnValue(false);
       mockInteraction.guild.members.me.id = 'bot-123';
-      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(new Collection([
-        ['code1', mockInvite]
-      ]));
+      mockInteraction.guild.invites.fetch = jest.fn().mockImplementation((code) => {
+        if (code === 'code1') return Promise.resolve(mockInvite);
+        return Promise.resolve(new Collection());
+      });
 
       mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
 
@@ -578,15 +584,13 @@ describe('invite command', () => {
         }
       });
 
-      mockInteraction.guild.members.me.permissions.has.mockReturnValue(false); // ManageGuild false
-      mockInteraction.guild.invites.fetch = jest.fn().mockRejectedValue(new Error('Discord error'));
+      mockInteraction.guild.members.me.permissions.has.mockReturnValue(false);
+      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(null);
 
       mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
 
       await inviteCommand.handleRemoveSubcommand(mockInteraction);
 
-      // Cover lines 642-643
-      expect(mockLogger.debug).toHaveBeenCalledWith("Bot doesn't have ManageGuild permission, cannot fetch invites to check creator.");
       expect(mockDatabase.deleteInviteTag).toHaveBeenCalledWith('tag1');
     });
 
@@ -602,9 +606,10 @@ describe('invite command', () => {
         delete: jest.fn().mockRejectedValue(new Error('Discord server is offline'))
       };
 
-      mockInteraction.guild.invites.fetch = jest.fn().mockResolvedValue(new Collection([
-        ['code1', mockInvite]
-      ]));
+      mockInteraction.guild.invites.fetch = jest.fn().mockImplementation((code) => {
+        if (code === 'code1') return Promise.resolve(mockInvite);
+        return Promise.resolve(new Collection());
+      });
 
       mockDatabase.getInviteTag.mockResolvedValue({ code: 'code1', name: 'tag1' });
       mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ 'code1': 'tag1' });

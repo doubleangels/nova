@@ -50,7 +50,7 @@ describe('urban command', () => {
       await urbanCommand.execute(mockInteraction);
 
       expect(mockInteraction.deferReply).toHaveBeenCalled();
-      expect(mockAxios.get).toHaveBeenCalledWith('https://api.urbandictionary.com/v0/define?term=hello', { timeout: 10000 });
+      expect(mockAxios.get).toHaveBeenCalledWith('https://api.urbandictionary.com/v0/define?term=hello');
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
       }));

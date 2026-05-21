@@ -101,6 +101,7 @@ describe('weather command', () => {
         location: { lat: 48.8566, lng: 2.3522 },
         formattedAddress: 'Paris, France'
       });
+      mockGetTimezoneData.mockResolvedValueOnce({ timezoneId: 'Europe/Paris', error: false });
 
       jest.spyOn(weatherCommand, 'fetchWeatherData').mockResolvedValueOnce(null);
 
@@ -272,7 +273,7 @@ describe('weather command', () => {
       const res = await weatherCommand.fetchWeatherData(10, 20, 'si');
       expect(res).toEqual({ currently: { summary: 'Hot' } });
       expect(mockAxios.get).toHaveBeenCalledWith(
-        'https://api.pirateweather.net/forecast/mock-weather-key/10,20?units=si&extend=hourly',
+        'https://api.pirateweather.net/forecast/mock-weather-key/10,20?units=si',
         { timeout: 5000 }
       );
     });
@@ -298,8 +299,7 @@ describe('weather command', () => {
   });
 
   describe('createWeatherEmbed Details & Timezone Fallback', () => {
-    it('should fall back to UTC time and timezone warning log if getTimezoneData throws', async () => {
-      mockGetTimezoneData.mockRejectedValueOnce(new Error('Timezone resolution failed'));
+    it('should fall back to UTC time when timezone lookup failed', async () => {
       const mockWeatherData = {
         currently: {
           apparentTemperature: 12.0,
@@ -310,13 +310,13 @@ describe('weather command', () => {
         daily: { data: [] }
       };
 
-      const embed = await weatherCommand.createWeatherEmbed('Paris', 48.85, 2.35, mockWeatherData, 'metric', 3, false);
+      const embed = await weatherCommand.createWeatherEmbed(
+        'Paris', 48.85, 2.35, mockWeatherData, 'metric', 3, false, { timezoneId: null, error: true }
+      );
       expect(embed.data.title).toBe('Weather in Paris');
-      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get timezone for location, using UTC', expect.any(Object));
     });
 
     it('should fall back to UTC if timezoneResult.error is true', async () => {
-      mockGetTimezoneData.mockResolvedValueOnce({ error: true });
       const mockWeatherData = {
         currently: {
           apparentTemperature: 12.0,
@@ -327,7 +327,9 @@ describe('weather command', () => {
         daily: { data: [] }
       };
 
-      const embed = await weatherCommand.createWeatherEmbed('Paris', 48.85, 2.35, mockWeatherData, 'metric', 3, false);
+      const embed = await weatherCommand.createWeatherEmbed(
+        'Paris', 48.85, 2.35, mockWeatherData, 'metric', 3, false, { error: true }
+      );
       expect(embed.data.title).toBe('Weather in Paris');
     });
 

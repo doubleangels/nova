@@ -1,16 +1,18 @@
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
-const KeyvSqlite = requireDefault('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
 const dayjs = require('dayjs');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
-
-// Ensure data directory exists with proper permissions
-// Allow override via DATA_DIR so bot and helper scripts use the same DB path
-const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
-const sqlitePath = path.join(dataDir, 'database.sqlite');
+const {
+  dataDir,
+  sqlitePath,
+  getSharedKeyvStore,
+  getReadonlyDb,
+  getWritableDb,
+  closeDatabaseConnections
+} = require('./sqliteStore');
 
 // Log database path for debugging
 logger.info('Database path initialized.', {
@@ -68,22 +70,15 @@ try {
   logger.error('This is likely a permissions issue. Please check directory permissions.');
 }
 
-// Initialize Keyv with SQLite storage
-// Data will be stored in ./data/database.sqlite
+const sharedStore = getSharedKeyvStore();
+
 const keyv = new Keyv({
-  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-    table: 'keyv',
-    busyTimeout: 10000
-  }),
+  store: sharedStore,
   namespace: 'main'
 });
 
-// Initialize separate Keyv instance for invites namespace
 const inviteKeyv = new Keyv({
-  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-    table: 'keyv',
-    busyTimeout: 10000
-  }),
+  store: sharedStore,
   namespace: 'invites'
 });
 
@@ -208,6 +203,18 @@ async function initializeDatabase() {
 
 // Cache for config values to avoid DB reads on hot paths (e.g. every message)
 const configCache = new Map();
+
+const INVITE_MAP_CACHE_TTL_MS = 60_000;
+/** @type {Map<string, { map: Object, expiresAt: number }>} */
+const inviteCodeToTagMapCache = new Map();
+
+function invalidateInviteCodeToTagMapCache(guildId) {
+  if (guildId) {
+    inviteCodeToTagMapCache.delete(guildId);
+  } else {
+    inviteCodeToTagMapCache.clear();
+  }
+}
 
 /**
  * Retrieves a configuration value from the database
@@ -362,10 +369,13 @@ async function removeMuteModeUser(userId) {
 async function getAllMuteModeUsers() {
   try {
     const userIds = await keyv.get('config:mute_mode_users') || [];
+    const userDataList = await Promise.all(
+      userIds.map((userId) => keyv.get(`mute_mode:${userId}`))
+    );
+
     const users = [];
-    
-    for (const userId of userIds) {
-      const userData = await keyv.get(`mute_mode:${userId}`);
+    for (let i = 0; i < userIds.length; i++) {
+      const userData = userDataList[i];
       if (userData) {
         users.push({
           user_id: userData.userId,
@@ -374,7 +384,7 @@ async function getAllMuteModeUsers() {
         });
       }
     }
-    
+
     return users;
   } catch (error) {
     logger.error("Error occurred while getting all mute mode users.", {
@@ -612,6 +622,7 @@ async function setInviteTag(tagName, inviteData) {
       tagName: tagName
     });
     await inviteKeyv.set(`tags:${tagName.toLowerCase()}`, inviteData);
+    invalidateInviteCodeToTagMapCache();
     logger.debug('Set invite tag successfully.', {
       tagName: tagName
     });
@@ -656,6 +667,7 @@ async function deleteInviteTag(tagName) {
       tagName: tagName
     });
     await inviteKeyv.delete(`tags:${tagName.toLowerCase()}`);
+    invalidateInviteCodeToTagMapCache();
     logger.debug('Deleted invite tag successfully.', {
       tagName: tagName
     });
@@ -674,18 +686,7 @@ async function deleteInviteTag(tagName) {
  * @returns {Promise<void>}
  */
 async function setInviteNotificationChannel(channelId) {
-  try {
-    logger.debug('Setting invite notification channel.', {
-      channelId: channelId
-    });
-    await keyv.set('config:invite_notification_channel', channelId);
-    logger.debug('Set invite notification channel successfully.');
-  } catch (err) {
-    logger.error('Error occurred while setting invite notification channel.', {
-      err: err
-    });
-    throw new Error("DATABASE_WRITE_ERROR");
-  }
+  await setValue('invite_notification_channel', channelId);
 }
 
 /**
@@ -693,16 +694,7 @@ async function setInviteNotificationChannel(channelId) {
  * @returns {Promise<string|null>} The channel ID, or null if not set
  */
 async function getInviteNotificationChannel() {
-  try {
-    logger.debug("Getting invite notification channel.");
-    const value = await keyv.get('config:invite_notification_channel');
-    return value !== undefined ? value : null;
-  } catch (err) {
-    logger.error("Error occurred while getting invite notification channel.", {
-      err: err
-    });
-    return null;
-  }
+  return getValue('invite_notification_channel');
 }
 
 /**
@@ -761,6 +753,10 @@ async function setInviteCodeToTagMap(guildId, codeToTagMap) {
       guildId: guildId
     });
     await keyv.set(`invite_code_to_tag_map:${guildId}`, codeToTagMap);
+    inviteCodeToTagMapCache.set(guildId, {
+      map: codeToTagMap,
+      expiresAt: Date.now() + INVITE_MAP_CACHE_TTL_MS
+    });
     logger.debug('Set invite code-to-tag map for guild successfully.', {
       guildId: guildId
     });
@@ -779,11 +775,21 @@ async function setInviteCodeToTagMap(guildId, codeToTagMap) {
  */
 async function getInviteCodeToTagMap(guildId) {
   try {
+    const cached = inviteCodeToTagMapCache.get(guildId);
+    if (cached && Date.now() < cached.expiresAt) {
+      return cached.map;
+    }
+
     logger.debug('Getting invite code-to-tag map for guild.', {
       guildId: guildId
     });
     const value = await keyv.get(`invite_code_to_tag_map:${guildId}`);
-    return value || {};
+    const map = value || {};
+    inviteCodeToTagMapCache.set(guildId, {
+      map,
+      expiresAt: Date.now() + INVITE_MAP_CACHE_TTL_MS
+    });
+    return map;
   } catch (err) {
     logger.error('Error occurred while getting invite code-to-tag map for guild.', {
       err: err,
@@ -804,18 +810,12 @@ async function getInviteCodeToTagMap(guildId) {
  * @returns {Array} Array of raw rows from keyv
  */
 function getRawInviteTagsRows() {
-  const Database = require('better-sqlite3');
-  const db = new Database(sqlitePath, { readonly: true });
-  
-  // Query all keys from invites namespace that start with tags:
-  const rows = db.prepare(`
+  const db = getReadonlyDb();
+  return db.prepare(`
     SELECT key, value 
     FROM keyv 
     WHERE key LIKE 'invites:tags:%'
   `).all();
-  
-  db.close();
-  return rows;
 }
 
 /**
@@ -953,21 +953,40 @@ async function setFormerMember(userId) {
  * @param {string} userId - The Discord user ID
  * @returns {Promise<number>} The updated message count
  */
+function parseKeyvStoredCount(rawValue) {
+  if (rawValue == null) return 0;
+  try {
+    const parsed = JSON.parse(rawValue);
+    const val = parsed?.value !== undefined ? parsed.value : parsed;
+    return Number(val) || 0;
+  } catch {
+    return 0;
+  }
+}
+
 async function incrementMessageCount(userId) {
   try {
     logger.debug('Incrementing message count for user.', { userId: userId });
-    const key = `message_count:${userId}`;
-    let count = await keyv.get(key) || 0;
-    count++;
-    await keyv.set(key, count);
-    logger.debug('Incremented message count for user successfully.', { 
-      userId: userId, 
-      count: count 
+    const fullKey = `main:message_count:${userId}`;
+    const db = getWritableDb();
+    const count = db.transaction(() => {
+      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey);
+      const nextCount = parseKeyvStoredCount(row?.value) + 1;
+      const wrapped = JSON.stringify({ value: nextCount, expires: null });
+      db.prepare(`
+        INSERT INTO keyv (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `).run(fullKey, wrapped);
+      return nextCount;
+    })();
+    logger.debug('Incremented message count for user successfully.', {
+      userId: userId,
+      count: count
     });
     return count;
   } catch (error) {
     logger.error('Error incrementing message count.', { err: error, userId });
-    return null; // return null (not 0) so callers can detect a DB failure vs a real count
+    return null;
   }
 }
 
@@ -1019,6 +1038,8 @@ async function isFormerMember(userId) {
 
 module.exports = {
   initializeDatabase,
+  closeDatabaseConnections,
+  invalidateInviteCodeToTagMapCache,
   getValue,
   setValue,
   deleteValue,

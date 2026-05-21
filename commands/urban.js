@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
-const axios = require('axios');
+const httpClient = require('../utils/httpClient');
+const { getCached, setCached, cacheKey } = require('../utils/responseCache');
 const logger = require('../logger')(path.basename(__filename));
 
 /**
@@ -40,9 +41,15 @@ module.exports = {
                 guildId: interaction.guildId
             });
 
-            const response = await axios.get(`https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`, {
-                timeout: 10000
-            });
+            const normalizedTerm = term.trim().toLowerCase();
+            const cacheId = cacheKey('urban', normalizedTerm);
+            const cached = getCached(cacheId);
+            if (cached) {
+                await interaction.editReply({ embeds: [cached] });
+                return;
+            }
+
+            const response = await httpClient.get(`https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(term)}`);
             const definitions = response.data.list;
 
             if (!definitions || definitions.length === 0) {
@@ -53,7 +60,12 @@ module.exports = {
                 return;
             }
 
-            const definition = definitions[0];
+            const definition = definitions.reduce((best, current) => {
+                if (!best) return current;
+                const bestScore = (best.thumbs_up || 0) - (best.thumbs_down || 0);
+                const currentScore = (current.thumbs_up || 0) - (current.thumbs_down || 0);
+                return currentScore > bestScore ? current : best;
+            }, null);
             const fields = [
                 { name: 'Example', value: definition.example || 'No example provided.' },
                 { name: 'Author', value: definition.author || 'Unknown' },
@@ -65,6 +77,8 @@ module.exports = {
                 .setTitle(`Urban Dictionary: ${definition.word}`)
                 .setDescription(definition.definition)
                 .addFields(fields);
+
+            setCached(cacheId, embed, 900000);
             
             await interaction.editReply({ embeds: [embed] });
             

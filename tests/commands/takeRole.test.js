@@ -52,6 +52,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
           fetch: jest.fn().mockResolvedValue(mockTargetMember),
           me: {
             roles: {
@@ -63,7 +66,7 @@ describe('takeRole command', () => {
 
       await takeRoleCommand.execute(mockInteraction);
 
-      expect(mockInteraction.guild.members.fetch).toHaveBeenCalledWith('target-user-id');
+      expect(mockInteraction.guild.members.cache.get).toHaveBeenCalledWith('target-user-id');
       expect(mockTargetMember.roles.remove).toHaveBeenCalledWith(mockRole, undefined);
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
@@ -120,6 +123,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
           fetch: jest.fn().mockResolvedValue(mockTargetMember),
           me: {
             roles: {
@@ -153,6 +159,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(null)
+          },
           fetch: jest.fn().mockRejectedValue(new Error('Fetch failed'))
         }
       };
@@ -187,6 +196,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
           fetch: jest.fn().mockResolvedValue(mockTargetMember)
         }
       };
@@ -220,6 +232,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
           fetch: jest.fn().mockResolvedValue(mockTargetMember)
         }
       };
@@ -253,6 +268,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
           fetch: jest.fn().mockResolvedValue(mockTargetMember),
           me: {
             roles: {
@@ -296,6 +314,9 @@ describe('takeRole command', () => {
 
       mockInteraction.guild = {
         members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
           fetch: jest.fn().mockResolvedValue(mockTargetMember),
           me: {
             roles: {

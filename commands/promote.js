@@ -271,11 +271,14 @@ module.exports = {
         userId: interaction.user.id
       });
 
-      const results = [];
-      for (const subredditName of PROMOTION_SUBREDDITS) {
-        const result = await postToSubreddit(subredditName, promotionTitle, promotionBody);
-        results.push({ subreddit: subredditName, ...result });
-      }
+      const results = await Promise.all(
+        PROMOTION_SUBREDDITS.map((subredditName) =>
+          postToSubreddit(subredditName, promotionTitle, promotionBody).then((result) => ({
+            subreddit: subredditName,
+            ...result
+          }))
+        )
+      );
 
       const succeeded = results.filter(r => r.success);
       const failed = results.filter(r => !r.success);

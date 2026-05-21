@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const httpClient = require('../utils/httpClient');
 
 /**
  * Command module for fetching and displaying random cat images
@@ -28,8 +28,11 @@ module.exports = {
         guildId: interaction.guild?.id
       });
 
-      const response = await axios.get('https://api.thecatapi.com/v1/images/search');
-      const catData = response.data[0];
+      const response = await httpClient.get('https://api.thecatapi.com/v1/images/search');
+      const catData = response.data?.[0];
+      if (!catData?.url) {
+        throw new Error('INVALID_RESPONSE');
+      }
       
       const embed = new EmbedBuilder()
         .setColor(0xFFB6C1)

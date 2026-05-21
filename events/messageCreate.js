@@ -4,7 +4,7 @@ const { captureError } = require('../instrument');
 const config = require('../config');
 const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
 const { handleReminder } = require('../utils/reminderUtils');
-const { Events } = require('discord.js');
+const { Events, ChannelType } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
 const { trackNewUserMessage } = require('../utils/spamModeUtils');
 
@@ -38,6 +38,13 @@ module.exports = {
       }
 
       if (message.author?.bot || message.webhookId) {
+        if (message.embeds?.length > 0) {
+          await checkForBumpMessages(message);
+        }
+        return;
+      }
+
+      if (message.channel?.type === ChannelType.DM) {
         if (message.embeds?.length > 0) {
           await checkForBumpMessages(message);
         }
@@ -100,8 +107,7 @@ module.exports = {
         channelName: message.channel.name
       });
 
-      // Skip bots and webhooks for no-text channel enforcement
-      if (message.author?.bot || message.webhookId) return;
+      // No-text channel enforcement (human guild messages only)
       if (String(message.channelId) !== String(noTextChannelId)) return;
 
       const content = message.content ?? '';

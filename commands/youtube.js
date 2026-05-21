@@ -168,7 +168,7 @@ module.exports = {
         part: 'snippet',
         q: query,
         type: contentType,
-        maxResults: 20,
+        maxResults: 10,
         key: config.googleApiKey,
         order: 'relevance',
         safeSearch: 'moderate'
@@ -176,7 +176,7 @@ module.exports = {
 
       const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
         params,
-        timeout: 5000
+        timeout: 10000
       });
 
       if (!response.data || !response.data.items || response.data.items.length === 0) {
@@ -187,11 +187,11 @@ module.exports = {
       let results = response.data.items;
 
       if (contentType === 'video') {
-        results = await this.enrichVideoResults(results);
+        results = await this.enrichVideoResults(results.slice(0, 5));
       } else if (contentType === 'channel') {
-        results = await this.enrichChannelResults(results);
+        results = await this.enrichChannelResults(results.slice(0, 5));
       } else if (contentType === 'playlist') {
-        results = await this.enrichPlaylistResults(results);
+        results = await this.enrichPlaylistResults(results.slice(0, 5));
       }
 
       return results;
@@ -231,11 +231,10 @@ module.exports = {
       }
 
       const detailedVideos = response.data.items;
+      const detailsMap = new Map(detailedVideos.map((video) => [video.id, video]));
 
-      return videos.map(searchResult => {
-        const detailedInfo = detailedVideos.find(
-          video => video.id === searchResult.id.videoId
-        );
+      return videos.map((searchResult) => {
+        const detailedInfo = detailsMap.get(searchResult.id.videoId);
 
         if (!detailedInfo) return searchResult;
 
@@ -279,11 +278,10 @@ module.exports = {
       }
 
       const detailedChannels = response.data.items;
+      const detailsMap = new Map(detailedChannels.map((channel) => [channel.id, channel]));
 
-      return channels.map(searchResult => {
-        const detailedInfo = detailedChannels.find(
-          channel => channel.id === searchResult.id.channelId
-        );
+      return channels.map((searchResult) => {
+        const detailedInfo = detailsMap.get(searchResult.id.channelId);
 
         if (!detailedInfo) return searchResult;
 
@@ -326,11 +324,10 @@ module.exports = {
       }
 
       const detailedPlaylists = response.data.items;
+      const detailsMap = new Map(detailedPlaylists.map((playlist) => [playlist.id, playlist]));
 
-      return playlists.map(searchResult => {
-        const detailedInfo = detailedPlaylists.find(
-          playlist => playlist.id === searchResult.id.playlistId
-        );
+      return playlists.map((searchResult) => {
+        const detailedInfo = detailsMap.get(searchResult.id.playlistId);
 
         if (!detailedInfo) return searchResult;
 

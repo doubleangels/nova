@@ -6,18 +6,23 @@ require('dotenv').config();
 const Sentry = require('@sentry/node');
 const pkg = require('./package.json');
 
+const environment = process.env.NODE_ENV || 'production';
+const isProduction = environment === 'production';
+const parsedSampleRate = parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE ?? (isProduction ? '0.1' : '1.0'));
+const tracesSampleRate = Number.isFinite(parsedSampleRate) ? parsedSampleRate : 0.1;
+
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
 
   sendDefaultPii: true,
 
-  tracesSampleRate: 1.0,
+  tracesSampleRate,
 
-  includeLocalVariables: true,
+  includeLocalVariables: !isProduction,
 
-  enableLogs: true,
+  enableLogs: process.env.SENTRY_ENABLE_LOGS === 'true',
 
-  environment: process.env.NODE_ENV || 'production',
+  environment,
 
   release: `${pkg.name}@${pkg.version}`
 });

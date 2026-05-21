@@ -119,17 +119,10 @@ describe('messageReactionAdd event', () => {
     });
 
     it('should log warn and throw if message is null/undefined', async () => {
-      let messageAccessCount = 0;
       const mockReaction = {
         partial: false,
         emoji: { name: '🇺🇸' },
-        get message() {
-          messageAccessCount++;
-          if (messageAccessCount === 1) {
-            return { id: 'msg-1' };
-          }
-          return null;
-        }
+        message: null
       };
       const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
 
@@ -138,7 +131,6 @@ describe('messageReactionAdd event', () => {
 
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
-      // Cover lines 97-101
       expect(mockLogger.warn).toHaveBeenCalledWith('Message not found for translation.', expect.any(Object));
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message', expect.any(Object));
     });
@@ -203,6 +195,7 @@ describe('messageReactionAdd event', () => {
         'https://api-free.deepl.com/v1/translate',
         null,
         {
+          timeout: 10000,
           params: {
             auth_key: 'deepl-key-123',
             text: 'Hola',

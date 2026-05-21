@@ -1,7 +1,8 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const httpClient = require('../utils/httpClient');
+const { getCached, setCached, cacheKey } = require('../utils/responseCache');
 
 
 /**
@@ -42,22 +43,23 @@ module.exports = {
         query
       });
 
-      const searchResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
-        params: {
-          action: 'query',
-          list: 'search',
-          srsearch: query,
-          format: 'json',
-          origin: '*'
-        },
+      const normalizedQuery = query.trim().toLowerCase();
+      const cacheId = cacheKey('wikipedia', normalizedQuery);
+      const cached = getCached(cacheId);
+      if (cached) {
+        await interaction.editReply({ embeds: [cached] });
+        return;
+      }
+
+      const summaryResponse = await httpClient.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(query), {
+        timeout: 10000,
         headers: {
           'User-Agent': 'Nova Discord Bot (https://github.com/doubleangels/nova)'
         }
       });
 
-      const searchResults = searchResponse.data.query.search;
-      
-      if (!searchResults || searchResults.length === 0) {
+      const page = summaryResponse.data;
+      if (!page?.extract) {
         await interaction.editReply({
           content: "⚠️ No results found for your search query.",
           flags: MessageFlags.Ephemeral
@@ -65,44 +67,26 @@ module.exports = {
         return;
       }
 
-      const article = searchResults[0];
-      const summaryResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
-        params: {
-          action: 'query',
-          prop: 'extracts',
-          exintro: true,
-          exsentences: 1,
-          explaintext: true,
-          titles: article.title,
-          format: 'json',
-          origin: '*'
-        },
-        headers: {
-          'User-Agent': 'Nova Discord Bot (https://github.com/doubleangels/nova)'
-        }
-      });
-
-      const pages = summaryResponse.data.query.pages;
-      const pageId = Object.keys(pages)[0];
-      let summary = pages[pageId].extract;
-
+      let summary = page.extract;
       if (summary.length > 1024) {
         summary = summary.substring(0, 1021) + '...';
       }
 
+      const title = page.title || query;
       const embed = new EmbedBuilder()
         .setColor(0xFFFFFF)
-        .setTitle(article.title)
+        .setTitle(title)
         .setDescription(summary)
-        .setURL(`https://en.wikipedia.org/wiki/${encodeURIComponent(article.title)}`)
+        .setURL(page.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(title)}`)
         .setFooter({ text: 'Powered by Wikipedia' });
-      
+
+      setCached(cacheId, embed, 900000);
       await interaction.editReply({ embeds: [embed] });
       
       logger.info("/wikipedia command completed successfully.", {
         userId: interaction.user.id,
         query,
-        articleTitle: article.title
+        articleTitle: title
       });
     } catch (error) {
       await this.handleError(interaction, error);

@@ -6,6 +6,7 @@ const config = require('../config');
 const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
+const { updateInviteSnapshotFromCollection } = require('../utils/inviteCache');
 
 const DEFAULT_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
@@ -79,16 +80,21 @@ module.exports = {
       ]);
       logger.info('Mute kicks and reminders rescheduled successfully.');
 
-      // Run cleanup on startup
-      try {
-        await cleanupOldTrackingUsers(client);
-        logger.info('Initial cleanup of old tracking users completed.');
-      } catch (error) {
-        captureError(error, { event: 'ready', handler: 'initialCleanup' });
-        logger.error('Failed to run initial cleanup.', {
-          err: error
-        });
-      }
+      // Run cleanup and invite init in parallel
+      await Promise.all([
+        cleanupOldTrackingUsers(client).then(() => {
+          logger.info('Initial cleanup of old tracking users completed.');
+        }).catch((error) => {
+          captureError(error, { event: 'ready', handler: 'initialCleanup' });
+          logger.error('Failed to run initial cleanup.', { err: error });
+        }),
+        initializeInviteUsage(client).then(() => {
+          logger.info('Invite usage tracking initialized for the guild.');
+        }).catch((error) => {
+          captureError(error, { event: 'ready', handler: 'initializeInviteUsage' });
+          logger.error('Failed to initialize invite usage tracking.', { err: error });
+        })
+      ]);
 
       // Schedule periodic cleanup every hour; store reference so it can be cleared on shutdown
       const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
@@ -106,16 +112,7 @@ module.exports = {
         intervalMinutes: CLEANUP_INTERVAL_MS / 1000 / 60
       });
 
-      // Initialize invite usage tracking for the guild
-      try {
-        await initializeInviteUsage(client);
-        logger.info('Invite usage tracking initialized for the guild.');
-      } catch (error) {
-        captureError(error, { event: 'ready', handler: 'initializeInviteUsage' });
-        logger.error('Failed to initialize invite usage tracking.', {
-          err: error
-        });
-      }
+      // Initialize invite usage tracking moved into parallel block above
 
       // Check and log New Member tracking status
       if (config.newMemberRoleId && config.memberFrenRoleId) {
@@ -184,10 +181,7 @@ async function initializeInviteUsage(client) {
 
     const invites = await guild.invites.fetch().catch(() => null);
     if (invites) {
-      const usage = {};
-      invites.each(invite => {
-        usage[invite.code] = invite.uses || 0;
-      });
+      const usage = updateInviteSnapshotFromCollection(guild.id, invites);
       await setInviteUsage(guild.id, usage);
       logger.debug('Initialized invite usage tracking for guild.', {
         guildName: guild.name,

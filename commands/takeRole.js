@@ -163,7 +163,8 @@ module.exports = {
    */
   async fetchGuildMember(interaction, userId) {
     try {
-      return await interaction.guild.members.fetch(userId);
+      return interaction.guild.members.cache.get(userId)
+        ?? await interaction.guild.members.fetch(userId);
     } catch (error) {
       logger.warn("Target user not found in guild:", {
         userId: userId,

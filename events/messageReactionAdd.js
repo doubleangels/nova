@@ -4,7 +4,8 @@ const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const { getLanguageInfo, isValidTranslationFlag } = require('../utils/languageUtils');
 const { Events } = require('discord.js');
-const axios = require('axios');
+const httpClient = require('../utils/httpClient');
+const { getCached, setCached, cacheKey } = require('../utils/responseCache');
 const config = require('../config');
 
 module.exports = {
@@ -46,23 +47,13 @@ module.exports = {
         }
       }
 
-      logger.info('Processing reaction from user.', {
+      logger.debug('Processing reaction from user.', {
         emoji: reaction.emoji.name,
         userTag: user.tag
       });
 
-      const flagEmoji = reaction.emoji.name;
-      if (isValidTranslationFlag(flagEmoji)) {
-        await handleTranslationRequest(reaction, user);
-        return;
-      }
-
-      logger.info('Successfully processed reaction from user.', {
-        userTag: user.tag
-      });
+      await handleTranslationRequest(reaction, user);
     } catch (error) {
-      // Do not rethrow — event handlers have no caller to receive the error.
-      // Rethrowing here causes an unhandled promise rejection.
       logger.error('Error processing reaction', {
         err: error,
         emoji: reaction.emoji?.name,
@@ -87,7 +78,7 @@ async function handleTranslationRequest(reaction, user) {
       flagEmoji: reaction.emoji.name,
       userId: user.id,
       userTag: user.tag,
-      messageId: reaction.message.id
+      messageId: reaction.message?.id
     });
 
     const flagEmoji = reaction.emoji.name;
@@ -97,13 +88,17 @@ async function handleTranslationRequest(reaction, user) {
       throw new Error("⚠️ Invalid translation flag provided.");
     }
 
-    const message = reaction.message;
+    let message = reaction.message;
     if (!message) {
       logger.warn('Message not found for translation.', {
         messageId: reaction.message?.id,
         userId: user.id
       });
       throw new Error("⚠️ Message not found for translation.");
+    }
+
+    if (message.partial) {
+      message = await message.fetch();
     }
 
     const originalText = message.content;
@@ -115,32 +110,39 @@ async function handleTranslationRequest(reaction, user) {
       throw new Error("⚠️ No text to translate found in the message.");
     }
 
-    logger.debug('Making translation API request.', {
-      targetLanguage: languageInfo.code,
-      textLength: originalText.length,
-      userId: user.id
-    });
+    const translationCacheKey = cacheKey('translation', message.id, languageInfo.code);
+    let translatedText = getCached(translationCacheKey);
 
-    const response = await axios.post(
-      'https://api-free.deepl.com/v1/translate',
-      null,
-      {
-        params: {
-          auth_key: config.deeplApiKey,
-          text: originalText,
-          target_lang: languageInfo.code.toUpperCase()
+    if (!translatedText) {
+      logger.debug('Making translation API request.', {
+        targetLanguage: languageInfo.code,
+        textLength: originalText.length,
+        userId: user.id
+      });
+
+      const response = await httpClient.post(
+        'https://api-free.deepl.com/v1/translate',
+        null,
+        {
+          timeout: 10000,
+          params: {
+            auth_key: config.deeplApiKey,
+            text: originalText,
+            target_lang: languageInfo.code.toUpperCase()
+          }
         }
-      }
-    );
+      );
 
-    const translatedText = response.data.translations[0].text;
-    logger.debug('Translation API response received successfully.', {
+      translatedText = response.data.translations[0].text;
+      setCached(translationCacheKey, translatedText, 3600000);
+    }
+
+    logger.debug('Translation ready.', {
       targetLanguage: languageInfo.code,
       translatedLength: translatedText.length,
       userId: user.id
     });
 
-    // Cache member lookup (already checked at line 45-48, but that was removed)
     let embedColor = 0x0099ff;
     if (message.guild) {
       const member = message.guild.members.cache.get(user.id);
@@ -161,12 +163,6 @@ async function handleTranslationRequest(reaction, user) {
       },
       timestamp: dayjs().toDate()
     };
-
-    logger.debug('Sending translation response to user.', {
-      targetLanguage: languageInfo.name,
-      userId: user.id,
-      messageId: message.id
-    });
 
     await message.reply({ embeds: [embed] });
 
@@ -190,12 +186,6 @@ async function handleTranslationRequest(reaction, user) {
       const errorMessage = error.response?.status === 403
         ? "⚠️ Translation API error occurred."
         : "⚠️ Failed to translate the message.";
-
-      logger.debug('Sending translation error response to user.', {
-        errorType: error.response?.status === 403 ? 'API_ERROR' : 'GENERAL_ERROR',
-        userId: user.id,
-        messageId: reaction.message?.id
-      });
 
       await reaction.message.reply({
         content: errorMessage,

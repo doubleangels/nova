@@ -26,11 +26,10 @@ describe('coinFlip command', () => {
 
       await coinFlipCommand.execute(mockInteraction);
 
-      expect(mockInteraction.deferReply).toHaveBeenCalled();
-      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
       }));
-      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const embed = mockInteraction.reply.mock.calls[0][0].embeds[0];
       expect(embed.data.description).toContain('Heads');
 
       randomSpy.mockRestore();
@@ -42,11 +41,10 @@ describe('coinFlip command', () => {
 
       await coinFlipCommand.execute(mockInteraction);
 
-      expect(mockInteraction.deferReply).toHaveBeenCalled();
-      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
       }));
-      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const embed = mockInteraction.reply.mock.calls[0][0].embeds[0];
       expect(embed.data.description).toContain('Tails');
 
       randomSpy.mockRestore();
@@ -54,7 +52,7 @@ describe('coinFlip command', () => {
 
     it('should handle errors during execute and call handleError', async () => {
       const mockInteraction = createMockInteraction();
-      mockInteraction.deferReply.mockRejectedValue(new Error('RESULT_FAILED'));
+      mockInteraction.reply.mockRejectedValue(new Error('RESULT_FAILED'));
 
       await coinFlipCommand.execute(mockInteraction);
 

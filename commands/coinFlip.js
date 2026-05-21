@@ -24,22 +24,20 @@ module.exports = {
      */
     async execute(interaction) {
         try {
-            await interaction.deferReply();
-            
             logger.info("/coinflip command initiated.", {
                 userId: interaction.user.id,
                 guildId: interaction.guild?.id
             });
 
             const result = this.flipCoin();
-            
+
             const embed = new EmbedBuilder()
                 .setColor(0xFFD700)
                 .setTitle('Coin Flip')
                 .setDescription(`The coin landed on **${result}**.`);
-            
-            await interaction.editReply({ embeds: [embed] });
-            
+
+            await interaction.reply({ embeds: [embed] });
+
             logger.info("/coinflip command completed successfully.", {
                 userId: interaction.user.id,
                 result

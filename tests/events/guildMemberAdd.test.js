@@ -333,6 +333,11 @@ describe('guildMemberAdd event', () => {
   });
 
   describe('checkTaggedInvite', () => {
+    beforeEach(() => {
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ code123: 'mytag' });
+      mockDatabase.rebuildCodeToTagMap.mockResolvedValue({ code123: 'mytag' });
+    });
+
     it('should return if no invite notification channel is configured', async () => {
       const mockMember = {
         user: { tag: 'User#1234', id: 'user-123' }
@@ -647,7 +652,7 @@ describe('guildMemberAdd event', () => {
       await Promise.all([p1, p2]);
 
       // Cover line 253
-      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Retrieved previous invite usage data.'), expect.any(Object));
+      expect(mockLogger.debug).toHaveBeenCalledWith(expect.stringContaining('Built current invite usage data.'), expect.any(Object));
     });
 
     it('should rebuild codeToTagMap if it is empty/null', async () => {

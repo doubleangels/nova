@@ -45,7 +45,7 @@ async function deployCommands() {
     logger.debug(`Loaded command: ${file}`);
   }
   
-  const rest = new REST({ version: '10' }).setToken(config.token);
+  const rest = new REST({ version: '10', timeout: 30_000 }).setToken(config.token);
   
   const clientId = process.env.DISCORD_CLIENT_ID || config.clientId;
   logger.info(`Deploying commands for application ID: ${clientId}`);

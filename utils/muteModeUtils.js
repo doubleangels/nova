@@ -157,21 +157,18 @@ async function rescheduleAllMuteKicks(client) {
       return;
     }
     const guildId = client.guilds.cache.first().id;
-    for (const userData of muteModeUsers) {
+    await Promise.all(muteModeUsers.map((userData) => {
       logger.debug('Rescheduling mute kick for user.', {
         userData: JSON.stringify(userData)
       });
-      logger.debug('Using mute kick time.', {
-        muteKickTime: muteKickTime
-      });
-      await scheduleMuteKick(
+      return scheduleMuteKick(
         userData.user_id,
         userData.join_time,
         muteKickTime,
         client,
         guildId
       );
-    }
+    }));
   } catch (e) {
     logger.error('Error occurred while rescheduling mute kicks on startup.', {
       err: e

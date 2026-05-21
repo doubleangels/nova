@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const { getInviteUsage, setInviteUsage, getInviteCodeToTagMap } = require('../utils/database');
+const { removeInviteFromSnapshot } = require('../utils/inviteCache');
 
 module.exports = {
   name: Events.InviteDelete,
@@ -48,6 +49,7 @@ module.exports = {
       );
       if (usageKey !== undefined) {
         delete currentUsage[usageKey];
+        removeInviteFromSnapshot(invite.guild.id, invite.code);
         
         // Update the invite usage tracking
         await setInviteUsage(invite.guild.id, currentUsage);

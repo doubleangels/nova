@@ -121,10 +121,10 @@ module.exports = {
    */
   async searchAndGetAnimeDetails(title) {
     const headers = { "X-MAL-CLIENT-ID": config.malClientId };
-    const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1`;
+    const searchUrl = `https://api.myanimelist.net/v2/anime?q=${encodeURIComponent(title)}&limit=1&fields=id,title,synopsis,mean,genres,start_date,main_picture`;
 
     logger.debug("Making MAL search request.", { searchUrl });
-    const searchResponse = await axios.get(searchUrl, { headers });
+    const searchResponse = await axios.get(searchUrl, { headers, timeout: 10000 });
 
     if (searchResponse.status !== 200 || !searchResponse.data.data || !searchResponse.data.data.length) {
       logger.warn("No anime results found.", { title });
@@ -132,29 +132,13 @@ module.exports = {
     }
 
     const animeNode = searchResponse.data.data[0].node;
-    const animeId = animeNode.id;
-
-    const detailsUrl = `https://api.myanimelist.net/v2/anime/${animeId}?fields=id,title,synopsis,mean,genres,start_date`;
-
-    logger.debug("Fetching anime details.", { animeId });
-    const detailsResponse = await axios.get(detailsUrl, { headers });
-
-    if (detailsResponse.status !== 200) {
-      logger.error("Failed to retrieve anime details.", {
-        status: detailsResponse.status,
-        animeId
-      });
-      throw new Error("API_ERROR");
-    }
-
-    const detailsData = detailsResponse.data;
     return {
-      id: animeId,
-      title: detailsData.title || "Unknown",
-      synopsis: detailsData.synopsis || "No synopsis available.",
-      rating: detailsData.mean || "N/A",
-      genres: detailsData.genres || [],
-      releaseDate: detailsData.start_date || null,
+      id: animeNode.id,
+      title: animeNode.title || "Unknown",
+      synopsis: animeNode.synopsis || "No synopsis available.",
+      rating: animeNode.mean || "N/A",
+      genres: animeNode.genres || [],
+      releaseDate: animeNode.start_date || null,
       imageUrl: animeNode.main_picture ? animeNode.main_picture.medium : null
     };
   },

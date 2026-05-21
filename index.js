@@ -45,11 +45,14 @@ const client = new Client({
 /** @type {Collection<string, Command>} Collection of registered commands */
 client.commands = new Collection();
 
-/** @type {Map<string, Array>} Map of conversation histories for users */
-client.conversationHistory = new Map();
+const { closeDatabaseConnections } = require('./utils/database');
 
 const deployCommands = require('./deploy-commands');
-deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
+if (config.settings.deployCommandsOnStart) {
+  deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
+} else {
+  logger.info('Skipping slash command deploy on startup (deployCommandsOnStart is false).');
+}
 
 /**
  * Loads all command files from the commands directory
@@ -125,27 +128,31 @@ process.on('unhandledRejection', (reason) => {
 });
 
 /**
- * Handles graceful shutdown on SIGINT signal
+ * Handles graceful shutdown
+ * @returns {Promise<void>}
  */
-process.on('SIGINT', async () => {
-  logger.info('Shutdown signal (SIGINT) received. Exiting...');
+async function gracefulShutdown(signal) {
+  logger.info(`Shutdown signal (${signal}) received. Exiting...`);
+  if (client.cleanupInterval) {
+    clearInterval(client.cleanupInterval);
+  }
+  try {
+    client.destroy();
+  } catch (err) {
+    logger.error('Error destroying Discord client on shutdown.', { err });
+  }
+  try {
+    closeDatabaseConnections();
+  } catch (err) {
+    logger.error('Error closing database connections on shutdown.', { err });
+  }
   try {
     await closeSentry();
   } catch (err) {
     logger.error('Error flushing Sentry on shutdown.', { err });
   }
   process.exit(0);
-});
+}
 
-/**
- * Handles graceful shutdown on SIGTERM signal
- */
-process.on('SIGTERM', async () => {
-  logger.info('Shutdown signal (SIGTERM) received. Exiting...');
-  try {
-    await closeSentry();
-  } catch (err) {
-    logger.error('Error flushing Sentry on shutdown.', { err });
-  }
-  process.exit(0);
-});
+process.on('SIGINT', () => { gracefulShutdown('SIGINT'); });
+process.on('SIGTERM', () => { gracefulShutdown('SIGTERM'); });

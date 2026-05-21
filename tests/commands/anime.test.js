@@ -61,6 +61,11 @@ describe('anime command', () => {
             {
               node: {
                 id: 20,
+                title: 'Naruto',
+                synopsis: 'A story about a ninja.',
+                mean: 7.9,
+                genres: [{ name: 'Action' }, { name: 'Adventure' }],
+                start_date: '2002-10-03',
                 main_picture: {
                   medium: 'https://cdn.myanimelist.net/images/anime/13/75127.jpg'
                 }
@@ -70,25 +75,12 @@ describe('anime command', () => {
         }
       };
 
-      const mockDetailsResponse = {
-        status: 200,
-        data: {
-          title: 'Naruto',
-          synopsis: 'A story about a ninja.',
-          mean: 7.9,
-          genres: [{ name: 'Action' }, { name: 'Adventure' }],
-          start_date: '2002-10-03'
-        }
-      };
-
-      mockAxios.get
-        .mockResolvedValueOnce(mockSearchResponse)
-        .mockResolvedValueOnce(mockDetailsResponse);
+      mockAxios.get.mockResolvedValueOnce(mockSearchResponse);
 
       await animeCommand.execute(mockInteraction);
 
       expect(mockInteraction.deferReply).toHaveBeenCalled();
-      expect(mockAxios.get).toHaveBeenCalledTimes(2);
+      expect(mockAxios.get).toHaveBeenCalledTimes(1);
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
       }));
@@ -124,27 +116,19 @@ describe('anime command', () => {
           data: [
             {
               node: {
-                id: 269
+                id: 269,
+                title: null,
+                synopsis: null,
+                mean: null,
+                genres: null,
+                start_date: null
               }
             }
           ]
         }
       };
 
-      const mockDetailsResponse = {
-        status: 200,
-        data: {
-          title: null,
-          synopsis: null,
-          mean: null,
-          genres: null,
-          start_date: null
-        }
-      };
-
-      mockAxios.get
-        .mockResolvedValueOnce(mockSearchResponse)
-        .mockResolvedValueOnce(mockDetailsResponse);
+      mockAxios.get.mockResolvedValueOnce(mockSearchResponse);
 
       await animeCommand.execute(mockInteraction);
 
@@ -262,21 +246,14 @@ describe('anime command', () => {
       }));
     });
 
-    it('should throw API_ERROR if details response status is not 200', async () => {
+    it('should throw API_ERROR if MAL response status is not 200', async () => {
       const mockInteraction = createMockInteraction({
         options: {
           getString: jest.fn().mockReturnValue('Naruto')
         }
       });
 
-      mockAxios.get
-        .mockResolvedValueOnce({
-          status: 200,
-          data: { data: [{ node: { id: 20 } }] }
-        })
-        .mockResolvedValueOnce({
-          status: 500
-        });
+      mockAxios.get.mockRejectedValueOnce(new Error('API_ERROR'));
 
       await animeCommand.execute(mockInteraction);
 

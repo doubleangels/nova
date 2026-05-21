@@ -41,28 +41,24 @@ module.exports = {
     });
 
     try {
-      let member = interaction.guild?.members.cache.get(targetUser.id);
-      if (interaction.guild && !member) {
-        member = await interaction.guild.members.fetch(targetUser.id).catch(() => null);
-      }
+      const memberPromise = interaction.guild
+        ? (interaction.guild.members.cache.get(targetUser.id)
+          ?? interaction.guild.members.fetch(targetUser.id).catch(() => null))
+        : Promise.resolve(null);
+      const [member, isReturning] = await Promise.all([
+        memberPromise,
+        isFormerMember(targetUser.id).catch(() => null)
+      ]);
+
       let extraPermissions = [];
       let returningValue = '—';
-      let isReturning = null;
-      try {
-        isReturning = await isFormerMember(targetUser.id);
-        if (isReturning === true || isReturning === false) {
-          returningValue = isReturning ? 'Yes' : 'No';
-        }
-      } catch (error) {
-        logger.warn('Failed to check returning status from database in /newuser.', {
-          err: error,
-          targetUserId: targetUser.id
-        });
+      if (isReturning === true || isReturning === false) {
+        returningValue = isReturning ? 'Yes' : 'No';
       }
 
       const displayName = member?.displayName ?? targetUser.globalName ?? targetUser.username;
-      const globalAvatarURL = targetUser.displayAvatarURL({ size: 1024 });
-      const serverAvatarURL = member?.avatar ? member.displayAvatarURL({ size: 1024 }) : null;
+      const globalAvatarURL = targetUser.displayAvatarURL({ size: 256 });
+      const serverAvatarURL = member?.avatar ? member.displayAvatarURL({ size: 256 }) : null;
       const createdTimestamp = Math.floor(targetUser.createdAt.getTime() / 1000);
 
       const avatarURL = serverAvatarURL ?? globalAvatarURL;

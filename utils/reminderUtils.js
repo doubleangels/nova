@@ -1,29 +1,14 @@
 const path = require('path');
-const fs = require('fs');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { getValue } = require('../utils/database');
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
-const KeyvSqlite = requireDefault('@keyv/sqlite');
+const { getSharedKeyvStore } = require('./sqliteStore');
 
-// Ensure data directory exists; use same DATA_DIR as main database for consistency (e.g. Docker)
-const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// Initialize Keyv for reminder storage using SQLite
-// SQLite provides ACID guarantees and immediate persistence
-// This is critical for reminders to survive bot restarts
-// Using the same database.sqlite file as the main database, but with a different namespace
-const sqlitePath = path.join(dataDir, 'database.sqlite');
 const reminderKeyv = new Keyv({
-  store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-    table: 'keyv',
-    busyTimeout: 10000
-  }),
+  store: getSharedKeyvStore(),
   namespace: 'nova_reminders'
 });
 
@@ -317,64 +302,15 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     
     // Save reminder data - SQLite provides ACID guarantees for immediate persistence
     await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
-    logger.debug('Saved reminder data.', {
-      reminderId: reminderId
-    });
-    
-    // Verify the reminder was saved by reading it back
-    const savedReminder = await reminderKeyv.get(`reminder:${reminderId}`);
-    if (!savedReminder || savedReminder.reminder_id !== reminderId) {
-      logger.error("Failed to verify reminder was saved to database:", {
-        reminderId,
-        savedReminder,
-        expectedId: reminderId
-      });
-      throw new Error("Failed to verify reminder was saved to database");
-    }
-    
-    // Update the list to contain ONLY this new reminder ID
-    // Since we cleaned up all old reminders above, the list should now only contain this one
     const listKey = `reminders:${type}:list`;
-    const newList = [reminderId];
-    await reminderKeyv.set(listKey, newList);
-    logger.debug('Set reminder list for type to contain only new reminder.', {
-      type: type,
-      reminderCount: newList.length,
-      list: newList
-    });
-    
-    // Verify the reminder is in the list
-    const verifyList = await reminderKeyv.get(listKey) || [];
-    if (!verifyList.includes(reminderId)) {
-      logger.warn('Reminder was not found in list after setting, attempting to fix.', {
-        reminderId: reminderId,
-        list: verifyList
-      });
-      // Try to set it again
-      await reminderKeyv.set(listKey, [reminderId]);
-      
-      // Verify again
-      const verifyList2 = await reminderKeyv.get(listKey) || [];
-      if (!verifyList2.includes(reminderId)) {
-        logger.error('CRITICAL: Failed to persist reminder to list after multiple attempts.', {
-          reminderId: reminderId,
-          list: verifyList2
-        });
-        throw new Error(`Failed to persist reminder ${reminderId} to list`);
-      } else {
-        logger.info('Successfully set reminder in list after retry.', {
-          reminderId: reminderId
-        });
-      }
-    }
-    
-    logger.info("Successfully saved and verified reminder in database:", { 
-      reminderId, 
-      type, 
+    await reminderKeyv.set(listKey, [reminderId]);
+
+    logger.info("Successfully saved reminder in database:", {
+      reminderId,
+      type,
       scheduledTime: scheduledTime.toISOString(),
       delayMs: delay,
-      delayMinutes: Math.round(delay / 1000 / 60),
-      savedReminder: savedReminder
+      delayMinutes: Math.round(delay / 1000 / 60)
     });
 
     // Send confirmation message unless skipped (e.g., when called from /fix command)

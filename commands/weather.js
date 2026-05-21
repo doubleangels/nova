@@ -139,7 +139,13 @@ module.exports = {
         lon 
       });
       
-      const weatherData = await this.fetchWeatherData(lat, lon, units);
+      const [weatherData, timezoneResult] = await Promise.all([
+        this.fetchWeatherData(lat, lon, units),
+        getTimezoneData({ lat, lng: lon }).catch((error) => {
+          logger.warn('Failed to get timezone for location, using UTC', { err: error, lat, lon });
+          return { timezoneId: null, error: true };
+        })
+      ]);
       
       if (!weatherData) {
         logger.warn("Failed to fetch weather data:", { 
@@ -162,7 +168,8 @@ module.exports = {
         weatherData, 
         unitsOption, 
         forecastDays,
-        hideLocation
+        hideLocation,
+        timezoneResult
       );
       
       await interaction.editReply({ embeds: [embed] });
@@ -191,8 +198,7 @@ module.exports = {
     try {
       const url = `https://api.pirateweather.net/forecast/${config.pirateWeatherApiKey}/${lat},${lon}`;
       const params = new URLSearchParams({ 
-        units: units,
-        extend: 'hourly'
+        units: units
       });
       const requestUrl = `${url}?${params.toString()}`;
       
@@ -232,7 +238,7 @@ module.exports = {
    * @param {boolean} hideLocation - Whether to hide the location details in the response
    * @returns {Promise<EmbedBuilder>} Discord embed with weather information
    */
-  async createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays, hideLocation = false) {
+  async createWeatherEmbed(place, lat, lon, data, unitsOption, forecastDays, hideLocation = false, timezoneResult = { timezoneId: null, error: true }) {
     const currently = data.currently || {};
     const daily = data.daily?.data || [];
     
@@ -268,29 +274,8 @@ module.exports = {
     }
     
     const windDirection = this.getWindDirection(weatherInfo.windBearing);
-    
-    let timezoneResult;
-    try {
-      timezoneResult = await getTimezoneData({ lat, lng: lon });
-    } catch (error) {
-      logger.warn("Failed to get timezone for location, using UTC", { 
-        err: error,
-        lat, 
-        lon
-      });
-      timezoneResult = { timezoneId: null, error: true };
-    }
 
     const forecastText = this.createForecastText(daily, unitsOption, forecastDays, timezoneResult?.timezoneId);
-    
-    let formattedTime;
-    if (!timezoneResult.error && timezoneResult.timezoneId) {
-      // Use formatted time with timezone
-      formattedTime = dayjs().tz(timezoneResult.timezoneId).format('MMM D, YYYY h:mm A');
-    } else {
-      // Fallback to UTC
-      formattedTime = dayjs().utc().format('MMM D, YYYY h:mm A UTC');
-    }
     
     const fields = [
       ...(hideLocation ? [] : [{ name: 'Location', value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, inline: false }]),

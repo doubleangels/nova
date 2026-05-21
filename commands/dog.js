@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, AttachmentBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
-const axios = require('axios');
+const httpClient = require('../utils/httpClient');
 
 // List of supported dog breeds for autocomplete
 const DOG_BREEDS = [
@@ -248,10 +248,10 @@ module.exports = {
         apiUrl = `https://dog.ceo/api/breed/${breedPath}/images/random`;
       }
 
-      const response = await axios.get(apiUrl);
+      const response = await httpClient.get(apiUrl);
       const dogData = response.data;
-      
-      if (!dogData.message) {
+
+      if (dogData.status !== 'success' || !dogData.message) {
         throw new Error("NO_IMAGE_URL");
       }
       

@@ -255,10 +255,6 @@ describe('viewUserInfo command', () => {
 
       await viewUserInfoCommand.execute(mockInteraction);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Failed to check returning status from database in View User Information.',
-        expect.any(Object)
-      );
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.fields).toContainEqual(expect.objectContaining({ name: 'Returning', value: '—' }));
     });

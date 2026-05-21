@@ -153,7 +153,6 @@ describe('newUser command', () => {
 
       await newUserCommand.execute(mockInteraction);
 
-      expect(mockLogger.warn).toHaveBeenCalled();
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       const returningField = embed.data.fields.find(f => f.name === 'Returning');
       expect(returningField.value).toBe('—');

@@ -4,18 +4,16 @@
 
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
-const KeyvSqlite = requireDefault('@keyv/sqlite');
 const path = require('path');
 const fs = require('fs');
+const { getSharedKeyvStore, sqlitePath, dataDir } = require('./sqliteStore');
 
 // Configuration constants
 const NAMESPACES = ['main', 'invites'];
 const KNOWN_SECTIONS = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:', 'former_member:'];
 
-// Ensure data directory exists
-// Allow override via environment variable for container usage
-const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
-const sqlitePath = path.join(dataDir, 'database.sqlite');
+/** @type {Map<string, import('keyv')>} */
+const keyvInstanceCache = new Map();
 
 /**
  * Ensures the data directory exists
@@ -164,14 +162,14 @@ function getKeyvForNamespace(namespace) {
   }
 
   ensureDataDir();
-  
-  return new Keyv({
-    store: new KeyvSqlite(`sqlite://${sqlitePath}`, {
-      table: 'keyv',
-      busyTimeout: 10000
-    }),
-    namespace: namespace
-  });
+
+  if (!keyvInstanceCache.has(namespace)) {
+    keyvInstanceCache.set(namespace, new Keyv({
+      store: getSharedKeyvStore(),
+      namespace
+    }));
+  }
+  return keyvInstanceCache.get(namespace);
 }
 
 /**
