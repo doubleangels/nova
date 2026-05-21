@@ -26,6 +26,23 @@ describe('sqliteStore', () => {
     expect(sqliteStore.sqlitePath).toContain('database.sqlite');
   });
 
+  it('defaults dataDir to project data folder when DATA_DIR is unset', () => {
+    const savedDataDir = process.env.DATA_DIR;
+    delete process.env.DATA_DIR;
+
+    jest.isolateModules(() => {
+      jest.doMock('better-sqlite3', () =>
+        jest.fn((filePath, opts) => (opts?.readonly ? mockReadonlyDb : mockWritableDb))
+      );
+      jest.doMock('@keyv/sqlite', () => mockKeyvSqlite);
+      const path = require('path');
+      const fresh = require('../../utils/sqliteStore');
+      expect(fresh.dataDir).toBe(path.resolve(process.cwd(), 'data'));
+    });
+
+    process.env.DATA_DIR = savedDataDir;
+  });
+
   it('returns singleton shared Keyv store', () => {
     const store1 = sqliteStore.getSharedKeyvStore();
     const store2 = sqliteStore.getSharedKeyvStore();

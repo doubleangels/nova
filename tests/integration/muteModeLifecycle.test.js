@@ -80,6 +80,10 @@ describe('Mute Mode Lifecycle Integration', () => {
     };
     jest.doMock('../../utils/spamModeUtils', () => mockSpamModeUtils);
 
+    jest.doMock('../../utils/reminderUtils', () => ({
+      handleReminder: jest.fn().mockResolvedValue()
+    }));
+
     mockConfig = {
       returningMemberRoleId: 'returning-role',
       newMemberRoleId: 'noobie-role',

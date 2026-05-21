@@ -1,3 +1,11 @@
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const jestDataDir = path.join(os.tmpdir(), 'nova-jest', String(process.pid));
+fs.mkdirSync(jestDataDir, { recursive: true });
+process.env.DATA_DIR = jestDataDir;
+
 process.env.TZ = 'UTC';
 process.env.NODE_ENV = 'test';
 process.env.LOG_LEVEL = 'error';
