@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require('discord.js');
 const { createMockInteraction } = require('../testUtils');
 
 const mockLogger = {
@@ -68,6 +69,26 @@ describe('wikipedia command', () => {
       expect(mockLogger.info).toHaveBeenCalledWith('/wikipedia command completed successfully.', expect.any(Object));
     });
 
+    it('should return cached embed without calling the API', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('CachedPage')
+        }
+      });
+
+      const cachedEmbed = new EmbedBuilder()
+        .setTitle('Cached Page')
+        .setDescription('Cached summary');
+
+      const { setCached, cacheKey } = require('../../utils/responseCache');
+      setCached(cacheKey('wikipedia', 'cachedpage'), cachedEmbed, 900000);
+
+      await wikipediaCommand.execute(mockInteraction);
+
+      expect(mockAxios.get).not.toHaveBeenCalled();
+      expect(mockInteraction.editReply).toHaveBeenCalledWith({ embeds: [cachedEmbed] });
+    });
+
     it('should truncate summary if it exceeds 1024 characters', async () => {
       const mockInteraction = createMockInteraction({
         options: {
@@ -108,6 +129,26 @@ describe('wikipedia command', () => {
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ No results found for your search query.'
       }));
+    });
+
+    it('should fall back to query title and default URL when page metadata is minimal', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('FallbackQuery')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          extract: 'Short article text.'
+        }
+      });
+
+      await wikipediaCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.title).toBe('FallbackQuery');
+      expect(sentEmbed.data.url).toBe('https://en.wikipedia.org/wiki/FallbackQuery');
     });
 
     it('should catch errors thrown during execution and forward to handleError', async () => {

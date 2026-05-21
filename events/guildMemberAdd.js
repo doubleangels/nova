@@ -11,6 +11,15 @@ const config = require('../config');
 // Lock map to prevent race conditions in invite usage tracking
 const inviteCheckLocks = new Map();
 
+function releaseInviteCheckLock(guildId, resolveLock, newLockPromise) {
+  if (typeof resolveLock === 'function') {
+    resolveLock();
+  }
+  if (inviteCheckLocks.get(guildId) === newLockPromise) {
+    inviteCheckLocks.delete(guildId);
+  }
+}
+
 module.exports = {
   name: Events.GuildMemberAdd,
 
@@ -375,12 +384,7 @@ module.exports = {
           });
         }
       } finally {
-        if (typeof resolveLock === 'function') {
-          resolveLock();
-        }
-        if (inviteCheckLocks.get(guildId) === newLockPromise) {
-          inviteCheckLocks.delete(guildId);
-        }
+        releaseInviteCheckLock(guildId, resolveLock, newLockPromise);
       }
     } catch (error) {
       captureError(error, { event: 'guildMemberAdd', handler: 'checkTaggedInvite' });
@@ -393,3 +397,7 @@ module.exports = {
     }
   }
 };
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports.__test__ = { inviteCheckLocks, releaseInviteCheckLock };
+}

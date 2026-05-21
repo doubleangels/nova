@@ -177,6 +177,39 @@ describe('anime command', () => {
       expect(animeCommand.formatReleaseDate(errorThrowingReleaseDate)).toBe(errorThrowingReleaseDate);
     });
 
+    it('should stringify zero rating in createAnimeEmbed', () => {
+      const embed = animeCommand.createAnimeEmbed({
+        id: 1,
+        title: 'Zero Rated',
+        synopsis: 'A rated show.',
+        rating: 0,
+        genres: [{ name: 'Action' }]
+      });
+      expect(embed.data.fields.find(f => f.name === '⭐ MAL Rating').value).toBe('0');
+    });
+
+    it('should use Unknown title when title is missing in createAnimeEmbed', () => {
+      const embed = animeCommand.createAnimeEmbed({
+        id: 1,
+        title: null,
+        synopsis: 'Synopsis text',
+        rating: 7,
+        genres: [{ name: 'Action' }]
+      });
+      expect(embed.data.title).toBe('Unknown');
+    });
+
+    it('should use default synopsis when synopsis is missing', () => {
+      const embed = animeCommand.createAnimeEmbed({
+        id: 1,
+        title: 'Test',
+        releaseDate: '2020-01-01',
+        rating: 8,
+        genres: [{ name: 'Action' }]
+      });
+      expect(embed.data.description).toContain('No synopsis available.');
+    });
+
     it('should correctly handle various rating types in createAnimeEmbed (covers rating branch coverage)', () => {
       // 1. rating is empty string
       const embedEmptyRating = animeCommand.createAnimeEmbed({

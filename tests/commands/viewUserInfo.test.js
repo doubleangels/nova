@@ -306,6 +306,27 @@ describe('viewUserInfo command', () => {
       expect(embed.data.author.name).toBe('Global Tag 6');
     });
 
+    it('should work when guild is null', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.guild = null;
+      mockInteraction.targetUser = {
+        id: 'user-id-no-guild',
+        username: 'noguild',
+        globalName: 'No Guild User',
+        bot: false,
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        displayAvatarURL: jest.fn().mockReturnValue('http://avatar.url/noguild')
+      };
+      mockDatabase.isFormerMember.mockResolvedValue(null);
+
+      await viewUserInfoCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.author.name).toBe('No Guild User');
+      const returningField = embed.data.fields.find(f => f.name === 'Returning');
+      expect(returningField.value).toBe('—');
+    });
+
     it('should catch error and send unexpected error reply', async () => {
       const mockInteraction = createMockInteraction();
       mockInteraction.targetUser = {

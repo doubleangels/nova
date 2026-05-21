@@ -34,6 +34,12 @@ describe('reminder command', () => {
     reminderCommand = require('../../commands/reminder');
   });
 
+  it('serializes slash command subcommands and options', () => {
+    const json = reminderCommand.data.toJSON();
+    expect(json.options).toHaveLength(2);
+    expect(json.options[0].options).toHaveLength(2);
+  });
+
   describe('execute', () => {
     it('should defer reply and handle setup subcommand', async () => {
       const mockInteraction = createMockInteraction({
@@ -49,6 +55,24 @@ describe('reminder command', () => {
       expect(mockInteraction.deferReply).toHaveBeenCalledWith({ flags: 64 });
       expect(setupSpy).toHaveBeenCalledWith(mockInteraction);
       setupSpy.mockRestore();
+    });
+
+    it('should do nothing when subcommand is unrecognized', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getSubcommand: jest.fn().mockReturnValue('unknown')
+        }
+      });
+
+      const setupSpy = jest.spyOn(reminderCommand, 'handleReminderSetup').mockResolvedValue();
+      const statusSpy = jest.spyOn(reminderCommand, 'handleReminderStatus').mockResolvedValue();
+
+      await reminderCommand.execute(mockInteraction);
+
+      expect(setupSpy).not.toHaveBeenCalled();
+      expect(statusSpy).not.toHaveBeenCalled();
+      setupSpy.mockRestore();
+      statusSpy.mockRestore();
     });
 
     it('should call handleReminderStatus when status subcommand is used', async () => {
@@ -173,6 +197,30 @@ describe('reminder command', () => {
       expect(bumpField.value).toContain(`<t:${Math.floor(futureTime / 1000)}:R>`);
     });
 
+    it('should show invalid channel and role when IDs are missing from cache', async () => {
+      const mockInteraction = createMockInteraction({
+        guild: {
+          channels: { cache: new Collection() },
+          roles: { cache: new Collection() }
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'reminder_channel') return 'missing-ch';
+        if (key === 'reminder_role') return 'missing-role';
+        return null;
+      });
+      mockReminderUtils.getLatestReminderData.mockResolvedValue(null);
+
+      await reminderCommand.handleReminderStatus(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const channelField = embed.data.fields.find(f => f.name === 'Channel');
+      const roleField = embed.data.fields.find(f => f.name === 'Role');
+      expect(channelField.value).toBe('Invalid channel');
+      expect(roleField.value).toBe('Invalid role');
+    });
+
     it('should handle configuration incomplete when not set', async () => {
       const mockInteraction = createMockInteraction({
         guild: {
@@ -281,6 +329,16 @@ describe('reminder command', () => {
       expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to retrieve reminder settings. Please try again later.'
       }));
+    });
+
+    it('should swallow errors when both editReply and reply fail', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('edit failed'));
+      mockInteraction.reply.mockRejectedValue(new Error('reply failed'));
+
+      await expect(
+        reminderCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'))
+      ).resolves.not.toThrow();
     });
   });
 });

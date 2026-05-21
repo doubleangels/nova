@@ -27,6 +27,11 @@ describe('spamMode command', () => {
     spamModeCommand = require('../../commands/spamMode');
   });
 
+  it('serializes slash command subcommands', () => {
+    const json = spamModeCommand.data.toJSON();
+    expect(json.options.length).toBeGreaterThanOrEqual(2);
+  });
+
   describe('execute', () => {
     it('should defer reply with Ephemeral flags and call status subcommand', async () => {
       const mockInteraction = createMockInteraction({
@@ -84,6 +89,18 @@ describe('spamMode command', () => {
     });
   });
 
+  describe('getCurrentSettings', () => {
+    it('should default tracking window from mute mode kick time', async () => {
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_kick_time_hours') return '6';
+        return null;
+      });
+
+      const settings = await spamModeCommand.getCurrentSettings();
+      expect(settings.window).toBe(6);
+    });
+  });
+
   describe('handleStatusSubcommand', () => {
     it('should fetch status, construct embed and reply', async () => {
       const warningChannel = { id: 'ch-warn', toString: () => '<#ch-warn>' };
@@ -138,6 +155,30 @@ describe('spamMode command', () => {
       expect(embed.data.color).toBe(0xFF0000); // Red when disabled
       const warningField = embed.data.fields.find(f => f.name === 'Warning Channel');
       expect(warningField.value).toBe('⚠️ Not set!');
+    });
+
+    it('should show channel ID when warning channel is not in guild cache', async () => {
+      const mockInteraction = createMockInteraction({
+        guild: {
+          channels: {
+            cache: new Collection()
+          }
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'spam_mode_enabled') return true;
+        if (key === 'spam_mode_threshold') return '3';
+        if (key === 'spam_mode_window_hours') return '2';
+        if (key === 'spam_mode_channel_id') return 'ch-missing';
+        return null;
+      });
+
+      await spamModeCommand.handleStatusSubcommand(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const warningField = embed.data.fields.find(f => f.name === 'Warning Channel');
+      expect(warningField.value).toBe('<#ch-missing>');
     });
 
     it('should display status when enabled with 1 hour singular form and no warning channel', async () => {
@@ -288,7 +329,58 @@ describe('spamMode command', () => {
     });
   });
 
+  describe('formatStatusMessage and formatUpdateMessage', () => {
+    it('should show full description when enabled with warning channel configured', () => {
+      const mockChannel = { toString: () => '<#warn-ch>' };
+      const mockInteraction = createMockInteraction({
+        guild: {
+          channels: {
+            cache: new Map([['warn-ch', mockChannel]])
+          }
+        }
+      });
+
+      const statusEmbed = spamModeCommand.formatStatusMessage({
+        enabled: true,
+        threshold: 3,
+        window: 1,
+        warningChannelId: 'warn-ch'
+      }, mockInteraction);
+      expect(statusEmbed.data.description).toContain('duplicate messages');
+      expect(statusEmbed.data.description).toContain('**1** hour');
+
+      const updateEmbed = spamModeCommand.formatUpdateMessage(
+        true,
+        3,
+        2,
+        mockChannel,
+        mockInteraction
+      );
+      expect(updateEmbed.data.description).toContain('duplicate messages');
+    });
+
+    it('should use plural hours in formatUpdateMessage when window is not 1', () => {
+      const mockInteraction = createMockInteraction();
+      const embed = spamModeCommand.formatUpdateMessage(true, 5, 4, null, mockInteraction);
+      const windowField = embed.data.fields.find(f => f.name === 'Tracking Window');
+      expect(windowField.value).toBe('4 hours');
+    });
+  });
+
   describe('getCurrentSettings', () => {
+    it('should default window when mute kick time is not a number', async () => {
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'spam_mode_enabled') return false;
+        if (key === 'spam_mode_threshold') return null;
+        if (key === 'spam_mode_window_hours') return null;
+        if (key === 'mute_mode_kick_time_hours') return 'not-a-number';
+        return null;
+      });
+
+      const settings = await spamModeCommand.getCurrentSettings();
+      expect(settings.window).toBe(4);
+    });
+
     it('should default window to mute_mode_kick_time_hours if not set', async () => {
       mockDatabase.getValue.mockImplementation(async (key) => {
         if (key === 'spam_mode_enabled') return true;
@@ -378,6 +470,16 @@ describe('spamMode command', () => {
       expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to retrieve spam mode settings. Please try again later.'
       }));
+    });
+
+    it('should swallow errors when both editReply and reply fail', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('edit failed'));
+      mockInteraction.reply.mockRejectedValue(new Error('reply failed'));
+
+      await expect(
+        spamModeCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'))
+      ).resolves.not.toThrow();
     });
   });
 });

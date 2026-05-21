@@ -44,6 +44,23 @@ describe('redditClient', () => {
   });
 
   describe('redditApiRequest', () => {
+    it('should share in-flight token refresh across concurrent requests', async () => {
+      let resolveToken;
+      const tokenPromise = new Promise((resolve) => {
+        resolveToken = resolve;
+      });
+      mockAxios.post.mockReturnValueOnce(tokenPromise);
+      mockAxios.mockResolvedValue({ data: { ok: true } });
+
+      const req1 = redditClient.redditApiRequest('GET', '/api/one');
+      const req2 = redditClient.redditApiRequest('GET', '/api/two');
+
+      resolveToken({ data: { access_token: 'shared-token', expires_in: 3600 } });
+      await Promise.all([req1, req2]);
+
+      expect(mockAxios.post).toHaveBeenCalledTimes(1);
+    });
+
     it('should fetch access token and make request', async () => {
       mockAxios.post.mockResolvedValueOnce({
         data: { access_token: 'token123', expires_in: 3600 }

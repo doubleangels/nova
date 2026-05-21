@@ -49,6 +49,7 @@ describe('promote command', () => {
       mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(mockTime);
       const res = await promoteCommand.getLastPromotion();
       expect(res).toBe(mockTime);
+      expect(mockLogger.debug).toHaveBeenCalledWith('Found next promotion time:', expect.any(Object));
     });
 
     it('should return null on error', async () => {
@@ -402,6 +403,457 @@ describe('promote command', () => {
       }));
     });
 
+    it('should handle json errors array in submit response without throwing', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { errors: [['RATELIMIT', 'slow down']] } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('Rate limit exceeded'),
+        flags: 64
+      }));
+    });
+
+    it('should parse post id from data.name when data.id is missing', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ flair_template_id: 'flair-1', text: 'gaming' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return {
+            json: {
+              data: {
+                name: 't3_post-from-name',
+                permalink: '/r/discordservers_/comments/abc'
+              }
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+    });
+
+    it('should ignore invalid JSON in string-encoded data field', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: 'not-json' } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('Could not parse response'),
+        flags: 64
+      }));
+    });
+
+    it('should match preferred flair text when available', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [
+            { id: 'flair-other', text: 'other' },
+            { id: 'flair-gaming', text: 'Gaming Server' }
+          ];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 'post-1', permalink: '/r/discordservers_/comments/1' } } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/discordservers_'),
+        expect.objectContaining({ matchedPreferred: true })
+      );
+    });
+
+    it('should handle RATELIMIT and malformed API error arrays in response', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      let submitCallCount = 0;
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          submitCallCount++;
+          if (submitCallCount === 1) {
+            const mockErr = new Error('Rate limited');
+            mockErr.response = { data: { json: { errors: [['RATELIMIT', 'You are doing that too much']] } } };
+            throw mockErr;
+          }
+          const mockErr = new Error('Bad format');
+          mockErr.response = { data: { json: { errors: ['not-an-array'] } } };
+          throw mockErr;
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringMatching(/Rate limit|RATELIMIT|Unknown error/)
+      }));
+    });
+
+    it('should parse submission with json errors, relative url, and string-encoded name/url', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      let submitCount = 0;
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ flair_template_id: 'ft-1', flair_text: 'unrelated' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          submitCount++;
+          if (submitCount === 1) {
+            return { json: { errors: [['ERR', 'fail']] } };
+          }
+          if (submitCount === 2) {
+            return { json: { data: { name: 't3_abc', url: 'not-a-full-url' } } };
+          }
+          return {
+            json: {
+              data: JSON.stringify({
+                name: 't3_strpost',
+                url: 'relative/path'
+              })
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalled();
+    });
+
+    it('should use first flair when preferred text does not match', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [
+            { flair_identifier: 'fi-1', flair_text: 'other category' },
+            { id: 'flair-2', text: 'another' }
+          ];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 'post-1', permalink: '/r/DiscordPromote/comments/1' } } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/DiscordPromote'),
+        expect.objectContaining({ matchedPreferred: false })
+      );
+    });
+
+    it('should parse string-encoded submission with id and non-matching url', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return {
+            json: {
+              data: JSON.stringify({
+                id: 'str-id',
+                url: 'not-http-url'
+              })
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+    });
+
+    it('should parse string-encoded submission using name and url fallbacks', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      let submitCount = 0;
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          submitCount++;
+          if (submitCount <= 2) {
+            return {
+              json: {
+                data: JSON.stringify({
+                  name: 't3_nameonly',
+                  url: 'https://reddit.com/r/test/comments/abc'
+                })
+              }
+            };
+          }
+          return {
+            json: {
+              data: JSON.stringify({
+                name: 't3_other',
+                url: 'no-scheme-path'
+              })
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+    });
+
+    it('should handle submission response with null data object', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: null } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('Could not parse response')
+      }));
+    });
+
+    it('should proceed when cooldown has expired', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(dayjs().subtract(1, 'hour').toISOString());
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 'post-1', permalink: '/r/discordservers_/comments/1' } } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.deferReply).toHaveBeenCalled();
+    });
+
+    it('should parse string-encoded submission using name and https url path segment', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return {
+            json: {
+              data: JSON.stringify({
+                name: 't3_urlonly',
+                url: 'https://reddit.com/r/discordservers_/comments/xyz'
+              })
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+    });
+
+    it('should parse string-encoded submission using name and non-http url fallbacks', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      let submitCount = 0;
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          submitCount++;
+          if (submitCount === 1) {
+            return {
+              json: {
+                data: JSON.stringify({
+                  name: 't3_nameonly',
+                  url: 'not-http-url'
+                })
+              }
+            };
+          }
+          return {
+            json: {
+              data: JSON.stringify({
+                name: 't3_other',
+                url: 'https://reddit.com/r/test/comments/abc'
+              })
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+    });
+
+    it('should fall through getRedditErrorMessage when API error tuple is too short', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          const mockErr = new Error('');
+          mockErr.response = { data: { json: { errors: [['ONLY_CODE']] } } };
+          throw mockErr;
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('Unknown error')
+      }));
+    });
+
+    it('should select flair via flair_text when text is missing', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ flair_template_id: 'ft-1', flair_text: 'gaming server' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 'post-1', permalink: '/r/DiscordPromote/comments/1' } } };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/DiscordPromote'),
+        expect.objectContaining({ matchedPreferred: true })
+      );
+    });
+
+    it('should parse string-encoded submission with id and permalink only', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return {
+            json: {
+              data: JSON.stringify({
+                id: 'direct-id',
+                permalink: '/r/discordservers_/comments/direct-id'
+              })
+            }
+          };
+        }
+        return null;
+      });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+    });
+
     it('should handle handlePost unexpected throws and log error in catch block', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
@@ -421,6 +873,270 @@ describe('promote command', () => {
         content: expect.stringContaining('An unexpected error occurred')
       }));
       expect(mockLogger.error).toHaveBeenCalledWith('Error occurred while posting to Reddit.', expect.any(Object));
+    });
+  });
+
+  describe('internal helpers', () => {
+    it('parseSubmissionResponse uses object data without string-encoded branch', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: { id: 'obj-only', permalink: '/r/x/comments/obj-only' }
+        }
+      });
+      expect(result.postId).toBe('obj-only');
+    });
+
+    it('parseSubmissionResponse handles string-encoded JSON', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({ name: 't3_abc', permalink: '/r/x/comments/abc' })
+        }
+      });
+      expect(result.postId).toBe('abc');
+    });
+
+    it('parseSubmissionResponse uses name when id is missing in object data', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: { name: 't3_objname', url: 'https://reddit.com/r/x/comments/objname' }
+        }
+      });
+      expect(result.postId).toBe('objname');
+    });
+
+    it('parseSubmissionResponse uses name when id is missing in string JSON', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({ name: 't3_onlyname', url: 'https://reddit.com/r/x/comments/onlyname' })
+        }
+      });
+      expect(result.postId).toBe('onlyname');
+      expect(result.permalink).toBe('/r/x/comments/onlyname');
+    });
+
+    it('parseSubmissionResponse uses name only in string JSON without url', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({ name: 't3_nameonly' })
+        }
+      });
+      expect(result).toBeNull();
+    });
+
+    it('parseSubmissionResponse reads id from string JSON payload', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({ id: 'str-id', permalink: '/r/x/comments/str-id' })
+        }
+      });
+      expect(result.postId).toBe('str-id');
+    });
+
+    it('parseSubmissionResponse uses id from string JSON without name field', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({ id: 'only-id', permalink: '/r/x/comments/only-id' })
+        }
+      });
+      expect(result.postId).toBe('only-id');
+    });
+
+    it('parseSubmissionResponse uses permalink from string JSON without url', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({ id: 'str-perm', permalink: '/r/x/comments/str-perm' })
+        }
+      });
+      expect(result).toEqual({ postId: 'str-perm', permalink: '/r/x/comments/str-perm' });
+    });
+
+    it('postToSubreddit falls back when flair entries lack text fields', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [
+            { id: 'no-text-1' },
+            { id: 'flair-2', text: 'gaming' }
+          ];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_x', permalink: '/r/x' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('discordservers_', 'title');
+      expect(result.success).toBe(true);
+    });
+
+    it('postToSubreddit matches flair using flair_text when text is missing', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ flair_template_id: 'ft-gaming', flair_text: 'gaming community' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_g', permalink: '/r/g' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('discordservers_', 'title');
+      expect(result.success).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/discordservers_'),
+        expect.objectContaining({ matchedPreferred: true })
+      );
+    });
+
+    it('postToSubreddit skips preferred flair lookup when subreddit has no preference', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ id: 'flair-1', text: 'general' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_x', permalink: '/r/x' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('NoPreferenceSub', 'title');
+      expect(result.success).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/NoPreferenceSub'),
+        expect.objectContaining({ matchedPreferred: false })
+      );
+    });
+
+    it('postToSubreddit matches preferred flair by flair_text when text is absent', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ flair_template_id: 'ft-2', flair_text: 'gaming server promo' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_match', permalink: '/r/m' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('DiscordPromote', 'title');
+      expect(result.success).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/DiscordPromote'),
+        expect.objectContaining({ matchedPreferred: true })
+      );
+    });
+
+    it('postToSubreddit falls back to first flair when preferred text is not found', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ id: 'flair-x', text: 'unrelated' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_fb', permalink: '/r/fb' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('DiscordServerPromos', 'title');
+      expect(result.success).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/DiscordServerPromos'),
+        expect.objectContaining({ matchedPreferred: false })
+      );
+    });
+
+    it('postToSubreddit falls back to first flair when preference does not match', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ id: 'flair-1', text: 'unrelated flair' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_z', permalink: '/r/z' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('discordservers_', 'title');
+      expect(result.success).toBe(true);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('Using flair for r/discordservers_'),
+        expect.objectContaining({ matchedPreferred: false })
+      );
+    });
+
+    it('postToSubreddit uses first flair when subreddit has no preference entry', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) {
+          return [{ flair_template_id: 'ft-unknown', text: 'misc' }];
+        }
+        if (method === 'POST' && path === '/api/submit') {
+          return { json: { data: { id: 't3_u', permalink: '/r/u' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('unknownsubreddit', 'title');
+      expect(result.success).toBe(true);
+    });
+
+    it('parseSubmissionResponse ignores invalid string-encoded JSON', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: { data: 'not-json' }
+      });
+      expect(result).toBeNull();
+    });
+
+    it('parseSubmissionResponse returns null when string JSON has no id, name, or permalink', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: { data: JSON.stringify({ url: 'https://reddit.com' }) }
+      });
+      expect(result).toBeNull();
+    });
+
+    it('parseSubmissionResponse uses full url when string JSON url has no path match', () => {
+      const result = promoteCommand.__test__.parseSubmissionResponse({
+        json: {
+          data: JSON.stringify({
+            id: 'url-id',
+            url: 'not-a-valid-url'
+          })
+        }
+      });
+      expect(result).toEqual({ postId: 'url-id', permalink: 'not-a-valid-url' });
+    });
+
+    it('getRedditErrorMessage uses Reddit label when subreddit is falsy', () => {
+      const msg = promoteCommand.__test__.getRedditErrorMessage(new Error('fail'), '');
+      expect(msg).toContain('Reddit');
+    });
+
+    it('postToSubreddit uses default empty body and truncates long text', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path, data) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) return [];
+        if (method === 'POST' && path === '/api/submit') {
+          expect(data.text).toHaveLength(10000);
+          return { json: { data: { id: 't3_x', permalink: '/r/x' } } };
+        }
+        return null;
+      });
+      const longBody = 'x'.repeat(10001);
+      const result = await promoteCommand.__test__.postToSubreddit('testsub', 'title', longBody);
+      expect(result.success).toBe(true);
+    });
+
+    it('does not export __test__ helpers outside test environment', () => {
+      jest.isolateModules(() => {
+        const previousEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'production';
+        const cmd = require('../../commands/promote');
+        expect(cmd.__test__).toBeUndefined();
+        process.env.NODE_ENV = previousEnv;
+      });
+    });
+
+    it('postToSubreddit omits text when body is empty', async () => {
+      mockRedditClient.redditApiRequest.mockImplementation(async (method, path, data) => {
+        if (method === 'GET' && path.includes('/api/link_flair')) return [];
+        if (method === 'POST' && path === '/api/submit') {
+          expect(data.text).toBeUndefined();
+          return { json: { data: { id: 't3_y', permalink: '/r/y' } } };
+        }
+        return null;
+      });
+      const result = await promoteCommand.__test__.postToSubreddit('testsub', 'title');
+      expect(result.success).toBe(true);
     });
   });
 });

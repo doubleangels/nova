@@ -22,6 +22,23 @@ describe('compareRoles command', () => {
     compareRolesCommand = require('../../commands/compareRoles');
   });
 
+  describe('helpers', () => {
+    it('truncateEmbedField returns None for empty text', () => {
+      expect(compareRolesCommand.__test__.truncateEmbedField('')).toBe('None');
+      expect(compareRolesCommand.__test__.truncateEmbedField(null)).toBe('None');
+    });
+
+    it('does not export __test__ helpers outside test environment', () => {
+      jest.isolateModules(() => {
+        const previousEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'production';
+        const cmd = require('../../commands/compareRoles');
+        expect(cmd.__test__).toBeUndefined();
+        process.env.NODE_ENV = previousEnv;
+      });
+    });
+  });
+
   describe('execute', () => {
     it('should successfully compare two different roles with shared and unique permissions', async () => {
       const mockRoleOne = {
@@ -221,6 +238,109 @@ describe('compareRoles command', () => {
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ An unexpected error occurred while comparing permissions. Please try again later.'
       }));
+    });
+
+    it('should use None when truncateEmbedField receives empty text', async () => {
+      const mockRoleOne = {
+        id: 'role-id-1',
+        name: 'Role One',
+        permissions: { toArray: jest.fn().mockReturnValue([]) },
+        toString: () => '<@&role-id-1>'
+      };
+      const mockRoleTwo = {
+        id: 'role-id-2',
+        name: 'Role Two',
+        permissions: { toArray: jest.fn().mockReturnValue([]) },
+        toString: () => '<@&role-id-2>'
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getRole: jest.fn().mockImplementation((name) => {
+            if (name === 'base-role') return mockRoleOne;
+            if (name === 'comparison-role') return mockRoleTwo;
+            return null;
+          })
+        }
+      });
+
+      await compareRolesCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const sharedField = embed.data.fields.find(f => f.name === 'Shared permissions');
+      expect(sharedField.value).toBe('None');
+    });
+
+    it('should return short text unchanged in truncateEmbedField path', async () => {
+      const mockRoleOne = {
+        id: 'role-id-1',
+        name: 'Role One',
+        permissions: { toArray: jest.fn().mockReturnValue(['KickMembers']) },
+        toString: () => '<@&role-id-1>'
+      };
+      const mockRoleTwo = {
+        id: 'role-id-2',
+        name: 'Role Two',
+        permissions: { toArray: jest.fn().mockReturnValue(['BanMembers']) },
+        toString: () => '<@&role-id-2>'
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getRole: jest.fn().mockImplementation((name) => {
+            if (name === 'base-role') return mockRoleOne;
+            if (name === 'comparison-role') return mockRoleTwo;
+            return null;
+          })
+        }
+      });
+
+      await compareRolesCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const sharedField = embed.data.fields.find(f => f.name === 'Shared permissions');
+      expect(sharedField.value).toBe('None');
+      expect(sharedField.value.length).toBeLessThan(1024);
+    });
+
+    it('should truncate permission lists longer than 1024 characters', async () => {
+      const longPerm = 'A'.repeat(200);
+      const manyPerms = Array.from({ length: 10 }, () => longPerm);
+
+      const mockRoleOne = {
+        id: 'role-id-1',
+        name: 'Role One',
+        permissions: {
+          toArray: jest.fn().mockReturnValue(manyPerms)
+        },
+        toString: () => '<@&role-id-1>'
+      };
+
+      const mockRoleTwo = {
+        id: 'role-id-2',
+        name: 'Role Two',
+        permissions: {
+          toArray: jest.fn().mockReturnValue(manyPerms)
+        },
+        toString: () => '<@&role-id-2>'
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getRole: jest.fn().mockImplementation((name) => {
+            if (name === 'base-role') return mockRoleOne;
+            if (name === 'comparison-role') return mockRoleTwo;
+            return null;
+          })
+        }
+      });
+
+      await compareRolesCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const sharedField = embed.data.fields.find(f => f.name === 'Shared permissions');
+      expect(sharedField.value.length).toBeLessThanOrEqual(1024);
+      expect(sharedField.value.endsWith('...')).toBe(true);
     });
 
     it('should catch error and log if editReply inside catch block also fails', async () => {

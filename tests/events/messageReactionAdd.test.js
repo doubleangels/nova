@@ -257,6 +257,37 @@ describe('messageReactionAdd event', () => {
       }
     });
 
+    it('should fetch partial message before translating', async () => {
+      const fetchedMessage = {
+        id: 'msg-1',
+        content: 'Hola',
+        partial: false,
+        reply: jest.fn().mockResolvedValue(),
+        guild: { members: { cache: { get: () => ({ roles: { highest: { color: 0xff0000 } } }) } } }
+      };
+
+      const mockReaction = {
+        partial: false,
+        emoji: { name: '🇺🇸' },
+        message: {
+          partial: true,
+          fetch: jest.fn().mockResolvedValue(fetchedMessage)
+        }
+      };
+      const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+      mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+      mockLanguageUtils.getLanguageInfo.mockReturnValue({ code: 'en', name: 'English' });
+      mockAxios.post.mockResolvedValue({
+        data: { translations: [{ text: 'Hello' }] }
+      });
+
+      await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+      expect(mockReaction.message.fetch).toHaveBeenCalled();
+      expect(fetchedMessage.reply).toHaveBeenCalled();
+    });
+
     it('should handle Google translation API 403 error specifically', async () => {
       const mockReaction = {
         partial: false,

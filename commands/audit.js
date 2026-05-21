@@ -4,6 +4,87 @@ const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
 
+const PERMISSION_LABELS = [
+  { bit: PermissionFlagsBits.Administrator, label: 'Administrator' },
+  { bit: PermissionFlagsBits.BanMembers, label: 'Ban Members' },
+  { bit: PermissionFlagsBits.KickMembers, label: 'Kick Members' },
+  { bit: PermissionFlagsBits.ManageChannels, label: 'Manage Channels' },
+  { bit: PermissionFlagsBits.ManageMessages, label: 'Manage Messages' },
+  { bit: PermissionFlagsBits.ManageNicknames, label: 'Manage Nicknames' },
+  { bit: PermissionFlagsBits.ManageRoles, label: 'Manage Roles' },
+  { bit: PermissionFlagsBits.ModerateMembers, label: 'Timeout / Moderate Members' }
+].sort((a, b) => a.label.localeCompare(b.label));
+
+const EXCLUDED_FOR_MODERATOR_LIST = new Set([
+  PermissionFlagsBits.Administrator,
+  PermissionFlagsBits.BanMembers,
+  PermissionFlagsBits.KickMembers
+]);
+
+function formatLine(member, showPerms, excludePowerPerms = false) {
+  const name = member.displayName || member.user.username;
+  const boldName = `**${name}**`;
+
+  if (!showPerms) {
+    return boldName;
+  }
+
+  const memberPermLabels = PERMISSION_LABELS
+    .filter(p => {
+      if (!member.permissions.has(p.bit)) return false;
+      if (excludePowerPerms && EXCLUDED_FOR_MODERATOR_LIST.has(p.bit)) return false;
+      return true;
+    })
+    .map(p => p.label);
+
+  const permsText = memberPermLabels.length > 0
+    ? memberPermLabels.join(', ')
+    : 'None';
+
+  return `${boldName} — ${permsText}`;
+}
+
+function buildPages(membersList, showPerms, excludePowerPerms = false) {
+  let effectiveMembers = membersList;
+
+  if (showPerms && excludePowerPerms) {
+    effectiveMembers = membersList.filter(member =>
+      PERMISSION_LABELS.some(p =>
+        member.permissions.has(p.bit) && !EXCLUDED_FOR_MODERATOR_LIST.has(p.bit)
+      )
+    );
+  }
+
+  if (effectiveMembers.length === 0) {
+    return ['None'];
+  }
+
+  const lines = effectiveMembers
+    .map(member => formatLine(member, showPerms, excludePowerPerms))
+    .sort((a, b) => a.localeCompare(b));
+
+  const pages = [];
+  let currentLines = [];
+  let currentLength = 0;
+
+  for (const line of lines) {
+    const extraLength = (currentLines.length > 0 ? 1 : 0) + line.length;
+
+    if (currentLines.length >= 25 || currentLength + extraLength > 900) {
+      pages.push(currentLines.join('\n'));
+      currentLines = [line];
+      currentLength = line.length;
+    } else {
+      currentLines.push(line);
+      currentLength += extraLength;
+    }
+  }
+
+  pages.push(currentLines.join('\n'));
+
+  return pages;
+}
+
 /**
  * Command module for auditing member permissions.
  * Lists members with moderator-level permissions vs standard users.
@@ -122,92 +203,6 @@ module.exports = {
         }
       }
 
-      const PERMISSION_LABELS = [
-        { bit: PermissionFlagsBits.Administrator, label: 'Administrator' },
-        { bit: PermissionFlagsBits.BanMembers, label: 'Ban Members' },
-        { bit: PermissionFlagsBits.KickMembers, label: 'Kick Members' },
-        { bit: PermissionFlagsBits.ManageChannels, label: 'Manage Channels' },
-        { bit: PermissionFlagsBits.ManageMessages, label: 'Manage Messages' },
-        { bit: PermissionFlagsBits.ManageNicknames, label: 'Manage Nicknames' },
-        { bit: PermissionFlagsBits.ManageRoles, label: 'Manage Roles' },
-        { bit: PermissionFlagsBits.ModerateMembers, label: 'Timeout / Moderate Members' }
-      ].sort((a, b) => a.label.localeCompare(b.label));
-
-      const EXCLUDED_FOR_MODERATOR_LIST = new Set([
-        PermissionFlagsBits.Administrator,
-        PermissionFlagsBits.BanMembers,
-        PermissionFlagsBits.KickMembers
-      ]);
-
-      const formatLine = (member, showPerms, excludePowerPerms = false) => {
-        const name = member.displayName || member.user.username;
-        const boldName = `**${name}**`;
-
-        if (!showPerms) {
-          return boldName;
-        }
-
-        const memberPermLabels = PERMISSION_LABELS
-          .filter(p => {
-            if (!member.permissions.has(p.bit)) return false;
-            if (excludePowerPerms && EXCLUDED_FOR_MODERATOR_LIST.has(p.bit)) return false;
-            return true;
-          })
-          .map(p => p.label);
-
-        const permsText = memberPermLabels.length > 0
-          ? memberPermLabels.join(', ')
-          : 'None';
-
-        return `${boldName} — ${permsText}`;
-      };
-
-      const buildPages = (membersList, showPerms, excludePowerPerms = false) => {
-        let effectiveMembers = membersList;
-
-        if (showPerms && excludePowerPerms) {
-          // For moderators, only keep members who still have at least one
-          // non-admin / non-kick / non-ban moderation permission.
-          effectiveMembers = membersList.filter(member =>
-            PERMISSION_LABELS.some(p =>
-              member.permissions.has(p.bit) && !EXCLUDED_FOR_MODERATOR_LIST.has(p.bit)
-            )
-          );
-        }
-
-        if (effectiveMembers.length === 0) {
-          return ['None'];
-        }
-
-        const lines = effectiveMembers
-          .map(member => formatLine(member, showPerms, excludePowerPerms))
-          .sort((a, b) => a.localeCompare(b));
-
-        const pages = [];
-        let currentLines = [];
-        let currentLength = 0;
-
-        for (const line of lines) {
-          const extraLength = (currentLines.length > 0 ? 1 : 0) + line.length;
-
-          // Split into multiple pages if we'd exceed a safe limit
-          if (currentLines.length >= 25 || currentLength + extraLength > 900) {
-            pages.push(currentLines.join('\n'));
-            currentLines = [line];
-            currentLength = line.length;
-          } else {
-            currentLines.push(line);
-            currentLength += extraLength;
-          }
-        }
-
-        if (currentLines.length > 0) {
-          pages.push(currentLines.join('\n'));
-        }
-
-        return pages;
-      };
-
       let targetMembers;
       let title;
       let description;
@@ -317,4 +312,8 @@ module.exports = {
     }
   }
 };
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports.__test__ = { formatLine, buildPages, PERMISSION_LABELS };
+}
 

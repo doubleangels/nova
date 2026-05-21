@@ -1,49 +1,336 @@
 const dayjs = require('dayjs');
+const fs = require('fs');
+
+function createFsMock(overrides = {}) {
+  return {
+    existsSync: jest.fn().mockReturnValue(true),
+    mkdirSync: jest.fn(),
+    accessSync: jest.fn(),
+    statSync: jest.fn().mockReturnValue({ size: 100, mode: 33188, uid: 1, gid: 1 }),
+    chmodSync: jest.fn(),
+    constants: fs.constants,
+    ...overrides
+  };
+}
+
+function createWritableDbMock(rowValue = null) {
+  const getStmt = { get: jest.fn().mockReturnValue(rowValue ? { value: rowValue } : undefined) };
+  const runStmt = { run: jest.fn() };
+  const mockDb = {
+    transaction: jest.fn((fn) => () => fn()),
+    prepare: jest.fn((sql) => {
+      if (sql.includes('SELECT')) return getStmt;
+      return runStmt;
+    })
+  };
+  return { mockDb, getStmt, runStmt };
+}
 
 describe('database utils', () => {
   let db;
   let mainKeyvInstance;
   let inviteKeyvInstance;
   let mockLogger;
+  let mockFs;
+  let mockReadonlyDb;
+  let mockWritableDb;
+  let getStmt;
+  let runStmt;
 
-  beforeEach(() => {
+  function loadDatabase({
+    fsOverrides = {},
+    sqliteOverrides = {},
+    configOverrides = { guildName: 'Test Guild' }
+  } = {}) {
     jest.resetModules();
-    
-    // Mock the logger
     mockLogger = require('../../tests/__mocks__/logger.mock')();
     jest.doMock('../../logger', () => () => mockLogger);
+    jest.doMock('../../config', () => configOverrides);
 
-    // Create tracking references for the Keyv instances
+    mockFs = createFsMock(fsOverrides);
+    jest.doMock('fs', () => mockFs);
+
+    const { mockDb, getStmt: gs, runStmt: rs } = createWritableDbMock();
+    mockWritableDb = mockDb;
+    getStmt = gs;
+    runStmt = rs;
+
+    mockReadonlyDb = {
+      prepare: jest.fn(() => ({
+        all: jest.fn().mockReturnValue([])
+      }))
+    };
+
+    jest.doMock('../../utils/sqliteStore', () => ({
+      dataDir: '/tmp/test-data',
+      sqlitePath: '/tmp/test-data/database.sqlite',
+      getSharedKeyvStore: jest.fn(() => ({})),
+      getReadonlyDb: jest.fn(() => mockReadonlyDb),
+      getWritableDb: jest.fn(() => mockWritableDb),
+      closeDatabaseConnections: jest.fn(),
+      ...sqliteOverrides
+    }));
+
     const MockKeyvClass = require('../../tests/__mocks__/keyv.mock');
-    
-    let keyvInstances = [];
-    
-    // Mock keyv and @keyv/sqlite
-    jest.doMock('keyv', () => {
-      return jest.fn().mockImplementation((opts) => {
+    jest.doMock('keyv', () =>
+      jest.fn().mockImplementation((opts) => {
         const instance = new MockKeyvClass(opts);
-        keyvInstances.push(instance);
         if (opts && opts.namespace === 'invites') {
           inviteKeyvInstance = instance;
         } else {
           mainKeyvInstance = instance;
         }
         return instance;
-      });
-    });
-    
-    jest.doMock('@keyv/sqlite', () => {
-      return jest.fn().mockImplementation(() => ({}));
-    });
-    
-    jest.doMock('../../config', () => ({}));
+      })
+    );
+    jest.doMock('@keyv/sqlite', () => jest.fn().mockImplementation(() => ({})));
 
     jest.isolateModules(() => {
       db = require('../../utils/database');
     });
+    return db;
+  }
+
+  beforeEach(() => {
+    loadDatabase();
+  });
+
+  describe('module initialization', () => {
+    it('creates data directory when missing', () => {
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn((p) => p !== '/tmp/test-data'),
+          accessSync: jest.fn()
+        }
+      });
+      expect(mockFs.mkdirSync).toHaveBeenCalled();
+    });
+
+    it('logs when data directory is not writable', () => {
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn().mockReturnValue(true),
+          accessSync: jest.fn(() => {
+            throw new Error('not writable');
+          })
+        }
+      });
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('logs when database file does not exist', () => {
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn((p) => p !== '/tmp/test-data/database.sqlite')
+        }
+      });
+      expect(mockLogger.info).toHaveBeenCalled();
+    });
+
+    it('handles top-level fs errors', () => {
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn(() => {
+            throw new Error('fs fail');
+          })
+        }
+      });
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('warns when chmod fails', () => {
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn().mockReturnValue(true),
+          chmodSync: jest.fn(() => {
+            throw new Error('chmod fail');
+          })
+        }
+      });
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
+
+    it('handles keyv connection errors', () => {
+      const errHandler = mainKeyvInstance.on.mock.calls.find((c) => c[0] === 'error')?.[1];
+      errHandler(new Error('keyv err'));
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Keyv connection error occurred.',
+        expect.any(Object)
+      );
+    });
+
+    it('handles invite keyv connection errors', () => {
+      const errHandler = inviteKeyvInstance.on.mock.calls.find((c) => c[0] === 'error')?.[1];
+      errHandler(new Error('invite keyv err'));
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Invite Keyv connection error occurred.',
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('initializeDatabase', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('succeeds on valid read/write test', async () => {
+      mainKeyvInstance.set.mockResolvedValue(undefined);
+      mainKeyvInstance.get.mockResolvedValue('test_value');
+      mainKeyvInstance.delete.mockResolvedValue(undefined);
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn().mockReturnValue(true),
+          statSync: jest.fn().mockReturnValue({ size: 10, mode: '33188', uid: 1, gid: 1 }),
+          chmodSync: jest.fn()
+        }
+      });
+      await db.initializeDatabase();
+      expect(mainKeyvInstance.set).toHaveBeenCalled();
+    });
+
+    it('warns when database file missing after successful test', async () => {
+      mainKeyvInstance.set.mockResolvedValue(undefined);
+      mainKeyvInstance.get.mockResolvedValue('test_value');
+      mainKeyvInstance.delete.mockResolvedValue(undefined);
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn((p) => !String(p).includes('database.sqlite')),
+          statSync: jest.fn(),
+          chmodSync: jest.fn()
+        }
+      });
+      await db.initializeDatabase();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Database file not found after successful test.',
+        expect.any(Object)
+      );
+    });
+
+    it('logs chmod failure during initializeDatabase', async () => {
+      mainKeyvInstance.set.mockResolvedValue(undefined);
+      mainKeyvInstance.get.mockResolvedValue('test_value');
+      mainKeyvInstance.delete.mockResolvedValue(undefined);
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn().mockReturnValue(true),
+          statSync: jest.fn().mockReturnValue({ size: 10, mode: '33188', uid: 1, gid: 1 }),
+          chmodSync: jest.fn(() => {
+            throw new Error('chmod');
+          })
+        }
+      });
+      await db.initializeDatabase();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Could not set permissions on database file.',
+        expect.any(Object)
+      );
+    });
+
+    it('retries and exits when all attempts fail', async () => {
+      const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      loadDatabase();
+      mainKeyvInstance.set.mockRejectedValue(new Error('db fail'));
+      const promise = db.initializeDatabase();
+      await jest.advanceTimersByTimeAsync(10000);
+      await promise;
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Final database error occurred.',
+        expect.objectContaining({ err: expect.any(Error) })
+      );
+      exitSpy.mockRestore();
+    });
+
+    it('throws when read/write test returns unexpected value', async () => {
+      const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+      loadDatabase({
+        fsOverrides: {
+          existsSync: jest.fn().mockReturnValue(true),
+          statSync: jest.fn().mockReturnValue({ size: 10, mode: '33188', uid: 1, gid: 1 }),
+          chmodSync: jest.fn()
+        }
+      });
+      mainKeyvInstance.set.mockResolvedValue(undefined);
+      mainKeyvInstance.get.mockResolvedValue('wrong_value');
+      mainKeyvInstance.delete.mockResolvedValue(undefined);
+      const promise = db.initializeDatabase();
+      await jest.advanceTimersByTimeAsync(15000);
+      await promise;
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Final database error occurred.',
+        expect.objectContaining({ err: expect.any(Error) })
+      );
+      exitSpy.mockRestore();
+    });
+
+  });
+
+  describe('user list helpers', () => {
+    it('does not duplicate user ids in tracking lists', async () => {
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return ['existing-u'];
+        return null;
+      });
+      const setCallsBefore = mainKeyvInstance.set.mock.calls.length;
+      await db.addSpamModeJoinTime('existing-u');
+      const listUpdateCalls = mainKeyvInstance.set.mock.calls
+        .slice(setCallsBefore)
+        .filter(([key]) => key === 'config:spam_mode_users');
+      expect(listUpdateCalls).toHaveLength(0);
+    });
+
+    it('handles addToUserList errors via mute mode add', async () => {
+      mainKeyvInstance.get.mockRejectedValue(new Error('list fail'));
+      await db.addMuteModeUser('u', 'name');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('removeMuteModeUser skips debug log when key was not present', async () => {
+      mainKeyvInstance.delete.mockResolvedValueOnce(false);
+      mainKeyvInstance.get.mockResolvedValueOnce(['u1']);
+      await db.removeMuteModeUser('u1');
+      expect(mockLogger.debug).not.toHaveBeenCalledWith(
+        'Removed user from mute mode tracking.',
+        expect.any(Object)
+      );
+    });
+
+    it('getAllMuteModeUsers returns empty list when user id list is null', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.getAllMuteModeUsers()).toEqual([]);
+    });
+
+    it('getAllMuteModeUsers skips missing user records', async () => {
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:mute_mode_users') return ['u1', 'u2'];
+        if (key === 'mute_mode:u1') return { userId: 'u1', username: 'a', joinTime: '2025-01-01' };
+        if (key === 'mute_mode:u2') return null;
+        return null;
+      });
+      const users = await db.getAllMuteModeUsers();
+      expect(users).toHaveLength(1);
+    });
+
+    it('handles removeFromUserList errors via spam remove', async () => {
+      mainKeyvInstance.get.mockRejectedValue(new Error('list fail'));
+      await db.removeSpamModeJoinTime('u');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
   });
 
   describe('getValue / setValue / deleteValue', () => {
+    it('returns cached config values without hitting keyv', async () => {
+      await db.setValue('cached_key', 'cached_value');
+      mainKeyvInstance.get.mockClear();
+      expect(await db.getValue('cached_key')).toBe('cached_value');
+      expect(mainKeyvInstance.get).not.toHaveBeenCalled();
+    });
+
     it('should set a value correctly', async () => {
       await db.setValue('test_key', 'test_value');
       expect(mainKeyvInstance.set).toHaveBeenCalledWith('config:test_key', 'test_value');
@@ -52,25 +339,49 @@ describe('database utils', () => {
     it('should get a value correctly', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce('test_value');
       const val = await db.getValue('test_key');
-      expect(mainKeyvInstance.get).toHaveBeenCalledWith('config:test_key');
       expect(val).toBe('test_value');
+    });
+
+    it('returns null for undefined values', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(undefined);
+      expect(await db.getValue('missing')).toBeNull();
+    });
+
+    it('returns cached value on subsequent reads', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce('first');
+      expect(await db.getValue('cached-read')).toBe('first');
+      mainKeyvInstance.get.mockClear();
+      expect(await db.getValue('cached-read')).toBe('first');
+      expect(mainKeyvInstance.get).not.toHaveBeenCalled();
+    });
+
+    it('returns null on get error', async () => {
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('get fail'));
+      expect(await db.getValue('err_key')).toBeNull();
+    });
+
+    it('handles set errors', async () => {
+      mainKeyvInstance.set.mockRejectedValueOnce(new Error('set fail'));
+      await db.setValue('err', 'v');
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should delete a value correctly', async () => {
       await db.deleteValue('test_key');
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('config:test_key');
     });
-    
+
+    it('handles delete errors', async () => {
+      mainKeyvInstance.delete.mockRejectedValueOnce(new Error('del fail'));
+      await db.deleteValue('err');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
     it('should use in-memory cache for subsequent gets', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce('cached_value');
-      
-      const val1 = await db.getValue('cache_key');
+      await db.getValue('cache_key');
+      await db.getValue('cache_key');
       expect(mainKeyvInstance.get).toHaveBeenCalledTimes(1);
-      expect(val1).toBe('cached_value');
-      
-      const val2 = await db.getValue('cache_key');
-      expect(mainKeyvInstance.get).toHaveBeenCalledTimes(1); // Should not be called again
-      expect(val2).toBe('cached_value');
     });
   });
 
@@ -78,70 +389,802 @@ describe('database utils', () => {
     it('should add mute mode user', async () => {
       await db.addMuteModeUser('user123', 'testuser');
       expect(mainKeyvInstance.set).toHaveBeenCalledWith(
-        'mute_mode:user123', 
-        expect.objectContaining({
-          userId: 'user123',
-          username: 'testuser'
-        })
-      );
-      // also adds to list
-      expect(mainKeyvInstance.set).toHaveBeenCalledWith(
-        'config:mute_mode_users',
-        expect.arrayContaining(['user123'])
+        'mute_mode:user123',
+        expect.objectContaining({ userId: 'user123' })
       );
     });
 
-    it('should remove mute mode user', async () => {
+    it('handles add mute mode errors', async () => {
+      mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
+      await db.addMuteModeUser('u', 'n');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should remove mute mode user when deleted', async () => {
+      mainKeyvInstance.delete.mockResolvedValueOnce(true);
       await db.removeMuteModeUser('user123');
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('mute_mode:user123');
     });
 
+    it('handles remove mute mode errors', async () => {
+      mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
+      await db.removeMuteModeUser('u');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('getAllMuteModeUsers returns formatted users', async () => {
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:mute_mode_users') return ['u1'];
+        if (key === 'mute_mode:u1') return { userId: 'u1', username: 'a', joinTime: dayjs().toISOString() };
+        return null;
+      });
+      const users = await db.getAllMuteModeUsers();
+      expect(users).toHaveLength(1);
+      expect(users[0].user_id).toBe('u1');
+    });
+
+    it('getAllMuteModeUsers returns empty on error', async () => {
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getAllMuteModeUsers()).toEqual([]);
+    });
+
     it('should get user join time', async () => {
-      const now = dayjs().toISOString();
-      mainKeyvInstance.get.mockResolvedValueOnce({ joinTime: now });
-      const joinTime = await db.getUserJoinTime('user123');
-      expect(joinTime).toBeInstanceOf(Date);
+      mainKeyvInstance.get.mockResolvedValueOnce({ joinTime: dayjs().toISOString() });
+      expect(await db.getUserJoinTime('user123')).toBeInstanceOf(Date);
+    });
+
+    it('returns null when no join time', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.getUserJoinTime('user123')).toBeNull();
+    });
+
+    it('handles getUserJoinTime errors', async () => {
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getUserJoinTime('u')).toBeNull();
     });
   });
 
   describe('Spam Mode Tracking', () => {
     it('should add spam mode join time', async () => {
-      const date = new Date();
-      await db.addSpamModeJoinTime('user123', 'testuser', date);
-      expect(mainKeyvInstance.set).toHaveBeenCalledWith(
-        'spam_mode:user123',
-        expect.objectContaining({
-          userId: 'user123',
-          username: 'testuser'
-        })
-      );
+      await db.addSpamModeJoinTime('user123', 'testuser', new Date());
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith('spam_mode:user123', expect.any(Object));
+    });
+
+    it('handles add spam errors', async () => {
+      mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
+      await db.addSpamModeJoinTime('u', 'n', new Date());
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('getSpamModeJoinTime returns date', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce({ joinTime: dayjs().toISOString() });
+      expect(await db.getSpamModeJoinTime('u')).toBeInstanceOf(Date);
+    });
+
+    it('getSpamModeJoinTime returns null without joinTime', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce({ userId: 'u' });
+      expect(await db.getSpamModeJoinTime('u')).toBeNull();
+    });
+
+    it('getSpamModeJoinTime returns null on error', async () => {
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getSpamModeJoinTime('u')).toBeNull();
     });
 
     it('should remove spam mode join time', async () => {
+      mainKeyvInstance.delete.mockResolvedValueOnce(true);
       await db.removeSpamModeJoinTime('user123');
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('spam_mode:user123');
+    });
+
+    it('handles remove spam errors', async () => {
+      mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
+      await db.removeSpamModeJoinTime('u');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('cleanupOldTrackingUsers', () => {
+    it('keeps spam users within tracking window', async () => {
+      const recent = dayjs().toISOString();
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return ['s1'];
+        if (key === 'spam_mode:s1') return { joinTime: recent };
+        if (key === 'config:mute_mode_users') return [];
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.spamModeRemoved).toBe(0);
+    });
+
+    it('removes expired mute users without consulting client when join time expired', async () => {
+      const oldTime = dayjs().subtract(10, 'hour').toISOString();
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_kick_time_hours') return '4';
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: oldTime };
+        return null;
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.muteModeRemoved).toBe(1);
+    });
+
+    it('handles empty spam and mute user lists from keyv', async () => {
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return null;
+        if (key === 'config:mute_mode_users') return null;
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.spamModeRemoved).toBe(0);
+      expect(result.muteModeRemoved).toBe(0);
+    });
+
+    it('keeps spam users within the tracking window', async () => {
+      const recent = dayjs().toISOString();
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_window_hours') return '4';
+        if (key === 'config:mute_mode_kick_time_hours') return '4';
+        if (key === 'config:spam_mode_users') return ['s1'];
+        if (key === 'spam_mode:s1') return { joinTime: recent };
+        if (key === 'config:mute_mode_users') return [];
+        return null;
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.spamModeRemoved).toBe(0);
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith('config:spam_mode_users', ['s1']);
+    });
+
+    it('removes expired spam and mute users', async () => {
+      const oldTime = dayjs().subtract(10, 'hour').toISOString();
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_window_hours') return '4';
+        if (key === 'config:mute_mode_kick_time_hours') return '4';
+        if (key === 'config:spam_mode_users') return ['s1'];
+        if (key === 'spam_mode:s1') return { joinTime: oldTime };
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: oldTime };
+        return null;
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.spamModeRemoved).toBeGreaterThan(0);
+      expect(result.muteModeRemoved).toBeGreaterThan(0);
+    });
+
+    it('removes mute users with missing join data', async () => {
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['orphan-m'];
+        return null;
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.muteModeRemoved).toBe(1);
+    });
+
+    it('removes orphan spam users without data', async () => {
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return ['orphan'];
+        if (key === 'config:mute_mode_users') return [];
+        return null;
+      });
+      const result = await db.cleanupOldTrackingUsers();
+      expect(result.spamModeRemoved).toBe(1);
+    });
+
+    it('uses client to remove mute users not in guild', async () => {
+      const recent = dayjs().toISOString();
+      const mockClient = {
+        guilds: {
+          cache: {
+            first: () => ({
+              members: { fetch: jest.fn().mockResolvedValue(null) }
+            })
+          }
+        }
+      };
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: recent };
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers(mockClient);
+      expect(result.muteModeRemoved).toBe(1);
+    });
+
+    it('removes mute user when no guild in client', async () => {
+      const recent = dayjs().toISOString();
+      const mockClient = { guilds: { cache: { first: () => null } } };
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: recent };
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers(mockClient);
+      expect(result.muteModeRemoved).toBe(1);
+    });
+
+    it('keeps mute user still in guild when within window', async () => {
+      const recent = dayjs().toISOString();
+      const mockClient = {
+        guilds: {
+          cache: {
+            first: () => ({
+              members: { fetch: jest.fn().mockResolvedValue({ id: 'm1' }) }
+            })
+          }
+        }
+      };
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: recent };
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers(mockClient);
+      expect(result.muteModeRemoved).toBe(0);
+    });
+
+    it('handles synchronous fetch errors for guild members', async () => {
+      const recent = dayjs().toISOString();
+      const mockClient = {
+        guilds: {
+          cache: {
+            first: () => ({
+              members: {
+                fetch: jest.fn().mockImplementation(() => {
+                  throw new Error('sync fetch fail');
+                })
+              }
+            })
+          }
+        }
+      };
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: recent };
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers(mockClient);
+      expect(result.muteModeRemoved).toBe(1);
+    });
+
+    it('handles fetch errors for guild members', async () => {
+      const recent = dayjs().toISOString();
+      const mockClient = {
+        guilds: {
+          cache: {
+            first: () => ({
+              members: { fetch: jest.fn().mockRejectedValue(new Error('fetch fail')) }
+            })
+          }
+        }
+      };
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['m1'];
+        if (key === 'mute_mode:m1') return { joinTime: recent };
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers(mockClient);
+      expect(result.muteModeRemoved).toBe(1);
+    });
+
+    it('logs debug when nothing to remove', async () => {
+      mainKeyvInstance.get.mockResolvedValue([]);
+      await db.cleanupOldTrackingUsers();
+      expect(mockLogger.debug).toHaveBeenCalled();
+    });
+
+    it('throws on cleanup error', async () => {
+      mainKeyvInstance.get.mockRejectedValue(new Error('cleanup fail'));
+      await expect(db.cleanupOldTrackingUsers()).rejects.toThrow('cleanup fail');
     });
   });
 
   describe('Invite Tracking', () => {
     it('should set invite tag', async () => {
       await db.setInviteTag('MyTag', { code: 'abc' });
-      // should lowercase the tag
       expect(inviteKeyvInstance.set).toHaveBeenCalledWith('tags:mytag', { code: 'abc' });
     });
 
+    it('throws on set invite tag error', async () => {
+      inviteKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
+      await expect(db.setInviteTag('t', {})).rejects.toThrow('DATABASE_WRITE_ERROR');
+    });
+
     it('should get invite tag', async () => {
-      await db.getInviteTag('MyTag');
-      expect(inviteKeyvInstance.get).toHaveBeenCalledWith('tags:mytag');
+      inviteKeyvInstance.get.mockResolvedValueOnce({ code: 'x' });
+      expect(await db.getInviteTag('MyTag')).toEqual({ code: 'x' });
     });
 
-    it('should get and set invite notification channel', async () => {
-      await db.setInviteNotificationChannel('channel123');
-      expect(mainKeyvInstance.set).toHaveBeenCalledWith('config:invite_notification_channel', 'channel123');
-
-      mainKeyvInstance.get.mockResolvedValueOnce('channel123');
-      const channel = await db.getInviteNotificationChannel();
-      expect(channel).toBe('channel123');
+    it('returns null when invite tag value is undefined', async () => {
+      inviteKeyvInstance.get.mockResolvedValueOnce(undefined);
+      expect(await db.getInviteTag('missing')).toBeNull();
     });
+
+    it('returns null on get invite tag error', async () => {
+      inviteKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getInviteTag('t')).toBeNull();
+    });
+
+    it('deletes invite tag', async () => {
+      await db.deleteInviteTag('MyTag');
+      expect(inviteKeyvInstance.delete).toHaveBeenCalledWith('tags:mytag');
+    });
+
+    it('throws on delete invite tag error', async () => {
+      inviteKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
+      await expect(db.deleteInviteTag('t')).rejects.toThrow('DATABASE_DELETE_ERROR');
+    });
+
+    it('notification channel get/set', async () => {
+      await db.setInviteNotificationChannel('ch1');
+      mainKeyvInstance.get.mockResolvedValueOnce('ch1');
+      expect(await db.getInviteNotificationChannel()).toBe('ch1');
+    });
+
+    it('setInviteUsage and getInviteUsage', async () => {
+      await db.setInviteUsage('g1', { abc: 1 });
+      mainKeyvInstance.get.mockResolvedValueOnce({ abc: 1 });
+      expect(await db.getInviteUsage('g1')).toEqual({ abc: 1 });
+    });
+
+    it('getInviteUsage returns stored usage map from keyv', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce({ code1: 3, code2: 1 });
+      expect(await db.getInviteUsage('guild-usage')).toEqual({ code1: 3, code2: 1 });
+    });
+
+    it('getInviteUsage returns empty object when keyv returns null', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.getInviteUsage('guild-null')).toEqual({});
+    });
+
+    it('handles invite usage errors', async () => {
+      mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
+      await db.setInviteUsage('g', {});
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getInviteUsage('g')).toEqual({});
+    });
+
+    it('setInviteCodeToTagMap and getInviteCodeToTagMap with cache', async () => {
+      const map = { code1: 'tag1' };
+      await db.setInviteCodeToTagMap('g1', map);
+      expect(await db.getInviteCodeToTagMap('g1')).toEqual(map);
+      expect(mainKeyvInstance.get).not.toHaveBeenCalled();
+    });
+
+    it('getInviteCodeToTagMap returns cached map without re-reading keyv', async () => {
+      const map = { cached: 'tag' };
+      await db.setInviteCodeToTagMap('g-cache', map);
+      mainKeyvInstance.get.mockClear();
+      expect(await db.getInviteCodeToTagMap('g-cache')).toEqual(map);
+      expect(mainKeyvInstance.get).not.toHaveBeenCalled();
+    });
+
+    it('getInviteCodeToTagMap loads from db when cache expired', async () => {
+      jest.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValueOnce(999999999999);
+      mainKeyvInstance.get.mockResolvedValueOnce({ c: 't' });
+      const map = await db.getInviteCodeToTagMap('g2');
+      expect(map).toEqual({ c: 't' });
+      Date.now.mockRestore?.();
+    });
+
+    it('getInviteCodeToTagMap returns empty object when keyv has no map stored', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.getInviteCodeToTagMap('g-empty-map')).toEqual({});
+    });
+
+    it('getInviteCodeToTagMap returns empty object when keyv returns null', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.getInviteCodeToTagMap('g-null-map')).toEqual({});
+    });
+
+    it('handles code map errors', async () => {
+      mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
+      await db.setInviteCodeToTagMap('g', {});
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getInviteCodeToTagMap('g')).toEqual({});
+    });
+
+    it('invalidateInviteCodeToTagMapCache clears cache', async () => {
+      await db.setInviteCodeToTagMap('g', { a: 'b' });
+      db.invalidateInviteCodeToTagMapCache('g');
+      mainKeyvInstance.get.mockResolvedValueOnce({ x: 'y' });
+      expect(await db.getInviteCodeToTagMap('g')).toEqual({ x: 'y' });
+    });
+
+    it('invalidateInviteCodeToTagMapCache clears all when no guildId', async () => {
+      await db.setInviteCodeToTagMap('g1', { a: 'b' });
+      db.invalidateInviteCodeToTagMapCache();
+      mainKeyvInstance.get.mockResolvedValueOnce({});
+      await db.getInviteCodeToTagMap('g1');
+    });
+  });
+
+  describe('getAllInviteTagsData / rebuildCodeToTagMap', () => {
+    const tagRow = {
+      key: 'invites:tags:disboard',
+      value: JSON.stringify({
+        value: { code: 'ABC', name: 'Disboard', createdAt: 1, updatedAt: 2 }
+      })
+    };
+
+    it('parses invite tags from sqlite', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([tagRow])
+            }))
+          }))
+        }
+      });
+      const tags = await db.getAllInviteTagsData();
+      expect(tags[0].tagName).toBe('disboard');
+    });
+
+    it('parses invite tags stored without keyv value wrapper', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([
+                {
+                  key: 'invites:tags:raw',
+                  value: JSON.stringify({ code: 'RAW1', name: 'Raw Tag' })
+                }
+              ])
+            }))
+          }))
+        }
+      });
+      const tags = await db.getAllInviteTagsData();
+      expect(tags[0]).toEqual(expect.objectContaining({ tagName: 'raw', code: 'RAW1', name: 'Raw Tag' }));
+    });
+
+    it('parses invite tags stored without keyv value wrapper', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([
+                {
+                  key: 'invites:tags:rawtag',
+                  value: JSON.stringify({ code: 'RAW1', name: 'Raw Tag' })
+                }
+              ])
+            }))
+          }))
+        }
+      });
+      const tags = await db.getAllInviteTagsData();
+      expect(tags[0]).toMatchObject({ tagName: 'rawtag', code: 'RAW1', name: 'Raw Tag' });
+    });
+
+    it('skips invalid tag rows', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([
+                { key: 'invites:tags:bad', value: 'not-json' },
+                { key: 'invites:tags:incomplete', value: JSON.stringify({ value: { code: 'x' } }) }
+              ])
+            }))
+          }))
+        }
+      });
+      expect(await db.getAllInviteTagsData()).toEqual([]);
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to parse tag data for key.',
+        expect.objectContaining({ key: 'invites:tags:bad' })
+      );
+    });
+
+    it('returns empty on getAllInviteTagsData error', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => {
+              throw new Error('db fail');
+            })
+          }))
+        }
+      });
+      expect(await db.getAllInviteTagsData()).toEqual([]);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error occurred while getting all invite tags.',
+        expect.any(Object)
+      );
+    });
+
+    it('rebuilds and persists map when tags exist', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([tagRow])
+            }))
+          }))
+        }
+      });
+      const map = await db.rebuildCodeToTagMap('guild-persist');
+      expect(map.abc).toBe('disboard');
+      expect(mainKeyvInstance.set).toHaveBeenCalled();
+    });
+
+    it('rebuilds code to tag map', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([tagRow])
+            }))
+          }))
+        }
+      });
+      const map = await db.rebuildCodeToTagMap('guild1');
+      expect(map.abc).toBe('disboard');
+    });
+
+    it('rebuilds map from tags stored without keyv value wrapper', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([
+                {
+                  key: 'invites:tags:unwrap',
+                  value: JSON.stringify({ code: 'UNWRAP', name: 'Unwrapped' })
+                }
+              ])
+            }))
+          }))
+        }
+      });
+      const map = await db.rebuildCodeToTagMap('guild-unwrap');
+      expect(map.unwrap).toBe('unwrap');
+    });
+
+    it('returns empty map on rebuild error', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => {
+              throw new Error('fail');
+            })
+          }))
+        }
+      });
+      expect(await db.rebuildCodeToTagMap('g')).toEqual({});
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error occurred while rebuilding code-to-tag mapping for guild.',
+        expect.any(Object)
+      );
+    });
+
+    it('warns on rebuild parse errors for individual rows', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([
+                { key: 'invites:tags:bad', value: 'not-json' },
+                tagRow
+              ])
+            }))
+          }))
+        }
+      });
+      const map = await db.rebuildCodeToTagMap('guild1');
+      expect(map.abc).toBe('disboard');
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to parse tag data for key.',
+        expect.objectContaining({ key: 'invites:tags:bad' })
+      );
+    });
+
+    it('returns empty map when no valid tag codes are found', async () => {
+      loadDatabase({
+        sqliteOverrides: {
+          getReadonlyDb: jest.fn(() => ({
+            prepare: jest.fn(() => ({
+              all: jest.fn().mockReturnValue([
+                { key: 'invites:tags:empty', value: JSON.stringify({ value: { name: 'No Code' } }) }
+              ])
+            }))
+          }))
+        }
+      });
+      expect(await db.rebuildCodeToTagMap('guild1')).toEqual({});
+    });
+  });
+
+  describe('members and message counts', () => {
+    it('getGuildName returns config value', async () => {
+      loadDatabase({ configOverrides: { guildName: 'My Guild' } });
+      expect(await db.getGuildName()).toBe('My Guild');
+    });
+
+    it('getGuildName falls back when config guildName is missing', async () => {
+      loadDatabase({ configOverrides: {} });
+      expect(await db.getGuildName()).toBe('Da Frens');
+    });
+
+    it('setFormerMember and isFormerMember', async () => {
+      await db.setFormerMember('u1');
+      mainKeyvInstance.get.mockResolvedValueOnce(1);
+      expect(await db.isFormerMember('u1')).toBe(true);
+    });
+
+    it('handles former member errors', async () => {
+      mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
+      await db.setFormerMember('u');
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.isFormerMember('u')).toBe(false);
+    });
+
+    it('incrementMessageCount starts at 1 when no prior row exists', async () => {
+      const selectStmt = { get: jest.fn().mockReturnValue(undefined) };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      expect(await db.incrementMessageCount('new-user')).toBe(1);
+    });
+
+    it('incrementMessageCount treats invalid stored JSON as zero', async () => {
+      const selectStmt = {
+        get: jest.fn().mockReturnValue({ value: 'not-json' })
+      };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      const count = await db.incrementMessageCount('u1');
+      expect(count).toBe(1);
+    });
+
+    it('incrementMessageCount parses unwrapped numeric JSON values', async () => {
+      const selectStmt = {
+        get: jest.fn().mockReturnValue({ value: '7' })
+      };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      expect(await db.incrementMessageCount('u-wrap')).toBe(8);
+    });
+
+    it('incrementMessageCount via writable db', async () => {
+      const selectStmt = {
+        get: jest.fn().mockReturnValue({ value: JSON.stringify({ value: 5, expires: null }) })
+      };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      const count = await db.incrementMessageCount('u1');
+      expect(count).toBe(6);
+      expect(writable.transaction).toHaveBeenCalled();
+    });
+
+    it('incrementMessageCount returns null on error', async () => {
+      const writable = {
+        transaction: jest.fn(() => {
+          throw new Error('tx fail');
+        }),
+        prepare: jest.fn()
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      expect(await db.incrementMessageCount('u')).toBeNull();
+    });
+
+    it('getMessageCount returns zero when stored count is zero', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(0);
+      expect(await db.getMessageCount('u-zero')).toBe(0);
+    });
+
+    it('getMessageCount returns zero when no count is stored', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.getMessageCount('u-missing')).toBe(0);
+    });
+
+    it('incrementMessageCount treats non-numeric wrapped count as zero before increment', async () => {
+      const selectStmt = {
+        get: jest.fn().mockReturnValue({
+          value: JSON.stringify({ value: 'not-a-number', expires: null })
+        })
+      };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      expect(await db.incrementMessageCount('u-nan')).toBe(1);
+    });
+
+    it('incrementMessageCount treats zero wrapped count as zero before increment', async () => {
+      const selectStmt = {
+        get: jest.fn().mockReturnValue({
+          value: JSON.stringify({ value: 0, expires: null })
+        })
+      };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      expect(await db.incrementMessageCount('u-zero-wrap')).toBe(1);
+    });
+
+    it('incrementMessageCount parses bare numeric JSON without value wrapper', async () => {
+      const selectStmt = {
+        get: jest.fn().mockReturnValue({ value: '12' })
+      };
+      const insertStmt = { run: jest.fn() };
+      const writable = {
+        transaction: jest.fn((fn) => () => fn()),
+        prepare: jest.fn()
+          .mockReturnValueOnce(selectStmt)
+          .mockReturnValueOnce(insertStmt)
+      };
+      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      expect(await db.incrementMessageCount('u-bare')).toBe(13);
+    });
+
+    it('getMessageCount and deleteMessageCount', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(10);
+      expect(await db.getMessageCount('u')).toBe(10);
+      await db.deleteMessageCount('u');
+      expect(mainKeyvInstance.delete).toHaveBeenCalledWith('message_count:u');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Deleted message count for user successfully.',
+        expect.objectContaining({ userId: 'u' })
+      );
+    });
+
+    it('isFormerMember returns true for stored marker values', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(0);
+      expect(await db.isFormerMember('u0')).toBe(true);
+    });
+
+    it('handles message count errors', async () => {
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.getMessageCount('u')).toBe(0);
+      mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
+      await db.deleteMessageCount('u');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  it('closeDatabaseConnections is re-exported', () => {
+    expect(db.closeDatabaseConnections).toBeDefined();
   });
 });

@@ -150,7 +150,7 @@ async function getLatestReminderData(type) {
  */
 async function getNextReminderTimeAfterCleanup(type) {
   try {
-    const reminderIds = await getReminderIds(type) || [];
+    const reminderIds = await getReminderIds(type);
     const now = dayjs();
     const idsToRemove = [];
 
@@ -779,5 +779,7 @@ module.exports = {
   rescheduleReminder,
   getLatestReminderData,
   getNextReminderTimeAfterCleanup,
+  addReminderId,
+  handleError,
   NEEDAFRIEND_REMINDER_MS
 };

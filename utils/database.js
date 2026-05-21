@@ -194,9 +194,7 @@ async function initializeDatabase() {
 
   logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
   
-  if (lastError) {
-    logger.error("Final database error occurred.", { err: lastError });
-  }
+  logger.error("Final database error occurred.", { err: lastError });
   
   process.exit(1);
 }

@@ -88,6 +88,84 @@ describe('newUser command', () => {
       expect(permField.value).toBe('**Extra:** Ban Members, Kick Members');
     });
 
+    it('should show Bot Yes and skip extra permissions when member matches benchmark role', async () => {
+      const targetUser = {
+        id: 'bot-123',
+        username: 'botuser',
+        bot: true,
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        displayAvatarURL: jest.fn().mockReturnValue('http://avatar.link')
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getUser: jest.fn().mockReturnValue(targetUser)
+        }
+      });
+
+      const mockMember = createMockMember({
+        permissions: {
+          toArray: jest.fn().mockReturnValue(['KickMembers'])
+        },
+        guild: {
+          roles: {
+            cache: {
+              get: jest.fn().mockReturnValue({
+                permissions: {
+                  has: jest.fn().mockReturnValue(true)
+                }
+              })
+            }
+          }
+        }
+      });
+
+      mockInteraction.guild.members.cache.set(targetUser.id, mockMember);
+      mockDatabase.isFormerMember.mockResolvedValue(false);
+
+      await newUserCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.fields.find(f => f.name === 'Bot').value).toBe('Yes');
+      expect(embed.data.fields.find(f => f.name === 'Permissions')).toBeUndefined();
+    });
+
+    it('should omit permissions field when benchmark role is not configured', async () => {
+      mockConfig.permissionBenchmarkRoleId = null;
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => mockLogger);
+      jest.doMock('../../config', () => mockConfig);
+      jest.doMock('../../utils/database', () => mockDatabase);
+      const cmd = require('../../commands/newUser');
+
+      const targetUser = {
+        id: 'target-123',
+        username: 'targetuser',
+        bot: false,
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        displayAvatarURL: jest.fn().mockReturnValue('http://avatar.link')
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getUser: jest.fn().mockReturnValue(targetUser)
+        }
+      });
+
+      const mockMember = createMockMember({
+        permissions: { toArray: jest.fn().mockReturnValue(['KickMembers']) },
+        guild: { roles: { cache: { get: jest.fn() } } }
+      });
+
+      mockInteraction.guild.members.cache.set(targetUser.id, mockMember);
+      mockDatabase.isFormerMember.mockResolvedValue(false);
+
+      await cmd.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.fields.find(f => f.name === 'Permissions')).toBeUndefined();
+    });
+
     it('should fetch target member when not in cache', async () => {
       const targetUser = {
         id: 'target-123',
@@ -131,6 +209,65 @@ describe('newUser command', () => {
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       const returningField = embed.data.fields.find(f => f.name === 'Returning');
       expect(returningField.value).toBe('No');
+    });
+
+    it('should use default embed color when baseEmbedColor is unset', async () => {
+      mockConfig.baseEmbedColor = undefined;
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => mockLogger);
+      jest.doMock('../../config', () => mockConfig);
+      jest.doMock('../../utils/database', () => mockDatabase);
+      const cmd = require('../../commands/newUser');
+
+      const targetUser = {
+        id: 'target-123',
+        username: 'targetuser',
+        bot: false,
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        displayAvatarURL: jest.fn().mockReturnValue('http://avatar.link')
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: { getUser: jest.fn().mockReturnValue(targetUser) }
+      });
+
+      mockInteraction.guild.members.cache.set(
+        targetUser.id,
+        createMockMember({ guild: { roles: { cache: { get: jest.fn() } } } })
+      );
+      mockDatabase.isFormerMember.mockResolvedValue(false);
+
+      await cmd.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.color).toBe(0);
+    });
+
+    it('should work when guild is null', async () => {
+      const targetUser = {
+        id: 'target-123',
+        username: 'targetuser',
+        globalName: 'Target User',
+        bot: false,
+        createdAt: new Date('2025-01-01T00:00:00Z'),
+        displayAvatarURL: jest.fn().mockReturnValue('http://avatar.link')
+      };
+
+      const mockInteraction = createMockInteraction({
+        guild: null,
+        options: {
+          getUser: jest.fn().mockReturnValue(targetUser)
+        }
+      });
+
+      mockDatabase.isFormerMember.mockResolvedValue(null);
+
+      await newUserCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.author.name).toBe('Target User');
+      const returningField = embed.data.fields.find(f => f.name === 'Returning');
+      expect(returningField.value).toBe('—');
     });
 
     it('should handle database errors gracefully and set Returning to —', async () => {

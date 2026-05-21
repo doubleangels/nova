@@ -1,4 +1,4 @@
-const { Collection } = require('discord.js');
+const { Collection, ChannelType } = require('discord.js');
 
 describe('messageCreate event', () => {
   let messageCreateEvent;
@@ -88,6 +88,90 @@ describe('messageCreate event', () => {
       expect(mockInstrument.captureError).toHaveBeenCalled();
     });
 
+    it('should return early for bot messages without embeds', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'bot-1', tag: 'Bot#0000', bot: true },
+        webhookId: null,
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'bot says hi',
+        embeds: []
+      };
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
+      expect(mockDatabase.getValue).not.toHaveBeenCalled();
+    });
+
+    it('should check bump embeds on webhook messages without bot author', async () => {
+      const mockMessage = {
+        partial: false,
+        author: null,
+        webhookId: 'wh-1',
+        channel: { id: 'chan-1', name: 'general' },
+        content: '',
+        embeds: [{ description: 'Bump done! Server bumped!' }]
+      };
+
+      mockReminderUtils.handleReminder.mockResolvedValue();
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+    });
+
+    it('should check bump embeds on bot messages and return early', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'bot-1', tag: 'Bot#0000', bot: true },
+        webhookId: null,
+        channel: { id: 'chan-1', name: 'general' },
+        content: '',
+        embeds: [{ description: 'Bump done! Server bumped!' }]
+      };
+
+      mockReminderUtils.handleReminder.mockResolvedValue();
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+      expect(mockDatabase.getValue).not.toHaveBeenCalled();
+    });
+
+    it('should log unknown author tag for guild messages', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello'
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Message received from user.',
+        expect.objectContaining({ author: 'Unknown Author' })
+      );
+    });
+
+    it('should return early for DM without embeds', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'dm-1', type: ChannelType.DM },
+        content: 'hello',
+        embeds: []
+      };
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.getValue).not.toHaveBeenCalled();
+    });
+
     it('should call trackNewUserMessage if spam mode is enabled', async () => {
       const mockMessage = {
         partial: false,
@@ -163,6 +247,29 @@ describe('messageCreate event', () => {
     });
 
     describe('no-text channel enforcement', () => {
+      it('should delete message with null content in no-text channel', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: null,
+          attachments: new Collection(),
+          stickers: new Collection(),
+          delete: jest.fn().mockResolvedValue()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).toHaveBeenCalled();
+      });
+
       it('should delete message if in no-text channel and has no allowed content', async () => {
         const attachment1 = { url: 'document.pdf', contentType: 'application/pdf' };
         const attachmentsCollection = new Collection([['att-1', attachment1]]);
@@ -295,6 +402,48 @@ describe('messageCreate event', () => {
       expect(mockDatabase.incrementMessageCount).not.toHaveBeenCalled();
     });
 
+    it('should skip message count delete when Fren has no stored count', async () => {
+      const mockMember = {
+        roles: {
+          cache: new Collection([['role-fren', { id: 'role-fren' }]]),
+          remove: jest.fn()
+        }
+      };
+
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello',
+        member: mockMember
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+      mockDatabase.getMessageCount.mockResolvedValue(0);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.deleteMessageCount).not.toHaveBeenCalled();
+    });
+
+    it('should return early from processUserMessage when member is missing', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello',
+        member: null
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.incrementMessageCount).not.toHaveBeenCalled();
+    });
+
     it('should remove Noobies role and delete message count if member has Fren role', async () => {
       const mockMember = {
         roles: {
@@ -348,6 +497,31 @@ describe('messageCreate event', () => {
       await messageCreateEvent.execute(mockMessage);
 
       expect(mockMember.roles.add).toHaveBeenCalledWith('role-noob', expect.any(String));
+    });
+
+    it('should not remove Noobies role when count is 100 but member lacks the role', async () => {
+      const mockMember = {
+        roles: {
+          cache: new Collection(),
+          remove: jest.fn()
+        }
+      };
+
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello',
+        member: mockMember
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+      mockDatabase.incrementMessageCount.mockResolvedValue(100);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockMember.roles.remove).not.toHaveBeenCalled();
     });
 
     it('should remove Noobies role and delete message count if message count >= 100 and member has role', async () => {
@@ -408,6 +582,69 @@ describe('messageCreate event', () => {
       );
     });
 
+    it('should skip processUserMessage when author becomes a bot after early checks', async () => {
+      let botFlag = false;
+      const mockMember = {
+        roles: {
+          cache: new Collection(),
+          add: jest.fn()
+        }
+      };
+
+      const mockMessage = {
+        partial: false,
+        author: {
+          id: 'user-1',
+          get bot() {
+            return botFlag;
+          },
+          tag: 'User#1234'
+        },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello',
+        member: mockMember
+      };
+
+      mockDatabase.getValue.mockImplementation(async () => {
+        botFlag = true;
+        return false;
+      });
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.incrementMessageCount).not.toHaveBeenCalled();
+    });
+
+    it('should skip processUserMessage when webhookId appears after early checks', async () => {
+      let webhookId = null;
+      const mockMessage = {
+        partial: false,
+        get webhookId() {
+          return webhookId;
+        },
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello',
+        member: {
+          roles: {
+            cache: new Collection(),
+            add: jest.fn()
+          }
+        }
+      };
+
+      mockDatabase.getValue.mockImplementation(async () => {
+        webhookId = 'wh-1';
+        return false;
+      });
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.incrementMessageCount).not.toHaveBeenCalled();
+    });
+
     it('should catch roles assignment errors and log them without throwing', async () => {
       const mockMember = {
         roles: {
@@ -439,6 +676,26 @@ describe('messageCreate event', () => {
   });
 
   describe('checkForBumpMessages', () => {
+    it('should process bump embeds in DM channels', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'dm-1', type: ChannelType.DM },
+        content: '',
+        embeds: [{
+          description: 'Bump done! Server bumped!'
+        }]
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+      mockReminderUtils.handleReminder.mockResolvedValue();
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+    });
+
     it('should process Disboard bump embed', async () => {
       const mockMessage = {
         partial: false,
@@ -448,6 +705,45 @@ describe('messageCreate event', () => {
         embeds: [{
           description: 'Bump done! Server bumped!'
         }]
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+      mockReminderUtils.handleReminder.mockResolvedValue();
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+    });
+
+    it('should handle fetch returning no embeds during bump check', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'disboard-123', tag: 'Disboard#0000', bot: true },
+        channel: { id: 'chan-1', name: 'general' },
+        content: '',
+        embeds: [{ title: 'Incomplete' }],
+        fetch: jest.fn().mockResolvedValue({ embeds: [] })
+      };
+
+      mockDatabase.getValue.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
+    });
+
+    it('should fetch partial message embeds when description is missing', async () => {
+      const mockMessage = {
+        partial: true,
+        author: { id: 'disboard-123', tag: 'Disboard#0000', bot: true },
+        channel: { id: 'chan-1', name: 'general' },
+        content: '',
+        embeds: [{ title: 'Bump' }],
+        fetch: jest.fn().mockResolvedValue({
+          embeds: [{ description: 'Bump done! Server bumped!' }]
+        })
       };
 
       mockDatabase.getValue.mockResolvedValue(false);

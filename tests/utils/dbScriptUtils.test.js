@@ -14,7 +14,8 @@ describe('dbScriptUtils', () => {
       existsSync: jest.fn(),
       mkdirSync: jest.fn(),
       statSync: jest.fn(),
-      accessSync: jest.fn()
+      accessSync: jest.fn(),
+      constants: fs.constants
     };
     jest.doMock('fs', () => mockFs);
 
@@ -142,6 +143,161 @@ describe('dbScriptUtils', () => {
       dbScriptUtils.getKeyvForNamespace('main');
       expect(mockKeyv).toHaveBeenCalled();
       expect(mockKeyvSqlite).toHaveBeenCalled();
+    });
+
+    it('returns cached Keyv instance for same namespace', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const first = dbScriptUtils.getKeyvForNamespace('invites');
+      const second = dbScriptUtils.getKeyvForNamespace('invites');
+      expect(first).toBe(second);
+      expect(mockKeyv).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('checkDatabaseAccess', () => {
+    beforeEach(() => {
+      process.getuid = () => 1000;
+      process.getgid = () => 1000;
+    });
+
+    it('handles platforms without getuid/getgid', () => {
+      delete process.getuid;
+      delete process.getgid;
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ uid: 0, gid: 0 });
+      mockFs.accessSync.mockImplementation(() => {});
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.currentUser.uid).toBeNull();
+      expect(result.accessible).toBe(true);
+      process.getuid = () => 1000;
+      process.getgid = () => 1000;
+    });
+
+    it('returns early when database file does not exist', () => {
+      mockFs.existsSync.mockReturnValue(false);
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.accessible).toBe(false);
+      expect(result.fileExists).toBe(false);
+    });
+
+    it('marks accessible when file is readable', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ uid: 1000, gid: 1000 });
+      mockFs.accessSync.mockImplementation(() => {});
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.accessible).toBe(true);
+    });
+
+    it('provides root guidance when access denied as root', () => {
+      process.getuid = () => 0;
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ uid: 1000, gid: 1000 });
+      mockFs.accessSync.mockImplementation(() => {
+        throw new Error('EACCES');
+      });
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.recommendation).toContain('gosu');
+    });
+
+    it('provides guidance for non-root wrong owner', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ uid: 999, gid: 999 });
+      mockFs.accessSync.mockImplementation(() => {
+        throw new Error('EACCES');
+      });
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.recommendation).toContain('different user');
+    });
+
+    it('suggests ls when access denied for same owner', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.statSync.mockReturnValue({ uid: 1000, gid: 1000 });
+      mockFs.accessSync.mockImplementation(() => {
+        throw new Error('EACCES');
+      });
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.recommendation).toContain('ls -l');
+    });
+
+    it('handles stat errors', () => {
+      mockFs.existsSync.mockImplementation(() => {
+        throw new Error('stat fail');
+      });
+      const result = dbScriptUtils.checkDatabaseAccess();
+      expect(result.error).toBe('stat fail');
+    });
+  });
+
+  describe('getDatabasePathInfo', () => {
+    it('returns path debug info', () => {
+      mockFs.existsSync.mockReturnValue(true);
+      const info = dbScriptUtils.getDatabasePathInfo();
+      expect(info.dataDir).toBeDefined();
+      expect(info.sqlitePath).toContain('database.sqlite');
+      expect(info.dataDirExists).toBe(true);
+      expect(info.databaseExists).toBe(true);
+    });
+  });
+
+  describe('formatSectionName', () => {
+    it('strips trailing colon from section', () => {
+      expect(dbScriptUtils.formatSectionName('config:')).toBe('config');
+      expect(dbScriptUtils.formatSectionName(null)).toBe('');
+    });
+  });
+
+  describe('parseKey edge cases', () => {
+    it('parses namespace without section colon', () => {
+      const result = dbScriptUtils.parseKey('invites:tagname');
+      expect(result).toEqual({
+        namespace: 'invites',
+        section: null,
+        actualKey: 'tagname',
+        fullKey: 'tagname'
+      });
+    });
+  });
+
+  describe('parseDatabaseKey edge cases', () => {
+    it('handles empty rest of key', () => {
+      expect(dbScriptUtils.parseDatabaseKey('main:')).toEqual({
+        namespace: 'main',
+        section: null,
+        actualKey: '',
+        fullKey: ''
+      });
+    });
+
+    it('defaults unknown namespace to main', () => {
+      expect(dbScriptUtils.parseDatabaseKey('unknown:config:my_key')).toEqual({
+        namespace: 'main',
+        section: 'config:',
+        actualKey: 'my_key',
+        fullKey: 'config:my_key'
+      });
+    });
+
+    it('builds fullKey without section prefix when section is null', () => {
+      expect(dbScriptUtils.parseDatabaseKey('invites:tagname')).toEqual({
+        namespace: 'invites',
+        section: null,
+        actualKey: 'tagname',
+        fullKey: 'tagname'
+      });
+    });
+  });
+
+  describe('parseValue edge cases', () => {
+    it('returns non-string values unchanged', () => {
+      expect(dbScriptUtils.parseValue(42)).toBe(42);
+    });
+  });
+
+  describe('withKeyv without disconnect', () => {
+    it('skips disconnect when not available', async () => {
+      const instance = {};
+      const result = await dbScriptUtils.withKeyv(instance, async (k) => k);
+      expect(result).toBe(instance);
     });
   });
 });

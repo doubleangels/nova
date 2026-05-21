@@ -1,4 +1,5 @@
 const { MessageFlags } = require('discord.js');
+const { createMockInteraction } = require('../testUtils');
 
 describe('giveperms command unit tests', () => {
   let givePermsCommand;
@@ -23,6 +24,27 @@ describe('giveperms command unit tests', () => {
     jest.doMock('../../config', () => mockConfig);
 
     givePermsCommand = require('../../commands/givePerms');
+  });
+
+  it('serializes slash command options', () => {
+    const json = givePermsCommand.data.toJSON();
+    expect(json.options).toHaveLength(3);
+  });
+
+  it('validateInputs returns success for valid configuration', () => {
+    const mockInteraction = {
+      guild: {
+        members: { me: { roles: { highest: { position: 10 } } } },
+        roles: { fetch: jest.fn().mockResolvedValue({ position: 5 }) }
+      }
+    };
+    const result = givePermsCommand.validateInputs(
+      mockInteraction,
+      'Role',
+      '#FF0000',
+      { id: 'user-1' }
+    );
+    expect(result.success).toBe(true);
   });
 
   it('should successfully run happy path and grant permissions', async () => {
@@ -312,7 +334,7 @@ describe('giveperms command unit tests', () => {
     const mockNewRole = {
       id: 'new-role-id',
       name: 'Elite',
-      delete: jest.fn().mockResolvedValue()
+      delete: jest.fn().mockRejectedValue(new Error('delete failed'))
     };
     const mockTargetMember = {
       id: 'user-123',
@@ -359,6 +381,89 @@ describe('giveperms command unit tests', () => {
     }));
   });
 
+  it('should reply when target user is not in guild', async () => {
+    const mockInteraction = createMockInteraction({
+      options: {
+        getString: jest.fn((name) => {
+          if (name === 'role') return 'TestRole';
+          if (name === 'color') return '#FF0000';
+          return null;
+        }),
+        getUser: jest.fn(() => ({ id: 'missing-user', tag: 'Missing#0001' }))
+      },
+      guild: {
+        members: {
+          cache: { get: jest.fn().mockReturnValue(undefined) },
+          fetch: jest.fn().mockResolvedValue(null)
+        }
+      }
+    });
+
+    await givePermsCommand.execute(mockInteraction);
+
+    expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: '⚠️ The specified user could not be found in this server.'
+    }));
+  });
+
+  it('handleError uses default message for unknown errors', async () => {
+    const interaction = {
+      user: { id: 'admin-123' },
+      editReply: jest.fn().mockResolvedValue(),
+      reply: jest.fn()
+    };
+    await givePermsCommand.handleError(interaction, new Error('SOMETHING_ELSE'));
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: '⚠️ An unexpected error occurred while granting permissions. Please try again later.'
+    }));
+  });
+
+  it('handleError maps USER_NOT_FOUND when editReply succeeds', async () => {
+    const interaction = {
+      user: { id: 'admin-123' },
+      guildId: 'guild-123',
+      editReply: jest.fn().mockResolvedValue(),
+      reply: jest.fn()
+    };
+
+    await givePermsCommand.handleError(interaction, new Error('USER_NOT_FOUND'));
+
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: '⚠️ The specified user could not be found in this server.'
+    }));
+    expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
+  it('handleError maps INVALID_COLOR when editReply succeeds', async () => {
+    const interaction = {
+      user: { id: 'admin-123' },
+      guildId: 'guild-123',
+      editReply: jest.fn().mockResolvedValue(),
+      reply: jest.fn()
+    };
+
+    await givePermsCommand.handleError(interaction, new Error('INVALID_COLOR'));
+
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: '⚠️ Invalid color format. Please use the format #RRGGBB or RRGGBB.'
+    }));
+  });
+
+  it('handleError uses generic message for unmapped errors', async () => {
+    const interaction = {
+      user: { id: 'admin-123' },
+      guildId: 'guild-123',
+      editReply: jest.fn().mockResolvedValue(),
+      reply: jest.fn()
+    };
+
+    await givePermsCommand.handleError(interaction, new Error('UNKNOWN'));
+
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: '⚠️ An unexpected error occurred while granting permissions. Please try again later.'
+    }));
+  });
+
   it('should handle custom command error classes in handleError', async () => {
     const mockInteraction = {
       user: { id: 'admin-123', tag: 'Admin#0001' },
@@ -387,9 +492,19 @@ describe('giveperms command unit tests', () => {
       content: expect.stringContaining('Invalid color format')
     }));
 
-    await givePermsCommand.handleError(mockInteraction, new Error('USER_NOT_FOUND'));
-    expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
+    const editReplyInteraction = {
+      user: { id: 'admin-123' },
+      guildId: 'guild-123',
+      editReply: jest.fn().mockResolvedValue()
+    };
+    await givePermsCommand.handleError(editReplyInteraction, new Error('USER_NOT_FOUND'));
+    expect(editReplyInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('could not be found')
     }));
+
+    mockInteraction.reply.mockRejectedValue(new Error('reply failed'));
+    await expect(
+      givePermsCommand.handleError(mockInteraction, new Error('CONFIG_MISSING'))
+    ).resolves.not.toThrow();
   });
 });

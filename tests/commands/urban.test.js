@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require('discord.js');
 const { createMockInteraction } = require('../testUtils');
 
 const mockLogger = {
@@ -96,6 +97,240 @@ describe('urban command', () => {
       expect(fields.find(f => f.name === 'Author').value).toBe('Unknown');
     });
 
+    it('should return cached embed without calling the API', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('CachedTerm')
+        }
+      });
+
+      const cachedEmbed = new EmbedBuilder()
+        .setTitle('Urban Dictionary: cached')
+        .setDescription('from cache');
+
+      const { setCached, cacheKey } = require('../../utils/responseCache');
+      setCached(cacheKey('urban', 'cachedterm'), cachedEmbed, 900000);
+
+      await urbanCommand.execute(mockInteraction);
+
+      expect(mockAxios.get).not.toHaveBeenCalled();
+      expect(mockInteraction.editReply).toHaveBeenCalledWith({ embeds: [cachedEmbed] });
+    });
+
+    it('should treat missing thumb counts as zero in score comparison', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('term')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              word: 'term',
+              definition: 'No thumbs',
+              example: 'ex',
+              author: 'a'
+            },
+            {
+              word: 'term',
+              definition: 'With thumbs',
+              example: 'ex2',
+              author: 'b',
+              thumbs_up: 5,
+              thumbs_down: 0
+            }
+          ]
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.description).toBe('With thumbs');
+    });
+
+    it('should keep the current best when scores are equal', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('term')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              word: 'term',
+              definition: 'First equal',
+              example: 'ex1',
+              author: 'a1',
+              thumbs_up: 5,
+              thumbs_down: 2
+            },
+            {
+              word: 'term',
+              definition: 'Second equal',
+              example: 'ex2',
+              author: 'a2',
+              thumbs_up: 6,
+              thumbs_down: 3
+            }
+          ]
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.description).toBe('First equal');
+    });
+
+    it('should keep the current best when scores are tied', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('term')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              word: 'term',
+              definition: 'First tied',
+              example: 'ex1',
+              author: 'a1',
+              thumbs_up: 5,
+              thumbs_down: 2
+            },
+            {
+              word: 'term',
+              definition: 'Second tied',
+              example: 'ex2',
+              author: 'a2',
+              thumbs_up: 6,
+              thumbs_down: 3
+            }
+          ]
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.description).toBe('First tied');
+    });
+
+    it('should keep best when later definition has zero thumbs_up', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('term')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              word: 'term',
+              definition: 'Zero thumbs leader',
+              example: 'ex1',
+              author: 'a1',
+              thumbs_up: 0,
+              thumbs_down: 0
+            },
+            {
+              word: 'term',
+              definition: 'Negative score',
+              example: 'ex2',
+              author: 'a2',
+              thumbs_up: 0,
+              thumbs_down: 5
+            }
+          ]
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.description).toBe('Zero thumbs leader');
+    });
+
+    it('should keep the first definition when later entries have lower scores', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('term')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              word: 'term',
+              definition: 'Best first',
+              example: 'ex1',
+              author: 'a1',
+              thumbs_up: 100,
+              thumbs_down: 0
+            },
+            {
+              word: 'term',
+              definition: 'Worse second',
+              example: 'ex2',
+              author: 'a2',
+              thumbs_up: 1,
+              thumbs_down: 50
+            }
+          ]
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.description).toBe('Best first');
+    });
+
+    it('should pick the definition with the best thumb score when multiple exist', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('term')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: [
+            {
+              word: 'term',
+              definition: 'Low score definition',
+              example: 'ex1',
+              author: 'a1',
+              thumbs_up: 2,
+              thumbs_down: 10
+            },
+            {
+              word: 'term',
+              definition: 'High score definition',
+              example: 'ex2',
+              author: 'a2',
+              thumbs_up: 50,
+              thumbs_down: 1
+            }
+          ]
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      const sentEmbed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(sentEmbed.data.description).toBe('High score definition');
+    });
+
     it('should reply with error if no definitions are found', async () => {
       const mockInteraction = createMockInteraction({
         options: {
@@ -106,6 +341,26 @@ describe('urban command', () => {
       mockAxios.get.mockResolvedValueOnce({
         data: {
           list: []
+        }
+      });
+
+      await urbanCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ No definitions found for that term.'
+      }));
+    });
+
+    it('should reply with error when definitions list is null', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('nullterm')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          list: null
         }
       });
 

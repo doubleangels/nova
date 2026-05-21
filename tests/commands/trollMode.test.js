@@ -26,6 +26,11 @@ describe('trollMode command', () => {
     trollModeCommand = require('../../commands/trollMode');
   });
 
+  it('serializes slash command subcommands', () => {
+    const json = trollModeCommand.data.toJSON();
+    expect(json.options.length).toBeGreaterThanOrEqual(2);
+  });
+
   describe('execute', () => {
     it('should defer reply with Ephemeral flags', async () => {
       const mockInteraction = createMockInteraction({
@@ -125,6 +130,19 @@ describe('trollMode command', () => {
       expect(embed.data.color).toBe(0x00FF00); // Green when enabled
     });
 
+    it('should use singular day text when account age is 1 and enabled', async () => {
+      const mockInteraction = createMockInteraction();
+      mockDatabase.getValue.mockResolvedValueOnce(true);
+      mockDatabase.getValue.mockResolvedValueOnce(1);
+
+      await trollModeCommand.handleStatusSubcommand(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const ageField = embed.data.fields.find(f => f.name === 'Minimum Account Age');
+      expect(ageField.value).toBe('1 day');
+      expect(embed.data.description).toContain('**1** day');
+    });
+
     it('should editReply with a red embed when disabled', async () => {
       const mockInteraction = createMockInteraction();
       mockDatabase.getValue.mockResolvedValueOnce(false); // enabled
@@ -200,7 +218,46 @@ describe('trollMode command', () => {
     });
   });
 
+  describe('formatStatusMessage', () => {
+    it('should omit description when troll mode is disabled', () => {
+      const embed = trollModeCommand.formatStatusMessage(
+        { enabled: false, accountAge: 10 },
+        createMockInteraction()
+      );
+      expect(embed.data.description).toBeUndefined();
+    });
+  });
+
+  describe('formatUpdateMessage', () => {
+    it('should omit description when troll mode is disabled', () => {
+      const mockInteraction = createMockInteraction();
+      const embed = trollModeCommand.formatUpdateMessage(false, 30, mockInteraction);
+      expect(embed.data.title).toBe('Troll Mode Disabled');
+      expect(embed.data.description).toBeUndefined();
+    });
+
+    it('should use singular day text when enabled with account age of 1', () => {
+      const mockInteraction = createMockInteraction();
+      const embed = trollModeCommand.formatUpdateMessage(true, 1, mockInteraction);
+      expect(embed.data.description).toContain('**1** day');
+    });
+  });
+
   describe('updateSettings', () => {
+    it('should update only enabled when account age is omitted', async () => {
+      mockDatabase.setValue.mockResolvedValue(true);
+      await trollModeCommand.updateSettings({ enabled: false });
+      expect(mockDatabase.setValue).toHaveBeenCalledWith('troll_mode_enabled', false);
+      expect(mockDatabase.setValue).not.toHaveBeenCalledWith('troll_mode_account_age', expect.any(Number));
+    });
+
+    it('should update only account age when enabled is omitted', async () => {
+      mockDatabase.setValue.mockResolvedValue(true);
+      await trollModeCommand.updateSettings({ accountAge: 21 });
+      expect(mockDatabase.setValue).toHaveBeenCalledWith('troll_mode_account_age', 21);
+      expect(mockDatabase.setValue).not.toHaveBeenCalledWith('troll_mode_enabled', expect.any(Boolean));
+    });
+
     it('should update database values', async () => {
       mockDatabase.setValue.mockResolvedValue(true);
       await trollModeCommand.updateSettings({ enabled: true, accountAge: 12 });
@@ -231,11 +288,44 @@ describe('trollMode command', () => {
       }));
     });
 
+    it('handleError uses default message for unknown errors', async () => {
+      const interaction = {
+        user: { id: 'user-1' },
+        editReply: jest.fn().mockResolvedValue(),
+        reply: jest.fn()
+      };
+      await trollModeCommand.handleError(interaction, new Error('UNKNOWN'));
+      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ An unexpected error occurred while managing troll mode settings. Please try again later.'
+      }));
+    });
+
+    it('handleError maps PERMISSION_DENIED when editReply succeeds', async () => {
+      const interaction = {
+        user: { id: 'user-1' },
+        editReply: jest.fn().mockResolvedValue(),
+        reply: jest.fn()
+      };
+      await trollModeCommand.handleError(interaction, new Error('PERMISSION_DENIED'));
+      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: "⚠️ You don't have permission to manage troll mode settings."
+      }));
+      expect(interaction.reply).not.toHaveBeenCalled();
+    });
+
     it('should handle INVALID_SETTINGS error correctly', async () => {
       const mockInteraction = createMockInteraction();
       await trollModeCommand.handleError(mockInteraction, new Error('INVALID_SETTINGS'));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Invalid troll mode settings provided.'
+      }));
+    });
+
+    it('should use generic error message for unmapped errors', async () => {
+      const mockInteraction = createMockInteraction();
+      await trollModeCommand.handleError(mockInteraction, new Error('UNKNOWN'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ An unexpected error occurred while managing troll mode settings. Please try again later.'
       }));
     });
 
@@ -248,6 +338,16 @@ describe('trollMode command', () => {
       expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         content: "⚠️ You don't have permission to manage troll mode settings."
       }));
+    });
+
+    it('should swallow errors when both editReply and reply fail', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('edit failed'));
+      mockInteraction.reply.mockRejectedValue(new Error('reply failed'));
+
+      await expect(
+        trollModeCommand.handleError(mockInteraction, new Error('PERMISSION_DENIED'))
+      ).resolves.not.toThrow();
     });
   });
 });

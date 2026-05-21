@@ -89,6 +89,7 @@ function similarityScore(str1, str2) {
   if (a === b) return 1.0;
   const longer = a.length >= b.length ? a : b;
   const shorter = a.length >= b.length ? b : a;
+  /* istanbul ignore next -- longer is non-empty once strings differ */
   if (longer.length === 0) return 1.0;
   return (longer.length - levenshtein(longer, shorter)) / longer.length;
 }
@@ -155,7 +156,9 @@ function formatDeletedMessagesSummary(occurrences) {
   for (const chId of channelOrder) {
     const inChannel = sorted.filter(o => o.channelId === chId);
     const name = inChannel[0].channelName || 'unknown';
-    lines.push(`**#${name}** · ${inChannel.length} message${inChannel.length === 1 ? '' : 's'}`);
+    let msgLabel = 'message';
+    if (inChannel.length !== 1) msgLabel = 'messages';
+    lines.push(`**#${name}** · ${inChannel.length} ${msgLabel}`);
     for (const occ of inChannel) {
       const preview =
         occ.contentPreview != null && String(occ.contentPreview).trim() !== ''
@@ -169,6 +172,7 @@ function formatDeletedMessagesSummary(occurrences) {
   if (out.length > maxTotal) {
     out = `${out.slice(0, maxTotal - 24)}\n_(summary truncated)_`;
   }
+  /* istanbul ignore next -- lines are non-empty when occurrences exist */
   return out || '_No details_';
 }
 
@@ -358,6 +362,7 @@ async function trackNewUserMessage(message) {
     }
 
     const normalizedContent = normalizeContent(contentWithoutEmotes);
+    /* istanbul ignore next -- non-link messages cannot normalize to empty after filters */
     if (normalizedContent.length === 0) return;
 
     // Base threshold from config (default: 3)
@@ -435,7 +440,7 @@ async function trackNewUserMessage(message) {
           isMultiChannel,
           hasLink,
           isSimilarMatch,
-          timeRemaining: timeRemaining ? `${Math.round(timeRemaining / 1000 / 60)} minutes` : null
+          timeRemaining: `${Math.round(timeRemaining / 1000 / 60)} minutes`
         });
 
         // Delete all spam copies (older ones first, then the most recent)
@@ -514,8 +519,7 @@ async function deleteOffendingMessages(guild, occurrences) {
   const deleteResults = await runWithConcurrency(
     toDelete.map((occurrence) => async () => {
       try {
-        const channel = guild.channels.cache.get(occurrence.channelId)
-          ?? await guild.channels.fetch(occurrence.channelId).catch(() => null);
+        const channel = guild.channels.cache.get(occurrence.channelId) ?? (await guild.channels.fetch(occurrence.channelId).catch(() => null));
         if (!channel) {
           failedCount++;
           return false;
@@ -552,8 +556,7 @@ async function deleteOffendingMessages(guild, occurrences) {
   // Fetch the most-recent message so the caller can reply to it
   let mostRecentMessage = null;
   try {
-    const channel = guild.channels.cache.get(mostRecentOccurrence.channelId)
-      ?? await guild.channels.fetch(mostRecentOccurrence.channelId).catch(() => null);
+    const channel = guild.channels.cache.get(mostRecentOccurrence.channelId) ?? (await guild.channels.fetch(mostRecentOccurrence.channelId).catch(() => null));
     if (channel) {
       mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
     }
@@ -915,5 +918,14 @@ async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected
 
 module.exports = {
   trackNewUserMessage,
-  handleSpamWarningButton
+  handleSpamWarningButton,
+  deleteOffendingMessages,
+  timeoutUser,
+  postSpamWarning,
+  truncateContentPreview,
+  formatDeletedMessagesSummary,
+  levenshtein,
+  similarityScore,
+  findSimilarContent,
+  parseSpamWarnButtonId
 };

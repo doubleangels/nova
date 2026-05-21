@@ -77,8 +77,15 @@ function parseSubmissionResponse(submissionResponse) {
   if (typeof jsonData.data === 'string') {
     try {
       const parsed = JSON.parse(jsonData.data);
-      postId = parsed.id || (parsed.name ? parsed.name.replace('t3_', '') : null);
-      permalink = parsed.permalink || (parsed.url ? (parsed.url.match(/https?:\/\/[^/]+(\/.*)/)?.[1] || parsed.url) : null);
+      postId = parsed.id ?? null;
+      if (!postId && parsed.name) {
+        postId = parsed.name.replace('t3_', '');
+      }
+      permalink = parsed.permalink ?? null;
+      if (!permalink && parsed.url) {
+        const urlMatch = parsed.url.match(/https?:\/\/[^/]+(\/.*)/);
+        permalink = urlMatch ? urlMatch[1] : parsed.url;
+      }
     } catch (_) { /* ignore */ }
   }
   if (!postId || !permalink) return null;
@@ -367,4 +374,12 @@ module.exports = {
       return null;
     }
   }
-}; 
+};
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports.__test__ = {
+    parseSubmissionResponse,
+    getRedditErrorMessage,
+    postToSubreddit
+  };
+} 

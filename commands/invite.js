@@ -20,6 +20,12 @@ function invalidateInviteTagsAutocompleteCache() {
   inviteTagsAutocompleteCache = { tags: [], expiresAt: 0 };
 }
 
+function pushListFieldIfNonempty(fields, currentField) {
+  if (currentField.value.length > 0) {
+    fields.push(currentField);
+  }
+}
+
 /**
  * Command module for managing invite codes with tags/names.
  * Allows users to store and retrieve invite codes with custom names.
@@ -398,10 +404,7 @@ module.exports = {
       currentField.value += tagLine;
     }
 
-    // Add the last field if it has content
-    if (currentField.value.length > 0) {
-      fields.push(currentField);
-    }
+    pushListFieldIfNonempty(fields, currentField);
 
     // Add fields to embed (max 25 fields)
     const fieldsToAdd = fields.slice(0, 25);
@@ -796,4 +799,8 @@ module.exports = {
     }
   }
 };
+
+if (process.env.NODE_ENV === 'test') {
+  module.exports.__test__ = { pushListFieldIfNonempty };
+}
 

@@ -217,6 +217,70 @@ describe('audit command', () => {
       expect(embed.data.fields[0].value).not.toContain('**Power Mod Nick**'); // power-id got filtered out of buildPages output
     });
 
+    it('should exclude power perms from moderator permission list but keep the member', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(false),
+          getSubcommand: jest.fn().mockReturnValue('moderator')
+        }
+      });
+
+      const mockModMember = {
+        displayName: 'Mixed Mod',
+        user: { id: 'mixed-id', username: 'mixedmod', bot: false },
+        permissions: {
+          has: jest.fn().mockImplementation((perm) => {
+            if (perm === PermissionFlagsBits.Administrator) return false;
+            if (perm === PermissionFlagsBits.BanMembers) return true;
+            if (perm === PermissionFlagsBits.ManageMessages) return true;
+            return false;
+          }),
+          any: jest.fn().mockReturnValue(true)
+        }
+      };
+
+      mockInteraction.guild = {
+        members: {
+          fetch: jest.fn().mockResolvedValue(new Map([['mixed-id', mockModMember]]))
+        }
+      };
+
+      await auditCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.fields[0].value).toContain('**Mixed Mod** — Manage Messages');
+      expect(embed.data.fields[0].value).not.toContain('Ban Members');
+    });
+
+    it('should show None for moderator permissions when only power perms remain', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(false),
+          getSubcommand: jest.fn().mockReturnValue('moderator')
+        }
+      });
+
+      const mockModMember = {
+        displayName: 'Power Only Mod',
+        user: { id: 'mod-power', username: 'modpower', bot: false },
+        permissions: {
+          has: jest.fn().mockImplementation((perm) => perm === PermissionFlagsBits.BanMembers),
+          any: jest.fn().mockReturnValue(true)
+        }
+      };
+
+      mockInteraction.guild = {
+        members: {
+          fetch: jest.fn().mockResolvedValue(new Map([['mod-power', mockModMember]]))
+        }
+      };
+
+      await auditCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.fields[0].value).toBe('None');
+    });
+
     it('should list None if effectiveMembers in buildPages is empty', async () => {
       const mockInteraction = createMockInteraction({
         options: {
@@ -340,6 +404,40 @@ describe('audit command', () => {
 
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.color).toBe(0);
+    });
+
+    it('should show None for member permission list when moderator has no listable perms', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(false),
+          getSubcommand: jest.fn().mockReturnValue('moderator')
+        }
+      });
+
+      const mockModMember = {
+        displayName: 'Listed Mod',
+        user: { id: 'listed-id', username: 'listedmod', bot: false },
+        permissions: {
+          has: jest.fn().mockImplementation((perm) => {
+            if (perm === PermissionFlagsBits.Administrator) return false;
+            if (perm === PermissionFlagsBits.ModerateMembers) return true;
+            return false;
+          }),
+          any: jest.fn().mockReturnValue(true)
+        }
+      };
+
+      mockInteraction.guild = {
+        members: {
+          fetch: jest.fn().mockResolvedValue(new Map([['listed-id', mockModMember]]))
+        }
+      };
+
+      await auditCommand.execute(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      expect(embed.data.fields[0].value).toContain('**Listed Mod**');
+      expect(embed.data.fields[0].value).toContain('Moderate Members');
     });
 
     it('should split members into multiple pages if counts exceed 25 members or 900 character limit, calling createPaginatedResults', async () => {
@@ -529,6 +627,129 @@ describe('audit command', () => {
       await expect(auditCommand.execute(mockInteraction)).resolves.not.toThrow();
 
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error reply for audit command.', expect.any(Object));
+    });
+  });
+
+  describe('internal helpers', () => {
+    it('formatLine uses username when displayName is missing', () => {
+      const line = auditCommand.__test__.formatLine(
+        { user: { username: 'plainuser' }, permissions: { has: () => false } },
+        false
+      );
+      expect(line).toBe('**plainuser**');
+    });
+
+    it('formatLine returns bold name only when showPerms is false', () => {
+      const line = auditCommand.__test__.formatLine(
+        {
+          displayName: 'Mod',
+          user: { username: 'mod' },
+          permissions: { has: () => true }
+        },
+        false
+      );
+      expect(line).toBe('**Mod**');
+      expect(line).not.toContain('—');
+    });
+
+    it('formatLine shows None when showPerms is true but member has no matching permissions', () => {
+      const line = auditCommand.__test__.formatLine(
+        {
+          displayName: 'Empty',
+          user: { username: 'empty' },
+          permissions: { has: () => false }
+        },
+        true
+      );
+      expect(line).toBe('**Empty** — None');
+    });
+
+    it('formatLine excludes power permissions when excludePowerPerms is true', () => {
+      const line = auditCommand.__test__.formatLine(
+        {
+          displayName: 'Power',
+          user: { username: 'power' },
+          permissions: {
+            has: (perm) => perm === PermissionFlagsBits.BanMembers
+          }
+        },
+        true,
+        true
+      );
+      expect(line).toBe('**Power** — None');
+    });
+
+    it('buildPages returns None when moderator filter removes all members', () => {
+      const member = {
+        displayName: 'Ban Only',
+        user: { username: 'banonly' },
+        permissions: {
+          has: (perm) => perm === PermissionFlagsBits.BanMembers
+        }
+      };
+      expect(auditCommand.__test__.buildPages([member], true, true)).toEqual(['None']);
+    });
+
+    it('buildPages appends lines without splitting when under limits', () => {
+      const members = Array.from({ length: 3 }, (_, i) => ({
+        displayName: `M${i}`,
+        user: { username: `u${i}` },
+        permissions: { has: () => false }
+      }));
+      const pages = auditCommand.__test__.buildPages(members, false, false);
+      expect(pages).toHaveLength(1);
+      expect(pages[0]).toContain('**M0**');
+      expect(pages[0]).toContain('**M2**');
+    });
+
+    it('buildPages splits when more than 25 members are listed', () => {
+      const members = Array.from({ length: 26 }, (_, i) => ({
+        displayName: `Member ${i}`,
+        user: { username: `user_${i}` },
+        permissions: { has: () => false }
+      }));
+      const pages = auditCommand.__test__.buildPages(members, false, false);
+      expect(pages.length).toBe(2);
+    });
+
+    it('buildPages uses default excludePowerPerms when omitted', () => {
+      const member = {
+        displayName: 'Mod',
+        user: { username: 'mod' },
+        permissions: {
+          has: (perm) => perm === PermissionFlagsBits.ManageMessages
+        }
+      };
+      const pages = auditCommand.__test__.buildPages([member], true);
+      expect(pages[0]).toContain('Manage Messages');
+    });
+
+    it('buildPages splits when combined line length exceeds 900 characters', () => {
+      const longName = 'x'.repeat(900);
+      const members = [
+        {
+          displayName: longName,
+          user: { username: 'long' },
+          permissions: { has: () => false }
+        },
+        {
+          displayName: 'Second',
+          user: { username: 'second' },
+          permissions: { has: () => false }
+        }
+      ];
+      const pages = auditCommand.__test__.buildPages(members, false);
+      expect(pages.length).toBe(2);
+    });
+
+    it('does not export __test__ helpers outside test environment', () => {
+      jest.isolateModules(() => {
+        const previousEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'production';
+        const cmd = require('../../commands/audit');
+        expect(cmd.__test__).toBeUndefined();
+        process.env.NODE_ENV = previousEnv;
+      });
     });
   });
 });

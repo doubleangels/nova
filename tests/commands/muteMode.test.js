@@ -45,6 +45,24 @@ describe('muteMode command', () => {
       statusSpy.mockRestore();
     });
 
+    it('should do nothing when subcommand is unrecognized', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getSubcommand: jest.fn().mockReturnValue('unknown')
+        }
+      });
+
+      const statusSpy = jest.spyOn(muteModeCommand, 'handleStatusSubcommand').mockResolvedValue();
+      const setSpy = jest.spyOn(muteModeCommand, 'handleSetSubcommand').mockResolvedValue();
+
+      await muteModeCommand.execute(mockInteraction);
+
+      expect(statusSpy).not.toHaveBeenCalled();
+      expect(setSpy).not.toHaveBeenCalled();
+      statusSpy.mockRestore();
+      setSpy.mockRestore();
+    });
+
     it('should call handleSetSubcommand when subcommand is set', async () => {
       const mockInteraction = createMockInteraction({
         options: {
@@ -205,6 +223,25 @@ describe('muteMode command', () => {
       expect(timeField.value).toBe('2 hours');
     });
 
+    it('should use current time limit when integer option is omitted', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(true),
+          getInteger: jest.fn().mockReturnValue(null)
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return false;
+        if (key === 'mute_mode_kick_time_hours') return '8';
+        return null;
+      });
+
+      await muteModeCommand.handleSetSubcommand(mockInteraction);
+
+      expect(mockDatabase.setValue).toHaveBeenCalledWith('mute_mode_kick_time_hours', 8);
+    });
+
     it('should enforce default value on invalid time limit', async () => {
       const mockInteraction = createMockInteraction({
         options: {
@@ -252,6 +289,17 @@ describe('muteMode command', () => {
   });
 
   describe('getCurrentSettings', () => {
+    it('should default timeLimit to 2 when not stored in database', async () => {
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return false;
+        if (key === 'mute_mode_kick_time_hours') return null;
+        return null;
+      });
+
+      const settings = await muteModeCommand.getCurrentSettings();
+      expect(settings.timeLimit).toBe(2);
+    });
+
     it('should throw DATABASE_READ_ERROR when DB read fails', async () => {
       mockDatabase.getValue.mockRejectedValue(new Error('db connection error'));
       await expect(muteModeCommand.getCurrentSettings()).rejects.toThrow('DATABASE_READ_ERROR');
@@ -262,6 +310,51 @@ describe('muteMode command', () => {
     it('should throw DATABASE_WRITE_ERROR when DB write fails', async () => {
       mockDatabase.setValue.mockRejectedValue(new Error('db write error'));
       await expect(muteModeCommand.updateSettings(true, 5)).rejects.toThrow('DATABASE_WRITE_ERROR');
+    });
+  });
+
+  it('serializes slash command subcommands', () => {
+    const json = muteModeCommand.data.toJSON();
+    expect(json.options).toHaveLength(2);
+  });
+
+  describe('formatUpdateMessage', () => {
+    it('should format disabled update without description', () => {
+      const embed = muteModeCommand.formatUpdateMessage(false, false, 2, 2, createMockInteraction());
+      expect(embed.data.title).toBe('Mute Mode Updated');
+      expect(embed.data.description).toBeUndefined();
+      const statusField = embed.data.fields.find(f => f.name === 'Status');
+      expect(statusField.value).toBe('**Disabled**');
+    });
+
+    it('should use singular hour text when time limit unchanged at 1 hour', () => {
+      const embed = muteModeCommand.formatUpdateMessage(true, true, 1, 1, createMockInteraction());
+      const timeField = embed.data.fields.find(f => f.name === 'Time Limit');
+      expect(timeField.value).toBe('1 hour');
+      expect(embed.data.description).toContain('**1** hour');
+    });
+
+    it('should omit description when disabling mute mode', () => {
+      const embed = muteModeCommand.formatUpdateMessage(true, false, 4, 4, createMockInteraction());
+      expect(embed.data.description).toBeUndefined();
+    });
+
+    it('should use plural hours when time limit unchanged and not 1', () => {
+      const embed = muteModeCommand.formatUpdateMessage(true, true, 4, 4, createMockInteraction());
+      const timeField = embed.data.fields.find(f => f.name === 'Time Limit');
+      expect(timeField.value).toBe('4 hours');
+    });
+
+    it('should use singular hour labels when old time limit was 1 hour', () => {
+      const embed = muteModeCommand.formatUpdateMessage(true, true, 1, 2, createMockInteraction());
+      const timeField = embed.data.fields.find(f => f.name === 'Time Limit');
+      expect(timeField.value).toBe('1 hour → 2 hours');
+    });
+
+    it('should use singular new hour text when updated limit is 1', () => {
+      const embed = muteModeCommand.formatUpdateMessage(true, true, 4, 1, createMockInteraction());
+      const timeField = embed.data.fields.find(f => f.name === 'Time Limit');
+      expect(timeField.value).toBe('4 hours → 1 hour');
     });
   });
 
@@ -309,6 +402,16 @@ describe('muteMode command', () => {
       expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to update mute mode settings. Please try again later.'
       }));
+    });
+
+    it('should swallow errors when both editReply and reply fail', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.editReply.mockRejectedValue(new Error('edit failed'));
+      mockInteraction.reply.mockRejectedValue(new Error('reply failed'));
+
+      await expect(
+        muteModeCommand.handleError(mockInteraction, new Error('DATABASE_READ_ERROR'))
+      ).resolves.not.toThrow();
     });
   });
 });

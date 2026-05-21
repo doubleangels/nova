@@ -162,3 +162,7 @@ module.exports = {
   }
 };
 
+if (process.env.NODE_ENV === 'test') {
+  module.exports.__test__ = { truncateEmbedField, formatPermissionName };
+}
+

@@ -338,6 +338,24 @@ describe('guildMemberAdd event', () => {
       mockDatabase.rebuildCodeToTagMap.mockResolvedValue({ code123: 'mytag' });
     });
 
+    it('should skip when tagged invite map stays empty after rebuild', async () => {
+      const mockMember = {
+        guild: { id: 'guild-123' },
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({});
+      mockDatabase.rebuildCodeToTagMap.mockResolvedValue({});
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockDatabase.rebuildCodeToTagMap).toHaveBeenCalledWith('guild-123');
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'No tagged invites configured, skipping invite check.'
+      );
+    });
+
     it('should return if no invite notification channel is configured', async () => {
       const mockMember = {
         user: { tag: 'User#1234', id: 'user-123' }
@@ -1294,6 +1312,79 @@ describe('guildMemberAdd event', () => {
       const sendCallArg = mockChannel.send.mock.calls[0][0];
       const inviteTagField = sendCallArg.embeds[0].data.fields.find(f => f.name === 'Invite Tag');
       expect(inviteTagField.value).toBe('mytag');
+    });
+
+    it('exports inviteCheckLocks helper in test environment', () => {
+      expect(guildMemberAddEvent.__test__.inviteCheckLocks).toBeInstanceOf(Map);
+    });
+
+    it('releaseInviteCheckLock skips resolve when resolveLock is not a function', () => {
+      const locks = guildMemberAddEvent.__test__.inviteCheckLocks;
+      const guildId = 'guild-non-fn-lock';
+      const stalePromise = Promise.resolve();
+      locks.set(guildId, stalePromise);
+
+      expect(() => {
+        guildMemberAddEvent.__test__.releaseInviteCheckLock(guildId, null, stalePromise);
+      }).not.toThrow();
+      expect(locks.has(guildId)).toBe(false);
+    });
+
+    it('does not export __test__ helpers outside test environment', () => {
+      jest.isolateModules(() => {
+        const previousEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'production';
+        const mod = require('../../events/guildMemberAdd');
+        expect(mod.__test__).toBeUndefined();
+        process.env.NODE_ENV = previousEnv;
+      });
+    });
+
+    it('should not delete invite lock when a newer lock replaced it during fetch', async () => {
+      const locks = guildMemberAddEvent.__test__.inviteCheckLocks;
+      const guildId = 'guild-stale-lock';
+
+      const mockChannel = {
+        id: 'chan-123',
+        name: 'notifications',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockGuild = {
+        id: guildId,
+        channels: {
+          cache: new Collection([['chan-123', mockChannel]])
+        },
+        members: {
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        },
+        invites: {
+          fetch: jest.fn().mockImplementation(async () => {
+            locks.set(guildId, Promise.resolve());
+            return new Collection();
+          })
+        }
+      };
+
+      const mockMember = {
+        guild: mockGuild,
+        user: { tag: 'User#1234', id: 'user-stale' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ code123: 'tag' });
+      mockDatabase.getInviteUsage.mockResolvedValue({ code123: 1 });
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(locks.has(guildId)).toBe(true);
+      locks.delete(guildId);
     });
   });
 });

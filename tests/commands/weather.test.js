@@ -183,6 +183,57 @@ describe('weather command', () => {
       expect(mockLogger.info).toHaveBeenCalledWith('/weather command completed successfully:', expect.any(Object));
     });
 
+    it('should continue when timezone lookup fails', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockImplementation((name) => {
+            if (name === 'place') return 'Paris';
+            if (name === 'units') return 'metric';
+            return null;
+          }),
+          getBoolean: jest.fn().mockReturnValue(false),
+          getInteger: jest.fn().mockReturnValue(3)
+        }
+      });
+
+      mockGetGeocodingData.mockResolvedValueOnce({
+        error: false,
+        location: { lat: 48.8566, lng: 2.3522 },
+        formattedAddress: 'Paris, France'
+      });
+
+      const mockWeatherData = {
+        currently: {
+          summary: 'Clear',
+          icon: 'clear-day',
+          temperature: 15,
+          apparentTemperature: 14,
+          humidity: 0.5,
+          windSpeed: 2,
+          windBearing: 90,
+          uvIndex: 2,
+          visibility: 10,
+          pressure: 1010,
+          dewPoint: 8,
+          cloudCover: 0.2,
+          precipIntensity: 0,
+          precipProbability: 0
+        },
+        daily: { data: [] }
+      };
+
+      jest.spyOn(weatherCommand, 'fetchWeatherData').mockResolvedValueOnce(mockWeatherData);
+      mockGetTimezoneData.mockRejectedValueOnce(new Error('timezone service down'));
+
+      await weatherCommand.execute(mockInteraction);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to get timezone for location, using UTC',
+        expect.objectContaining({ lat: 48.8566, lon: 2.3522 })
+      );
+      expect(mockInteraction.editReply).toHaveBeenCalled();
+    });
+
     it('should successfully fetch weather and display details in imperial (privacy mode false)', async () => {
       const mockInteraction = createMockInteraction({
         options: {

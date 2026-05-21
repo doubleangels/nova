@@ -76,6 +76,28 @@ describe('noText command', () => {
       }));
     });
 
+    it('should do nothing when subcommand is unrecognized', async () => {
+      const mockChannel = {
+        id: 'ch-text',
+        toString: () => '<#ch-text>',
+        permissionsFor: jest.fn().mockReturnValue({
+          has: jest.fn().mockReturnValue(true)
+        })
+      };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getSubcommand: jest.fn().mockReturnValue('unknown'),
+          getChannel: jest.fn().mockReturnValue(mockChannel)
+        }
+      });
+
+      await noTextCommand.execute(mockInteraction);
+
+      expect(mockDatabase.getValue).not.toHaveBeenCalled();
+      expect(mockDatabase.setValue).not.toHaveBeenCalled();
+    });
+
     describe('subcommand set', () => {
       it('should return error if channel already configured', async () => {
         const mockChannel = {
@@ -127,6 +149,37 @@ describe('noText command', () => {
           content: '⚠️ Failed to save channel configuration. Please try again later.'
         }));
         expect(mockLogger.error).toHaveBeenCalled();
+      });
+
+      it('should use default embed color when baseEmbedColor is unset', async () => {
+        jest.resetModules();
+        jest.doMock('../../logger', () => () => mockLogger);
+        jest.doMock('../../config', () => ({}));
+        jest.doMock('../../utils/database', () => mockDatabase);
+        const cmd = require('../../commands/noText');
+
+        const mockChannel = {
+          id: 'ch-text',
+          toString: () => '<#ch-text>',
+          permissionsFor: jest.fn().mockReturnValue({
+            has: jest.fn().mockReturnValue(true)
+          })
+        };
+
+        const mockInteraction = createMockInteraction({
+          options: {
+            getSubcommand: jest.fn().mockReturnValue('set'),
+            getChannel: jest.fn().mockReturnValue(mockChannel)
+          }
+        });
+
+        mockDatabase.getValue.mockResolvedValue(null);
+        mockDatabase.setValue.mockResolvedValue(true);
+
+        await cmd.execute(mockInteraction);
+
+        const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+        expect(embed.data.color).toBe(0);
       });
 
       it('should successfully set no-text channel config', async () => {
@@ -208,6 +261,37 @@ describe('noText command', () => {
           content: '⚠️ Failed to save channel configuration. Please try again later.'
         }));
         expect(mockLogger.error).toHaveBeenCalled();
+      });
+
+      it('should use default embed color on remove when baseEmbedColor is unset', async () => {
+        jest.resetModules();
+        jest.doMock('../../logger', () => () => mockLogger);
+        jest.doMock('../../config', () => ({}));
+        jest.doMock('../../utils/database', () => mockDatabase);
+        const cmd = require('../../commands/noText');
+
+        const mockChannel = {
+          id: 'ch-text',
+          toString: () => '<#ch-text>',
+          permissionsFor: jest.fn().mockReturnValue({
+            has: jest.fn().mockReturnValue(true)
+          })
+        };
+
+        const mockInteraction = createMockInteraction({
+          options: {
+            getSubcommand: jest.fn().mockReturnValue('remove'),
+            getChannel: jest.fn().mockReturnValue(mockChannel)
+          }
+        });
+
+        mockDatabase.getValue.mockResolvedValue('ch-text');
+        mockDatabase.setValue.mockResolvedValue(true);
+
+        await cmd.execute(mockInteraction);
+
+        const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+        expect(embed.data.color).toBe(0);
       });
 
       it('should successfully remove no-text channel config', async () => {

@@ -46,6 +46,18 @@ describe('cat command', () => {
     expect(mockLogger.info).toHaveBeenCalledWith('/cat command completed successfully.', expect.any(Object));
   });
 
+  it('should handle empty API response as INVALID_RESPONSE', async () => {
+    const mockInteraction = createMockInteraction();
+
+    mockAxios.get.mockResolvedValueOnce({ data: [] });
+
+    await catCommand.execute(mockInteraction);
+
+    expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: "⚠️ The cat service didn't send a proper image. Please try again."
+    }));
+  });
+
   it('should handle all custom error types in error catch block', async () => {
     const errorTypes = [
       { msg: 'API_ERROR', expected: "⚠️ Couldn't fetch a cat picture due to an API error. Try again later." },
