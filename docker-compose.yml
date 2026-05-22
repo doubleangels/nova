@@ -12,7 +12,7 @@ services:
     read_only: true
     environment:
       - DOPPLER_TOKEN
-      - NODE_OPTIONS=--max-old-space-size=256
+      - NODE_OPTIONS=--max-old-space-size=192
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:

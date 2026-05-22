@@ -5,18 +5,15 @@
 FROM node:24-alpine AS base
 
 ENV NODE_ENV=production
-ENV NODE_OPTIONS="--max-old-space-size=256"
+ENV NODE_OPTIONS="--max-old-space-size=192"
 
 WORKDIR /app
 
 # Update Alpine package index and upgrade all packages, then add runtime deps
 RUN apk update && apk upgrade --no-cache && \
-    apk add --no-cache dumb-init su-exec procps && \
+    apk add --no-cache dumb-init su-exec && \
     addgroup -g 1001 nodejs && \
     adduser -u 1001 -G nodejs -s /bin/sh -D discordbot
-
-# Use latest npm
-RUN npm install -g npm@latest && npm cache clean --force
 
 # Copy package files for dependency installation (better caching)
 COPY package*.json ./
@@ -24,9 +21,13 @@ COPY package*.json ./
 # Build stage for native modules
 FROM base AS builder
 
+RUN npm install -g npm@latest && npm cache clean --force
+
 RUN --mount=type=cache,target=/root/.npm \
     apk update && apk add --no-cache python3 make g++ && \
     npm ci --omit=dev && \
+    find node_modules -type f \( -name '*.md' -o -name '*.map' -o -name 'LICENSE*' -o -name 'CHANGELOG*' \) -delete && \
+    find node_modules -depth -type d \( -name test -o -name tests -o -name __tests__ -o -name docs \) -exec rm -rf {} + 2>/dev/null || true && \
     npm cache clean --force && \
     apk del python3 make g++
 
@@ -62,9 +63,9 @@ RUN chmod +x /app/docker-entrypoint.sh && \
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]
 
-# Add health check - verify the bot process is running
+# Add health check - verify the bot process is running (pidof from busybox; no procps)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD pgrep -f "node.*index.js" > /dev/null || exit 1
+  CMD pidof node > /dev/null || exit 1
 
 # Entrypoint fixes data-dir permissions, then runs Doppler (inject secrets) + app. Pass DOPPLER_TOKEN when running.
 ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]
