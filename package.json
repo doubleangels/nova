@@ -3,16 +3,23 @@
   "version": "1.0.0",
   "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
+  "packageManager": "pnpm@10.6.4",
   "scripts": {
     "start": "doppler run -- node index.js",
-    "update": "npm outdated && npm update --save",
+    "update": "pnpm outdated && pnpm update",
     "set-value": "node set-value.js",
     "remove-value": "node remove-value.js",
     "list-values": "node list-values.js",
     "prune-db": "node prune-db.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
-    "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand"
+    "test:debug": "pnpm exec jest --inspect-brk --runInBand"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "sqlite3"
+    ]
   },
   "repository": {
     "type": "git",

@@ -12,13 +12,14 @@ updates:
         patterns:
           - "*"
   
+  # package-ecosystem: npm supports pnpm-lock.yaml updates
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: "daily"
     target-branch: "dev"
     commit-message:
-      prefix: "[NPM]"
+      prefix: "[pnpm]"
     groups:
       production-dependencies:
         dependency-type: "production"
