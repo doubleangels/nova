@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } =
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
+const { rescheduleAllMuteKicks, clearAllScheduledMuteKicks } = require('../utils/muteModeUtils');
 
 /**
  * @typedef {Object} MuteModeSettings
@@ -137,6 +138,18 @@ module.exports = {
       });
 
       await this.updateSettings(isEnabled, timeLimit);
+
+      if (isEnabled && !currentSettings.isEnabled) {
+        await rescheduleAllMuteKicks(interaction.client);
+        logger.info('Rescheduled mute kicks after enabling mute mode.', {
+          guildId: interaction.guildId
+        });
+      } else if (!isEnabled && currentSettings.isEnabled) {
+        clearAllScheduledMuteKicks();
+        logger.info('Cleared scheduled mute kicks after disabling mute mode.', {
+          guildId: interaction.guildId
+        });
+      }
 
       const embed = this.formatUpdateMessage(
         currentSettings.isEnabled, isEnabled,

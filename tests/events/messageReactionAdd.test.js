@@ -50,6 +50,27 @@ describe('messageReactionAdd event', () => {
     expect(mockLogger.debug).toHaveBeenCalledWith('Bot reaction received, ignoring.');
   });
 
+  it('should skip translation when DEEPL_API_KEY is not configured', async () => {
+    mockConfig.deeplApiKey = undefined;
+
+    const mockReaction = {
+      partial: false,
+      emoji: { name: '🇺🇸' },
+      message: { id: 'msg-1', content: 'hello' }
+    };
+    const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+    mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+
+    await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'Translation skipped: DEEPL_API_KEY is not configured.'
+    );
+    expect(mockLanguageUtils.getLanguageInfo).not.toHaveBeenCalled();
+    expect(mockAxios.post).not.toHaveBeenCalled();
+  });
+
   it('should fetch reaction data if it is partial', async () => {
     const mockReaction = {
       partial: true,

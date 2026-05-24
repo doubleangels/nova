@@ -65,11 +65,13 @@ The following environment variables can be set in your `docker-compose.yml`:
 - `BOT_STATUS`
 - `BOT_STATUS_TYPE`
 - `DISCORD_BOT_TOKEN`
-- `GIVE_PERMS_FREN_ROLE_ID`
-- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID`
-- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID`
-- `NEWUSER_PERMISSION_DIFF_ROLE_ID`
+- `DISCORD_CLIENT_ID` (optional; defaults to the bot application ID used for slash command deploy)
+- `MEMBER_FREN_ROLE_ID`
+- `CUSTOM_ROLE_POSITIONING_ANCHOR_ID`
+- `RETURNING_MEMBER_ROLE_ID`
+- `PERMISSION_BENCHMARK_ROLE_ID`
 - `NEW_MEMBER_ROLE_ID`
+- `DEEPL_API_KEY` (optional; enables flag-emoji translation reactions)
 - `GOOGLE_API_KEY`
 - `GUILD_NAME`
 - `IMAGE_SEARCH_ENGINE_ID`
@@ -180,9 +182,9 @@ Create and assign custom roles to users with automatic permission management. Cr
 
 **Requirements:**
 
-- `GIVE_PERMS_POSITION_ABOVE_ROLE_ID` must be configured in Doppler (or env)
-- `GIVE_PERMS_FREN_ROLE_ID` must be configured in Doppler (or env)
-- `NEWUSER_BEEN_IN_SERVER_BEFORE_ROLE_ID` and `NEWUSER_PERMISSION_DIFF_ROLE_ID` (for `/newuser`) must be configured in Doppler (or env)
+- `CUSTOM_ROLE_POSITIONING_ANCHOR_ID` must be configured in Doppler (or env)
+- `MEMBER_FREN_ROLE_ID` must be configured in Doppler (or env)
+- `RETURNING_MEMBER_ROLE_ID` and `PERMISSION_BENCHMARK_ROLE_ID` (for `/newuser`) must be configured in Doppler (or env)
 
 #### `/giverole` (Manage Roles Permission)
 

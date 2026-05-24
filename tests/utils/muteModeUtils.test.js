@@ -285,6 +285,21 @@ describe('muteModeUtils', () => {
     });
   });
 
+  describe('clearAllScheduledMuteKicks', () => {
+    it('should cancel all active mute kick timeouts', async () => {
+      const joinTime = new Date();
+      mockDatabase.getUserJoinTime.mockResolvedValue(joinTime);
+
+      await muteModeUtils.scheduleMuteKick('user1', joinTime, 2, mockClient, 'guild123');
+      await muteModeUtils.scheduleMuteKick('user2', joinTime, 2, mockClient, 'guild123');
+
+      expect(muteModeUtils.cancelMuteKick('user1')).toBe(true);
+      muteModeUtils.clearAllScheduledMuteKicks();
+      expect(muteModeUtils.cancelMuteKick('user1')).toBe(false);
+      expect(muteModeUtils.cancelMuteKick('user2')).toBe(false);
+    });
+  });
+
   describe('rescheduleAllMuteKicks', () => {
     it('should reschedule kicks for all users', async () => {
       mockDatabase.getValue.mockResolvedValueOnce('2');

@@ -51,19 +51,15 @@ module.exports = {
         return;
       }
 
-      // Parallelize database writes
-      await Promise.all([
-        addMuteModeUser(member.id, member.user.tag),
-        addSpamModeJoinTime(member.id, member.user.tag, member.joinedAt)
-      ]);
+      await addSpamModeJoinTime(member.id, member.user.tag, member.joinedAt);
 
-      // Parallelize config reads
       const [muteModeEnabled, muteKickTimeValue] = await Promise.all([
         getValue('mute_mode_enabled'),
         getValue('mute_mode_kick_time_hours')
       ]);
-      
+
       if (muteModeEnabled) {
+        await addMuteModeUser(member.id, member.user.tag);
         const muteKickTime = parseInt(muteKickTimeValue, 10) || 4;
         await scheduleMuteKick(
           member.id,

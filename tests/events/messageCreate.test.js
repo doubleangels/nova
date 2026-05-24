@@ -212,7 +212,7 @@ describe('messageCreate event', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('should remove mute mode tracking if cancelMuteKick is true', async () => {
+    it('should clear mute mode tracking after any user message', async () => {
       const mockMessage = {
         partial: false,
         author: { id: 'user-1', tag: 'User#1234', bot: false },
@@ -221,29 +221,13 @@ describe('messageCreate event', () => {
       };
 
       mockDatabase.getValue.mockResolvedValue(false);
-      mockMuteModeUtils.cancelMuteKick.mockReturnValue(true);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
       mockDatabase.removeMuteModeUser.mockResolvedValue();
 
       await messageCreateEvent.execute(mockMessage);
 
+      expect(mockMuteModeUtils.cancelMuteKick).toHaveBeenCalledWith('user-1');
       expect(mockDatabase.removeMuteModeUser).toHaveBeenCalledWith('user-1');
-    });
-
-    it('should reply Pong! on !ping prefix command', async () => {
-      const mockMessage = {
-        partial: false,
-        author: { id: 'user-1', tag: 'User#1234', bot: false },
-        channel: { id: 'chan-1', name: 'general' },
-        content: '!ping',
-        reply: jest.fn().mockResolvedValue()
-      };
-
-      mockDatabase.getValue.mockResolvedValue(false);
-      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
-
-      await messageCreateEvent.execute(mockMessage);
-
-      expect(mockMessage.reply).toHaveBeenCalledWith('Pong!');
     });
 
     describe('no-text channel enforcement', () => {

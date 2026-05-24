@@ -30,7 +30,11 @@ describe('ready event', () => {
       botStatus: null,
       botStatusType: null,
       newMemberRoleId: null,
-      memberFrenRoleId: null
+      memberFrenRoleId: null,
+      settings: {
+        rescheduleReminderOnStart: true,
+        rescheduleAllMuteKicksOnStart: true
+      }
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -78,6 +82,31 @@ describe('ready event', () => {
     expect(mockMuteModeUtils.rescheduleAllMuteKicks).toHaveBeenCalledWith(mockClient);
     expect(mockReminderUtils.rescheduleReminder).toHaveBeenCalledWith(mockClient);
     expect(mockDatabase.cleanupOldTrackingUsers).toHaveBeenCalledWith(mockClient);
+  });
+
+  it('should skip startup reschedule when config flags are false', async () => {
+    mockConfig.settings.rescheduleAllMuteKicksOnStart = false;
+    mockConfig.settings.rescheduleReminderOnStart = false;
+
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockMuteModeUtils.rescheduleAllMuteKicks).not.toHaveBeenCalled();
+    expect(mockReminderUtils.rescheduleReminder).not.toHaveBeenCalled();
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'Skipping mute kick reschedule on startup (rescheduleAllMuteKicksOnStart is false).'
+    );
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'Skipping reminder reschedule on startup (rescheduleReminderOnStart is false).'
+    );
   });
 
   it('should use custom bot status from config mapping', async () => {

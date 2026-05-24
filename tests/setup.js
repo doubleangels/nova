@@ -29,3 +29,6 @@ process.env.SEARCH_ENGINE_ID = 'test-search-engine';
 process.env.SERVER_INVITE_URL = 'https://discord.gg/test';
 
 jest.setTimeout(10000);
+
+// config.js registers process.exit listeners; many test files load it and can exceed the default limit
+process.setMaxListeners(20);

@@ -38,7 +38,7 @@ const client = new Client({
     UserManager: 50,
     PresenceManager: 0,
     VoiceStateManager: 0,
-    ReactionManager: 0,
+    ReactionManager: 50,
   })
 });
 

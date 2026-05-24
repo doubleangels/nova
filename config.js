@@ -63,7 +63,7 @@ module.exports = {
   botStatus: process.env.BOT_STATUS,
   // Bot activity type (playing, watching, listening, streaming, competing)
   botStatusType: process.env.BOT_STATUS_TYPE || 'watching',
-  clientId: "1280311987154456657",
+  clientId: process.env.DISCORD_CLIENT_ID || '1280311987154456657',
   // Authentication token for your Discord bot
   token: process.env.DISCORD_BOT_TOKEN,
   // Discord role ID to assign alongside custom roles
@@ -143,4 +143,8 @@ if (missing.length > 0) {
   console.error('Set the following in your .env or environment:');
   missing.forEach(name => console.error(`  - ${name}`));
   process.exit(1);
+}
+
+if (!isSet(process.env.DEEPL_API_KEY)) {
+  console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
 }

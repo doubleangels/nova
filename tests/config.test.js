@@ -83,4 +83,24 @@ describe('config', () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
+
+  it('warns when DEEPL_API_KEY is not set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    delete process.env.DEEPL_API_KEY;
+    require('../config');
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('does not warn when DEEPL_API_KEY is set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    process.env.DEEPL_API_KEY = 'test-deepl-key';
+    require('../config');
+    expect(consoleWarnSpy).not.toHaveBeenCalledWith(
+      'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
+    );
+    consoleWarnSpy.mockRestore();
+  });
 });

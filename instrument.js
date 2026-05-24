@@ -14,7 +14,7 @@ const tracesSampleRate = Number.isFinite(parsedSampleRate) ? parsedSampleRate : 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
 
-  sendDefaultPii: true,
+  sendDefaultPii: false,
 
   tracesSampleRate,
 

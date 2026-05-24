@@ -72,6 +72,7 @@ describe('Spam Detection Integration Flow', () => {
       isFormerMember: jest.fn().mockResolvedValue(false),
       incrementMessageCount: jest.fn().mockResolvedValue(1),
       deleteMessageCount: jest.fn().mockResolvedValue(),
+      removeMuteModeUser: jest.fn().mockResolvedValue(),
       getInviteNotificationChannel: jest.fn().mockResolvedValue(null)
     };
     jest.doMock('../../utils/database', () => mockDatabase);

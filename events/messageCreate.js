@@ -76,24 +76,11 @@ module.exports = {
         });
       }
 
-      // Only remove from mute mode if user was actually in mute mode (cancelMuteKick returns true)
-      // This avoids unnecessary database calls for users not in mute mode
-      if (cancelMuteKick(message.author.id)) {
-        await removeMuteModeUser(message.author.id);
-        logger.debug('Removed mute mode tracking for user after message.', {
-          userTag: message.author.tag
-        });
-      }
-
-      if (message.content?.startsWith('!')) {
-        const args = message.content.slice(1).trim().split(/ +/);
-        const command = args.shift().toLowerCase();
-        switch (command) {
-          case 'ping':
-            await message.reply('Pong!');
-            break;
-        }
-      }
+      cancelMuteKick(message.author.id);
+      await removeMuteModeUser(message.author.id);
+      logger.debug('Cleared mute mode tracking after user message.', {
+        userTag: message.author.tag
+      });
 
       await processUserMessage(message);
       

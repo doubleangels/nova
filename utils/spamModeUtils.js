@@ -252,9 +252,6 @@ function buildSpamWarningPayload(user, occurrences, dmSent) {
 // ── Core user-state helpers ───────────────────────────────────────────────────
 
 /**
-// ── Core user-state helpers ───────────────────────────────────────────────────
-
-/**
  * Removes stale message occurrences from in-memory tracking for one user.
  * @param {string} userId
  * @param {number} cutoffTime - Remove occurrences older than this timestamp

@@ -81,6 +81,11 @@ async function handleTranslationRequest(reaction, user) {
       messageId: reaction.message?.id
     });
 
+    if (!config.deeplApiKey) {
+      logger.debug('Translation skipped: DEEPL_API_KEY is not configured.');
+      return;
+    }
+
     const flagEmoji = reaction.emoji.name;
     const languageInfo = getLanguageInfo(flagEmoji);
     if (!languageInfo) {

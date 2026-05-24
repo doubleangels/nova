@@ -23,6 +23,11 @@ describe('muteMode command', () => {
     };
     jest.doMock('../../utils/database', () => mockDatabase);
 
+    jest.doMock('../../utils/muteModeUtils', () => ({
+      rescheduleAllMuteKicks: jest.fn().mockResolvedValue(),
+      clearAllScheduledMuteKicks: jest.fn()
+    }));
+
     muteModeCommand = require('../../commands/muteMode');
   });
 
@@ -155,6 +160,50 @@ describe('muteMode command', () => {
   });
 
   describe('handleSetSubcommand', () => {
+    it('should reschedule kicks when enabling mute mode', async () => {
+      const mockInteraction = createMockInteraction({
+        client: 'mock-client',
+        options: {
+          getBoolean: jest.fn().mockReturnValue(true),
+          getInteger: jest.fn().mockReturnValue(2)
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return false;
+        if (key === 'mute_mode_kick_time_hours') return '2';
+        return null;
+      });
+
+      const muteModeUtils = require('../../utils/muteModeUtils');
+      await muteModeCommand.handleSetSubcommand(mockInteraction);
+
+      expect(muteModeUtils.rescheduleAllMuteKicks).toHaveBeenCalledWith('mock-client');
+      expect(muteModeUtils.clearAllScheduledMuteKicks).not.toHaveBeenCalled();
+    });
+
+    it('should clear scheduled kicks when disabling mute mode', async () => {
+      const mockInteraction = createMockInteraction({
+        client: 'mock-client',
+        options: {
+          getBoolean: jest.fn().mockReturnValue(false),
+          getInteger: jest.fn().mockReturnValue(2)
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return true;
+        if (key === 'mute_mode_kick_time_hours') return '2';
+        return null;
+      });
+
+      const muteModeUtils = require('../../utils/muteModeUtils');
+      await muteModeCommand.handleSetSubcommand(mockInteraction);
+
+      expect(muteModeUtils.clearAllScheduledMuteKicks).toHaveBeenCalled();
+      expect(muteModeUtils.rescheduleAllMuteKicks).not.toHaveBeenCalled();
+    });
+
     it('should set settings and reply with embed', async () => {
       const mockInteraction = createMockInteraction({
         options: {

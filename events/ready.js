@@ -73,12 +73,21 @@ module.exports = {
         botTag: client.user.tag
       });
 
-      // Parallelize independent initialization tasks
-      await Promise.all([
-        rescheduleAllMuteKicks(client),
-        rescheduleReminder(client)
-      ]);
-      logger.info('Mute kicks and reminders rescheduled successfully.');
+      const startupTasks = [];
+      if (config.settings.rescheduleAllMuteKicksOnStart) {
+        startupTasks.push(rescheduleAllMuteKicks(client));
+      } else {
+        logger.info('Skipping mute kick reschedule on startup (rescheduleAllMuteKicksOnStart is false).');
+      }
+      if (config.settings.rescheduleReminderOnStart) {
+        startupTasks.push(rescheduleReminder(client));
+      } else {
+        logger.info('Skipping reminder reschedule on startup (rescheduleReminderOnStart is false).');
+      }
+      if (startupTasks.length > 0) {
+        await Promise.all(startupTasks);
+        logger.info('Startup reschedule tasks completed successfully.');
+      }
 
       // Run cleanup and invite init in parallel
       await Promise.all([

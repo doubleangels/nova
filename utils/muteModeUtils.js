@@ -176,8 +176,21 @@ async function rescheduleAllMuteKicks(client) {
   }
 }
 
+/**
+ * Cancels all scheduled mute kick timeouts (e.g. when mute mode is disabled).
+ * Does not remove users from the database; callers should handle persistence separately if needed.
+ */
+function clearAllScheduledMuteKicks() {
+  for (const timeoutId of activeTimeouts.values()) {
+    clearTimeout(timeoutId);
+  }
+  activeTimeouts.clear();
+  logger.debug('Cleared all scheduled mute kick timeouts.');
+}
+
 module.exports = {
   scheduleMuteKick,
   rescheduleAllMuteKicks,
-  cancelMuteKick
+  cancelMuteKick,
+  clearAllScheduledMuteKicks
 };

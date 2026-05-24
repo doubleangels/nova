@@ -128,6 +128,39 @@ describe('guildMemberAdd event', () => {
       expect(mockMember.roles.add).toHaveBeenCalledWith('noobie-role', expect.any(String));
     });
 
+    it('should not add mute mode tracking when mute mode is disabled', async () => {
+      const mockMember = {
+        id: 'user-123',
+        user: { bot: false, tag: 'User#1234' },
+        joinedAt: new Date(),
+        client: 'mock-client',
+        guild: { id: 'guild-123' },
+        roles: {
+          cache: new Collection(),
+          add: jest.fn().mockResolvedValue()
+        }
+      };
+
+      mockTrollModeUtils.checkAccountAge.mockResolvedValue(true);
+      mockDatabase.addSpamModeJoinTime.mockResolvedValue();
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return false;
+        return null;
+      });
+      mockDatabase.isFormerMember.mockResolvedValue(false);
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue(null);
+
+      await guildMemberAddEvent.execute(mockMember);
+
+      expect(mockDatabase.addMuteModeUser).not.toHaveBeenCalled();
+      expect(mockMuteModeUtils.scheduleMuteKick).not.toHaveBeenCalled();
+      expect(mockDatabase.addSpamModeJoinTime).toHaveBeenCalledWith(
+        'user-123',
+        'User#1234',
+        mockMember.joinedAt
+      );
+    });
+
     it('should warn and continue if Noobies role addition fails', async () => {
       const mockMember = {
         id: 'user-123',
