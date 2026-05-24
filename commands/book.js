@@ -362,7 +362,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in book command", {
+    logger.error("Error occurred in book command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id

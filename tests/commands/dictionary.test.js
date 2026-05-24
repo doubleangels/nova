@@ -195,7 +195,7 @@ describe('dictionary command', () => {
 
       await dictionaryCommand.execute(mockInteraction);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in dictionary command', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Error occurred in dictionary command.', expect.any(Object));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: errCase.expected
       }));

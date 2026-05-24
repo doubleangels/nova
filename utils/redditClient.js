@@ -50,12 +50,12 @@ async function getRedditAccessToken() {
       if (response.data?.access_token) {
         accessToken = response.data.access_token;
         tokenExpiry = dayjs().valueOf() + (response.data.expires_in * 1000 || 3600000);
-        logger.debug('Successfully obtained Reddit OAuth token');
+        logger.debug('Successfully obtained Reddit OAuth token.');
         return accessToken;
       }
       throw new Error('No access token in Reddit OAuth response');
     } catch (error) {
-      logger.error('Failed to get Reddit OAuth token', {
+      logger.error('Failed to get Reddit OAuth token.', {
         err: error,
         status: error.response?.status,
         data: error.response?.data
@@ -98,7 +98,7 @@ async function redditApiRequest(method, endpoint, data = null, isRetry = false) 
     const response = await httpClient(requestConfig);
     return response.data;
   } catch (error) {
-    logger.error('Reddit API request failed', {
+    logger.error('Reddit API request failed.', {
       err: error,
       method,
       endpoint,
@@ -107,7 +107,7 @@ async function redditApiRequest(method, endpoint, data = null, isRetry = false) 
     });
 
     if (!isRetry && error.response?.status === 401 && accessToken) {
-      logger.debug('Token expired, clearing cache and retrying once');
+      logger.debug('Token expired; clearing cache and retrying once.');
       accessToken = null;
       tokenExpiry = null;
       return redditApiRequest(method, endpoint, data, true);

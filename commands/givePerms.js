@@ -53,7 +53,7 @@ module.exports = {
      */
     async execute(interaction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-        logger.info("/giveperms command initiated:", { 
+        logger.info("/giveperms command initiated.", { 
             userId: interaction.user.id, 
             guildId: interaction.guildId 
         });
@@ -71,7 +71,7 @@ module.exports = {
                 });
             }
             
-            logger.debug("Processing command options:", { 
+            logger.debug("Processing command options.", { 
                 roleName, 
                 colorHex, 
                 targetUserId: targetUser.id,
@@ -161,7 +161,7 @@ module.exports = {
         }
 
         if (roleName.length > 100) {
-            logger.warn("Role name exceeds maximum length:", { 
+            logger.warn("Role name exceeds the maximum length.", { 
                 roleName, 
                 maxLength: 100 
             });
@@ -191,7 +191,7 @@ module.exports = {
         
         // Check if positioning anchor role ID is valid (not null, not undefined, not empty string)
         if (!customRolePositioningAnchorId || (typeof customRolePositioningAnchorId === 'string' && customRolePositioningAnchorId.trim().length === 0)) {
-            logger.error("Positioning anchor role not configured:", { 
+            logger.error("Positioning anchor role is not configured.", { 
                 envVar: 'CUSTOM_ROLE_POSITIONING_ANCHOR_ID',
                 value: customRolePositioningAnchorId,
                 type: typeof customRolePositioningAnchorId
@@ -204,7 +204,7 @@ module.exports = {
         
         // Check if member fren role ID is valid (not null, not undefined, not empty string)
         if (!memberFrenRoleId || (typeof memberFrenRoleId === 'string' && memberFrenRoleId.trim().length === 0)) {
-            logger.error("Member fren role not configured:", { 
+            logger.error("Member fren role is not configured.", { 
                 envVar: 'MEMBER_FREN_ROLE_ID',
                 value: memberFrenRoleId,
                 type: typeof memberFrenRoleId
@@ -245,7 +245,7 @@ module.exports = {
         const newRolePosition = positionRole.position + 1;
         // Bot can only assign roles that are below its highest role; new role must be strictly below bot.
         if (botMember.roles.highest.position <= newRolePosition) {
-            logger.warn("Bot's highest role is not high enough to create and assign a role above the reference role:", {
+            logger.warn("Bot's highest role is not high enough to create and assign a role above the reference role.", {
                 botHighestRolePosition: botMember.roles.highest.position,
                 referenceRolePosition: positionRole.position,
                 requiredNewRolePosition: newRolePosition
@@ -264,7 +264,7 @@ module.exports = {
             reason: auditReason
         });
         
-        logger.info("New role created:", { 
+        logger.info("New role was created.", { 
             roleId: newRole.id, 
             roleName: newRole.name, 
             position: newRole.position,
@@ -286,7 +286,7 @@ module.exports = {
             };
         }
         
-        logger.info("Permissions successfully granted to user:", { 
+        logger.info("Permissions were successfully granted to the user.", { 
             userId: targetMember.id, 
             userTag: targetMember.user.tag,
             roles: [newRole.name, additionalRole.name],
@@ -305,7 +305,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error in giveperms command", {
+        logger.error("Error occurred in giveperms command.", {
             err: error,
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
@@ -332,7 +332,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for giveperms command", {
+            logger.error("Failed to send error response for giveperms command.", {
                 err: followUpError,
                 originalError: error.message,
                 userId: interaction.user?.id

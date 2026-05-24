@@ -65,7 +65,7 @@ describe('messageReactionAdd event', () => {
     await messageReactionAddEvent.execute(mockReaction, mockUser);
 
     expect(mockLogger.debug).toHaveBeenCalledWith(
-      'Translation skipped: DEEPL_API_KEY is not configured.'
+      'Translation was skipped because DEEPL_API_KEY is not configured.'
     );
     expect(mockLanguageUtils.getLanguageInfo).not.toHaveBeenCalled();
     expect(mockAxios.post).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('messageReactionAdd event', () => {
 
     await messageReactionAddEvent.execute(mockReaction, mockUser);
 
-    expect(mockLogger.error).toHaveBeenCalledWith('Error fetching reaction', expect.any(Object));
+    expect(mockLogger.error).toHaveBeenCalledWith('Error occurred while fetching reaction.', expect.any(Object));
   });
 
   describe('handleTranslationRequest', () => {
@@ -153,7 +153,7 @@ describe('messageReactionAdd event', () => {
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockLogger.warn).toHaveBeenCalledWith('Message not found for translation.', expect.any(Object));
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message.', expect.any(Object));
     });
 
     it('should reply with error if message content is empty', async () => {
@@ -355,7 +355,7 @@ describe('messageReactionAdd event', () => {
 
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message.', expect.any(Object));
     });
   });
 });

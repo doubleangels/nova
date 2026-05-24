@@ -143,7 +143,7 @@ async function postToSubreddit(subredditName, promotionTitle, promotionBody = ''
           text: f.text ?? f.flair_text
         };
       });
-      logger.info(`Available flairs for r/${subredditName}:`, {
+      logger.info(`Available flairs were retrieved for r/${subredditName}.`, {
         flairs: availableFlairs,
         totalCount: availableFlairs.length
       });
@@ -154,13 +154,13 @@ async function postToSubreddit(subredditName, promotionTitle, promotionBody = ''
       const first = flairData[0];
       const flair = preferred || first;
       flairId = flair.id ?? flair.flair_template_id ?? flair.flair_identifier;
-      logger.debug(`Using flair for r/${subredditName}:`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text, preferredText, matchedPreferred: !!preferred });
+      logger.debug(`Using flair for r/${subredditName}.`, { id: flairId, flair_template_id: flair.flair_template_id, text: flair.text || flair.flair_text, preferredText, matchedPreferred: !!preferred });
     }
   } catch (flairErr) {
     if (flairErr.response?.status === 404 && flairErr.response?.data?.reason === 'banned') {
       return { success: false, error: `r/${subredditName} is banned or restricted.` };
     }
-    logger.warn(`Could not fetch flairs for r/${subredditName}`, { status: flairErr.response?.status });
+    logger.warn(`Could not fetch flairs for r/${subredditName}.`, { status: flairErr.response?.status });
   }
 
   const submissionData = {
@@ -181,7 +181,7 @@ async function postToSubreddit(subredditName, promotionTitle, promotionBody = ''
     const response = await redditApiRequest('POST', '/api/submit', submissionData);
     const parsed = parseSubmissionResponse(response);
     if (parsed) {
-      logger.info(`Successfully posted to r/${subredditName}`, { postId: parsed.postId, permalink: parsed.permalink });
+      logger.info(`Successfully posted to r/${subredditName}.`, { postId: parsed.postId, permalink: parsed.permalink });
       return { success: true, permalink: parsed.permalink };
     }
     if (response?.json?.errors?.length) {
@@ -243,7 +243,7 @@ module.exports = {
       const now = dayjs();
       const nextTime = dayjs(nextPromotionTime);
 
-      logger.debug("Cooldown check:", {
+      logger.debug("Checking promotion cooldown.", {
         now: now.toISOString(),
         nextTime: nextTime.toISOString(),
         diffHours: nextTime.diff(now, 'hour', true)
@@ -261,7 +261,7 @@ module.exports = {
     }
 
     await interaction.deferReply();
-    logger.info("/promote command initiated:", {
+    logger.info("/promote command initiated.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       promotionTitle: promotionTitle,
@@ -270,7 +270,7 @@ module.exports = {
     });
 
     try {
-      logger.info("Attempting to post to Reddit:", {
+      logger.info("Attempting to post to Reddit.", {
         subreddits: PROMOTION_SUBREDDITS,
         title: promotionTitle,
         link: PROMOTION_LINK,
@@ -328,7 +328,7 @@ module.exports = {
   },
 
   async handleError(error, interaction) {
-    logger.error('Error in promote command', {
+    logger.error('Error occurred in promote command.', {
       err: error,
       userId: interaction.user.id,
       guildId: interaction.guildId
@@ -363,7 +363,7 @@ module.exports = {
     try {
       const remindAt = await getNextReminderTimeAfterCleanup('promote');
       if (remindAt) {
-        logger.debug('Found next promotion time:', {
+        logger.debug('Found next promotion time.', {
           remind_at: remindAt,
           now: dayjs().toISOString()
         });

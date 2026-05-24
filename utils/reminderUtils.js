@@ -212,13 +212,13 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
   try {
     const reminderRole = await getValue('reminder_role');
     if (!reminderRole) {
-      logger.warn("Reminder not scheduled: 'reminder_role' not set. Use /reminder to configure.");
+      logger.warn("Reminder was not scheduled because reminder_role is not set. Use /reminder to configure.");
       return;
     }
 
     const reminderChannelId = await getValue('reminder_channel');
     if (!reminderChannelId) {
-      logger.warn("Reminder not scheduled: 'reminder_channel' not set. Use /reminder to configure.");
+      logger.warn("Reminder was not scheduled because reminder_channel is not set. Use /reminder to configure.");
       return;
     }
 
@@ -234,7 +234,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         channel = await message.client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
-      logger.error("Failed to fetch channel", {
+      logger.error("Failed to fetch channel.", {
         err: channelError,
         channelId: reminderChannelId
       });
@@ -285,7 +285,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     }
     
     if (deletedCount > 0 || expiredCount > 0) {
-      logger.debug("Cleaned up existing reminders of type:", { 
+      logger.debug("Cleaned up existing reminders of the given type.", { 
         type, 
         deletedCount, 
         expiredCount,
@@ -305,7 +305,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
     const listKey = `reminders:${type}:list`;
     await reminderKeyv.set(listKey, [reminderId]);
 
-    logger.info("Successfully saved reminder in database:", {
+    logger.info("Successfully saved reminder in the database.", {
       reminderId,
       type,
       scheduledTime: scheduledTime.toISOString(),
@@ -357,7 +357,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
         }
 
         await channel.send(reminderMessage);
-        logger.debug("Sent scheduled reminder ping:", {
+        logger.debug("Sent scheduled reminder ping.", {
           role: reminderRole,
           channelId: reminderChannelId,
           type
@@ -369,7 +369,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
           reminderId: reminderId
         });
       } catch (err) {
-        logger.error("Error while sending scheduled reminder", {
+        logger.error("Error occurred while sending scheduled reminder.", {
           err: err,
           type
         });
@@ -395,12 +395,12 @@ async function rescheduleReminder(client) {
     const reminderRole = await getValue("reminder_role");
     
     if (!reminderChannelId) {
-      logger.warn("Configuration error: Missing reminder channel value. Reminders cannot be rescheduled.");
+      logger.warn("Reminders cannot be rescheduled because the reminder channel is not configured.");
       return;
     }
     
     if (!reminderRole) {
-      logger.warn("Configuration error: Missing reminder role value. Reminders cannot be rescheduled.");
+      logger.warn("Reminders cannot be rescheduled because the reminder role is not configured.");
       return;
     }
 
@@ -567,7 +567,7 @@ async function rescheduleReminder(client) {
       getLatestReminderData('needafriend')
     ]);
 
-    logger.info("Latest reminder data retrieved:", {
+    logger.info("Latest reminder data was retrieved.", {
       hasBumpReminder: !!bumpReminder,
       hasPromoteReminder: !!promoteReminder,
       hasNeedafriendReminder: !!needafriendReminder,
@@ -588,7 +588,7 @@ async function rescheduleReminder(client) {
         channel = await client.channels.fetch(reminderChannelId);
       }
     } catch (channelError) {
-      logger.error("Failed to fetch channel for rescheduled reminder", {
+      logger.error("Failed to fetch channel for rescheduled reminder.", {
         err: channelError,
         channelId: reminderChannelId
       });
@@ -600,7 +600,7 @@ async function rescheduleReminder(client) {
       const now = dayjs();
       const delay = scheduledTime.diff(now, 'millisecond');
       
-      logger.info("Processing disboard reminder for rescheduling:", {
+      logger.info("Processing disboard reminder for rescheduling.", {
         reminder_id: bumpReminder.reminder_id,
         scheduledTime: scheduledTime.toISOString(),
         now: now.toISOString(),
@@ -619,20 +619,20 @@ async function rescheduleReminder(client) {
             await reminderKeyv.delete(`reminder:${bumpReminder.reminder_id}`);
             await removeReminderId('bump', bumpReminder.reminder_id);
           } catch (err) {
-            logger.error("Error while sending rescheduled bump reminder", {
+            logger.error("Error occurred while sending rescheduled bump reminder.", {
               err: err
             });
           }
         }, delay);
         
-        logger.info("Successfully rescheduled disboard reminder:", {
+        logger.info("Successfully rescheduled disboard reminder.", {
           reminder_id: bumpReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
           scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
         });
       } else {
-        logger.warn("Bump reminder is in the past, skipping reschedule:", {
+        logger.warn("Bump reminder is in the past; skipping reschedule.", {
           reminder_id: bumpReminder.reminder_id,
           scheduledTime: scheduledTime.toISOString(),
           now: now.toISOString(),
@@ -646,7 +646,7 @@ async function rescheduleReminder(client) {
       const now = dayjs();
       const delay = scheduledTime.diff(now, 'millisecond');
       
-      logger.info("Processing promote reminder for rescheduling:", {
+      logger.info("Processing promote reminder for rescheduling.", {
         reminder_id: promoteReminder.reminder_id,
         scheduledTime: scheduledTime.toISOString(),
         now: now.toISOString(),
@@ -665,20 +665,20 @@ async function rescheduleReminder(client) {
             await reminderKeyv.delete(`reminder:${promoteReminder.reminder_id}`);
             await removeReminderId('promote', promoteReminder.reminder_id);
           } catch (err) {
-            logger.error("Error while sending rescheduled promotion reminder", {
+            logger.error("Error occurred while sending rescheduled promotion reminder.", {
               err: err
             });
           }
         }, delay);
         
-        logger.info("Successfully rescheduled promotion reminder:", {
+        logger.info("Successfully rescheduled promotion reminder.", {
           reminder_id: promoteReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
           scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
         });
       } else {
-        logger.warn("Promote reminder is in the past, skipping reschedule:", {
+        logger.warn("Promote reminder is in the past; skipping reschedule.", {
           reminder_id: promoteReminder.reminder_id,
           scheduledTime: scheduledTime.toISOString(),
           now: now.toISOString(),
@@ -692,7 +692,7 @@ async function rescheduleReminder(client) {
       const now = dayjs();
       const delay = scheduledTime.diff(now, 'millisecond');
 
-      logger.info('Processing needafriend reminder for rescheduling:', {
+      logger.info('Processing needafriend reminder for rescheduling.', {
         reminder_id: needafriendReminder.reminder_id,
         scheduledTime: scheduledTime.toISOString(),
         now: now.toISOString(),
@@ -711,20 +711,20 @@ async function rescheduleReminder(client) {
             await reminderKeyv.delete(`reminder:${needafriendReminder.reminder_id}`);
             await removeReminderId('needafriend', needafriendReminder.reminder_id);
           } catch (err) {
-            logger.error('Error while sending rescheduled needafriend reminder', {
+            logger.error('Error occurred while sending rescheduled needafriend reminder.', {
               err: err
             });
           }
         }, delay);
 
-        logger.info('Successfully rescheduled needafriend reminder:', {
+        logger.info('Successfully rescheduled needafriend reminder.', {
           reminder_id: needafriendReminder.reminder_id,
           delayMs: delay,
           delayMinutes: Math.round(delay / 1000 / 60),
           scheduledFor: dayjs().add(delay, 'millisecond').toISOString()
         });
       } else {
-        logger.warn('Needafriend reminder is in the past, skipping reschedule:', {
+        logger.warn('Needafriend reminder is in the past; skipping reschedule.', {
           reminder_id: needafriendReminder.reminder_id,
           scheduledTime: scheduledTime.toISOString(),
           now: now.toISOString(),
@@ -735,7 +735,7 @@ async function rescheduleReminder(client) {
     
     logger.info("Reminder rescheduling completed.");
   } catch (error) {
-    logger.error("Error in rescheduleReminder", {
+    logger.error("Error occurred in rescheduleReminder.", {
       err: error
     });
   }

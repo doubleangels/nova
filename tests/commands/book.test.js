@@ -519,7 +519,7 @@ describe('book command', () => {
 
         await bookCommand.execute(mockInteraction);
 
-        expect(mockLogger.error).toHaveBeenCalledWith('Error in book command', expect.any(Object));
+        expect(mockLogger.error).toHaveBeenCalledWith('Error occurred in book command.', expect.any(Object));
         expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
           content: errType.expected
         }));

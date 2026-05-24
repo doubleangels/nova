@@ -50,7 +50,7 @@ module.exports = {
       }
 
       await interaction.deferReply();
-      logger.info("/youtube command initiated:", {
+      logger.info("/youtube command initiated.", {
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -196,7 +196,7 @@ module.exports = {
 
       return results;
     } catch (error) {
-      logger.error("YouTube API search failed", {
+      logger.error("YouTube API search failed.", {
         err: error,
         query,
         contentType
@@ -245,7 +245,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich video results", {
+      logger.error("Failed to enrich video results.", {
         err: error
       });
       return videos;
@@ -291,7 +291,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich channel results", {
+      logger.error("Failed to enrich channel results.", {
         err: error
       });
       return channels;
@@ -337,7 +337,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich playlist results", {
+      logger.error("Failed to enrich playlist results.", {
         err: error
       });
       return playlists;

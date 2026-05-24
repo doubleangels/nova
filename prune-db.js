@@ -128,7 +128,7 @@ async function pruneDatabase() {
   // Check database access permissions first
   const accessCheck = checkDatabaseAccess();
   if (!accessCheck.accessible && accessCheck.fileExists) {
-    console.error('Permission error: Cannot access database file.');
+    console.error('Cannot access the database file due to a permission error.');
     if (accessCheck.recommendation) {
       console.error('\nRecommendation:');
       console.error(accessCheck.recommendation);
@@ -145,7 +145,7 @@ async function pruneDatabase() {
   try {
     db = new Database(sqlitePath, { readonly: !isCommit });
   } catch (error) {
-    console.error(`Failed to open database: ${error.message}`);
+    console.error(`Failed to open the database. ${error.message}`);
     process.exit(1);
   }
 
@@ -227,7 +227,7 @@ async function pruneDatabase() {
 
     db.close();
   } catch (error) {
-    console.error(`An error occurred: ${error.message}`);
+    console.error(`An error occurred while pruning the database. ${error.message}`);
     if (db) {
       try {
         db.close();

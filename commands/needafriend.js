@@ -134,7 +134,7 @@ module.exports = {
     try {
       const post = await findWeeklyAdvertisementPost();
       if (!post) {
-        logger.warn('needafriend: weekly thread not found', { subreddit: NEEDAFRIEND_SUBREDDIT, expectedTitle: WEEKLY_THREAD_TITLE });
+        logger.warn('Weekly needafriend thread was not found.', { subreddit: NEEDAFRIEND_SUBREDDIT, expectedTitle: WEEKLY_THREAD_TITLE });
         return interaction.editReply({
           content: `⚠️ Could not find a post titled **${WEEKLY_THREAD_TITLE}** on r/${NEEDAFRIEND_SUBREDDIT} (checked hot and new). If the title changed, update \`WEEKLY_THREAD_TITLE\` in \`commands/needafriend.js\`.`,
           flags: MessageFlags.Ephemeral
@@ -150,7 +150,7 @@ module.exports = {
       const parsed = parseCommentResponse(response);
       if (parsed) {
         const commentUrl = `https://www.reddit.com${parsed.permalink}`;
-        logger.info('needafriend: comment posted', { post: post.name, commentPermalink: parsed.permalink });
+        logger.info('Posted needafriend comment on weekly thread.', { post: post.name, commentPermalink: parsed.permalink });
         const embed = new EmbedBuilder()
           .setColor(0xFF4500)
           .setTitle('Comment Posted Successfully')
@@ -175,7 +175,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (err) {
-      logger.error('needafriend command failed', { err });
+      logger.error('Error occurred in needafriend command.', { err });
       return interaction.editReply({
         content: `⚠️ ${formatRedditCommentError(err)}`,
         flags: MessageFlags.Ephemeral

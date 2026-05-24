@@ -79,7 +79,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error('Error in dictionary command', {
+    logger.error('Error occurred in dictionary command.', {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id

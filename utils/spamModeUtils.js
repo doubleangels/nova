@@ -302,14 +302,14 @@ async function trackNewUserMessage(message) {
     const timeRemaining = windowMs - timeSinceJoin;
 
     if (timeRemaining <= 0) {
-      logger.debug('Spam mode: User is not new, removing from tracking.', { userId });
+      logger.debug('User is not new; removing from spam mode tracking.', { userId });
       await removeSpamModeJoinTime(userId);
       return;
     }
 
     // Skip slash commands
     if (message.content?.trim().startsWith('/')) {
-      logger.debug('Spam mode: Message is a slash command, skipping tracking.');
+      logger.debug('Skipping spam tracking because the message is a slash command.');
       return;
     }
 
@@ -320,13 +320,13 @@ async function trackNewUserMessage(message) {
 
     // Skip sticker-only messages
     if (message.stickers?.size > 0 && contentWithoutEmotes.length === 0) {
-      logger.debug('Spam mode: Message only contains stickers, skipping tracking.');
+      logger.debug('Skipping spam tracking because the message only contains stickers.');
       return;
     }
 
     // Skip emote-only messages
     if ((!message.stickers || message.stickers.size === 0) && contentWithoutEmotes.length === 0) {
-      logger.debug('Spam mode: Message only contains emotes, skipping tracking.');
+      logger.debug('Skipping spam tracking because the message only contains emotes.');
       return;
     }
 
@@ -338,19 +338,19 @@ async function trackNewUserMessage(message) {
     if (!hasLink) {
       // Apply normal length filters only to non-link messages
       if (contentWithoutEmotes.length < 3) {
-        logger.debug('Spam mode: Message too short (pre-normalization), skipping tracking.');
+        logger.debug('Skipping spam tracking because the message is too short before normalization.');
         return;
       }
 
       const tentativeNorm = normalizeContent(contentWithoutEmotes);
       if (tentativeNorm.length < 3) {
-        logger.debug('Spam mode: Message too short (post-normalization), skipping tracking.');
+        logger.debug('Skipping spam tracking because the message is too short after normalization.');
         return;
       }
 
       const wordCount = tentativeNorm.split(/\s+/).filter(w => w.length > 0).length;
       if (wordCount < 5 && tentativeNorm.length < 30) {
-        logger.debug('Spam mode: Message too short (not sentence-length), skipping tracking.', {
+        logger.debug('Skipping spam tracking because the message is not sentence-length.', {
           wordCount,
           charCount: tentativeNorm.length
         });
@@ -388,7 +388,7 @@ async function trackNewUserMessage(message) {
       contentPreview: truncateContentPreview(contentWithoutEmotes)
     };
 
-    logger.debug('Spam mode: Tracking message for new user.', {
+    logger.debug('Tracking message for new user in spam mode.', {
       userId,
       contentPreview: normalizedContent.substring(0, 50),
       hasLink,
@@ -414,7 +414,7 @@ async function trackNewUserMessage(message) {
       if (hasLink)        effectiveThreshold -= LINK_THRESHOLD_REDUCTION;
       effectiveThreshold = Math.max(2, effectiveThreshold);
 
-      logger.debug('Spam mode: Found occurrences of message for user.', {
+      logger.debug('Found duplicate message occurrences for user in spam mode.', {
         occurrenceCount: existingOccurrences.length,
         effectiveThreshold,
         isMultiChannel,
@@ -426,7 +426,7 @@ async function trackNewUserMessage(message) {
       if (existingOccurrences.length >= effectiveThreshold) {
         const uniqueChannelNames = [...new Set(existingOccurrences.map(occ => occ.channelName))];
 
-        logger.warn('[SPAM MODE] New user sent duplicate/similar message:', {
+        logger.warn('New user sent a duplicate or similar message in spam mode.', {
           userId: message.author.id,
           username: message.author.tag,
           content: normalizedContent.substring(0, 100),
@@ -870,7 +870,7 @@ async function handleSpamWarningButton(interaction) {
  */
 async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected — automatic timeout') {
   if (!guild || !user) {
-    logger.warn('Cannot timeout user: missing guild or user.');
+    logger.warn('Cannot timeout user because guild or user is missing.');
     return;
   }
 
@@ -894,7 +894,7 @@ async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected
 
     const durationMs = Math.floor(Number(durationSeconds) * 1000);
     if (!Number.isFinite(durationMs) || durationMs <= 0) {
-      logger.warn('Cannot timeout user: invalid durationSeconds', { userId: user.id, durationSeconds, durationMs });
+      logger.warn('Cannot timeout user because durationSeconds is invalid.', { userId: user.id, durationSeconds, durationMs });
       return;
     }
 
@@ -902,7 +902,7 @@ async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected
     const clampedMs = Math.min(durationMs, maxMs);
 
     if (!dayjs().add(clampedMs, 'millisecond').isValid()) {
-      logger.warn('Cannot timeout user: invalid calculated end date', { userId: user.id, durationSeconds, clampedMs });
+      logger.warn('Cannot timeout user because the calculated end date is invalid.', { userId: user.id, durationSeconds, clampedMs });
       return;
     }
 

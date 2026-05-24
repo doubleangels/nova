@@ -14,7 +14,7 @@ axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 
 // Log the base embed color on startup for debugging
 if (config.baseEmbedColor) {
-  logger.info(`Base embed color loaded: 0x${config.baseEmbedColor.toString(16).toUpperCase()} (from BASE_EMBED_COLOR="${process.env.BASE_EMBED_COLOR}")`);
+  logger.info(`Base embed color was loaded as 0x${config.baseEmbedColor.toString(16).toUpperCase()}.`, { sourceEnv: process.env.BASE_EMBED_COLOR });
 } else {
   logger.warn('BASE_EMBED_COLOR not set. Embed colors will use Discord defaults.');
 }
@@ -49,7 +49,7 @@ const { closeDatabaseConnections } = require('./utils/database');
 
 const deployCommands = require('./deploy-commands');
 if (config.settings.deployCommandsOnStart) {
-  deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup:', err));
+  deployCommands().then(() => logger.info('Slash commands deployed on startup.')).catch(err => logger.error('Failed to deploy slash commands on startup.', { err }));
 } else {
   logger.info('Skipping slash command deploy on startup (deployCommandsOnStart is false).');
 }
@@ -65,10 +65,10 @@ for (const file of commandFiles) {
   try {
     const command = require(path.join(commandsPath, file));
     client.commands.set(command.data.name, command);
-    logger.info(`Loaded command: ${command.data.name}`);
+    logger.info(`Loaded command ${command.data.name}.`);
   } catch (error) {
     captureError(error, { source: 'commandLoad', file });
-    logger.error(`Error loading command file: ${file}`, {
+    logger.error(`Error occurred while loading command file ${file}.`, {
       error: error.stack,
       message: error.message
     });
@@ -90,7 +90,7 @@ for (const file of eventFiles) {
     const safeExecute = (...args) =>
       Promise.resolve(event.execute(...args)).catch((error) => {
         captureError(error, { event: event.name, source: 'eventExecute' });
-        logger.error(`Unhandled error escaped event handler: ${event.name}`, { err: error });
+        logger.error(`Unhandled error escaped the ${event.name} event handler.`, { err: error });
       });
 
     if (event.once) {
@@ -98,10 +98,10 @@ for (const file of eventFiles) {
     } else {
       client.on(event.name, safeExecute);
     }
-    logger.info(`Loaded event: ${event.name}`);
+    logger.info(`Loaded event ${event.name}.`);
   } catch (error) {
     captureError(error, { source: 'eventLoad', file });
-    logger.error(`Error loading event file: ${file}`, {
+    logger.error(`Error occurred while loading event file ${file}.`, {
       error: error.stack,
       message: error.message
     });

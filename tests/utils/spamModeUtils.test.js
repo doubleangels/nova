@@ -921,7 +921,7 @@ describe('spamModeUtils', () => {
       await spamModeUtils.trackNewUserMessage(mockMessage);
 
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Spam mode: Message too short (post-normalization), skipping tracking.'
+        'Skipping spam tracking because the message is too short after normalization.'
       );
       expect(mockDatabase.getValue).not.toHaveBeenCalledWith('spam_mode_threshold');
     });
@@ -1076,7 +1076,7 @@ describe('spamModeUtils', () => {
       msgs[2].guild = null;
       await spamModeUtils.trackNewUserMessage(msgs[2]);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Cannot timeout user: missing guild or user.');
+      expect(mockLogger.warn).toHaveBeenCalledWith('Cannot timeout user because guild or user is missing.');
     });
 
     it('should warn when member cannot be fetched for automatic timeout', async () => {
@@ -1187,7 +1187,7 @@ describe('spamModeUtils', () => {
 
       isFiniteSpy.mockRestore();
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Cannot timeout user: invalid durationSeconds',
+        'Cannot timeout user because durationSeconds is invalid.',
         expect.objectContaining({ userId: TRACKED_USER_ID })
       );
     });
@@ -1708,7 +1708,7 @@ describe('spamModeUtils', () => {
   describe('timeoutUser', () => {
     it('should warn when guild or user is missing', async () => {
       await spamModeUtils.timeoutUser(null, { id: TRACKED_USER_ID });
-      expect(mockLogger.warn).toHaveBeenCalledWith('Cannot timeout user: missing guild or user.');
+      expect(mockLogger.warn).toHaveBeenCalledWith('Cannot timeout user because guild or user is missing.');
     });
 
     it('should warn when automatic timeout end date is invalid', async () => {
@@ -1742,7 +1742,7 @@ describe('spamModeUtils', () => {
       await utils.timeoutUser(guild, user, 600);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Cannot timeout user: invalid calculated end date',
+        'Cannot timeout user because the calculated end date is invalid.',
         expect.objectContaining({ userId: TRACKED_USER_ID })
       );
       expect(member.timeout).not.toHaveBeenCalled();

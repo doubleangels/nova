@@ -302,7 +302,7 @@ describe('youtube command', () => {
 
       const results = await youtubeCommand.searchYouTube('query', 'video');
       expect(results).toHaveLength(1);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to enrich video results', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to enrich video results.', expect.any(Object));
     });
 
     it('should successfully search and enrich channel results', async () => {
@@ -340,7 +340,7 @@ describe('youtube command', () => {
 
       const results = await youtubeCommand.searchYouTube('query', 'channel');
       expect(results).toHaveLength(1);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to enrich channel results', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to enrich channel results.', expect.any(Object));
     });
 
     it('should successfully search and enrich playlist results', async () => {
@@ -378,7 +378,7 @@ describe('youtube command', () => {
 
       const results = await youtubeCommand.searchYouTube('query', 'playlist');
       expect(results).toHaveLength(1);
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to enrich playlist results', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to enrich playlist results.', expect.any(Object));
     });
 
     it('should return search results unenriched if enrichment API returns empty response objects', async () => {
@@ -428,7 +428,7 @@ describe('youtube command', () => {
     it('should throw error if searchYouTube request itself fails', async () => {
       mockAxios.get.mockRejectedValueOnce(new Error('Network crash'));
       await expect(youtubeCommand.searchYouTube('query', 'video')).rejects.toThrow('Network crash');
-      expect(mockLogger.error).toHaveBeenCalledWith('YouTube API search failed', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('YouTube API search failed.', expect.any(Object));
     });
   });
 

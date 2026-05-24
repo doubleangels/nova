@@ -140,7 +140,7 @@ function isSet(value) {
 const missing = REQUIRED_ENV_VARS.filter(name => !isSet(process.env[name]));
 if (missing.length > 0) {
   console.error('Missing required environment variable(s). Bot cannot start.');
-  console.error('Set the following in your .env or environment:');
+  console.error('Set the following variables in your .env or environment.');
   missing.forEach(name => console.error(`  - ${name}`));
   process.exit(1);
 }

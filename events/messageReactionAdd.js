@@ -38,7 +38,7 @@ module.exports = {
         try {
           await reaction.fetch();
         } catch (error) {
-          logger.error('Error fetching reaction', {
+          logger.error('Error occurred while fetching reaction.', {
             err: error,
             userId: user.id,
             messageId: reaction.message.id
@@ -54,7 +54,7 @@ module.exports = {
 
       await handleTranslationRequest(reaction, user);
     } catch (error) {
-      logger.error('Error processing reaction', {
+      logger.error('Error occurred while processing reaction.', {
         err: error,
         emoji: reaction.emoji?.name,
         userId: user.id,
@@ -82,7 +82,7 @@ async function handleTranslationRequest(reaction, user) {
     });
 
     if (!config.deeplApiKey) {
-      logger.debug('Translation skipped: DEEPL_API_KEY is not configured.');
+      logger.debug('Translation was skipped because DEEPL_API_KEY is not configured.');
       return;
     }
 
@@ -178,7 +178,7 @@ async function handleTranslationRequest(reaction, user) {
     });
   } catch (error) {
     captureError(error, { event: 'messageReactionAdd' });
-    logger.error('Error in translation request', {
+    logger.error('Error occurred in translation request.', {
       err: error,
       status: error.response?.status,
       statusText: error.response?.statusText,
@@ -197,7 +197,7 @@ async function handleTranslationRequest(reaction, user) {
         allowedMentions: { repliedUser: false }
       });
     } catch (replyError) {
-      logger.error('Failed to send error message', {
+      logger.error('Failed to send error message.', {
         err: replyError,
         originalError: error.message
       });

@@ -81,7 +81,7 @@ describe('weather command', () => {
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to get coordinates for the specified location. Please try a different place name.'
       }));
-      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get coordinates for location:', expect.any(Object));
+      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to get coordinates for the location.', expect.any(Object));
     });
 
     it('should reply with error if fetchWeatherData returns null', async () => {
@@ -110,7 +110,7 @@ describe('weather command', () => {
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to fetch weather data. Please try again later.'
       }));
-      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to fetch weather data:', expect.any(Object));
+      expect(mockLogger.warn).toHaveBeenCalledWith('Failed to fetch weather data.', expect.any(Object));
     });
 
     it('should successfully fetch weather and display details in metric (privacy mode default / true)', async () => {
@@ -180,7 +180,7 @@ describe('weather command', () => {
       expect(fields.find(f => f.name === '📈 Pressure').value).toBe('1013 hPa');
       expect(fields.find(f => f.name === '📆 3-Day Forecast').value).toContain('05/19/2024');
 
-      expect(mockLogger.info).toHaveBeenCalledWith('/weather command completed successfully:', expect.any(Object));
+      expect(mockLogger.info).toHaveBeenCalledWith('/weather command completed successfully.', expect.any(Object));
     });
 
     it('should continue when timezone lookup fails', async () => {
@@ -228,7 +228,7 @@ describe('weather command', () => {
       await weatherCommand.execute(mockInteraction);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Failed to get timezone for location, using UTC',
+        'Failed to get timezone for location; using UTC.',
         expect.objectContaining({ lat: 48.8566, lon: 2.3522 })
       );
       expect(mockInteraction.editReply).toHaveBeenCalled();
@@ -307,7 +307,7 @@ describe('weather command', () => {
 
       await weatherCommand.execute(mockInteraction);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in weather command', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Error occurred in weather command.', expect.any(Object));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ An unexpected error occurred while fetching weather information. Please try again later.'
       }));
@@ -337,7 +337,7 @@ describe('weather command', () => {
 
       const res = await weatherCommand.fetchWeatherData(10, 20, 'si');
       expect(res).toBeNull();
-      expect(mockLogger.warn).toHaveBeenCalledWith('PirateWeather API returned non-200 status:', expect.any(Object));
+      expect(mockLogger.warn).toHaveBeenCalledWith('PirateWeather API returned a non-200 status.', expect.any(Object));
     });
 
     it('should return null if axios.get throws an error', async () => {
@@ -345,7 +345,7 @@ describe('weather command', () => {
 
       const res = await weatherCommand.fetchWeatherData(10, 20, 'si');
       expect(res).toBeNull();
-      expect(mockLogger.error).toHaveBeenCalledWith('Error fetching weather data from API', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Error occurred while fetching weather data from the API.', expect.any(Object));
     });
   });
 
@@ -505,7 +505,7 @@ describe('weather command', () => {
 
         await weatherCommand.handleError(mockInteraction, errCase.error);
 
-        expect(mockLogger.error).toHaveBeenCalledWith('Error in weather command', expect.any(Object));
+        expect(mockLogger.error).toHaveBeenCalledWith('Error occurred in weather command.', expect.any(Object));
         expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
           content: errCase.expected
         }));
@@ -519,7 +519,7 @@ describe('weather command', () => {
 
       await weatherCommand.handleError(mockInteraction, error);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error response for weather command', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error response for weather command.', expect.any(Object));
       expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to fetch weather data. Please try again later.'
       }));

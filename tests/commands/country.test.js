@@ -237,7 +237,7 @@ describe('country command', () => {
 
       await countryCommand.execute(mockInteraction);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in country command', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Error occurred in country command.', expect.any(Object));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: errCase.expected
       }));

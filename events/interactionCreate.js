@@ -84,7 +84,7 @@ module.exports = {
           });
         }
       } catch (replyError) {
-        logger.error('Error sending error response', {
+        logger.error('Error occurred while sending error response.', {
           err: replyError,
           originalError: error.message
         });

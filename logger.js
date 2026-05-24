@@ -62,7 +62,7 @@ function getLogger(label) {
       _pino: childLogger
     };
   } catch (error) {
-    console.error('Failed to create logger:', error);
+    console.error('Failed to create logger.', error);
     throw new Error('Failed to create logger instance.');
   }
 }

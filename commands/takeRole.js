@@ -70,7 +70,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error('Error in takeRole command', {
+    logger.error('Error occurred in takeRole command.', {
       err: error,
       userId: interaction.user.id,
       guildId: interaction.guildId,
@@ -166,7 +166,7 @@ module.exports = {
       return interaction.guild.members.cache.get(userId)
         ?? await interaction.guild.members.fetch(userId);
     } catch (error) {
-      logger.warn("Target user not found in guild:", {
+      logger.warn("Target user was not found in the guild.", {
         userId: userId,
         guildId: interaction.guildId
       });

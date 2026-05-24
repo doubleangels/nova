@@ -97,7 +97,10 @@ describe('index bootstrap', () => {
     expect(mockClient.commands.get('okCmd')).toBeDefined();
     expect(mockClient.on).toHaveBeenCalledWith('okEvent', expect.any(Function));
     expect(deployCommands).toHaveBeenCalled();
-    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Base embed color'));
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Base embed color was loaded'),
+      expect.any(Object)
+    );
   });
 
   it('should warn when base embed color is missing', () => {
@@ -142,8 +145,8 @@ describe('index bootstrap', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(mockLogger.error).toHaveBeenCalledWith(
-      'Failed to deploy slash commands on startup:',
-      expect.any(Error)
+      'Failed to deploy slash commands on startup.',
+      { err: expect.any(Error) }
     );
   });
 

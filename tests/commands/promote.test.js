@@ -49,7 +49,7 @@ describe('promote command', () => {
       mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(mockTime);
       const res = await promoteCommand.getLastPromotion();
       expect(res).toBe(mockTime);
-      expect(mockLogger.debug).toHaveBeenCalledWith('Found next promotion time:', expect.any(Object));
+      expect(mockLogger.debug).toHaveBeenCalledWith('Found next promotion time.', expect.any(Object));
     });
 
     it('should return null on error', async () => {
@@ -862,7 +862,7 @@ describe('promote command', () => {
       // Force logger.info to throw inside the try block of handlePost
       let isFirstInfo = true;
       mockLogger.info.mockImplementation((msg) => {
-        if (msg === 'Attempting to post to Reddit:') {
+        if (msg === 'Attempting to post to Reddit.') {
           throw new Error('Unexpected posting explosion');
         }
       });

@@ -259,7 +259,7 @@ describe('interactionCreate event', () => {
         await interactionCreateEvent.execute(mockInteraction);
 
         expect(mockLogger.error).toHaveBeenCalledWith(
-          'Error sending error response',
+          'Error occurred while sending error response.',
           expect.any(Object)
         );
       });

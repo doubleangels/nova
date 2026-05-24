@@ -50,7 +50,7 @@ async function setValue(keyString, value) {
         }
       }
       
-      console.error('Permission error: Cannot access database file.');
+      console.error('Cannot access the database file due to a permission error.');
       console.error('');
       if (accessCheck.recommendation) {
         console.error(accessCheck.recommendation);
@@ -79,7 +79,7 @@ async function setValue(keyString, value) {
       console.log(`   Type: ${typeof parsedValue}`);
     });
   } catch (error) {
-    console.error(`Error setting value: ${error.message}`);
+    console.error(`Error occurred while setting value. ${error.message}`);
     if (error.stack && process.env.DEBUG) {
       console.error(error.stack);
     }

@@ -27,7 +27,7 @@ async function deployCommands() {
     try {
       command = require(`./commands/${file}`);
     } catch (error) {
-      logger.error(`Error loading command file: ${file}`, {
+      logger.error(`Error occurred while loading command file ${file}.`, {
         error: error.stack,
         message: error.message
       });
@@ -37,18 +37,18 @@ async function deployCommands() {
     
     // Skip disabled commands - they will not be deployed/updated
     if (config.settings.disabledCommands.includes(commandName)) {
-      logger.info(`Skipping disabled command: ${commandName}`);
+      logger.info(`Skipping disabled command ${commandName}.`);
       continue;
     }
     
     commands.push(command.data.toJSON());
-    logger.debug(`Loaded command: ${file}`);
+    logger.debug(`Loaded command ${file}.`);
   }
   
   const rest = new REST({ version: '10', timeout: 30_000 }).setToken(config.token);
   
   const clientId = process.env.DISCORD_CLIENT_ID || config.clientId;
-  logger.info(`Deploying commands for application ID: ${clientId}`);
+  logger.info(`Deploying commands for application ID ${clientId}.`);
   
   try {    
     await rest.put(
@@ -58,7 +58,7 @@ async function deployCommands() {
     
     logger.info(`Successfully registered ${commands.length} application (/) commands.`);
   } catch (error) {
-    logger.error('Failed to deploy commands:', { error });
+    logger.error('Failed to deploy commands.', { error });
     throw error;
   }
 }
@@ -69,7 +69,7 @@ if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully.'))
     .catch(err => {
-      logger.error('Failed to deploy commands:', err);
+      logger.error('Failed to deploy commands.', { err });
       process.exit(1);
     });
 }

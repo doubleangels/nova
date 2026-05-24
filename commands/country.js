@@ -89,7 +89,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error('Error in country command', {
+    logger.error('Error occurred in country command.', {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id

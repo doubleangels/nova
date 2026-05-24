@@ -145,7 +145,7 @@ async function readValue(keyString) {
       }
     });
   } catch (error) {
-    console.error(`Error reading value: ${error.message}`);
+    console.error(`Error occurred while reading value. ${error.message}`);
     if (error.stack && process.env.DEBUG) {
       console.error(error.stack);
     }
@@ -184,7 +184,7 @@ async function listAllValues() {
         }
       }
       
-      console.error('Permission error: Cannot access database file.');
+      console.error('Cannot access the database file due to a permission error.');
       console.error('');
       if (accessCheck.recommendation) {
         console.error(accessCheck.recommendation);
@@ -264,7 +264,7 @@ async function listAllValues() {
       }
       db.close();
     } catch (e) {
-      console.error(`Error checking database structure: ${e.message}`);
+      console.error(`Error occurred while checking database structure. ${e.message}`);
       console.error('');
       console.error('This is likely a permissions issue. The database file exists but cannot be opened.');
       console.error('');
@@ -357,7 +357,7 @@ async function listAllValues() {
     }
     
   } catch (error) {
-    console.error(`Error listing values:`, error.message);
+    console.error(`Error occurred while listing values. ${error.message}`);
     process.exit(1);
   }
 }

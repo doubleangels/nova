@@ -202,7 +202,7 @@ describe('redditClient', () => {
 
       await expect(redditClient.redditApiRequest('GET', '/api/test')).rejects.toThrow('Failed to authenticate with Reddit API');
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to get Reddit OAuth token',
+        'Failed to get Reddit OAuth token.',
         expect.objectContaining({
           err: expect.any(Error)
         })

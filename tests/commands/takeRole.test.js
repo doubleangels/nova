@@ -168,7 +168,7 @@ describe('takeRole command', () => {
 
       await takeRoleCommand.execute(mockInteraction);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Target user not found in guild:', expect.any(Object));
+      expect(mockLogger.warn).toHaveBeenCalledWith('Target user was not found in the guild.', expect.any(Object));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ The specified user could not be found in this server.'
       }));
@@ -328,7 +328,7 @@ describe('takeRole command', () => {
 
       await takeRoleCommand.execute(mockInteraction);
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in takeRole command', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Error occurred in takeRole command.', expect.any(Object));
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ An unexpected error occurred while taking the role. Please try again later.'
       }));

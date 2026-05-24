@@ -42,7 +42,7 @@ module.exports = {
       });
     } catch (error) {
       captureError(error, { event: 'guildMemberRemove' });
-      logger.error('Error processing member leave', {
+      logger.error('Error occurred while processing member leave.', {
         err: error,
         userId: member.user?.id
       });

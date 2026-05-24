@@ -85,7 +85,7 @@ module.exports = {
     try {
       await interaction.deferReply();
       
-      logger.debug("Weather command received:", { 
+      logger.debug("Weather command was received.", { 
         userId: interaction.user.id,
         userTag: interaction.user.tag 
       });
@@ -107,7 +107,7 @@ module.exports = {
       
       const units = unitsOption === 'imperial' ? 'us' : 'si';
       
-      logger.debug("Processing weather request:", { 
+      logger.debug("Processing weather request.", { 
         place: hideLocation ? '[hidden]' : place, 
         units: unitsOption,
         forecastDays,
@@ -117,7 +117,7 @@ module.exports = {
       const geocodeResult = await getGeocodingData(place);
       
       if (geocodeResult.error) {
-        logger.warn("Failed to get coordinates for location:", { 
+        logger.warn("Failed to get coordinates for the location.", { 
           place, 
           errorType: geocodeResult.type,
           userId: interaction.user.id 
@@ -133,7 +133,7 @@ module.exports = {
       const { location, formattedAddress } = geocodeResult;
       const { lat, lng: lon } = location;
       
-      logger.debug("Location coordinates retrieved:", { 
+      logger.debug("Location coordinates were retrieved.", { 
         formattedAddress, 
         lat, 
         lon 
@@ -142,13 +142,13 @@ module.exports = {
       const [weatherData, timezoneResult] = await Promise.all([
         this.fetchWeatherData(lat, lon, units),
         getTimezoneData({ lat, lng: lon }).catch((error) => {
-          logger.warn('Failed to get timezone for location, using UTC', { err: error, lat, lon });
+          logger.warn('Failed to get timezone for location; using UTC.', { err: error, lat, lon });
           return { timezoneId: null, error: true };
         })
       ]);
       
       if (!weatherData) {
-        logger.warn("Failed to fetch weather data:", { 
+        logger.warn("Failed to fetch weather data.", { 
           place: formattedAddress, 
           lat, 
           lon 
@@ -174,7 +174,7 @@ module.exports = {
       
       await interaction.editReply({ embeds: [embed] });
       
-      logger.info("/weather command completed successfully:", { 
+      logger.info("/weather command completed successfully.", { 
         place: hideLocation ? '[hidden]' : formattedAddress, 
         userId: interaction.user.id,
         units: unitsOption,
@@ -210,14 +210,14 @@ module.exports = {
         logger.debug("Weather API data received successfully.");
         return response.data;
       } else {
-        logger.warn("PirateWeather API returned non-200 status:", { 
+        logger.warn("PirateWeather API returned a non-200 status.", { 
           status: response.status,
           statusText: response.statusText
         });
         return null;
       }
     } catch (error) {
-      logger.error("Error fetching weather data from API", { 
+      logger.error("Error occurred while fetching weather data from the API.", { 
         err: error,
         lat,
         lon
@@ -380,7 +380,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error in weather command", {
+    logger.error("Error occurred in weather command.", {
       err: error,
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
@@ -404,7 +404,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for weather command", {
+      logger.error("Failed to send error response for weather command.", {
         err: followUpError,
         originalError: error.message,
         userId: interaction.user?.id
