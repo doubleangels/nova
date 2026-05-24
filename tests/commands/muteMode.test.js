@@ -362,7 +362,7 @@ describe('muteMode command', () => {
     });
   });
 
-  it('serializes slash command subcommands', () => {
+  it('should serialize slash command subcommands', () => {
     const json = muteModeCommand.data.toJSON();
     expect(json.options).toHaveLength(2);
   });

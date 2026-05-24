@@ -27,7 +27,7 @@ describe('spamMode command', () => {
     spamModeCommand = require('../../commands/spamMode');
   });
 
-  it('serializes slash command subcommands', () => {
+  it('should serialize slash command subcommands', () => {
     const json = spamModeCommand.data.toJSON();
     expect(json.options.length).toBeGreaterThanOrEqual(2);
   });

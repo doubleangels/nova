@@ -145,7 +145,7 @@ describe('dbScriptUtils', () => {
       expect(mockKeyvSqlite).toHaveBeenCalled();
     });
 
-    it('returns cached Keyv instance for same namespace', () => {
+    it('should return cached Keyv instance for same namespace', () => {
       mockFs.existsSync.mockReturnValue(true);
       const first = dbScriptUtils.getKeyvForNamespace('invites');
       const second = dbScriptUtils.getKeyvForNamespace('invites');
@@ -160,7 +160,7 @@ describe('dbScriptUtils', () => {
       process.getgid = () => 1000;
     });
 
-    it('handles platforms without getuid/getgid', () => {
+    it('should handle platforms without getuid/getgid', () => {
       delete process.getuid;
       delete process.getgid;
       mockFs.existsSync.mockReturnValue(true);
@@ -173,14 +173,14 @@ describe('dbScriptUtils', () => {
       process.getgid = () => 1000;
     });
 
-    it('returns early when database file does not exist', () => {
+    it('should return early when database file does not exist', () => {
       mockFs.existsSync.mockReturnValue(false);
       const result = dbScriptUtils.checkDatabaseAccess();
       expect(result.accessible).toBe(false);
       expect(result.fileExists).toBe(false);
     });
 
-    it('marks accessible when file is readable', () => {
+    it('should mark accessible when file is readable', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.statSync.mockReturnValue({ uid: 1000, gid: 1000 });
       mockFs.accessSync.mockImplementation(() => {});
@@ -188,7 +188,7 @@ describe('dbScriptUtils', () => {
       expect(result.accessible).toBe(true);
     });
 
-    it('provides root guidance when access denied as root', () => {
+    it('should provide root guidance when access denied as root', () => {
       process.getuid = () => 0;
       mockFs.existsSync.mockReturnValue(true);
       mockFs.statSync.mockReturnValue({ uid: 1000, gid: 1000 });
@@ -199,7 +199,7 @@ describe('dbScriptUtils', () => {
       expect(result.recommendation).toContain('gosu');
     });
 
-    it('provides guidance for non-root wrong owner', () => {
+    it('should provide guidance for non-root wrong owner', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.statSync.mockReturnValue({ uid: 999, gid: 999 });
       mockFs.accessSync.mockImplementation(() => {
@@ -209,7 +209,7 @@ describe('dbScriptUtils', () => {
       expect(result.recommendation).toContain('different user');
     });
 
-    it('suggests ls when access denied for same owner', () => {
+    it('should suggest ls when access denied for same owner', () => {
       mockFs.existsSync.mockReturnValue(true);
       mockFs.statSync.mockReturnValue({ uid: 1000, gid: 1000 });
       mockFs.accessSync.mockImplementation(() => {
@@ -219,7 +219,7 @@ describe('dbScriptUtils', () => {
       expect(result.recommendation).toContain('ls -l');
     });
 
-    it('handles stat errors', () => {
+    it('should handle stat errors', () => {
       mockFs.existsSync.mockImplementation(() => {
         throw new Error('stat fail');
       });
@@ -229,7 +229,7 @@ describe('dbScriptUtils', () => {
   });
 
   describe('getDatabasePathInfo', () => {
-    it('returns path debug info', () => {
+    it('should return path debug info', () => {
       mockFs.existsSync.mockReturnValue(true);
       const info = dbScriptUtils.getDatabasePathInfo();
       expect(info.dataDir).toBeDefined();
@@ -240,14 +240,14 @@ describe('dbScriptUtils', () => {
   });
 
   describe('formatSectionName', () => {
-    it('strips trailing colon from section', () => {
+    it('should strip trailing colon from section', () => {
       expect(dbScriptUtils.formatSectionName('config:')).toBe('config');
       expect(dbScriptUtils.formatSectionName(null)).toBe('');
     });
   });
 
   describe('parseKey edge cases', () => {
-    it('parses namespace without section colon', () => {
+    it('should parse namespace without section colon', () => {
       const result = dbScriptUtils.parseKey('invites:tagname');
       expect(result).toEqual({
         namespace: 'invites',
@@ -259,7 +259,7 @@ describe('dbScriptUtils', () => {
   });
 
   describe('parseDatabaseKey edge cases', () => {
-    it('handles empty rest of key', () => {
+    it('should handle empty rest of key', () => {
       expect(dbScriptUtils.parseDatabaseKey('main:')).toEqual({
         namespace: 'main',
         section: null,
@@ -268,7 +268,7 @@ describe('dbScriptUtils', () => {
       });
     });
 
-    it('defaults unknown namespace to main', () => {
+    it('should default unknown namespace to main', () => {
       expect(dbScriptUtils.parseDatabaseKey('unknown:config:my_key')).toEqual({
         namespace: 'main',
         section: 'config:',
@@ -277,7 +277,7 @@ describe('dbScriptUtils', () => {
       });
     });
 
-    it('builds fullKey without section prefix when section is null', () => {
+    it('should build fullKey without section prefix when section is null', () => {
       expect(dbScriptUtils.parseDatabaseKey('invites:tagname')).toEqual({
         namespace: 'invites',
         section: null,
@@ -288,13 +288,13 @@ describe('dbScriptUtils', () => {
   });
 
   describe('parseValue edge cases', () => {
-    it('returns non-string values unchanged', () => {
+    it('should return non-string values unchanged', () => {
       expect(dbScriptUtils.parseValue(42)).toBe(42);
     });
   });
 
   describe('withKeyv without disconnect', () => {
-    it('skips disconnect when not available', async () => {
+    it('should skip disconnect when not available', async () => {
       const instance = {};
       const result = await dbScriptUtils.withKeyv(instance, async (k) => k);
       expect(result).toBe(instance);

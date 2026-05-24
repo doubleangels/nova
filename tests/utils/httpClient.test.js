@@ -5,7 +5,7 @@ describe('httpClient', () => {
     delete axios.defaults.timeout;
   });
 
-  it('sets default timeout when not already configured', () => {
+  it('should set default timeout when not already configured', () => {
     jest.isolateModules(() => {
       const axios = require('axios');
       delete axios.defaults.timeout;
@@ -14,7 +14,7 @@ describe('httpClient', () => {
     });
   });
 
-  it('preserves existing timeout when already set', () => {
+  it('should preserve existing timeout when already set', () => {
     jest.isolateModules(() => {
       const axios = require('axios');
       axios.defaults.timeout = 5000;

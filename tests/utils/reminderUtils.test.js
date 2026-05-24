@@ -66,7 +66,7 @@ describe('reminderUtils', () => {
   });
 
   describe('module initialization', () => {
-    it('uses getSharedKeyvStore for Keyv and logs connection errors', () => {
+    it('should use getSharedKeyvStore for Keyv and logs connection errors', () => {
       expect(mockGetSharedKeyvStore).toHaveBeenCalled();
       expect(reminderKeyvInstance.on).toHaveBeenCalledWith('error', expect.any(Function));
 
@@ -78,19 +78,19 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('exports NEEDAFRIEND_REMINDER_MS as seven days', () => {
+    it('should export NEEDAFRIEND_REMINDER_MS as seven days', () => {
       expect(reminderUtils.NEEDAFRIEND_REMINDER_MS).toBe(7 * 24 * 60 * 60 * 1000);
     });
   });
 
   describe('getLatestReminderData', () => {
-    it('returns null when no reminders exist', async () => {
+    it('should return null when no reminders exist', async () => {
       reminderKeyvInstance.get.mockResolvedValue([]);
       const result = await reminderUtils.getLatestReminderData('bump');
       expect(result).toBeNull();
     });
 
-    it('skips invalid dates, missing remind_at, and past reminders', async () => {
+    it('should skip invalid dates, missing remind_at, and past reminders', async () => {
       const futureSoon = dayjs().add(1, 'hour').toISOString();
       const futureLater = dayjs().add(2, 'hour').toISOString();
       const past = dayjs().subtract(1, 'hour').toISOString();
@@ -121,7 +121,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('returns null and logs on error', async () => {
+    it('should return null and logs on error', async () => {
       reminderKeyvInstance.get.mockRejectedValue(new Error('keyv read failed'));
       const result = await reminderUtils.getLatestReminderData('bump');
       expect(result).toBeNull();
@@ -133,7 +133,7 @@ describe('reminderUtils', () => {
   });
 
   describe('getNextReminderTimeAfterCleanup', () => {
-    it('removes expired and invalid reminders then returns next time', async () => {
+    it('should remove expired and invalid reminders then returns next time', async () => {
       const future = dayjs().add(30, 'minute').toISOString();
       const past = dayjs().subtract(1, 'hour').toISOString();
 
@@ -150,7 +150,7 @@ describe('reminderUtils', () => {
       expect(reminderKeyvInstance.set).toHaveBeenCalledWith('reminders:bump:list', ['valid']);
     });
 
-    it('cleans null entries and invalid remind_at values', async () => {
+    it('should clean null entries and invalid remind_at values', async () => {
       const future = dayjs().add(1, 'hour').toISOString();
 
       reminderKeyvInstance.get.mockImplementation(async (k) => {
@@ -167,7 +167,7 @@ describe('reminderUtils', () => {
       expect(reminderKeyvInstance.delete).toHaveBeenCalledWith('reminder:bad-date');
     });
 
-    it('removes entries with missing remind_at', async () => {
+    it('should remove entries with missing remind_at', async () => {
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k === 'reminders:needafriend:list') return ['no-time'];
         if (k === 'reminder:no-time') return { reminder_id: 'no-time', type: 'needafriend' };
@@ -179,7 +179,7 @@ describe('reminderUtils', () => {
       expect(reminderKeyvInstance.delete).toHaveBeenCalledWith('reminder:no-time');
     });
 
-    it('returns null and logs on error', async () => {
+    it('should return null and logs on error', async () => {
       reminderKeyvInstance.get.mockRejectedValue(new Error('cleanup failed'));
       const next = await reminderUtils.getNextReminderTimeAfterCleanup('bump');
       expect(next).toBeNull();
@@ -189,14 +189,14 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('returns null when reminder list is empty and nothing to clean', async () => {
+    it('should return null when reminder list is empty and nothing to clean', async () => {
       reminderKeyvInstance.get.mockResolvedValue(null);
       const next = await reminderUtils.getNextReminderTimeAfterCleanup('bump');
       expect(next).toBeNull();
       expect(reminderKeyvInstance.delete).not.toHaveBeenCalled();
     });
 
-    it('returns next time without cleanup when all reminders are valid', async () => {
+    it('should return next time without cleanup when all reminders are valid', async () => {
       const future = dayjs().add(2, 'hour').toISOString();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k === 'reminders:bump:list') return ['ok'];
@@ -232,7 +232,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('returns early when channel fetch fails', async () => {
+    it('should return early when channel fetch fails', async () => {
       setupConfig();
       mockClient.channels.cache = new Map();
       mockClient.channels.fetch.mockRejectedValue(new Error('channel gone'));
@@ -250,7 +250,7 @@ describe('reminderUtils', () => {
       expect(reminderKeyvInstance.set).not.toHaveBeenCalled();
     });
 
-    it('cleans existing future, expired, and invalid reminders before scheduling', async () => {
+    it('should clean existing future, expired, and invalid reminders before scheduling', async () => {
       setupConfig();
       const future = dayjs().add(2, 'hour').toISOString();
       const past = dayjs().subtract(1, 'hour').toISOString();
@@ -288,7 +288,7 @@ describe('reminderUtils', () => {
       expect(reminderKeyvInstance.delete).toHaveBeenCalled();
     });
 
-    it('sends promote and needafriend confirmation messages', async () => {
+    it('should send promote and needafriend confirmation messages', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k.endsWith(':list')) return [];
@@ -307,7 +307,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('sends promote and needafriend scheduled pings', async () => {
+    it('should send promote and needafriend scheduled pings', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k.endsWith(':list')) return [];
@@ -328,7 +328,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('skips confirmation when skipConfirmation is true', async () => {
+    it('should skip confirmation when skipConfirmation is true', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k.endsWith(':list')) return [];
@@ -343,7 +343,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('logs warn when confirmation send fails but still schedules', async () => {
+    it('should log warn when confirmation send fails but still schedules', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k.endsWith(':list')) return [];
@@ -358,7 +358,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('logs error when scheduled ping send fails', async () => {
+    it('should log error when scheduled ping send fails', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
         if (k.endsWith(':list')) return [];
@@ -377,7 +377,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('fetches channel from API when not in cache', async () => {
+    it('should fetch channel from API when not in cache', async () => {
       setupConfig();
       mockClient.channels.cache = new Map();
       reminderKeyvInstance.get.mockImplementation(async (k) => {
@@ -389,7 +389,7 @@ describe('reminderUtils', () => {
       expect(mockClient.channels.fetch).toHaveBeenCalledWith('channel-123');
     });
 
-    it('logs unexpected errors from getValue', async () => {
+    it('should log unexpected errors from getValue', async () => {
       mockDatabase.getValue.mockRejectedValue(new Error('db down'));
       await reminderUtils.handleReminder({ client: mockClient }, 1000);
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -400,7 +400,7 @@ describe('reminderUtils', () => {
   });
 
   describe('rescheduleReminder', () => {
-    it('returns when reminder channel config is missing', async () => {
+    it('should return when reminder channel config is missing', async () => {
       mockDatabase.getValue.mockImplementation(async (k) => {
         if (k === 'reminder_role') return 'role-123';
         return null;
@@ -411,7 +411,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('returns when reminder role config is missing', async () => {
+    it('should return when reminder role config is missing', async () => {
       mockDatabase.getValue.mockImplementation(async (k) => {
         if (k === 'reminder_channel') return 'channel-123';
         return null;
@@ -463,7 +463,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('cleans invalid and expired promote reminders and reschedules active ones', async () => {
+    it('should clean invalid and expired promote reminders and reschedules active ones', async () => {
       setupConfig();
       const future = dayjs().add(45, 'minute').toISOString();
       const past = dayjs().subtract(2, 'hour').toISOString();
@@ -488,7 +488,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('cleans invalid and expired needafriend reminders and reschedules active ones', async () => {
+    it('should clean invalid and expired needafriend reminders and reschedules active ones', async () => {
       setupConfig();
       const future = dayjs().add(20, 'minute').toISOString();
       const past = dayjs().subtract(3, 'hour').toISOString();
@@ -513,7 +513,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('marks invalid bump reminder data for cleanup', async () => {
+    it('should mark invalid bump reminder data for cleanup', async () => {
       setupConfig();
 
       reminderKeyvInstance.get.mockImplementation(async (k) => {
@@ -532,7 +532,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('warns when reschedule delay is zero or negative', async () => {
+    it('should warn when reschedule delay is zero or negative', async () => {
       jest.resetModules();
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2025-06-01T12:00:00.000Z'));
@@ -604,7 +604,7 @@ describe('reminderUtils', () => {
       realDayjs.prototype.diff.mockRestore();
     });
 
-    it('returns when channel fetch fails', async () => {
+    it('should return when channel fetch fails', async () => {
       setupConfig();
       const future = dayjs().add(1, 'hour').toISOString();
 
@@ -629,7 +629,7 @@ describe('reminderUtils', () => {
       expect(mockChannel.send).not.toHaveBeenCalled();
     });
 
-    it('logs errors when rescheduled bump ping fails', async () => {
+    it('should log errors when rescheduled bump ping fails', async () => {
       setupConfig();
       const future = dayjs().add(10, 'minute').toISOString();
 
@@ -653,7 +653,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('logs errors when rescheduled promote ping fails', async () => {
+    it('should log errors when rescheduled promote ping fails', async () => {
       setupConfig();
       const future = dayjs().add(10, 'minute').toISOString();
 
@@ -677,7 +677,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('logs errors when rescheduled needafriend ping fails', async () => {
+    it('should log errors when rescheduled needafriend ping fails', async () => {
       setupConfig();
       const future = dayjs().add(10, 'minute').toISOString();
 
@@ -701,7 +701,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('logs top-level errors', async () => {
+    it('should log top-level errors', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockRejectedValue(new Error('reschedule boom'));
       await reminderUtils.rescheduleReminder(mockClient);
@@ -711,7 +711,7 @@ describe('reminderUtils', () => {
       );
     });
 
-    it('fetches channel from API when not cached', async () => {
+    it('should fetch channel from API when not cached', async () => {
       setupConfig();
       const future = dayjs().add(15, 'minute').toISOString();
       mockClient.channels.cache = new Map();
@@ -730,7 +730,7 @@ describe('reminderUtils', () => {
       expect(mockClient.channels.fetch).toHaveBeenCalledWith('channel-123');
     });
 
-    it('logs cleaned up expired counts across types', async () => {
+    it('should log cleaned up expired counts across types', async () => {
       setupConfig();
       const past = dayjs().subtract(1, 'day').toISOString();
 
@@ -757,13 +757,13 @@ describe('reminderUtils', () => {
   });
 
   describe('addReminderId', () => {
-    it('adds id when not already in list', async () => {
+    it('should add id when not already in list', async () => {
       reminderKeyvInstance.get.mockResolvedValueOnce([]);
       await reminderUtils.addReminderId('bump', 'rem-new');
       expect(reminderKeyvInstance.set).toHaveBeenCalledWith('reminders:bump:list', ['rem-new']);
     });
 
-    it('does not duplicate existing id', async () => {
+    it('should not duplicate existing id', async () => {
       reminderKeyvInstance.get.mockResolvedValueOnce(['rem-1']);
       await reminderUtils.addReminderId('bump', 'rem-1');
       expect(reminderKeyvInstance.set).not.toHaveBeenCalled();

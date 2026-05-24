@@ -41,7 +41,7 @@ describe('config', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('loads config with all required env vars', () => {
+  it('should load config with all required env vars', () => {
     const config = require('../config');
     expect(config.token).toBe(process.env.DISCORD_BOT_TOKEN);
     expect(config.guildName).toBe(process.env.GUILD_NAME || 'Da Frens');
@@ -49,25 +49,25 @@ describe('config', () => {
     expect(config.settings.deployCommandsOnStart).toBe(true);
   });
 
-  it('parses baseEmbedColor with hash prefix', () => {
+  it('should parse baseEmbedColor with hash prefix', () => {
     process.env.BASE_EMBED_COLOR = '#CD41FF';
     const config = require('../config');
     expect(config.baseEmbedColor).toBe(0xCD41FF);
   });
 
-  it('parses baseEmbedColor with 0x prefix', () => {
+  it('should parse baseEmbedColor with 0x prefix', () => {
     process.env.BASE_EMBED_COLOR = '0xABCDEF';
     const config = require('../config');
     expect(config.baseEmbedColor).toBe(0xABCDEF);
   });
 
-  it('falls back to default color for invalid hex', () => {
+  it('should fall back to default color for invalid hex', () => {
     process.env.BASE_EMBED_COLOR = 'not-a-color';
     const config = require('../config');
     expect(config.baseEmbedColor).toBe(0x999999);
   });
 
-  it('uses default log level when LOG_LEVEL is unset', () => {
+  it('should use default log level when LOG_LEVEL is unset', () => {
     const saved = process.env.LOG_LEVEL;
     delete process.env.LOG_LEVEL;
     const config = require('../config');
@@ -77,14 +77,14 @@ describe('config', () => {
     }
   });
 
-  it('exits when required env vars are missing', () => {
+  it('should exit when required env vars are missing', () => {
     delete process.env.DISCORD_BOT_TOKEN;
     require('../config');
     expect(exitSpy).toHaveBeenCalledWith(1);
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
-  it('warns when DEEPL_API_KEY is not set', () => {
+  it('should warn when DEEPL_API_KEY is not set', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     delete process.env.DEEPL_API_KEY;
     require('../config');
@@ -94,7 +94,7 @@ describe('config', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it('does not warn when DEEPL_API_KEY is set', () => {
+  it('should not warn when DEEPL_API_KEY is set', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     process.env.DEEPL_API_KEY = 'test-deepl-key';
     require('../config');

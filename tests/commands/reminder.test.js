@@ -34,7 +34,7 @@ describe('reminder command', () => {
     reminderCommand = require('../../commands/reminder');
   });
 
-  it('serializes slash command subcommands and options', () => {
+  it('should serialize slash command subcommands and options', () => {
     const json = reminderCommand.data.toJSON();
     expect(json.options).toHaveLength(2);
     expect(json.options[0].options).toHaveLength(2);

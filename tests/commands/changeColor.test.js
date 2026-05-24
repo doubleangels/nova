@@ -30,7 +30,7 @@ describe('changeColor command', () => {
     changeColorCommand = require('../../commands/changeColor');
   });
 
-  it('serializes slash command options', () => {
+  it('should serialize slash command options', () => {
     const json = changeColorCommand.data.toJSON();
     expect(json.name).toBe('changecolor');
     expect(json.options).toHaveLength(2);

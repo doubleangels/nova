@@ -631,7 +631,7 @@ describe('audit command', () => {
   });
 
   describe('internal helpers', () => {
-    it('formatLine uses username when displayName is missing', () => {
+    it('should formatLine uses username when displayName is missing', () => {
       const line = auditCommand.__test__.formatLine(
         { user: { username: 'plainuser' }, permissions: { has: () => false } },
         false
@@ -639,7 +639,7 @@ describe('audit command', () => {
       expect(line).toBe('**plainuser**');
     });
 
-    it('formatLine returns bold name only when showPerms is false', () => {
+    it('should formatLine returns bold name only when showPerms is false', () => {
       const line = auditCommand.__test__.formatLine(
         {
           displayName: 'Mod',
@@ -652,7 +652,7 @@ describe('audit command', () => {
       expect(line).not.toContain('—');
     });
 
-    it('formatLine shows None when showPerms is true but member has no matching permissions', () => {
+    it('should formatLine shows None when showPerms is true but member has no matching permissions', () => {
       const line = auditCommand.__test__.formatLine(
         {
           displayName: 'Empty',
@@ -664,7 +664,7 @@ describe('audit command', () => {
       expect(line).toBe('**Empty** — None');
     });
 
-    it('formatLine excludes power permissions when excludePowerPerms is true', () => {
+    it('should formatLine excludes power permissions when excludePowerPerms is true', () => {
       const line = auditCommand.__test__.formatLine(
         {
           displayName: 'Power',
@@ -679,7 +679,7 @@ describe('audit command', () => {
       expect(line).toBe('**Power** — None');
     });
 
-    it('buildPages returns None when moderator filter removes all members', () => {
+    it('should buildPages returns None when moderator filter removes all members', () => {
       const member = {
         displayName: 'Ban Only',
         user: { username: 'banonly' },
@@ -690,7 +690,7 @@ describe('audit command', () => {
       expect(auditCommand.__test__.buildPages([member], true, true)).toEqual(['None']);
     });
 
-    it('buildPages appends lines without splitting when under limits', () => {
+    it('should buildPages appends lines without splitting when under limits', () => {
       const members = Array.from({ length: 3 }, (_, i) => ({
         displayName: `M${i}`,
         user: { username: `u${i}` },
@@ -702,7 +702,7 @@ describe('audit command', () => {
       expect(pages[0]).toContain('**M2**');
     });
 
-    it('buildPages splits when more than 25 members are listed', () => {
+    it('should buildPages splits when more than 25 members are listed', () => {
       const members = Array.from({ length: 26 }, (_, i) => ({
         displayName: `Member ${i}`,
         user: { username: `user_${i}` },
@@ -712,7 +712,7 @@ describe('audit command', () => {
       expect(pages.length).toBe(2);
     });
 
-    it('buildPages uses default excludePowerPerms when omitted', () => {
+    it('should buildPages uses default excludePowerPerms when omitted', () => {
       const member = {
         displayName: 'Mod',
         user: { username: 'mod' },
@@ -724,7 +724,7 @@ describe('audit command', () => {
       expect(pages[0]).toContain('Manage Messages');
     });
 
-    it('buildPages splits when combined line length exceeds 900 characters', () => {
+    it('should buildPages splits when combined line length exceeds 900 characters', () => {
       const longName = 'x'.repeat(900);
       const members = [
         {
@@ -742,7 +742,7 @@ describe('audit command', () => {
       expect(pages.length).toBe(2);
     });
 
-    it('does not export __test__ helpers outside test environment', () => {
+    it('should not export __test__ helpers outside test environment', () => {
       jest.isolateModules(() => {
         const previousEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';

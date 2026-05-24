@@ -22,7 +22,7 @@ describe('logger', () => {
     getLogger = require('../logger');
   });
 
-  it('uses default log level in pino config when logLevel is missing', () => {
+  it('should use default log level in pino config when logLevel is missing', () => {
     let capturedOptions;
     jest.resetModules();
     jest.doMock('pino', () => {
@@ -39,7 +39,7 @@ describe('logger', () => {
     expect(capturedOptions.level).toBe('info');
   });
 
-  it('configures pino level formatter', () => {
+  it('should configure pino level formatter', () => {
     let capturedOptions;
     jest.resetModules();
     jest.doMock('pino', () => {
@@ -56,12 +56,12 @@ describe('logger', () => {
     expect(capturedOptions.formatters.level('debug')).toEqual({ level: 'DEBUG' });
   });
 
-  it('throws for invalid label', () => {
+  it('should throw for invalid label', () => {
     expect(() => getLogger()).toThrow('Invalid logger label provided.');
     expect(() => getLogger(123)).toThrow('Invalid logger label provided.');
   });
 
-  it('logs message only when no meta object', () => {
+  it('should log message only when no meta object', () => {
     const log = getLogger('test.js');
     log.info('hello');
     log.error('err');
@@ -73,7 +73,7 @@ describe('logger', () => {
     expect(mockChildLogger.debug).toHaveBeenCalledWith('dbg');
   });
 
-  it('logs with meta object as first arg to pino', () => {
+  it('should log with meta object as first arg to pino', () => {
     const log = getLogger('test.js');
     const meta = { userId: '1' };
     log.info('hello', meta);
@@ -84,12 +84,12 @@ describe('logger', () => {
     expect(mockChildLogger.error).toHaveBeenCalledWith(meta, 'err');
   });
 
-  it('exposes raw pino child logger', () => {
+  it('should expose raw pino child logger', () => {
     const log = getLogger('test.js');
     expect(log._pino).toBe(mockChildLogger);
   });
 
-  it('throws when child logger creation fails', () => {
+  it('should throw when child logger creation fails', () => {
     jest.resetModules();
     jest.doMock('pino', () => {
       const base = {

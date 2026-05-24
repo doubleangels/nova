@@ -96,7 +96,7 @@ describe('database utils', () => {
   });
 
   describe('module initialization', () => {
-    it('creates data directory when missing', () => {
+    it('should create data directory when missing', () => {
       loadDatabase({
         fsOverrides: {
           existsSync: jest.fn((p) => p !== '/tmp/test-data'),
@@ -106,7 +106,7 @@ describe('database utils', () => {
       expect(mockFs.mkdirSync).toHaveBeenCalled();
     });
 
-    it('logs when data directory is not writable', () => {
+    it('should log when data directory is not writable', () => {
       loadDatabase({
         fsOverrides: {
           existsSync: jest.fn().mockReturnValue(true),
@@ -118,7 +118,7 @@ describe('database utils', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('logs when database file does not exist', () => {
+    it('should log when database file does not exist', () => {
       loadDatabase({
         fsOverrides: {
           existsSync: jest.fn((p) => p !== '/tmp/test-data/database.sqlite')
@@ -127,7 +127,7 @@ describe('database utils', () => {
       expect(mockLogger.info).toHaveBeenCalled();
     });
 
-    it('handles top-level fs errors', () => {
+    it('should handle top-level fs errors', () => {
       loadDatabase({
         fsOverrides: {
           existsSync: jest.fn(() => {
@@ -138,7 +138,7 @@ describe('database utils', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('warns when chmod fails', () => {
+    it('should warn when chmod fails', () => {
       loadDatabase({
         fsOverrides: {
           existsSync: jest.fn().mockReturnValue(true),
@@ -150,7 +150,7 @@ describe('database utils', () => {
       expect(mockLogger.warn).toHaveBeenCalled();
     });
 
-    it('handles keyv connection errors', () => {
+    it('should handle keyv connection errors', () => {
       const errHandler = mainKeyvInstance.on.mock.calls.find((c) => c[0] === 'error')?.[1];
       errHandler(new Error('keyv err'));
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -159,7 +159,7 @@ describe('database utils', () => {
       );
     });
 
-    it('handles invite keyv connection errors', () => {
+    it('should handle invite keyv connection errors', () => {
       const errHandler = inviteKeyvInstance.on.mock.calls.find((c) => c[0] === 'error')?.[1];
       errHandler(new Error('invite keyv err'));
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -177,7 +177,7 @@ describe('database utils', () => {
       jest.useRealTimers();
     });
 
-    it('succeeds on valid read/write test', async () => {
+    it('should succeed on valid read/write test', async () => {
       mainKeyvInstance.set.mockResolvedValue(undefined);
       mainKeyvInstance.get.mockResolvedValue('test_value');
       mainKeyvInstance.delete.mockResolvedValue(undefined);
@@ -192,7 +192,7 @@ describe('database utils', () => {
       expect(mainKeyvInstance.set).toHaveBeenCalled();
     });
 
-    it('warns when database file missing after successful test', async () => {
+    it('should warn when database file missing after successful test', async () => {
       mainKeyvInstance.set.mockResolvedValue(undefined);
       mainKeyvInstance.get.mockResolvedValue('test_value');
       mainKeyvInstance.delete.mockResolvedValue(undefined);
@@ -210,7 +210,7 @@ describe('database utils', () => {
       );
     });
 
-    it('logs chmod failure during initializeDatabase', async () => {
+    it('should log chmod failure during initializeDatabase', async () => {
       mainKeyvInstance.set.mockResolvedValue(undefined);
       mainKeyvInstance.get.mockResolvedValue('test_value');
       mainKeyvInstance.delete.mockResolvedValue(undefined);
@@ -230,7 +230,7 @@ describe('database utils', () => {
       );
     });
 
-    it('retries and exits when all attempts fail', async () => {
+    it('should retry and exit when all attempts fail', async () => {
       const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
       loadDatabase();
       mainKeyvInstance.set.mockRejectedValue(new Error('db fail'));
@@ -245,7 +245,7 @@ describe('database utils', () => {
       exitSpy.mockRestore();
     });
 
-    it('throws when read/write test returns unexpected value', async () => {
+    it('should throw when read/write test returns unexpected value', async () => {
       const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
       loadDatabase({
         fsOverrides: {
@@ -271,7 +271,7 @@ describe('database utils', () => {
   });
 
   describe('user list helpers', () => {
-    it('does not duplicate user ids in tracking lists', async () => {
+    it('should not duplicate user ids in tracking lists', async () => {
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_users') return ['existing-u'];
         return null;
@@ -284,13 +284,13 @@ describe('database utils', () => {
       expect(listUpdateCalls).toHaveLength(0);
     });
 
-    it('handles addToUserList errors via mute mode add', async () => {
+    it('should handle addToUserList errors via mute mode add', async () => {
       mainKeyvInstance.get.mockRejectedValue(new Error('list fail'));
       await db.addMuteModeUser('u', 'name');
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('removeMuteModeUser skips debug log when key was not present', async () => {
+    it('should skip debug log when key was not present in removeMuteModeUser', async () => {
       mainKeyvInstance.delete.mockResolvedValueOnce(false);
       mainKeyvInstance.get.mockResolvedValueOnce(['u1']);
       await db.removeMuteModeUser('u1');
@@ -300,12 +300,12 @@ describe('database utils', () => {
       );
     });
 
-    it('getAllMuteModeUsers returns empty list when user id list is null', async () => {
+    it('should return empty list when user id list is null in getAllMuteModeUsers', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getAllMuteModeUsers()).toEqual([]);
     });
 
-    it('getAllMuteModeUsers skips missing user records', async () => {
+    it('should skip missing user records in getAllMuteModeUsers', async () => {
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:mute_mode_users') return ['u1', 'u2'];
         if (key === 'mute_mode:u1') return { userId: 'u1', username: 'a', joinTime: '2025-01-01' };
@@ -316,7 +316,7 @@ describe('database utils', () => {
       expect(users).toHaveLength(1);
     });
 
-    it('handles removeFromUserList errors via spam remove', async () => {
+    it('should handle removeFromUserList errors via spam remove', async () => {
       mainKeyvInstance.get.mockRejectedValue(new Error('list fail'));
       await db.removeSpamModeJoinTime('u');
       expect(mockLogger.error).toHaveBeenCalled();
@@ -324,7 +324,7 @@ describe('database utils', () => {
   });
 
   describe('getValue / setValue / deleteValue', () => {
-    it('returns cached config values without hitting keyv', async () => {
+    it('should return cached config values without hitting keyv', async () => {
       await db.setValue('cached_key', 'cached_value');
       mainKeyvInstance.get.mockClear();
       expect(await db.getValue('cached_key')).toBe('cached_value');
@@ -342,12 +342,12 @@ describe('database utils', () => {
       expect(val).toBe('test_value');
     });
 
-    it('returns null for undefined values', async () => {
+    it('should return null for undefined values', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(undefined);
       expect(await db.getValue('missing')).toBeNull();
     });
 
-    it('returns cached value on subsequent reads', async () => {
+    it('should return cached value on subsequent reads', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce('first');
       expect(await db.getValue('cached-read')).toBe('first');
       mainKeyvInstance.get.mockClear();
@@ -355,12 +355,12 @@ describe('database utils', () => {
       expect(mainKeyvInstance.get).not.toHaveBeenCalled();
     });
 
-    it('returns null on get error', async () => {
+    it('should return null on get error', async () => {
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('get fail'));
       expect(await db.getValue('err_key')).toBeNull();
     });
 
-    it('handles set errors', async () => {
+    it('should handle set errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('set fail'));
       await db.setValue('err', 'v');
       expect(mockLogger.error).toHaveBeenCalled();
@@ -371,7 +371,7 @@ describe('database utils', () => {
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('config:test_key');
     });
 
-    it('handles delete errors', async () => {
+    it('should handle delete errors', async () => {
       mainKeyvInstance.delete.mockRejectedValueOnce(new Error('del fail'));
       await db.deleteValue('err');
       expect(mockLogger.error).toHaveBeenCalled();
@@ -394,7 +394,7 @@ describe('database utils', () => {
       );
     });
 
-    it('handles add mute mode errors', async () => {
+    it('should handle add mute mode errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
       await db.addMuteModeUser('u', 'n');
       expect(mockLogger.error).toHaveBeenCalled();
@@ -406,13 +406,13 @@ describe('database utils', () => {
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('mute_mode:user123');
     });
 
-    it('handles remove mute mode errors', async () => {
+    it('should handle remove mute mode errors', async () => {
       mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
       await db.removeMuteModeUser('u');
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('getAllMuteModeUsers returns formatted users', async () => {
+    it('should return formatted users in getAllMuteModeUsers', async () => {
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:mute_mode_users') return ['u1'];
         if (key === 'mute_mode:u1') return { userId: 'u1', username: 'a', joinTime: dayjs().toISOString() };
@@ -423,7 +423,7 @@ describe('database utils', () => {
       expect(users[0].user_id).toBe('u1');
     });
 
-    it('getAllMuteModeUsers returns empty on error', async () => {
+    it('should return empty on error in getAllMuteModeUsers', async () => {
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getAllMuteModeUsers()).toEqual([]);
     });
@@ -433,12 +433,12 @@ describe('database utils', () => {
       expect(await db.getUserJoinTime('user123')).toBeInstanceOf(Date);
     });
 
-    it('returns null when no join time', async () => {
+    it('should return null when no join time', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getUserJoinTime('user123')).toBeNull();
     });
 
-    it('handles getUserJoinTime errors', async () => {
+    it('should handle getUserJoinTime errors', async () => {
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getUserJoinTime('u')).toBeNull();
     });
@@ -450,23 +450,23 @@ describe('database utils', () => {
       expect(mainKeyvInstance.set).toHaveBeenCalledWith('spam_mode:user123', expect.any(Object));
     });
 
-    it('handles add spam errors', async () => {
+    it('should handle add spam errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
       await db.addSpamModeJoinTime('u', 'n', new Date());
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('getSpamModeJoinTime returns date', async () => {
+    it('should return date in getSpamModeJoinTime', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce({ joinTime: dayjs().toISOString() });
       expect(await db.getSpamModeJoinTime('u')).toBeInstanceOf(Date);
     });
 
-    it('getSpamModeJoinTime returns null without joinTime', async () => {
+    it('should return null without joinTime in getSpamModeJoinTime', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce({ userId: 'u' });
       expect(await db.getSpamModeJoinTime('u')).toBeNull();
     });
 
-    it('getSpamModeJoinTime returns null on error', async () => {
+    it('should return null on error in getSpamModeJoinTime', async () => {
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getSpamModeJoinTime('u')).toBeNull();
     });
@@ -477,7 +477,7 @@ describe('database utils', () => {
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('spam_mode:user123');
     });
 
-    it('handles remove spam errors', async () => {
+    it('should handle remove spam errors', async () => {
       mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
       await db.removeSpamModeJoinTime('u');
       expect(mockLogger.error).toHaveBeenCalled();
@@ -485,7 +485,7 @@ describe('database utils', () => {
   });
 
   describe('cleanupOldTrackingUsers', () => {
-    it('keeps spam users within tracking window', async () => {
+    it('should keep spam users within tracking window', async () => {
       const recent = dayjs().toISOString();
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_users') return ['s1'];
@@ -497,7 +497,7 @@ describe('database utils', () => {
       expect(result.spamModeRemoved).toBe(0);
     });
 
-    it('removes expired mute users without consulting client when join time expired', async () => {
+    it('should remove expired mute users without consulting client when join time expired', async () => {
       const oldTime = dayjs().subtract(10, 'hour').toISOString();
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_users') return [];
@@ -510,7 +510,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(1);
     });
 
-    it('handles empty spam and mute user lists from keyv', async () => {
+    it('should handle empty spam and mute user lists from keyv', async () => {
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_users') return null;
         if (key === 'config:mute_mode_users') return null;
@@ -521,7 +521,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(0);
     });
 
-    it('keeps spam users within the tracking window', async () => {
+    it('should keep spam users within the tracking window', async () => {
       const recent = dayjs().toISOString();
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_window_hours') return '4';
@@ -536,7 +536,7 @@ describe('database utils', () => {
       expect(mainKeyvInstance.set).toHaveBeenCalledWith('config:spam_mode_users', ['s1']);
     });
 
-    it('removes expired spam and mute users', async () => {
+    it('should remove expired spam and mute users', async () => {
       const oldTime = dayjs().subtract(10, 'hour').toISOString();
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_window_hours') return '4';
@@ -552,7 +552,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBeGreaterThan(0);
     });
 
-    it('removes mute users with missing join data', async () => {
+    it('should remove mute users with missing join data', async () => {
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_users') return [];
         if (key === 'config:mute_mode_users') return ['orphan-m'];
@@ -562,7 +562,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(1);
     });
 
-    it('removes orphan spam users without data', async () => {
+    it('should remove orphan spam users without data', async () => {
       mainKeyvInstance.get.mockImplementation(async (key) => {
         if (key === 'config:spam_mode_users') return ['orphan'];
         if (key === 'config:mute_mode_users') return [];
@@ -572,7 +572,7 @@ describe('database utils', () => {
       expect(result.spamModeRemoved).toBe(1);
     });
 
-    it('uses client to remove mute users not in guild', async () => {
+    it('should use client to remove mute users not in guild', async () => {
       const recent = dayjs().toISOString();
       const mockClient = {
         guilds: {
@@ -593,7 +593,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(1);
     });
 
-    it('removes mute user when no guild in client', async () => {
+    it('should remove mute user when no guild in client', async () => {
       const recent = dayjs().toISOString();
       const mockClient = { guilds: { cache: { first: () => null } } };
       mainKeyvInstance.get.mockImplementation(async (key) => {
@@ -606,7 +606,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(1);
     });
 
-    it('keeps mute user still in guild when within window', async () => {
+    it('should keep mute user still in guild when within window', async () => {
       const recent = dayjs().toISOString();
       const mockClient = {
         guilds: {
@@ -627,7 +627,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(0);
     });
 
-    it('handles synchronous fetch errors for guild members', async () => {
+    it('should handle synchronous fetch errors for guild members', async () => {
       const recent = dayjs().toISOString();
       const mockClient = {
         guilds: {
@@ -652,7 +652,7 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(1);
     });
 
-    it('handles fetch errors for guild members', async () => {
+    it('should handle fetch errors for guild members', async () => {
       const recent = dayjs().toISOString();
       const mockClient = {
         guilds: {
@@ -673,13 +673,13 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(1);
     });
 
-    it('logs debug when nothing to remove', async () => {
+    it('should log debug when nothing to remove', async () => {
       mainKeyvInstance.get.mockResolvedValue([]);
       await db.cleanupOldTrackingUsers();
       expect(mockLogger.debug).toHaveBeenCalled();
     });
 
-    it('throws on cleanup error', async () => {
+    it('should throw on cleanup error', async () => {
       mainKeyvInstance.get.mockRejectedValue(new Error('cleanup fail'));
       await expect(db.cleanupOldTrackingUsers()).rejects.toThrow('cleanup fail');
     });
@@ -691,7 +691,7 @@ describe('database utils', () => {
       expect(inviteKeyvInstance.set).toHaveBeenCalledWith('tags:mytag', { code: 'abc' });
     });
 
-    it('throws on set invite tag error', async () => {
+    it('should throw on set invite tag error', async () => {
       inviteKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
       await expect(db.setInviteTag('t', {})).rejects.toThrow('DATABASE_WRITE_ERROR');
     });
@@ -701,63 +701,63 @@ describe('database utils', () => {
       expect(await db.getInviteTag('MyTag')).toEqual({ code: 'x' });
     });
 
-    it('returns null when invite tag value is undefined', async () => {
+    it('should return null when invite tag value is undefined', async () => {
       inviteKeyvInstance.get.mockResolvedValueOnce(undefined);
       expect(await db.getInviteTag('missing')).toBeNull();
     });
 
-    it('returns null on get invite tag error', async () => {
+    it('should return null on get invite tag error', async () => {
       inviteKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getInviteTag('t')).toBeNull();
     });
 
-    it('deletes invite tag', async () => {
+    it('should delete invite tag', async () => {
       await db.deleteInviteTag('MyTag');
       expect(inviteKeyvInstance.delete).toHaveBeenCalledWith('tags:mytag');
     });
 
-    it('throws on delete invite tag error', async () => {
+    it('should throw on delete invite tag error', async () => {
       inviteKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
       await expect(db.deleteInviteTag('t')).rejects.toThrow('DATABASE_DELETE_ERROR');
     });
 
-    it('notification channel get/set', async () => {
+    it('should notification channel get/set', async () => {
       await db.setInviteNotificationChannel('ch1');
       mainKeyvInstance.get.mockResolvedValueOnce('ch1');
       expect(await db.getInviteNotificationChannel()).toBe('ch1');
     });
 
-    it('setInviteUsage and getInviteUsage', async () => {
+    it('should and getInviteUsage in setInviteUsage', async () => {
       await db.setInviteUsage('g1', { abc: 1 });
       mainKeyvInstance.get.mockResolvedValueOnce({ abc: 1 });
       expect(await db.getInviteUsage('g1')).toEqual({ abc: 1 });
     });
 
-    it('getInviteUsage returns stored usage map from keyv', async () => {
+    it('should return stored usage map from keyv in getInviteUsage', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce({ code1: 3, code2: 1 });
       expect(await db.getInviteUsage('guild-usage')).toEqual({ code1: 3, code2: 1 });
     });
 
-    it('getInviteUsage returns empty object when keyv returns null', async () => {
+    it('should return empty object when keyv returns null in getInviteUsage', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getInviteUsage('guild-null')).toEqual({});
     });
 
-    it('handles invite usage errors', async () => {
+    it('should handle invite usage errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
       await db.setInviteUsage('g', {});
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getInviteUsage('g')).toEqual({});
     });
 
-    it('setInviteCodeToTagMap and getInviteCodeToTagMap with cache', async () => {
+    it('should and getInviteCodeToTagMap with cache in setInviteCodeToTagMap', async () => {
       const map = { code1: 'tag1' };
       await db.setInviteCodeToTagMap('g1', map);
       expect(await db.getInviteCodeToTagMap('g1')).toEqual(map);
       expect(mainKeyvInstance.get).not.toHaveBeenCalled();
     });
 
-    it('getInviteCodeToTagMap returns cached map without re-reading keyv', async () => {
+    it('should return cached map without re-reading keyv in getInviteCodeToTagMap', async () => {
       const map = { cached: 'tag' };
       await db.setInviteCodeToTagMap('g-cache', map);
       mainKeyvInstance.get.mockClear();
@@ -765,7 +765,7 @@ describe('database utils', () => {
       expect(mainKeyvInstance.get).not.toHaveBeenCalled();
     });
 
-    it('getInviteCodeToTagMap loads from db when cache expired', async () => {
+    it('should load from db when cache expired in getInviteCodeToTagMap', async () => {
       jest.spyOn(Date, 'now').mockReturnValueOnce(0).mockReturnValueOnce(999999999999);
       mainKeyvInstance.get.mockResolvedValueOnce({ c: 't' });
       const map = await db.getInviteCodeToTagMap('g2');
@@ -773,31 +773,31 @@ describe('database utils', () => {
       Date.now.mockRestore?.();
     });
 
-    it('getInviteCodeToTagMap returns empty object when keyv has no map stored', async () => {
+    it('should return empty object when keyv has no map stored in getInviteCodeToTagMap', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getInviteCodeToTagMap('g-empty-map')).toEqual({});
     });
 
-    it('getInviteCodeToTagMap returns empty object when keyv returns null', async () => {
+    it('should return empty object when keyv returns null in getInviteCodeToTagMap', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getInviteCodeToTagMap('g-null-map')).toEqual({});
     });
 
-    it('handles code map errors', async () => {
+    it('should handle code map errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
       await db.setInviteCodeToTagMap('g', {});
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getInviteCodeToTagMap('g')).toEqual({});
     });
 
-    it('invalidateInviteCodeToTagMapCache clears cache', async () => {
+    it('should clear cache in invalidateInviteCodeToTagMapCache', async () => {
       await db.setInviteCodeToTagMap('g', { a: 'b' });
       db.invalidateInviteCodeToTagMapCache('g');
       mainKeyvInstance.get.mockResolvedValueOnce({ x: 'y' });
       expect(await db.getInviteCodeToTagMap('g')).toEqual({ x: 'y' });
     });
 
-    it('invalidateInviteCodeToTagMapCache clears all when no guildId', async () => {
+    it('should clear all when no guildId in invalidateInviteCodeToTagMapCache', async () => {
       await db.setInviteCodeToTagMap('g1', { a: 'b' });
       db.invalidateInviteCodeToTagMapCache();
       mainKeyvInstance.get.mockResolvedValueOnce({});
@@ -813,7 +813,7 @@ describe('database utils', () => {
       })
     };
 
-    it('parses invite tags from sqlite', async () => {
+    it('should parse invite tags from sqlite', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -827,7 +827,7 @@ describe('database utils', () => {
       expect(tags[0].tagName).toBe('disboard');
     });
 
-    it('parses invite tags stored without keyv value wrapper', async () => {
+    it('should parse invite tags stored without keyv value wrapper', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -846,7 +846,7 @@ describe('database utils', () => {
       expect(tags[0]).toEqual(expect.objectContaining({ tagName: 'raw', code: 'RAW1', name: 'Raw Tag' }));
     });
 
-    it('parses invite tags stored without keyv value wrapper', async () => {
+    it('should parse invite tags stored without keyv value wrapper', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -865,7 +865,7 @@ describe('database utils', () => {
       expect(tags[0]).toMatchObject({ tagName: 'rawtag', code: 'RAW1', name: 'Raw Tag' });
     });
 
-    it('skips invalid tag rows', async () => {
+    it('should skip invalid tag rows', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -885,7 +885,7 @@ describe('database utils', () => {
       );
     });
 
-    it('returns empty on getAllInviteTagsData error', async () => {
+    it('should return empty on getAllInviteTagsData error', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -902,7 +902,7 @@ describe('database utils', () => {
       );
     });
 
-    it('rebuilds and persists map when tags exist', async () => {
+    it('should rebuild and persists map when tags exist', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -917,7 +917,7 @@ describe('database utils', () => {
       expect(mainKeyvInstance.set).toHaveBeenCalled();
     });
 
-    it('rebuilds code to tag map', async () => {
+    it('should rebuild code to tag map', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -931,7 +931,7 @@ describe('database utils', () => {
       expect(map.abc).toBe('disboard');
     });
 
-    it('rebuilds map from tags stored without keyv value wrapper', async () => {
+    it('should rebuild map from tags stored without keyv value wrapper', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -950,7 +950,7 @@ describe('database utils', () => {
       expect(map.unwrap).toBe('unwrap');
     });
 
-    it('returns empty map on rebuild error', async () => {
+    it('should return empty map on rebuild error', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -967,7 +967,7 @@ describe('database utils', () => {
       );
     });
 
-    it('warns on rebuild parse errors for individual rows', async () => {
+    it('should warn on rebuild parse errors for individual rows', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -988,7 +988,7 @@ describe('database utils', () => {
       );
     });
 
-    it('returns empty map when no valid tag codes are found', async () => {
+    it('should return empty map when no valid tag codes are found', async () => {
       loadDatabase({
         sqliteOverrides: {
           getReadonlyDb: jest.fn(() => ({
@@ -1005,30 +1005,30 @@ describe('database utils', () => {
   });
 
   describe('members and message counts', () => {
-    it('getGuildName returns config value', async () => {
+    it('should return config value in getGuildName', async () => {
       loadDatabase({ configOverrides: { guildName: 'My Guild' } });
       expect(await db.getGuildName()).toBe('My Guild');
     });
 
-    it('getGuildName falls back when config guildName is missing', async () => {
+    it('should fall back when config guildName is missing in getGuildName', async () => {
       loadDatabase({ configOverrides: {} });
       expect(await db.getGuildName()).toBe('Da Frens');
     });
 
-    it('setFormerMember and isFormerMember', async () => {
+    it('should and isFormerMember in setFormerMember', async () => {
       await db.setFormerMember('u1');
       mainKeyvInstance.get.mockResolvedValueOnce(1);
       expect(await db.isFormerMember('u1')).toBe(true);
     });
 
-    it('handles former member errors', async () => {
+    it('should handle former member errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('fail'));
       await db.setFormerMember('u');
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.isFormerMember('u')).toBe(false);
     });
 
-    it('incrementMessageCount starts at 1 when no prior row exists', async () => {
+    it('should start at 1 when no prior row exists in incrementMessageCount', async () => {
       const selectStmt = { get: jest.fn().mockReturnValue(undefined) };
       const insertStmt = { run: jest.fn() };
       const writable = {
@@ -1041,7 +1041,7 @@ describe('database utils', () => {
       expect(await db.incrementMessageCount('new-user')).toBe(1);
     });
 
-    it('incrementMessageCount treats invalid stored JSON as zero', async () => {
+    it('should treat invalid stored JSON as zero in incrementMessageCount', async () => {
       const selectStmt = {
         get: jest.fn().mockReturnValue({ value: 'not-json' })
       };
@@ -1057,7 +1057,7 @@ describe('database utils', () => {
       expect(count).toBe(1);
     });
 
-    it('incrementMessageCount parses unwrapped numeric JSON values', async () => {
+    it('should parse unwrapped numeric JSON values in incrementMessageCount', async () => {
       const selectStmt = {
         get: jest.fn().mockReturnValue({ value: '7' })
       };
@@ -1072,7 +1072,7 @@ describe('database utils', () => {
       expect(await db.incrementMessageCount('u-wrap')).toBe(8);
     });
 
-    it('incrementMessageCount via writable db', async () => {
+    it('should via writable db in incrementMessageCount', async () => {
       const selectStmt = {
         get: jest.fn().mockReturnValue({ value: JSON.stringify({ value: 5, expires: null }) })
       };
@@ -1089,7 +1089,7 @@ describe('database utils', () => {
       expect(writable.transaction).toHaveBeenCalled();
     });
 
-    it('incrementMessageCount returns null on error', async () => {
+    it('should return null on error in incrementMessageCount', async () => {
       const writable = {
         transaction: jest.fn(() => {
           throw new Error('tx fail');
@@ -1100,17 +1100,17 @@ describe('database utils', () => {
       expect(await db.incrementMessageCount('u')).toBeNull();
     });
 
-    it('getMessageCount returns zero when stored count is zero', async () => {
+    it('should return zero when stored count is zero in getMessageCount', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(0);
       expect(await db.getMessageCount('u-zero')).toBe(0);
     });
 
-    it('getMessageCount returns zero when no count is stored', async () => {
+    it('should return zero when no count is stored in getMessageCount', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getMessageCount('u-missing')).toBe(0);
     });
 
-    it('incrementMessageCount treats non-numeric wrapped count as zero before increment', async () => {
+    it('should treat non-numeric wrapped count as zero before increment in incrementMessageCount', async () => {
       const selectStmt = {
         get: jest.fn().mockReturnValue({
           value: JSON.stringify({ value: 'not-a-number', expires: null })
@@ -1127,7 +1127,7 @@ describe('database utils', () => {
       expect(await db.incrementMessageCount('u-nan')).toBe(1);
     });
 
-    it('incrementMessageCount treats zero wrapped count as zero before increment', async () => {
+    it('should treat zero wrapped count as zero before increment in incrementMessageCount', async () => {
       const selectStmt = {
         get: jest.fn().mockReturnValue({
           value: JSON.stringify({ value: 0, expires: null })
@@ -1144,7 +1144,7 @@ describe('database utils', () => {
       expect(await db.incrementMessageCount('u-zero-wrap')).toBe(1);
     });
 
-    it('incrementMessageCount parses bare numeric JSON without value wrapper', async () => {
+    it('should parse bare numeric JSON without value wrapper in incrementMessageCount', async () => {
       const selectStmt = {
         get: jest.fn().mockReturnValue({ value: '12' })
       };
@@ -1159,7 +1159,7 @@ describe('database utils', () => {
       expect(await db.incrementMessageCount('u-bare')).toBe(13);
     });
 
-    it('getMessageCount and deleteMessageCount', async () => {
+    it('should and deleteMessageCount in getMessageCount', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(10);
       expect(await db.getMessageCount('u')).toBe(10);
       await db.deleteMessageCount('u');
@@ -1170,12 +1170,12 @@ describe('database utils', () => {
       );
     });
 
-    it('isFormerMember returns true for stored marker values', async () => {
+    it('should return true for stored marker values in isFormerMember', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(0);
       expect(await db.isFormerMember('u0')).toBe(true);
     });
 
-    it('handles message count errors', async () => {
+    it('should handle message count errors', async () => {
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
       expect(await db.getMessageCount('u')).toBe(0);
       mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
@@ -1184,7 +1184,7 @@ describe('database utils', () => {
     });
   });
 
-  it('closeDatabaseConnections is re-exported', () => {
+  it('should re-export in closeDatabaseConnections', () => {
     expect(db.closeDatabaseConnections).toBeDefined();
   });
 });

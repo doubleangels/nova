@@ -26,7 +26,7 @@ describe('trollMode command', () => {
     trollModeCommand = require('../../commands/trollMode');
   });
 
-  it('serializes slash command subcommands', () => {
+  it('should serialize slash command subcommands', () => {
     const json = trollModeCommand.data.toJSON();
     expect(json.options.length).toBeGreaterThanOrEqual(2);
   });
@@ -288,7 +288,7 @@ describe('trollMode command', () => {
       }));
     });
 
-    it('handleError uses default message for unknown errors', async () => {
+    it('should use default message for unknown errors in handleError', async () => {
       const interaction = {
         user: { id: 'user-1' },
         editReply: jest.fn().mockResolvedValue(),
@@ -300,7 +300,7 @@ describe('trollMode command', () => {
       }));
     });
 
-    it('handleError maps PERMISSION_DENIED when editReply succeeds', async () => {
+    it('should map PERMISSION_DENIED when editReply succeeds in handleError', async () => {
       const interaction = {
         user: { id: 'user-1' },
         editReply: jest.fn().mockResolvedValue(),

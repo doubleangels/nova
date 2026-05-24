@@ -1,12 +1,12 @@
 const { runWithConcurrency } = require('../../utils/asyncUtils');
 
 describe('asyncUtils', () => {
-  it('returns empty array for no tasks', async () => {
+  it('should return empty array for no tasks', async () => {
     const result = await runWithConcurrency([]);
     expect(result).toEqual([]);
   });
 
-  it('runs all tasks with default concurrency limit', async () => {
+  it('should run all tasks with default concurrency limit', async () => {
     const order = [];
     const tasks = [
       () => Promise.resolve(order.push(1)),
@@ -17,7 +17,7 @@ describe('asyncUtils', () => {
     expect(order).toEqual([1, 2, 3]);
   });
 
-  it('respects concurrency limit smaller than task count', async () => {
+  it('should respect concurrency limit smaller than task count', async () => {
     let concurrent = 0;
     let maxConcurrent = 0;
     const tasks = Array.from({ length: 5 }, () => async () => {
@@ -31,7 +31,7 @@ describe('asyncUtils', () => {
     expect(maxConcurrent).toBeLessThanOrEqual(2);
   });
 
-  it('uses limit capped to task count when limit exceeds tasks', async () => {
+  it('should use limit capped to task count when limit exceeds tasks', async () => {
     const results = await runWithConcurrency([() => Promise.resolve('a')], 10);
     expect(results).toEqual(['a']);
   });

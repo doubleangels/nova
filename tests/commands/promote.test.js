@@ -877,7 +877,7 @@ describe('promote command', () => {
   });
 
   describe('internal helpers', () => {
-    it('parseSubmissionResponse uses object data without string-encoded branch', () => {
+    it('should parseSubmissionResponse uses object data without string-encoded branch', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: { id: 'obj-only', permalink: '/r/x/comments/obj-only' }
@@ -886,7 +886,7 @@ describe('promote command', () => {
       expect(result.postId).toBe('obj-only');
     });
 
-    it('parseSubmissionResponse handles string-encoded JSON', () => {
+    it('should parseSubmissionResponse handles string-encoded JSON', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({ name: 't3_abc', permalink: '/r/x/comments/abc' })
@@ -895,7 +895,7 @@ describe('promote command', () => {
       expect(result.postId).toBe('abc');
     });
 
-    it('parseSubmissionResponse uses name when id is missing in object data', () => {
+    it('should parseSubmissionResponse uses name when id is missing in object data', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: { name: 't3_objname', url: 'https://reddit.com/r/x/comments/objname' }
@@ -904,7 +904,7 @@ describe('promote command', () => {
       expect(result.postId).toBe('objname');
     });
 
-    it('parseSubmissionResponse uses name when id is missing in string JSON', () => {
+    it('should parseSubmissionResponse uses name when id is missing in string JSON', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({ name: 't3_onlyname', url: 'https://reddit.com/r/x/comments/onlyname' })
@@ -914,7 +914,7 @@ describe('promote command', () => {
       expect(result.permalink).toBe('/r/x/comments/onlyname');
     });
 
-    it('parseSubmissionResponse uses name only in string JSON without url', () => {
+    it('should parseSubmissionResponse uses name only in string JSON without url', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({ name: 't3_nameonly' })
@@ -923,7 +923,7 @@ describe('promote command', () => {
       expect(result).toBeNull();
     });
 
-    it('parseSubmissionResponse reads id from string JSON payload', () => {
+    it('should parseSubmissionResponse reads id from string JSON payload', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({ id: 'str-id', permalink: '/r/x/comments/str-id' })
@@ -932,7 +932,7 @@ describe('promote command', () => {
       expect(result.postId).toBe('str-id');
     });
 
-    it('parseSubmissionResponse uses id from string JSON without name field', () => {
+    it('should parseSubmissionResponse uses id from string JSON without name field', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({ id: 'only-id', permalink: '/r/x/comments/only-id' })
@@ -941,7 +941,7 @@ describe('promote command', () => {
       expect(result.postId).toBe('only-id');
     });
 
-    it('parseSubmissionResponse uses permalink from string JSON without url', () => {
+    it('should parseSubmissionResponse uses permalink from string JSON without url', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({ id: 'str-perm', permalink: '/r/x/comments/str-perm' })
@@ -950,7 +950,7 @@ describe('promote command', () => {
       expect(result).toEqual({ postId: 'str-perm', permalink: '/r/x/comments/str-perm' });
     });
 
-    it('postToSubreddit falls back when flair entries lack text fields', async () => {
+    it('should postToSubreddit falls back when flair entries lack text fields', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [
@@ -967,7 +967,7 @@ describe('promote command', () => {
       expect(result.success).toBe(true);
     });
 
-    it('postToSubreddit matches flair using flair_text when text is missing', async () => {
+    it('should postToSubreddit matches flair using flair_text when text is missing', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [{ flair_template_id: 'ft-gaming', flair_text: 'gaming community' }];
@@ -985,7 +985,7 @@ describe('promote command', () => {
       );
     });
 
-    it('postToSubreddit skips preferred flair lookup when subreddit has no preference', async () => {
+    it('should postToSubreddit skips preferred flair lookup when subreddit has no preference', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [{ id: 'flair-1', text: 'general' }];
@@ -1003,7 +1003,7 @@ describe('promote command', () => {
       );
     });
 
-    it('postToSubreddit matches preferred flair by flair_text when text is absent', async () => {
+    it('should postToSubreddit matches preferred flair by flair_text when text is absent', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [{ flair_template_id: 'ft-2', flair_text: 'gaming server promo' }];
@@ -1021,7 +1021,7 @@ describe('promote command', () => {
       );
     });
 
-    it('postToSubreddit falls back to first flair when preferred text is not found', async () => {
+    it('should postToSubreddit falls back to first flair when preferred text is not found', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [{ id: 'flair-x', text: 'unrelated' }];
@@ -1039,7 +1039,7 @@ describe('promote command', () => {
       );
     });
 
-    it('postToSubreddit falls back to first flair when preference does not match', async () => {
+    it('should postToSubreddit falls back to first flair when preference does not match', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [{ id: 'flair-1', text: 'unrelated flair' }];
@@ -1057,7 +1057,7 @@ describe('promote command', () => {
       );
     });
 
-    it('postToSubreddit uses first flair when subreddit has no preference entry', async () => {
+    it('should postToSubreddit uses first flair when subreddit has no preference entry', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
           return [{ flair_template_id: 'ft-unknown', text: 'misc' }];
@@ -1071,21 +1071,21 @@ describe('promote command', () => {
       expect(result.success).toBe(true);
     });
 
-    it('parseSubmissionResponse ignores invalid string-encoded JSON', () => {
+    it('should parseSubmissionResponse ignores invalid string-encoded JSON', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: { data: 'not-json' }
       });
       expect(result).toBeNull();
     });
 
-    it('parseSubmissionResponse returns null when string JSON has no id, name, or permalink', () => {
+    it('should parseSubmissionResponse returns null when string JSON has no id, name, or permalink', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: { data: JSON.stringify({ url: 'https://reddit.com' }) }
       });
       expect(result).toBeNull();
     });
 
-    it('parseSubmissionResponse uses full url when string JSON url has no path match', () => {
+    it('should parseSubmissionResponse uses full url when string JSON url has no path match', () => {
       const result = promoteCommand.__test__.parseSubmissionResponse({
         json: {
           data: JSON.stringify({
@@ -1097,12 +1097,12 @@ describe('promote command', () => {
       expect(result).toEqual({ postId: 'url-id', permalink: 'not-a-valid-url' });
     });
 
-    it('getRedditErrorMessage uses Reddit label when subreddit is falsy', () => {
+    it('should getRedditErrorMessage uses Reddit label when subreddit is falsy', () => {
       const msg = promoteCommand.__test__.getRedditErrorMessage(new Error('fail'), '');
       expect(msg).toContain('Reddit');
     });
 
-    it('postToSubreddit uses default empty body and truncates long text', async () => {
+    it('should postToSubreddit uses default empty body and truncates long text', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path, data) => {
         if (method === 'GET' && path.includes('/api/link_flair')) return [];
         if (method === 'POST' && path === '/api/submit') {
@@ -1116,7 +1116,7 @@ describe('promote command', () => {
       expect(result.success).toBe(true);
     });
 
-    it('does not export __test__ helpers outside test environment', () => {
+    it('should not export __test__ helpers outside test environment', () => {
       jest.isolateModules(() => {
         const previousEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
@@ -1126,7 +1126,7 @@ describe('promote command', () => {
       });
     });
 
-    it('postToSubreddit omits text when body is empty', async () => {
+    it('should postToSubreddit omits text when body is empty', async () => {
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path, data) => {
         if (method === 'GET' && path.includes('/api/link_flair')) return [];
         if (method === 'POST' && path === '/api/submit') {

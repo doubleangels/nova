@@ -91,7 +91,7 @@ describe('index bootstrap', () => {
     jest.restoreAllMocks();
   });
 
-  it('loads commands and events and logs in', () => {
+  it('should load commands and events and logs in', () => {
     loadIndex();
     expect(mockClient.login).toHaveBeenCalledWith('test-token');
     expect(mockClient.commands.get('okCmd')).toBeDefined();
@@ -100,14 +100,14 @@ describe('index bootstrap', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('Base embed color'));
   });
 
-  it('warns when base embed color is missing', () => {
+  it('should warn when base embed color is missing', () => {
     loadIndex({ baseEmbedColor: undefined });
     expect(mockLogger.warn).toHaveBeenCalledWith(
       'BASE_EMBED_COLOR not set. Embed colors will use Discord defaults.'
     );
   });
 
-  it('skips deploy when deployCommandsOnStart is false', () => {
+  it('should skip deploy when deployCommandsOnStart is false', () => {
     loadIndex({ settings: { deployCommandsOnStart: false } });
     expect(deployCommands).not.toHaveBeenCalled();
     expect(mockLogger.info).toHaveBeenCalledWith(
@@ -115,7 +115,7 @@ describe('index bootstrap', () => {
     );
   });
 
-  it('logs when deploy commands fails on startup', async () => {
+  it('should log when deploy commands fails on startup', async () => {
     jest.resetModules();
     mockLogger = require('./__mocks__/logger.mock')();
     deployCommands = jest.fn().mockRejectedValue(new Error('deploy failed'));
@@ -147,7 +147,7 @@ describe('index bootstrap', () => {
     );
   });
 
-  it('captures command load errors', () => {
+  it('should capture command load errors', () => {
     jest.resetModules();
     processOnHandlers = {};
     mockLogger = require('./__mocks__/logger.mock')();
@@ -184,7 +184,7 @@ describe('index bootstrap', () => {
     expect(captureError.mock.calls[0][1]).toMatchObject({ source: 'commandLoad' });
   });
 
-  it('registers once events with client.once', () => {
+  it('should register once events with client.once', () => {
     jest.resetModules();
     mockLogger = require('./__mocks__/logger.mock')();
     const client = { commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn() };
@@ -214,7 +214,7 @@ describe('index bootstrap', () => {
     expect(client.once).toHaveBeenCalledWith('ready', expect.any(Function));
   });
 
-  it('captures event load errors', () => {
+  it('should capture event load errors', () => {
     jest.resetModules();
     mockLogger = require('./__mocks__/logger.mock')();
     captureError = jest.fn();
@@ -242,7 +242,7 @@ describe('index bootstrap', () => {
     );
   });
 
-  it('wraps event execute errors with captureError', async () => {
+  it('should wrap event execute errors with captureError', async () => {
     jest.resetModules();
     const execute = jest.fn().mockRejectedValue(new Error('event failed'));
     mockLogger = require('./__mocks__/logger.mock')();
@@ -275,7 +275,7 @@ describe('index bootstrap', () => {
     expect(captureError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ source: 'eventExecute' }));
   });
 
-  it('handles uncaughtException and unhandledRejection', async () => {
+  it('should handle uncaughtException and unhandledRejection', async () => {
     loadIndex({ settings: { deployCommandsOnStart: false } });
     await processOnHandlers.uncaughtException(new Error('uncaught'));
     expect(captureError).toHaveBeenCalled();
@@ -286,14 +286,14 @@ describe('index bootstrap', () => {
     );
   });
 
-  it('wraps Error unhandledRejection without converting', async () => {
+  it('should wrap Error unhandledRejection without converting', async () => {
     loadIndex({ settings: { deployCommandsOnStart: false } });
     const err = new Error('rejection');
     await processOnHandlers.unhandledRejection(err);
     expect(captureError).toHaveBeenCalledWith(err, expect.objectContaining({ handler: 'unhandledRejection' }));
   });
 
-  it('gracefully shuts down on SIGINT', async () => {
+  it('should gracefully shuts down on SIGINT', async () => {
     loadIndex({ settings: { deployCommandsOnStart: false } });
     mockClient.cleanupInterval = setInterval(() => {}, 1000);
     await processOnHandlers.SIGINT();
@@ -303,7 +303,7 @@ describe('index bootstrap', () => {
     expect(process.exit).toHaveBeenCalledWith(0);
   });
 
-  it('logs errors during graceful shutdown', async () => {
+  it('should log errors during graceful shutdown', async () => {
     loadIndex({ settings: { deployCommandsOnStart: false } });
     mockClient.destroy.mockImplementation(() => {
       throw new Error('destroy fail');

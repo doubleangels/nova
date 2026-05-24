@@ -86,26 +86,26 @@ describe('invite command', () => {
     inviteCommand = require('../../commands/invite');
   });
 
-  it('serializes slash command subcommands', () => {
+  it('should serialize slash command subcommands', () => {
     const json = inviteCommand.data.toJSON();
     expect(json.options.length).toBeGreaterThanOrEqual(5);
   });
 
   describe('helpers', () => {
-    it('pushListFieldIfNonempty skips empty field values', () => {
+    it('should pushListFieldIfNonempty skips empty field values', () => {
       const fields = [{ name: 'Tags', value: 'existing', inline: false }];
       inviteCommand.__test__.pushListFieldIfNonempty(fields, { name: 'Tags', value: '', inline: false });
       expect(fields).toHaveLength(1);
     });
 
-    it('pushListFieldIfNonempty appends field when value is non-empty', () => {
+    it('should pushListFieldIfNonempty appends field when value is non-empty', () => {
       const fields = [];
       const field = { name: 'Tags', value: 'line', inline: false };
       inviteCommand.__test__.pushListFieldIfNonempty(fields, field);
       expect(fields).toEqual([field]);
     });
 
-    it('does not export __test__ helpers outside test environment', () => {
+    it('should not export __test__ helpers outside test environment', () => {
       jest.isolateModules(() => {
         const previousEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';

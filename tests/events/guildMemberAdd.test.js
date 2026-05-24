@@ -1347,11 +1347,11 @@ describe('guildMemberAdd event', () => {
       expect(inviteTagField.value).toBe('mytag');
     });
 
-    it('exports inviteCheckLocks helper in test environment', () => {
+    it('should export inviteCheckLocks helper in test environment', () => {
       expect(guildMemberAddEvent.__test__.inviteCheckLocks).toBeInstanceOf(Map);
     });
 
-    it('releaseInviteCheckLock skips resolve when resolveLock is not a function', () => {
+    it('should skip resolve when resolveLock is not a function in releaseInviteCheckLock', () => {
       const locks = guildMemberAddEvent.__test__.inviteCheckLocks;
       const guildId = 'guild-non-fn-lock';
       const stalePromise = Promise.resolve();
@@ -1363,7 +1363,7 @@ describe('guildMemberAdd event', () => {
       expect(locks.has(guildId)).toBe(false);
     });
 
-    it('does not export __test__ helpers outside test environment', () => {
+    it('should not export __test__ helpers outside test environment', () => {
       jest.isolateModules(() => {
         const previousEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';

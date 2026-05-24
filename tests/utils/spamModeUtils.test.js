@@ -1252,7 +1252,7 @@ describe('spamModeUtils', () => {
   });
 
   describe('internal coverage gaps', () => {
-    it('deleteOffendingMessages should handle channel fetch rejections', async () => {
+    it('should handle channel fetch rejections in deleteOffendingMessages', async () => {
       const guild = createMockGuild();
       guild.channels.cache = new Map();
       guild.channels.fetch.mockRejectedValue(new Error('channel fetch failed'));
@@ -1265,7 +1265,7 @@ describe('spamModeUtils', () => {
       expect(guild.channels.fetch).toHaveBeenCalled();
     });
 
-    it('deleteOffendingMessages should handle message fetch rejections', async () => {
+    it('should handle message fetch rejections in deleteOffendingMessages', async () => {
       const guild = createMockGuild();
       guild.channels.cache = new Map([
         [
@@ -1286,7 +1286,7 @@ describe('spamModeUtils', () => {
       expect(guild.channels.cache.get('ch-reject').messages.fetch).toHaveBeenCalled();
     });
 
-    it('deleteOffendingMessages should handle most recent channel fetch rejections', async () => {
+    it('should handle most recent channel fetch rejections in deleteOffendingMessages', async () => {
       const guild = createMockGuild();
       guild.channels.cache = new Map();
       guild.channels.fetch.mockRejectedValue(new Error('recent channel fetch failed'));
@@ -1690,7 +1690,7 @@ describe('spamModeUtils', () => {
       expect(guild.members.ban).toHaveBeenCalled();
     });
 
-    it('timeoutUser should handle member fetch rejection', async () => {
+    it('should handle member fetch rejection in timeoutUser', async () => {
       const guild = createMockGuild();
       const user = { id: TRACKED_USER_ID, tag: 'spammer#0001' };
       wireGuildMembers(guild, createBotMember(10), createMockMember({ id: TRACKED_USER_ID }));

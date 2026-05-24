@@ -23,12 +23,12 @@ describe('compareRoles command', () => {
   });
 
   describe('helpers', () => {
-    it('truncateEmbedField returns None for empty text', () => {
+    it('should truncateEmbedField returns None for empty text', () => {
       expect(compareRolesCommand.__test__.truncateEmbedField('')).toBe('None');
       expect(compareRolesCommand.__test__.truncateEmbedField(null)).toBe('None');
     });
 
-    it('does not export __test__ helpers outside test environment', () => {
+    it('should not export __test__ helpers outside test environment', () => {
       jest.isolateModules(() => {
         const previousEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';

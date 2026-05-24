@@ -21,12 +21,12 @@ describe('sqliteStore', () => {
     sqliteStore = require('../../utils/sqliteStore');
   });
 
-  it('exports data paths', () => {
+  it('should export data paths', () => {
     expect(sqliteStore.dataDir).toBeDefined();
     expect(sqliteStore.sqlitePath).toContain('database.sqlite');
   });
 
-  it('defaults dataDir to project data folder when DATA_DIR is unset', () => {
+  it('should default dataDir to project data folder when DATA_DIR is unset', () => {
     const savedDataDir = process.env.DATA_DIR;
     delete process.env.DATA_DIR;
 
@@ -43,14 +43,14 @@ describe('sqliteStore', () => {
     process.env.DATA_DIR = savedDataDir;
   });
 
-  it('returns singleton shared Keyv store', () => {
+  it('should return singleton shared Keyv store', () => {
     const store1 = sqliteStore.getSharedKeyvStore();
     const store2 = sqliteStore.getSharedKeyvStore();
     expect(store1).toBe(store2);
     expect(mockKeyvSqlite).toHaveBeenCalledTimes(1);
   });
 
-  it('returns singleton readonly db', () => {
+  it('should return singleton readonly db', () => {
     const db1 = sqliteStore.getReadonlyDb();
     const db2 = sqliteStore.getReadonlyDb();
     expect(db1).toBe(mockReadonlyDb);
@@ -58,7 +58,7 @@ describe('sqliteStore', () => {
     expect(mockReadonlyDb.pragma).toHaveBeenCalledWith('busy_timeout = 10000');
   });
 
-  it('returns singleton writable db', () => {
+  it('should return singleton writable db', () => {
     const db1 = sqliteStore.getWritableDb();
     const db2 = sqliteStore.getWritableDb();
     expect(db1).toBe(mockWritableDb);
@@ -66,14 +66,14 @@ describe('sqliteStore', () => {
     expect(mockWritableDb.pragma).toHaveBeenCalledWith('busy_timeout = 10000');
   });
 
-  it('closes only readonly connection when writable was never opened', () => {
+  it('should close only readonly connection when writable was never opened', () => {
     sqliteStore.getReadonlyDb();
     sqliteStore.closeDatabaseConnections();
     expect(mockReadonlyDb.close).toHaveBeenCalled();
     expect(mockWritableDb.close).not.toHaveBeenCalled();
   });
 
-  it('closes only writable connection when readonly was never opened', () => {
+  it('should close only writable connection when readonly was never opened', () => {
     jest.resetModules();
     jest.doMock('better-sqlite3', () =>
       jest.fn((path, opts) => (opts?.readonly ? mockReadonlyDb : mockWritableDb))
@@ -86,7 +86,7 @@ describe('sqliteStore', () => {
     expect(mockReadonlyDb.close).not.toHaveBeenCalled();
   });
 
-  it('closes database connections and clears singletons', () => {
+  it('should close database connections and clears singletons', () => {
     sqliteStore.getReadonlyDb();
     sqliteStore.getWritableDb();
     sqliteStore.closeDatabaseConnections();

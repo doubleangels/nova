@@ -26,12 +26,12 @@ describe('giveperms command unit tests', () => {
     givePermsCommand = require('../../commands/givePerms');
   });
 
-  it('serializes slash command options', () => {
+  it('should serialize slash command options', () => {
     const json = givePermsCommand.data.toJSON();
     expect(json.options).toHaveLength(3);
   });
 
-  it('validateInputs returns success for valid configuration', () => {
+  it('should validateInputs returns success for valid configuration', () => {
     const mockInteraction = {
       guild: {
         members: { me: { roles: { highest: { position: 10 } } } },
@@ -406,7 +406,7 @@ describe('giveperms command unit tests', () => {
     }));
   });
 
-  it('handleError uses default message for unknown errors', async () => {
+  it('should use default message for unknown errors in handleError', async () => {
     const interaction = {
       user: { id: 'admin-123' },
       editReply: jest.fn().mockResolvedValue(),
@@ -418,7 +418,7 @@ describe('giveperms command unit tests', () => {
     }));
   });
 
-  it('handleError maps USER_NOT_FOUND when editReply succeeds', async () => {
+  it('should map USER_NOT_FOUND when editReply succeeds in handleError', async () => {
     const interaction = {
       user: { id: 'admin-123' },
       guildId: 'guild-123',
@@ -434,7 +434,7 @@ describe('giveperms command unit tests', () => {
     expect(interaction.reply).not.toHaveBeenCalled();
   });
 
-  it('handleError maps INVALID_COLOR when editReply succeeds', async () => {
+  it('should map INVALID_COLOR when editReply succeeds in handleError', async () => {
     const interaction = {
       user: { id: 'admin-123' },
       guildId: 'guild-123',
@@ -449,7 +449,7 @@ describe('giveperms command unit tests', () => {
     }));
   });
 
-  it('handleError uses generic message for unmapped errors', async () => {
+  it('should use generic message for unmapped errors in handleError', async () => {
     const interaction = {
       user: { id: 'admin-123' },
       guildId: 'guild-123',
