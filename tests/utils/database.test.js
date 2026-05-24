@@ -151,8 +151,9 @@ describe('database utils', () => {
     });
 
     it('should handle keyv connection errors', () => {
-      const errHandler = mainKeyvInstance.on.mock.calls.find((c) => c[0] === 'error')?.[1];
-      expect(errHandler).toBeDefined();
+      const errorCall = mainKeyvInstance.on.mock.calls.find((c) => c[0] === 'error');
+      expect(errorCall).toBeDefined();
+      const errHandler = errorCall[1];
       errHandler(new Error('keyv err'));
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Keyv connection error occurred.',
@@ -161,8 +162,9 @@ describe('database utils', () => {
     });
 
     it('should handle invite keyv connection errors', () => {
-      const errHandler = inviteKeyvInstance.on.mock.calls.find((c) => c[0] === 'error')?.[1];
-      expect(errHandler).toBeDefined();
+      const errorCall = inviteKeyvInstance.on.mock.calls.find((c) => c[0] === 'error');
+      expect(errorCall).toBeDefined();
+      const errHandler = errorCall[1];
       errHandler(new Error('invite keyv err'));
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Invite Keyv connection error occurred.',

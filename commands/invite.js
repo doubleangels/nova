@@ -631,7 +631,6 @@ module.exports = {
 
     try {
       let inviteDeleted = false;
-      let inviteDeleteError = null;
 
       // Try to delete the invite from Discord if we have the code
       if (inviteTag.code) {
@@ -649,20 +648,17 @@ module.exports = {
               });
             } else {
               logger.debug("Bot doesn't have ManageGuild permission and didn't create invite, cannot delete.");
-              inviteDeleteError = "Bot lacks ManageGuild permission and didn't create this invite";
             }
           } else {
             logger.debug('Invite not found in server, may have already been deleted.', {
               inviteCode: inviteTag.code
             });
-            inviteDeleteError = "Invite not found in server";
           }
         } catch (deleteError) {
           logger.warn('Failed to delete invite from Discord.', {
             err: deleteError,
             inviteCode: inviteTag.code
           });
-          inviteDeleteError = deleteError.message;
         }
       }
 

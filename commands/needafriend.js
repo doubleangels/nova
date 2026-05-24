@@ -149,7 +149,6 @@ module.exports = {
 
       const parsed = parseCommentResponse(response);
       if (parsed) {
-        const commentUrl = `https://www.reddit.com${parsed.permalink}`;
         logger.info('Posted needafriend comment on weekly thread.', { post: post.name, commentPermalink: parsed.permalink });
         const embed = new EmbedBuilder()
           .setColor(0xFF4500)

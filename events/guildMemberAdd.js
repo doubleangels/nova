@@ -145,10 +145,10 @@ module.exports = {
       }
 
       let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
-      if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
+      if (Object.keys(codeToTagMap).length === 0) {
         codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
       }
-      if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
+      if (Object.keys(codeToTagMap).length === 0) {
         logger.debug('No tagged invites configured, skipping invite check.');
         return;
       }

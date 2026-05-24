@@ -169,7 +169,7 @@ module.exports = {
       const members = await guild.members.fetch();
 
       const moderatorMembers = [];
-      const standardMembers = [];
+      let standardCount = 0;
       const kickMembers = [];
       const banMembers = [];
 
@@ -191,7 +191,7 @@ module.exports = {
         if (isAdmin || hasModPerms) {
           moderatorMembers.push(member);
         } else {
-          standardMembers.push(member);
+          standardCount++;
         }
 
         if (canKick) {
@@ -278,7 +278,7 @@ module.exports = {
         userId: interaction.user.id,
         guildId: interaction.guildId,
         moderatorCount: moderatorMembers.length,
-        standardCount: standardMembers.length,
+        standardCount: standardCount,
         kickCount: kickMembers.length,
         banCount: banMembers.length
       });

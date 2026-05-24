@@ -108,62 +108,58 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleSetSubcommand(interaction) {
-    try {
-      const currentSettings = await this.getCurrentSettings();
-      
-      const isEnabled = interaction.options.getBoolean('enabled');
-      
-      let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
-      
-      if (timeLimit < 1 || timeLimit > 72) {
-        logger.warn("Invalid time limit specified.", {
-          userId: interaction.user.id,
-          guildId: interaction.guildId,
-          providedValue: timeLimit
-        });
-        
-        timeLimit = 2;
-      }
-      
-      logger.debug("Processing mutemode update.", {
-        currentEnabled: currentSettings.isEnabled,
-        newEnabled: isEnabled,
-        currentTimeLimit: currentSettings.timeLimit,
-        newTimeLimit: timeLimit,
-        guildId: interaction.guildId
-      });
-
-      await this.updateSettings(isEnabled, timeLimit);
-
-      if (isEnabled && !currentSettings.isEnabled) {
-        await rescheduleAllMuteKicks(interaction.client);
-        logger.info('Rescheduled mute kicks after enabling mute mode.', {
-          guildId: interaction.guildId
-        });
-      } else if (!isEnabled && currentSettings.isEnabled) {
-        clearAllScheduledMuteKicks();
-        logger.info('Cleared scheduled mute kicks after disabling mute mode.', {
-          guildId: interaction.guildId
-        });
-      }
-
-      const embed = this.formatUpdateMessage(
-        currentSettings.isEnabled, isEnabled,
-        currentSettings.timeLimit, timeLimit,
-        interaction
-      );
-
-      await interaction.editReply({ embeds: [embed] });
-      
-      logger.info("/mutemode command completed successfully.", {
+    const currentSettings = await this.getCurrentSettings();
+    
+    const isEnabled = interaction.options.getBoolean('enabled');
+    
+    let timeLimit = interaction.options.getInteger('time') ?? currentSettings.timeLimit;
+    
+    if (timeLimit < 1 || timeLimit > 72) {
+      logger.warn("Invalid time limit specified.", {
         userId: interaction.user.id,
         guildId: interaction.guildId,
-        isEnabled,
-        timeLimit
+        providedValue: timeLimit
       });
-    } catch (error) {
-      throw error;
+      
+      timeLimit = 2;
     }
+    
+    logger.debug("Processing mutemode update.", {
+      currentEnabled: currentSettings.isEnabled,
+      newEnabled: isEnabled,
+      currentTimeLimit: currentSettings.timeLimit,
+      newTimeLimit: timeLimit,
+      guildId: interaction.guildId
+    });
+
+    await this.updateSettings(isEnabled, timeLimit);
+
+    if (isEnabled && !currentSettings.isEnabled) {
+      await rescheduleAllMuteKicks(interaction.client);
+      logger.info('Rescheduled mute kicks after enabling mute mode.', {
+        guildId: interaction.guildId
+      });
+    } else if (!isEnabled && currentSettings.isEnabled) {
+      clearAllScheduledMuteKicks();
+      logger.info('Cleared scheduled mute kicks after disabling mute mode.', {
+        guildId: interaction.guildId
+      });
+    }
+
+    const embed = this.formatUpdateMessage(
+      currentSettings.isEnabled, isEnabled,
+      currentSettings.timeLimit, timeLimit,
+      interaction
+    );
+
+    await interaction.editReply({ embeds: [embed] });
+    
+    logger.info("/mutemode command completed successfully.", {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      isEnabled,
+      timeLimit
+    });
   },
   
   /**

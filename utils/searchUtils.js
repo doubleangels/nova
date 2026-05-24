@@ -1,6 +1,4 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const path = require('path');
-const logger = require('../logger')(path.basename(__filename));
 
 /**
  * Creates a paginated message with navigation buttons
