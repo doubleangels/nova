@@ -1,148 +1,207 @@
 # Nova Discord Bot
 
+[![DeepScan grade](https://deepscan.io/api/teams/29402/projects/31350/branches/1015182/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=29402&pid=31350&bid=1015182)
+
 <div align="center">
   <img src="logo.png" alt="Logo" width="250">
 </div>
 <br>
 
-A feature-rich Discord bot designed to bring advanced functionalities to your Discord server. With integrations for Google APIs, OMDB, PirateWeather, MAL, Reddit, and more, Nova offers a dynamic and customizable experience with robust administrative tools.
+Nova is a multi-purpose Discord bot built for the **Da Frens** server. It combines search and media integrations (Google, OMDB, PirateWeather, MyAnimeList, Reddit, Wikipedia, and more) with moderation, invite tracking, automated reminders, and role-management tools.
+
+**Tech stack:** Node.js 24, discord.js 14, Keyv with SQLite, pnpm, Doppler for secrets, Sentry for error monitoring.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- [Discord Bot Token](https://discord.com/developers/applications) - Create a new application and bot
+- [Discord Bot Token](https://discord.com/developers/applications) — create an application and bot
 - API keys for:
-  - [Google API](https://console.cloud.google.com/) - With Search Engine ID and Image Search Engine ID
-  - [OMDB API](http://www.omdbapi.com/apikey.aspx) - For movie information
-  - [PirateWeather](https://pirateweather.net/) - For weather forecasts
-  - [MyAnimeList](https://myanimelist.net/apiconfig) - Client ID for anime information
-  - [Reddit](https://www.reddit.com/prefs/apps) - Client ID and Client Secret
-- [Sentry](https://sentry.io/) - DSN for error monitoring (optional but recommended)
-- Docker and Docker Compose
+  - [Google API](https://console.cloud.google.com/) — Custom Search Engine ID and Image Search Engine ID
+  - [OMDB API](http://www.omdbapi.com/apikey.aspx) — movie and TV information
+  - [PirateWeather](https://pirateweather.net/) — weather forecasts
+  - [MyAnimeList](https://myanimelist.net/apiconfig) — anime information (Client ID)
+  - [Reddit](https://www.reddit.com/prefs/apps) — Client ID, Client Secret, username, and password
+- [Doppler](https://www.doppler.com/) service token (recommended for production) or a local `.env` file
+- **Docker deployment:** Docker and Docker Compose
+- **Local development:** Node.js 24 and [pnpm](https://pnpm.io/) 10.x
 
 ### Docker Deployment
 
-1. **Create a `docker-compose.yml` file:**
+The repository includes a production-ready [docker-compose.yml](docker-compose.yml). It runs the published image with a read-only root filesystem, drops all capabilities except those needed for the entrypoint, injects secrets via Doppler, and persists the SQLite database under `./data`.
 
-```yaml
-services:
-  nova:
-    image: ghcr.io/doubleangels/nova:latest
-    container_name: nova
-    restart: unless-stopped
-    cap_drop:
-      - ALL
-    cap_add:
-      - CHOWN
-      - SETGID
-    environment:
-      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
-    volumes:
-      - ./data:/app/data:rw,noexec,nosuid
-    tmpfs:
-      - /tmp
-```
-
-2. **Deploy the bot:**
+1. Set your Doppler service token:
 
 ```bash
-docker-compose up -d
+export DOPPLER_TOKEN=dp.st.xxxx
+```
+
+2. Start the bot:
+
+```bash
+docker compose up -d
+```
+
+The container image is published to `ghcr.io/doubleangels/nova:latest`. Data is stored at `./data` on the host (mounted to `/app/data` in the container).
+
+### Local Development
+
+1. Clone the repository and install dependencies:
+
+```bash
+pnpm install
+```
+
+2. Configure environment variables — either create a `.env` file (loaded by `dotenv`) or run through Doppler:
+
+```bash
+# With Doppler (matches production)
+pnpm start
+
+# Or run Node directly if env vars are already set
+node index.js
+```
+
+3. Slash commands are deployed automatically on startup when `deployCommandsOnStart` is enabled in [config.js](config.js). To deploy manually:
+
+```bash
+node deploy-commands.js
 ```
 
 ## ⚙️ Configuration
 
-### Environment Variables
+### Required Environment Variables
 
-The following environment variables can be set in your `docker-compose.yml`:
+The bot exits on startup if any of these are missing (see [config.js](config.js)):
 
-| Variable        | Description                                      | Required | Default | Example |
-| --------------- | ------------------------------------------------ | :------: | :-----: | ------- |
-| `DOPPLER_TOKEN` | Doppler service token (injects secrets as env vars) |    ✅    |    -    | -       |
+| Variable | Description |
+| -------- | ----------- |
+| `DISCORD_BOT_TOKEN` | Discord bot token |
+| `BOT_STATUS` | Bot activity status text |
+| `MEMBER_FREN_ROLE_ID` | Role ID for the Fren role |
+| `CUSTOM_ROLE_POSITIONING_ANCHOR_ID` | Role ID that custom roles are positioned above |
+| `GOOGLE_API_KEY` | Google API key for search and location features |
+| `IMAGE_SEARCH_ENGINE_ID` | Google Custom Search Engine ID for image search |
+| `MAL_CLIENT_ID` | MyAnimeList API client ID |
+| `RETURNING_MEMBER_ROLE_ID` | Role ID for returning members |
+| `PERMISSION_BENCHMARK_ROLE_ID` | Role ID used as a permission comparison benchmark |
+| `NEW_MEMBER_ROLE_ID` | Role ID for the Noobies role |
+| `OMDB_API_KEY` | OMDb API key |
+| `PIRATEWEATHER_API_KEY` | PirateWeather API key |
+| `REDDIT_CLIENT_ID` | Reddit API client ID |
+| `REDDIT_CLIENT_SECRET` | Reddit API client secret |
+| `REDDIT_PASSWORD` | Reddit account password |
+| `REDDIT_USERNAME` | Reddit account username |
+| `SEARCH_ENGINE_ID` | Google Custom Search Engine ID for web search |
+| `SERVER_INVITE_URL` | Server invite URL used in kick messages |
 
-**Note:** Secrets and API keys are injected at runtime by [Doppler](https://www.doppler.com/). Pass `DOPPLER_TOKEN` when running the container so the bot receives the following (configure them in your Doppler project):
-- `BASE_EMBED_COLOR`
-- `BOT_STATUS`
-- `BOT_STATUS_TYPE`
-- `DISCORD_BOT_TOKEN`
-- `DISCORD_CLIENT_ID` (optional; defaults to the bot application ID used for slash command deploy)
-- `MEMBER_FREN_ROLE_ID`
-- `CUSTOM_ROLE_POSITIONING_ANCHOR_ID`
-- `RETURNING_MEMBER_ROLE_ID`
-- `PERMISSION_BENCHMARK_ROLE_ID`
-- `NEW_MEMBER_ROLE_ID`
-- `DEEPL_API_KEY` (optional; enables flag-emoji translation reactions)
-- `GOOGLE_API_KEY`
-- `GUILD_NAME`
-- `IMAGE_SEARCH_ENGINE_ID`
-- `LOG_LEVEL`
-- `MAL_CLIENT_ID`
-- `OMDB_API_KEY`
-- `PIRATEWEATHER_API_KEY`
-- `REDDIT_CLIENT_ID`
-- `REDDIT_CLIENT_SECRET`
-- `REDDIT_PASSWORD`
-- `REDDIT_USERNAME`
-- `SEARCH_ENGINE_ID`
-- `SENTRY_DSN`
-- `SERVER_INVITE_URL`
+### Optional Environment Variables
 
-Ensure your Doppler project contains these config values. Pass `DOPPLER_TOKEN` when running the container (e.g. via `doppler run -- docker compose up` or by setting `DOPPLER_TOKEN` in the service environment).
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `DOPPLER_TOKEN` | Doppler service token (Docker / `pnpm start`) | — |
+| `BASE_EMBED_COLOR` | Default embed color (hex, e.g. `#CD41FF`) | `#999999` |
+| `BOT_STATUS_TYPE` | Activity type (`playing`, `watching`, `listening`, etc.) | `watching` |
+| `DISCORD_CLIENT_ID` | Application ID for slash command deploy | Bot application ID |
+| `DEEPL_API_KEY` | DeepL API key for flag-emoji translation reactions | — |
+| `GUILD_NAME` | Guild display name | `Da Frens` |
+| `LOG_LEVEL` | Log verbosity (`error`, `warn`, `info`, `debug`) | `info` |
+| `SENTRY_DSN` | Sentry DSN for error monitoring | — |
+| `SENTRY_TRACES_SAMPLE_RATE` | Sentry performance trace sample rate | `0.1` (production) / `1.0` (dev) |
+| `SENTRY_ENABLE_LOGS` | Enable Sentry log forwarding (`true` / `false`) | `false` |
+| `NODE_ENV` | Runtime environment (`production`, `development`, etc.) | `production` |
+| `NODE_OPTIONS` | Node.js runtime flags (e.g. memory limit) | — |
+
+### Doppler vs `.env`
+
+In production, secrets are injected at runtime by Doppler (`DOPPLER_TOKEN` in [docker-compose.yml](docker-compose.yml) or `doppler run --` via `pnpm start`). For local development you can use either Doppler or a `.env` file in the project root.
+
+### Bot Settings
+
+Behavior flags in [config.js](config.js) `settings`:
+
+| Setting | Description | Default |
+| ------- | ----------- | ------- |
+| `deployCommandsOnStart` | Deploy slash commands when the bot starts | `true` |
+| `rescheduleReminderOnStart` | Reschedule Disboard/Reddit reminders on startup | `true` |
+| `rescheduleAllMuteKicksOnStart` | Reschedule mute-mode kick timers on startup | `true` |
+| `disabledCommands` | Command names to skip during deploy (e.g. `['promote']`) | `[]` |
 
 ## 🎯 Features
 
 ### Multi-Platform Integration
 
-- **Google Services**: Web search and image search capabilities
-- **OMDB**: Movie and TV show information
-- **PirateWeather**: Weather forecasts and conditions
-- **MyAnimeList**: Anime and manga information
-- **Reddit**: Server promotion and content sharing across multiple subreddits
-- **Sentry**: Automatic error monitoring and alerting across all bot events and commands
-- **Wikipedia**: Article summaries and information
+- **Google Services:** Web search, image search, location/timezone lookup, and Google Books
+- **OMDB:** Movie and TV show information
+- **PirateWeather:** Weather forecasts and current conditions
+- **MyAnimeList:** Anime information
+- **Reddit:** Server promotion (`/promote`) and weekly r/needafriend comments (`/needafriend`)
+- **DeepL:** Flag-emoji translation reactions (optional)
+- **Sentry:** Error monitoring across events and commands
+- **Wikipedia:** Article summaries
 
 ### Administrative Tools
 
-- **Invite Tracking**: Monitor and tag invite codes with custom names, receive notifications when members join via tagged invites (only tagged invites are tracked)
-- **Role Management**: Assign custom roles with automatic permission management
-- **Reminder System**: Automated reminders for Disboard bumps and Reddit promotions (r/findaserver and r/needafriend)
-- **Mute Mode**: Automatically kick inactive users
-- **Troll Mode**: Kick new accounts that don't meet age requirements
-- **Spam Mode**: Enhanced spam detection and moderation
-- **Noobies Management**: Automatically assigned to new members without the primary role and automatically removed once they participate by sending 100 messages.
+- **Invite Tracking:** Tag invite codes, receive join notifications (only tagged invites are tracked)
+- **Permission Audit:** List members with admin, moderator, kick, or ban permissions
+- **Role Management:** Create, assign, rename, recolor, and compare roles
+- **Reminder System:** Automated Disboard bump and Reddit promotion reminders
+- **Mute Mode:** Kick users who remain silent after joining
+- **Troll Mode:** Kick new accounts below a minimum age threshold
+- **Spam Mode:** Detect and warn on duplicate messages
+- **No-Text Channels:** Restrict channels to GIFs and stickers only
+- **Noobies Management:** Auto-assign the Noobies role to new members without the Fren role; remove it after 100 messages
 
-### Information & Entertainment
+### Information and Entertainment
 
-- **Search Commands**: Google web search and image search
-- **Media Information**: Movies (IMDB/OMDB), anime (MAL), books
-- **Weather**: Current conditions and forecasts
-- **Dictionary & Urban Dictionary**: Word definitions and slang
-- **Random Content**: Cat and dog images, coin flips, country information
-- **YouTube**: Video information and links
+- Search, media, weather, dictionary, and random-content commands (see Commands below)
+
+## 🤖 Automatic Behaviors
+
+These run without a slash command:
+
+- **Flag-emoji translation:** React to a message with a supported country-flag emoji to translate its text via DeepL ([events/messageReactionAdd.js](events/messageReactionAdd.js)). Requires `DEEPL_API_KEY`.
+- **Member join handling:** On join, the bot may assign returning-member or Noobies roles, schedule mute-mode kicks, and check tagged invites for notification ([events/guildMemberAdd.js](events/guildMemberAdd.js)).
+- **Message moderation:** Spam-mode duplicate detection and no-text channel enforcement ([events/messageCreate.js](events/messageCreate.js)).
+- **Reminders:** Disboard bumps (2-hour cycle), r/findaserver posts (24-hour cooldown), and r/needafriend comments (7-day cooldown) are scheduled automatically when configured via `/reminder setup`.
+- **Former member tracking:** Users who leave are recorded so returning members can be identified on re-join.
 
 ## 🔧 Commands
 
 ### Administrative Commands
 
+#### `/audit` (Administrator Only)
+
+Audit which members hold moderator-level permissions. Results are paginated when large.
+
+**Subcommands:**
+
+- **`admin`**: Members with the Administrator permission
+- **`moderator`**: Members with moderator permissions but not Administrator
+- **`kick`**: Members who can kick others
+- **`ban`**: Members who can ban others
+
+Each subcommand accepts an optional `include-bots` boolean (default: false).
+
 #### `/invite` (Administrator Only)
 
-Manage invite codes with custom tags and track member joins. Receive notifications when members join via tagged invites. **Note:** Only tagged invites are tracked and will trigger notifications.
+Manage invite codes with custom tags and track member joins. **Only tagged invites are tracked** and trigger notifications.
 
 **Subcommands:**
 
 - **`tag`**: Tag an existing invite code with a custom name
-  - `code` (required): The invite code (can be just the code or full URL like `discord.gg/xxxxx`)
-  - `name` (required): The custom name/tag to associate with this invite code
-- **`setup`**: Set up the channel for invite notifications
-  - `channel` (required): The text channel where invite notifications will be sent
-- **`list`**: List all tagged invite codes with their associated names and URLs
-- **`create`**: Create a new Discord invite and automatically tag it
-  - `name` (required): The name/tag for this invite
-  - `channel` (optional): The channel to create the invite for (defaults to first available text channel)
-  - `max_uses` (optional): Maximum number of uses (0 = unlimited, max: 100)
-  - `max_age` (optional): Maximum age in seconds (0 = never expires, max: 604800)
-- **`remove`**: Remove a tagged invite code (with autocomplete for tag names)
-  - `name` (required): The name/tag of the invite to remove
+  - `code` (required): Invite code or full URL (`discord.gg/xxxxx`)
+  - `name` (required): Custom tag name
+- **`setup`**: Set the invite notification channel
+  - `channel` (required): Text channel for notifications
+- **`list`**: List all tagged invites with names and URLs
+- **`create`**: Create a new invite and tag it automatically
+  - `name` (required): Tag name
+  - `channel` (optional): Target channel (defaults to first available text channel)
+  - `max_uses` (optional): Max uses (0 = unlimited, max 100)
+  - `max_age` (optional): Max age in seconds (0 = never expires, max 604800)
+- **`remove`**: Remove a tagged invite (autocomplete on tag names)
+  - `name` (required): Tag to remove
 
 #### `/reminder` (Administrator Only)
 
@@ -150,302 +209,326 @@ Configure and manage server reminders for Disboard and Reddit promotions.
 
 **Subcommands:**
 
-- **`setup`**: Set up the reminder channel and role
-  - `channel` (required): The text channel where reminders will be sent
-  - `role` (required): The role to ping when reminders are sent
-- **`status`**: Check the current reminder configuration and status
-  - Shows next scheduled bump time for Disboard
-  - Shows next scheduled promotion time for Reddit (r/findaserver)
-  - Shows next scheduled comment time for r/needafriend
+- **`setup`**: Set the reminder channel and ping role
+  - `channel` (required): Reminder text channel
+  - `role` (required): Role to ping
+- **`status`**: Show current configuration and next scheduled times (Disboard, r/findaserver, r/needafriend)
 
 #### `/promote` (Administrator Only)
 
-Post a server advertisement link post to Reddit (r/findaserver) with automatic cooldown management. The post includes a full server description as the body text. The bot enforces a 24-hour cooldown between promotions and schedules a reminder when the cooldown expires.
-
-**Requirements:** Reddit API credentials must be configured.
+Post a server advertisement to r/findaserver. Enforces a 24-hour cooldown and schedules a reminder when the cooldown expires. Requires Reddit API credentials.
 
 #### `/needafriend` (Administrator Only)
 
-Comment the server advertisement on the weekly "Weekly Discord Server Advertisement Thread" pinned post in r/needafriend. The bot searches the hot and new listings to locate the current week's thread, then posts the comment. A 7-day cooldown is enforced between uses, with a reminder scheduled for the next available time.
+Comment the server advertisement on the current weekly r/needafriend thread. Enforces a 7-day cooldown. Requires Reddit API credentials.
 
-**Requirements:** Reddit API credentials must be configured.
+#### `/giveperms` (Manage Roles)
 
-#### `/giveperms` (Manage Roles Permission)
-
-Create and assign custom roles to users with automatic permission management. Creates a new role with the specified name and color, positions it above a reference role, and assigns it along with a "fren" role.
+Create and assign a custom role with automatic permission management. Positions the role above the anchor role and assigns the Fren role.
 
 **Parameters:**
 
-- `role` (required): The name for the new role (max 100 characters)
-- `color` (required): The color in hex format (e.g., `#RRGGBB` or `RRGGBB`)
-- `user` (required): The user to receive the permissions
+- `role` (required): New role name (max 100 characters)
+- `color` (required): Hex color (`#RRGGBB` or `RRGGBB`)
+- `user` (required): User to receive the role
 
-**Requirements:**
-
-- `CUSTOM_ROLE_POSITIONING_ANCHOR_ID` must be configured in Doppler (or env)
-- `MEMBER_FREN_ROLE_ID` must be configured in Doppler (or env)
-- `RETURNING_MEMBER_ROLE_ID` and `PERMISSION_BENCHMARK_ROLE_ID` (for `/newuser`) must be configured in Doppler (or env)
-
-#### `/giverole` (Manage Roles Permission)
+#### `/giverole` (Manage Roles)
 
 Assign an existing role to a user.
 
-**Parameters:**
+**Parameters:** `role` (required), `user` (required)
 
-- `role` (required): The role to assign
-- `user` (required): The user to give the role to
-
-#### `/takerole` (Manage Roles Permission)
+#### `/takerole` (Manage Roles)
 
 Remove a role from a user.
 
-**Parameters:**
+**Parameters:** `role` (required), `user` (required), `reason` (optional)
 
-- `role` (required): The role to remove
-- `user` (required): The user to remove the role from
-- `reason` (optional): Reason for removing the role
+#### `/changecolor` (Manage Roles)
 
-#### `/changecolor` (Manage Roles Permission)
+Change a role's color.
 
-Change the color of a role.
+**Parameters:** `role` (required), `color` (required, hex)
 
-**Parameters:**
+#### `/changerolename` (Manage Roles)
 
-- `role` (required): The role to change the color of
-- `color` (required): The new color in hex format (e.g., `#RRGGBB` or `RRGGBB`)
+Rename a role.
 
-#### `/changenickname` (Manage Nicknames Permission)
+**Parameters:** `role` (required), `name` (required, 1–100 characters)
 
-Change a user's nickname in the server.
+#### `/changenickname` (Manage Nicknames)
 
-**Parameters:**
+Change a user's nickname.
 
-- `user` (required): The user whose nickname to change
-- `nickname` (optional): The new nickname (1-32 characters). If omitted, resets the nickname.
+**Parameters:** `user` (required), `nickname` (optional, 1–32 characters; omit to reset)
 
-#### `/notext` (Manage Channels Permission)
+#### `/compareroles` (Administrator Only)
 
-Configure a channel to only allow GIFs and stickers, preventing text messages.
+Compare two roles and show which permissions they share.
+
+**Parameters:** `base-role` (required), `comparison-role` (required)
+
+#### `/notext` (Manage Channels)
+
+Configure a channel to allow only GIFs and stickers.
 
 **Subcommands:**
 
-- **`set`**: Set a channel to only allow GIFs and stickers
-  - `channel` (required): The text channel to configure
-- **`remove`**: Remove no-text configuration from a channel
-  - `channel` (required): The text channel to remove the configuration from
+- **`set`**: Enable no-text mode on a channel (`channel` required)
+- **`remove`**: Disable no-text mode on a channel (`channel` required)
 
 #### `/mutemode` (Administrator Only)
 
-Toggle automatic kicking of users who don't send a message within a time limit.
+Kick users who do not send a message within a configured time after joining.
 
 **Subcommands:**
 
-- **`set`**: Configure mute mode settings
-  - `enabled` (required): Enable or disable mute mode
-  - `time` (optional): Hours a user must be silent before being kicked (1-72, default: 2)
-- **`status`**: Check the current mute mode status and settings
+- **`set`**: `enabled` (required), `time` (optional, 1–72 hours, default 2)
+- **`status`**: Show current settings
 
-**Note:** Bot accounts are exempt from mute mode tracking.
+Bot accounts are exempt.
 
 #### `/spammode` (Administrator Only)
 
-Manage server-wide spam detection settings. Automatically deletes duplicate messages and posts warnings.
+Detect duplicate messages and post warnings.
 
 **Subcommands:**
 
-- **`set`**: Configure spam mode settings
-  - `enabled` (required): Enable or disable spam mode
-  - `threshold` (optional): Minimum number of duplicate messages to trigger spam mode (2-10, default: 3)
-  - `window` (optional): Hours to track duplicate messages (1-72, default: 4)
-  - `channel` (optional): Channel to send spam warnings to
-- **`status`**: Check the current spam mode status and settings
+- **`set`**: `enabled` (required), `threshold` (optional, 2–10, default 3), `window` (optional, 1–72 hours, default 4), `channel` (optional warning channel)
+- **`status`**: Show current settings
 
-**Note:** Bot accounts are exempt from spam mode tracking.
+Bot accounts are exempt.
 
 #### `/trollmode` (Administrator Only)
 
-Manage automatic kicking of new members based on account age requirements.
+Kick new members whose accounts are younger than a minimum age.
 
 **Subcommands:**
 
-- **`set`**: Configure troll mode settings
-  - `enabled` (required): Enable or disable troll mode
-  - `age` (optional): Minimum account age in days required to join (1-365, default: 30)
-- **`status`**: Check the current troll mode status and settings
+- **`set`**: `enabled` (required), `age` (optional, 1–365 days, default 30)
+- **`status`**: Show current settings
 
-**Note:** Bot accounts are exempt from troll mode tracking.
+Bot accounts are exempt.
 
 #### `/fix` (Administrator Only)
 
-Fix reminder data in the database for various reminder types. Use this if a reminder gets stuck or shows the wrong time.
+Repair stuck reminder timers in the database.
 
 **Subcommands:**
 
-- **`disboard`**: Fix Disboard bump reminder data (reschedules for 2 hours from now)
-- **`reddit`**: Fix Reddit promotion reminder data (reschedules for 24 hours from now)
-- **`needafriend`**: Fix r/needafriend comment reminder data (reschedules for 7 days from now)
+- **`disboard`**: Reschedule Disboard bump for 2 hours from now
+- **`reddit`**: Reschedule r/findaserver promotion for 24 hours from now
+- **`needafriend`**: Reschedule r/needafriend comment for 7 days from now
 
-**Note:** Reminder configuration must be set up using `/reminder setup` before using this command.
+Requires `/reminder setup` to have been run first.
 
 ### Information Commands
 
 #### `/google`
 
-Search the web using Google Custom Search API.
+Search the web via Google Custom Search API.
 
-**Parameters:**
+**Parameters:** `query` (required), `results` (optional, 1–10, default 5)
 
-- `query` (required): The search query
-- `results` (optional): Number of results to return (1-10, default: 5)
-
-**Features:** Paginated results with summaries and links.
+Paginated results with summaries and links.
 
 #### `/googleimages`
 
-Search for images using Google Custom Search API.
+Search for images via Google Custom Search API.
 
-**Parameters:**
+**Parameters:** `query` (required), `results` (optional, 1–10, default 5)
 
-- `query` (required): The image search query
-- `results` (optional): Number of results to return (1-10, default: 5)
-
-**Features:** Paginated results with image previews and source links.
+Paginated results with previews and source links.
 
 #### `/imdb`
 
-Search for movies and TV shows using IMDb data via OMDb API.
+Search movies and TV shows via OMDb.
 
-**Subcommands:**
+**Subcommands:** `movie` (`query` required), `tv` (`query` required)
 
-- **`movie`**: Search for a movie
-  - `title` (required): The movie title to search for
-- **`tv`**: Search for a TV show
-  - `title` (required): The TV show title to search for
-
-**Information displayed:** Plot, year, rating, genre, director, actors, awards, and IMDb link.
+Displays plot, year, rating, genre, director, actors, awards, and IMDb link.
 
 #### `/anime`
 
-Search for anime information from MyAnimeList.
+Search anime on MyAnimeList.
 
-**Parameters:**
+**Parameters:** `query` (required)
 
-- `title` (required): The anime title to search for
-
-**Information displayed:** Synopsis, genres, MAL rating, release date, and link to MyAnimeList page.
+Displays synopsis, genres, rating, release date, and MAL link.
 
 #### `/weather`
 
-Get weather information for any location using PirateWeather API.
+Get weather for any location via PirateWeather.
 
-**Parameters:**
+**Parameters:** `place` (required), `privacy_mode` (optional, default on), `units` (optional, `metric` or `imperial`), `forecast_days` (optional, 1–7, default 3)
 
-- `place` (required): The location name (e.g., "New York", "Tokyo", "London")
-- `privacy_mode` (optional): When enabled (default), hides the requested location in the response
-- `units` (optional): Unit system - `metric` (°C, m/s) or `imperial` (°F, mph), default: `metric`
-- `forecast_days` (optional): Number of days for forecast (1-7, default: 3)
-
-**Information displayed:** Current conditions, temperature, humidity, wind speed, UV index, visibility, pressure, dew point, cloud cover, precipitation, and multi-day forecast.
+Displays current conditions, forecast, humidity, wind, UV, visibility, pressure, and more.
 
 #### `/wikipedia`
 
-Fetch and display Wikipedia article summaries.
+Fetch a Wikipedia article summary.
 
-**Parameters:**
-
-- `query` (required): The search query
-
-**Features:** Searches Wikipedia and displays the first result with a summary and link to the full article.
+**Parameters:** `query` (required)
 
 #### `/dictionary`
 
-Get word definitions from a free dictionary API.
+Look up word definitions.
 
-**Parameters:**
-
-- `word` (required): The word to look up
-
-**Information displayed:** Definition, phonetic pronunciation, and part of speech.
+**Parameters:** `word` (required)
 
 #### `/urban`
 
-Get definitions from Urban Dictionary.
+Look up slang definitions on Urban Dictionary.
 
-**Parameters:**
-
-- `term` (required): The term to search for
-
-**Information displayed:** Definition, example usage, author, and thumbs up/down counts.
+**Parameters:** `query` (required)
 
 #### `/youtube`
 
-Search for YouTube content including videos, channels, and playlists.
+Search YouTube videos, channels, or playlists.
 
-**Parameters:**
-
-- `query` (required): The search query
-- `type` (optional): Content type - `video`, `channel`, or `playlist` (default: `video`)
-
-**Features:** Paginated results with rich embeds showing thumbnails, statistics, and links.
+**Parameters:** `query` (required), `type` (optional: `video`, `channel`, `playlist`, default `video`)
 
 #### `/book`
 
-Search for books using Google Books API.
+Search books via Google Books API.
 
 **Subcommands:**
 
-- **`search`**: Search for books by title, author, or general query
-  - `query` (required): The search query (title, author, etc.)
-- **`isbn`**: Search for a book by ISBN
-  - `isbn` (required): The ISBN (10 or 13 digits)
+- **`search`**: `query` (required)
+- **`isbn`**: `isbn` (required, 10 or 13 digits)
 
-**Information displayed:** Title, authors, description, publication date, page count, language, publisher, rating, categories, ISBN numbers, and links to preview/info pages.
-
-**Features:** Paginated results with book covers and detailed metadata.
+Paginated results with covers and metadata.
 
 #### `/country`
 
-Get information about any country using the REST Countries API.
+Get country information from the REST Countries API.
 
-**Parameters:**
+**Parameters:** `name` (required)
 
-- `name` (required): The country name (e.g., "France", "Japan", "Brazil")
+#### `/joindate`
 
-**Information displayed:** Official name, flag, region, subregion, capital, population, currencies, area, and Google Maps link.
+Show when a user joined the server.
+
+**Parameters:** `user` (required)
+
+#### `/newuser`
+
+View a user's avatar, username, display name, account creation date, permissions compared to the benchmark role, and returning-member status.
+
+**Parameters:** `user` (required)
 
 ### Utility Commands
 
 #### `/coinflip`
 
-Flip a coin and get a random result of heads or tails.
+Flip a coin (heads or tails).
 
 #### `/cat`
 
-Fetch and display a random cat image from The Cat API.
+Fetch a random cat image from The Cat API.
 
 #### `/dog`
 
-Fetch and display a random dog image from Dog CEO API.
+Fetch a random dog image from Dog CEO API.
 
-**Parameters:**
-
-- `breed` (optional): Specific breed to fetch (e.g., Golden Retriever, Shiba). If omitted, a random breed is used.
+**Parameters:** `breed` (optional)
 
 #### `/timedifference`
 
-Calculate the time difference between two locations.
+Calculate the time difference between two locations (requires Google API key).
 
-**Parameters:**
+**Parameters:** `first-place` (required), `second-place` (required)
 
-- `place1` (required): The first location (e.g., "Tokyo", "London", "New York")
-- `place2` (required): The second location
+### Context Menu Commands
 
-**Information displayed:** Time zones for both locations, UTC offsets, and the time difference between them.
+Right-click a message or user in Discord to use these:
 
-**Requirements:** Google API key must be configured.
+#### `Quote` (Message)
 
-#### `/mock` (Context Menu Command)
+Reply with an embed quoting the selected message's text (max 4096 characters).
 
-Convert a message to mocking text format (alternating case by character, e.g., `lIkE tHiS`) and append a mocking emoji. Right-click on a message and select "Mock" from the context menu.
+#### `Mock` (Message)
 
-**Note:** Works on messages with text content. Messages longer than 2000 characters cannot be converted.
+Convert message text to alternating case (e.g. `lIkE tHiS`) and append a mocking emoji. Messages over 2000 characters cannot be converted.
+
+#### `View Join Date` (User)
+
+Show the selected user's server join date (ephemeral reply).
+
+#### `View User Information` (User)
+
+Show permissions, roles, and returning-member status for the selected user (ephemeral reply).
+
+## 🗄️ Database Tools
+
+Nova stores configuration and state in a SQLite Keyv database at `./data` (or `/app/data` in Docker). CLI scripts operate on the same database:
+
+| Script | Command | Description |
+| ------ | ------- | ----------- |
+| Set value | `pnpm set-value <key> <value>` | Create or update a key |
+| Remove value | `pnpm remove-value <key>` | Delete a key |
+| List values | `pnpm list-values [<key>]` | List all keys or read one key |
+| Prune database | `pnpm prune-db [--commit]` | Remove obsolete keys (dry-run by default) |
+
+**Key format:** `[namespace:][section:]key`
+
+- **Namespaces:** `main` (default), `invites`
+- **Sections:** `config`, `tags`, `invite_usage`, `invite_code_to_tag_map`, `former_member`, etc.
+
+**Examples:**
+
+```bash
+pnpm set-value reminder_channel "123456789012345678"
+pnpm set-value main:config:reminder_channel "123456789012345678"
+pnpm set-value invites:tags:disboard '{"code":"abc123","name":"Disboard"}'
+pnpm list-values
+pnpm list-values former_member:123456789
+pnpm prune-db              # dry run — shows keys that would be deleted
+pnpm prune-db --commit       # actually delete obsolete keys
+```
+
+## 🧪 Development and Testing
+
+### Scripts
+
+| Command | Description |
+| ------- | ----------- |
+| `pnpm start` | Run the bot via Doppler |
+| `pnpm test` | Run Jest with 100% coverage threshold |
+| `pnpm test:watch` | Run tests in watch mode |
+| `pnpm test:debug` | Run tests with Node inspector |
+| `pnpm update` | Check for and apply dependency updates |
+
+Tests live under [tests/](tests/) with unit tests for commands, events, and utilities, plus integration tests for invite tracking, spam detection, reminders, and pagination.
+
+Coverage is enforced at **100%** for statements, branches, functions, and lines ([jest.config.js](jest.config.js)).
+
+### CI
+
+On push/PR to `main`, [.github/workflows/build-docker.yml](.github/workflows/build-docker.yml) runs:
+
+1. `pnpm install` and `pnpm test`
+2. Dependency audit (`pnpm audit --audit-level=high`)
+3. Trivy filesystem and container image scans
+4. Docker image build (pushed to GHCR on merge to `main`)
+
+## 📁 Project Layout
+
+```
+nova/
+├── commands/          # Slash and context menu command modules
+├── events/            # Discord event handlers (ready, messageCreate, guildMemberAdd, etc.)
+├── utils/             # Shared utilities (database, reminders, spam/mute/troll modes, search pagination)
+├── tests/             # Jest unit and integration tests
+├── scripts/           # Maintenance scripts (e.g. audit-log-messages)
+├── config.js          # Bot configuration and required env validation
+├── index.js           # Bot entry point
+├── deploy-commands.js # Manual slash command deployment
+├── instrument.js      # Sentry initialization
+├── set-value.js       # Database CLI — set a key
+├── remove-value.js    # Database CLI — remove a key
+├── list-values.js     # Database CLI — list/read keys
+├── prune-db.js        # Database CLI — prune obsolete keys
+├── Dockerfile         # Multi-stage production image (Node 24 Alpine + Doppler)
+└── docker-compose.yml # Production compose file
+```
