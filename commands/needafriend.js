@@ -1,5 +1,5 @@
 const path = require('path');
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');

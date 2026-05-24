@@ -1,4 +1,4 @@
-const { Collection, PermissionFlagsBits } = require('discord.js');
+const { Collection } = require('discord.js');
 
 function createMockInteraction(overrides = {}) {
   return {

@@ -21,8 +21,7 @@ const { parseKey, getKeyvForNamespace, parseValue, withKeyv, formatSectionName }
 
 async function setValue(keyString, value) {
   try {
-    const { getDatabasePathInfo, checkDatabaseAccess } = require('./utils/dbScriptUtils');
-    const pathInfo = getDatabasePathInfo();
+    const { checkDatabaseAccess } = require('./utils/dbScriptUtils');
     
     // Check database access permissions first
     const accessCheck = checkDatabaseAccess();

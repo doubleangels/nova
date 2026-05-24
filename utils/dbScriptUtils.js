@@ -4,7 +4,6 @@
 
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
-const path = require('path');
 const fs = require('fs');
 const { getSharedKeyvStore, sqlitePath, dataDir } = require('./sqliteStore');
 

@@ -87,20 +87,16 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleStatusSubcommand(interaction) {
-    try {
-      const currentSettings = await this.getCurrentSettings();
-      
-      const embed = this.formatStatusMessage(currentSettings, interaction);
-      await interaction.editReply({ embeds: [embed] });
-      
-      logger.info("/mutemode command completed successfully.", {
-        userId: interaction.user.id,
-        guildId: interaction.guildId,
-        settings: currentSettings
-      });
-    } catch (error) {
-      throw error;
-    }
+    const currentSettings = await this.getCurrentSettings();
+    
+    const embed = this.formatStatusMessage(currentSettings, interaction);
+    await interaction.editReply({ embeds: [embed] });
+    
+    logger.info("/mutemode command completed successfully.", {
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      settings: currentSettings
+    });
   },
   
   /**

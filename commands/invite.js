@@ -2,7 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType, Mes
 const path = require('path');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
-const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getValue, setValue, getAllInviteTagsData, getInviteCodeToTagMap, setInviteCodeToTagMap } = require('../utils/database');
+const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getAllInviteTagsData, getInviteCodeToTagMap, setInviteCodeToTagMap } = require('../utils/database');
 
 let inviteTagsAutocompleteCache = { tags: [], expiresAt: 0 };
 const INVITE_TAGS_CACHE_TTL_MS = 30_000;

@@ -200,7 +200,7 @@ module.exports = {
       });
       
       return {
-        items: response.data.items || []
+        items: response.data?.items || []
       };
     } catch (apiError) {
       logger.error("Google API request failed.", { 

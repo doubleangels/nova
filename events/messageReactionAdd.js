@@ -93,10 +93,11 @@ async function handleTranslationRequest(reaction, user) {
       throw new Error("⚠️ Invalid translation flag provided.");
     }
 
+    const messageId = reaction.message?.id;
     let message = reaction.message;
     if (!message) {
       logger.warn('Message not found for translation.', {
-        messageId: reaction.message?.id,
+        messageId,
         userId: user.id
       });
       throw new Error("⚠️ Message not found for translation.");
@@ -192,10 +193,12 @@ async function handleTranslationRequest(reaction, user) {
         ? "⚠️ Translation API error occurred."
         : "⚠️ Failed to translate the message.";
 
-      await reaction.message.reply({
-        content: errorMessage,
-        allowedMentions: { repliedUser: false }
-      });
+      if (reaction.message) {
+        await reaction.message.reply({
+          content: errorMessage,
+          allowedMentions: { repliedUser: false }
+        });
+      }
     } catch (replyError) {
       logger.error('Failed to send error message.', {
         err: replyError,

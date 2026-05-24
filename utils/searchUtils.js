@@ -1,6 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const path = require('path');
-const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 
 /**

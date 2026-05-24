@@ -166,12 +166,12 @@ async function pruneDatabase() {
     const rows = db.prepare('SELECT key FROM keyv').all();
     console.log(`Analyzing ${rows.length} total key(s) in the 'keyv' table...\n`);
 
-    const keepKeys = [];
+    let keepCount = 0;
     const deleteKeys = [];
 
     for (const row of rows) {
       if (isKeyNeeded(row.key)) {
-        keepKeys.push(row.key);
+        keepCount++;
       } else {
         deleteKeys.push(row.key);
       }
@@ -179,7 +179,7 @@ async function pruneDatabase() {
 
     // Print breakdown
     console.log(`Analysis Results:`);
-    console.log(`  - Keys to KEEP:   ${keepKeys.length}`);
+    console.log(`  - Keys to KEEP:   ${keepCount}`);
     console.log(`  - Keys to DELETE: ${deleteKeys.length}`);
     console.log('');
 

@@ -243,7 +243,6 @@ module.exports = {
     const daily = data.daily?.data || [];
     
     const icon = currently.icon || 'default';
-    const weatherIcon = WEATHER_ICONS[icon] || WEATHER_ICONS.default;
     
     const weatherInfo = {
       summary: currently.summary || "Unknown",

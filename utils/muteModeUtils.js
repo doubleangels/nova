@@ -152,7 +152,7 @@ async function rescheduleAllMuteKicks(client) {
     const value = await getValue("mute_mode_kick_time_hours");
     const muteKickTime = Number.isFinite(parseInt(value, 10)) ? parseInt(value, 10) : 4;
     const muteModeUsers = await getAllMuteModeUsers();
-    if (!muteModeUsers || muteModeUsers.length === 0) {
+    if (muteModeUsers.length === 0) {
       logger.debug("No mute mode users found for mute kick rescheduling.");
       return;
     }

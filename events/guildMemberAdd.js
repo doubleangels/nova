@@ -137,8 +137,15 @@ module.exports = {
         return;
       }
 
-      let codeToTagMap = await getInviteCodeToTagMap(member.guild?.id);
-      if (member.guild?.id && (!codeToTagMap || Object.keys(codeToTagMap).length === 0)) {
+      if (!member.guild) {
+        logger.warn('Member has no guild, skipping invite check.', {
+          userId: member.user.id
+        });
+        return;
+      }
+
+      let codeToTagMap = await getInviteCodeToTagMap(member.guild.id);
+      if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
         codeToTagMap = await rebuildCodeToTagMap(member.guild.id);
       }
       if (!codeToTagMap || Object.keys(codeToTagMap).length === 0) {
