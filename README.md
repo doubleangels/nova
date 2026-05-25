@@ -1,15 +1,20 @@
-# Nova Discord Bot
-
-[![DeepScan grade](https://deepscan.io/api/teams/29402/projects/31350/branches/1015182/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=29402&pid=31350&bid=1015182)
-
 <div align="center">
-  <img src="logo.png" alt="Logo" width="250">
+  <img src="logo.png" alt="Logo" width="200" style="border-radius: 20px; margin-bottom: 20px;">
+
+  <h1>Nova Discord Bot</h1>
+  <p><b>A multi-purpose Discord bot for Da Frens with search, moderation, invite tracking, and automated reminders.</b></p>
+
+  [![DeepScan grade](https://deepscan.io/api/teams/29402/projects/31350/branches/1015182/badge/grade.svg)](https://deepscan.io/dashboard#view=project&tid=29402&pid=31350&bid=1015182)
+  [![Node.js](https://img.shields.io/badge/node.js-24.x-brightgreen.svg?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
+  [![Discord.js](https://img.shields.io/badge/discord.js-14.x-blue.svg?style=flat-square&logo=discord)](https://discord.js.org/)
+  [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg?style=flat-square&logo=docker)](https://www.docker.com/)
+  [![Doppler](https://img.shields.io/badge/doppler-secrets-000000.svg?style=flat-square&logo=doppler)](https://www.doppler.com/)
+  [![Sentry](https://img.shields.io/badge/sentry-observability-362D59.svg?style=flat-square&logo=sentry)](https://sentry.io/)
 </div>
+
 <br>
 
-Nova is a multi-purpose Discord bot built for the **Da Frens** server. It combines search and media integrations (Google, OMDB, PirateWeather, MyAnimeList, Reddit, Wikipedia, and more) with moderation, invite tracking, automated reminders, and role-management tools.
-
-**Tech stack:** Node.js 24, discord.js 14, Keyv with SQLite, pnpm, Doppler for secrets, Sentry for error monitoring.
+Nova combines integrations for Google, OMDB, PirateWeather, MyAnimeList, Reddit, Wikipedia, and more with moderation tools, invite tracking, and role management.
 
 ## 🚀 Quick Start
 
