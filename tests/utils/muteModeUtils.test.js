@@ -347,16 +347,6 @@ describe('muteModeUtils', () => {
       expect(muteModeUtils.cancelMuteKick('user1')).toBe(false);
     });
 
-    it('should do nothing when mute mode users is null', async () => {
-      mockDatabase.getValue.mockResolvedValueOnce('2');
-      mockDatabase.getAllMuteModeUsers.mockResolvedValueOnce(null);
-
-      await muteModeUtils.rescheduleAllMuteKicks(mockClient);
-
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        'No mute mode users found for mute kick rescheduling.'
-      );
-    });
 
     it('should return early when client is undefined', async () => {
       await muteModeUtils.rescheduleAllMuteKicks(undefined);

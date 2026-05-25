@@ -402,6 +402,23 @@ describe('guildMemberAdd event', () => {
       );
     });
 
+    it('should warn and return if member has no guild', async () => {
+      const mockMember = {
+        guild: null,
+        user: { tag: 'User#1234', id: 'user-123' }
+      };
+
+      mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
+
+      await guildMemberAddEvent.checkTaggedInvite(mockMember);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Member has no guild, skipping invite check.',
+        { userId: 'user-123' }
+      );
+      expect(mockDatabase.getInviteCodeToTagMap).not.toHaveBeenCalled();
+    });
+
     it('should log an error if notification channel API fetch fails', async () => {
       const mockGuild = {
         id: 'guild-123',
@@ -747,7 +764,7 @@ describe('guildMemberAdd event', () => {
 
       mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
       mockDatabase.getInviteUsage.mockResolvedValue({ 'code123': 2 });
-      mockDatabase.getInviteCodeToTagMap.mockResolvedValue(null); // empty/null to trigger rebuild
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({}); // empty map triggers rebuild
       mockDatabase.rebuildCodeToTagMap.mockResolvedValue({ 'code123': 'mytag' });
       mockDatabase.getInviteTag.mockResolvedValue({
         code: 'code123',

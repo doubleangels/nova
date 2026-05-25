@@ -153,7 +153,10 @@ describe('messageReactionAdd event', () => {
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockLogger.warn).toHaveBeenCalledWith('Message not found for translation.', expect.any(Object));
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message.', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error occurred in translation request.',
+        expect.objectContaining({ err: expect.any(Error) })
+      );
     });
 
     it('should reply with error if message content is empty', async () => {
