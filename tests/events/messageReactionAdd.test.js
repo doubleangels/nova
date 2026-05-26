@@ -216,17 +216,18 @@ describe('messageReactionAdd event', () => {
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockAxios.post).toHaveBeenCalledWith(
-        'https://api-free.deepl.com/v1/translate',
-        null,
+        'https://api-free.deepl.com/v2/translate',
+        expect.any(URLSearchParams),
         {
           timeout: 10000,
-          params: {
-            auth_key: 'deepl-key-123',
-            text: 'Hola',
-            target_lang: 'EN'
+          headers: {
+            Authorization: 'DeepL-Auth-Key deepl-key-123'
           }
         }
       );
+      const requestBody = mockAxios.post.mock.calls[0][1];
+      expect(requestBody.get('text')).toBe('Hola');
+      expect(requestBody.get('target_lang')).toBe('EN');
       expect(mockReaction.message.reply).toHaveBeenCalledWith({
         embeds: [expect.objectContaining({
           color: 0xff0000,

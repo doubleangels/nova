@@ -127,14 +127,15 @@ async function handleTranslationRequest(reaction, user) {
       });
 
       const response = await httpClient.post(
-        'https://api-free.deepl.com/v1/translate',
-        null,
+        'https://api-free.deepl.com/v2/translate',
+        new URLSearchParams({
+          text: originalText,
+          target_lang: languageInfo.code.toUpperCase()
+        }),
         {
           timeout: 10000,
-          params: {
-            auth_key: config.deeplApiKey,
-            text: originalText,
-            target_lang: languageInfo.code.toUpperCase()
+          headers: {
+            Authorization: `DeepL-Auth-Key ${config.deeplApiKey}`
           }
         }
       );
