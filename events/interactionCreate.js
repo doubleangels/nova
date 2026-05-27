@@ -3,6 +3,12 @@ const { captureError } = require('../instrument');
 const logger = require('../logger')(path.basename(__filename));
 const { MessageFlags, Events } = require('discord.js');
 const { handleSpamWarningButton } = require('../utils/spamModeUtils');
+const {
+  handleWorldCupPredictButton,
+  handleWorldCupPredictModal,
+  BUTTON_PREFIX,
+  MODAL_PREFIX
+} = require('../utils/worldCupInteractions');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -21,6 +27,42 @@ module.exports = {
   async execute(interaction) {
     if (interaction.isButton() && interaction.customId.startsWith('spamWarn:')) {
       await handleSpamWarningButton(interaction);
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId.startsWith(BUTTON_PREFIX)) {
+      try {
+        await handleWorldCupPredictButton(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'worldcupButton' });
+        logger.error('Error handling World Cup predict button.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong opening the prediction form.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    if (
+      typeof interaction.isModalSubmit === 'function' &&
+      interaction.isModalSubmit() &&
+      interaction.customId?.startsWith(MODAL_PREFIX)
+    ) {
+      try {
+        await handleWorldCupPredictModal(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'worldcupModal' });
+        logger.error('Error handling World Cup predict modal.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong saving your prediction.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
       return;
     }
 

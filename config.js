@@ -5,13 +5,23 @@ require('dotenv').config();
  * @property {boolean} deployCommandsOnStart - Whether to deploy slash commands on bot startup
  * @property {boolean} rescheduleReminderOnStart - Whether to reschedule reminders on bot startup
  * @property {boolean} rescheduleAllMuteKicksOnStart - Whether to reschedule mute kicks on bot startup
- * @property {string[]} disabledCommands - Array of command names that are disabled
- * 
- * @example
- * // To disable commands, add their names to the disabledCommands array:
- * // disabledCommands: ['promote', 'invite']
- * // Disabled commands will not be deployed/updated to Discord on bot startup
+ * @property {string[]} disabledCommands - Array of command names that are disabled (derived from DISABLED_COMMANDS env var)
+ *
+ * To disable commands, set `DISABLED_COMMANDS` as a comma-separated list:
+ * - `DISABLED_COMMANDS="promote,invite"`
+ *
+ * Disabled commands will not be deployed/updated to Discord on bot startup.
  */
+
+function parseDisabledCommands(value) {
+  if (value == null) return [];
+
+  const trimmed = String(value).trim();
+  if (trimmed === '') return [];
+
+  // Comma-separated only (whitespace around commas is ok).
+  return [...new Set(trimmed.split(',').map(s => s.trim()).filter(Boolean))];
+}
 
 /**
  * @typedef {Object} BotConfig
@@ -40,6 +50,13 @@ require('dotenv').config();
  * @property {string} redditUsername - Reddit username for API authentication (from REDDIT_USERNAME env var)
  * @property {string} searchEngineId - Google Custom Search Engine ID for web searches (from SEARCH_ENGINE_ID env var)
  * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
+ * @property {string} apiFootballKey - API-Football key for World Cup fixtures (from API_FOOTBALL_KEY env var)
+ * @property {string} worldCupParticipantRoleId - Role granted on /worldcup register (from WORLD_CUP_PARTICIPANT_ROLE_ID env var)
+ * @property {string} worldCupChannelId - Channel for prompts and match announcements (from WORLD_CUP_CHANNEL_ID env var)
+ * @property {string} worldCupLeagueId - API-Football league ID for World Cup (from WORLD_CUP_LEAGUE_ID env var)
+ * @property {string} worldCupSeason - API-Football season year (from WORLD_CUP_SEASON env var)
+ * @property {number} worldCupReminderHours - Hours before kickoff to post prediction prompts
+ * @property {number} worldCupPollIntervalMs - Interval for fixture polling scheduler
  * // Spotify integration removed
  */
 
@@ -49,7 +66,7 @@ module.exports = {
     deployCommandsOnStart: true,
     rescheduleReminderOnStart: true,
     rescheduleAllMuteKicksOnStart: true,
-    disabledCommands: [],
+    disabledCommands: parseDisabledCommands(process.env.DISABLED_COMMANDS),
   },
   // Base embed color in hex format (e.g., CD41FF or #CD41FF); default #999999
   baseEmbedColor: (() => {
@@ -104,6 +121,20 @@ module.exports = {
   searchEngineId: process.env.SEARCH_ENGINE_ID,
   // Server invite URL for kick messages
   serverInviteUrl: process.env.SERVER_INVITE_URL,
+  // API-Football (World Cup predictions)
+  apiFootballKey: process.env.API_FOOTBALL_KEY,
+  worldCupParticipantRoleId: process.env.WORLD_CUP_PARTICIPANT_ROLE_ID,
+  worldCupChannelId: process.env.WORLD_CUP_CHANNEL_ID,
+  worldCupLeagueId: process.env.WORLD_CUP_LEAGUE_ID || '1',
+  worldCupSeason: process.env.WORLD_CUP_SEASON || '2026',
+  worldCupReminderHours: (() => {
+    const parsed = parseInt(process.env.WORLD_CUP_REMINDER_HOURS, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 24;
+  })(),
+  worldCupPollIntervalMs: (() => {
+    const parsed = parseInt(process.env.WORLD_CUP_POLL_INTERVAL_MS, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 15 * 60 * 1000;
+  })(),
   // Spotify integration removed
 };
 
@@ -147,4 +178,16 @@ if (missing.length > 0) {
 
 if (!isSet(process.env.DEEPL_API_KEY)) {
   console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
+}
+
+if (!isSet(process.env.API_FOOTBALL_KEY)) {
+  console.warn('API_FOOTBALL_KEY is not set. World Cup predictions will be unavailable.');
+}
+
+if (isSet(process.env.API_FOOTBALL_KEY) && !isSet(process.env.WORLD_CUP_CHANNEL_ID)) {
+  console.warn('WORLD_CUP_CHANNEL_ID is not set. World Cup prompts and announcements will not be posted.');
+}
+
+if (isSet(process.env.API_FOOTBALL_KEY) && !isSet(process.env.WORLD_CUP_PARTICIPANT_ROLE_ID)) {
+  console.warn('WORLD_CUP_PARTICIPANT_ROLE_ID is not set. /worldcup register cannot assign a participant role.');
 }

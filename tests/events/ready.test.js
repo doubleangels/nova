@@ -8,6 +8,7 @@ describe('ready event', () => {
   let mockReminderUtils;
   let mockMuteModeUtils;
   let mockDatabase;
+  let mockWorldCupScheduler;
 
   beforeEach(() => {
     jest.resetModules();
@@ -55,6 +56,11 @@ describe('ready event', () => {
     };
     jest.doMock('../../utils/database', () => mockDatabase);
 
+    mockWorldCupScheduler = {
+      startWorldCupScheduler: jest.fn()
+    };
+    jest.doMock('../../utils/worldCupScheduler', () => mockWorldCupScheduler);
+
     readyEvent = require('../../events/ready');
   });
 
@@ -75,6 +81,7 @@ describe('ready event', () => {
     await readyEvent.execute(mockClient);
 
     expect(mockDatabase.initializeDatabase).toHaveBeenCalled();
+    expect(mockWorldCupScheduler.startWorldCupScheduler).toHaveBeenCalledWith(mockClient);
     expect(mockClient.user.setActivity).toHaveBeenCalledWith(
       'for ways to help! ❤️',
       { type: ActivityType.Watching }
