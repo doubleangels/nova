@@ -47,6 +47,8 @@ describe('config', () => {
     expect(config.guildName).toBe(process.env.GUILD_NAME || 'Da Frens');
     expect(config.botStatusType).toBe(process.env.BOT_STATUS_TYPE || 'watching');
     expect(config.settings.deployCommandsOnStart).toBe(true);
+    expect(config.settings.rescheduleReminderOnStart).toBe(true);
+    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(true);
   });
 
   it('should parse baseEmbedColor with hash prefix', () => {
@@ -75,6 +77,48 @@ describe('config', () => {
     if (saved !== undefined) {
       process.env.LOG_LEVEL = saved;
     }
+  });
+
+  it('should parse DISABLED_COMMANDS as comma-separated list', () => {
+    process.env.DISABLED_COMMANDS = 'promote, invite';
+    const config = require('../config');
+    expect(config.settings.disabledCommands).toEqual(['promote', 'invite']);
+  });
+
+  it('should return [] when DISABLED_COMMANDS is an empty string', () => {
+    process.env.DISABLED_COMMANDS = '   ';
+    const config = require('../config');
+    expect(config.settings.disabledCommands).toEqual([]);
+  });
+
+  it('should parse startup setting env vars as booleans', () => {
+    process.env.DEPLOY_COMMANDS_ON_START = 'false';
+    process.env.RESCHEDULE_REMINDER_ON_START = 'false';
+    process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START = 'false';
+    const config = require('../config');
+    expect(config.settings.deployCommandsOnStart).toBe(false);
+    expect(config.settings.rescheduleReminderOnStart).toBe(false);
+    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(false);
+  });
+
+  it('should parse explicit true startup setting env vars', () => {
+    process.env.DEPLOY_COMMANDS_ON_START = 'TRUE';
+    process.env.RESCHEDULE_REMINDER_ON_START = 'true';
+    process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START = ' true ';
+    const config = require('../config');
+    expect(config.settings.deployCommandsOnStart).toBe(true);
+    expect(config.settings.rescheduleReminderOnStart).toBe(true);
+    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(true);
+  });
+
+  it('should use default true for invalid startup setting env vars', () => {
+    process.env.DEPLOY_COMMANDS_ON_START = 'not-bool';
+    process.env.RESCHEDULE_REMINDER_ON_START = '';
+    process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START = 'not-bool';
+    const config = require('../config');
+    expect(config.settings.deployCommandsOnStart).toBe(true);
+    expect(config.settings.rescheduleReminderOnStart).toBe(true);
+    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(true);
   });
 
   it('should exit when required env vars are missing', () => {

@@ -131,6 +131,10 @@ Set variables in Doppler (or `.env` for local experiments).
 | `BASE_EMBED_COLOR` | Default embed color (hex) | `#999999` |
 | `GUILD_NAME` | Guild display name | `Da Frens` |
 | `LOG_LEVEL` | Pino log level | `info` |
+| `DISABLED_COMMANDS` | Slash command names to skip during deploy | `[]` |
+| `DEPLOY_COMMANDS_ON_START` | Deploy slash commands on startup | `true` |
+| `RESCHEDULE_REMINDER_ON_START` | Reschedule Disboard/Reddit reminders on startup | `true` |
+| `RESCHEDULE_ALL_MUTE_KICKS_ON_START` | Reschedule mute-mode kick timers on startup | `true` |
 
 ### Integrations (optional)
 
@@ -143,10 +147,9 @@ Set variables in Doppler (or `.env` for local experiments).
 
 | Setting | Description | Default |
 | :--- | :--- | :--- |
-| `deployCommandsOnStart` | Deploy slash commands on startup | `true` |
-| `rescheduleReminderOnStart` | Reschedule Disboard/Reddit reminders on startup | `true` |
-| `rescheduleAllMuteKicksOnStart` | Reschedule mute-mode kick timers on startup | `true` |
-| `disabledCommands` | Command names to skip during deploy | `[]` |
+| `deployCommandsOnStart` | Deploy slash commands on startup (from `DEPLOY_COMMANDS_ON_START`) | `true` |
+| `rescheduleReminderOnStart` | Reschedule Disboard/Reddit reminders on startup (from `RESCHEDULE_REMINDER_ON_START`) | `true` |
+| `rescheduleAllMuteKicksOnStart` | Reschedule mute-mode kick timers on startup (from `RESCHEDULE_ALL_MUTE_KICKS_ON_START`) | `true` |
 
 ---
 
@@ -201,7 +204,7 @@ These run without a slash command:
 | `/dog` | Random dog image (optional breed) | Everyone |
 | `/timedifference` | Time difference between two places | Everyone |
 
-Slash commands deploy automatically on startup when `deployCommandsOnStart` is enabled. To deploy manually:
+Slash commands deploy automatically on startup when `DEPLOY_COMMANDS_ON_START=true`. To deploy manually:
 
 ```bash
 node deploy-commands.js

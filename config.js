@@ -5,13 +5,34 @@ require('dotenv').config();
  * @property {boolean} deployCommandsOnStart - Whether to deploy slash commands on bot startup
  * @property {boolean} rescheduleReminderOnStart - Whether to reschedule reminders on bot startup
  * @property {boolean} rescheduleAllMuteKicksOnStart - Whether to reschedule mute kicks on bot startup
- * @property {string[]} disabledCommands - Array of command names that are disabled
- * 
- * @example
- * // To disable commands, add their names to the disabledCommands array:
- * // disabledCommands: ['promote', 'invite']
- * // Disabled commands will not be deployed/updated to Discord on bot startup
+ * @property {string[]} disabledCommands - Array of command names that are disabled (derived from DISABLED_COMMANDS env var)
+ *
+ * To disable commands, set `DISABLED_COMMANDS` as a comma-separated list:
+ * - `DISABLED_COMMANDS="promote,invite"`
+ *
+ * Disabled commands will not be deployed/updated to Discord on bot startup.
  */
+
+function parseDisabledCommands(value) {
+  if (value == null) return [];
+
+  const trimmed = String(value).trim();
+  if (trimmed === '') return [];
+
+  // Comma-separated only (whitespace around commas is ok).
+  return [...new Set(trimmed.split(',').map(s => s.trim()).filter(Boolean))];
+}
+
+function parseBooleanEnv(value, defaultValue) {
+  if (value == null) return defaultValue;
+
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === '') return defaultValue;
+  if (normalized === 'true') return true;
+  if (normalized === 'false') return false;
+
+  return defaultValue;
+}
 
 /**
  * @typedef {Object} BotConfig
@@ -46,10 +67,10 @@ require('dotenv').config();
 /** @type {BotConfig} */
 module.exports = {
   settings: {
-    deployCommandsOnStart: true,
-    rescheduleReminderOnStart: true,
-    rescheduleAllMuteKicksOnStart: true,
-    disabledCommands: [],
+    deployCommandsOnStart: parseBooleanEnv(process.env.DEPLOY_COMMANDS_ON_START, true),
+    rescheduleReminderOnStart: parseBooleanEnv(process.env.RESCHEDULE_REMINDER_ON_START, true),
+    rescheduleAllMuteKicksOnStart: parseBooleanEnv(process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START, true),
+    disabledCommands: parseDisabledCommands(process.env.DISABLED_COMMANDS),
   },
   // Base embed color in hex format (e.g., CD41FF or #CD41FF); default #999999
   baseEmbedColor: (() => {
