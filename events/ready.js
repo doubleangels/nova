@@ -7,6 +7,7 @@ const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 const { updateInviteSnapshotFromCollection } = require('../utils/inviteCache');
+const { startWorldCupScheduler } = require('../utils/worldCupScheduler');
 
 const DEFAULT_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
@@ -132,6 +133,8 @@ module.exports = {
       } else {
         logger.warn('New Member message tracking is disabled (missing role IDs in config).');
       }
+
+      startWorldCupScheduler(client);
 
       logger.info('Bot is ready and all systems are initialized.');
 

@@ -47,8 +47,6 @@ describe('config', () => {
     expect(config.guildName).toBe(process.env.GUILD_NAME || 'Da Frens');
     expect(config.botStatusType).toBe(process.env.BOT_STATUS_TYPE || 'watching');
     expect(config.settings.deployCommandsOnStart).toBe(true);
-    expect(config.settings.rescheduleReminderOnStart).toBe(true);
-    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(true);
   });
 
   it('should parse baseEmbedColor with hash prefix', () => {
@@ -91,36 +89,6 @@ describe('config', () => {
     expect(config.settings.disabledCommands).toEqual([]);
   });
 
-  it('should parse startup setting env vars as booleans', () => {
-    process.env.DEPLOY_COMMANDS_ON_START = 'false';
-    process.env.RESCHEDULE_REMINDER_ON_START = 'false';
-    process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START = 'false';
-    const config = require('../config');
-    expect(config.settings.deployCommandsOnStart).toBe(false);
-    expect(config.settings.rescheduleReminderOnStart).toBe(false);
-    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(false);
-  });
-
-  it('should parse explicit true startup setting env vars', () => {
-    process.env.DEPLOY_COMMANDS_ON_START = 'TRUE';
-    process.env.RESCHEDULE_REMINDER_ON_START = 'true';
-    process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START = ' true ';
-    const config = require('../config');
-    expect(config.settings.deployCommandsOnStart).toBe(true);
-    expect(config.settings.rescheduleReminderOnStart).toBe(true);
-    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(true);
-  });
-
-  it('should use default true for invalid startup setting env vars', () => {
-    process.env.DEPLOY_COMMANDS_ON_START = 'not-bool';
-    process.env.RESCHEDULE_REMINDER_ON_START = '';
-    process.env.RESCHEDULE_ALL_MUTE_KICKS_ON_START = 'not-bool';
-    const config = require('../config');
-    expect(config.settings.deployCommandsOnStart).toBe(true);
-    expect(config.settings.rescheduleReminderOnStart).toBe(true);
-    expect(config.settings.rescheduleAllMuteKicksOnStart).toBe(true);
-  });
-
   it('should exit when required env vars are missing', () => {
     delete process.env.DISCORD_BOT_TOKEN;
     require('../config');
@@ -138,6 +106,27 @@ describe('config', () => {
     consoleWarnSpy.mockRestore();
   });
 
+  it('should warn when API_FOOTBALL_KEY is not set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    delete process.env.API_FOOTBALL_KEY;
+    require('../config');
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'API_FOOTBALL_KEY is not set. World Cup predictions will be unavailable.'
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('should warn when WORLD_CUP_CHANNEL_ID is missing but API key set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    process.env.API_FOOTBALL_KEY = 'test-football-key';
+    delete process.env.WORLD_CUP_CHANNEL_ID;
+    require('../config');
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'WORLD_CUP_CHANNEL_ID is not set. World Cup prompts and announcements will not be posted.'
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
   it('should not warn when DEEPL_API_KEY is set', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     process.env.DEEPL_API_KEY = 'test-deepl-key';
@@ -146,5 +135,21 @@ describe('config', () => {
       'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
     );
     consoleWarnSpy.mockRestore();
+  });
+
+  it('should use custom World Cup reminder and poll intervals when valid', () => {
+    process.env.WORLD_CUP_REMINDER_HOURS = '48';
+    process.env.WORLD_CUP_POLL_INTERVAL_MS = '60000';
+    const config = require('../config');
+    expect(config.worldCupReminderHours).toBe(48);
+    expect(config.worldCupPollIntervalMs).toBe(60000);
+  });
+
+  it('should fall back when World Cup reminder and poll env vars are invalid', () => {
+    process.env.WORLD_CUP_REMINDER_HOURS = 'not-a-number';
+    process.env.WORLD_CUP_POLL_INTERVAL_MS = '0';
+    const config = require('../config');
+    expect(config.worldCupReminderHours).toBe(24);
+    expect(config.worldCupPollIntervalMs).toBe(15 * 60 * 1000);
   });
 });
