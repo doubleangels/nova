@@ -19,4 +19,23 @@ function cacheKey(...parts) {
   return parts.map((p) => String(p).toLowerCase()).join(':');
 }
 
-module.exports = { getCached, setCached, cacheKey };
+/**
+ * @param {string} key
+ */
+function deleteCached(key) {
+  cache.delete(key);
+}
+
+/**
+ * @param {string} prefix
+ */
+function deleteByPrefix(prefix) {
+  const normalized = String(prefix).toLowerCase();
+  for (const key of cache.keys()) {
+    if (key.startsWith(normalized)) {
+      cache.delete(key);
+    }
+  }
+}
+
+module.exports = { getCached, setCached, cacheKey, deleteCached, deleteByPrefix };

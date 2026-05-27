@@ -7,8 +7,11 @@ const {
 const path = require('path');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
-const { isApiConfigured, getSeasonFixtures } = require('../utils/worldCupClient');
+const { isApiConfigured, getSeasonFixtures } = require('../utils/footballClient');
+const { getCompetitionName } = require('../utils/footballCompetitions');
 const {
+  isUserRegistered,
+  addRegisteredUser,
   getLeaderboard,
   scoreFinishedFixtures,
   formatFixtureLine,
@@ -16,8 +19,12 @@ const {
   getPrediction,
   getUserPredictionFixtureIds,
   getUserPoints,
-  resetWorldCupGame,
-  isWorldCupGameConfigured
+  resetFootballGame,
+  isFootballGameConfigured
+} = require('../utils/footballUtils');
+const {
+  isUserRegistered: isWorldCupUserRegistered,
+  addRegisteredUser: addWorldCupRegisteredUser
 } = require('../utils/worldCupUtils');
 const msgs = require('../utils/predictionMessages');
 
@@ -25,9 +32,14 @@ const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE']);
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('worldcup')
-    .setDescription('Predict FIFA World Cup 2026 match results.')
+    .setName('football')
+    .setDescription('Predict club match results (Premier League, Bundesliga, La Liga, Champions League).')
     .setDefaultMemberPermissions(null)
+    .addSubcommand(sub =>
+      sub
+        .setName('register')
+        .setDescription('Join predictions and receive the participant role.')
+    )
     .addSubcommand(sub =>
       sub
         .setName('leaderboard')
@@ -57,6 +69,17 @@ module.exports = {
               { name: 'Finished', value: 'finished' }
             )
         )
+        .addStringOption(opt =>
+          opt
+            .setName('competition')
+            .setDescription('Filter by competition')
+            .addChoices(
+              { name: 'Premier League', value: 'PL' },
+              { name: 'Bundesliga', value: 'BL1' },
+              { name: 'La Liga', value: 'PD' },
+              { name: 'Champions League', value: 'CL' }
+            )
+        )
     )
     .addSubcommand(sub =>
       sub.setName('mypicks').setDescription('View your predictions and points per match.')
@@ -64,7 +87,7 @@ module.exports = {
     .addSubcommand(sub =>
       sub
         .setName('reset')
-        .setDescription('Clear all World Cup prediction data (administrators).')
+        .setDescription('Clear all club football prediction data (administrators).')
         .addBooleanOption(opt =>
           opt
             .setName('repost')
@@ -77,6 +100,9 @@ module.exports = {
 
     try {
       switch (subcommand) {
+        case 'register':
+          await this.handleRegister(interaction);
+          break;
         case 'leaderboard':
           await this.handleLeaderboard(interaction);
           break;
@@ -103,10 +129,81 @@ module.exports = {
     }
   },
 
+  async handleRegister(interaction) {
+    const roleId = config.predictionParticipantRoleId;
+    if (!roleId) {
+      await interaction.reply({
+        content: msgs.ERR_REGISTER_NOT_CONFIGURED,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    if (!interaction.guild || !interaction.member) {
+      await interaction.reply({
+        content: msgs.ERR_GUILD_ONLY,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const inFootball = await isUserRegistered(interaction.user.id);
+    const inWorldCup = await isWorldCupUserRegistered(interaction.user.id);
+    if (inFootball && inWorldCup) {
+      await interaction.editReply({
+        content: msgs.MSG_ALREADY_REGISTERED
+      });
+      return;
+    }
+
+    const role = interaction.guild.roles.cache.get(roleId) ||
+      await interaction.guild.roles.fetch(roleId).catch(() => null);
+
+    if (!role) {
+      await interaction.editReply({
+        content: msgs.ERR_PARTICIPANT_ROLE_MISSING
+      });
+      return;
+    }
+
+    const me = interaction.guild.members.me;
+    if (!me?.permissions.has(PermissionFlagsBits.ManageRoles)) {
+      await interaction.editReply({
+        content: msgs.ERR_MANAGE_ROLES_REQUIRED
+      });
+      return;
+    }
+
+    if (role.position >= me.roles.highest.position) {
+      await interaction.editReply({
+        content: msgs.ERR_ROLE_HIERARCHY
+      });
+      return;
+    }
+
+    await interaction.member.roles.add(role, 'Prediction game registration');
+    await addRegisteredUser(interaction.user.id);
+    await addWorldCupRegisteredUser(interaction.user.id);
+
+    const channelRef = config.predictionChannelId
+      ? `<#${config.predictionChannelId}>`
+      : 'the prediction channel';
+    await interaction.editReply({
+      content: msgs.formatRegisterSuccess(channelRef, role.name)
+    });
+
+    logger.info('/football register completed.', {
+      userId: interaction.user.id,
+      guildId: interaction.guild.id
+    });
+  },
+
   async handleLeaderboard(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
-        content: msgs.errNotConfigured('worldcup'),
+        content: msgs.errNotConfigured('club'),
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -133,9 +230,9 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(config.baseEmbedColor)
-      .setTitle(msgs.GAME.worldcup.leaderboardTitle)
+      .setTitle(msgs.GAME.club.leaderboardTitle)
       .setDescription(lines.join('\n'))
-      .setFooter({ text: msgs.GAME.worldcup.leaderboardFooter });
+      .setFooter({ text: msgs.GAME.club.leaderboardFooter });
 
     await interaction.editReply({ embeds: [embed] });
   },
@@ -143,8 +240,8 @@ module.exports = {
   async handleRules(interaction) {
     const embed = new EmbedBuilder()
       .setColor(config.baseEmbedColor)
-      .setTitle(msgs.GAME.worldcup.rulesTitle)
-      .setDescription(msgs.buildRulesDescription('worldcup'));
+      .setTitle(msgs.GAME.club.rulesTitle)
+      .setDescription(msgs.buildRulesDescription('club'));
 
     await interaction.reply({ embeds: [embed] });
   },
@@ -152,7 +249,7 @@ module.exports = {
   async handleMatches(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
-        content: msgs.errNotConfigured('worldcup'),
+        content: msgs.errNotConfigured('club'),
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -161,7 +258,10 @@ module.exports = {
     await interaction.deferReply();
 
     const filter = interaction.options.getString('status');
-    let fixtures = await getSeasonFixtures();
+    const competition = interaction.options.getString('competition');
+    let fixtures = await getSeasonFixtures(
+      competition ? { competition } : {}
+    );
 
     if (filter === 'upcoming') {
       fixtures = fixtures.filter(f => ['NS', 'TBD', 'PST'].includes(f.status));
@@ -185,7 +285,9 @@ module.exports = {
     const lines = fixtures.map(f => `• \`${f.id}\` ${formatFixtureLine(f)}`);
     const embed = new EmbedBuilder()
       .setColor(config.baseEmbedColor)
-      .setTitle(msgs.GAME.worldcup.matchesTitle)
+      .setTitle(
+        competition ? `${getCompetitionName(competition)} fixtures` : msgs.GAME.club.matchesTitle
+      )
       .setDescription(lines.join('\n').slice(0, 4000));
 
     await interaction.editReply({ embeds: [embed] });
@@ -194,7 +296,7 @@ module.exports = {
   async handleMyPicks(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
-        content: msgs.errNotConfigured('worldcup'),
+        content: msgs.errNotConfigured('club'),
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -240,7 +342,7 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(config.baseEmbedColor)
-      .setTitle(msgs.GAME.worldcup.myPicksTitle)
+      .setTitle(msgs.GAME.club.myPicksTitle)
       .setDescription(lines.join('\n').slice(0, 4000))
       .setFooter({ text: `Total points: ${total}` });
 
@@ -258,7 +360,7 @@ module.exports = {
 
     if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
       await interaction.reply({
-        content: msgs.errAdminResetOnly('worldcup'),
+        content: msgs.errAdminResetOnly('club'),
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -268,15 +370,15 @@ module.exports = {
 
     const repost = interaction.options.getBoolean('repost') ?? true;
 
-    await resetWorldCupGame();
+    await resetFootballGame();
 
     let repostSucceeded = false;
     let repostSkippedConfig = false;
     if (repost) {
-      const { isApiConfigured } = require('../utils/worldCupClient');
-      const { runWorldCupStartup } = require('../utils/worldCupScheduler');
-      if (isApiConfigured() && isWorldCupGameConfigured()) {
-        await runWorldCupStartup(interaction.client);
+      const { isApiConfigured } = require('../utils/footballClient');
+      const { runFootballStartup } = require('../utils/footballScheduler');
+      if (isApiConfigured() && isFootballGameConfigured()) {
+        await runFootballStartup(interaction.client);
         repostSucceeded = true;
       } else {
         repostSkippedConfig = true;
@@ -285,12 +387,12 @@ module.exports = {
 
     const embed = new EmbedBuilder()
       .setColor(config.baseEmbedColor)
-      .setTitle(msgs.GAME.worldcup.resetTitle)
+      .setTitle(msgs.GAME.club.resetTitle)
       .setDescription(
-        msgs.buildResetDescription('worldcup', repost, repostSucceeded, repostSkippedConfig)
+        msgs.buildResetDescription('club', repost, repostSucceeded, repostSkippedConfig)
       );
 
-    logger.info('World Cup game reset by administrator.', {
+    logger.info('Football game reset by administrator.', {
       userId: interaction.user.id,
       guildId: interaction.guild.id,
       repost
@@ -300,7 +402,7 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logger.error('Error in worldcup command.', {
+    logger.error('Error in football command.', {
       err: error,
       userId: interaction.user?.id,
       subcommand: interaction.options?.getSubcommand?.()
@@ -314,7 +416,7 @@ module.exports = {
         await interaction.reply({ content: message, flags: MessageFlags.Ephemeral });
       }
     } catch (followUpError) {
-      logger.error('Failed to send worldcup error reply.', { err: followUpError });
+      logger.error('Failed to send football error reply.', { err: followUpError });
     }
   }
 };

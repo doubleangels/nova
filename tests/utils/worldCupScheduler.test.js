@@ -10,17 +10,18 @@ describe('worldCupScheduler', () => {
 
     mockUtils = {
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
-      getRegisteredUserIds: jest.fn().mockResolvedValue(['111111111111111111']),
       getPromptedFixtures: jest.fn().mockResolvedValue([]),
       markFixturePrompted: jest.fn().mockResolvedValue(),
       buildPromptEmbed: jest.fn().mockReturnValue({ data: { title: 'Prompt' } }),
       isInReminderWindow: jest.fn().mockReturnValue(true),
-      scoreFinishedFixtures: jest.fn().mockResolvedValue(0)
+      scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
+      resetMockDemoState: jest.fn().mockResolvedValue()
     };
 
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
+      isMockApiEnabled: jest.fn().mockReturnValue(false),
       getSeasonFixtures: jest.fn().mockResolvedValue([
         {
           id: 77,
@@ -33,8 +34,9 @@ describe('worldCupScheduler', () => {
       ])
     }));
     jest.doMock('../../config', () => ({
-      worldCupChannelId: '222222222222222222',
-      worldCupPollIntervalMs: 60000
+      predictionChannelId: '222222222222222222',
+      predictionParticipantRoleId: '333333333333333333',
+      predictionPollIntervalMs: 60000
     }));
     jest.doMock('../../logger', () => () => ({
       info: jest.fn(),
@@ -65,50 +67,13 @@ describe('worldCupScheduler', () => {
     scheduler.stopWorldCupScheduler();
   });
 
-  it('should log when DM fails', async () => {
-    const debug = jest.fn();
-    jest.resetModules();
-    jest.doMock('../../logger', () => () => ({
-      info: jest.fn(),
-      error: jest.fn(),
-      debug
-    }));
-    jest.doMock('../../utils/worldCupUtils', () => mockUtils);
-    jest.doMock('../../utils/worldCupClient', () => ({
-      isApiConfigured: jest.fn().mockReturnValue(true),
-      getSeasonFixtures: jest.fn()
-    }));
-    jest.doMock('../../config', () => ({ worldCupChannelId: '222222222222222222' }));
-    const s = require('../../utils/worldCupScheduler');
+  it('should send channel prompt without DMing users', async () => {
+    const channelSend = jest.fn().mockResolvedValue({});
+    mockClient.channels.fetch.mockResolvedValue({
+      isTextBased: () => true,
+      send: channelSend
+    });
 
-    const clientWithDmFail = {
-      channels: {
-        fetch: jest.fn().mockResolvedValue({
-          isTextBased: () => true,
-          send: jest.fn().mockResolvedValue({})
-        })
-      },
-      users: {
-        fetch: jest.fn().mockResolvedValue({
-          send: jest.fn().mockRejectedValue(new Error('dm closed'))
-        })
-      }
-    };
-
-    const fixture = {
-      id: 79,
-      home: 'A',
-      away: 'B',
-      kickoff: dayjs().add(6, 'hour').toISOString(),
-      status: 'NS',
-      goals: { home: null, away: null }
-    };
-
-    await s.sendPredictionPrompts(clientWithDmFail, fixture);
-    expect(debug).toHaveBeenCalled();
-  });
-
-  it('should send channel prompt and DM registered users', async () => {
     const fixture = {
       id: 77,
       home: 'A',
@@ -121,15 +86,67 @@ describe('worldCupScheduler', () => {
     await scheduler.sendPredictionPrompts(mockClient, fixture);
 
     expect(mockClient.channels.fetch).toHaveBeenCalledWith('222222222222222222');
+    expect(channelSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content:
+          '<@&333333333333333333> A new match is open for predictions - submit yours before kickoff.',
+        embeds: expect.any(Array),
+        components: expect.any(Array)
+      })
+    );
     expect(mockUtils.markFixturePrompted).toHaveBeenCalledWith(77);
-    expect(mockClient.users.fetch).toHaveBeenCalledWith('111111111111111111');
+    expect(mockClient.users.fetch).not.toHaveBeenCalled();
+  });
+
+  it('should omit role ping when participant role is not configured', async () => {
+    jest.resetModules();
+    jest.doMock('../../utils/worldCupUtils', () => mockUtils);
+    jest.doMock('../../utils/worldCupClient', () => ({
+      isApiConfigured: jest.fn().mockReturnValue(true),
+      isMockApiEnabled: jest.fn().mockReturnValue(false),
+      getSeasonFixtures: jest.fn()
+    }));
+    jest.doMock('../../config', () => ({
+      predictionChannelId: '222222222222222222',
+      predictionPollIntervalMs: 60000
+    }));
+    jest.doMock('../../logger', () => () => ({
+      info: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    }));
+    const s = require('../../utils/worldCupScheduler');
+
+    const channelSend = jest.fn().mockResolvedValue({});
+    const client = {
+      channels: {
+        fetch: jest.fn().mockResolvedValue({
+          isTextBased: () => true,
+          send: channelSend
+        })
+      },
+    };
+
+    await s.sendPredictionPrompts(client, {
+      id: 82,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    });
+
+    expect(channelSend).toHaveBeenCalledWith(
+      expect.not.objectContaining({ content: expect.any(String) })
+    );
   });
 
   it('should no-op poll when API or channel not configured', async () => {
     jest.resetModules();
     const scoreFinishedFixtures = jest.fn();
     jest.doMock('../../utils/worldCupClient', () => ({
-      isApiConfigured: jest.fn().mockReturnValue(false)
+      isApiConfigured: jest.fn().mockReturnValue(false),
+      isMockApiEnabled: jest.fn().mockReturnValue(false)
     }));
     jest.doMock('../../utils/worldCupUtils', () => ({
       isWorldCupGameConfigured: jest.fn().mockReturnValue(false),
@@ -163,6 +180,7 @@ describe('worldCupScheduler', () => {
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
+      isMockApiEnabled: jest.fn().mockReturnValue(false),
       getSeasonFixtures: jest.fn().mockResolvedValue([
         {
           id: 78,
@@ -175,8 +193,8 @@ describe('worldCupScheduler', () => {
       ])
     }));
     jest.doMock('../../config', () => ({
-      worldCupChannelId: '222222222222222222',
-      worldCupPollIntervalMs: 60000
+      predictionChannelId: '222222222222222222',
+      predictionPollIntervalMs: 60000
     }));
     jest.doMock('../../logger', () => () => ({
       info: jest.fn(),
@@ -192,6 +210,46 @@ describe('worldCupScheduler', () => {
     mockUtils.getPromptedFixtures.mockResolvedValue([77]);
     await scheduler.runWorldCupPoll(mockClient);
     expect(mockUtils.markFixturePrompted).not.toHaveBeenCalled();
+  });
+
+  it('should reset mock demo state on startup when mock API is enabled', async () => {
+    jest.resetModules();
+    const resetMockDemoState = jest.fn().mockResolvedValue();
+    const scoreFinishedFixtures = jest.fn().mockResolvedValue(0);
+    jest.doMock('../../utils/worldCupUtils', () => ({
+      isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
+      getPromptedFixtures: jest.fn().mockResolvedValue([]),
+      markFixturePrompted: jest.fn().mockResolvedValue(),
+      buildPromptEmbed: jest.fn(),
+      isInReminderWindow: jest.fn().mockReturnValue(true),
+      scoreFinishedFixtures,
+      resetMockDemoState
+    }));
+    jest.doMock('../../utils/worldCupClient', () => ({
+      isApiConfigured: jest.fn().mockReturnValue(true),
+      isMockApiEnabled: jest.fn().mockReturnValue(true),
+      getSeasonFixtures: jest.fn().mockResolvedValue([
+        {
+          id: 900001,
+          home: 'A',
+          away: 'B',
+          kickoff: dayjs().add(2, 'hour').toISOString(),
+          status: 'NS',
+          goals: { home: null, away: null }
+        }
+      ])
+    }));
+    jest.doMock('../../config', () => ({
+      predictionChannelId: '222222222222222222',
+      predictionPollIntervalMs: 60000
+    }));
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
+    const s = require('../../utils/worldCupScheduler');
+
+    await s.runWorldCupStartup(mockClient);
+
+    expect(resetMockDemoState).toHaveBeenCalled();
+    expect(scoreFinishedFixtures).toHaveBeenCalled();
   });
 
   it('should restart scheduler and clear prior interval', () => {
@@ -216,11 +274,12 @@ describe('worldCupScheduler', () => {
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
+      isMockApiEnabled: jest.fn().mockReturnValue(false),
       getSeasonFixtures: jest.fn()
     }));
     jest.doMock('../../config', () => ({
-      worldCupChannelId: '222222222222222222',
-      worldCupPollIntervalMs: 600000
+      predictionChannelId: '222222222222222222',
+      predictionPollIntervalMs: 600000
     }));
     jest.doMock('../../logger', () => () => ({
       info: jest.fn(),
@@ -266,7 +325,8 @@ describe('worldCupScheduler', () => {
       isWorldCupGameConfigured: jest.fn().mockReturnValue(false)
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
-      isApiConfigured: jest.fn().mockReturnValue(false)
+      isApiConfigured: jest.fn().mockReturnValue(false),
+      isMockApiEnabled: jest.fn().mockReturnValue(false)
     }));
     jest.doMock('../../config', () => ({}));
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));

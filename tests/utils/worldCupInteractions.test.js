@@ -14,8 +14,18 @@ describe('worldCupInteractions', () => {
       getPrediction: jest.fn().mockResolvedValue(null),
       savePrediction: jest.fn().mockResolvedValue(),
       isFixtureOpenForPrediction: jest.fn().mockReturnValue(true),
-      parseResultPick: actualUtils.parseResultPick,
-      parseScoreInputs: actualUtils.parseScoreInputs
+      truncateModalLabel: actualUtils.truncateModalLabel,
+      formatFixtureTeam: actualUtils.formatFixtureTeam,
+      formatResultPickDisplay: actualUtils.formatResultPickDisplay,
+      isPendingPredictionComplete: actualUtils.isPendingPredictionComplete,
+      savePendingPrediction: jest.fn().mockImplementation(async (userId, fixtureId, partial) => ({
+        ...partial,
+        updatedAt: new Date().toISOString()
+      })),
+      getPendingPrediction: jest.fn().mockResolvedValue(null),
+      clearPendingPrediction: jest.fn().mockResolvedValue(),
+      scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
+      areAllMockPlayableFixturesPredicted: jest.fn().mockResolvedValue(true)
     };
 
     mockClient = {
@@ -36,7 +46,8 @@ describe('worldCupInteractions', () => {
     }));
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0x123456,
-      worldCupParticipantRoleId: '333333333333333333'
+      predictionParticipantRoleId: '333333333333333333',
+      predictionMockApi: false
     }));
     jest.doMock('../../logger', () => () => ({
       info: jest.fn(),
@@ -46,7 +57,7 @@ describe('worldCupInteractions', () => {
     interactions = require('../../utils/worldCupInteractions');
   });
 
-  it('should show modal on button click', async () => {
+  it('should show three dropdowns on button click', async () => {
     const interaction = {
       customId: 'worldcup:predict:42',
       user: { id: '111111111111111111' },
@@ -54,14 +65,25 @@ describe('worldCupInteractions', () => {
       member: {
         roles: { cache: { has: jest.fn().mockReturnValue(true) } }
       },
-      reply: jest.fn(),
-      showModal: jest.fn().mockResolvedValue()
+      reply: jest.fn().mockResolvedValue()
     };
 
     await interactions.handleWorldCupPredictButton(interaction);
 
-    expect(interaction.showModal).toHaveBeenCalled();
-    expect(interaction.reply).not.toHaveBeenCalled();
+    expect(mockUtils.clearPendingPrediction).toHaveBeenCalledWith(
+      '111111111111111111',
+      42
+    );
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        components: expect.arrayContaining([
+          expect.objectContaining({ components: expect.any(Array) })
+        ]),
+        flags: MessageFlags.Ephemeral
+      })
+    );
+    const rows = interaction.reply.mock.calls[0][0].components;
+    expect(rows).toHaveLength(3);
   });
 
   it('should reject unregistered users without role', async () => {
@@ -74,8 +96,7 @@ describe('worldCupInteractions', () => {
       member: {
         roles: { cache: { has: jest.fn().mockReturnValue(false) } }
       },
-      reply: jest.fn(),
-      showModal: jest.fn()
+      reply: jest.fn()
     };
 
     await interactions.handleWorldCupPredictButton(interaction);
@@ -85,88 +106,47 @@ describe('worldCupInteractions', () => {
     }));
   });
 
-  it('should require guild for button', async () => {
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '1' },
-      guild: null,
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictButton(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
-  });
+  it('should update form after partial picks', async () => {
+    mockUtils.savePendingPrediction.mockResolvedValue({
+      homeScore: 2,
+      awayScore: 1,
+      updatedAt: new Date().toISOString()
+    });
 
-  it('should reject when fixture not found', async () => {
-    mockClient.getFixtureById.mockResolvedValue(null);
     const interaction = {
-      customId: 'worldcup:predict:42',
+      customId: 'worldcup:pick:home:42',
       user: { id: '111111111111111111' },
-      guild: { id: 'g' },
-      member: { roles: { cache: { has: jest.fn().mockReturnValue(true) } } },
-      reply: jest.fn()
+      values: ['2'],
+      update: jest.fn().mockResolvedValue()
     };
-    await interactions.handleWorldCupPredictButton(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
+
+    await interactions.handleWorldCupPickSelect(interaction);
+
+    expect(mockUtils.savePrediction).not.toHaveBeenCalled();
+    expect(interaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        components: expect.any(Array)
+      })
+    );
   });
 
-  it('should reject invalid fixture id on button', async () => {
-    const interaction = {
-      customId: 'worldcup:predict:notanumber',
-      user: { id: '1' },
-      guild: { id: 'g' },
-      member: { roles: { cache: { has: jest.fn().mockReturnValue(true) } } },
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictButton(interaction);
-    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
-      content: '⚠️ Invalid match reference.'
-    }));
-  });
+  it('should save prediction when all three dropdowns are set', async () => {
+    mockUtils.savePendingPrediction.mockResolvedValue({
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      updatedAt: new Date().toISOString()
+    });
 
-  it('should reject when fixture closed', async () => {
-    mockUtils.isFixtureOpenForPrediction.mockReturnValue(false);
     const interaction = {
-      customId: 'worldcup:predict:42',
+      customId: 'worldcup:pick:winner:42',
       user: { id: '111111111111111111' },
-      guild: { id: 'g' },
-      member: { roles: { cache: { has: jest.fn().mockReturnValue(true) } } },
-      reply: jest.fn(),
-      showModal: jest.fn()
-    };
-    await interactions.handleWorldCupPredictButton(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('should reject duplicate prediction on button', async () => {
-    mockUtils.getPrediction.mockResolvedValue({ homeScore: 1, awayScore: 0 });
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '111111111111111111' },
-      guild: { id: 'g' },
-      member: { roles: { cache: { has: jest.fn().mockReturnValue(true) } } },
-      reply: jest.fn(),
-      showModal: jest.fn()
-    };
-    await interactions.handleWorldCupPredictButton(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('should save prediction on modal submit', async () => {
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '111111111111111111' },
-      fields: {
-        getTextInputValue: jest.fn((id) => {
-          if (id === 'home_score') return '2';
-          if (id === 'away_score') return '1';
-          if (id === 'result_pick') return 'home';
-          return '';
-        })
-      },
-      reply: jest.fn().mockResolvedValue()
+      values: ['home'],
+      client: {},
+      update: jest.fn().mockResolvedValue()
     };
 
-    await interactions.handleWorldCupPredictModal(interaction);
+    await interactions.handleWorldCupPickSelect(interaction);
 
     expect(mockUtils.savePrediction).toHaveBeenCalledWith(
       '111111111111111111',
@@ -177,102 +157,38 @@ describe('worldCupInteractions', () => {
         resultPick: 'home'
       })
     );
-    expect(interaction.reply).toHaveBeenCalled();
+    expect(mockUtils.clearPendingPrediction).toHaveBeenCalledWith(
+      '111111111111111111',
+      42
+    );
+    expect(interaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embeds: expect.any(Array),
+        components: []
+      })
+    );
   });
 
-  it('should reject invalid fixture id on modal', async () => {
-    const interaction = {
-      customId: 'worldcup:predict:bad',
-      user: { id: '1' },
-      fields: { getTextInputValue: jest.fn() },
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictModal(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
+  it('should build three select rows with team labels', () => {
+    const rows = interactions.buildPredictionSelectRows(
+      { home: 'Brazil', away: 'Argentina' },
+      42,
+      { homeScore: 2, awayScore: 0, resultPick: 'home' }
+    );
+    expect(rows).toHaveLength(3);
+    expect(rows[0].components[0].data.custom_id).toBe('worldcup:pick:home:42');
+    expect(rows[2].components[0].options.map(o => o.data.label)).toEqual([
+      '🇧🇷 Brazil',
+      'Draw',
+      '🇦🇷 Argentina'
+    ]);
   });
 
-  it('should reject closed fixture on modal', async () => {
-    mockUtils.isFixtureOpenForPrediction.mockReturnValue(false);
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '111111111111111111' },
-      fields: {
-        getTextInputValue: jest.fn((id) => {
-          if (id === 'home_score') return '1';
-          if (id === 'away_score') return '0';
-          return 'home';
-        })
-      },
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictModal(interaction);
-    expect(mockUtils.savePrediction).not.toHaveBeenCalled();
-  });
-
-  it('should reject duplicate on modal', async () => {
-    mockUtils.getPrediction.mockResolvedValue({ homeScore: 1, awayScore: 0 });
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '111111111111111111' },
-      fields: {
-        getTextInputValue: jest.fn((id) => {
-          if (id === 'home_score') return '1';
-          if (id === 'away_score') return '0';
-          return 'home';
-        })
-      },
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictModal(interaction);
-    expect(mockUtils.savePrediction).not.toHaveBeenCalled();
-  });
-
-  it('should reject invalid modal scores', async () => {
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '111111111111111111' },
-      fields: {
-        getTextInputValue: jest.fn(() => 'bad')
-      },
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictModal(interaction);
-    expect(mockUtils.savePrediction).not.toHaveBeenCalled();
-  });
-
-  it('should reject when API not configured', async () => {
-    jest.resetModules();
-    jest.doMock('../../utils/worldCupClient', () => ({
-      isApiConfigured: jest.fn().mockReturnValue(false),
-      getFixtureById: jest.fn()
-    }));
-    jest.doMock('../../utils/worldCupUtils', () => mockUtils);
-    jest.doMock('../../config', () => ({}));
-    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
-    const ix = require('../../utils/worldCupInteractions');
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '1' },
-      reply: jest.fn()
-    };
-    await ix.handleWorldCupPredictButton(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
-  });
-
-  it('should reject invalid result pick on modal', async () => {
-    const interaction = {
-      customId: 'worldcup:predict:42',
-      user: { id: '111111111111111111' },
-      fields: {
-        getTextInputValue: jest.fn((id) => {
-          if (id === 'home_score') return '1';
-          if (id === 'away_score') return '0';
-          return 'invalid';
-        })
-      },
-      reply: jest.fn()
-    };
-    await interactions.handleWorldCupPredictModal(interaction);
-    expect(mockUtils.savePrediction).not.toHaveBeenCalled();
+  it('should parse pick custom ids', () => {
+    expect(interactions.parsePickCustomId('worldcup:pick:away:99')).toEqual({
+      side: 'away',
+      fixtureId: 99
+    });
+    expect(interactions.isWorldCupPickSelect('worldcup:pick:winner:1')).toBe(true);
   });
 });

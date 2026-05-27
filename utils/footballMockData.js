@@ -1,19 +1,19 @@
 const dayjs = require('dayjs');
 
-/** Mock match ID used for the one-game instant demo flow. */
-const MOCK_PLAYABLE_MATCH_IDS = [900001];
+/** Mock match ID for the club-football one-game demo (distinct from World Cup 900xxx). */
+const MOCK_PLAYABLE_MATCH_IDS = [910001];
 
 /**
  * Full-time score applied once at least one prediction exists for the fixture.
  * @type {Record<number, { home: number, away: number }>}
  */
 const MOCK_SCRIPTED_FULL_TIME = {
-  900001: { home: 2, away: 1 }
+  910001: { home: 2, away: 1 }
 };
 
 /**
- * Demo fixture uses real national teams and football-data.org area codes so country
- * flags match each side (same as production), not random mock flags.
+ * Demo fixture uses real club names and football-data.org area codes so country flags
+ * match each side (same as production), not random mock flags.
  * @returns {Array<Record<string, unknown>>}
  */
 function buildMockMatches() {
@@ -21,11 +21,12 @@ function buildMockMatches() {
 
   return [
     {
-      id: 900001,
+      id: 910001,
       utcDate: now.add(2, 'hour').toISOString(),
       status: 'TIMED',
-      homeTeam: { name: 'Brazil', tla: 'BRA', area: { code: 'BRA' } },
-      awayTeam: { name: 'Argentina', tla: 'ARG', area: { code: 'ARG' } },
+      competition: { code: 'PL', name: 'Premier League' },
+      homeTeam: { name: 'Arsenal', tla: 'ARS', area: { code: 'ENG' } },
+      awayTeam: { name: 'Chelsea', tla: 'CHE', area: { code: 'ENG' } },
       score: { fullTime: { home: null, away: null } }
     }
   ];

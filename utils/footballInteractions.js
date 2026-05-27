@@ -7,8 +7,8 @@ const {
 } = require('discord.js');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
-const { isApiConfigured, getFixtureById } = require('./worldCupClient');
-const { BUTTON_PREFIX } = require('./worldCupScheduler');
+const { isApiConfigured, getFixtureById } = require('./footballClient');
+const { BUTTON_PREFIX } = require('./footballScheduler');
 const {
   isUserRegistered,
   getPrediction,
@@ -23,16 +23,16 @@ const {
   isPendingPredictionComplete,
   scoreFinishedFixtures,
   areAllMockPlayableFixturesPredicted
-} = require('./worldCupUtils');
+} = require('./footballUtils');
 const msgs = require('./predictionMessages');
 
-const PICK_PREFIX = 'worldcup:pick:';
+const PICK_PREFIX = 'football:pick:';
 
 /**
  * @param {string} customId
  * @returns {boolean}
  */
-function isWorldCupPickSelect(customId) {
+function isFootballPickSelect(customId) {
   return Boolean(customId?.startsWith(PICK_PREFIX));
 }
 
@@ -62,9 +62,9 @@ function buildGoalSelectOptions() {
 }
 
 /**
- * @param {import('./worldCupUtils').NormalizedFixture} fixture
+ * @param {import('./footballUtils').NormalizedFixture} fixture
  * @param {number} fixtureId
- * @param {import('./worldCupUtils').PendingPrediction|null} [pending]
+ * @param {import('./footballUtils').PendingPrediction|null} [pending]
  * @returns {ActionRowBuilder[]}
  */
 function buildPredictionSelectRows(fixture, fixtureId, pending = null) {
@@ -123,8 +123,8 @@ function buildPredictionSelectRows(fixture, fixtureId, pending = null) {
 }
 
 /**
- * @param {import('./worldCupUtils').NormalizedFixture} fixture
- * @param {import('./worldCupUtils').PendingPrediction|null} pending
+ * @param {import('./footballUtils').NormalizedFixture} fixture
+ * @param {import('./footballUtils').PendingPrediction|null} pending
  * @returns {string}
  */
 function buildPredictionFormContent(fixture, pending = null) {
@@ -140,10 +140,10 @@ function buildPredictionFormContent(fixture, pending = null) {
  * @param {import('discord.js').ButtonInteraction} interaction
  * @returns {Promise<void>}
  */
-async function handleWorldCupPredictButton(interaction) {
+async function handleFootballPredictButton(interaction) {
   if (!isApiConfigured()) {
     await interaction.reply({
-      content: msgs.errNotConfigured('worldcup'),
+      content: msgs.errNotConfigured('club'),
       flags: MessageFlags.Ephemeral
     });
     return;
@@ -216,7 +216,7 @@ async function handleWorldCupPredictButton(interaction) {
  * @param {import('discord.js').StringSelectMenuInteraction} interaction
  * @returns {Promise<void>}
  */
-async function handleWorldCupPickSelect(interaction) {
+async function handleFootballPickSelect(interaction) {
   const parsed = parsePickCustomId(interaction.customId);
   if (!parsed) {
     await interaction.reply({
@@ -249,7 +249,7 @@ async function handleWorldCupPickSelect(interaction) {
     return;
   }
 
-  /** @type {Partial<import('./worldCupUtils').PendingPrediction>} */
+  /** @type {Partial<import('./footballUtils').PendingPrediction>} */
   let partial = {};
 
   if (side === 'home' || side === 'away') {
@@ -315,7 +315,7 @@ async function handleWorldCupPickSelect(interaction) {
     await scoreFinishedFixtures(interaction.client);
   }
 
-  logger.info('World Cup prediction saved.', {
+  logger.info('Football prediction saved.', {
     userId: interaction.user.id,
     fixtureId,
     homeScore: pending.homeScore,
@@ -327,10 +327,10 @@ async function handleWorldCupPickSelect(interaction) {
 module.exports = {
   PICK_PREFIX,
   BUTTON_PREFIX,
-  isWorldCupPickSelect,
+  isFootballPickSelect,
   parsePickCustomId,
   buildPredictionSelectRows,
   buildPredictionFormContent,
-  handleWorldCupPredictButton,
-  handleWorldCupPickSelect
+  handleFootballPredictButton,
+  handleFootballPickSelect
 };

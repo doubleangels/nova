@@ -5,10 +5,16 @@ const { MessageFlags, Events } = require('discord.js');
 const { handleSpamWarningButton } = require('../utils/spamModeUtils');
 const {
   handleWorldCupPredictButton,
-  handleWorldCupPredictModal,
-  BUTTON_PREFIX,
-  MODAL_PREFIX
+  handleWorldCupPickSelect,
+  isWorldCupPickSelect,
+  BUTTON_PREFIX: WORLDCUP_BUTTON_PREFIX
 } = require('../utils/worldCupInteractions');
+const {
+  handleFootballPredictButton,
+  handleFootballPickSelect,
+  isFootballPickSelect,
+  BUTTON_PREFIX: FOOTBALL_BUTTON_PREFIX
+} = require('../utils/footballInteractions');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -30,7 +36,7 @@ module.exports = {
       return;
     }
 
-    if (interaction.isButton() && interaction.customId.startsWith(BUTTON_PREFIX)) {
+    if (interaction.isButton() && interaction.customId.startsWith(WORLDCUP_BUTTON_PREFIX)) {
       try {
         await handleWorldCupPredictButton(interaction);
       } catch (error) {
@@ -46,16 +52,52 @@ module.exports = {
       return;
     }
 
+    if (interaction.isButton() && interaction.customId.startsWith(FOOTBALL_BUTTON_PREFIX)) {
+      try {
+        await handleFootballPredictButton(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'footballButton' });
+        logger.error('Error handling Football predict button.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong opening the prediction form.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
     if (
-      typeof interaction.isModalSubmit === 'function' &&
-      interaction.isModalSubmit() &&
-      interaction.customId?.startsWith(MODAL_PREFIX)
+      typeof interaction.isStringSelectMenu === 'function' &&
+      interaction.isStringSelectMenu() &&
+      isWorldCupPickSelect(interaction.customId)
     ) {
       try {
-        await handleWorldCupPredictModal(interaction);
+        await handleWorldCupPickSelect(interaction);
       } catch (error) {
-        captureError(error, { handler: 'worldcupModal' });
-        logger.error('Error handling World Cup predict modal.', { err: error });
+        captureError(error, { handler: 'worldcupPickSelect' });
+        logger.error('Error handling World Cup prediction select.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong saving your prediction.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    if (
+      typeof interaction.isStringSelectMenu === 'function' &&
+      interaction.isStringSelectMenu() &&
+      isFootballPickSelect(interaction.customId)
+    ) {
+      try {
+        await handleFootballPickSelect(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'footballPickSelect' });
+        logger.error('Error handling Football prediction select.', { err: error });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong saving your prediction.',

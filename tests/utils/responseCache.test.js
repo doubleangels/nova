@@ -33,4 +33,17 @@ describe('responseCache', () => {
   it('should build lowercase cache keys from parts', () => {
     expect(cacheKey('Foo', 'BAR')).toBe('foo:bar');
   });
+
+  it('should delete keys by prefix', () => {
+    const { deleteByPrefix } = require('../../utils/responseCache');
+    setCached('prediction-ai:result:worldcup:1:a', { score: 1 });
+    setCached('prediction-ai:result:worldcup:2:b', { score: 2 });
+    setCached('other:keep', { ok: true });
+
+    deleteByPrefix('prediction-ai:result:worldcup:1:');
+
+    expect(getCached('prediction-ai:result:worldcup:1:a')).toBeUndefined();
+    expect(getCached('prediction-ai:result:worldcup:2:b')).toEqual({ score: 2 });
+    expect(getCached('other:keep')).toEqual({ ok: true });
+  });
 });

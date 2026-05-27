@@ -23,6 +23,92 @@ function parseDisabledCommands(value) {
   return [...new Set(trimmed.split(',').map(s => s.trim()).filter(Boolean))];
 }
 
+function isSet(value) {
+  return value != null && String(value).trim() !== '';
+}
+
+function isTruthyEnv(value) {
+  if (!isSet(value)) return false;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+/**
+ * First non-empty env var from `keys` (shared settings for /worldcup and /football).
+ * @param {...string} keys
+ * @returns {string|undefined}
+ */
+function envFirst(...keys) {
+  for (const key of keys) {
+    if (isSet(process.env[key])) return String(process.env[key]).trim();
+  }
+  return undefined;
+}
+
+/**
+ * @param {string[]} keys
+ * @param {number} defaultValue
+ * @returns {number}
+ */
+function parsePositiveIntEnv(keys, defaultValue) {
+  const raw = envFirst(...keys);
+  if (raw == null) return defaultValue;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
+/** Shared by /worldcup and /football (legacy per-game env vars still accepted). */
+const predictionParticipantRoleId = envFirst(
+  'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID',
+  'WORLD_CUP_PARTICIPANT_ROLE_ID',
+  'FOOTBALL_PARTICIPANT_ROLE_ID'
+);
+const predictionChannelId = envFirst(
+  'FOOTBALL_PREDICTION_CHANNEL_ID',
+  'WORLD_CUP_CHANNEL_ID',
+  'FOOTBALL_CHANNEL_ID'
+);
+const predictionReminderHours = parsePositiveIntEnv(
+  [
+    'FOOTBALL_PREDICTION_REMINDER_HOURS',
+    'WORLD_CUP_REMINDER_HOURS',
+    'FOOTBALL_REMINDER_HOURS'
+  ],
+  24
+);
+const predictionPollIntervalMs = parsePositiveIntEnv(
+  [
+    'FOOTBALL_PREDICTION_POLL_INTERVAL_MS',
+    'WORLD_CUP_POLL_INTERVAL_MS',
+    'FOOTBALL_POLL_INTERVAL_MS'
+  ],
+  15 * 60 * 1000
+);
+const predictionMockApi = isTruthyEnv(
+  envFirst('FOOTBALL_PREDICTION_MOCK_API', 'WORLD_CUP_MOCK_API', 'FOOTBALL_MOCK_API')
+);
+const predictionPendingTtlMs = parsePositiveIntEnv(
+  ['FOOTBALL_PREDICTION_PENDING_TTL_MS'],
+  15 * 60 * 1000
+);
+const predictionAiEnabled = isTruthyEnv(
+  envFirst('FOOTBALL_PREDICTION_AI_ENABLED', 'PREDICTION_AI_ENABLED')
+);
+const geminiApiKey = envFirst('GEMINI_API_KEY');
+const geminiPredictionModel =
+  envFirst('FOOTBALL_PREDICTION_GEMINI_MODEL', 'GEMINI_PREDICTION_MODEL') ||
+  'gemini-3.1-flash-lite';
+const geminiPredictionCacheTtlMs = (() => {
+  const raw = envFirst('FOOTBALL_PREDICTION_AI_CACHE_TTL_MS');
+  if (raw == null) return 0;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+})();
+const geminiContextCacheTtlSeconds = parsePositiveIntEnv(
+  ['FOOTBALL_PREDICTION_AI_CONTEXT_CACHE_TTL_SECONDS'],
+  3600
+);
+
 /**
  * @typedef {Object} BotConfig
  * @property {BotSettings} settings - Bot behavior settings
@@ -51,13 +137,21 @@ function parseDisabledCommands(value) {
  * @property {string} searchEngineId - Google Custom Search Engine ID for web searches (from SEARCH_ENGINE_ID env var)
  * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
  * @property {string} footballDataApiKey - football-data.org API token (from FOOTBALL_DATA_API_KEY env var)
- * @property {boolean} worldCupMockApi - Use simulated fixtures instead of football-data.org (from WORLD_CUP_MOCK_API env var)
- * @property {string} worldCupParticipantRoleId - Role granted on /worldcup register (from WORLD_CUP_PARTICIPANT_ROLE_ID env var)
- * @property {string} worldCupChannelId - Channel for prompts and match announcements (from WORLD_CUP_CHANNEL_ID env var)
+ * @property {string|undefined} predictionParticipantRoleId - Shared participant role (/worldcup and /football register)
+ * @property {string|undefined} predictionChannelId - Shared channel for prompts and match announcements
+ * @property {number} predictionReminderHours - Hours before kickoff to post prediction prompts (both games)
+ * @property {number} predictionPollIntervalMs - Fixture polling interval (both games)
+ * @property {boolean} predictionMockApi - Simulated fixtures for /worldcup and /football (FOOTBALL_PREDICTION_MOCK_API)
+ * @property {number} predictionPendingTtlMs - Ephemeral pick form TTL in ms (FOOTBALL_PREDICTION_PENDING_TTL_MS)
+ * @property {boolean} predictionAiEnabled - Gemini match suggestions on prompts (FOOTBALL_PREDICTION_AI_ENABLED)
+ * @property {string|undefined} geminiApiKey - Google AI Studio key for Gemini (GEMINI_API_KEY)
+ * @property {string} geminiPredictionModel - Gemini model id for match predictions (default gemini-3.1-flash-lite)
+ * @property {number} geminiPredictionCacheTtlMs - AI result cache TTL (0 = until kickoff)
+ * @property {number} geminiContextCacheTtlSeconds - Gemini explicit system-instruction cache TTL
  * @property {string} worldCupCompetitionCode - football-data.org competition code (from WORLD_CUP_COMPETITION_CODE env var)
  * @property {string} worldCupSeason - Season year for competition matches (from WORLD_CUP_SEASON env var)
- * @property {number} worldCupReminderHours - Hours before kickoff to post prediction prompts
- * @property {number} worldCupPollIntervalMs - Interval for fixture polling scheduler
+ * @property {string[]} footballCompetitionCodes - football-data.org codes (PL, BL1, PD, CL)
+ * @property {string} footballSeason - Season year for club competitions (from FOOTBALL_SEASON env var)
  * // Spotify integration removed
  */
 
@@ -124,19 +218,25 @@ module.exports = {
   serverInviteUrl: process.env.SERVER_INVITE_URL,
   // football-data.org (World Cup predictions)
   footballDataApiKey: process.env.FOOTBALL_DATA_API_KEY,
-  worldCupMockApi: isTruthyEnv(process.env.WORLD_CUP_MOCK_API),
-  worldCupParticipantRoleId: process.env.WORLD_CUP_PARTICIPANT_ROLE_ID,
-  worldCupChannelId: process.env.WORLD_CUP_CHANNEL_ID,
+  predictionParticipantRoleId,
+  predictionChannelId,
+  predictionReminderHours,
+  predictionPollIntervalMs,
+  predictionMockApi,
+  predictionPendingTtlMs,
+  predictionAiEnabled,
+  geminiApiKey,
+  geminiPredictionModel,
+  geminiPredictionCacheTtlMs,
+  geminiContextCacheTtlSeconds,
   worldCupCompetitionCode: process.env.WORLD_CUP_COMPETITION_CODE || 'WC',
   worldCupSeason: process.env.WORLD_CUP_SEASON || '2026',
-  worldCupReminderHours: (() => {
-    const parsed = parseInt(process.env.WORLD_CUP_REMINDER_HOURS, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 24;
+  // Club football predictions (Premier League, Bundesliga, La Liga, Champions League)
+  footballCompetitionCodes: (() => {
+    const { parseCompetitionCodes } = require('./utils/footballCompetitions');
+    return parseCompetitionCodes(process.env.FOOTBALL_COMPETITION_CODES);
   })(),
-  worldCupPollIntervalMs: (() => {
-    const parsed = parseInt(process.env.WORLD_CUP_POLL_INTERVAL_MS, 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 15 * 60 * 1000;
-  })(),
+  footballSeason: process.env.FOOTBALL_SEASON || String(new Date().getFullYear()),
   // Spotify integration removed
 };
 
@@ -166,16 +266,6 @@ const REQUIRED_ENV_VARS = [
   // Spotify env vars removed
 ];
 
-function isSet(value) {
-  return value != null && String(value).trim() !== '';
-}
-
-function isTruthyEnv(value) {
-  if (!isSet(value)) return false;
-  const normalized = String(value).trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes';
-}
-
 const missing = REQUIRED_ENV_VARS.filter(name => !isSet(process.env[name]));
 if (missing.length > 0) {
   console.error('Missing required environment variable(s). Bot cannot start.');
@@ -188,21 +278,34 @@ if (!isSet(process.env.DEEPL_API_KEY)) {
   console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
 }
 
-if (isTruthyEnv(process.env.WORLD_CUP_MOCK_API)) {
+if (predictionMockApi) {
   console.warn(
-    'WORLD_CUP_MOCK_API is enabled. World Cup fixtures use simulated data instead of football-data.org.'
+    'FOOTBALL_PREDICTION_MOCK_API is enabled. /worldcup and /football use simulated fixtures instead of football-data.org.'
   );
 } else if (!isSet(process.env.FOOTBALL_DATA_API_KEY)) {
-  console.warn('FOOTBALL_DATA_API_KEY is not set. World Cup predictions will be unavailable.');
+  console.warn(
+    'FOOTBALL_DATA_API_KEY is not set. /worldcup and /football predictions will be unavailable.'
+  );
 }
 
-const worldCupApiActive =
-  isTruthyEnv(process.env.WORLD_CUP_MOCK_API) || isSet(process.env.FOOTBALL_DATA_API_KEY);
+const predictionApiActive =
+  predictionMockApi || isSet(process.env.FOOTBALL_DATA_API_KEY);
 
-if (worldCupApiActive && !isSet(process.env.WORLD_CUP_CHANNEL_ID)) {
-  console.warn('WORLD_CUP_CHANNEL_ID is not set. World Cup prompts and announcements will not be posted.');
+if (predictionApiActive && !predictionChannelId) {
+  console.warn(
+    'FOOTBALL_PREDICTION_CHANNEL_ID is not set. Prediction prompts and announcements will not be posted.'
+  );
 }
 
-if (worldCupApiActive && !isSet(process.env.WORLD_CUP_PARTICIPANT_ROLE_ID)) {
-  console.warn('WORLD_CUP_PARTICIPANT_ROLE_ID is not set. /worldcup register cannot assign a participant role.');
+if (predictionApiActive && !predictionParticipantRoleId) {
+  console.warn(
+    'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID is not set. /football register cannot assign a participant role.'
+  );
 }
+
+if (predictionAiEnabled && !geminiApiKey) {
+  console.warn(
+    'FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing. AI match suggestions will be skipped.'
+  );
+}
+

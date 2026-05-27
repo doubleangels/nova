@@ -6,24 +6,24 @@ const {
 } = require('discord.js');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
-const { getSeasonFixtures, isApiConfigured, isMockApiEnabled } = require('./worldCupClient');
+const { getSeasonFixtures, isApiConfigured, isMockApiEnabled } = require('./footballClient');
 const {
-  isWorldCupGameConfigured,
+  isFootballGameConfigured,
   getPromptedFixtures,
   markFixturePrompted,
   buildPromptEmbed,
   isInReminderWindow,
   scoreFinishedFixtures,
   resetMockDemoState
-} = require('./worldCupUtils');
-const { MOCK_PLAYABLE_MATCH_IDS } = require('./worldCupMockData');
+} = require('./footballUtils');
+const { MOCK_PLAYABLE_MATCH_IDS } = require('./footballMockData');
 const { buildRolePing, SUBMIT_BUTTON_LABEL } = require('./predictionMessages');
 const { fetchMatchAiPrediction } = require('./matchPredictionAi');
 
 /** @type {NodeJS.Timeout | null} */
 let pollInterval = null;
 
-const BUTTON_PREFIX = 'worldcup:predict:';
+const BUTTON_PREFIX = 'football:predict:';
 
 /**
  * @returns {string|undefined}
@@ -35,7 +35,7 @@ function buildPromptChannelContent() {
 }
 
 /**
- * @param {import('./worldCupUtils').NormalizedFixture} fixture
+ * @param {import('./footballUtils').NormalizedFixture} fixture
  * @returns {ActionRowBuilder}
  */
 function buildPredictButtonRow(fixture) {
@@ -49,12 +49,12 @@ function buildPredictButtonRow(fixture) {
 
 /**
  * @param {import('discord.js').Client} client
- * @param {import('./worldCupUtils').NormalizedFixture} fixture
+ * @param {import('./footballUtils').NormalizedFixture} fixture
  * @returns {Promise<void>}
  */
 async function sendPredictionPrompts(client, fixture) {
   const channelId = config.predictionChannelId;
-  const aiPrediction = await fetchMatchAiPrediction({ game: 'worldcup', fixture });
+  const aiPrediction = await fetchMatchAiPrediction({ game: 'club', fixture });
   const embed = buildPromptEmbed(fixture, { aiPrediction: aiPrediction || undefined });
   const components = [buildPredictButtonRow(fixture)];
 
@@ -69,7 +69,7 @@ async function sendPredictionPrompts(client, fixture) {
       });
     }
   } catch (err) {
-    logger.error('Failed to post World Cup channel prompt.', {
+    logger.error('Failed to post Football channel prompt.', {
       err,
       fixtureId: fixture.id,
       channelId
@@ -80,11 +80,7 @@ async function sendPredictionPrompts(client, fixture) {
 }
 
 /**
- * @param {import('discord.js').Client} client
- * @returns {Promise<void>}
- */
-/**
- * @param {import('./worldCupUtils').NormalizedFixture} fixture
+ * @param {import('./footballUtils').NormalizedFixture} fixture
  * @param {Date} now
  * @returns {boolean}
  */
@@ -99,8 +95,8 @@ function shouldPromptFixture(fixture, now) {
  * @param {import('discord.js').Client} client
  * @returns {Promise<void>}
  */
-async function runWorldCupPoll(client) {
-  if (!isApiConfigured() || !isWorldCupGameConfigured()) return;
+async function runFootballPoll(client) {
+  if (!isApiConfigured() || !isFootballGameConfigured()) return;
 
   try {
     await scoreFinishedFixtures(client);
@@ -115,7 +111,7 @@ async function runWorldCupPoll(client) {
       await sendPredictionPrompts(client, fixture);
     }
   } catch (err) {
-    logger.error('World Cup scheduler poll failed.', { err });
+    logger.error('Football scheduler poll failed.', { err });
   }
 }
 
@@ -123,21 +119,21 @@ async function runWorldCupPoll(client) {
  * @param {import('discord.js').Client} client
  * @returns {Promise<void>}
  */
-async function runWorldCupStartup(client) {
+async function runFootballStartup(client) {
   if (isMockApiEnabled()) {
     await resetMockDemoState();
-    logger.info('World Cup mock demo reset (fresh test match).');
+    logger.info('Football mock demo reset (fresh test match).');
   }
-  await runWorldCupPoll(client);
+  await runFootballPoll(client);
 }
 
 /**
  * @param {import('discord.js').Client} client
  * @returns {void}
  */
-function startWorldCupScheduler(client) {
-  if (!isApiConfigured() || !isWorldCupGameConfigured()) {
-    logger.info('World Cup scheduler not started (missing API key or channel).');
+function startFootballScheduler(client) {
+  if (!isApiConfigured() || !isFootballGameConfigured()) {
+    logger.info('Football scheduler not started (missing API key or channel).');
     return;
   }
 
@@ -147,19 +143,19 @@ function startWorldCupScheduler(client) {
 
   const intervalMs = config.predictionPollIntervalMs;
 
-  void runWorldCupStartup(client);
+  void runFootballStartup(client);
 
   pollInterval = setInterval(() => {
-    void runWorldCupPoll(client);
+    void runFootballPoll(client);
   }, intervalMs);
 
-  logger.info('World Cup scheduler started.', { intervalMs });
+  logger.info('Football scheduler started.', { intervalMs });
 }
 
 /**
  * Stops the scheduler (for tests).
  */
-function stopWorldCupScheduler() {
+function stopFootballScheduler() {
   if (pollInterval) {
     clearInterval(pollInterval);
     pollInterval = null;
@@ -171,8 +167,8 @@ module.exports = {
   buildPromptChannelContent,
   buildPredictButtonRow,
   sendPredictionPrompts,
-  runWorldCupPoll,
-  runWorldCupStartup,
-  startWorldCupScheduler,
-  stopWorldCupScheduler
+  runFootballPoll,
+  runFootballStartup,
+  startFootballScheduler,
+  stopFootballScheduler
 };

@@ -125,6 +125,53 @@ function isKeyNeeded(dbKey) {
       return DISCORD_ID_REGEX.test(userId);
     }
 
+    if (rest.startsWith('pending_prediction:')) {
+      const parts = rest.split(':');
+      if (parts.length !== 3) return false;
+      const userId = parts[1];
+      const fixtureId = parts[2];
+      return DISCORD_ID_REGEX.test(userId) && /^\d+$/.test(fixtureId);
+    }
+
+    return false;
+  }
+
+  if (namespace === 'football') {
+    if (rest === 'registered' || rest === 'prompted_fixtures' || rest === 'scored_fixtures') {
+      return true;
+    }
+
+    if (rest.startsWith('prediction:')) {
+      const parts = rest.split(':');
+      if (parts.length !== 3) return false;
+      const userId = parts[1];
+      const fixtureId = parts[2];
+      return DISCORD_ID_REGEX.test(userId) && /^\d+$/.test(fixtureId);
+    }
+
+    if (rest.startsWith('points:')) {
+      const userId = rest.substring('points:'.length);
+      return DISCORD_ID_REGEX.test(userId);
+    }
+
+    if (rest.startsWith('predictions_by_fixture:')) {
+      const fixtureId = rest.substring('predictions_by_fixture:'.length);
+      return /^\d+$/.test(fixtureId);
+    }
+
+    if (rest.startsWith('user_predictions:')) {
+      const userId = rest.substring('user_predictions:'.length);
+      return DISCORD_ID_REGEX.test(userId);
+    }
+
+    if (rest.startsWith('pending_prediction:')) {
+      const parts = rest.split(':');
+      if (parts.length !== 3) return false;
+      const userId = parts[1];
+      const fixtureId = parts[2];
+      return DISCORD_ID_REGEX.test(userId) && /^\d+$/.test(fixtureId);
+    }
+
     return false;
   }
 

@@ -32,10 +32,27 @@ describe('worldCupClient', () => {
         id: 100,
         home: 'Team A',
         away: 'Team B',
+        homeIso2: null,
+        awayIso2: null,
+        homeTla: null,
+        awayTla: null,
         kickoff: '2026-06-01T12:00:00Z',
         status: 'NS',
         goals: { home: null, away: null }
       });
+    });
+
+    it('should resolve country codes from team payload', () => {
+      const normalized = client.normalizeFixture(
+        sampleMatch({
+          homeTeam: { name: 'Brazil', tla: 'BRA' },
+          awayTeam: { name: 'Argentina', tla: 'ARG' }
+        })
+      );
+      expect(normalized.homeIso2).toBe('BR');
+      expect(normalized.awayIso2).toBe('AR');
+      expect(normalized.homeTla).toBe('BRA');
+      expect(normalized.awayTla).toBe('ARG');
     });
 
     it('should map FINISHED status to FT', () => {
@@ -208,7 +225,7 @@ describe('worldCupClient', () => {
       jest.doMock('../../utils/httpClient', () => mockAxios);
       jest.doMock('../../config', () => ({
         footballDataApiKey: '',
-        worldCupMockApi: true,
+        predictionMockApi: true,
         worldCupCompetitionCode: 'WC',
         worldCupSeason: '2026'
       }));
@@ -228,10 +245,13 @@ describe('worldCupClient', () => {
       expect(mockAxios.get).not.toHaveBeenCalled();
     });
 
-    it('should fetch mock fixture by id', async () => {
-      const fixture = await client.getFixtureById(900002);
-      expect(fixture?.home).toBe('Sampleland');
-      expect(fixture?.status).toBe('FT');
+    it('should fetch mock fixture by id as upcoming before any predictions', async () => {
+      const fixture = await client.getFixtureById(900001);
+      expect(fixture?.home).toBe('Brazil');
+      expect(fixture?.homeIso2).toBe('BR');
+      expect(fixture?.awayIso2).toBe('AR');
+      expect(fixture?.status).toBe('NS');
+      expect(fixture?.goals).toEqual({ home: null, away: null });
       expect(mockAxios.get).not.toHaveBeenCalled();
     });
 

@@ -15,8 +15,8 @@ describe('worldCupUtils', () => {
     jest.doMock('../../logger', () => () => mockLogger);
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupReminderHours: 24,
-      worldCupChannelId: '999999999999999999'
+      predictionReminderHours: 24,
+      predictionChannelId: '999999999999999999'
     }));
     utils = require('../../utils/worldCupUtils');
   });
@@ -27,6 +27,13 @@ describe('worldCupUtils', () => {
       'World Cup Keyv connection error.',
       expect.objectContaining({ err: expect.any(Error) })
     );
+  });
+
+  it('should clear all World Cup Keyv data on resetWorldCupGame', async () => {
+    const clearSpy = jest.spyOn(utils.worldCupKeyv, 'clear').mockResolvedValue(undefined);
+    await utils.resetWorldCupGame();
+    expect(clearSpy).toHaveBeenCalled();
+    clearSpy.mockRestore();
   });
 
   describe('scoring', () => {
@@ -76,6 +83,29 @@ describe('worldCupUtils', () => {
       expect(utils.parseResultPick('')).toBeNull();
       expect(utils.parseResultPick(null)).toBeNull();
     });
+
+    it('should parse team names when fixture is provided', () => {
+      const fixture = { home: 'Brazil', away: 'Argentina' };
+      expect(utils.parseResultPick('Brazil', fixture)).toBe('home');
+      expect(utils.parseResultPick('argentina', fixture)).toBe('away');
+      expect(utils.parseResultPick('draw', fixture)).toBe('draw');
+    });
+  });
+
+  describe('formatResultPickDisplay', () => {
+    it('should show team names or draw', () => {
+      const fixture = { home: 'Brazil', away: 'Argentina' };
+      expect(utils.formatResultPickDisplay(fixture, 'home')).toBe('🇧🇷 Brazil');
+      expect(utils.formatResultPickDisplay(fixture, 'away')).toBe('🇦🇷 Argentina');
+      expect(utils.formatResultPickDisplay(fixture, 'draw')).toBe('Draw');
+    });
+  });
+
+  describe('goalsModalLabel', () => {
+    it('should include team name and respect length limit', () => {
+      expect(utils.goalsModalLabel('Brazil')).toBe('Brazil goals');
+      expect(utils.goalsModalLabel('A'.repeat(50)).length).toBeLessThanOrEqual(45);
+    });
   });
 
   describe('parseScoreInputs', () => {
@@ -87,6 +117,9 @@ describe('worldCupUtils', () => {
       expect(utils.parseScoreInputs('x', '1').error).toBeDefined();
       expect(utils.parseScoreInputs('16', '0').error).toBeDefined();
       expect(utils.parseScoreInputs('1', '16').error).toContain('Away score');
+      expect(
+        utils.parseScoreInputs('16', '0', { home: 'Brazil', away: 'Argentina' }).error
+      ).toContain('Brazil');
     });
   });
 
@@ -95,7 +128,7 @@ describe('worldCupUtils', () => {
       jest.resetModules();
       jest.doMock('../../config', () => ({
         footballDataApiKey: 'key',
-        worldCupChannelId: '123'
+        predictionChannelId: '123'
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       const u = require('../../utils/worldCupUtils');
@@ -106,7 +139,7 @@ describe('worldCupUtils', () => {
       jest.resetModules();
       jest.doMock('../../config', () => ({
         footballDataApiKey: '   ',
-        worldCupChannelId: '   '
+        predictionChannelId: '   '
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       const u = require('../../utils/worldCupUtils');
@@ -116,9 +149,9 @@ describe('worldCupUtils', () => {
     it('should return true when mock API is enabled', () => {
       jest.resetModules();
       jest.doMock('../../config', () => ({
-        worldCupMockApi: true,
+        predictionMockApi: true,
         footballDataApiKey: '',
-        worldCupChannelId: '123'
+        predictionChannelId: '123'
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       const u = require('../../utils/worldCupUtils');
@@ -273,6 +306,70 @@ describe('worldCupUtils', () => {
     });
   });
 
+  describe('applyMockInstantFinishToFixtures', () => {
+    let mockModeUtils;
+
+    beforeEach(() => {
+      jest.resetModules();
+      jest.doMock('../../config', () => ({
+        predictionMockApi: true,
+        baseEmbedColor: 0x123456,
+        predictionChannelId: '1'
+      }));
+      jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
+      mockModeUtils = require('../../utils/worldCupUtils');
+    });
+
+    it('should leave fixtures open until someone has predicted', async () => {
+      const fixtures = await mockModeUtils.applyMockInstantFinishToFixtures([
+        {
+          id: 900001,
+          home: 'Brazil',
+          away: 'Argentina',
+          kickoff: new Date().toISOString(),
+          status: 'NS',
+          goals: { home: null, away: null }
+        }
+      ]);
+      expect(fixtures[0].status).toBe('NS');
+    });
+
+    it('should mark demo fixture as FT after it has a prediction', async () => {
+      const open = await mockModeUtils.applyMockInstantFinishToFixtures([
+        {
+          id: 900001,
+          home: 'Brazil',
+          away: 'Argentina',
+          kickoff: new Date().toISOString(),
+          status: 'NS',
+          goals: { home: null, away: null }
+        }
+      ]);
+      expect(open[0].status).toBe('NS');
+
+      await mockModeUtils.savePrediction('141414141414141414', 900001, {
+        homeScore: 2,
+        awayScore: 1,
+        resultPick: 'home',
+        submittedAt: new Date().toISOString()
+      });
+
+      const finished = await mockModeUtils.applyMockInstantFinishToFixtures([
+        {
+          id: 900001,
+          home: 'Brazil',
+          away: 'Argentina',
+          kickoff: new Date().toISOString(),
+          status: 'NS',
+          goals: { home: null, away: null }
+        }
+      ]);
+
+      expect(finished[0].status).toBe('FT');
+      expect(finished[0].goals).toEqual({ home: 2, away: 1 });
+    });
+  });
+
   describe('persistence', () => {
     it('should ignore duplicate registration', async () => {
       await utils.addRegisteredUser('101010101010101010');
@@ -377,7 +474,34 @@ describe('worldCupUtils', () => {
         status: 'NS',
         goals: { home: null, away: null }
       });
-      expect(embed.data.title).toBe('World Cup prediction');
+      expect(embed.data.title).toBe('World Cup - match open');
+    });
+
+    it('should add Gemini AI pick field when provided', () => {
+      const embed = utils.buildPromptEmbed(
+        {
+          id: 3,
+          home: 'Brazil',
+          away: 'Argentina',
+          kickoff: '2026-06-12T18:00:00+00:00',
+          status: 'NS',
+          goals: { home: null, away: null }
+        },
+        {
+          aiPrediction: {
+            homeScore: 2,
+            awayScore: 1,
+            resultPick: 'home',
+            reasoning: 'Home advantage.',
+            model: 'gemini-3.1-flash-lite'
+          }
+        }
+      );
+      expect(embed.data.fields?.[0]?.name).toBe('AI Prediction:');
+      const aiValue = embed.data.fields?.[0]?.value || '';
+      expect(aiValue).toContain('2-1');
+      expect(aiValue).toContain('Brazil');
+      expect(aiValue).toContain('Argentina');
     });
 
     it('should use question marks when goals are null in announcement', () => {
@@ -420,7 +544,7 @@ describe('worldCupUtils', () => {
         goals: { home: 0, away: 0 }
       };
       const embed = utils.buildAnnouncementEmbed(fixture, []);
-      expect(embed.data.fields[0].value).toContain('No registered predictions');
+      expect(embed.data.fields[0].value).toContain('Nobody scored points');
     });
 
     it('should expose predictor ids for a fixture', async () => {
@@ -457,7 +581,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupChannelId: '888888888888888888',
+      predictionChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -499,7 +623,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupChannelId: '888888888888888888',
+      predictionChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -550,7 +674,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
 
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupChannelId: '888888888888888888',
+      predictionChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -596,7 +720,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupChannelId: '888888888888888888',
+      predictionChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -634,7 +758,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
 
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupChannelId: '888888888888888888',
+      predictionChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -668,7 +792,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
 
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      worldCupChannelId: '888888888888888888',
+      predictionChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -698,7 +822,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
   it('should return 0 when world cup not configured', async () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
-      worldCupChannelId: '',
+      predictionChannelId: '',
       footballDataApiKey: ''
     }));
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));

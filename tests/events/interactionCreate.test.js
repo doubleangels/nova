@@ -31,11 +31,18 @@ describe('interactionCreate event', () => {
 
     mockWorldCupInteractions = {
       handleWorldCupPredictButton: jest.fn().mockResolvedValue(),
-      handleWorldCupPredictModal: jest.fn().mockResolvedValue(),
-      BUTTON_PREFIX: 'worldcup:predict:',
-      MODAL_PREFIX: 'worldcup:predict:'
+      handleWorldCupPickSelect: jest.fn().mockResolvedValue(),
+      isWorldCupPickSelect: jest.fn((id) => id?.startsWith('worldcup:pick:')),
+      BUTTON_PREFIX: 'worldcup:predict:'
     };
     jest.doMock('../../utils/worldCupInteractions', () => mockWorldCupInteractions);
+
+    jest.doMock('../../utils/footballInteractions', () => ({
+      handleFootballPredictButton: jest.fn().mockResolvedValue(),
+      handleFootballPickSelect: jest.fn().mockResolvedValue(),
+      isFootballPickSelect: jest.fn(id => id?.startsWith('football:pick:')),
+      BUTTON_PREFIX: 'football:predict:'
+    }));
 
     interactionCreateEvent = require('../../events/interactionCreate');
   });
@@ -106,13 +113,25 @@ describe('interactionCreate event', () => {
     await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
   });
 
-  it('should capture errors from World Cup modal handler', async () => {
-    mockWorldCupInteractions.handleWorldCupPredictModal.mockRejectedValue(new Error('modal fail'));
+  it('should handle World Cup prediction select menus', async () => {
     const mockInteraction = createMockInteraction({
-      customId: 'worldcup:predict:99'
+      customId: 'worldcup:pick:home:99'
     });
     mockInteraction.isButton = jest.fn().mockReturnValue(false);
-    mockInteraction.isModalSubmit = jest.fn().mockReturnValue(true);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockWorldCupInteractions.handleWorldCupPickSelect).toHaveBeenCalledWith(mockInteraction);
+  });
+
+  it('should capture errors from World Cup pick select handler', async () => {
+    mockWorldCupInteractions.handleWorldCupPickSelect.mockRejectedValue(new Error('select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
     mockInteraction.replied = false;
     mockInteraction.deferred = false;
 
@@ -120,63 +139,6 @@ describe('interactionCreate event', () => {
 
     expect(mockInstrument.captureError).toHaveBeenCalled();
     expect(mockInteraction.reply).toHaveBeenCalled();
-  });
-
-  it('should not reply on World Cup modal errors when already deferred', async () => {
-    mockWorldCupInteractions.handleWorldCupPredictModal.mockRejectedValue(new Error('modal fail'));
-    const mockInteraction = createMockInteraction({
-      customId: 'worldcup:predict:99'
-    });
-    mockInteraction.isButton = jest.fn().mockReturnValue(false);
-    mockInteraction.isModalSubmit = jest.fn().mockReturnValue(true);
-    mockInteraction.replied = false;
-    mockInteraction.deferred = true;
-
-    await interactionCreateEvent.execute(mockInteraction);
-
-    expect(mockInteraction.reply).not.toHaveBeenCalled();
-  });
-
-  it('should swallow reply failures after World Cup modal errors', async () => {
-    mockWorldCupInteractions.handleWorldCupPredictModal.mockRejectedValue(new Error('modal fail'));
-    const mockInteraction = createMockInteraction({
-      customId: 'worldcup:predict:99'
-    });
-    mockInteraction.isButton = jest.fn().mockReturnValue(false);
-    mockInteraction.isModalSubmit = jest.fn().mockReturnValue(true);
-    mockInteraction.replied = false;
-    mockInteraction.deferred = false;
-    mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
-
-    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
-  });
-
-  it('should skip World Cup modal handling when isModalSubmit is missing', async () => {
-    const mockInteraction = createMockInteraction({
-      customId: 'worldcup:predict:99'
-    });
-    mockInteraction.isButton = jest.fn().mockReturnValue(false);
-    mockInteraction.isAutocomplete = jest.fn().mockReturnValue(false);
-    mockInteraction.isChatInputCommand = jest.fn().mockReturnValue(false);
-    mockInteraction.isMessageContextMenuCommand = jest.fn().mockReturnValue(false);
-    mockInteraction.isUserContextMenuCommand = jest.fn().mockReturnValue(false);
-    delete mockInteraction.isModalSubmit;
-
-    await interactionCreateEvent.execute(mockInteraction);
-
-    expect(mockWorldCupInteractions.handleWorldCupPredictModal).not.toHaveBeenCalled();
-  });
-
-  it('should handle World Cup predict modal submits', async () => {
-    const mockInteraction = createMockInteraction({
-      customId: 'worldcup:predict:99'
-    });
-    mockInteraction.isButton = jest.fn().mockReturnValue(false);
-    mockInteraction.isModalSubmit = jest.fn().mockReturnValue(true);
-
-    await interactionCreateEvent.execute(mockInteraction);
-
-    expect(mockWorldCupInteractions.handleWorldCupPredictModal).toHaveBeenCalledWith(mockInteraction);
   });
 
   describe('autocomplete interactions', () => {

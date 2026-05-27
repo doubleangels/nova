@@ -139,14 +139,29 @@ Set variables in Doppler (or `.env` for local experiments).
 | :--- | :--- | :--- |
 | `DEEPL_API_KEY` | Flag-emoji translation via DeepL | *unset* |
 | `SENTRY_DSN` | Sentry error monitoring | *unset* |
-| `FOOTBALL_DATA_API_KEY` | [football-data.org](https://www.football-data.org/) API token for World Cup fixtures | *unset* |
-| `WORLD_CUP_MOCK_API` | Use simulated fixtures instead of the API (`true` / `1` / `yes`) | *unset* |
-| `WORLD_CUP_PARTICIPANT_ROLE_ID` | Role assigned when users run `/worldcup register` | *unset* |
-| `WORLD_CUP_CHANNEL_ID` | Channel for pre-match prompts and post-match announcements | *unset* |
+| `FOOTBALL_DATA_API_KEY` | [football-data.org](https://www.football-data.org/) API token for `/worldcup` and `/football` | *unset* |
+| `FOOTBALL_PREDICTION_MOCK_API` | Simulated fixtures for `/worldcup` and `/football` (`true` / `1` / `yes`) | *unset* |
+| `FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID` | Participant role for `/football register` (World Cup + club games) | *unset* |
+| `FOOTBALL_PREDICTION_CHANNEL_ID` | Channel for prompts and announcements (both games) | *unset* |
+| `FOOTBALL_PREDICTION_REMINDER_HOURS` | Hours before kickoff to post prompts | `24` |
+| `FOOTBALL_PREDICTION_POLL_INTERVAL_MS` | How often to poll fixtures (ms) | `900000` (15 min) |
+| `FOOTBALL_PREDICTION_PENDING_TTL_MS` | How long in-progress dropdown picks are kept (ms) | `900000` (15 min) |
+| `FOOTBALL_PREDICTION_AI_ENABLED` | Add a Gemini score suggestion on each match prompt (`true` / `1` / `yes`) | *unset* |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) key for Gemini match suggestions | *unset* |
+| `FOOTBALL_PREDICTION_GEMINI_MODEL` | Gemini model id for match suggestions | `gemini-3.1-flash-lite` |
+
+AI match suggestions use **Google Search grounding** (via the Gemini API) to factor in current form, injuries, and competition context. Search queries may incur additional Gemini API usage.
+
+| `FOOTBALL_PREDICTION_AI_CACHE_TTL_MS` | How long to reuse a generated AI pick per fixture (`0` = until kickoff) | `0` |
+| `FOOTBALL_PREDICTION_AI_CONTEXT_CACHE_TTL_SECONDS` | Gemini explicit cache TTL for the shared system instruction | `3600` |
+
+Caching reduces tokens and cost: the system prompt is stored in a Gemini context cache, and each fixture's AI prediction is reused until kickoff (or the TTL above).
 | `WORLD_CUP_COMPETITION_CODE` | football-data.org competition code (World Cup = `WC`) | `WC` |
-| `WORLD_CUP_SEASON` | Season year | `2026` |
-| `WORLD_CUP_REMINDER_HOURS` | Hours before kickoff to post prediction prompts | `24` |
-| `WORLD_CUP_POLL_INTERVAL_MS` | How often to poll fixtures (ms) | `900000` (15 min) |
+| `WORLD_CUP_SEASON` | World Cup season year | `2026` |
+| `FOOTBALL_COMPETITION_CODES` | Club leagues: `PL`, `BL1`, `PD`, `CL` | `PL,BL1,PD,CL` |
+| `FOOTBALL_SEASON` | Club competition season year | current calendar year |
+
+Legacy names (`WORLD_CUP_MOCK_API`, `FOOTBALL_MOCK_API`, `WORLD_CUP_CHANNEL_ID`, `WORLD_CUP_REMINDER_HOURS`, etc.) still work if the shared `FOOTBALL_PREDICTION_*` variables above are unset.
 
 ### Bot settings (`config.js`)
 
@@ -169,17 +184,35 @@ These run without a slash command:
 - **Message moderation** — Spam-mode duplicate detection and no-text channel enforcement.
 - **Reminders** — Disboard bumps (2 h), r/findaserver posts (24 h), r/needafriend comments (7 d) when configured via `/reminder setup`.
 - **Former members** — Users who leave are recorded for returning-member detection on re-join.
-- **World Cup predictions** — When `FOOTBALL_DATA_API_KEY` and `WORLD_CUP_CHANNEL_ID` are set, registered users get channel posts and DMs before each match with a button to submit score + winner/draw predictions via modal; results and points are announced after full-time.
+- **Prediction games** — When `FOOTBALL_DATA_API_KEY` and `FOOTBALL_PREDICTION_CHANNEL_ID` are set, `/worldcup` and `/football` post prompts in the same channel; registered users predict via buttons and dropdowns, and results are announced after full-time.
 
 ### World Cup predictions
 
-1. Set `FOOTBALL_DATA_API_KEY`, `WORLD_CUP_PARTICIPANT_ROLE_ID`, and `WORLD_CUP_CHANNEL_ID` in Doppler (or set `WORLD_CUP_MOCK_API=true` with the channel/role IDs to test without an API key).
-2. Users run `/worldcup register` to join and receive the participant role.
-3. Before each match (default 24 h ahead), the bot posts in the World Cup channel and DMs registered users with a **Submit prediction** button.
-4. Users enter home goals, away goals, and `home` / `draw` / `away` in the modal (both score and outcome required).
+1. For local testing set `FOOTBALL_PREDICTION_MOCK_API=true`, `FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID`, and `FOOTBALL_PREDICTION_CHANNEL_ID` (no football-data.org key required). For production add `FOOTBALL_DATA_API_KEY` as well.
+2. Users run `/football register` to join World Cup and club predictions and receive the participant role.
+3. Before each match (default 24 h ahead), the bot posts in the prediction channel with a **Submit prediction** button. Optionally enable **Gemini** suggestions with `FOOTBALL_PREDICTION_AI_ENABLED` and `GEMINI_API_KEY` (see table above).
+4. Users pick each team’s goals and the winner from dropdowns on one ephemeral message (any order).
 5. After full-time, the bot scores predictions and posts results plus who earned points. Use `/worldcup leaderboard` anytime.
+6. Server administrators can run `/worldcup reset` to wipe all game data (registrations, predictions, points, prompts) and optionally re-post open match prompts.
+
+**Mock API (`FOOTBALL_PREDICTION_MOCK_API=true`):** enables one World Cup demo fixture and one club demo fixture (described below).
+
+Real fixtures show country flag emojis (e.g. 🇧🇷 Brazil) wherever team names appear, resolved from the API team code/TLA or a built-in name map.
 
 **Scoring:** exact score = 3 pts; correct outcome from your predicted score = 1 pt; correct separate winner/draw pick = 1 pt (max 4 per match).
+
+### Club football predictions (`/football`)
+
+Separate from World Cup: same scoring and UI, but fixtures come from **Premier League**, **Bundesliga**, **La Liga**, and **UEFA Champions League** via football-data.org.
+
+1. Use the shared `FOOTBALL_PREDICTION_*` settings (same channel and role as `/worldcup`). Set `FOOTBALL_PREDICTION_MOCK_API=true` for local testing without an API key.
+2. Optionally set `FOOTBALL_COMPETITION_CODES` (default `PL,BL1,PD,CL`) and `FOOTBALL_SEASON` (e.g. `2025` for the 2025/26 season).
+3. Users run `/football register`, then predict from channel prompts. Use `/football matches` with optional `competition` and `status` filters.
+4. Administrators can run `/football reset` to wipe all club football game data.
+
+**Club mock demo** (with `FOOTBALL_PREDICTION_MOCK_API=true`): on each bot start, **Arsenal vs Chelsea** (Premier League) is posted with each club’s country flag from API-style team metadata. After at least one prediction it finishes **2-1**.
+
+**World Cup mock demo** (same flag): **Brazil vs Argentina** with each side’s country flag from API-style team metadata. After at least one prediction it finishes **2-1**.
 
 ### Slash commands (overview)
 
@@ -215,7 +248,8 @@ These run without a slash command:
 | `/country` | Country information | Everyone |
 | `/joindate` | Server join date for a user | Everyone |
 | `/newuser` | Profile and account creation info | Everyone |
-| `/worldcup` | World Cup 2026 predictions (register, leaderboard, matches) | Everyone |
+| `/worldcup` | World Cup 2026 predictions (leaderboard, matches, rules); `reset` is admin-only | Everyone (`reset`: Administrator) |
+| `/football` | Club football + **register** for both games (PL, Bundesliga, La Liga, CL); `reset` is admin-only | Everyone (`reset`: Administrator) |
 | `/coinflip` | Flip a coin | Everyone |
 | `/cat` | Random cat image | Everyone |
 | `/dog` | Random dog image (optional breed) | Everyone |

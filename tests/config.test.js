@@ -106,16 +106,24 @@ describe('config', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it('should warn when WORLD_CUP_MOCK_API is enabled', () => {
+  it('should warn when FOOTBALL_PREDICTION_MOCK_API is enabled', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.WORLD_CUP_MOCK_API = 'true';
+    process.env.FOOTBALL_PREDICTION_MOCK_API = 'true';
     delete process.env.FOOTBALL_DATA_API_KEY;
     require('../config');
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'WORLD_CUP_MOCK_API is enabled. World Cup fixtures use simulated data instead of football-data.org.'
+      'FOOTBALL_PREDICTION_MOCK_API is enabled. /worldcup and /football use simulated fixtures instead of football-data.org.'
     );
-    delete process.env.WORLD_CUP_MOCK_API;
+    delete process.env.FOOTBALL_PREDICTION_MOCK_API;
     consoleWarnSpy.mockRestore();
+  });
+
+  it('should enable mock mode from legacy WORLD_CUP_MOCK_API', () => {
+    delete process.env.FOOTBALL_PREDICTION_MOCK_API;
+    process.env.WORLD_CUP_MOCK_API = 'true';
+    const config = require('../config');
+    expect(config.predictionMockApi).toBe(true);
+    delete process.env.WORLD_CUP_MOCK_API;
   });
 
   it('should warn when FOOTBALL_DATA_API_KEY is not set', () => {
@@ -124,20 +132,34 @@ describe('config', () => {
     delete process.env.FOOTBALL_DATA_API_KEY;
     require('../config');
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'FOOTBALL_DATA_API_KEY is not set. World Cup predictions will be unavailable.'
+      'FOOTBALL_DATA_API_KEY is not set. /worldcup and /football predictions will be unavailable.'
     );
     consoleWarnSpy.mockRestore();
   });
 
-  it('should warn when WORLD_CUP_CHANNEL_ID is missing but API key set', () => {
+  it('should warn when prediction channel is missing but API key set', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
     process.env.FOOTBALL_DATA_API_KEY = 'test-football-key';
+    delete process.env.FOOTBALL_PREDICTION_CHANNEL_ID;
     delete process.env.WORLD_CUP_CHANNEL_ID;
+    delete process.env.FOOTBALL_CHANNEL_ID;
     require('../config');
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'WORLD_CUP_CHANNEL_ID is not set. World Cup prompts and announcements will not be posted.'
+      'FOOTBALL_PREDICTION_CHANNEL_ID is not set. Prediction prompts and announcements will not be posted.'
     );
     consoleWarnSpy.mockRestore();
+  });
+
+  it('should resolve shared prediction settings from legacy env vars', () => {
+    delete process.env.FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID;
+    delete process.env.FOOTBALL_PREDICTION_CHANNEL_ID;
+    process.env.WORLD_CUP_PARTICIPANT_ROLE_ID = '111111111111111111';
+    process.env.WORLD_CUP_CHANNEL_ID = '222222222222222222';
+    process.env.WORLD_CUP_REMINDER_HOURS = '48';
+    const config = require('../config');
+    expect(config.predictionParticipantRoleId).toBe('111111111111111111');
+    expect(config.predictionChannelId).toBe('222222222222222222');
+    expect(config.predictionReminderHours).toBe(48);
   });
 
   it('should not warn when DEEPL_API_KEY is set', () => {
@@ -150,19 +172,25 @@ describe('config', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it('should use custom World Cup reminder and poll intervals when valid', () => {
-    process.env.WORLD_CUP_REMINDER_HOURS = '48';
-    process.env.WORLD_CUP_POLL_INTERVAL_MS = '60000';
+  it('should use custom prediction reminder and poll intervals when valid', () => {
+    process.env.FOOTBALL_PREDICTION_REMINDER_HOURS = '48';
+    process.env.FOOTBALL_PREDICTION_POLL_INTERVAL_MS = '60000';
     const config = require('../config');
-    expect(config.worldCupReminderHours).toBe(48);
-    expect(config.worldCupPollIntervalMs).toBe(60000);
+    expect(config.predictionReminderHours).toBe(48);
+    expect(config.predictionPollIntervalMs).toBe(60000);
   });
 
-  it('should fall back when World Cup reminder and poll env vars are invalid', () => {
-    process.env.WORLD_CUP_REMINDER_HOURS = 'not-a-number';
-    process.env.WORLD_CUP_POLL_INTERVAL_MS = '0';
+  it('should fall back when prediction reminder and poll env vars are invalid', () => {
+    process.env.FOOTBALL_PREDICTION_REMINDER_HOURS = 'not-a-number';
+    process.env.FOOTBALL_PREDICTION_POLL_INTERVAL_MS = '0';
     const config = require('../config');
-    expect(config.worldCupReminderHours).toBe(24);
-    expect(config.worldCupPollIntervalMs).toBe(15 * 60 * 1000);
+    expect(config.predictionReminderHours).toBe(24);
+    expect(config.predictionPollIntervalMs).toBe(15 * 60 * 1000);
+  });
+
+  it('should use custom prediction pending TTL when valid', () => {
+    process.env.FOOTBALL_PREDICTION_PENDING_TTL_MS = '300000';
+    const config = require('../config');
+    expect(config.predictionPendingTtlMs).toBe(300000);
   });
 });

@@ -8,6 +8,7 @@ const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 const { updateInviteSnapshotFromCollection } = require('../utils/inviteCache');
 const { startWorldCupScheduler } = require('../utils/worldCupScheduler');
+const { startFootballScheduler } = require('../utils/footballScheduler');
 
 const DEFAULT_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
@@ -135,6 +136,7 @@ module.exports = {
       }
 
       startWorldCupScheduler(client);
+      startFootballScheduler(client);
 
       logger.info('Bot is ready and all systems are initialized.');
 

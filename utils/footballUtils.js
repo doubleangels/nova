@@ -3,7 +3,7 @@ const dayjs = require('dayjs');
 const { EmbedBuilder } = require('discord.js');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
-const { getSeasonFixtures } = require('./worldCupClient');
+const { getSeasonFixtures } = require('./footballClient');
 const keyvModule = require('keyv');
 const Keyv = keyvModule.default ?? keyvModule;
 const { getSharedKeyvStore } = require('./sqliteStore');
@@ -19,13 +19,15 @@ const msgs = require('./predictionMessages');
  * @property {string|null} [awayIso2]
  * @property {string|null} [homeTla]
  * @property {string|null} [awayTla]
+ * @property {string|null} [competitionCode]
+ * @property {string|null} [competitionName]
  * @property {string} kickoff ISO date
  * @property {string} status
  * @property {{ home: number|null, away: number|null }} goals
  */
 
 /**
- * @typedef {Object} WorldCupPrediction
+ * @typedef {Object} FootballPrediction
  * @property {number} homeScore
  * @property {number} awayScore
  * @property {'home'|'draw'|'away'} resultPick
@@ -36,12 +38,12 @@ const msgs = require('./predictionMessages');
  * @property {number} [pointsAwarded]
  */
 
-const worldCupKeyv = new Keyv({
+const footballKeyv = new Keyv({
   store: getSharedKeyvStore(),
-  namespace: 'worldcup'
+  namespace: 'football'
 });
 
-worldCupKeyv.on('error', err => logger.error('World Cup Keyv connection error.', { err }));
+footballKeyv.on('error', err => logger.error('Football Keyv connection error.', { err }));
 
 const OPEN_STATUSES = new Set(['NS', 'TBD', 'PST']);
 
@@ -98,7 +100,7 @@ function isFixtureOpenForPrediction(fixture, now = new Date()) {
 /**
  * @returns {boolean}
  */
-function isWorldCupGameConfigured() {
+function isFootballGameConfigured() {
   const hasApi =
     config.predictionMockApi ||
     (config.footballDataApiKey && String(config.footballDataApiKey).trim());
@@ -114,7 +116,7 @@ function isWorldCupGameConfigured() {
  * @returns {Promise<string[]>}
  */
 async function getRegisteredUserIds() {
-  return (await worldCupKeyv.get('registered')) || [];
+  return (await footballKeyv.get('registered')) || [];
 }
 
 /**
@@ -134,40 +136,40 @@ async function addRegisteredUser(userId) {
   const list = await getRegisteredUserIds();
   if (!list.includes(userId)) {
     list.push(userId);
-    await worldCupKeyv.set('registered', list);
+    await footballKeyv.set('registered', list);
   }
 }
 
 /**
  * @param {string} userId
  * @param {number} fixtureId
- * @returns {Promise<WorldCupPrediction|null>}
+ * @returns {Promise<FootballPrediction|null>}
  */
 async function getPrediction(userId, fixtureId) {
-  return (await worldCupKeyv.get(`prediction:${userId}:${fixtureId}`)) || null;
+  return (await footballKeyv.get(`prediction:${userId}:${fixtureId}`)) || null;
 }
 
 /**
  * @param {string} userId
  * @param {number} fixtureId
- * @param {WorldCupPrediction} prediction
+ * @param {FootballPrediction} prediction
  * @returns {Promise<void>}
  */
 async function savePrediction(userId, fixtureId, prediction) {
-  await worldCupKeyv.set(`prediction:${userId}:${fixtureId}`, prediction);
+  await footballKeyv.set(`prediction:${userId}:${fixtureId}`, prediction);
 
   const indexKey = `predictions_by_fixture:${fixtureId}`;
-  const userIds = (await worldCupKeyv.get(indexKey)) || [];
+  const userIds = (await footballKeyv.get(indexKey)) || [];
   if (!userIds.includes(userId)) {
     userIds.push(userId);
-    await worldCupKeyv.set(indexKey, userIds);
+    await footballKeyv.set(indexKey, userIds);
   }
 
   const userIndexKey = `user_predictions:${userId}`;
-  const fixtureIds = (await worldCupKeyv.get(userIndexKey)) || [];
+  const fixtureIds = (await footballKeyv.get(userIndexKey)) || [];
   if (!fixtureIds.includes(fixtureId)) {
     fixtureIds.push(fixtureId);
-    await worldCupKeyv.set(userIndexKey, fixtureIds);
+    await footballKeyv.set(userIndexKey, fixtureIds);
   }
 }
 
@@ -176,7 +178,7 @@ async function savePrediction(userId, fixtureId, prediction) {
  * @returns {Promise<number[]>}
  */
 async function getUserPredictionFixtureIds(userId) {
-  return (await worldCupKeyv.get(`user_predictions:${userId}`)) || [];
+  return (await footballKeyv.get(`user_predictions:${userId}`)) || [];
 }
 
 /**
@@ -184,7 +186,7 @@ async function getUserPredictionFixtureIds(userId) {
  * @returns {Promise<number>}
  */
 async function getUserPoints(userId) {
-  return (await worldCupKeyv.get(`points:${userId}`)) || 0;
+  return (await footballKeyv.get(`points:${userId}`)) || 0;
 }
 
 /**
@@ -195,7 +197,7 @@ async function getUserPoints(userId) {
 async function addUserPoints(userId, delta) {
   const current = await getUserPoints(userId);
   const next = current + delta;
-  await worldCupKeyv.set(`points:${userId}`, next);
+  await footballKeyv.set(`points:${userId}`, next);
   return next;
 }
 
@@ -203,7 +205,7 @@ async function addUserPoints(userId, delta) {
  * @returns {Promise<number[]>}
  */
 async function getPromptedFixtures() {
-  return (await worldCupKeyv.get('prompted_fixtures')) || [];
+  return (await footballKeyv.get('prompted_fixtures')) || [];
 }
 
 /**
@@ -214,7 +216,7 @@ async function markFixturePrompted(fixtureId) {
   const list = await getPromptedFixtures();
   if (!list.includes(fixtureId)) {
     list.push(fixtureId);
-    await worldCupKeyv.set('prompted_fixtures', list);
+    await footballKeyv.set('prompted_fixtures', list);
   }
 }
 
@@ -222,7 +224,7 @@ async function markFixturePrompted(fixtureId) {
  * @returns {Promise<number[]>}
  */
 async function getScoredFixtures() {
-  return (await worldCupKeyv.get('scored_fixtures')) || [];
+  return (await footballKeyv.get('scored_fixtures')) || [];
 }
 
 /**
@@ -233,7 +235,7 @@ async function markFixtureScored(fixtureId) {
   const list = await getScoredFixtures();
   if (!list.includes(fixtureId)) {
     list.push(fixtureId);
-    await worldCupKeyv.set('scored_fixtures', list);
+    await footballKeyv.set('scored_fixtures', list);
   }
 }
 
@@ -242,7 +244,7 @@ async function markFixtureScored(fixtureId) {
  * @returns {Promise<string[]>}
  */
 async function getPredictorIdsForFixture(fixtureId) {
-  return (await worldCupKeyv.get(`predictions_by_fixture:${fixtureId}`)) || [];
+  return (await footballKeyv.get(`predictions_by_fixture:${fixtureId}`)) || [];
 }
 
 const PENDING_PREDICTION_TTL_MS = config.predictionPendingTtlMs;
@@ -287,7 +289,7 @@ async function savePendingPrediction(userId, fixtureId, partial) {
     ...partial,
     updatedAt: new Date().toISOString()
   };
-  await worldCupKeyv.set(
+  await footballKeyv.set(
     `pending_prediction:${userId}:${fixtureId}`,
     next,
     PENDING_PREDICTION_TTL_MS
@@ -301,7 +303,7 @@ async function savePendingPrediction(userId, fixtureId, partial) {
  * @returns {Promise<PendingPrediction|null>}
  */
 async function getPendingPrediction(userId, fixtureId) {
-  return (await worldCupKeyv.get(`pending_prediction:${userId}:${fixtureId}`)) || null;
+  return (await footballKeyv.get(`pending_prediction:${userId}:${fixtureId}`)) || null;
 }
 
 /**
@@ -310,7 +312,7 @@ async function getPendingPrediction(userId, fixtureId) {
  * @returns {Promise<void>}
  */
 async function clearPendingPrediction(userId, fixtureId) {
-  await worldCupKeyv.delete(`pending_prediction:${userId}:${fixtureId}`);
+  await footballKeyv.delete(`pending_prediction:${userId}:${fixtureId}`);
 }
 
 /**
@@ -332,7 +334,9 @@ function formatFixtureLine(fixture) {
   const kickoff = fixture.kickoff
     ? formatDiscordTimestamp(fixture.kickoff)
     : 'TBD';
-  return `**${formatFixtureTeam(fixture, 'home')}** vs **${formatFixtureTeam(fixture, 'away')}** - ${kickoff} (\`${fixture.status}\`)`;
+  const league = fixture.competitionName || fixture.competitionCode;
+  const prefix = league ? `**[${league}]** ` : '';
+  return `${prefix}**${formatFixtureTeam(fixture, 'home')}** vs **${formatFixtureTeam(fixture, 'away')}** - ${kickoff} (\`${fixture.status}\`)`;
 }
 
 /**
@@ -345,9 +349,10 @@ function formatFixtureLine(fixture) {
  * @returns {EmbedBuilder}
  */
 function buildPromptEmbed(fixture, options = {}) {
+  const league = fixture.competitionName || fixture.competitionCode;
   const embed = new EmbedBuilder()
     .setColor(config.baseEmbedColor)
-    .setTitle(msgs.buildPromptTitle('worldcup'))
+    .setTitle(msgs.buildPromptTitle('club', league))
     .setDescription(
       `${formatFixtureLine(fixture)}\n\n${msgs.buildPromptDescription(fixture, formatFixtureTeam)}`
     )
@@ -385,7 +390,7 @@ function buildAnnouncementEmbed(fixture, earners) {
     value: msgs.formatPointsEarnedField(earners).slice(0, 1024)
   });
 
-  embed.setFooter({ text: msgs.buildResultsFooter('worldcup') });
+  embed.setFooter({ text: msgs.buildResultsFooter('club') });
   return embed;
 }
 
@@ -412,7 +417,7 @@ async function getLeaderboard(limit = 10) {
 async function areAllMockPlayableFixturesPredicted() {
   if (!config.predictionMockApi) return false;
 
-  const { MOCK_PLAYABLE_MATCH_IDS } = require('./worldCupMockData');
+  const { MOCK_PLAYABLE_MATCH_IDS } = require('./footballMockData');
   for (const fixtureId of MOCK_PLAYABLE_MATCH_IDS) {
     const predictorIds = await getPredictorIdsForFixture(fixtureId);
     if (predictorIds.length === 0) return false;
@@ -421,11 +426,11 @@ async function areAllMockPlayableFixturesPredicted() {
 }
 
 /**
- * Wipes all World Cup game data in Keyv (registrations, predictions, points, prompts, pending).
+ * Wipes all Football game data in Keyv (registrations, predictions, points, prompts, pending).
  * @returns {Promise<void>}
  */
-async function resetWorldCupGame() {
-  await worldCupKeyv.clear();
+async function resetFootballGame() {
+  await footballKeyv.clear();
 }
 
 /**
@@ -435,18 +440,18 @@ async function resetWorldCupGame() {
 async function resetMockDemoState() {
   if (!config.predictionMockApi) return;
 
-  const { MOCK_PLAYABLE_MATCH_IDS } = require('./worldCupMockData');
+  const { MOCK_PLAYABLE_MATCH_IDS } = require('./footballMockData');
   const { clearAiPredictionCache } = require('./matchPredictionAi');
-  clearAiPredictionCache(MOCK_PLAYABLE_MATCH_IDS, 'worldcup');
+  clearAiPredictionCache(MOCK_PLAYABLE_MATCH_IDS, 'club');
 
   const prompted = await getPromptedFixtures();
-  await worldCupKeyv.set(
+  await footballKeyv.set(
     'prompted_fixtures',
     prompted.filter(id => !MOCK_PLAYABLE_MATCH_IDS.includes(id))
   );
 
   const scored = await getScoredFixtures();
-  await worldCupKeyv.set(
+  await footballKeyv.set(
     'scored_fixtures',
     scored.filter(id => !MOCK_PLAYABLE_MATCH_IDS.includes(id))
   );
@@ -454,14 +459,14 @@ async function resetMockDemoState() {
   for (const fixtureId of MOCK_PLAYABLE_MATCH_IDS) {
     const userIds = await getPredictorIdsForFixture(fixtureId);
     for (const userId of userIds) {
-      await worldCupKeyv.delete(`prediction:${userId}:${fixtureId}`);
+      await footballKeyv.delete(`prediction:${userId}:${fixtureId}`);
       const userFixtureIds = await getUserPredictionFixtureIds(userId);
-      await worldCupKeyv.set(
+      await footballKeyv.set(
         `user_predictions:${userId}`,
         userFixtureIds.filter(id => id !== fixtureId)
       );
     }
-    await worldCupKeyv.delete(`predictions_by_fixture:${fixtureId}`);
+    await footballKeyv.delete(`predictions_by_fixture:${fixtureId}`);
   }
 }
 
@@ -478,7 +483,7 @@ async function applyMockInstantFinishToFixtures(fixtures) {
   const {
     isMockPlayableMatchId,
     getMockScriptedFullTimeGoals
-  } = require('./worldCupMockData');
+  } = require('./footballMockData');
 
   return fixtures.map(fixture => {
     if (!isMockPlayableMatchId(fixture.id)) return fixture;
@@ -499,7 +504,7 @@ async function applyMockInstantFinishToFixtures(fixtures) {
  * @returns {Promise<number>}
  */
 async function scoreFinishedFixtures(client) {
-  if (!isWorldCupGameConfigured()) return 0;
+  if (!isFootballGameConfigured()) return 0;
 
   const fixtures = await getSeasonFixtures({ forceRefresh: true });
   const scoredList = await getScoredFixtures();
@@ -558,7 +563,7 @@ async function scoreFinishedFixtures(client) {
           await channel.send({ embeds: [embed] });
         }
       } catch (err) {
-        logger.error('Failed to post World Cup match announcement.', {
+        logger.error('Failed to post Football match announcement.', {
           err,
           fixtureId: fixture.id,
           channelId
@@ -665,12 +670,12 @@ function formatResultPickOptions(fixture) {
 }
 
 module.exports = {
-  worldCupKeyv,
+  footballKeyv,
   getOutcome,
   calculateScorePoints,
   calculateResultPoints,
   isFixtureOpenForPrediction,
-  isWorldCupGameConfigured,
+  isFootballGameConfigured,
   getRegisteredUserIds,
   isUserRegistered,
   addRegisteredUser,
@@ -696,7 +701,7 @@ module.exports = {
   buildAnnouncementEmbed,
   getLeaderboard,
   areAllMockPlayableFixturesPredicted,
-  resetWorldCupGame,
+  resetFootballGame,
   resetMockDemoState,
   applyMockInstantFinishToFixtures,
   scoreFinishedFixtures,
