@@ -29,7 +29,7 @@ const MODAL_PREFIX = 'worldcup:predict:';
 async function handleWorldCupPredictButton(interaction) {
   if (!isApiConfigured()) {
     await interaction.reply({
-      content: '⚠️ World Cup predictions are not configured (missing API_FOOTBALL_KEY).',
+      content: '⚠️ World Cup predictions are not configured (missing FOOTBALL_DATA_API_KEY).',
       flags: MessageFlags.Ephemeral
     });
     return;

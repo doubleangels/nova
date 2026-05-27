@@ -50,11 +50,12 @@ function parseDisabledCommands(value) {
  * @property {string} redditUsername - Reddit username for API authentication (from REDDIT_USERNAME env var)
  * @property {string} searchEngineId - Google Custom Search Engine ID for web searches (from SEARCH_ENGINE_ID env var)
  * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
- * @property {string} apiFootballKey - API-Football key for World Cup fixtures (from API_FOOTBALL_KEY env var)
+ * @property {string} footballDataApiKey - football-data.org API token (from FOOTBALL_DATA_API_KEY env var)
+ * @property {boolean} worldCupMockApi - Use simulated fixtures instead of football-data.org (from WORLD_CUP_MOCK_API env var)
  * @property {string} worldCupParticipantRoleId - Role granted on /worldcup register (from WORLD_CUP_PARTICIPANT_ROLE_ID env var)
  * @property {string} worldCupChannelId - Channel for prompts and match announcements (from WORLD_CUP_CHANNEL_ID env var)
- * @property {string} worldCupLeagueId - API-Football league ID for World Cup (from WORLD_CUP_LEAGUE_ID env var)
- * @property {string} worldCupSeason - API-Football season year (from WORLD_CUP_SEASON env var)
+ * @property {string} worldCupCompetitionCode - football-data.org competition code (from WORLD_CUP_COMPETITION_CODE env var)
+ * @property {string} worldCupSeason - Season year for competition matches (from WORLD_CUP_SEASON env var)
  * @property {number} worldCupReminderHours - Hours before kickoff to post prediction prompts
  * @property {number} worldCupPollIntervalMs - Interval for fixture polling scheduler
  * // Spotify integration removed
@@ -121,11 +122,12 @@ module.exports = {
   searchEngineId: process.env.SEARCH_ENGINE_ID,
   // Server invite URL for kick messages
   serverInviteUrl: process.env.SERVER_INVITE_URL,
-  // API-Football (World Cup predictions)
-  apiFootballKey: process.env.API_FOOTBALL_KEY,
+  // football-data.org (World Cup predictions)
+  footballDataApiKey: process.env.FOOTBALL_DATA_API_KEY,
+  worldCupMockApi: isTruthyEnv(process.env.WORLD_CUP_MOCK_API),
   worldCupParticipantRoleId: process.env.WORLD_CUP_PARTICIPANT_ROLE_ID,
   worldCupChannelId: process.env.WORLD_CUP_CHANNEL_ID,
-  worldCupLeagueId: process.env.WORLD_CUP_LEAGUE_ID || '1',
+  worldCupCompetitionCode: process.env.WORLD_CUP_COMPETITION_CODE || 'WC',
   worldCupSeason: process.env.WORLD_CUP_SEASON || '2026',
   worldCupReminderHours: (() => {
     const parsed = parseInt(process.env.WORLD_CUP_REMINDER_HOURS, 10);
@@ -168,6 +170,12 @@ function isSet(value) {
   return value != null && String(value).trim() !== '';
 }
 
+function isTruthyEnv(value) {
+  if (!isSet(value)) return false;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
 const missing = REQUIRED_ENV_VARS.filter(name => !isSet(process.env[name]));
 if (missing.length > 0) {
   console.error('Missing required environment variable(s). Bot cannot start.');
@@ -180,14 +188,21 @@ if (!isSet(process.env.DEEPL_API_KEY)) {
   console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
 }
 
-if (!isSet(process.env.API_FOOTBALL_KEY)) {
-  console.warn('API_FOOTBALL_KEY is not set. World Cup predictions will be unavailable.');
+if (isTruthyEnv(process.env.WORLD_CUP_MOCK_API)) {
+  console.warn(
+    'WORLD_CUP_MOCK_API is enabled. World Cup fixtures use simulated data instead of football-data.org.'
+  );
+} else if (!isSet(process.env.FOOTBALL_DATA_API_KEY)) {
+  console.warn('FOOTBALL_DATA_API_KEY is not set. World Cup predictions will be unavailable.');
 }
 
-if (isSet(process.env.API_FOOTBALL_KEY) && !isSet(process.env.WORLD_CUP_CHANNEL_ID)) {
+const worldCupApiActive =
+  isTruthyEnv(process.env.WORLD_CUP_MOCK_API) || isSet(process.env.FOOTBALL_DATA_API_KEY);
+
+if (worldCupApiActive && !isSet(process.env.WORLD_CUP_CHANNEL_ID)) {
   console.warn('WORLD_CUP_CHANNEL_ID is not set. World Cup prompts and announcements will not be posted.');
 }
 
-if (isSet(process.env.API_FOOTBALL_KEY) && !isSet(process.env.WORLD_CUP_PARTICIPANT_ROLE_ID)) {
+if (worldCupApiActive && !isSet(process.env.WORLD_CUP_PARTICIPANT_ROLE_ID)) {
   console.warn('WORLD_CUP_PARTICIPANT_ROLE_ID is not set. /worldcup register cannot assign a participant role.');
 }

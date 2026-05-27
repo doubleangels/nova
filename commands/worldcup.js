@@ -5,7 +5,6 @@ const {
   PermissionFlagsBits
 } = require('discord.js');
 const path = require('path');
-const dayjs = require('dayjs');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
 const { isApiConfigured, getSeasonFixtures } = require('../utils/worldCupClient');
@@ -164,7 +163,7 @@ module.exports = {
   async handleLeaderboard(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
-        content: '⚠️ World Cup predictions are not configured (missing `API_FOOTBALL_KEY`).',
+        content: '⚠️ World Cup predictions are not configured (missing `FOOTBALL_DATA_API_KEY`).',
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -222,7 +221,7 @@ module.exports = {
   async handleMatches(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
-        content: '⚠️ World Cup predictions are not configured (missing `API_FOOTBALL_KEY`).',
+        content: '⚠️ World Cup predictions are not configured (missing `FOOTBALL_DATA_API_KEY`).',
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -264,7 +263,7 @@ module.exports = {
   async handleMyPicks(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
-        content: '⚠️ World Cup predictions are not configured (missing `API_FOOTBALL_KEY`).',
+        content: '⚠️ World Cup predictions are not configured (missing `FOOTBALL_DATA_API_KEY`).',
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -291,8 +290,8 @@ module.exports = {
       const prediction = await getPrediction(interaction.user.id, fixtureId);
       const fixture = fixtureMap.get(fixtureId);
       const label = fixture
-        ? `${fixture.home} vs ${fixture.away}`
-        : `Match ${fixtureId}`;
+        ? formatFixtureLine(fixture)
+        : `Match \`${fixtureId}\``;
       const pick = `Score **${prediction.homeScore}–${prediction.awayScore}**, pick **${prediction.resultPick}**`;
       const pts = prediction.scored
         ? ` — **+${prediction.pointsAwarded ?? 0}** pts`

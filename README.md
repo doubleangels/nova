@@ -139,10 +139,11 @@ Set variables in Doppler (or `.env` for local experiments).
 | :--- | :--- | :--- |
 | `DEEPL_API_KEY` | Flag-emoji translation via DeepL | *unset* |
 | `SENTRY_DSN` | Sentry error monitoring | *unset* |
-| `API_FOOTBALL_KEY` | [API-Football](https://www.api-football.com/) key for World Cup fixtures | *unset* |
+| `FOOTBALL_DATA_API_KEY` | [football-data.org](https://www.football-data.org/) API token for World Cup fixtures | *unset* |
+| `WORLD_CUP_MOCK_API` | Use simulated fixtures instead of the API (`true` / `1` / `yes`) | *unset* |
 | `WORLD_CUP_PARTICIPANT_ROLE_ID` | Role assigned when users run `/worldcup register` | *unset* |
 | `WORLD_CUP_CHANNEL_ID` | Channel for pre-match prompts and post-match announcements | *unset* |
-| `WORLD_CUP_LEAGUE_ID` | API-Football league ID (World Cup = `1`) | `1` |
+| `WORLD_CUP_COMPETITION_CODE` | football-data.org competition code (World Cup = `WC`) | `WC` |
 | `WORLD_CUP_SEASON` | Season year | `2026` |
 | `WORLD_CUP_REMINDER_HOURS` | Hours before kickoff to post prediction prompts | `24` |
 | `WORLD_CUP_POLL_INTERVAL_MS` | How often to poll fixtures (ms) | `900000` (15 min) |
@@ -168,11 +169,11 @@ These run without a slash command:
 - **Message moderation** — Spam-mode duplicate detection and no-text channel enforcement.
 - **Reminders** — Disboard bumps (2 h), r/findaserver posts (24 h), r/needafriend comments (7 d) when configured via `/reminder setup`.
 - **Former members** — Users who leave are recorded for returning-member detection on re-join.
-- **World Cup predictions** — When `API_FOOTBALL_KEY` and `WORLD_CUP_CHANNEL_ID` are set, registered users get channel posts and DMs before each match with a button to submit score + winner/draw predictions via modal; results and points are announced after full-time.
+- **World Cup predictions** — When `FOOTBALL_DATA_API_KEY` and `WORLD_CUP_CHANNEL_ID` are set, registered users get channel posts and DMs before each match with a button to submit score + winner/draw predictions via modal; results and points are announced after full-time.
 
 ### World Cup predictions
 
-1. Set `API_FOOTBALL_KEY`, `WORLD_CUP_PARTICIPANT_ROLE_ID`, and `WORLD_CUP_CHANNEL_ID` in Doppler.
+1. Set `FOOTBALL_DATA_API_KEY`, `WORLD_CUP_PARTICIPANT_ROLE_ID`, and `WORLD_CUP_CHANNEL_ID` in Doppler (or set `WORLD_CUP_MOCK_API=true` with the channel/role IDs to test without an API key).
 2. Users run `/worldcup register` to join and receive the participant role.
 3. Before each match (default 24 h ahead), the bot posts in the World Cup channel and DMs registered users with a **Submit prediction** button.
 4. Users enter home goals, away goals, and `home` / `draw` / `away` in the modal (both score and outcome required).

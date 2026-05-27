@@ -106,19 +106,32 @@ describe('config', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it('should warn when API_FOOTBALL_KEY is not set', () => {
+  it('should warn when WORLD_CUP_MOCK_API is enabled', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    delete process.env.API_FOOTBALL_KEY;
+    process.env.WORLD_CUP_MOCK_API = 'true';
+    delete process.env.FOOTBALL_DATA_API_KEY;
     require('../config');
     expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'API_FOOTBALL_KEY is not set. World Cup predictions will be unavailable.'
+      'WORLD_CUP_MOCK_API is enabled. World Cup fixtures use simulated data instead of football-data.org.'
+    );
+    delete process.env.WORLD_CUP_MOCK_API;
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('should warn when FOOTBALL_DATA_API_KEY is not set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    delete process.env.WORLD_CUP_MOCK_API;
+    delete process.env.FOOTBALL_DATA_API_KEY;
+    require('../config');
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'FOOTBALL_DATA_API_KEY is not set. World Cup predictions will be unavailable.'
     );
     consoleWarnSpy.mockRestore();
   });
 
   it('should warn when WORLD_CUP_CHANNEL_ID is missing but API key set', () => {
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.API_FOOTBALL_KEY = 'test-football-key';
+    process.env.FOOTBALL_DATA_API_KEY = 'test-football-key';
     delete process.env.WORLD_CUP_CHANNEL_ID;
     require('../config');
     expect(consoleWarnSpy).toHaveBeenCalledWith(

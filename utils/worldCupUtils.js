@@ -93,9 +93,12 @@ function isFixtureOpenForPrediction(fixture, now = new Date()) {
  * @returns {boolean}
  */
 function isWorldCupGameConfigured() {
+  const hasApi =
+    config.worldCupMockApi ||
+    (config.footballDataApiKey && String(config.footballDataApiKey).trim());
+
   return Boolean(
-    config.apiFootballKey &&
-    String(config.apiFootballKey).trim() &&
+    hasApi &&
     config.worldCupChannelId &&
     String(config.worldCupChannelId).trim()
   );
@@ -237,12 +240,23 @@ async function getPredictorIdsForFixture(fixtureId) {
 }
 
 /**
+ * @param {string} isoDate
+ * @param {'t'|'T'|'d'|'D'|'f'|'F'|'R'} [style='f']
+ * @returns {string}
+ */
+function formatDiscordTimestamp(isoDate, style = 'f') {
+  const unix = Math.floor(new Date(isoDate).getTime() / 1000);
+  if (!Number.isFinite(unix)) return 'TBD';
+  return `<t:${unix}:${style}>`;
+}
+
+/**
  * @param {NormalizedFixture} fixture
  * @returns {string}
  */
 function formatFixtureLine(fixture) {
   const kickoff = fixture.kickoff
-    ? dayjs(fixture.kickoff).format('MMM D, HH:mm [UTC]')
+    ? formatDiscordTimestamp(fixture.kickoff)
     : 'TBD';
   return `**${fixture.home}** vs **${fixture.away}** — ${kickoff} (\`${fixture.status}\`)`;
 }
@@ -450,6 +464,7 @@ module.exports = {
   getScoredFixtures,
   markFixtureScored,
   getPredictorIdsForFixture,
+  formatDiscordTimestamp,
   formatFixtureLine,
   buildPromptEmbed,
   buildAnnouncementEmbed,

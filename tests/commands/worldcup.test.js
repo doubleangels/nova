@@ -253,7 +253,7 @@ describe('worldcup command', () => {
     await worldcupCommand.execute(interaction);
 
     const description = interaction.editReply.mock.calls[0][0].embeds[0].data.description;
-    expect(description).toContain('Match 999');
+    expect(description).toContain('Match `999`');
     expect(description).toContain('pending');
   });
 
@@ -316,7 +316,7 @@ describe('worldcup command', () => {
     });
     await worldcupCommand.execute(interaction);
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
-      content: expect.stringContaining('API_FOOTBALL_KEY')
+      content: expect.stringContaining('FOOTBALL_DATA_API_KEY')
     }));
   });
 
@@ -450,7 +450,7 @@ describe('worldcup command', () => {
     });
     await worldcupCommand.execute(interaction);
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
-      content: expect.stringContaining('API_FOOTBALL_KEY')
+      content: expect.stringContaining('FOOTBALL_DATA_API_KEY')
     }));
   });
 
@@ -461,7 +461,7 @@ describe('worldcup command', () => {
     });
     await worldcupCommand.execute(interaction);
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
-      content: expect.stringContaining('API_FOOTBALL_KEY')
+      content: expect.stringContaining('FOOTBALL_DATA_API_KEY')
     }));
   });
 
