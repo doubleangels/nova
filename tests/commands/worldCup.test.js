@@ -446,4 +446,46 @@ describe('worldcup command', () => {
     expect(mockScheduler.runWorldCupStartup).not.toHaveBeenCalled();
   });
 
+  it('should deny reset when executed outside a guild', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('reset'),
+        getBoolean: jest.fn().mockReturnValue(true)
+      },
+      guild: null
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('server')
+    }));
+    expect(mockUtils.resetWorldCupGame).not.toHaveBeenCalled();
+  });
+
+  it('should skip repost and set repostSkippedConfig when API or game is not configured', async () => {
+    mockClientApi.isApiConfigured.mockReturnValue(false);
+    mockUtils.isWorldCupGameConfigured.mockReturnValue(false);
+
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('reset'),
+        getBoolean: jest.fn().mockReturnValue(true)
+      },
+      guild: { id: 'guild-1' },
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      },
+      client: { id: 'bot' }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(mockUtils.resetWorldCupGame).toHaveBeenCalled();
+    expect(mockScheduler.runWorldCupStartup).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.any(Array)
+    }));
+  });
+
 });

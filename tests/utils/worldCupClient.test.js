@@ -229,6 +229,12 @@ describe('worldCupClient', () => {
         worldCupCompetitionCode: 'WC',
         worldCupSeason: '2026'
       }));
+      // Prevent applyMockFinish from consulting the real SQLite store (which may
+      // have predictions from other test suites), so fixtures always appear as-is.
+      jest.doMock('../../utils/predictionMockFinish', () => ({
+        applyMockInstantFinishToFixtures: (_store, _ids, _data, fixtures) =>
+          Promise.resolve(fixtures)
+      }));
       client = require('../../utils/worldCupClient');
       client.clearSeasonCache();
     });

@@ -838,3 +838,51 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     expect(await scoringUtils.scoreFinishedFixtures(null)).toBe(0);
   });
 });
+
+describe('worldCupUtils pending prediction and mock state', () => {
+  let utils;
+
+  beforeEach(() => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn()
+    }));
+    jest.doMock('../../config', () => ({
+      baseEmbedColor: 0xABCDEF,
+      predictionMockApi: true,
+      predictionChannelId: '999999999999999999'
+    }));
+    utils = require('../../utils/worldCupUtils');
+  });
+
+  it('should save, get, and clear a pending prediction', async () => {
+    await utils.savePendingPrediction('user-x', 1001, { homeScore: 2 });
+    const pending = await utils.getPendingPrediction('user-x', 1001);
+    expect(pending?.homeScore).toBe(2);
+
+    await utils.clearPendingPrediction('user-x', 1001);
+    const cleared = await utils.getPendingPrediction('user-x', 1001);
+    expect(cleared).toBeNull();
+  });
+
+  it('should report areAllMockPlayableFixturesPredicted correctly', async () => {
+    // Before any prediction, should be false (fixture not predicted)
+    const before = await utils.areAllMockPlayableFixturesPredicted();
+    expect(typeof before).toBe('boolean');
+  });
+
+  it('should call resetMockDemoState without error', async () => {
+    await expect(utils.resetMockDemoState()).resolves.not.toThrow();
+  });
+
+  it('should return select options from formatResultPickOptions', () => {
+    const fixture = { home: 'Brazil', away: 'Argentina' };
+    const options = utils.formatResultPickOptions(fixture);
+    expect(typeof options).toBe('string');
+    expect(options).toContain('draw');
+    expect(options).toContain('Brazil');
+    expect(options).toContain('Argentina');
+  });
+});

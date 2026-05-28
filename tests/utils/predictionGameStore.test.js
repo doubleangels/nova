@@ -47,4 +47,48 @@ describe('predictionGameStore', () => {
     expect(await store.getUserPoints('user-a')).toBe(0);
     expect(await store.getPrediction('user-a', 900001)).toBeNull();
   });
+
+  it('should set and clear prompting paused flag', async () => {
+    await store.setPromptingPaused(true);
+    expect(await store.isPromptingPaused()).toBe(true);
+
+    await store.setPromptingPaused(false);
+    expect(await store.isPromptingPaused()).toBe(false);
+  });
+
+  it('should save, get, and clear a pending prediction', async () => {
+    await store.savePendingPrediction('user-b', 42, { homeScore: 1 });
+    const pending = await store.getPendingPrediction('user-b', 42);
+    expect(pending?.homeScore).toBe(1);
+
+    await store.clearPendingPrediction('user-b', 42);
+    const cleared = await store.getPendingPrediction('user-b', 42);
+    expect(cleared).toBeNull();
+  });
+
+  it('should merge partial updates in savePendingPrediction', async () => {
+    await store.savePendingPrediction('user-c', 55, { homeScore: 2 });
+    await store.savePendingPrediction('user-c', 55, { awayScore: 0 });
+    const pending = await store.getPendingPrediction('user-c', 55);
+    expect(pending?.homeScore).toBe(2);
+    expect(pending?.awayScore).toBe(0);
+  });
+
+  it('should skip resetMockDemoState when predictionMockApi is false', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: false, predictionPendingTtlMs: 600000 }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const nonMockStore = createPredictionStore('no-mock-store', 'NoMock');
+    // Should resolve without error and without doing anything
+    await expect(nonMockStore.resetMockDemoState([1, 2], 'club')).resolves.toBeUndefined();
+  });
+
+  it('should return false from areAllMockPlayableFixturesPredicted when predictionMockApi is false', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: false, predictionPendingTtlMs: 600000 }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const nonMockStore = createPredictionStore('no-mock-store-2', 'NoMock2');
+    const result = await nonMockStore.areAllMockPlayableFixturesPredicted([1, 2]);
+    expect(result).toBe(false);
+  });
 });

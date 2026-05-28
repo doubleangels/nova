@@ -535,4 +535,131 @@ describe('weather command', () => {
       await expect(weatherCommand.handleError(mockInteraction, error)).resolves.not.toThrow();
     });
   });
+
+  describe('createWeatherEmbed with AI enabled', () => {
+    it('should append AI context field when weatherAiEnabled is true and context is returned', async () => {
+      jest.resetModules();
+      const mockFetchWeatherContext = jest.fn().mockResolvedValue({ note: 'Heat advisory in effect.' });
+      jest.doMock('../../config', () => ({
+        pirateWeatherApiKey: 'mock-key',
+        weatherAiEnabled: true
+      }));
+      jest.doMock('axios', () => ({ get: jest.fn() }));
+      jest.doMock('../../utils/locationUtils', () => ({
+        getGeocodingData: mockGetGeocodingData,
+        getTimezoneData: mockGetTimezoneData
+      }));
+      jest.doMock('../../utils/commandContextAi', () => ({
+        fetchWeatherContext: mockFetchWeatherContext
+      }));
+      jest.doMock('../../utils/geminiContextMessages', () => ({
+        formatAiContextField: (note) => note ? { name: '🤖 AI Note', value: note } : null
+      }));
+      const aiWeatherCommand = require('../../commands/weather');
+
+      const mockWeatherData = {
+        currently: {
+          summary: 'Hot',
+          icon: 'clear-day',
+          temperature: 35,
+          apparentTemperature: 37,
+          humidity: 0.3,
+          windSpeed: 1,
+          windBearing: 0,
+          uvIndex: 10,
+          visibility: 15,
+          pressure: 1010,
+          dewPoint: 18,
+          cloudCover: 0,
+          precipIntensity: 0,
+          precipProbability: 0
+        },
+        daily: {
+          data: [
+            { time: 1716076800, summary: 'Sunny', icon: 'clear-day', temperatureHigh: 36, temperatureLow: 22, precipProbability: 0 }
+          ]
+        }
+      };
+
+      const embed = await aiWeatherCommand.createWeatherEmbed(
+        'Austin, TX', 30.27, -97.74, mockWeatherData, 'metric', 1, true,
+        { timezoneId: 'America/Chicago', error: false }
+      );
+
+      expect(mockFetchWeatherContext).toHaveBeenCalled();
+      const fields = embed.data.fields;
+      const aiField = fields.find(f => f.name === '🤖 AI Note');
+      expect(aiField).toBeDefined();
+      expect(aiField.value).toBe('Heat advisory in effect.');
+    });
+
+    it('should not append AI field when fetchWeatherContext returns null note', async () => {
+      jest.resetModules();
+      const mockFetchWeatherContext = jest.fn().mockResolvedValue({ note: '' });
+      jest.doMock('../../config', () => ({
+        pirateWeatherApiKey: 'mock-key',
+        weatherAiEnabled: true
+      }));
+      jest.doMock('axios', () => ({ get: jest.fn() }));
+      jest.doMock('../../utils/locationUtils', () => ({
+        getGeocodingData: mockGetGeocodingData,
+        getTimezoneData: mockGetTimezoneData
+      }));
+      jest.doMock('../../utils/commandContextAi', () => ({
+        fetchWeatherContext: mockFetchWeatherContext
+      }));
+      jest.doMock('../../utils/geminiContextMessages', () => ({
+        formatAiContextField: () => null
+      }));
+      const aiWeatherCommand = require('../../commands/weather');
+
+      const mockWeatherData = {
+        currently: { summary: 'Cloudy' },
+        daily: { data: [] }
+      };
+
+      const embed = await aiWeatherCommand.createWeatherEmbed(
+        'Austin, TX', 30.27, -97.74, mockWeatherData, 'metric', 1, true
+      );
+
+      const aiField = embed.data.fields.find(f => f.name === '🤖 AI Note');
+      expect(aiField).toBeUndefined();
+    });
+  });
+
+  describe('buildForecastSnippetForAi', () => {
+    it('should build snippet with metric units and timezoneId', () => {
+      const daily = [
+        { time: 1716076800, summary: 'Sunny', temperatureHigh: 25.5, temperatureLow: 15.0, precipProbability: 0.1 }
+      ];
+      const result = weatherCommand.buildForecastSnippetForAi(daily, 'metric', 1, 'Europe/Paris');
+      expect(result).toContain('°C');
+      expect(result).toContain('25.5°C');
+      expect(result).toContain('15.0°C');
+      expect(result).toContain('10%');
+    });
+
+    it('should build snippet with imperial units and UTC fallback when timezoneId is null', () => {
+      const daily = [
+        { time: 1716076800, summary: 'Rainy', temperatureHigh: 70.0, temperatureLow: 55.0, precipProbability: 0.8 }
+      ];
+      const result = weatherCommand.buildForecastSnippetForAi(daily, 'imperial', 1, null);
+      expect(result).toContain('°F');
+      expect(result).toContain('UTC');
+      expect(result).toContain('70.0°F');
+    });
+
+    it('should handle missing time, temperatureHigh, temperatureLow, and precipProbability', () => {
+      const daily = [{ summary: 'Unknown' }];
+      const result = weatherCommand.buildForecastSnippetForAi(daily, 'metric', 1, null);
+      expect(result).toContain('unknown');
+      expect(result).toContain('N/A');
+      expect(result).toContain('0%');
+    });
+
+    it('should return fallback string when daily array is empty', () => {
+      const result = weatherCommand.buildForecastSnippetForAi([], 'metric', 3, null);
+      expect(result).toBe('No forecast data.');
+    });
+  });
 });

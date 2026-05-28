@@ -22,6 +22,25 @@ describe('geminiClient', () => {
     ).toEqual({ note: 'ok' });
   });
 
+  it('should return null for invalid JSON inside a fenced block', () => {
+    expect(client.parseJsonFromModelText('```json\nnot-json\n```')).toBeNull();
+  });
+
+  it('should extract JSON from raw text with surrounding content', () => {
+    const result = client.parseJsonFromModelText('prefix {"key":"value"} suffix');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('should return null for text with no JSON object', () => {
+    expect(client.parseJsonFromModelText('no json here')).toBeNull();
+    expect(client.parseJsonFromModelText(null)).toBeNull();
+    expect(client.parseJsonFromModelText('')).toBeNull();
+  });
+
+  it('should return null for invalid JSON extracted from braces', () => {
+    expect(client.parseJsonFromModelText('{ not valid json }')).toBeNull();
+  });
+
   it('should build generate content body with google search', () => {
     const body = client.buildGenerateContentBody(
       'user prompt',
@@ -34,6 +53,12 @@ describe('geminiClient', () => {
     expect(body.systemInstruction.parts[0].text).toBe('system text');
   });
 
+  it('should build body without google search when disabled', () => {
+    const body = client.buildGenerateContentBody('prompt', 'sys', {}, undefined, false);
+    expect(body.tools).toBeUndefined();
+    expect(body.systemInstruction.parts[0].text).toBe('sys');
+  });
+
   it('should return null from generateStructuredJson when not configured', async () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({ geminiApiKey: '' }));
@@ -44,5 +69,44 @@ describe('geminiClient', () => {
       responseSchema: { type: 'object', properties: { note: { type: 'string' } } }
     });
     expect(result).toBeNull();
+  });
+
+  it('should return zero for readUsageMetadata when input is invalid', () => {
+    expect(client.readUsageMetadata(null)).toEqual({ cachedTokens: 0, promptTokens: 0 });
+    expect(client.readUsageMetadata('string')).toEqual({ cachedTokens: 0, promptTokens: 0 });
+  });
+
+  it('should reuse cached context and skip creation on second getOrCreate call', async () => {
+    mockAxios.post.mockResolvedValue({ data: { name: 'cachedContents/ctx1' } });
+    const mgr = new client.SystemContextCacheManager('test');
+    const first = await mgr.getOrCreate('key', 'system text', 'display-name');
+    const second = await mgr.getOrCreate('key', 'system text', 'display-name');
+    expect(first).toBe('cachedContents/ctx1');
+    expect(second).toBe('cachedContents/ctx1');
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('should return null from getOrCreate when cache creation fails', async () => {
+    mockAxios.post.mockRejectedValue(new Error('network'));
+    const mgr = new client.SystemContextCacheManager('test');
+    const result = await mgr.getOrCreate('key2', 'sys', 'display');
+    expect(result).toBeNull();
+  });
+
+  it('should return null from createSystemContextCache when response has no name', async () => {
+    mockAxios.post.mockResolvedValue({ data: {} });
+    const result = await client.createSystemContextCache('sys', 'display');
+    expect(result).toBeNull();
+  });
+
+  it('should clear entries in SystemContextCacheManager', async () => {
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/c1' } })
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/c2' } });
+    const mgr = new client.SystemContextCacheManager('ns');
+    await mgr.getOrCreate('k', 'sys', 'disp');
+    mgr.clear();
+    await mgr.getOrCreate('k', 'sys', 'disp');
+    expect(mockAxios.post).toHaveBeenCalledTimes(2);
   });
 });

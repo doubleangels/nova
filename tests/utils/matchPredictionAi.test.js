@@ -248,4 +248,119 @@ describe('matchPredictionAi', () => {
     });
     expect(pick).toBeNull();
   });
+
+  it('should return null from normalizeAiResponse when scores are invalid', () => {
+    // negative score
+    expect(ai.normalizeAiResponse({ homeScore: -1, awayScore: 0, winner: 'home', reasoning: 'x' },
+      { home: 'A', away: 'B' })).toBeNull();
+    // score > 15
+    expect(ai.normalizeAiResponse({ homeScore: 0, awayScore: 16, winner: 'away', reasoning: 'x' },
+      { home: 'A', away: 'B' })).toBeNull();
+    // non-numeric
+    expect(ai.normalizeAiResponse({ homeScore: 'abc', awayScore: 0, winner: 'home', reasoning: 'x' },
+      { home: 'A', away: 'B' })).toBeNull();
+    // null input
+    expect(ai.normalizeAiResponse(null, { home: 'A', away: 'B' })).toBeNull();
+  });
+
+  it('should resolve winner by team name in parseWinnerPick via normalizeAiResponse', () => {
+    const pick = ai.normalizeAiResponse(
+      { homeScore: 1, awayScore: 0, winner: 'Brazil', reasoning: 'Stronger.' },
+      { home: 'Brazil', away: 'Argentina' }
+    );
+    expect(pick?.resultPick).toBe('home');
+
+    const pick2 = ai.normalizeAiResponse(
+      { homeScore: 0, awayScore: 1, winner: 'Argentina', reasoning: 'Solid defense.' },
+      { home: 'Brazil', away: 'Argentina' }
+    );
+    expect(pick2?.resultPick).toBe('away');
+  });
+
+  it('should fall back to default result cache TTL when kickoff is in the past', () => {
+    const pastFixture = { kickoff: '2020-01-01T00:00:00Z' };
+    const ttl = ai.getResultCacheTtlMs(pastFixture);
+    // DEFAULT_RESULT_CACHE_MS is 6 hours (21600000ms)
+    expect(ttl).toBe(6 * 60 * 60 * 1000);
+  });
+
+  it('should use remaining time as TTL when kickoff is in the future', () => {
+    const futureDate = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+    const ttl = ai.getResultCacheTtlMs({ kickoff: futureDate });
+    expect(ttl).toBeGreaterThan(60_000);
+    expect(ttl).toBeLessThan(4 * 60 * 60 * 1000);
+  });
+
+  it('should use DEFAULT_RESULT_CACHE_MS when no kickoff is provided', () => {
+    const ttl = ai.getResultCacheTtlMs({});
+    expect(ttl).toBe(6 * 60 * 60 * 1000);
+  });
+
+  it('should build user prompt without competitionName or competitionCode', () => {
+    const prompt = ai.buildUserPrompt({
+      game: 'worldcup',
+      fixture: { id: 1, home: 'Brazil', away: 'Argentina' }
+    });
+    expect(prompt).toContain('FIFA World Cup');
+    expect(prompt).toContain('TBD');
+  });
+
+  it('should use fixed cache TTL when geminiPredictionCacheTtlMs is set', () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      predictionAiEnabled: true,
+      geminiApiKey: 'test-key',
+      geminiPredictionModel: 'gemini-3.1-flash-lite',
+      geminiPredictionCacheTtlMs: 7200000, // 2 hours
+      geminiContextCacheTtlSeconds: 3600
+    }));
+    const fixedAi = require('../../utils/matchPredictionAi');
+    const ttl = fixedAi.getResultCacheTtlMs({ kickoff: new Date(Date.now() + 60 * 60 * 1000).toISOString() });
+    expect(ttl).toBe(7200000);
+  });
+
+  it('should return cached prediction without calling Gemini on second call', async () => {
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys_cached' } })
+      .mockResolvedValueOnce({
+        data: {
+          candidates: [{
+            content: {
+              parts: [{ text: JSON.stringify({ homeScore: 3, awayScore: 1, winner: 'home', reasoning: 'Home form.' }) }]
+            }
+          }]
+        }
+      });
+
+    const fixture = { id: 920001, home: 'Liverpool', away: 'Man City', kickoff: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() };
+    const first = await ai.fetchMatchAiPrediction({ game: 'club', fixture });
+    const second = await ai.fetchMatchAiPrediction({ game: 'club', fixture });
+
+    expect(first?.homeScore).toBe(3);
+    expect(second).toEqual(first);
+    // Only 2 API calls (1 for context cache creation, 1 for Gemini generation)
+    expect(mockAxios.post).toHaveBeenCalledTimes(2);
+  });
+
+  it('should force refresh prediction when forceRefresh is true', async () => {
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys_fr' } })
+      .mockResolvedValueOnce({
+        data: {
+          candidates: [{ content: { parts: [{ text: JSON.stringify({ homeScore: 0, awayScore: 0, winner: 'draw', reasoning: 'Even.' }) }] } }]
+        }
+      })
+      .mockResolvedValueOnce({
+        data: {
+          candidates: [{ content: { parts: [{ text: JSON.stringify({ homeScore: 2, awayScore: 0, winner: 'home', reasoning: 'Home dominates.' }) }] } }]
+        }
+      });
+
+    const fixture = { id: 930001, home: 'Barcelona', away: 'Madrid', kickoff: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString() };
+    await ai.fetchMatchAiPrediction({ game: 'club', fixture });
+    const refreshed = await ai.fetchMatchAiPrediction({ game: 'club', fixture, forceRefresh: true });
+
+    expect(refreshed?.homeScore).toBe(2);
+  });
 });

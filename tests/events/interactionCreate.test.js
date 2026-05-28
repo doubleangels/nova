@@ -141,6 +141,95 @@ describe('interactionCreate event', () => {
     expect(mockInteraction.reply).toHaveBeenCalled();
   });
 
+  it('should handle Football predict buttons', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    const mockInteraction = createMockInteraction({
+      customId: 'football:predict:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(footballInteractions.handleFootballPredictButton).toHaveBeenCalledWith(mockInteraction);
+  });
+
+  it('should capture errors from Football predict button handler', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    footballInteractions.handleFootballPredictButton.mockRejectedValue(new Error('football btn fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:predict:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockInteraction.reply).toHaveBeenCalled();
+  });
+
+  it('should not reply on Football button errors when already replied', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    footballInteractions.handleFootballPredictButton.mockRejectedValue(new Error('football btn fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:predict:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = true;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+  });
+
+  it('should handle Football prediction select menus', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    const mockInteraction = createMockInteraction({
+      customId: 'football:pick:home:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(footballInteractions.handleFootballPickSelect).toHaveBeenCalledWith(mockInteraction);
+  });
+
+  it('should capture errors from Football pick select handler', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    footballInteractions.handleFootballPickSelect.mockRejectedValue(new Error('football select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockInteraction.reply).toHaveBeenCalled();
+  });
+
+  it('should not reply on Football select errors when already replied', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    footballInteractions.handleFootballPickSelect.mockRejectedValue(new Error('football select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = true;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+  });
+
   describe('autocomplete interactions', () => {
     it('should log warning if no matching command is found', async () => {
       const mockInteraction = createMockInteraction({
