@@ -177,7 +177,7 @@ function buildRulesDescription(gameId) {
     '• Correct winner pick - **1** point',
     '',
     'After full time, results and points are posted in the channel. ' +
-      `Check standings anytime with ${g.leaderboardCommand}.`
+    `Check standings anytime with ${g.leaderboardCommand}.`
   );
 
   return lines.join('\n');
