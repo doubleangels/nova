@@ -35,6 +35,8 @@ describe('googleSearch command', () => {
   let googleSearchCommand;
   let mockConfig;
   let mockAxios;
+  let mockCommandContextAi;
+  let mockGeminiContextMessages;
 
   beforeEach(() => {
     jest.resetModules();
@@ -50,6 +52,16 @@ describe('googleSearch command', () => {
       get: jest.fn()
     };
     jest.doMock('axios', () => mockAxios);
+
+    mockCommandContextAi = {
+      fetchGoogleSearchContext: jest.fn()
+    };
+    jest.doMock('../../utils/commandContextAi', () => mockCommandContextAi);
+
+    mockGeminiContextMessages = {
+      formatAiContextField: jest.fn()
+    };
+    jest.doMock('../../utils/geminiContextMessages', () => mockGeminiContextMessages);
 
     googleSearchCommand = require('../../commands/googleSearch');
     jest.clearAllMocks();
@@ -191,6 +203,72 @@ describe('googleSearch command', () => {
       expect(embed.data.title).toBe('No Title Found');
       expect(embed.data.description).toContain('No description available');
       expect(embed.data.fields).toBeUndefined();
+    });
+
+    it('should add AI context field if googleAiEnabled is true', async () => {
+      mockConfig.googleAiEnabled = true;
+      mockCommandContextAi.fetchGoogleSearchContext.mockResolvedValue({ note: 'AI insight' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue({
+        name: '🤖 AI Insight', value: 'AI insight'
+      });
+
+      const mockItems = [
+        { title: 'Result 1', link: 'http://res1.com', snippet: 'A snippet' }
+      ];
+      const embed = await googleSearchCommand.generateResultEmbed(mockItems, 0, 'query');
+
+      expect(mockCommandContextAi.fetchGoogleSearchContext).toHaveBeenCalledWith({
+        query: 'query',
+        resultTitle: 'Result 1',
+        resultSnippet: 'A snippet',
+        resultLink: 'http://res1.com',
+        resultIndex: 0
+      });
+      expect(embed.data.fields).toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight', value: 'AI insight'
+      }));
+    });
+
+    it('should not add AI context field if formatAiContextField returns null', async () => {
+      mockConfig.googleAiEnabled = true;
+      mockCommandContextAi.fetchGoogleSearchContext.mockResolvedValue({ note: 'Empty' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const mockItems = [
+        { title: 'Result 2', link: 'http://res2.com', snippet: 'A snippet' }
+      ];
+      const embed = await googleSearchCommand.generateResultEmbed(mockItems, 0, 'query');
+
+      expect(embed.data.fields).not.toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight'
+      }));
+    });
+
+    it('should pass empty string to AI context when link is missing', async () => {
+      mockConfig.googleAiEnabled = true;
+      mockCommandContextAi.fetchGoogleSearchContext.mockResolvedValue({});
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const mockItems = [
+        { title: 'No Link', link: null, snippet: 'Snippet' }
+      ];
+      await googleSearchCommand.generateResultEmbed(mockItems, 0, 'query');
+
+      expect(mockCommandContextAi.fetchGoogleSearchContext).toHaveBeenCalledWith({
+        query: 'query',
+        resultTitle: 'No Link',
+        resultSnippet: 'Snippet',
+        resultLink: '',
+        resultIndex: 0
+      });
+    });
+
+    it('should use default query parameter', async () => {
+      const mockItems = [
+        { title: 'Title', link: 'http://link.com', snippet: 'Snippet' }
+      ];
+      const embed = await googleSearchCommand.generateResultEmbed(mockItems, 0);
+      expect(embed.data.title).toBe('Title');
     });
   });
 

@@ -239,7 +239,7 @@ function createPredictionInteractionHandlers(options) {
         return;
       }
       partial = side === 'home' ? { homeScore: goals } : { awayScore: goals };
-    } else if (side === 'winner') {
+    } else { // side === 'winner'
       if (!['home', 'draw', 'away'].includes(value)) {
         await interaction.followUp({
           content: msgs.ERR_INVALID_WINNER,

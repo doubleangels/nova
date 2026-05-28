@@ -70,14 +70,20 @@ describe('predictionGameUi', () => {
     };
 
     it('should build embed without formatLinePrefix (line 104)', () => {
-      const embed = ui.buildPromptEmbed('worldcup', fixture, formatTeam, undefined, {});
+      const embed = ui.buildPromptEmbed('worldcup', fixture, formatTeam, undefined);
       expect(embed.data.title).toContain('World Cup');
     });
 
     it('should build club embed with competition', () => {
       const clubFixture = { ...fixture, competitionName: 'Premier League' };
-      const embed = ui.buildPromptEmbed('club', clubFixture, formatTeam, undefined, {});
+      const embed = ui.buildPromptEmbed('club', clubFixture, formatTeam, undefined);
       expect(embed.data.title).toContain('Premier League');
+    });
+
+    it('should build club embed with competitionCode when competitionName is missing (lines 106-108)', () => {
+      const clubFixture = { ...fixture, competitionCode: 'PL' };
+      const embed = ui.buildPromptEmbed('club', clubFixture, formatTeam);
+      expect(embed.data.title).toBeDefined(); // msgs.buildPromptTitle handles it, we just want to hit the branch
     });
   });
 
@@ -106,6 +112,18 @@ describe('predictionGameUi', () => {
       const fixture = { home: 'Arsenal', away: 'Chelsea' };
       expect(ui.parseResultPick('arsenal', fixture, null)).toBe('home');
       expect(ui.parseResultPick('chelsea', fixture, null)).toBe('away');
+    });
+
+    it('should fall back if formatTeam matches neither (line 179)', () => {
+      const fixture = { home: 'Team A', away: 'Team B' };
+      const plainFormatTeam = (_fix, side) => side === 'home' ? 'Team A FC' : 'Team B FC';
+      
+      expect(ui.parseResultPick('xyz', fixture, plainFormatTeam)).toBeNull();
+    });
+
+    it('should handle missing raw, fixture.home, and fixture.away (lines 170, 174-175)', () => {
+      expect(ui.parseResultPick('xyz', {}, null)).toBeNull();
+      expect(ui.parseResultPick(null, { home: 'Arsenal', away: 'Chelsea' }, null)).toBeNull();
     });
   });
 
@@ -150,6 +168,101 @@ describe('predictionGameUi', () => {
     it('should truncate very long team names', () => {
       const label = ui.goalsModalLabel('A'.repeat(60));
       expect(label.length).toBeLessThanOrEqual(45);
+    });
+  });
+
+  describe('isFixtureOpenForPrediction (lines 34-38)', () => {
+    it('should return false for missing fixture or non-open status', () => {
+      expect(ui.isFixtureOpenForPrediction(null)).toBe(false);
+      expect(ui.isFixtureOpenForPrediction({ status: 'FINISHED' })).toBe(false);
+    });
+
+    it('should return true if status is open and kickoff is missing', () => {
+      expect(ui.isFixtureOpenForPrediction({ status: 'NS' })).toBe(true);
+    });
+
+    it('should return true if kickoff is in the future', () => {
+      const now = new Date('2026-06-01T12:00:00Z');
+      expect(ui.isFixtureOpenForPrediction({ status: 'NS', kickoff: '2026-06-01T13:00:00Z' }, now)).toBe(true);
+      expect(ui.isFixtureOpenForPrediction({ status: 'NS', kickoff: '2026-06-01T11:00:00Z' }, now)).toBe(false);
+    });
+  });
+
+  describe('isInReminderWindow (lines 46-56)', () => {
+    it('should return false if kickoff or open status is missing', () => {
+      expect(ui.isInReminderWindow({ status: 'FINISHED', kickoff: '2026-06-01T12:00:00Z' })).toBe(false);
+      expect(ui.isInReminderWindow({ status: 'NS' })).toBe(false);
+    });
+
+    it('should return true if current time is within reminder window', () => {
+      const kickoff = '2026-06-02T12:00:00Z';
+      const fixture = { status: 'NS', kickoff };
+      // reminderHours is 24, so window is 2026-06-01T12:00:00Z to 2026-06-02T12:00:00Z
+      expect(ui.isInReminderWindow(fixture, new Date('2026-06-01T12:00:00Z'), 24)).toBe(true);
+      expect(ui.isInReminderWindow(fixture, new Date('2026-06-01T15:00:00Z'), 24)).toBe(true);
+      expect(ui.isInReminderWindow(fixture, new Date('2026-06-01T11:00:00Z'), 24)).toBe(false);
+      expect(ui.isInReminderWindow(fixture, new Date('2026-06-02T12:00:01Z'), 24)).toBe(false);
+    });
+  });
+
+  describe('buildPromptEmbed (line 119)', () => {
+    const fixture = {
+      id: 1, home: 'Arsenal', away: 'Chelsea',
+      kickoff: '2026-06-01T12:00:00Z', status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    it('should add AI pick field if aiPrediction is provided', () => {
+      const aiPrediction = {
+        homeScore: 2, awayScore: 1, resultPick: 'home', reasoning: 'AI says so.'
+      };
+      const embed = ui.buildPromptEmbed('worldcup', fixture, formatTeam, undefined, { aiPrediction });
+      expect(embed.data.fields).toBeDefined();
+      expect(embed.data.fields[0].value).toContain('AI says so');
+    });
+  });
+
+  describe('buildAnnouncementEmbed (lines 145-160)', () => {
+    it('should build announcement embed', () => {
+      const fixture = { goals: { home: 2, away: 1 } };
+      const earners = [{ userId: '123', scorePoints: 3, resultPoints: 0, total: 3 }];
+      const embed = ui.buildAnnouncementEmbed('club', fixture, earners, formatTeam, undefined);
+      expect(embed.data.title).toContain('2-1');
+      expect(embed.data.fields[0].value).toContain('<@123>');
+    });
+
+    it('should build announcement embed with missing goals (lines 145-146)', () => {
+      const fixture = { goals: {} };
+      const earners = [];
+      const embed = ui.buildAnnouncementEmbed('club', fixture, earners, formatTeam, undefined);
+      expect(embed.data.title).toContain('?-?');
+    });
+  });
+
+  describe('parseScoreInputs (lines 200-219)', () => {
+    it('should parse valid scores', () => {
+      const res = ui.parseScoreInputs('2', '1');
+      expect(res).toEqual({ homeScore: 2, awayScore: 1 });
+    });
+
+    it('should return error for invalid home score', () => {
+      const res = ui.parseScoreInputs('abc', '1', { home: 'Arsenal', away: 'Chelsea' }, formatTeam);
+      expect(res.error).toContain('Arsenal');
+      expect(res.error).toContain('whole number');
+    });
+
+    it('should return error for invalid away score', () => {
+      const res = ui.parseScoreInputs('2', '-1');
+      expect(res.error).toContain('Away'); // without fixture/formatTeam, uses fallback 'Away'
+    });
+  });
+
+  describe('formatResultPickOptions (lines 218-219)', () => {
+    it('should format result pick options', () => {
+      const fixture = { home: 'Arsenal', away: 'Chelsea' };
+      expect(ui.formatResultPickOptions(fixture, formatTeam)).toContain('Arsenal');
+      expect(ui.formatResultPickOptions(fixture, formatTeam)).toContain('Chelsea');
+      expect(ui.formatResultPickOptions(fixture, formatTeam)).toContain('draw');
     });
   });
 });

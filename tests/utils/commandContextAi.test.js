@@ -314,4 +314,106 @@ describe('commandContextAi', () => {
     });
     expect(ctx?.note).toBe('Mild weather.');
   });
+
+  it('should fetch IMDB context when imdbId is missing', async () => {
+    jest.resetModules();
+    mockAxios = { post: jest.fn() };
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'key',
+      imdbAiEnabled: true
+    }));
+    const imdbAi = require('../../utils/commandContextAi');
+
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/imdb2' } })
+      .mockResolvedValueOnce({
+        data: { candidates: [{ content: { parts: [{ text: '{"note":"Good"}' }] } }] }
+      });
+
+    const ctx = await imdbAi.fetchImdbContext({
+      title: 'Inception',
+      year: '2010',
+      typeLabel: 'Movie',
+      rating: '8.8',
+      genre: 'Sci-Fi',
+      plotSnippet: 'A thief...'
+    });
+    expect(ctx?.note).toBe('Good');
+  });
+
+  it('should fetch book context when rating is missing', async () => {
+    jest.resetModules();
+    mockAxios = { post: jest.fn() };
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'key',
+      bookAiEnabled: true
+    }));
+    const bookAi = require('../../utils/commandContextAi');
+
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/book2' } })
+      .mockResolvedValueOnce({
+        data: { candidates: [{ content: { parts: [{ text: '{"note":"Good book"}' }] } }] }
+      });
+
+    const ctx = await bookAi.fetchBookContext({
+      title: 'The Alchemist',
+      authors: 'Paulo Coelho',
+      bookId: 'abc123',
+      publishedDate: '1988',
+      descriptionSnippet: 'A shepherd...'
+    });
+    expect(ctx?.note).toBe('Good book');
+  });
+
+  it('should fetch google search context when resultLink is missing', async () => {
+    jest.resetModules();
+    mockAxios = { post: jest.fn() };
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'key',
+      googleAiEnabled: true
+    }));
+    const googleAi = require('../../utils/commandContextAi');
+
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/google2' } })
+      .mockResolvedValueOnce({
+        data: { candidates: [{ content: { parts: [{ text: '{"note":"Result ok"}' }] } }] }
+      });
+
+    const ctx = await googleAi.fetchGoogleSearchContext({
+      query: 'jest testing',
+      resultTitle: 'Jest docs',
+      resultSnippet: 'A delightful testing framework',
+      resultIndex: 0
+    });
+    expect(ctx?.note).toBe('Result ok');
+  });
+
+  it('should fetch google images context when contextLink and imageLink are missing', async () => {
+    jest.resetModules();
+    mockAxios = { post: jest.fn() };
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'key',
+      googleImagesAiEnabled: true
+    }));
+    const googleImagesAi = require('../../utils/commandContextAi');
+
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/gi2' } })
+      .mockResolvedValueOnce({
+        data: { candidates: [{ content: { parts: [{ text: '{"note":"Image ok"}' }] } }] }
+      });
+
+    const ctx = await googleImagesAi.fetchGoogleImagesContext({
+      query: 'Eiffel Tower',
+      title: 'Eiffel Tower aerial',
+      resultIndex: 0
+    });
+    expect(ctx?.note).toBe('Image ok');
+  });
 });

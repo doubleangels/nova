@@ -17,6 +17,8 @@ describe('book command', () => {
   let bookCommand;
   let mockConfig;
   let mockAxios;
+  let mockCommandContextAi;
+  let mockGeminiContextMessages;
 
   beforeEach(() => {
     jest.resetModules();
@@ -31,6 +33,16 @@ describe('book command', () => {
       get: jest.fn()
     };
     jest.doMock('axios', () => mockAxios);
+
+    mockCommandContextAi = {
+      fetchBookContext: jest.fn()
+    };
+    jest.doMock('../../utils/commandContextAi', () => mockCommandContextAi);
+
+    mockGeminiContextMessages = {
+      formatAiContextField: jest.fn()
+    };
+    jest.doMock('../../utils/geminiContextMessages', () => mockGeminiContextMessages);
 
     bookCommand = require('../../commands/book');
     jest.clearAllMocks();
@@ -376,6 +388,71 @@ describe('book command', () => {
       expect(embed.data.title).toBe('Minimal Book');
       expect(embed.data.thumbnail).toBeUndefined();
       expect(embed.data.url).toBeUndefined();
+      expect(embed.data.fields).toBeUndefined();
+    });
+
+    it('should add AI context field if bookAiEnabled is true', async () => {
+      mockConfig.bookAiEnabled = true;
+      mockCommandContextAi.fetchBookContext.mockResolvedValue({ note: 'AI insight' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue({
+        name: '🤖 AI Insight', value: 'AI insight'
+      });
+
+      const books = [{
+        index: 0,
+        id: 'book1',
+        title: 'Title',
+        authors: ['Author'],
+        description: 'Description',
+        publishedDate: '2020',
+        pageCount: 300,
+        categories: ['Genre'],
+        averageRating: 4.5,
+        ratingsCount: 10,
+        language: 'en',
+        publisher: 'Pub House'
+      }];
+
+      const embed = await bookCommand.createBookEmbed(books, 0);
+
+      expect(mockCommandContextAi.fetchBookContext).toHaveBeenCalledWith({
+        title: 'Title',
+        authors: 'Author',
+        bookId: 'book1',
+        publishedDate: '2020',
+        rating: '4.5/5 (10 ratings)',
+        descriptionSnippet: 'Description'
+      });
+      expect(embed.data.fields).toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight', value: 'AI insight'
+      }));
+    });
+
+    it('should not add AI context field if formatAiContextField returns null', async () => {
+      mockConfig.bookAiEnabled = true;
+      mockCommandContextAi.fetchBookContext.mockResolvedValue({ note: 'Empty' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const books = [{
+        index: 0,
+        id: 'book1',
+        title: 'Title',
+        authors: null,
+        description: null,
+        publishedDate: 'Unknown',
+        pageCount: 'Unknown',
+        categories: [],
+        averageRating: null,
+        ratingsCount: 0,
+        language: 'Unknown',
+        publisher: 'Unknown'
+      }];
+
+      const embed = await bookCommand.createBookEmbed(books, 0);
+
+      expect(mockCommandContextAi.fetchBookContext).toHaveBeenCalledWith(
+        expect.objectContaining({ descriptionSnippet: '', rating: '', authors: '' })
+      );
       expect(embed.data.fields).toBeUndefined();
     });
   });

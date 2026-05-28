@@ -116,7 +116,7 @@ module.exports = {
   async createMediaEmbed(data, typeLabel) {
     const imdbUrl = data.imdbID ? `https://www.imdb.com/title/${data.imdbID}/` : null;
     const fields = [
-      { name: '📅 Year', value: data.Year, inline: true },
+      { name: '📅 Year', value: data.Year || 'N/A', inline: true },
       { name: '⭐ Rating', value: data.imdbRating || 'N/A', inline: true },
       { name: '🎭 Genre', value: data.Genre || 'N/A', inline: true },
       { name: '🎬 Director', value: data.Director || 'N/A', inline: true },

@@ -315,7 +315,7 @@ async function getOrCreateSystemContextCache(demoMode) {
  * @param {boolean} [demoMode]
  * @returns {Promise<unknown|null>}
  */
-async function callGeminiForPrediction(userPrompt, demoMode = false) {
+async function callGeminiForPrediction(userPrompt, demoMode) {
   const cachedContentName = await getOrCreateSystemContextCache(demoMode);
 
   return generateStructuredJson({

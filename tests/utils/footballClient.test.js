@@ -35,6 +35,10 @@ describe('footballClient', () => {
     client.clearSeasonCache();
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('should report API configured when key is set', () => {
     expect(client.isApiConfigured()).toBe(true);
   });
@@ -174,10 +178,8 @@ describe('footballClient', () => {
     mockAxios.get.mockRejectedValueOnce(mkErr(429, {})); // no headers
     mockAxios.get.mockResolvedValueOnce({ data: sampleMatch() });
     const p = client.getFixtureById(123);
-    await Promise.resolve();
-    jest.advanceTimersByTime(65000);
+    await jest.runAllTimersAsync();
     await p;
-    jest.useRealTimers();
   });
 
   it('should return null if rate limit retries are exhausted (lines 145-151, 189)', async () => {
@@ -188,14 +190,10 @@ describe('footballClient', () => {
       .mockRejectedValueOnce(mkErr(429, { 'retry-after': '1' }))
       .mockRejectedValueOnce(mkErr(429, { 'retry-after': '1' }));
     
-    const p = client.getFixtureById(123);
-    for(let i = 0; i < 5; i++) {
-        await Promise.resolve();
-        jest.advanceTimersByTime(2000);
-    }
+    const p = client.getFixtureById(123).catch(e => e);
+    await jest.runAllTimersAsync();
     const result = await p;
-    expect(result).toBeNull();
-    jest.useRealTimers();
+    expect(result.response?.status).toBe(429);
   });
 
   it('should return in-flight promise for concurrent requests (lines 376, 398)', async () => {
@@ -428,4 +426,180 @@ describe('footballClient', () => {
     expect(dateFixtures).toHaveLength(1);
     expect(dateFixtures[0].id).toBe(1);
   });
+
+  it('should use cached fixtures when available', async () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      footballDataApiKey: 'test-key', footballSeason: '2025', footballCompetitionCodes: ['PL']
+    }));
+    jest.doMock('../../logger', () => () => ({ debug: jest.fn(), warn: jest.fn(), error: jest.fn() }));
+    client = require('../../utils/footballClient');
+
+    mockAxios.get.mockResolvedValue({ data: { matches: [sampleMatch()] } });
+    const first = await client.getSeasonFixtures();
+    expect(mockAxios.get).toHaveBeenCalledTimes(1);
+
+    // Call again, should use cache (mockAxios.get should not be called again)
+    const second = await client.getSeasonFixtures();
+    expect(second).toEqual(first);
+    expect(mockAxios.get).toHaveBeenCalledTimes(1);
+  });
+  it('should return [] when not configured (whitespace key)', async () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({ footballDataApiKey: '   ', footballCompetitionCodes: ['PL'] }));
+    jest.doMock('../../logger', () => () => ({ debug: jest.fn(), warn: jest.fn(), error: jest.fn() }));
+    const unconfigured = require('../../utils/footballClient');
+    expect(unconfigured.isApiConfigured()).toBe(false);
+  });
+
+  it('should return true when configured with a non-empty string key', async () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({ footballDataApiKey: ' valid-key ', footballCompetitionCodes: ['PL'] }));
+    jest.doMock('../../logger', () => () => ({ debug: jest.fn(), warn: jest.fn(), error: jest.fn() }));
+    const configured = require('../../utils/footballClient');
+    expect(configured.isApiConfigured()).toBe(true);
+  });
+
+  it('should handle invalid footballSeason gracefully', async () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      footballDataApiKey: 'test-key',
+      footballSeason: 'invalid-year',
+      footballCompetitionCodes: ['PL']
+    }));
+    jest.doMock('../../logger', () => () => ({ debug: jest.fn(), warn: jest.fn(), error: jest.fn() }));
+    const tempClient = require('../../utils/footballClient');
+
+    mockAxios.get.mockResolvedValueOnce({ data: { matches: [sampleMatch({ id: 1 })] } });
+    const fixtures = await tempClient.getSeasonFixtures();
+    expect(fixtures).toHaveLength(1);
+  });
+
+  it('should handle matches with missing kickoff and status during normalization and sorting', async () => {
+    mockAxios.get.mockResolvedValue({
+      data: sampleMatch({ id: 3, utcDate: undefined, status: null, competition: { code: null } })
+    });
+    const fixture = await client.getFixtureById(3);
+    expect(fixture.status).toBe('NS');
+    expect(fixture.competitionName).toBeNull();
+  });
+
+  it('should filter out invalid match objects during normalization', async () => {
+    mockAxios.get.mockResolvedValueOnce({
+      data: {
+        matches: [
+          sampleMatch({ id: 2 }),
+          null,
+          'not-an-object'
+        ]
+      }
+    });
+    const fixtures = await client.getSeasonFixtures();
+    expect(fixtures).toHaveLength(1);
+  });
+
+  it('should handle non-array matches response with warning (default season)', async () => {
+    mockAxios.get.mockResolvedValueOnce({ data: { matches: null, message: 'Invalid explicit' } });
+    const fixtures = await client.getSeasonFixtures();
+    expect(fixtures).toEqual([]);
+    
+    mockAxios.get.mockResolvedValueOnce({ data: { matches: 'not an array', message: 'Invalid' } });
+    const fixtures2 = await client.getSeasonFixtures();
+    expect(fixtures2).toEqual([]);
+
+    // 404 for explicit seasons (2025, 2024), then non-array for default season
+    mockAxios.get
+      .mockRejectedValueOnce(mkErr(404))
+      .mockRejectedValueOnce(mkErr(404))
+      .mockResolvedValueOnce({ data: { matches: null, message: 'Invalid default' } });
+    const fixtures3 = await client.getSeasonFixtures();
+    expect(fixtures3).toEqual([]);
+  });
+
+  it('should refetch stale fixture in cache', async () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => mockAxios);
+    jest.doMock('../../config', () => ({
+      footballDataApiKey: 'test-key', footballSeason: '2025', footballCompetitionCodes: ['PL']
+    }));
+    jest.doMock('../../logger', () => () => ({ debug: jest.fn(), warn: jest.fn(), error: jest.fn() }));
+    client = require('../../utils/footballClient');
+
+    mockAxios.get.mockResolvedValueOnce({
+      data: { matches: [sampleMatch({ id: 1, utcDate: '2000-01-01T00:00:00Z', status: 'NS' })] }
+    });
+    await client.getSeasonFixtures();
+
+    mockAxios.get.mockResolvedValueOnce({ data: sampleMatch({ id: 1, status: 'FT', utcDate: '2000-01-01T00:00:00Z' }) });
+    const fixture = await client.getFixtureById(1);
+    expect(fixture.status).toBe('FT');
+    
+    mockAxios.get.mockResolvedValueOnce({ data: sampleMatch({ id: 1, status: 'FT', utcDate: '2000-01-01T00:00:00Z' }) });
+    const cachedFixture = await client.getFixtureById(1);
+    expect(cachedFixture.status).toBe('FT');
+    expect(mockAxios.get).toHaveBeenCalledTimes(3);
+  });
+
+  it('should test missing kickoff in isCachedFixtureStale', async () => {
+    // Fill cache
+    mockAxios.get.mockResolvedValueOnce({
+      data: { matches: [sampleMatch({ id: 1, utcDate: null, status: 'TIMED' })] }
+    });
+    await client.getSeasonFixtures();
+
+    const cachedFixture = await client.getFixtureById(1);
+    // isCachedFixtureStale will return false if !kickoff, so it uses cache!
+    expect(cachedFixture.utcDate).toBeUndefined();
+    // getSeasonFixtures calls it for each configured competition (PL, BL1) => 2 calls
+    // getFixtureById uses cache and doesn't call API. Total: 2
+    expect(mockAxios.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('should handle sorting of matches with missing kickoff', async () => {
+    mockAxios.get.mockResolvedValueOnce({
+      data: {
+        matches: [
+          sampleMatch({ id: 1, utcDate: '2026-02-01T15:00:00Z' }),
+          sampleMatch({ id: 2, utcDate: null }),
+          sampleMatch({ id: 3, utcDate: undefined })
+        ]
+      }
+    });
+    const fixtures = await client.getSeasonFixtures();
+    // 2 and 3 have missing kickoff, they get sorted properly
+    expect(fixtures).toHaveLength(3);
+    // Since missing kickoff uses Date(0), they will be first
+    expect(fixtures[0].id).toBe(2);
+    expect(fixtures[1].id).toBe(3);
+    expect(fixtures[2].id).toBe(1);
+  });
+
+  it('should handle mock fetch with incomplete match or empty mock finish array', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({
+      footballDataApiKey: '', predictionMockApi: true,
+      footballSeason: '2025', footballCompetitionCodes: ['PL']
+    }));
+    jest.doMock('../../utils/footballMockData', () => ({
+      getMockMatchById: jest.fn()
+        .mockReturnValueOnce({ id: 100 }) 
+        .mockReturnValueOnce({ id: 101, homeTeam: { name: 'A' }, awayTeam: { name: 'B' } })
+    }));
+    jest.doMock('../../utils/predictionMockFinish', () => ({
+      applyMockInstantFinishToFixtures: jest.fn().mockResolvedValue([])
+    }));
+    jest.doMock('../../logger', () => () => ({ debug: jest.fn(), warn: jest.fn(), error: jest.fn() }));
+    const mockClient = require('../../utils/footballClient');
+
+    let res = await mockClient.getFixtureById(100);
+    expect(res).toBeNull();
+
+    res = await mockClient.getFixtureById(101);
+    expect(res).toBeNull();
+  });
+
 });

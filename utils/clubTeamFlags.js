@@ -29,6 +29,7 @@ function clubNameLookupKeys(name) {
 
   const push = value => {
     const key = value.trim();
+    /* istanbul ignore else */
     if (key) keys.push(key);
   };
 

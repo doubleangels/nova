@@ -190,7 +190,6 @@ function buildRulesDescription(gameId) {
 
   lines.push(
     '**Before kickoff** match posts appear in the prediction channel.',
-    'When AI predictions are enabled, each post includes a **Gemini** suggested score grounded with **Google Search** (for fun - not official scoring).',
     'Open the form and set:',
     '• Home goals (0-15)',
     '• Away goals (0-15)',
@@ -198,7 +197,6 @@ function buildRulesDescription(gameId) {
     '',
     '**Scoring (per match, max 4 points)**',
     '• Exact score - **3** points',
-    '• Correct result from your predicted score - **1** point',
     '• Correct winner pick - **1** point',
     '',
     'After full time, results and points are posted in the channel. ' +

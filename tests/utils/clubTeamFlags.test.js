@@ -59,4 +59,28 @@ describe('clubTeamFlags', () => {
     expect(areaCodeToIso2('GB')).toBe('GB');
     expect(areaCodeToIso2(null)).toBeNull();
   });
+
+  it('should handle empty or invalid names in clubNameLookupKeys (lines 28-32)', () => {
+    const { clubNameLookupKeys } = require('../../utils/clubTeamFlags');
+    expect(clubNameLookupKeys(null)).toEqual([]);
+    expect(clubNameLookupKeys('   ')).toEqual([]);
+    expect(clubNameLookupKeys(123)).toEqual([]);
+  });
+
+  it('should handle empty or invalid TLAs in iso2FromClubTla (lines 72-74)', () => {
+    expect(iso2FromClubTla(null)).toBeNull();
+    expect(iso2FromClubTla('   ')).toBeNull();
+    expect(iso2FromClubTla(123)).toBeNull();
+  });
+
+  it('should handle invalid team objects in resolveClubIso2FromTeam (line 91)', () => {
+    expect(resolveClubIso2FromTeam(null)).toBeNull();
+    expect(resolveClubIso2FromTeam('not-an-object')).toBeNull();
+  });
+
+  it('should resolve from TLA fallback (line 101)', () => {
+    // Need a team with no area, no recognizable name, but a recognized TLA.
+    const fakeTeam = { tla: 'MUN' }; // Manchester United
+    expect(resolveClubIso2FromTeam(fakeTeam)).toBe('GB');
+  });
 });

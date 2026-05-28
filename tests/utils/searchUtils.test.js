@@ -265,7 +265,7 @@ describe('searchUtils', () => {
       const mockButtonInteraction2 = {
         customId: 'test_next_user-123_123',
         user: { id: 'user-123' },
-        deferUpdate: jest.fn().mockReturnValue({ catch: jest.fn() }),
+        deferUpdate: jest.fn().mockRejectedValue(new Error('defer error')),
         editReply: jest.fn().mockResolvedValue(true)
       };
 

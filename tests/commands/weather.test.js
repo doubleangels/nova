@@ -439,7 +439,7 @@ describe('weather command', () => {
       const mockWeatherData = {
         currently: {},
         daily: {
-          data: [null]
+          data: [undefined]
         }
       };
 
@@ -619,8 +619,12 @@ describe('weather command', () => {
       };
 
       const embed = await aiWeatherCommand.createWeatherEmbed(
-        'Austin, TX', 30.27, -97.74, mockWeatherData, 'metric', 1, true
+        'Austin, TX', 30.27, -97.74, mockWeatherData, 'metric', 1, false
       );
+
+      expect(mockFetchWeatherContext).toHaveBeenCalledWith(expect.objectContaining({
+        place: 'Austin, TX'
+      }));
 
       const aiField = embed.data.fields.find(f => f.name === '🤖 AI Note');
       expect(aiField).toBeUndefined();
@@ -655,6 +659,14 @@ describe('weather command', () => {
       expect(result).toContain('unknown');
       expect(result).toContain('N/A');
       expect(result).toContain('0%');
+    });
+
+    it('should handle undefined daily elements', () => {
+      const daily = [undefined];
+      const result = weatherCommand.buildForecastSnippetForAi(daily, 'metric', 1, null);
+      expect(result).toContain('unknown');
+      expect(result).toContain('no summary');
+      expect(result).toContain('N/A');
     });
 
     it('should return fallback string when daily array is empty', () => {

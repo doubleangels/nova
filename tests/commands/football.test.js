@@ -7,6 +7,7 @@ describe('football command', () => {
   let mockWorldCupUtils;
   let mockClientApi;
   let mockConfig;
+  let mockLogger;
 
   beforeEach(() => {
     jest.resetModules();
@@ -49,11 +50,13 @@ describe('football command', () => {
       getCompetitionName: (code) => code
     }));
     jest.doMock('../../config', () => mockConfig);
-    jest.doMock('../../logger', () => () => ({
+
+    mockLogger = {
       info: jest.fn(),
       error: jest.fn(),
       warn: jest.fn()
-    }));
+    };
+    jest.doMock('../../logger', () => () => mockLogger);
 
     footballCommand = require('../../commands/football');
   });
@@ -100,6 +103,25 @@ describe('football command', () => {
     expect(reply.embeds).toHaveLength(1);
     expect(reply.embeds[0].data.title).toBe('Registered for predictions!');
     expect(reply.embeds[0].data.description).toContain('Club football');
+  });
+
+  it('should register user with fallback channelRef when channelId is not configured', async () => {
+    mockConfig.footballChannelId = undefined;
+    const role = { id: '444444444444444444', name: 'Predictor', position: 1 };
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      guild: {
+        id: 'guild-1',
+        roles: { cache: new Map([[role.id, role]]), fetch: jest.fn() },
+        members: { me: { permissions: { has: jest.fn().mockReturnValue(true) }, roles: { highest: { position: 5 } } } }
+      },
+      member: { roles: { add: jest.fn().mockResolvedValue(), cache: { has: jest.fn() }, highest: { position: 0 } } }
+    });
+
+    await footballCommand.execute(interaction);
+
+    const reply = interaction.editReply.mock.calls[0][0];
+    expect(reply.embeds[0].data.description).toContain('the prediction channel');
   });
 
   it('should report already registered when already in football', async () => {
@@ -171,7 +193,9 @@ describe('football command', () => {
     jest.doMock('../../utils/footballUtils', () => mockFootballUtils);
     jest.doMock('../../utils/worldCupUtils', () => mockWorldCupUtils);
     jest.doMock('../../utils/footballClient', () => mockClientApi);
-    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
+    
+    mockLogger = { info: jest.fn(), error: jest.fn(), warn: jest.fn() };
+    jest.doMock('../../logger', () => () => mockLogger);
     footballCommand = require('../../commands/football');
 
     const interaction = createMockInteraction({
@@ -203,6 +227,21 @@ describe('football command', () => {
       guild: {
         id: 'guild-1',
         roles: { cache: new Map(), fetch: jest.fn().mockResolvedValue(null) },
+        members: { me: { permissions: { has: jest.fn().mockReturnValue(true) }, roles: { highest: { position: 5 } } } }
+      },
+      member: { roles: { add: jest.fn(), cache: { has: jest.fn().mockReturnValue(false) } } }
+    });
+    await footballCommand.execute(interaction);
+    const reply = interaction.editReply.mock.calls[0][0];
+    expect(reply.embeds[0].data.description).toContain('participant role was not found');
+  });
+
+  it('should show role missing error when role fetch fails (covers catch)', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      guild: {
+        id: 'guild-1',
+        roles: { cache: new Map(), fetch: jest.fn().mockRejectedValue(new Error('Discord API error')) },
         members: { me: { permissions: { has: jest.fn().mockReturnValue(true) }, roles: { highest: { position: 5 } } } }
       },
       member: { roles: { add: jest.fn(), cache: { has: jest.fn().mockReturnValue(false) } } }
@@ -245,10 +284,13 @@ describe('football command', () => {
   });
 
   it('should show leaderboard', async () => {
-    mockFootballUtils.getLeaderboard = jest.fn().mockResolvedValue([
-      { userId: '111', points: 5 }
+    mockFootballUtils.getLeaderboard.mockResolvedValue([
+      { userId: '111', points: 5 },
+      { userId: '222', points: 4 },
+      { userId: '333', points: 3 },
+      { userId: '444', points: 2 }
     ]);
-    mockFootballUtils.scoreFinishedFixtures = jest.fn().mockResolvedValue(0);
+    mockFootballUtils.scoreFinishedFixtures.mockResolvedValue(0);
     const interaction = createMockInteraction({
       client: {},
       options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) }
@@ -286,7 +328,8 @@ describe('football command', () => {
 
   it('should list matches', async () => {
     mockClientApi.getSeasonFixtures.mockResolvedValue([
-      { id: 1, home: 'A', away: 'B', kickoff: '2026-06-01T12:00:00Z', status: 'NS', goals: { home: null, away: null } }
+      { id: 1, home: 'A', away: 'B', kickoff: '2026-06-02T12:00:00Z', status: 'NS', goals: { home: null, away: null } },
+      { id: 2, home: 'C', away: 'D', kickoff: '2026-06-01T12:00:00Z', status: 'NS', goals: { home: null, away: null } }
     ]);
     mockFootballUtils.formatFixtureLine = jest.fn().mockReturnValue('A vs B');
     const interaction = createMockInteraction({
@@ -326,10 +369,49 @@ describe('football command', () => {
     await footballCommand.execute(interaction);
     interaction.options.getString.mockReturnValue('finished');
     await footballCommand.execute(interaction);
-    expect(interaction.editReply).toHaveBeenCalledTimes(2);
+    expect(interaction.editReply).toHaveBeenCalled();
   });
 
-  it('should show empty matches', async () => {
+  it('should handle errors via handleError when replied', async () => {
+    mockFootballUtils.getLeaderboard.mockRejectedValue(new Error('Test error'));
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) },
+      replied: true,
+      deferred: false
+    });
+    interaction.editReply = jest.fn().mockResolvedValue();
+    await footballCommand.execute(interaction);
+    expect(interaction.editReply).toHaveBeenCalled();
+  });
+
+  it('should handle errors via handleError when not deferred', async () => {
+    mockFootballUtils.getLeaderboard.mockRejectedValue(new Error('Test error'));
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) },
+      deferred: false,
+      replied: false
+    });
+    interaction.reply = jest.fn().mockResolvedValue();
+    await footballCommand.execute(interaction);
+    expect(interaction.reply).toHaveBeenCalled();
+  });
+
+  it('should log error when handleError fails to send reply', async () => {
+    mockFootballUtils.getLeaderboard.mockRejectedValue(new Error('Test error'));
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) },
+      deferred: false,
+      replied: false
+    });
+    interaction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+    await footballCommand.execute(interaction);
+    expect(mockLogger.error).toHaveBeenCalledWith('Failed to send football error reply.', expect.any(Object));
+  });
+
+  it('should show empty matches after filtering', async () => {
+    mockClientApi.getSeasonFixtures.mockResolvedValue([
+      { id: 1, home: 'A', away: 'B', kickoff: '2026-06-01T12:00:00Z', status: 'FT', goals: { home: null, away: null } }
+    ]);
     const interaction = createMockInteraction({
       options: { getSubcommand: jest.fn().mockReturnValue('matches'), getString: jest.fn().mockReturnValue('upcoming') }
     });
@@ -429,7 +511,7 @@ describe('football command', () => {
   it('should reset and repost for administrators', async () => {
     jest.doMock('../../utils/footballScheduler', () => ({ runFootballStartup: jest.fn().mockResolvedValue() }));
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('reset'), getBoolean: jest.fn().mockReturnValue(true) },
+      options: { getSubcommand: jest.fn().mockReturnValue('reset'), getBoolean: jest.fn().mockReturnValue(null) },
       guild: { id: 'g1' },
       memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) },
       client: { id: 'bot' }

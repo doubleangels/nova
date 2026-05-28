@@ -35,6 +35,8 @@ describe('googleImages command', () => {
   let googleImagesCommand;
   let mockConfig;
   let mockAxios;
+  let mockCommandContextAi;
+  let mockGeminiContextMessages;
 
   beforeEach(() => {
     jest.resetModules();
@@ -50,6 +52,16 @@ describe('googleImages command', () => {
       get: jest.fn()
     };
     jest.doMock('axios', () => mockAxios);
+
+    mockCommandContextAi = {
+      fetchGoogleImagesContext: jest.fn()
+    };
+    jest.doMock('../../utils/commandContextAi', () => mockCommandContextAi);
+
+    mockGeminiContextMessages = {
+      formatAiContextField: jest.fn()
+    };
+    jest.doMock('../../utils/geminiContextMessages', () => mockGeminiContextMessages);
 
     googleImagesCommand = require('../../commands/googleImages');
     jest.clearAllMocks();
@@ -205,9 +217,89 @@ describe('googleImages command', () => {
       const mockItems = [
         { title: 'No Image Obj', link: 'http://img1.jpg', image: null }
       ];
-      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0, 'cats');
+      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0); // No query provided
       const sourceField = embed.data.fields?.find(f => f.name === 'Source');
       expect(sourceField?.value).toContain('http://img1.jpg');
+    });
+
+    it('should omit source and image links if both are missing', async () => {
+      const mockItems = [
+        { title: 'Empty Links', link: null, image: { contextLink: null } }
+      ];
+      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0);
+      const sourceField = embed.data.fields?.find(f => f.name === 'Source');
+      const imageField = embed.data.fields?.find(f => f.name === 'Image');
+      expect(sourceField).toBeUndefined();
+      expect(imageField).toBeUndefined();
+    });
+
+    it('should add both Source and Image links when pageLink differs from imageLink', async () => {
+      const mockItems = [
+        { title: 'Diff Links', link: 'http://img.jpg', image: { contextLink: 'http://page.html' } }
+      ];
+      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0);
+      const sourceField = embed.data.fields?.find(f => f.name === 'Source');
+      const imageField = embed.data.fields?.find(f => f.name === 'Image');
+      expect(sourceField?.value).toContain('http://page.html');
+      expect(imageField?.value).toContain('http://img.jpg');
+    });
+
+    it('should add AI context field if googleImagesAiEnabled is true', async () => {
+      mockConfig.googleImagesAiEnabled = true;
+      mockCommandContextAi.fetchGoogleImagesContext.mockResolvedValue({ note: 'AI insight' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue({
+        name: '🤖 AI Insight', value: 'AI insight'
+      });
+
+      const mockItems = [
+        { title: 'Image 1', link: 'http://img1.jpg', image: { contextLink: 'http://src1.html' } }
+      ];
+      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0, 'puppy');
+
+      expect(mockCommandContextAi.fetchGoogleImagesContext).toHaveBeenCalledWith({
+        query: 'puppy',
+        title: 'Image 1',
+        contextLink: 'http://src1.html',
+        imageLink: 'http://img1.jpg',
+        resultIndex: 0
+      });
+      expect(embed.data.fields).toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight', value: 'AI insight'
+      }));
+    });
+
+    it('should not add AI context field if formatAiContextField returns null', async () => {
+      mockConfig.googleImagesAiEnabled = true;
+      mockCommandContextAi.fetchGoogleImagesContext.mockResolvedValue({ note: 'Empty' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const mockItems = [
+        { title: 'Image 2', link: 'http://img2.jpg', image: null }
+      ];
+      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0, 'puppy');
+
+      expect(embed.data.fields).not.toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight'
+      }));
+    });
+
+    it('should pass empty string to AI context when links are missing', async () => {
+      mockConfig.googleImagesAiEnabled = true;
+      mockCommandContextAi.fetchGoogleImagesContext.mockResolvedValue({});
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const mockItems = [
+        { title: 'No Links', link: null, image: null }
+      ];
+      await googleImagesCommand.generateImageEmbed(mockItems, 0, 'cats');
+
+      expect(mockCommandContextAi.fetchGoogleImagesContext).toHaveBeenCalledWith({
+        query: 'cats',
+        title: 'No Links',
+        contextLink: '',
+        imageLink: '',
+        resultIndex: 0
+      });
     });
   });
 

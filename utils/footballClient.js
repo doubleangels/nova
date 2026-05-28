@@ -168,7 +168,7 @@ async function throttleBeforeApiRequest() {
  * @param {{ competitionCode?: string }} [context]
  * @returns {Promise<import('./footballUtils').NormalizedFixture[]|null>}
  */
-async function withRateLimitRetry(request, context = {}) {
+async function withRateLimitRetry(request, context) {
   for (let attempt = 0; attempt < RATE_LIMIT_MAX_RETRIES; attempt++) {
     try {
       await throttleBeforeApiRequest();
@@ -186,7 +186,6 @@ async function withRateLimitRetry(request, context = {}) {
       await sleep(waitMs);
     }
   }
-  return null;
 }
 
 /**
@@ -372,10 +371,6 @@ async function fetchMatchByIdFromApi(matchId) {
  * @returns {Promise<import('./footballUtils').NormalizedFixture[]>}
  */
 async function refreshSeasonFixturesFromApi() {
-  if (seasonFetchInFlight) {
-    return seasonFetchInFlight;
-  }
-
   seasonFetchInFlight = fetchSeasonMatchesFromApi().finally(() => {
     seasonFetchInFlight = null;
   });

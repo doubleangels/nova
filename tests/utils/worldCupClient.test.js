@@ -43,6 +43,20 @@ describe('worldCupClient', () => {
     });
 
     it('should resolve country codes from team payload', () => {
+      expect(client.normalizeFixture({ id: 2, homeTeam: { id: 758, name: 'Uruguay' }, awayTeam: { id: 1, name: 'A' } }).homeIso2).toBe('UY');
+    });
+
+    it('should map undefined status to NS', () => {
+      const match = { id: 3, homeTeam: { name: 'A' }, awayTeam: { name: 'B' } };
+      expect(client.normalizeFixture(match).status).toBe('NS');
+    });
+
+    it('should fallback to raw status if not in STATUS_MAP', () => {
+      const match = { id: 4, homeTeam: { name: 'A' }, awayTeam: { name: 'B' }, status: 'UNKNOWN' };
+      expect(client.normalizeFixture(match).status).toBe('UNKNOWN');
+    });
+
+    it('should resolve country codes from team payload', () => {
       const normalized = client.normalizeFixture(
         sampleMatch({
           homeTeam: { name: 'Brazil', tla: 'BRA' },
@@ -325,6 +339,81 @@ describe('worldCupClient', () => {
       const second = await client.getSeasonFixtures();
       expect(mockAxios.get).not.toHaveBeenCalled();
       expect(first).toHaveLength(second.length);
+    });
+  });
+
+  describe('getFixtureById', () => {
+    it('should return null if API not configured', async () => {
+      const config = require('../../config');
+      config.footballDataApiKey = '';
+      config.predictionMockApi = false;
+      expect(await client.getFixtureById(123)).toBeNull();
+    });
+
+    it('should return null if mock match not found', async () => {
+      const config = require('../../config');
+      config.predictionMockApi = true;
+      expect(await client.getFixtureById(999)).toBeNull();
+    });
+
+    it('should return null if mock match normalization fails', async () => {
+      jest.resetModules();
+      const config = require('../../config');
+      config.predictionMockApi = true;
+      jest.doMock('../../utils/worldCupMockData', () => ({
+        getMockMatchById: jest.fn().mockReturnValue({ id: 123 }) // Missing home/away
+      }));
+      const c = require('../../utils/worldCupClient');
+      expect(await c.getFixtureById(123)).toBeNull();
+    });
+
+    it('should return null if applyMockFinish returns empty array', async () => {
+      jest.resetModules();
+      const config = require('../../config');
+      config.predictionMockApi = true;
+      const mockData = require('../../utils/worldCupMockData');
+      mockData.getMockMatchById = jest.fn().mockReturnValue({ id: 123, homeTeam: {name: 'A'}, awayTeam: {name: 'B'} });
+      jest.doMock('../../utils/predictionMockFinish', () => ({
+        applyMockInstantFinishToFixtures: () => Promise.resolve([])
+      }));
+      const clientMockFinish = require('../../utils/worldCupClient');
+      expect(await clientMockFinish.getFixtureById(123)).toBeNull();
+    });
+
+    it('should fetch from API if cached fixture is stale', async () => {
+      const config = require('../../config');
+      config.footballDataApiKey = 'fake';
+      config.predictionMockApi = false;
+      
+      // Inject stale cache: kickoff in the past, not FT
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 999, status: 'SCHEDULED', utcDate: '2000-01-01T00:00:00Z' })] }
+      });
+      await client.getSeasonFixtures(); // populates cache with stale fixture
+      
+      mockAxios.get.mockResolvedValueOnce({
+        data: sampleMatch({ id: 999, status: 'IN_PLAY' })
+      });
+      
+      const fixture = await client.getFixtureById(999);
+      expect(fixture.status).toBe('LIVE');
+      expect(mockAxios.get).toHaveBeenCalledTimes(2); // One for getSeasonFixtures, one for getFixtureById
+    });
+
+    it('should use cache if cached fixture is finished', async () => {
+      const config = require('../../config');
+      config.footballDataApiKey = 'fake';
+      config.predictionMockApi = false;
+      
+      // Inject finished cache: status FT
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 888, status: 'FINISHED', score: { fullTime: {home: 1, away: 1} } })] }
+      });
+      await client.getSeasonFixtures(); // populates cache
+      
+      const fixture = await client.getFixtureById(888);
+      expect(fixture.status).toBe('FT');
+      expect(mockAxios.get).toHaveBeenCalledTimes(1); // Only for getSeasonFixtures
     });
   });
 

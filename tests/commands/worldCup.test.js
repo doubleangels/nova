@@ -28,7 +28,10 @@ describe('worldcup command', () => {
       getUserPredictionFixtureIds: jest.fn().mockResolvedValue([]),
       getUserPoints: jest.fn().mockResolvedValue(0),
       resetWorldCupGame: jest.fn().mockResolvedValue(),
-      isWorldCupGameConfigured: jest.fn().mockReturnValue(true)
+      isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
+      isUserRegistered: jest.fn().mockResolvedValue(false),
+      addRegisteredUser: jest.fn().mockResolvedValue(),
+      setPromptingPaused: jest.fn().mockResolvedValue()
     };
 
     mockScheduler = {
@@ -67,6 +70,144 @@ describe('worldcup command', () => {
     jest.doMock('../../logger', () => () => mockLogger);
 
     worldcupCommand = require('../../commands/worldCup');
+  });
+
+  describe('register', () => {
+    it('should reply with error if config is missing roleId', async () => {
+      mockConfig.worldCupParticipantRoleId = null;
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('Registration is not set up')
+      }));
+    });
+
+    it('should reply with error if outside guild', async () => {
+      const interaction = createMockInteraction({
+        guild: null,
+        options: { getSubcommand: jest.fn().mockReturnValue('register') }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('works in a server')
+      }));
+    });
+
+    it('should reply already registered if user has role and in db', async () => {
+      mockUtils.isUserRegistered.mockResolvedValueOnce(true);
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        member: { roles: { cache: { has: jest.fn().mockReturnValue(true) } } }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: expect.any(Array)
+      }));
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.title).toContain('Already registered!');
+    });
+
+    it('should reply error if role is missing in guild', async () => {
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        guild: {
+          roles: {
+            cache: { get: jest.fn().mockReturnValue(null) },
+            fetch: jest.fn().mockRejectedValue(new Error('not found'))
+          }
+        }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.description).toContain('was not found');
+    });
+
+    it('should reply error if bot lacks ManageRoles permission', async () => {
+      const mockRole = { position: 5 };
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        guild: {
+          roles: {
+            cache: { get: jest.fn().mockReturnValue(mockRole) }
+          },
+          members: {
+            me: { permissions: { has: jest.fn().mockReturnValue(false) } }
+          }
+        }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.description).toContain('Manage Roles');
+    });
+
+    it('should reply error if role hierarchy is wrong', async () => {
+      const mockRole = { position: 10 };
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        guild: {
+          roles: {
+            cache: { get: jest.fn().mockReturnValue(mockRole) }
+          },
+          members: {
+            me: {
+              permissions: { has: jest.fn().mockReturnValue(true) },
+              roles: { highest: { position: 5 } }
+            }
+          }
+        }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.description).toContain('highest role must be above');
+    });
+
+    it('should successfully register the user', async () => {
+      const mockRole = { position: 5 };
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        guild: {
+          roles: {
+            cache: { get: jest.fn().mockReturnValue(mockRole) }
+          },
+          members: {
+            me: {
+              permissions: { has: jest.fn().mockReturnValue(true) },
+              roles: { highest: { position: 10 } }
+            }
+          }
+        },
+        member: {
+          roles: { add: jest.fn().mockResolvedValue() }
+        }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.member.roles.add).toHaveBeenCalledWith(mockRole, 'Prediction game registration');
+      expect(mockUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.title).toContain('Registered for predictions!');
+    });
+
+    it('should successfully register user when worldCupChannelId is missing', async () => {
+      mockConfig.worldCupChannelId = null;
+      const mockRole = { position: 5 };
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        guild: {
+          roles: {
+            cache: { get: jest.fn().mockReturnValue(mockRole) }
+          },
+          members: {
+            me: {
+              permissions: { has: jest.fn().mockReturnValue(true) },
+              roles: { highest: { position: 10 } }
+            }
+          }
+        },
+        member: {
+          roles: { add: jest.fn().mockResolvedValue() }
+        }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.member.roles.add).toHaveBeenCalledWith(mockRole, 'Prediction game registration');
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.description).toContain('the prediction channel');
+    });
   });
 
   it('should show leaderboard', async () => {
@@ -157,6 +298,30 @@ describe('worldcup command', () => {
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.any(Array)
     }));
+  });
+
+  it('should show mypicks for unknown fixtures and missing predictions', async () => {
+    mockUtils.getUserPredictionFixtureIds.mockResolvedValue([100, 200]);
+    mockUtils.getPrediction.mockImplementation(async (userId, fixtureId) => {
+      if (fixtureId === 200) return null; // Test missing prediction branch
+      return {
+        fixtureId: 100,
+        homeScore: 1,
+        awayScore: 1,
+        resultPick: 'draw',
+        scored: false,
+        pointsAwarded: null
+      };
+    });
+    mockClientApi.getSeasonFixtures.mockResolvedValue([]);
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') }
+    });
+    await worldcupCommand.execute(interaction);
+    expect(interaction.editReply).toHaveBeenCalled();
+    const embed = interaction.editReply.mock.calls[0][0].embeds[0];
+    expect(embed.data.description).toContain('Match `100`');
+    expect(embed.data.description).toContain('prediction data missing');
   });
 
   it('should show mypicks for unknown fixtures and pending scores', async () => {
@@ -404,7 +569,7 @@ describe('worldcup command', () => {
     const interaction = createMockInteraction({
       options: {
         getSubcommand: jest.fn().mockReturnValue('reset'),
-        getBoolean: jest.fn().mockReturnValue(true)
+        getBoolean: jest.fn().mockReturnValue(null)
       },
       guild: { id: 'guild-1' },
       memberPermissions: {
@@ -486,6 +651,30 @@ describe('worldcup command', () => {
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.any(Array)
     }));
+  });
+
+  it('should skip repost and set repostSkippedConfig when game is not configured but API is', async () => {
+    mockClientApi.isApiConfigured.mockReturnValue(true);
+    mockUtils.isWorldCupGameConfigured.mockReturnValue(false);
+    
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('reset'),
+        getBoolean: jest.fn().mockReturnValue(true)
+      },
+      guild: { id: 'guild-1' },
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      },
+      client: { id: 'bot' }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(mockUtils.resetWorldCupGame).toHaveBeenCalled();
+    expect(mockScheduler.runWorldCupStartup).not.toHaveBeenCalled();
+    const embed = interaction.editReply.mock.calls[0][0].embeds[0];
+    expect(embed.data.description).toContain('Match prompts were not re-posted');
   });
 
 });

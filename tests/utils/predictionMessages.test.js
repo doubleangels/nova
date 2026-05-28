@@ -24,6 +24,7 @@ describe('predictionMessages', () => {
   it('should format my pick lines', () => {
     expect(msgs.formatMyPickLine(2, 1, 'Home', true, 4)).toContain('+4');
     expect(msgs.formatMyPickLine(0, 0, 'Draw', false)).toContain('awaiting final score');
+    expect(msgs.formatMyPickLine(1, 0, 'Home', true)).toContain('+0');
   });
 
   it('should build register embed copy', () => {
@@ -60,6 +61,13 @@ describe('predictionMessages', () => {
     );
     expect(content).toContain('Winner: **Arsenal**');
     expect(content).toContain('Choose home goals');
+
+    const contentUndefined = msgs.buildPredictionFormContentWithPick(
+      { home: 'Arsenal', away: 'Chelsea' },
+      formatTeam,
+      () => ''
+    );
+    expect(contentUndefined).toContain('Choose home goals');
   });
 
   it('should show saving message when prediction is complete', () => {
@@ -182,5 +190,45 @@ describe('predictionMessages', () => {
       null
     );
     expect(content).toContain('Arsenal');
+  });
+  describe('Uncovered utility functions', () => {
+    it('should format errRegisterFirst', () => {
+      expect(msgs.errRegisterFirst('worldcup')).toContain('Run /worldcup register first');
+    });
+
+    it('should format msgEmptyLeaderboard', () => {
+      expect(msgs.msgEmptyLeaderboard('club')).toContain('Run /football register to join');
+    });
+
+    it('should format errAdminResetOnly', () => {
+      expect(msgs.errAdminResetOnly('worldcup')).toContain('Only administrators can reset world cup');
+    });
+
+    it('should format buildPromptDescription', () => {
+      const formatTeam = jest.fn((fix, side) => `${side}Team`);
+      const desc = msgs.buildPromptDescription({}, formatTeam);
+      expect(desc).toContain('homeTeam');
+      expect(desc).toContain('awayTeam');
+      expect(desc).toContain('Tap **Submit prediction**');
+    });
+
+    it('should format formatPointsEarnedField with no earners', () => {
+      expect(msgs.formatPointsEarnedField([])).toBe('Nobody scored points on this match.');
+    });
+
+    it('should format formatPointsEarnedField with earners sorted by total', () => {
+      const earners = [
+        { userId: '1', scorePoints: 0, resultPoints: 1, total: 1 },
+        { userId: '2', scorePoints: 3, resultPoints: 1, total: 4 }
+      ];
+      const result = msgs.formatPointsEarnedField(earners);
+      expect(result).toContain('<@2> - **+4** pts (3 score, 1 result)');
+      expect(result).toContain('<@1> - **+1** pts (0 score, 1 result)');
+      expect(result.indexOf('<@2>')).toBeLessThan(result.indexOf('<@1>')); // Sorting check
+    });
+
+    it('should format winnerPlaceholderSelected', () => {
+      expect(msgs.winnerPlaceholderSelected('Draw')).toBe('Winner: Draw');
+    });
   });
 });

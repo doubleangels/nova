@@ -47,6 +47,14 @@ describe('worldCupTeamFlags', () => {
       `${flags.iso2ToFlagEmoji(flags.mockIso2ForTeamName('Demovakia'))} Demovakia`
     );
     expect(flags.mockIso2ForTeamName('Demovakia')).not.toBe(mockvilleIso);
+
+    const sampleland = flags.formatFixtureTeam(
+      { home: 'Sampleland', away: 'Demovakia' },
+      'home'
+    );
+    expect(sampleland).toBe(
+      `${flags.iso2ToFlagEmoji(flags.mockIso2ForTeamName('Sampleland'))} Sampleland`
+    );
   });
 
   it('should assign mock ISO codes from the country pool', () => {
@@ -58,6 +66,48 @@ describe('worldCupTeamFlags', () => {
 
   it('should return plain name when no flag mapping exists', () => {
     expect(flags.formatTeamWithFlag('Unknown FC', { mockApi: false })).toBe('Unknown FC');
+  });
+
+  it('should handle falsy/empty teamName', () => {
+    // Tests: String(teamName || '').trim() || 'Team' (line 215)
+    expect(flags.formatTeamWithFlag(null, { mockApi: false })).toBe('Team');
+    expect(flags.formatTeamWithFlag('', { mockApi: false })).toBe('Team');
+    expect(flags.formatTeamWithFlag('   ', { mockApi: false })).toBe('Team');
+  });
+
+  it('should handle mockIso2ForTeamName with falsy/empty teamName', () => {
+    // Tests: if (!normalized || pool.length === 0) (line 23)
+    expect(flags.mockIso2ForTeamName(null)).toBe('AE'); // Fallback to pool[0] if pool is not empty
+  });
+
+  it('should handle mockIso2ForTeamName with empty pool', () => {
+    // Clear pool to test pool[0] || 'US'
+    const originalIso2 = flags.NAME_TO_ISO2['usa'];
+    flags.getMockIso2Pool().length = 0; // Empty the pool array
+    expect(flags.mockIso2ForTeamName('Team')).toBe('US');
+  });
+
+  it('should handle iso2ToFlagEmoji edge cases', () => {
+    // Tests line 138-140
+    expect(flags.iso2ToFlagEmoji(null)).toBeNull();
+    expect(flags.iso2ToFlagEmoji('A')).toBeNull(); // not length 2
+    expect(flags.iso2ToFlagEmoji('12')).toBeNull(); // not A-Z
+  });
+
+  it('should handle iso2FromName edge cases', () => {
+    // Tests lines 171-180
+    expect(flags.iso2FromName(null)).toBeNull();
+    expect(flags.iso2FromName('   ')).toBeNull();
+    // Test suffix stripping ' national team'
+    expect(flags.iso2FromName('Brazil National Team')).toBe('BR');
+    expect(flags.iso2FromName('Chelsea FC')).toBe('GB');
+    expect(flags.iso2FromName('Unknown National Team')).toBeNull();
+  });
+
+  it('should handle resolveIso2FromTeam edge cases', () => {
+    // Tests line 190
+    expect(flags.resolveIso2FromTeam(null)).toBeNull();
+    expect(flags.resolveIso2FromTeam('not an object')).toBeNull();
   });
 });
 
@@ -87,5 +137,11 @@ describe('codeToIso2 edge cases (via iso2FromTla)', () => {
     // area.code='TOOLONG' → codeToIso2 returns null → falls through to name/tla lookup
     const result = flags.resolveIso2FromTeam({ area: { code: 'TOOLONG' }, name: 'Unknown' });
     expect(result).toBeNull(); // 'Unknown' not in NAME_TO_ISO2, no tla
+  });
+
+  it('should handle codeToIso2 with falsy input', () => {
+    // TLA length === 3 but not in map (line 154)
+    expect(flags.iso2FromTla('ZZZ')).toBeNull();
+    expect(flags.iso2FromTla(null)).toBeNull();
   });
 });

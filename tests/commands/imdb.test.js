@@ -12,6 +12,8 @@ describe('imdb command', () => {
   let imdbCommand;
   let mockConfig;
   let mockAxios;
+  let mockCommandContextAi;
+  let mockGeminiContextMessages;
 
   beforeEach(() => {
     jest.resetModules();
@@ -25,6 +27,16 @@ describe('imdb command', () => {
       get: jest.fn()
     };
     jest.doMock('axios', () => mockAxios);
+
+    mockCommandContextAi = {
+      fetchImdbContext: jest.fn()
+    };
+    jest.doMock('../../utils/commandContextAi', () => mockCommandContextAi);
+
+    mockGeminiContextMessages = {
+      formatAiContextField: jest.fn()
+    };
+    jest.doMock('../../utils/geminiContextMessages', () => mockGeminiContextMessages);
 
     imdbCommand = require('../../commands/imdb');
     jest.clearAllMocks();
@@ -191,6 +203,70 @@ describe('imdb command', () => {
         params: expect.objectContaining({
           type: undefined
         })
+      }));
+    });
+  });
+
+  describe('createMediaEmbed', () => {
+    it('should add AI context field if imdbAiEnabled is true', async () => {
+      mockConfig.imdbAiEnabled = true;
+      mockCommandContextAi.fetchImdbContext.mockResolvedValue({ note: 'AI insight' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue({
+        name: '🤖 AI Insight', value: 'AI insight'
+      });
+
+      const mockData = {
+        Title: 'The Matrix',
+        Year: '1999',
+        imdbRating: '8.7',
+        Genre: 'Action, Sci-Fi',
+        Plot: 'A hacker discovers the truth.',
+        imdbID: 'tt0133093'
+      };
+
+      const embed = await imdbCommand.createMediaEmbed(mockData, 'Movie');
+
+      expect(mockCommandContextAi.fetchImdbContext).toHaveBeenCalledWith({
+        title: 'The Matrix',
+        year: '1999',
+        typeLabel: 'Movie',
+        imdbId: 'tt0133093',
+        rating: '8.7',
+        genre: 'Action, Sci-Fi',
+        plotSnippet: 'A hacker discovers the truth.'
+      });
+      expect(embed.data.fields).toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight', value: 'AI insight'
+      }));
+    });
+
+    it('should not add AI context field if formatAiContextField returns null', async () => {
+      mockConfig.imdbAiEnabled = true;
+      mockCommandContextAi.fetchImdbContext.mockResolvedValue({ note: 'Empty' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const mockData = {
+        Title: 'Unknown Movie',
+        Year: null,
+        imdbRating: null,
+        Genre: null,
+        Plot: null,
+        imdbID: null
+      };
+
+      const embed = await imdbCommand.createMediaEmbed(mockData, 'Movie');
+
+      expect(mockCommandContextAi.fetchImdbContext).toHaveBeenCalledWith({
+        title: 'Unknown Movie',
+        year: 'Unknown',
+        typeLabel: 'Movie',
+        imdbId: '',
+        rating: 'N/A',
+        genre: 'N/A',
+        plotSnippet: ''
+      });
+      expect(embed.data.fields).not.toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight'
       }));
     });
   });

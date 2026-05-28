@@ -40,6 +40,28 @@ describe('footballUtils', () => {
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
     const u = require('../../utils/footballUtils');
     expect(u.isFootballGameConfigured()).toBe(false);
+
+    // Cover truthy but whitespace-only API key
+    jest.resetModules();
+    jest.doMock('../../config', () => ({
+      predictionMockApi: false,
+      footballDataApiKey: '   ',
+      footballChannelId: '123'
+    }));
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
+    const u2 = require('../../utils/footballUtils');
+    expect(u2.isFootballGameConfigured()).toBe(false);
+
+    // Cover valid API key without mock
+    jest.resetModules();
+    jest.doMock('../../config', () => ({
+      predictionMockApi: false,
+      footballDataApiKey: 'real-key',
+      footballChannelId: '123'
+    }));
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
+    const u3 = require('../../utils/footballUtils');
+    expect(u3.isFootballGameConfigured()).toBe(true);
   });
 
   it('should register and check user registration', async () => {

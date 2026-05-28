@@ -181,4 +181,55 @@ describe('geminiClient', () => {
     expect(name2).toBe('cachedContents/new');
     expect(mockAxios.post).toHaveBeenCalledTimes(1);
   });
+
+  it('should fall back to DEFAULT_MODEL when model string is whitespace (line 26)', () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => ({ post: jest.fn() }));
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'k',
+      geminiContextModel: '   ',
+      geminiPredictionModel: '   '
+    }));
+    const c = require('../../utils/geminiClient');
+    expect(c.getGeminiModel()).toBe(c.DEFAULT_MODEL);
+  });
+
+  it('should fallback to 0 for usage tokens when missing or invalid (lines 71-72)', () => {
+    expect(client.readUsageMetadata({
+      prompt_token_count: 'invalid',
+      cached_content_token_count: null
+    })).toEqual({ cachedTokens: 0, promptTokens: 0 });
+    expect(client.readUsageMetadata({})).toEqual({ cachedTokens: 0, promptTokens: 0 });
+  });
+
+  it('should build generate content body with no system instruction (lines 102-108)', () => {
+    const body = client.buildGenerateContentBody('prompt', null, {}, null, false);
+    expect(body.cachedContent).toBeUndefined();
+    expect(body.systemInstruction).toBeUndefined();
+  });
+
+  it('should return null from createSystemContextCache when not configured (line 117)', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ geminiApiKey: '' }));
+    const disabled = require('../../utils/geminiClient');
+    const result = await disabled.createSystemContextCache('sys', 'display');
+    expect(result).toBeNull();
+  });
+
+  it('should fallback to 3600 TTL when config TTL is missing in SystemContextCacheManager (line 271)', async () => {
+    jest.resetModules();
+    const mockPost = jest.fn().mockResolvedValue({ data: { name: 'cachedContents/abc' } });
+    jest.doMock('../../utils/httpClient', () => ({ post: mockPost }));
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'k',
+      geminiContextCacheTtlSeconds: 0 // falls back to 3600
+    }));
+    const c = require('../../utils/geminiClient');
+    const mgr = new c.SystemContextCacheManager('ns3');
+    await mgr.getOrCreate('k3', 'sys', 'disp');
+    // We can't directly check the internal TTL easily without inspecting `mgr.entries`, so we inspect that.
+    const entry = mgr.entries.get(mgr.fullKey('k3'));
+    // 3600000 ms - buffer
+    expect(entry.expiresAt).toBeGreaterThan(Date.now() + 3500000);
+  });
 });

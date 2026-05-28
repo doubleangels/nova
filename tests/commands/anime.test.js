@@ -12,6 +12,8 @@ describe('anime command', () => {
   let animeCommand;
   let mockConfig;
   let mockAxios;
+  let mockCommandContextAi;
+  let mockGeminiContextMessages;
 
   beforeEach(() => {
     jest.resetModules();
@@ -26,6 +28,16 @@ describe('anime command', () => {
       get: jest.fn()
     };
     jest.doMock('axios', () => mockAxios);
+
+    mockCommandContextAi = {
+      fetchAnimeContext: jest.fn()
+    };
+    jest.doMock('../../utils/commandContextAi', () => mockCommandContextAi);
+
+    mockGeminiContextMessages = {
+      formatAiContextField: jest.fn()
+    };
+    jest.doMock('../../utils/geminiContextMessages', () => mockGeminiContextMessages);
 
     animeCommand = require('../../commands/anime');
     jest.clearAllMocks();
@@ -241,6 +253,58 @@ describe('anime command', () => {
         genres: []
       });
       expect(embedValidRating.data.fields.find(f => f.name === '⭐ MAL Rating').value).toBe('8.5');
+    });
+
+    it('should add AI context field if animeAiEnabled is true', async () => {
+      mockConfig.animeAiEnabled = true;
+      mockCommandContextAi.fetchAnimeContext.mockResolvedValue({ note: 'AI insight' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue({
+        name: '🤖 AI Insight', value: 'AI insight'
+      });
+
+      const embed = await animeCommand.createAnimeEmbed({
+        id: 1,
+        title: 'Title',
+        synopsis: 'Synopsis',
+        rating: 8.5,
+        genres: [],
+        releaseDate: '2023-01-01'
+      });
+
+      expect(mockCommandContextAi.fetchAnimeContext).toHaveBeenCalledWith({
+        title: 'Title',
+        malId: 1,
+        rating: '8.5',
+        genres: 'Unknown',
+        releaseDate: 'January 1, 2023',
+        synopsisSnippet: 'Synopsis'
+      });
+      expect(mockGeminiContextMessages.formatAiContextField).toHaveBeenCalledWith('AI insight');
+      expect(embed.data.fields).toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight', value: 'AI insight'
+      }));
+    });
+
+    it('should not add AI context field if formatAiContextField returns null (covers null synopsis)', async () => {
+      mockConfig.animeAiEnabled = true;
+      mockCommandContextAi.fetchAnimeContext.mockResolvedValue({ note: 'Empty' });
+      mockGeminiContextMessages.formatAiContextField.mockReturnValue(null);
+
+      const embed = await animeCommand.createAnimeEmbed({
+        id: 1,
+        title: 'Title',
+        synopsis: null,
+        rating: 8.5,
+        genres: [],
+        releaseDate: '2023-01-01'
+      });
+
+      expect(mockCommandContextAi.fetchAnimeContext).toHaveBeenCalledWith(
+        expect.objectContaining({ synopsisSnippet: '' })
+      );
+      expect(embed.data.fields).not.toContainEqual(expect.objectContaining({
+        name: '🤖 AI Insight'
+      }));
     });
 
     it('should reply with warning if no search results found (status 200 but empty/null data)', async () => {
