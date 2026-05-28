@@ -96,7 +96,7 @@ function createScoreFinishedFixtures(store, deps) {
       );
 
       let scoredCount = 0;
-      const channelId = config.predictionChannelId;
+      const channelId = deps.channelId;
 
       for (const fixture of finished) {
         const scoredNow = await store.getScoredFixtures();

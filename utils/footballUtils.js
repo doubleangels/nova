@@ -54,8 +54,8 @@ function isFootballGameConfigured() {
 
   return Boolean(
     hasApi &&
-    config.predictionChannelId &&
-    String(config.predictionChannelId).trim()
+    config.footballChannelId &&
+    String(config.footballChannelId).trim()
   );
 }
 
@@ -85,6 +85,7 @@ const scoreFinishedFixtures = createScoreFinishedFixtures(store, {
   isConfigured: isFootballGameConfigured,
   getFixtures: getSeasonFixtures,
   buildAnnouncementEmbed,
+  channelId: config.footballChannelId,
   logLabel: 'Football'
 });
 

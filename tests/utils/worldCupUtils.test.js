@@ -16,7 +16,7 @@ describe('worldCupUtils', () => {
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
       predictionReminderHours: 24,
-      predictionChannelId: '999999999999999999'
+      worldCupChannelId: '999999999999999999'
     }));
     utils = require('../../utils/worldCupUtils');
   });
@@ -128,7 +128,7 @@ describe('worldCupUtils', () => {
       jest.resetModules();
       jest.doMock('../../config', () => ({
         footballDataApiKey: 'key',
-        predictionChannelId: '123'
+        worldCupChannelId: '123'
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       const u = require('../../utils/worldCupUtils');
@@ -139,7 +139,7 @@ describe('worldCupUtils', () => {
       jest.resetModules();
       jest.doMock('../../config', () => ({
         footballDataApiKey: '   ',
-        predictionChannelId: '   '
+        worldCupChannelId: '   '
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       const u = require('../../utils/worldCupUtils');
@@ -151,7 +151,7 @@ describe('worldCupUtils', () => {
       jest.doMock('../../config', () => ({
         predictionMockApi: true,
         footballDataApiKey: '',
-        predictionChannelId: '123'
+        worldCupChannelId: '123'
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       const u = require('../../utils/worldCupUtils');
@@ -314,7 +314,7 @@ describe('worldCupUtils', () => {
       jest.doMock('../../config', () => ({
         predictionMockApi: true,
         baseEmbedColor: 0x123456,
-        predictionChannelId: '1'
+        worldCupChannelId: '1'
       }));
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
       mockModeUtils = require('../../utils/worldCupUtils');
@@ -581,7 +581,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      predictionChannelId: '888888888888888888',
+      worldCupChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -623,7 +623,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      predictionChannelId: '888888888888888888',
+      worldCupChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -674,7 +674,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
 
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      predictionChannelId: '888888888888888888',
+      worldCupChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -720,7 +720,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      predictionChannelId: '888888888888888888',
+      worldCupChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -758,7 +758,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
 
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      predictionChannelId: '888888888888888888',
+      worldCupChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -800,7 +800,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
 
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
-      predictionChannelId: '888888888888888888',
+      worldCupChannelId: '888888888888888888',
       footballDataApiKey: 'key'
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
@@ -830,7 +830,7 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
   it('should return 0 when world cup not configured', async () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({
-      predictionChannelId: '',
+      worldCupChannelId: '',
       footballDataApiKey: ''
     }));
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
@@ -852,7 +852,7 @@ describe('worldCupUtils pending prediction and mock state', () => {
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
       predictionMockApi: true,
-      predictionChannelId: '999999999999999999'
+      worldCupChannelId: '999999999999999999'
     }));
     utils = require('../../utils/worldCupUtils');
   });

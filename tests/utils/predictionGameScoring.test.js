@@ -108,6 +108,7 @@ describe('createScoreFinishedFixtures', () => {
     getFixtures: jest.fn().mockResolvedValue([]),
     buildAnnouncementEmbed: jest.fn().mockReturnValue({ embeds: 'embed' }),
     logLabel: 'test',
+    channelId: 'ch1',
     ...overrides
   });
 
@@ -162,7 +163,7 @@ describe('createScoreFinishedFixtures', () => {
     const mockChannel = { isTextBased: jest.fn().mockReturnValue(true), send: jest.fn().mockResolvedValue(undefined) };
     const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
 
-    jest.doMock('../../config', () => ({ predictionChannelId: 'ch1' }));
+
     const deps = makeDeps({
       getFixtures: jest.fn().mockResolvedValue([fixture])
     });
@@ -183,7 +184,7 @@ describe('createScoreFinishedFixtures', () => {
     const mockChannel = { isTextBased: jest.fn().mockReturnValue(false), send: jest.fn() };
     const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
 
-    jest.doMock('../../config', () => ({ predictionChannelId: 'ch1' }));
+
     const deps = makeDeps({
       getFixtures: jest.fn().mockResolvedValue([fixture])
     });
@@ -204,7 +205,7 @@ describe('createScoreFinishedFixtures', () => {
     const mockChannel = { isTextBased: jest.fn().mockReturnValue(true), send: jest.fn().mockRejectedValue(new Error('Discord err')) };
     const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
 
-    jest.doMock('../../config', () => ({ predictionChannelId: 'ch1' }));
+
     const mockLogger = { error: jest.fn() };
     jest.doMock('../../logger', () => () => mockLogger);
     

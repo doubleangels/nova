@@ -23,10 +23,6 @@ const {
   isFootballGameConfigured,
   setPromptingPaused
 } = require('../utils/footballUtils');
-const {
-  isUserRegistered: isWorldCupUserRegistered,
-  addRegisteredUser: addWorldCupRegisteredUser
-} = require('../utils/worldCupUtils');
 const msgs = require('../utils/predictionMessages');
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE']);
@@ -131,7 +127,7 @@ module.exports = {
   },
 
   async handleRegister(interaction) {
-    const roleId = config.predictionParticipantRoleId;
+    const roleId = config.footballParticipantRoleId;
     if (!roleId) {
       await interaction.reply({
         content: msgs.ERR_REGISTER_NOT_CONFIGURED,
@@ -151,17 +147,16 @@ module.exports = {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const inFootball = await isUserRegistered(interaction.user.id);
-    const inWorldCup = await isWorldCupUserRegistered(interaction.user.id);
     const hasRole =
       roleId && interaction.member.roles?.cache?.has(roleId);
 
-    if (hasRole && inFootball && inWorldCup) {
+    if (hasRole && inFootball) {
       await interaction.editReply({
         embeds: [
           new EmbedBuilder()
-            .setColor(config.baseEmbedColor)
+            .setColor(msgs.GAME.club.embedColor)
             .setTitle(msgs.REGISTER_EMBED_TITLE_ALREADY)
-            .setDescription(msgs.buildRegisterAlreadyDescription())
+            .setDescription(msgs.buildRegisterAlreadyDescription('club'))
         ]
       });
       return;
@@ -174,7 +169,7 @@ module.exports = {
       await interaction.editReply({
         embeds: [
           new EmbedBuilder()
-            .setColor(config.baseEmbedColor)
+            .setColor(msgs.GAME.club.embedColor)
             .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
             .setDescription(msgs.ERR_PARTICIPANT_ROLE_MISSING)
         ]
@@ -187,7 +182,7 @@ module.exports = {
       await interaction.editReply({
         embeds: [
           new EmbedBuilder()
-            .setColor(config.baseEmbedColor)
+            .setColor(msgs.GAME.club.embedColor)
             .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
             .setDescription(msgs.ERR_MANAGE_ROLES_REQUIRED)
         ]
@@ -199,7 +194,7 @@ module.exports = {
       await interaction.editReply({
         embeds: [
           new EmbedBuilder()
-            .setColor(config.baseEmbedColor)
+            .setColor(msgs.GAME.club.embedColor)
             .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
             .setDescription(msgs.ERR_ROLE_HIERARCHY)
         ]
@@ -209,17 +204,16 @@ module.exports = {
 
     await interaction.member.roles.add(role, 'Prediction game registration');
     await addRegisteredUser(interaction.user.id);
-    await addWorldCupRegisteredUser(interaction.user.id);
 
-    const channelRef = config.predictionChannelId
-      ? `<#${config.predictionChannelId}>`
+    const channelRef = config.footballChannelId
+      ? `<#${config.footballChannelId}>`
       : 'the prediction channel';
     await interaction.editReply({
       embeds: [
         new EmbedBuilder()
-          .setColor(config.baseEmbedColor)
+          .setColor(msgs.GAME.club.embedColor)
           .setTitle(msgs.REGISTER_EMBED_TITLE_SUCCESS)
-          .setDescription(msgs.buildRegisterSuccessDescription(channelRef, role.name))
+          .setDescription(msgs.buildRegisterSuccessDescription('club', channelRef, role.name))
       ]
     });
 
@@ -247,7 +241,7 @@ module.exports = {
 
     if (board.length === 0) {
       await interaction.editReply({
-        content: msgs.MSG_EMPTY_LEADERBOARD
+        content: msgs.msgEmptyLeaderboard('club')
       });
       return;
     }
@@ -258,7 +252,7 @@ module.exports = {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.club.embedColor)
       .setTitle(msgs.GAME.club.leaderboardTitle)
       .setDescription(lines.join('\n'))
       .setFooter({ text: msgs.GAME.club.leaderboardFooter });
@@ -268,7 +262,7 @@ module.exports = {
 
   async handleRules(interaction) {
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.club.embedColor)
       .setTitle(msgs.GAME.club.rulesTitle)
       .setDescription(msgs.buildRulesDescription('club'));
 
@@ -313,7 +307,7 @@ module.exports = {
 
     const lines = fixtures.map(f => `• \`${f.id}\` ${formatFixtureLine(f)}`);
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.club.embedColor)
       .setTitle(
         competition ? `${getCompetitionName(competition)} fixtures` : msgs.GAME.club.matchesTitle
       )
@@ -374,7 +368,7 @@ module.exports = {
     const total = await getUserPoints(interaction.user.id);
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.club.embedColor)
       .setTitle(msgs.GAME.club.myPicksTitle)
       .setDescription(lines.join('\n').slice(0, 4000))
       .setFooter({ text: `Total points: ${total}` });
@@ -423,7 +417,7 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.club.embedColor)
       .setTitle(msgs.GAME.club.resetTitle)
       .setDescription(
         msgs.buildResetDescription('club', repost, repostSucceeded, repostSkippedConfig)

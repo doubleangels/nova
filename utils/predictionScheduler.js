@@ -15,6 +15,8 @@ const { isInReminderWindow } = require('./predictionGameUi');
  *   logLabel: string,
  *   buttonPrefix: string,
  *   aiGameId: 'worldcup'|'club',
+ *   participantRoleId?: string,
+ *   channelId?: string,
  *   isApiConfigured: () => boolean,
  *   isGameConfigured: () => boolean,
  *   isMockApiEnabled: () => boolean,
@@ -35,7 +37,7 @@ function createPredictionScheduler(options) {
   let pollInFlight = false;
 
   function buildPromptChannelContent() {
-    const roleId = config.predictionParticipantRoleId;
+    const roleId = options.participantRoleId;
     if (!roleId || !String(roleId).trim()) return undefined;
     return buildRolePing(roleId);
   }
@@ -54,7 +56,7 @@ function createPredictionScheduler(options) {
    * @param {object} fixture
    */
   async function sendPredictionPrompts(client, fixture) {
-    const channelId = config.predictionChannelId;
+    const channelId = options.channelId;
     const aiPrediction = await fetchMatchAiPrediction({
       game: options.aiGameId,
       fixture

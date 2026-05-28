@@ -146,11 +146,13 @@ function createPredictionInteractionHandlers(options) {
     }
 
     const registered = await store.isUserRegistered(interaction.user.id);
-    const roleId = config.predictionParticipantRoleId;
+    const roleId = options.gameId === 'worldcup'
+      ? config.worldCupParticipantRoleId
+      : config.footballParticipantRoleId;
     const hasRole = roleId && interaction.member.roles?.cache?.has(roleId);
     if (!registered && !hasRole) {
       await interaction.reply({
-        content: msgs.ERR_REGISTER_FIRST,
+        content: msgs.errRegisterFirst(options.gameId),
         flags: MessageFlags.Ephemeral
       });
       return;
@@ -278,7 +280,7 @@ function createPredictionInteractionHandlers(options) {
     await store.clearPendingPrediction(interaction.user.id, fixtureId);
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME[options.gameId].embedColor)
       .setTitle(msgs.SAVED_PREDICTION_TITLE)
       .setDescription(
         `**${options.formatFixtureTeam(fixture, 'home')}** vs **${options.formatFixtureTeam(fixture, 'away')}**\n` +

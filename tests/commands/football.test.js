@@ -38,8 +38,8 @@ describe('football command', () => {
 
     mockConfig = {
       baseEmbedColor: 0xABCDEF,
-      predictionParticipantRoleId: '444444444444444444',
-      predictionChannelId: '555555555555555555'
+      footballParticipantRoleId: '444444444444444444',
+      footballChannelId: '555555555555555555'
     };
 
     jest.doMock('../../utils/footballUtils', () => mockFootballUtils);
@@ -58,7 +58,7 @@ describe('football command', () => {
     footballCommand = require('../../commands/football');
   });
 
-  it('should register user for both games and assign role', async () => {
+  it('should register user for football and assign role', async () => {
     const role = {
       id: '444444444444444444',
       name: 'Predictor',
@@ -95,16 +95,15 @@ describe('football command', () => {
     expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(interaction.member.roles.add).toHaveBeenCalledWith(role, 'Prediction game registration');
     expect(mockFootballUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
-    expect(mockWorldCupUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
+    expect(mockWorldCupUtils.addRegisteredUser).not.toHaveBeenCalled();
     const reply = interaction.editReply.mock.calls[0][0];
     expect(reply.embeds).toHaveLength(1);
     expect(reply.embeds[0].data.title).toBe('Registered for predictions!');
-    expect(reply.embeds[0].data.description).toContain('World Cup');
+    expect(reply.embeds[0].data.description).toContain('Club football');
   });
 
-  it('should report already registered when in both games', async () => {
+  it('should report already registered when already in football', async () => {
     mockFootballUtils.isUserRegistered.mockResolvedValue(true);
-    mockWorldCupUtils.isUserRegistered.mockResolvedValue(true);
 
     const interaction = createMockInteraction({
       options: { getSubcommand: jest.fn().mockReturnValue('register') },
@@ -134,9 +133,8 @@ describe('football command', () => {
     expect(mockFootballUtils.addRegisteredUser).not.toHaveBeenCalled();
   });
 
-  it('should complete registration when only registered for one game', async () => {
-    mockFootballUtils.isUserRegistered.mockResolvedValue(true);
-    mockWorldCupUtils.isUserRegistered.mockResolvedValue(false);
+  it('should proceed with registration when not yet in football', async () => {
+    mockFootballUtils.isUserRegistered.mockResolvedValue(false);
 
     const role = { id: '444444444444444444', name: 'Predictor', position: 1 };
     const interaction = createMockInteraction({
@@ -163,12 +161,12 @@ describe('football command', () => {
     await footballCommand.execute(interaction);
 
     expect(mockFootballUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
-    expect(mockWorldCupUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
+    expect(mockWorldCupUtils.addRegisteredUser).not.toHaveBeenCalled();
   });
 
   it('should reject register when role id missing', async () => {
     jest.resetModules();
-    mockConfig.predictionParticipantRoleId = undefined;
+    mockConfig.footballParticipantRoleId = undefined;
     jest.doMock('../../config', () => mockConfig);
     jest.doMock('../../utils/footballUtils', () => mockFootballUtils);
     jest.doMock('../../utils/worldCupUtils', () => mockWorldCupUtils);

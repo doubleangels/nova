@@ -57,7 +57,7 @@ describe('worldCupInteractions', () => {
     }));
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0x123456,
-      predictionParticipantRoleId: '333333333333333333',
+      worldCupParticipantRoleId: '333333333333333333',
       predictionMockApi: false
     }));
     jest.doMock('../../logger', () => () => ({

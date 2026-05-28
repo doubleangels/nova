@@ -17,7 +17,7 @@ describe('worldCupUtils keyv import', () => {
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
       predictionReminderHours: 24,
-      predictionChannelId: '999999999999999999'
+      worldCupChannelId: '999999999999999999'
     }));
     jest.doMock('../../utils/sqliteStore', () => ({
       getSharedKeyvStore: jest.fn().mockReturnValue({})
@@ -44,7 +44,7 @@ describe('worldCupUtils keyv import', () => {
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
       predictionReminderHours: 24,
-      predictionChannelId: '999999999999999999'
+      worldCupChannelId: '999999999999999999'
     }));
     jest.doMock('../../utils/sqliteStore', () => ({
       getSharedKeyvStore: jest.fn().mockReturnValue({})

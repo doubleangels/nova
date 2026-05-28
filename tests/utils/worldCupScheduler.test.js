@@ -46,8 +46,8 @@ describe('worldCupScheduler', () => {
       ])
     }));
     jest.doMock('../../config', () => ({
-      predictionChannelId: '222222222222222222',
-      predictionParticipantRoleId: '333333333333333333',
+      worldCupChannelId: '222222222222222222',
+      worldCupParticipantRoleId: '333333333333333333',
       predictionPollIntervalMs: 60000
     }));
     jest.doMock('../../logger', () => () => ({
@@ -131,7 +131,7 @@ describe('worldCupScheduler', () => {
       getSeasonFixtures: jest.fn()
     }));
     jest.doMock('../../config', () => ({
-      predictionChannelId: '222222222222222222',
+      worldCupChannelId: '222222222222222222',
       predictionPollIntervalMs: 60000
     }));
     jest.doMock('../../logger', () => () => ({
@@ -229,7 +229,7 @@ describe('worldCupScheduler', () => {
       ])
     }));
     jest.doMock('../../config', () => ({
-      predictionChannelId: '222222222222222222',
+      worldCupChannelId: '222222222222222222',
       predictionPollIntervalMs: 60000
     }));
     jest.doMock('../../logger', () => () => ({
@@ -292,7 +292,7 @@ describe('worldCupScheduler', () => {
       ])
     }));
     jest.doMock('../../config', () => ({
-      predictionChannelId: '222222222222222222',
+      worldCupChannelId: '222222222222222222',
       predictionPollIntervalMs: 60000
     }));
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
@@ -330,7 +330,7 @@ describe('worldCupScheduler', () => {
       getSeasonFixtures: jest.fn()
     }));
     jest.doMock('../../config', () => ({
-      predictionChannelId: '222222222222222222',
+      worldCupChannelId: '222222222222222222',
       predictionPollIntervalMs: 600000
     }));
     jest.doMock('../../logger', () => () => ({

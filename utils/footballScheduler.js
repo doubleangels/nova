@@ -10,12 +10,16 @@ const {
 } = require('./footballUtils');
 const { MOCK_PLAYABLE_MATCH_IDS } = require('./footballMockData');
 
+const config = require('../config');
+
 const BUTTON_PREFIX = 'football:predict:';
 
 const scheduler = createPredictionScheduler({
   logLabel: 'Football',
   buttonPrefix: BUTTON_PREFIX,
   aiGameId: 'club',
+  participantRoleId: config.footballParticipantRoleId,
+  channelId: config.footballChannelId,
   isApiConfigured,
   isGameConfigured: isFootballGameConfigured,
   isMockApiEnabled,

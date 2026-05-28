@@ -51,8 +51,8 @@ describe('worldcup command', () => {
 
     mockConfig = {
       baseEmbedColor: 0xABCDEF,
-      predictionParticipantRoleId: '444444444444444444',
-      predictionChannelId: '555555555555555555'
+      worldCupParticipantRoleId: '444444444444444444',
+      worldCupChannelId: '555555555555555555'
     };
 
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);

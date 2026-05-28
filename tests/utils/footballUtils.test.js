@@ -11,7 +11,7 @@ describe('footballUtils', () => {
     jest.doMock('../../config', () => ({
       baseEmbedColor: 0xABCDEF,
       predictionMockApi: true,
-      predictionChannelId: '999999999999999999',
+      footballChannelId: '999999999999999999',
       footballDataApiKey: 'key',
       predictionPendingTtlMs: 600000
     }));
@@ -24,7 +24,7 @@ describe('footballUtils', () => {
 
   it('should return false from isFootballGameConfigured when no channel', () => {
     jest.resetModules();
-    jest.doMock('../../config', () => ({ predictionMockApi: true, predictionChannelId: '' }));
+    jest.doMock('../../config', () => ({ predictionMockApi: true, footballChannelId: '' }));
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
     const u = require('../../utils/footballUtils');
     expect(u.isFootballGameConfigured()).toBe(false);
@@ -35,7 +35,7 @@ describe('footballUtils', () => {
     jest.doMock('../../config', () => ({
       predictionMockApi: false,
       footballDataApiKey: '',
-      predictionChannelId: '123'
+      footballChannelId: '123'
     }));
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn() }));
     const u = require('../../utils/footballUtils');

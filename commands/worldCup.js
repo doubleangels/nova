@@ -9,6 +9,8 @@ const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
 const { isApiConfigured, getSeasonFixtures } = require('../utils/worldCupClient');
 const {
+  isUserRegistered,
+  addRegisteredUser,
   getLeaderboard,
   scoreFinishedFixtures,
   formatFixtureLine,
@@ -29,6 +31,11 @@ module.exports = {
     .setName('worldcup')
     .setDescription('Predict FIFA World Cup 2026 match results.')
     .setDefaultMemberPermissions(null)
+    .addSubcommand(sub =>
+      sub
+        .setName('register')
+        .setDescription('Join World Cup predictions and receive the participant role.')
+    )
     .addSubcommand(sub =>
       sub
         .setName('leaderboard')
@@ -78,6 +85,9 @@ module.exports = {
 
     try {
       switch (subcommand) {
+        case 'register':
+          await this.handleRegister(interaction);
+          break;
         case 'leaderboard':
           await this.handleLeaderboard(interaction);
           break;
@@ -104,6 +114,102 @@ module.exports = {
     }
   },
 
+  async handleRegister(interaction) {
+    const roleId = config.worldCupParticipantRoleId;
+    if (!roleId) {
+      await interaction.reply({
+        content: msgs.ERR_REGISTER_NOT_CONFIGURED,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    if (!interaction.guild || !interaction.member) {
+      await interaction.reply({
+        content: msgs.ERR_GUILD_ONLY,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const inWorldCup = await isUserRegistered(interaction.user.id);
+    const hasRole = roleId && interaction.member.roles?.cache?.has(roleId);
+
+    if (hasRole && inWorldCup) {
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(msgs.GAME.worldcup.embedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ALREADY)
+            .setDescription(msgs.buildRegisterAlreadyDescription('worldcup'))
+        ]
+      });
+      return;
+    }
+
+    const role = interaction.guild.roles.cache.get(roleId) ||
+      await interaction.guild.roles.fetch(roleId).catch(() => null);
+
+    if (!role) {
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(msgs.GAME.worldcup.embedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
+            .setDescription(msgs.ERR_PARTICIPANT_ROLE_MISSING)
+        ]
+      });
+      return;
+    }
+
+    const me = interaction.guild.members.me;
+    if (!me?.permissions.has(PermissionFlagsBits.ManageRoles)) {
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(msgs.GAME.worldcup.embedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
+            .setDescription(msgs.ERR_MANAGE_ROLES_REQUIRED)
+        ]
+      });
+      return;
+    }
+
+    if (role.position >= me.roles.highest.position) {
+      await interaction.editReply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(msgs.GAME.worldcup.embedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
+            .setDescription(msgs.ERR_ROLE_HIERARCHY)
+        ]
+      });
+      return;
+    }
+
+    await interaction.member.roles.add(role, 'Prediction game registration');
+    await addRegisteredUser(interaction.user.id);
+
+    const channelRef = config.worldCupChannelId
+      ? `<#${config.worldCupChannelId}>`
+      : 'the prediction channel';
+    await interaction.editReply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(msgs.GAME.worldcup.embedColor)
+          .setTitle(msgs.REGISTER_EMBED_TITLE_SUCCESS)
+          .setDescription(msgs.buildRegisterSuccessDescription('worldcup', channelRef, role.name))
+      ]
+    });
+
+    logger.info('/worldcup register completed.', {
+      userId: interaction.user.id,
+      guildId: interaction.guild.id
+    });
+  },
+
   async handleLeaderboard(interaction) {
     if (!isApiConfigured()) {
       await interaction.reply({
@@ -122,7 +228,7 @@ module.exports = {
 
     if (board.length === 0) {
       await interaction.editReply({
-        content: msgs.MSG_EMPTY_LEADERBOARD
+        content: msgs.msgEmptyLeaderboard('worldcup')
       });
       return;
     }
@@ -133,7 +239,7 @@ module.exports = {
     });
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.worldcup.embedColor)
       .setTitle(msgs.GAME.worldcup.leaderboardTitle)
       .setDescription(lines.join('\n'))
       .setFooter({ text: msgs.GAME.worldcup.leaderboardFooter });
@@ -143,7 +249,7 @@ module.exports = {
 
   async handleRules(interaction) {
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.worldcup.embedColor)
       .setTitle(msgs.GAME.worldcup.rulesTitle)
       .setDescription(msgs.buildRulesDescription('worldcup'));
 
@@ -185,7 +291,7 @@ module.exports = {
 
     const lines = fixtures.map(f => `• \`${f.id}\` ${formatFixtureLine(f)}`);
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.worldcup.embedColor)
       .setTitle(msgs.GAME.worldcup.matchesTitle)
       .setDescription(lines.join('\n').slice(0, 4000));
 
@@ -244,7 +350,7 @@ module.exports = {
     const total = await getUserPoints(interaction.user.id);
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.worldcup.embedColor)
       .setTitle(msgs.GAME.worldcup.myPicksTitle)
       .setDescription(lines.join('\n').slice(0, 4000))
       .setFooter({ text: `Total points: ${total}` });
@@ -293,7 +399,7 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setColor(config.baseEmbedColor)
+      .setColor(msgs.GAME.worldcup.embedColor)
       .setTitle(msgs.GAME.worldcup.resetTitle)
       .setDescription(
         msgs.buildResetDescription('worldcup', repost, repostSucceeded, repostSkippedConfig)

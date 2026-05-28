@@ -27,10 +27,14 @@ describe('predictionMessages', () => {
   });
 
   it('should build register embed copy', () => {
-    expect(msgs.buildRegisterSuccessDescription('<#1>', 'Predictor')).toContain(
+    expect(msgs.buildRegisterSuccessDescription('worldcup', '<#1>', 'Predictor')).toContain(
       'World Cup'
     );
-    expect(msgs.buildRegisterAlreadyDescription()).toContain('already registered');
+    expect(msgs.buildRegisterSuccessDescription('club', '<#1>', 'Predictor')).toContain(
+      'Club football'
+    );
+    expect(msgs.buildRegisterAlreadyDescription('worldcup')).toContain('already registered');
+    expect(msgs.buildRegisterAlreadyDescription('club')).toContain('already registered');
   });
 
   it('should return worldcup prompt title without competition', () => {

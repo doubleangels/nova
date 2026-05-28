@@ -57,17 +57,30 @@ function parsePositiveIntEnv(keys, defaultValue) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
 }
 
-/** Shared by /worldcup and /football (legacy per-game env vars still accepted). */
-const predictionParticipantRoleId = envFirst(
-  'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID',
+/** Football club participant role ID (FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID or FOOTBALL_PARTICIPANT_ROLE_ID). */
+const footballParticipantRoleId = envFirst(
+  'FOOTBALL_PARTICIPANT_ROLE_ID',
+  'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID'
+);
+/** World Cup participant role ID (WORLD_CUP_PARTICIPANT_ROLE_ID; falls back to football role if not set). */
+const worldCupParticipantRoleId = envFirst(
   'WORLD_CUP_PARTICIPANT_ROLE_ID',
-  'FOOTBALL_PARTICIPANT_ROLE_ID'
+  'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID'
 );
-const predictionChannelId = envFirst(
-  'FOOTBALL_PREDICTION_CHANNEL_ID',
+/** @deprecated Use footballParticipantRoleId or worldCupParticipantRoleId. Kept for backward compat. */
+const predictionParticipantRoleId = footballParticipantRoleId || worldCupParticipantRoleId;
+/** Football club prediction channel (FOOTBALL_CHANNEL_ID or FOOTBALL_PREDICTION_CHANNEL_ID). */
+const footballChannelId = envFirst(
+  'FOOTBALL_CHANNEL_ID',
+  'FOOTBALL_PREDICTION_CHANNEL_ID'
+);
+/** World Cup prediction channel (WORLD_CUP_CHANNEL_ID or FOOTBALL_PREDICTION_CHANNEL_ID). */
+const worldCupChannelId = envFirst(
   'WORLD_CUP_CHANNEL_ID',
-  'FOOTBALL_CHANNEL_ID'
+  'FOOTBALL_PREDICTION_CHANNEL_ID'
 );
+/** @deprecated Use footballChannelId or worldCupChannelId. Kept for backward compat. */
+const predictionChannelId = footballChannelId || worldCupChannelId;
 const predictionReminderHours = parsePositiveIntEnv(
   [
     'FOOTBALL_PREDICTION_REMINDER_HOURS',
@@ -149,8 +162,12 @@ const googleImagesAiEnabled = isTruthyEnv(envFirst('GOOGLE_IMAGES_AI_ENABLED'));
  * @property {string} searchEngineId - Google Custom Search Engine ID for web searches (from SEARCH_ENGINE_ID env var)
  * @property {string} serverInviteUrl - Server invite URL for kick messages (from SERVER_INVITE_URL env var)
  * @property {string} footballDataApiKey - football-data.org API token (from FOOTBALL_DATA_API_KEY env var)
- * @property {string|undefined} predictionParticipantRoleId - Shared participant role (/worldcup and /football register)
- * @property {string|undefined} predictionChannelId - Shared channel for prompts and match announcements
+ * @property {string|undefined} footballParticipantRoleId - Participant role for /football register (FOOTBALL_PARTICIPANT_ROLE_ID)
+ * @property {string|undefined} worldCupParticipantRoleId - Participant role for /worldcup register (WORLD_CUP_PARTICIPANT_ROLE_ID)
+ * @property {string|undefined} predictionParticipantRoleId - @deprecated Shared fallback; prefer game-specific role IDs
+ * @property {string|undefined} footballChannelId - Channel for /football prompts and announcements (FOOTBALL_CHANNEL_ID)
+ * @property {string|undefined} worldCupChannelId - Channel for /worldcup prompts and announcements (WORLD_CUP_CHANNEL_ID)
+ * @property {string|undefined} predictionChannelId - @deprecated Shared fallback; prefer game-specific channel IDs
  * @property {number} predictionReminderHours - Hours before kickoff to post prediction prompts (both games)
  * @property {number} predictionPollIntervalMs - Fixture polling interval (both games)
  * @property {boolean} predictionMockApi - Simulated fixtures for /worldcup and /football (FOOTBALL_PREDICTION_MOCK_API)
@@ -238,7 +255,11 @@ module.exports = {
   serverInviteUrl: process.env.SERVER_INVITE_URL,
   // football-data.org (World Cup predictions)
   footballDataApiKey: process.env.FOOTBALL_DATA_API_KEY,
+  footballParticipantRoleId,
+  worldCupParticipantRoleId,
   predictionParticipantRoleId,
+  footballChannelId,
+  worldCupChannelId,
   predictionChannelId,
   predictionReminderHours,
   predictionPollIntervalMs,
@@ -323,15 +344,27 @@ if (predictionMockApi) {
 const predictionApiActive =
   predictionMockApi || isSet(process.env.FOOTBALL_DATA_API_KEY);
 
-if (predictionApiActive && !predictionChannelId) {
+if (predictionApiActive && !footballChannelId) {
   console.warn(
-    'FOOTBALL_PREDICTION_CHANNEL_ID is not set. Prediction prompts and announcements will not be posted.'
+    'FOOTBALL_CHANNEL_ID is not set. Football prediction prompts and announcements will not be posted.'
   );
 }
 
-if (predictionApiActive && !predictionParticipantRoleId) {
+if (predictionApiActive && !worldCupChannelId) {
   console.warn(
-    'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID is not set. /football register cannot assign a participant role.'
+    'WORLD_CUP_CHANNEL_ID is not set. World Cup prediction prompts and announcements will not be posted.'
+  );
+}
+
+if (predictionApiActive && !footballParticipantRoleId) {
+  console.warn(
+    'FOOTBALL_PARTICIPANT_ROLE_ID is not set. /football register cannot assign a participant role.'
+  );
+}
+
+if (predictionApiActive && !worldCupParticipantRoleId) {
+  console.warn(
+    'WORLD_CUP_PARTICIPANT_ROLE_ID is not set. /worldcup register cannot assign a participant role.'
   );
 }
 

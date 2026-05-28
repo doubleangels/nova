@@ -108,7 +108,7 @@ function buildPromptEmbed(gameId, fixture, formatTeam, formatLinePrefix, options
       : undefined;
 
   const embed = new EmbedBuilder()
-    .setColor(config.baseEmbedColor)
+    .setColor(msgs.GAME[gameId].embedColor)
     .setTitle(msgs.buildPromptTitle(gameId, league))
     .setDescription(
       `${formatFixtureLine(fixture, formatTeam, formatLinePrefix)}\n\n${msgs.buildPromptDescription(fixture, formatTeam)}`
@@ -145,7 +145,7 @@ function buildAnnouncementEmbed(
   const home = fixture.goals.home ?? '?';
   const away = fixture.goals.away ?? '?';
   const embed = new EmbedBuilder()
-    .setColor(config.baseEmbedColor)
+    .setColor(msgs.GAME[gameId].embedColor)
     .setTitle(
       `Full time - ${formatTeam(fixture, 'home')} ${home}-${away} ${formatTeam(fixture, 'away')}`
     )

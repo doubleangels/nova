@@ -5,10 +5,12 @@
 
 /** @typedef {'worldcup' | 'club'} PredictionGameId */
 
-/** @type {Record<PredictionGameId, { label: string, leaderboardCommand: string, rulesCommand: string, myPicksTitle: string, resetTitle: string, leaderboardTitle: string, rulesTitle: string, matchesTitle: string, leaderboardFooter: string }>} */
+/** @type {Record<PredictionGameId, { label: string, embedColor: number, registerCommand: string, leaderboardCommand: string, rulesCommand: string, myPicksTitle: string, resetTitle: string, leaderboardTitle: string, rulesTitle: string, matchesTitle: string, leaderboardFooter: string }> */
 const GAME = {
   worldcup: {
     label: 'World Cup',
+    embedColor: 0xEB9D57,
+    registerCommand: '/worldcup register',
     leaderboardCommand: '/worldcup leaderboard',
     rulesCommand: '/worldcup rules',
     myPicksTitle: 'Your World Cup predictions',
@@ -20,6 +22,8 @@ const GAME = {
   },
   club: {
     label: 'Club football',
+    embedColor: 0xB0F246,
+    registerCommand: '/football register',
     leaderboardCommand: '/football leaderboard',
     rulesCommand: '/football rules',
     myPicksTitle: 'Your club football predictions',
@@ -30,8 +34,6 @@ const GAME = {
     leaderboardFooter: 'Premier League · Bundesliga · La Liga · Champions League'
   }
 };
-
-const REGISTER_COMMAND = '/football register';
 const SUBMIT_BUTTON_LABEL = 'Submit prediction';
 const AI_PICK_FIELD_NAME = 'AI Prediction:';
 /** Max characters for Gemini reasoning (fits Discord embed field with score line). */
@@ -64,7 +66,13 @@ const ERR_PREDICTIONS_CLOSED_SHORT = '⚠️ Predictions are closed for this mat
 const ERR_ALREADY_PREDICTED = '⚠️ You already submitted a prediction for this match.';
 const ERR_GOALS_RANGE = '⚠️ Goals must be a whole number from 0 to 15.';
 const ERR_INVALID_WINNER = '⚠️ Invalid winner selection.';
-const ERR_REGISTER_FIRST = `⚠️ Run ${REGISTER_COMMAND} first to join predictions.`;
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function errRegisterFirst(gameId) {
+  return `⚠️ Run ${GAME[gameId].registerCommand} first to join predictions.`;
+}
 const ERR_REGISTER_NOT_CONFIGURED =
   '⚠️ Registration is not set up. Set `FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID`.';
 const ERR_PARTICIPANT_ROLE_MISSING =
@@ -74,17 +82,34 @@ const ERR_MANAGE_ROLES_REQUIRED =
 const ERR_ROLE_HIERARCHY =
   '⚠️ My highest role must be above the participant role in the role list.';
 
-const MSG_EMPTY_LEADERBOARD = `The leaderboard is empty. Run ${REGISTER_COMMAND} to join.`;
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function msgEmptyLeaderboard(gameId) {
+  return `The leaderboard is empty. Run ${GAME[gameId].registerCommand} to join.`;
+}
 const MSG_NO_MATCHES_FILTER =
   'No matches match that filter. The schedule may not be published yet.';
 const MSG_NO_PREDICTIONS =
   'You have not submitted any predictions yet. Use **Submit prediction** on match posts in the prediction channel.';
 const MSG_MISSING_PREDICTION =
   'prediction data missing (try again or contact an admin)';
-const MSG_ALREADY_REGISTERED =
-  'You are already registered for the World Cup and club football predictions games.';
-const MSG_REGISTER_SUCCESS =
-  'You are registered for the World Cup and club football predictions games. Watch {channel} for match posts and submit your predictions.';
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function msgAlreadyRegistered(gameId) {
+  return `You are already registered for the ${GAME[gameId].label} predictions game.`;
+}
+
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function msgRegisterSuccess(gameId) {
+  return `You are registered for the ${GAME[gameId].label} predictions game. Watch {channel} for match posts and submit your predictions.`;
+}
 const REGISTER_EMBED_TITLE_SUCCESS = 'Registered for predictions!';
 const REGISTER_EMBED_TITLE_ALREADY = 'Already registered!';
 const REGISTER_EMBED_TITLE_ERROR = 'Could not register!';
@@ -151,7 +176,7 @@ function buildPromptTitle(gameId, competitionLabel) {
 function buildRulesDescription(gameId) {
   const g = GAME[gameId];
   const lines = [
-    `**Join** with ${REGISTER_COMMAND} (World Cup and club football, one registration).`,
+    `**Join** with ${g.registerCommand}.`,
     ''
   ];
 
@@ -346,36 +371,25 @@ function formatAiPredictionField(fixture, ai, formatTeam) {
 }
 
 /**
+ * @param {PredictionGameId} gameId
  * @param {string} channelMention
  * @param {string} roleName
  * @returns {string}
  */
-function formatRegisterSuccess(channelMention, roleName) {
-  return MSG_REGISTER_SUCCESS.replace('{roleName}', roleName).replace(
-    '{channel}',
-    channelMention
-  );
+function buildRegisterSuccessDescription(gameId, channelMention, roleName) {
+  return msgRegisterSuccess(gameId).replace('{channel}', channelMention);
 }
 
 /**
- * @param {string} channelMention
- * @param {string} roleName
+ * @param {PredictionGameId} gameId
  * @returns {string}
  */
-function buildRegisterSuccessDescription(channelMention, roleName) {
-  return formatRegisterSuccess(channelMention, roleName);
-}
-
-/**
- * @returns {string}
- */
-function buildRegisterAlreadyDescription() {
-  return MSG_ALREADY_REGISTERED;
+function buildRegisterAlreadyDescription(gameId) {
+  return msgAlreadyRegistered(gameId);
 }
 
 module.exports = {
   GAME,
-  REGISTER_COMMAND,
   SUBMIT_BUTTON_LABEL,
   AI_PICK_FIELD_NAME,
   AI_REASONING_MAX_LENGTH,
@@ -393,16 +407,15 @@ module.exports = {
   ERR_ALREADY_PREDICTED,
   ERR_GOALS_RANGE,
   ERR_INVALID_WINNER,
-  ERR_REGISTER_FIRST,
+  errRegisterFirst,
   ERR_REGISTER_NOT_CONFIGURED,
   ERR_PARTICIPANT_ROLE_MISSING,
   ERR_MANAGE_ROLES_REQUIRED,
   ERR_ROLE_HIERARCHY,
-  MSG_EMPTY_LEADERBOARD,
+  msgEmptyLeaderboard,
   MSG_NO_MATCHES_FILTER,
   MSG_NO_PREDICTIONS,
   MSG_MISSING_PREDICTION,
-  MSG_ALREADY_REGISTERED,
   REGISTER_EMBED_TITLE_SUCCESS,
   REGISTER_EMBED_TITLE_ALREADY,
   REGISTER_EMBED_TITLE_ERROR,
@@ -423,7 +436,6 @@ module.exports = {
   buildResetDescription,
   formatMyPickLine,
   formatAiPredictionField,
-  formatRegisterSuccess,
   buildRegisterSuccessDescription,
   buildRegisterAlreadyDescription
 };

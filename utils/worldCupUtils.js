@@ -53,8 +53,8 @@ function isWorldCupGameConfigured() {
 
   return Boolean(
     hasApi &&
-    config.predictionChannelId &&
-    String(config.predictionChannelId).trim()
+    config.worldCupChannelId &&
+    String(config.worldCupChannelId).trim()
   );
 }
 
@@ -84,6 +84,7 @@ const scoreFinishedFixtures = createScoreFinishedFixtures(store, {
   isConfigured: isWorldCupGameConfigured,
   getFixtures: getSeasonFixtures,
   buildAnnouncementEmbed,
+  channelId: config.worldCupChannelId,
   logLabel: 'World Cup'
 });
 

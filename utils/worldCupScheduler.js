@@ -10,12 +10,16 @@ const {
 } = require('./worldCupUtils');
 const { MOCK_PLAYABLE_MATCH_IDS } = require('./worldCupMockData');
 
+const config = require('../config');
+
 const BUTTON_PREFIX = 'worldcup:predict:';
 
 const scheduler = createPredictionScheduler({
   logLabel: 'World Cup',
   buttonPrefix: BUTTON_PREFIX,
   aiGameId: 'worldcup',
+  participantRoleId: config.worldCupParticipantRoleId,
+  channelId: config.worldCupChannelId,
   isApiConfigured,
   isGameConfigured: isWorldCupGameConfigured,
   isMockApiEnabled,
