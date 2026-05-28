@@ -82,9 +82,9 @@ const MSG_NO_PREDICTIONS =
 const MSG_MISSING_PREDICTION =
   'prediction data missing (try again or contact an admin)';
 const MSG_ALREADY_REGISTERED =
-  'You are already registered for World Cup and club football predictions.';
+  'You are already registered for the World Cup and club football predictions games.';
 const MSG_REGISTER_SUCCESS =
-  'You are registered for **World Cup** and **club football** predictions. Role **{roleName}** assigned - watch {channel} for match posts.';
+  'You are registered for the World Cup and club football predictions games. Watch {channel} for match posts and submit your predictions.';
 const REGISTER_EMBED_TITLE_SUCCESS = 'Registered for predictions!';
 const REGISTER_EMBED_TITLE_ALREADY = 'Already registered!';
 const REGISTER_EMBED_TITLE_ERROR = 'Could not register!';
