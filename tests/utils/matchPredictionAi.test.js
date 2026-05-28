@@ -277,6 +277,35 @@ describe('matchPredictionAi', () => {
     expect(pick2?.resultPick).toBe('away');
   });
 
+  it('should fall back to score-based result when winner is unrecognizable in parseWinnerPick (line 135)', () => {
+    // homeScore=1 awayScore=0 → outcome = 'home'; unrecognized winner falls back to fromScore
+    const pick = ai.normalizeAiResponse(
+      { homeScore: 1, awayScore: 0, winner: 'Unknown Team', reasoning: 'x' },
+      { home: 'Brazil', away: 'Argentina' }
+    );
+    // normalizeAiResponse uses fromScore ('home') as fallback when fromWinner is null
+    expect(pick?.resultPick).toBe('home');
+  });
+
+  it('should return null from fetchMatchAiPrediction when Gemini returns invalid payload (lines 367-373)', async () => {
+    // Gemini returns malformed JSON that normalizes to null
+    mockAxios.post
+      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys_bad' } })
+      .mockResolvedValueOnce({
+        data: {
+          candidates: [{
+            content: { parts: [{ text: JSON.stringify({ homeScore: -1, awayScore: 0, winner: 'INVALID' }) }] }
+          }]
+        }
+      });
+    const fixture = {
+      id: 999991, home: 'Brazil', away: 'Argentina',
+      kickoff: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+    };
+    const result = await ai.fetchMatchAiPrediction({ game: 'worldcup', fixture });
+    expect(result).toBeNull();
+  });
+
   it('should fall back to default result cache TTL when kickoff is in the past', () => {
     const pastFixture = { kickoff: '2020-01-01T00:00:00Z' };
     const ttl = ai.getResultCacheTtlMs(pastFixture);

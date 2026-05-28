@@ -60,3 +60,32 @@ describe('worldCupTeamFlags', () => {
     expect(flags.formatTeamWithFlag('Unknown FC', { mockApi: false })).toBe('Unknown FC');
   });
 });
+
+describe('codeToIso2 edge cases (via iso2FromTla)', () => {
+  let flags;
+  beforeEach(() => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: false }));
+    flags = require('../../utils/worldCupTeamFlags');
+  });
+
+  it('should return null from iso2FromTla for code > 3 chars (line 155)', () => {
+    // iso2FromTla → codeToIso2 → trimmed.length > 3 → return null
+    expect(flags.iso2FromTla('TOOLONG')).toBeNull();
+  });
+
+  it('should return trimmed ISO2 when length is 2 (line 153)', () => {
+    // Directly exercising the 2-char path
+    expect(flags.resolveIso2FromTeam({ area: { code: 'br' }, name: 'Brazil' })).toBe('BR');
+  });
+
+  it('should resolve TLA to ISO2 when length is 3 (line 154)', () => {
+    expect(flags.iso2FromTla('BRA')).toBe('BR');
+  });
+
+  it('should return null from resolveIso2FromTeam when area code has > 3 chars', () => {
+    // area.code='TOOLONG' → codeToIso2 returns null → falls through to name/tla lookup
+    const result = flags.resolveIso2FromTeam({ area: { code: 'TOOLONG' }, name: 'Unknown' });
+    expect(result).toBeNull(); // 'Unknown' not in NAME_TO_ISO2, no tla
+  });
+});

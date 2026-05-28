@@ -21,5 +21,16 @@ describe('footballMockData', () => {
 
   it('should expose scripted full-time score', () => {
     expect(mockData.getMockScriptedFullTimeGoals(910001)).toEqual({ home: 2, away: 1 });
+    expect(mockData.getMockScriptedFullTimeGoals(123)).toBeNull();
+  });
+
+  it('should check if match id is playable (line 41)', () => {
+    expect(mockData.isMockPlayableMatchId(910001)).toBe(true);
+    expect(mockData.isMockPlayableMatchId(123)).toBe(false);
+  });
+
+  it('should get mock match by id (line 64)', () => {
+    expect(mockData.getMockMatchById(910001)).toHaveProperty('id', 910001);
+    expect(mockData.getMockMatchById(123)).toBeNull();
   });
 });

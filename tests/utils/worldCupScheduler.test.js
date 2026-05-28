@@ -248,6 +248,12 @@ describe('worldCupScheduler', () => {
     expect(mockUtils.markFixturePrompted).not.toHaveBeenCalled();
   });
 
+  it('should return early from poll if prompting is paused (line 112)', async () => {
+    mockUtils.store.isPromptingPaused.mockResolvedValue(true);
+    await scheduler.runWorldCupPoll(mockClient);
+    expect(mockUtils.store.getPromptedFixtures).not.toHaveBeenCalled();
+  });
+
   it('should reset mock demo state on startup when mock API is enabled', async () => {
     jest.resetModules();
     const resetMockDemoState = jest.fn().mockResolvedValue();

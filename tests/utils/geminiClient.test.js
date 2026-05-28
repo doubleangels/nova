@@ -59,6 +59,12 @@ describe('geminiClient', () => {
     expect(body.systemInstruction.parts[0].text).toBe('sys');
   });
 
+  it('should use cachedContent instead of systemInstruction when cachedContentName is set (lines 102-105)', () => {
+    const body = client.buildGenerateContentBody('prompt', 'sys', {}, 'cachedContents/abc', true);
+    expect(body.cachedContent).toBe('cachedContents/abc');
+    expect(body.systemInstruction).toBeUndefined();
+  });
+
   it('should return null from generateStructuredJson when not configured', async () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({ geminiApiKey: '' }));
@@ -71,9 +77,64 @@ describe('geminiClient', () => {
     expect(result).toBeNull();
   });
 
+  it('should return parsed JSON from generateStructuredJson with token usage logging (lines 218-225)', async () => {
+    mockAxios.post.mockResolvedValue({
+      data: {
+        usageMetadata: { prompt_token_count: 100, cached_content_token_count: 50 },
+        candidates: [{ content: { parts: [{ text: '{"result":"ok"}' }] } }]
+      }
+    });
+    const result = await client.generateStructuredJson({
+      userPrompt: 'test', systemInstruction: 'sys',
+      responseSchema: {}, logLabel: 'test-label'
+    });
+    expect(result).toEqual({ result: 'ok' });
+  });
+
+  it('should return null from generateStructuredJson when candidates has no parts (line 228)', async () => {
+    mockAxios.post.mockResolvedValue({
+      data: { candidates: [{ content: { parts: null } }] }
+    });
+    const result = await client.generateStructuredJson({
+      userPrompt: 'test', systemInstruction: 'sys', responseSchema: {}
+    });
+    expect(result).toBeNull();
+  });
+
   it('should return zero for readUsageMetadata when input is invalid', () => {
     expect(client.readUsageMetadata(null)).toEqual({ cachedTokens: 0, promptTokens: 0 });
     expect(client.readUsageMetadata('string')).toEqual({ cachedTokens: 0, promptTokens: 0 });
+  });
+
+  it('should read valid usageMetadata object (lines 71-72)', () => {
+    expect(client.readUsageMetadata({
+      prompt_token_count: 200,
+      cached_content_token_count: 10
+    })).toEqual({ cachedTokens: 10, promptTokens: 200 });
+  });
+
+  it('should use geminiContextModel when set (lines 23-26)', () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => ({ post: jest.fn() }));
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'k',
+      geminiContextModel: 'my-context-model',
+      geminiPredictionModel: 'other-model'
+    }));
+    const c = require('../../utils/geminiClient');
+    expect(c.getGeminiModel()).toBe('my-context-model');
+  });
+
+  it('should fall back to DEFAULT_MODEL when no model configured (line 26)', () => {
+    jest.resetModules();
+    jest.doMock('../../utils/httpClient', () => ({ post: jest.fn() }));
+    jest.doMock('../../config', () => ({
+      geminiApiKey: 'k',
+      geminiContextModel: undefined,
+      geminiPredictionModel: undefined
+    }));
+    const c = require('../../utils/geminiClient');
+    expect(c.getGeminiModel()).toBe(c.DEFAULT_MODEL);
   });
 
   it('should reuse cached context and skip creation on second getOrCreate call', async () => {
@@ -108,5 +169,16 @@ describe('geminiClient', () => {
     mgr.clear();
     await mgr.getOrCreate('k', 'sys', 'disp');
     expect(mockAxios.post).toHaveBeenCalledTimes(2);
+  });
+
+  it('should store entry with expiry in getOrCreate (line 271)', async () => {
+    mockAxios.post.mockResolvedValue({ data: { name: 'cachedContents/new' } });
+    const mgr = new client.SystemContextCacheManager('ns2');
+    const name = await mgr.getOrCreate('k2', 'sys', 'disp');
+    expect(name).toBe('cachedContents/new');
+    // Second call should reuse without hitting the API again
+    const name2 = await mgr.getOrCreate('k2', 'sys', 'disp');
+    expect(name2).toBe('cachedContents/new');
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
   });
 });

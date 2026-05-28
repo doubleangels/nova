@@ -91,4 +91,28 @@ describe('predictionGameStore', () => {
     const result = await nonMockStore.areAllMockPlayableFixturesPredicted([1, 2]);
     expect(result).toBe(false);
   });
+
+  it('should not track participant when adding 0 points (line 129 false branch)', async () => {
+    await store.addUserPoints('user-zero', 0);
+    expect(await store.getUserPoints('user-zero')).toBe(0);
+    // User should not appear in participants since next <= 0
+    const board = await store.getLeaderboard(10);
+    expect(board.some(e => e.userId === 'user-zero')).toBe(false);
+  });
+
+  it('should getLeaderboard when no participants or registered users (line 213 || [])', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: true, predictionPendingTtlMs: 600000 }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const emptyStore = createPredictionStore('empty-store', 'Empty');
+    const board = await emptyStore.getLeaderboard(5);
+    expect(board).toEqual([]);
+  });
+
+  it('should return null from isPendingPredictionComplete for null (via store export)', () => {
+    const { isPendingPredictionComplete } = require('../../utils/predictionGameStore');
+    expect(isPendingPredictionComplete(null)).toBe(false);
+    expect(isPendingPredictionComplete({ homeScore: 1, awayScore: 0, resultPick: 'home' })).toBe(true);
+    expect(isPendingPredictionComplete({ homeScore: 1 })).toBe(false);
+  });
 });

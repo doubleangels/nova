@@ -26,4 +26,15 @@ describe('footballSeason', () => {
     expect(getFootballSeasonCandidates(2026)).toEqual([2026, 2025]);
     expect(getFootballSeasonCandidates(2025)).toEqual([2025, 2024]);
   });
+
+  it('should use default season when no primary season provided (line 27)', () => {
+    // Should return default and default - 1
+    const defaultYear = getDefaultFootballSeasonYear();
+    expect(getFootballSeasonCandidates()).toEqual([defaultYear, defaultYear - 1]);
+    expect(getFootballSeasonCandidates(null)).toEqual([defaultYear, defaultYear - 1]);
+  });
+
+  it('should not add previous year if primary season is not > 2000 (line 29 false branch)', () => {
+    expect(getFootballSeasonCandidates(2000)).toEqual([2000]);
+  });
 });

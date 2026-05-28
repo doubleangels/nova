@@ -245,5 +245,56 @@ describe('searchUtils', () => {
         expect.any(Object)
       );
     });
+
+    it('should ignore collect event if pageUpdateInFlight is true (lines 87-88)', async () => {
+      const slowEmbed = jest.fn(
+        () =>
+          new Promise(resolve => {
+            setTimeout(() => resolve({ title: 'Page 1' }), 50);
+          })
+      );
+      await searchUtils.createPaginatedResults(mockInteraction, items, slowEmbed, 'test', 60000, mockLogger);
+      
+      const mockButtonInteraction1 = {
+        customId: 'test_next_user-123_123',
+        user: { id: 'user-123' },
+        deferUpdate: jest.fn().mockResolvedValue(true),
+        editReply: jest.fn().mockResolvedValue(true)
+      };
+      
+      const mockButtonInteraction2 = {
+        customId: 'test_next_user-123_123',
+        user: { id: 'user-123' },
+        deferUpdate: jest.fn().mockReturnValue({ catch: jest.fn() }),
+        editReply: jest.fn().mockResolvedValue(true)
+      };
+
+      const p1 = collectorEmitter.listeners['collect'](mockButtonInteraction1);
+      const p2 = collectorEmitter.listeners['collect'](mockButtonInteraction2);
+      
+      await Promise.all([p1, p2]);
+      
+      expect(mockButtonInteraction1.editReply).toHaveBeenCalled();
+      expect(mockButtonInteraction2.editReply).not.toHaveBeenCalled();
+      expect(mockButtonInteraction2.deferUpdate).toHaveBeenCalled();
+    });
+
+    it('should log error if editing reply fails during collect (line 118)', async () => {
+      await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger);
+      
+      const mockButtonInteraction = {
+        customId: 'test_next_user-123_123',
+        user: { id: 'user-123' },
+        deferUpdate: jest.fn().mockResolvedValue(true),
+        editReply: jest.fn().mockRejectedValue(new Error('Edit Failed'))
+      };
+      
+      await collectorEmitter.listeners['collect'](mockButtonInteraction);
+      
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to update paginated result.',
+        expect.any(Object)
+      );
+    });
   });
 });

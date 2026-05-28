@@ -47,4 +47,16 @@ describe('clubTeamFlags', () => {
       resolveClubIso2FromTeam({ name: 'Levante UD', shortName: 'Levante', tla: 'LEV' })
     ).toBe('ES');
   });
+
+  it('should return null when no ISO2 can be resolved (line 107)', () => {
+    const fakeTeam = { area: { code: '???' }, name: 'Unknown FC', tla: '???' };
+    expect(resolveClubIso2FromTeam(fakeTeam, 'UNKNOWN')).toBeNull();
+  });
+
+  it('should resolve from area code', () => {
+    const { areaCodeToIso2 } = require('../../utils/clubTeamFlags');
+    expect(areaCodeToIso2('ENG')).toBe('GB');
+    expect(areaCodeToIso2('GB')).toBe('GB');
+    expect(areaCodeToIso2(null)).toBeNull();
+  });
 });

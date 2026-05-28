@@ -885,4 +885,12 @@ describe('worldCupUtils pending prediction and mock state', () => {
     expect(options).toContain('Brazil');
     expect(options).toContain('Argentina');
   });
+
+  it('should delegate isPromptingPaused and setPromptingPaused (lines 131-132)', async () => {
+    await utils.setPromptingPaused(true);
+    expect(await utils.isPromptingPaused()).toBe(true);
+    await utils.setPromptingPaused(false);
+    expect(await utils.isPromptingPaused()).toBe(false);
+  });
 });
+

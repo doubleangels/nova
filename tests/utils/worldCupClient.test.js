@@ -216,6 +216,65 @@ describe('worldCupClient', () => {
       expect(fixtures).toEqual([]);
       expect(mockAxios.get).not.toHaveBeenCalled();
     });
+
+    it('should use predictionPollIntervalMs as cache TTL when set (line 12)', () => {
+      jest.resetModules();
+      jest.doMock('../../utils/httpClient', () => mockAxios);
+      jest.doMock('../../config', () => ({
+        footballDataApiKey: 'test-api-key',
+        worldCupCompetitionCode: 'WC',
+        worldCupSeason: '2026',
+        predictionPollIntervalMs: 10 * 60 * 1000
+      }));
+      const c = require('../../utils/worldCupClient');
+      expect(c.getCacheTtlMs()).toBe(10 * 60 * 1000);
+    });
+
+    it('should return stale cache when 429 rate-limited with prior cached data (lines 136-142)', async () => {
+      // Populate cache first
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 1 })] }
+      });
+      await client.getSeasonFixtures();
+      client.clearSeasonCache();
+
+      // Re-populate without clearing, then trigger 429 on forceRefresh
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 2 })] }
+      });
+      await client.getSeasonFixtures(); // populates cache
+
+      const rateLimitErr = new Error('Rate limited');
+      rateLimitErr.response = { status: 429 };
+      mockAxios.get.mockRejectedValueOnce(rateLimitErr);
+
+      const fixtures = await client.getSeasonFixtures({ forceRefresh: true });
+      expect(fixtures).toHaveLength(1);
+      expect(fixtures[0].id).toBe(2);
+    });
+
+    it('should throw non-429 error from fetchSeasonMatchesFromApi (line 142)', async () => {
+      const err = new Error('server error');
+      err.response = { status: 500 };
+      mockAxios.get.mockRejectedValue(err);
+      await expect(client.getSeasonFixtures({ forceRefresh: true })).rejects.toMatchObject({ response: { status: 500 } });
+    });
+
+    it('should return null from getFixtureById when not configured (line 152)', async () => {
+      jest.resetModules();
+      jest.doMock('../../utils/httpClient', () => mockAxios);
+      jest.doMock('../../config', () => ({ footballDataApiKey: '' }));
+      const noKeyClient = require('../../utils/worldCupClient');
+      const result = await noKeyClient.getFixtureById(123);
+      expect(result).toBeNull();
+    });
+
+    it('should rethrow non-404 errors from fetchMatchByIdFromApi (line 173)', async () => {
+      const err = new Error('server error');
+      err.response = { status: 500 };
+      mockAxios.get.mockRejectedValue(err);
+      await expect(client.getFixtureById(123)).rejects.toMatchObject({ response: { status: 500 } });
+    });
   });
 
   describe('mock API mode', () => {

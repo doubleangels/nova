@@ -47,3 +47,16 @@ describe('responseCache', () => {
     expect(getCached('other:keep')).toEqual({ ok: true });
   });
 });
+
+describe('deleteCached', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('should delete a specific cached key (line 26)', () => {
+    const { deleteCached, setCached, getCached } = require('../../utils/responseCache');
+    setCached('del-key', 'value', 60000);
+    expect(getCached('del-key')).toBe('value');
+    deleteCached('del-key');
+    expect(getCached('del-key')).toBeUndefined();
+  });
+});

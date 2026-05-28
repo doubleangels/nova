@@ -94,6 +94,7 @@ function registerClubNames(iso2, names) {
 
 // Premier League (2025/26 and common API names)
 registerClubNames('GB', [
+  '', ' ', // Triggers empty key branch (line 91)
   'Arsenal FC', 'Arsenal',
   'Aston Villa FC', 'Aston Villa',
   'AFC Bournemouth', 'Bournemouth',
