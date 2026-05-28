@@ -12,18 +12,21 @@ const {
   cacheKey,
   deleteByPrefix
 } = require('./responseCache');
-const axios = require('./httpClient');
+const {
+  DEFAULT_MODEL,
+  isGeminiConfigured,
+  getGeminiModel,
+  parseJsonFromModelText,
+  buildGenerateContentBody,
+  generateStructuredJson,
+  SystemContextCacheManager
+} = require('./geminiClient');
 const logger = require('../logger')(path.basename(__filename));
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
-const REQUEST_TIMEOUT_MS = 45000;
 const RESULT_CACHE_PREFIX = 'prediction-ai:result:';
 const DEFAULT_RESULT_CACHE_MS = 6 * 60 * 60 * 1000;
-const CONTEXT_CACHE_REFRESH_BUFFER_MS = 60 * 1000;
 
-/** @type {Map<string, { name: string, expiresAt: number }>} */
-const systemContextCacheByMode = new Map();
+const predictionContextCache = new SystemContextCacheManager('prediction');
 
 /**
  * @typedef {Object} AiMatchPrediction
@@ -38,19 +41,7 @@ const systemContextCacheByMode = new Map();
  * @returns {boolean}
  */
 function isMatchAiEnabled() {
-  return Boolean(
-    config.predictionAiEnabled &&
-    config.geminiApiKey &&
-    String(config.geminiApiKey).trim()
-  );
-}
-
-/**
- * @returns {string}
- */
-function getGeminiModel() {
-  const model = config.geminiPredictionModel || DEFAULT_MODEL;
-  return String(model).trim() || DEFAULT_MODEL;
+  return Boolean(config.predictionAiEnabled && isGeminiConfigured());
 }
 
 /**
@@ -112,7 +103,7 @@ function clearAiPredictionCache(fixtureIds, game) {
     }
   }
 
-  systemContextCacheByMode.clear();
+  predictionContextCache.clear();
 }
 
 /**
@@ -276,10 +267,10 @@ function buildUserPrompt({ game, fixture, demoMode = false }) {
  * @returns {object}
  */
 function buildGeminiRequestBody(userPrompt, demoMode = false, cachedContentName) {
-  const body = {
-    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-    tools: [{ google_search: {} }],
-    generationConfig: {
+  return buildGenerateContentBody(
+    userPrompt,
+    buildSystemInstruction(demoMode),
+    {
       temperature: 0.35,
       maxOutputTokens: 512,
       responseMimeType: 'application/json',
@@ -293,18 +284,9 @@ function buildGeminiRequestBody(userPrompt, demoMode = false, cachedContentName)
         },
         required: ['homeScore', 'awayScore', 'winner', 'reasoning']
       }
-    }
-  };
-
-  if (cachedContentName) {
-    body.cachedContent = cachedContentName;
-  } else {
-    body.systemInstruction = {
-      parts: [{ text: buildSystemInstruction(demoMode) }]
-    };
-  }
-
-  return body;
+    },
+    cachedContentName
+  );
 }
 
 /**
@@ -312,7 +294,7 @@ function buildGeminiRequestBody(userPrompt, demoMode = false, cachedContentName)
  * @returns {string}
  */
 function systemContextCacheKey(demoMode) {
-  return `${demoMode ? 'demo' : 'live'}:${getGeminiModel()}`;
+  return demoMode ? 'demo' : 'live';
 }
 
 /**
@@ -321,107 +303,11 @@ function systemContextCacheKey(demoMode) {
  */
 async function getOrCreateSystemContextCache(demoMode) {
   const key = systemContextCacheKey(demoMode);
-  const existing = systemContextCacheByMode.get(key);
-  if (existing && existing.expiresAt > Date.now()) {
-    return existing.name;
-  }
-
-  const ttlSeconds = config.geminiContextCacheTtlSeconds || 3600;
-  const model = getGeminiModel();
-
-  try {
-    const response = await axios.post(
-      `${GEMINI_API_BASE}/cachedContents`,
-      {
-        model: `models/${model}`,
-        displayName: `nova-prediction-${demoMode ? 'demo' : 'live'}`,
-        systemInstruction: {
-          parts: [{ text: buildSystemInstruction(demoMode) }]
-        },
-        ttl: `${ttlSeconds}s`
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': config.geminiApiKey
-        },
-        timeout: REQUEST_TIMEOUT_MS
-      }
-    );
-
-    const name = response.data?.name;
-    if (!name) {
-      return null;
-    }
-
-    systemContextCacheByMode.set(key, {
-      name,
-      expiresAt: Date.now() + ttlSeconds * 1000 - CONTEXT_CACHE_REFRESH_BUFFER_MS
-    });
-
-    logger.info('Gemini system instruction context cache created.', {
-      demoMode,
-      model,
-      ttlSeconds,
-      cachedContent: name
-    });
-
-    return name;
-  } catch (err) {
-    logger.warn('Gemini context cache unavailable; using inline system instruction.', {
-      err,
-      demoMode,
-      model
-    });
-    return null;
-  }
-}
-
-/**
- * @param {string} text
- * @returns {unknown|null}
- */
-function parseJsonFromModelText(text) {
-  if (!text || typeof text !== 'string') return null;
-
-  const trimmed = text.trim();
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (fence) {
-      try {
-        return JSON.parse(fence[1].trim());
-      } catch {
-        return null;
-      }
-    }
-    const start = trimmed.indexOf('{');
-    const end = trimmed.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      try {
-        return JSON.parse(trimmed.slice(start, end + 1));
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  }
-}
-
-/**
- * @param {unknown} usageMetadata
- * @returns {{ cachedTokens: number, promptTokens: number }}
- */
-function readUsageMetadata(usageMetadata) {
-  if (!usageMetadata || typeof usageMetadata !== 'object') {
-    return { cachedTokens: 0, promptTokens: 0 };
-  }
-
-  return {
-    cachedTokens: Number(usageMetadata.cached_content_token_count) || 0,
-    promptTokens: Number(usageMetadata.prompt_token_count) || 0
-  };
+  return predictionContextCache.getOrCreate(
+    key,
+    buildSystemInstruction(demoMode),
+    `nova-prediction-${demoMode ? 'demo' : 'live'}`
+  );
 }
 
 /**
@@ -430,36 +316,24 @@ function readUsageMetadata(usageMetadata) {
  * @returns {Promise<unknown|null>}
  */
 async function callGeminiForPrediction(userPrompt, demoMode = false) {
-  const model = getGeminiModel();
-  const url = `${GEMINI_API_BASE}/models/${model}:generateContent`;
   const cachedContentName = await getOrCreateSystemContextCache(demoMode);
 
-  const response = await axios.post(
-    url,
-    buildGeminiRequestBody(userPrompt, demoMode, cachedContentName || undefined),
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': config.geminiApiKey
+  return generateStructuredJson({
+    userPrompt,
+    systemInstruction: buildSystemInstruction(demoMode),
+    cachedContentName: cachedContentName || undefined,
+    responseSchema: {
+      type: 'object',
+      properties: {
+        homeScore: { type: 'integer' },
+        awayScore: { type: 'integer' },
+        winner: { type: 'string', enum: ['home', 'draw', 'away'] },
+        reasoning: { type: 'string', maxLength: AI_REASONING_MAX_LENGTH }
       },
-      timeout: REQUEST_TIMEOUT_MS
-    }
-  );
-
-  const usage = readUsageMetadata(response.data?.usageMetadata);
-  if (usage.cachedTokens > 0 || usage.promptTokens > 0) {
-    logger.debug('Gemini prediction token usage.', {
-      cachedTokens: usage.cachedTokens,
-      promptTokens: usage.promptTokens,
-      usedContextCache: Boolean(cachedContentName)
-    });
-  }
-
-  const parts = response.data?.candidates?.[0]?.content?.parts;
-  if (!Array.isArray(parts)) return null;
-
-  const text = parts.map(part => part?.text).filter(Boolean).join('');
-  return parseJsonFromModelText(text);
+      required: ['homeScore', 'awayScore', 'winner', 'reasoning']
+    },
+    logLabel: 'match-prediction'
+  });
 }
 
 /**

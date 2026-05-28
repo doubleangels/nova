@@ -17,7 +17,8 @@ const {
   getUserPredictionFixtureIds,
   getUserPoints,
   resetWorldCupGame,
-  isWorldCupGameConfigured
+  isWorldCupGameConfigured,
+  setPromptingPaused
 } = require('../utils/worldCupUtils');
 const msgs = require('../utils/predictionMessages');
 
@@ -219,6 +220,10 @@ module.exports = {
     const lines = [];
     for (const fixtureId of fixtureIds) {
       const prediction = await getPrediction(interaction.user.id, fixtureId);
+      if (!prediction) {
+        lines.push(`• Match \`${fixtureId}\`: ${msgs.MSG_MISSING_PREDICTION}`);
+        continue;
+      }
       const fixture = fixtureMap.get(fixtureId);
       const label = fixture
         ? formatFixtureLine(fixture)
@@ -269,6 +274,10 @@ module.exports = {
     const repost = interaction.options.getBoolean('repost') ?? true;
 
     await resetWorldCupGame();
+
+    if (!repost) {
+      await setPromptingPaused(true);
+    }
 
     let repostSucceeded = false;
     let repostSkippedConfig = false;

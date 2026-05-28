@@ -99,13 +99,15 @@ describe('searchUtils', () => {
       const mockButtonInteraction = {
         customId: 'test_next_user-123_123',
         user: { id: 'user-123' },
-        update: jest.fn().mockResolvedValue(true)
+        deferUpdate: jest.fn().mockResolvedValue(true),
+        editReply: jest.fn().mockResolvedValue(true)
       };
 
       // Trigger 'collect' for 'next'
       await collectorEmitter.listeners['collect'](mockButtonInteraction);
       
-      expect(mockButtonInteraction.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockButtonInteraction.deferUpdate).toHaveBeenCalled();
+      expect(mockButtonInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: [{ title: 'Page 1' }]
       }));
 
@@ -113,7 +115,7 @@ describe('searchUtils', () => {
       mockButtonInteraction.customId = 'test_prev_user-123_123';
       await collectorEmitter.listeners['collect'](mockButtonInteraction);
 
-      expect(mockButtonInteraction.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockButtonInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: [{ title: 'Page 0' }]
       }));
     });
@@ -176,11 +178,13 @@ describe('searchUtils', () => {
       const mockButtonInteraction = {
         customId: 'test_other_user-123_123',
         user: { id: 'user-123' },
-        update: jest.fn().mockResolvedValue(true)
+        deferUpdate: jest.fn().mockResolvedValue(true),
+        editReply: jest.fn().mockResolvedValue(true)
       };
 
       await collectorEmitter.listeners['collect'](mockButtonInteraction);
-      expect(mockButtonInteraction.update).toHaveBeenCalled();
+      expect(mockButtonInteraction.deferUpdate).toHaveBeenCalled();
+      expect(mockButtonInteraction.editReply).toHaveBeenCalled();
     });
 
     it('should filter correct interactions', async () => {
@@ -193,6 +197,39 @@ describe('searchUtils', () => {
       expect(filter({ customId: 'test_next_user-123_123' })).toBe(true);
       expect(filter({ customId: 'other_prev_user-123_123' })).toBe(false);
       expect(filter({ customId: 'test_prev_other-456_123' })).toBe(false);
+    });
+
+    it('should defer update before slow embed generation on button press', async () => {
+      const slowEmbed = jest.fn(
+        () =>
+          new Promise(resolve => {
+            setTimeout(() => resolve({ title: 'Page 1' }), 50);
+          })
+      );
+
+      await searchUtils.createPaginatedResults(
+        mockInteraction,
+        items,
+        slowEmbed,
+        'test',
+        60000,
+        mockLogger
+      );
+
+      const mockButtonInteraction = {
+        customId: 'test_next_user-123_123',
+        user: { id: 'user-123' },
+        deferUpdate: jest.fn().mockResolvedValue(true),
+        editReply: jest.fn().mockResolvedValue(true)
+      };
+
+      await collectorEmitter.listeners['collect'](mockButtonInteraction);
+
+      expect(mockButtonInteraction.deferUpdate).toHaveBeenCalled();
+      expect(mockButtonInteraction.editReply).toHaveBeenCalled();
+      expect(mockButtonInteraction.deferUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+        mockButtonInteraction.editReply.mock.invocationCallOrder[0]
+      );
     });
 
     it('should catch and log error if editReply fails on collector end', async () => {

@@ -41,7 +41,8 @@ describe('googleSearch command', () => {
 
     mockConfig = {
       googleApiKey: 'mock-api-key',
-      searchEngineId: 'mock-cse-id'
+      searchEngineId: 'mock-cse-id',
+      googleAiEnabled: false
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -146,10 +147,10 @@ describe('googleSearch command', () => {
       expect(mockCreatePaginatedResults).toHaveBeenCalled();
       
       const embedGenerator = mockCreatePaginatedResults.mock.calls[0][2];
-      const embed1 = embedGenerator(0);
+      const embed1 = await Promise.resolve(embedGenerator(0));
       expect(embed1.data.title).toBe('JS Guide');
       expect(embed1.data.description).toContain('JavaScript is a language.');
-      expect(embed1.data.description).toContain('(http://js.org)');
+      expect(embed1.data.fields?.find(f => f.name === 'Link')?.value).toContain('http://js.org');
 
       expect(mockLogger.info).toHaveBeenCalledWith('/google command completed successfully.', expect.any(Object));
     });
@@ -182,14 +183,14 @@ describe('googleSearch command', () => {
   });
 
   describe('generateResultEmbed', () => {
-    it('should fall back to default values if fields are missing in search results', () => {
+    it('should fall back to default values if fields are missing in search results', async () => {
       const mockItems = [
         { title: null, link: null, snippet: null }
       ];
-      const embed = googleSearchCommand.generateResultEmbed(mockItems, 0);
+      const embed = await googleSearchCommand.generateResultEmbed(mockItems, 0, 'test query');
       expect(embed.data.title).toBe('No Title Found');
-      expect(embed.data.description).toContain('No Description Found');
-      expect(embed.data.description).toContain('(No Link Found)');
+      expect(embed.data.description).toContain('No description available');
+      expect(embed.data.fields).toBeUndefined();
     });
   });
 

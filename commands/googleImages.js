@@ -4,6 +4,8 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
+const { fetchGoogleImagesContext } = require('../utils/commandContextAi');
+const { formatAiContextField } = require('../utils/geminiContextMessages');
 
 const titleCase = str =>
   str
@@ -105,7 +107,9 @@ module.exports = {
         });
       }
 
-      const generateEmbed = (index) => this.generateImageEmbed(searchResults.items, index);
+      const searchQuery = searchParams.query;
+      const generateEmbed = (index) =>
+        this.generateImageEmbed(searchResults.items, index, searchQuery);
 
       await createPaginatedResults(
         interaction,
@@ -186,18 +190,47 @@ module.exports = {
    * @param {number} index - Index of the current result to display
    * @returns {EmbedBuilder} Discord embed with image preview and metadata
    */
-  generateImageEmbed(items, index) {
+  async generateImageEmbed(items, index, query = '') {
     const item = items[index];
-    const title = item.title || "No Title";
-    const imageLink = item.link || "";
+    const title = item.title || 'No Title';
+    const imageLink = item.link || '';
     const pageLink = item.image?.contextLink || imageLink;
-    
-    return new EmbedBuilder()
+
+    const embed = new EmbedBuilder()
       .setTitle(title)
-      .setDescription(`**[View Original Source](${pageLink})**`)
       .setColor(0x4285F4)
-      .setImage(imageLink)
       .setFooter({ text: `Powered by Google Image Search • Result ${index + 1} of ${items.length}` });
+
+    if (imageLink) {
+      embed.setImage(imageLink);
+    }
+
+    const linkFields = [];
+    if (pageLink) {
+      linkFields.push({ name: 'Source', value: `[View page](${pageLink})`, inline: true });
+    }
+    if (imageLink && imageLink !== pageLink) {
+      linkFields.push({ name: 'Image', value: `[Direct link](${imageLink})`, inline: true });
+    }
+    if (linkFields.length > 0) {
+      embed.addFields(linkFields);
+    }
+
+    if (config.googleImagesAiEnabled && query) {
+      const aiContext = await fetchGoogleImagesContext({
+        query,
+        title,
+        contextLink: pageLink || '',
+        imageLink: imageLink || '',
+        resultIndex: index
+      });
+      const aiField = formatAiContextField(aiContext?.note);
+      if (aiField) {
+        embed.addFields(aiField);
+      }
+    }
+
+    return embed;
   },
 
   /**

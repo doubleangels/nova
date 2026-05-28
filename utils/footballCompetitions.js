@@ -19,6 +19,15 @@ function parseCompetitionCodes(value) {
     : [...DEFAULT_COMPETITION_CODES];
 
   const valid = tokens.filter(code => FOOTBALL_COMPETITIONS[code]);
+  const invalid = tokens.filter(code => !FOOTBALL_COMPETITIONS[code]);
+  if (invalid.length > 0) {
+    console.warn(
+      '[footballCompetitions] Ignoring invalid FOOTBALL_COMPETITION_CODES entries:',
+      invalid.join(', '),
+      '- using:',
+      (valid.length > 0 ? valid : DEFAULT_COMPETITION_CODES).join(', ')
+    );
+  }
   return valid.length > 0 ? [...new Set(valid)] : [...DEFAULT_COMPETITION_CODES];
 }
 

@@ -8,16 +8,28 @@ describe('worldCupScheduler', () => {
   beforeEach(() => {
     jest.resetModules();
 
+    const markFixturePrompted = jest.fn().mockResolvedValue();
+    const getPromptedFixtures = jest.fn().mockResolvedValue([]);
+    const isPromptingPaused = jest.fn().mockResolvedValue(false);
+
     mockUtils = {
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
-      getPromptedFixtures: jest.fn().mockResolvedValue([]),
-      markFixturePrompted: jest.fn().mockResolvedValue(),
+      getPromptedFixtures,
+      markFixturePrompted,
       buildPromptEmbed: jest.fn().mockReturnValue({ data: { title: 'Prompt' } }),
       isInReminderWindow: jest.fn().mockReturnValue(true),
       scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
-      resetMockDemoState: jest.fn().mockResolvedValue()
+      resetMockDemoState: jest.fn().mockResolvedValue(),
+      store: {
+        getPromptedFixtures,
+        markFixturePrompted,
+        isPromptingPaused
+      }
     };
 
+    jest.doMock('../../utils/matchPredictionAi', () => ({
+      fetchMatchAiPrediction: jest.fn().mockResolvedValue(null)
+    }));
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
@@ -100,7 +112,19 @@ describe('worldCupScheduler', () => {
 
   it('should omit role ping when participant role is not configured', async () => {
     jest.resetModules();
-    jest.doMock('../../utils/worldCupUtils', () => mockUtils);
+    const markFixturePrompted = jest.fn().mockResolvedValue();
+    jest.doMock('../../utils/matchPredictionAi', () => ({
+      fetchMatchAiPrediction: jest.fn().mockResolvedValue(null)
+    }));
+    jest.doMock('../../utils/worldCupUtils', () => ({
+      ...mockUtils,
+      markFixturePrompted,
+      store: {
+        markFixturePrompted,
+        getPromptedFixtures: jest.fn().mockResolvedValue([]),
+        isPromptingPaused: jest.fn().mockResolvedValue(false)
+      }
+    }));
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
       isMockApiEnabled: jest.fn().mockReturnValue(false),
@@ -169,14 +193,23 @@ describe('worldCupScheduler', () => {
   it('should skip fixtures outside reminder window', async () => {
     jest.resetModules();
     const markFixturePrompted = jest.fn().mockResolvedValue();
+    const getPromptedFixtures = jest.fn().mockResolvedValue([]);
+    jest.doMock('../../utils/matchPredictionAi', () => ({
+      fetchMatchAiPrediction: jest.fn().mockResolvedValue(null)
+    }));
     jest.doMock('../../utils/worldCupUtils', () => ({
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
       getRegisteredUserIds: jest.fn().mockResolvedValue([]),
-      getPromptedFixtures: jest.fn().mockResolvedValue([]),
+      getPromptedFixtures,
       markFixturePrompted,
       buildPromptEmbed: jest.fn(),
       isInReminderWindow: jest.fn().mockReturnValue(false),
-      scoreFinishedFixtures: jest.fn().mockResolvedValue(0)
+      scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
+      store: {
+        getPromptedFixtures,
+        markFixturePrompted,
+        isPromptingPaused: jest.fn().mockResolvedValue(false)
+      }
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
@@ -216,14 +249,24 @@ describe('worldCupScheduler', () => {
     jest.resetModules();
     const resetMockDemoState = jest.fn().mockResolvedValue();
     const scoreFinishedFixtures = jest.fn().mockResolvedValue(0);
+    const getPromptedFixtures = jest.fn().mockResolvedValue([]);
+    const markFixturePrompted = jest.fn().mockResolvedValue();
+    jest.doMock('../../utils/matchPredictionAi', () => ({
+      fetchMatchAiPrediction: jest.fn().mockResolvedValue(null)
+    }));
     jest.doMock('../../utils/worldCupUtils', () => ({
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
-      getPromptedFixtures: jest.fn().mockResolvedValue([]),
-      markFixturePrompted: jest.fn().mockResolvedValue(),
+      getPromptedFixtures,
+      markFixturePrompted,
       buildPromptEmbed: jest.fn(),
       isInReminderWindow: jest.fn().mockReturnValue(true),
       scoreFinishedFixtures,
-      resetMockDemoState
+      resetMockDemoState,
+      store: {
+        getPromptedFixtures,
+        markFixturePrompted,
+        isPromptingPaused: jest.fn().mockResolvedValue(false)
+      }
     }));
     jest.doMock('../../utils/worldCupClient', () => ({
       isApiConfigured: jest.fn().mockReturnValue(true),
@@ -302,7 +345,7 @@ describe('worldCupScheduler', () => {
       goals: { home: null, away: null }
     };
     await scheduler.sendPredictionPrompts(mockClient, fixture);
-    expect(mockUtils.markFixturePrompted).toHaveBeenCalledWith(81);
+    expect(mockUtils.markFixturePrompted).not.toHaveBeenCalled();
   });
 
   it('should log channel errors when sending prompt', async () => {
@@ -316,7 +359,7 @@ describe('worldCupScheduler', () => {
       goals: { home: null, away: null }
     };
     await scheduler.sendPredictionPrompts(mockClient, fixture);
-    expect(mockUtils.markFixturePrompted).toHaveBeenCalledWith(80);
+    expect(mockUtils.markFixturePrompted).not.toHaveBeenCalled();
   });
 
   it('should not start scheduler when not configured', () => {

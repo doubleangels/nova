@@ -17,7 +17,8 @@ describe('anime command', () => {
     jest.resetModules();
 
     mockConfig = {
-      malClientId: 'mal-client-id-xyz'
+      malClientId: 'mal-client-id-xyz',
+      animeAiEnabled: false
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -177,8 +178,8 @@ describe('anime command', () => {
       expect(animeCommand.formatReleaseDate(errorThrowingReleaseDate)).toBe(errorThrowingReleaseDate);
     });
 
-    it('should stringify zero rating in createAnimeEmbed', () => {
-      const embed = animeCommand.createAnimeEmbed({
+    it('should stringify zero rating in createAnimeEmbed', async () => {
+      const embed = await animeCommand.createAnimeEmbed({
         id: 1,
         title: 'Zero Rated',
         synopsis: 'A rated show.',
@@ -188,8 +189,8 @@ describe('anime command', () => {
       expect(embed.data.fields.find(f => f.name === '⭐ MAL Rating').value).toBe('0');
     });
 
-    it('should use Unknown title when title is missing in createAnimeEmbed', () => {
-      const embed = animeCommand.createAnimeEmbed({
+    it('should use Unknown title when title is missing in createAnimeEmbed', async () => {
+      const embed = await animeCommand.createAnimeEmbed({
         id: 1,
         title: null,
         synopsis: 'Synopsis text',
@@ -199,8 +200,8 @@ describe('anime command', () => {
       expect(embed.data.title).toBe('Unknown');
     });
 
-    it('should use default synopsis when synopsis is missing', () => {
-      const embed = animeCommand.createAnimeEmbed({
+    it('should use default synopsis when synopsis is missing', async () => {
+      const embed = await animeCommand.createAnimeEmbed({
         id: 1,
         title: 'Test',
         releaseDate: '2020-01-01',
@@ -210,9 +211,9 @@ describe('anime command', () => {
       expect(embed.data.description).toContain('No synopsis available.');
     });
 
-    it('should correctly handle various rating types in createAnimeEmbed (covers rating branch coverage)', () => {
+    it('should correctly handle various rating types in createAnimeEmbed (covers rating branch coverage)', async () => {
       // 1. rating is empty string
-      const embedEmptyRating = animeCommand.createAnimeEmbed({
+      const embedEmptyRating = await animeCommand.createAnimeEmbed({
         id: 1,
         title: 'Title',
         synopsis: 'Synopsis',
@@ -222,7 +223,7 @@ describe('anime command', () => {
       expect(embedEmptyRating.data.fields.find(f => f.name === '⭐ MAL Rating').value).toBe('N/A');
 
       // 2. rating is null
-      const embedNullRating = animeCommand.createAnimeEmbed({
+      const embedNullRating = await animeCommand.createAnimeEmbed({
         id: 1,
         title: 'Title',
         synopsis: 'Synopsis',
@@ -232,7 +233,7 @@ describe('anime command', () => {
       expect(embedNullRating.data.fields.find(f => f.name === '⭐ MAL Rating').value).toBe('N/A');
 
       // 3. rating is a valid rating value
-      const embedValidRating = animeCommand.createAnimeEmbed({
+      const embedValidRating = await animeCommand.createAnimeEmbed({
         id: 1,
         title: 'Title',
         synopsis: 'Synopsis',

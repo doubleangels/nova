@@ -105,9 +105,21 @@ const geminiPredictionCacheTtlMs = (() => {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 })();
 const geminiContextCacheTtlSeconds = parsePositiveIntEnv(
-  ['FOOTBALL_PREDICTION_AI_CONTEXT_CACHE_TTL_SECONDS'],
+  ['FOOTBALL_PREDICTION_AI_CONTEXT_CACHE_TTL_SECONDS', 'GEMINI_CONTEXT_CACHE_TTL_SECONDS'],
   3600
 );
+const geminiContextModel =
+  envFirst('GEMINI_CONTEXT_MODEL', 'COMMAND_CONTEXT_GEMINI_MODEL') || undefined;
+const geminiCommandContextCacheTtlMs = parsePositiveIntEnv(
+  ['GEMINI_COMMAND_CONTEXT_CACHE_TTL_MS', 'COMMAND_CONTEXT_AI_CACHE_TTL_MS'],
+  60 * 60 * 1000
+);
+const weatherAiEnabled = isTruthyEnv(envFirst('WEATHER_AI_ENABLED'));
+const animeAiEnabled = isTruthyEnv(envFirst('ANIME_AI_ENABLED'));
+const imdbAiEnabled = isTruthyEnv(envFirst('IMDB_AI_ENABLED'));
+const bookAiEnabled = isTruthyEnv(envFirst('BOOK_AI_ENABLED'));
+const googleAiEnabled = isTruthyEnv(envFirst('GOOGLE_AI_ENABLED', 'GOOGLE_SEARCH_AI_ENABLED'));
+const googleImagesAiEnabled = isTruthyEnv(envFirst('GOOGLE_IMAGES_AI_ENABLED'));
 
 /**
  * @typedef {Object} BotConfig
@@ -148,6 +160,14 @@ const geminiContextCacheTtlSeconds = parsePositiveIntEnv(
  * @property {string} geminiPredictionModel - Gemini model id for match predictions (default gemini-3.1-flash-lite)
  * @property {number} geminiPredictionCacheTtlMs - AI result cache TTL (0 = until kickoff)
  * @property {number} geminiContextCacheTtlSeconds - Gemini explicit system-instruction cache TTL
+ * @property {string|undefined} geminiContextModel - Gemini model for command context fields (default: prediction model)
+ * @property {number} geminiCommandContextCacheTtlMs - Command AI context result cache TTL
+ * @property {boolean} weatherAiEnabled - Gemini outlook on /weather (WEATHER_AI_ENABLED)
+ * @property {boolean} animeAiEnabled - Gemini status on /anime (ANIME_AI_ENABLED)
+ * @property {boolean} imdbAiEnabled - Gemini context on /imdb (IMDB_AI_ENABLED)
+ * @property {boolean} bookAiEnabled - Gemini reader note on /book (BOOK_AI_ENABLED)
+ * @property {boolean} googleAiEnabled - Gemini insight on /google (GOOGLE_AI_ENABLED)
+ * @property {boolean} googleImagesAiEnabled - Gemini insight on /googleimages (GOOGLE_IMAGES_AI_ENABLED)
  * @property {string} worldCupCompetitionCode - football-data.org competition code (from WORLD_CUP_COMPETITION_CODE env var)
  * @property {string} worldCupSeason - Season year for competition matches (from WORLD_CUP_SEASON env var)
  * @property {string[]} footballCompetitionCodes - football-data.org codes (PL, BL1, PD, CL)
@@ -229,6 +249,14 @@ module.exports = {
   geminiPredictionModel,
   geminiPredictionCacheTtlMs,
   geminiContextCacheTtlSeconds,
+  geminiContextModel,
+  geminiCommandContextCacheTtlMs,
+  weatherAiEnabled,
+  animeAiEnabled,
+  imdbAiEnabled,
+  bookAiEnabled,
+  googleAiEnabled,
+  googleImagesAiEnabled,
   worldCupCompetitionCode: process.env.WORLD_CUP_COMPETITION_CODE || 'WC',
   worldCupSeason: process.env.WORLD_CUP_SEASON || '2026',
   // Club football predictions (Premier League, Bundesliga, La Liga, Champions League)
@@ -307,5 +335,22 @@ if (predictionAiEnabled && !geminiApiKey) {
   console.warn(
     'FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing. AI match suggestions will be skipped.'
   );
+}
+
+const commandAiFlags = [
+  ['WEATHER_AI_ENABLED', weatherAiEnabled],
+  ['ANIME_AI_ENABLED', animeAiEnabled],
+  ['IMDB_AI_ENABLED', imdbAiEnabled],
+  ['BOOK_AI_ENABLED', bookAiEnabled],
+  ['GOOGLE_AI_ENABLED', googleAiEnabled],
+  ['GOOGLE_IMAGES_AI_ENABLED', googleImagesAiEnabled]
+];
+
+for (const [envName, enabled] of commandAiFlags) {
+  if (enabled && !geminiApiKey) {
+    console.warn(
+      `${envName} is set but GEMINI_API_KEY is missing. That command's AI insight field will be skipped.`
+    );
+  }
 }
 

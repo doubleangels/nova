@@ -4,6 +4,8 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
+const { fetchGoogleSearchContext } = require('../utils/commandContextAi');
+const { formatAiContextField } = require('../utils/geminiContextMessages');
 
 /**
  * Command module for performing Google web searches.
@@ -99,10 +101,12 @@ module.exports = {
         });
       }
       
+      const searchQuery = searchParams.query;
+
       await createPaginatedResults(
         interaction,
         searchResults.items,
-        index => this.generateResultEmbed(searchResults.items, index),
+        index => this.generateResultEmbed(searchResults.items, index, searchQuery),
         'search',
         120000,
         logger,
@@ -223,16 +227,37 @@ module.exports = {
    * @param {number} index - Index of the current result to display
    * @returns {EmbedBuilder} Discord embed with result summary and metadata
    */
-  generateResultEmbed(items, index) {
+  async generateResultEmbed(items, index, query = '') {
     const item = items[index];
-    const title = item.title || "No Title Found";
-    const link = item.link || "No Link Found";
-    const snippet = item.snippet || "No Description Found";
-    
-    return new EmbedBuilder()
+    const title = item.title || 'No Title Found';
+    const link = item.link || null;
+    const snippet = item.snippet || 'No description available.';
+
+    const embed = new EmbedBuilder()
       .setTitle(title)
-      .setDescription(`**Summary:** ${snippet}\n[Read More](${link})`)
+      .setDescription(snippet.slice(0, 4096))
       .setColor(0x4285F4)
       .setFooter({ text: `Powered by Google Search • Result ${index + 1} of ${items.length}` });
+
+    if (link) {
+      embed.setURL(link);
+      embed.addFields({ name: 'Link', value: `[Open page](${link})`, inline: false });
+    }
+
+    if (config.googleAiEnabled && query) {
+      const aiContext = await fetchGoogleSearchContext({
+        query,
+        resultTitle: title,
+        resultSnippet: snippet.slice(0, 400),
+        resultLink: link || '',
+        resultIndex: index
+      });
+      const aiField = formatAiContextField(aiContext?.note);
+      if (aiField) {
+        embed.addFields(aiField);
+      }
+    }
+
+    return embed;
   }
 };

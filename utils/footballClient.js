@@ -137,8 +137,7 @@ async function fetchSeasonMatchesFromApi() {
   if (isMockApiEnabled()) {
     logger.debug('Returning simulated club football fixtures.');
     const fixtures = getMockSeasonMatches().map(normalizeFixture).filter(Boolean);
-    const { applyMockInstantFinishToFixtures } = require('./footballUtils');
-    return applyMockInstantFinishToFixtures(fixtures);
+    return applyMockFinish(fixtures);
   }
 
   const codes = config.footballCompetitionCodes;
@@ -180,8 +179,7 @@ async function fetchMatchByIdFromApi(matchId) {
     if (!match) return null;
     const fixture = normalizeFixture(match);
     if (!fixture) return null;
-    const { applyMockInstantFinishToFixtures } = require('./footballUtils');
-    const finished = await applyMockInstantFinishToFixtures([fixture]);
+    const finished = await applyMockFinish([fixture]);
     return finished[0] ?? null;
   }
 
@@ -237,6 +235,31 @@ async function getSeasonFixtures(options = {}) {
 }
 
 /**
+ * @param {{ kickoff?: string, status: string }} fixture
+ * @returns {boolean}
+ */
+function isCachedFixtureStale(fixture) {
+  if (!fixture.kickoff || fixture.status === 'FT') return false;
+  return new Date(fixture.kickoff).getTime() <= Date.now();
+}
+
+/**
+ * @param {import('./footballUtils').NormalizedFixture[]} fixtures
+ * @returns {Promise<import('./footballUtils').NormalizedFixture[]>}
+ */
+async function applyMockFinish(fixtures) {
+  const { applyMockInstantFinishToFixtures } = require('./predictionMockFinish');
+  const mockData = require('./footballMockData');
+  const { store } = require('./footballUtils');
+  return applyMockInstantFinishToFixtures(
+    store,
+    mockData.MOCK_PLAYABLE_MATCH_IDS,
+    mockData,
+    fixtures
+  );
+}
+
+/**
  * @param {number} fixtureId
  * @returns {Promise<import('./footballUtils').NormalizedFixture | null>}
  */
@@ -246,7 +269,7 @@ async function getFixtureById(fixtureId) {
   }
 
   const cached = seasonCache.data?.find(f => f.id === fixtureId);
-  if (cached) return cached;
+  if (cached && !isCachedFixtureStale(cached)) return cached;
 
   return fetchMatchByIdFromApi(fixtureId);
 }

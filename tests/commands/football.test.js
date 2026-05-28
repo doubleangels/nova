@@ -107,7 +107,12 @@ describe('football command', () => {
           }
         }
       },
-      member: { roles: { add: jest.fn(), cache: { has: jest.fn() } } }
+      member: {
+        roles: {
+          add: jest.fn(),
+          cache: { has: jest.fn().mockReturnValue(true) }
+        }
+      }
     });
 
     await footballCommand.execute(interaction);

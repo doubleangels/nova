@@ -30,4 +30,10 @@ describe('worldCupMockData', () => {
     expect(match?.awayTeam?.name).toBe('Argentina');
     expect(mockData.getMockMatchById(999999)).toBeNull();
   });
+
+  it('should use a stable kickoff across repeated mock builds', () => {
+    const first = mockData.buildMockMatches()[0].utcDate;
+    const second = mockData.buildMockMatches()[0].utcDate;
+    expect(first).toBe(second);
+  });
 });

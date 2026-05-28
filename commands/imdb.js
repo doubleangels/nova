@@ -3,6 +3,8 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
+const { fetchImdbContext } = require('../utils/commandContextAi');
+const { formatAiContextField } = require('../utils/geminiContextMessages');
 
 /**
  * Command module for searching movies and TV shows using IMDb data.
@@ -91,7 +93,7 @@ module.exports = {
         return;
       }
       const data = response.data;
-      const embed = this.createMediaEmbed(data, typeLabel);
+      const embed = await this.createMediaEmbed(data, typeLabel);
       await interaction.editReply({ embeds: [embed] });
       logger.info('/imdb command completed successfully.', {
         title: data.Title,
@@ -111,7 +113,7 @@ module.exports = {
    * @param {string} typeLabel - 'Movie' or 'TV Show'
    * @returns {EmbedBuilder} Discord embed with details
    */
-  createMediaEmbed(data, typeLabel) {
+  async createMediaEmbed(data, typeLabel) {
     const imdbUrl = data.imdbID ? `https://www.imdb.com/title/${data.imdbID}/` : null;
     const fields = [
       { name: '📅 Year', value: data.Year, inline: true },
@@ -133,6 +135,23 @@ module.exports = {
     if (data.Poster && data.Poster !== 'N/A') {
       embed.setThumbnail(data.Poster);
     }
+
+    if (config.imdbAiEnabled) {
+      const aiContext = await fetchImdbContext({
+        title: data.Title,
+        year: data.Year || 'Unknown',
+        typeLabel,
+        imdbId: data.imdbID || '',
+        rating: data.imdbRating || 'N/A',
+        genre: data.Genre || 'N/A',
+        plotSnippet: (data.Plot || '').slice(0, 400)
+      });
+      const aiField = formatAiContextField(aiContext?.note);
+      if (aiField) {
+        embed.addFields(aiField);
+      }
+    }
+
     return embed;
   },
 

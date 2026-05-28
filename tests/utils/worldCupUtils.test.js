@@ -776,6 +776,14 @@ describe('worldCupUtils scoreFinishedFixtures', () => {
     jest.doMock('../../logger', () => () => mockLog);
 
     const scoringUtils = require('../../utils/worldCupUtils');
+    await scoringUtils.savePrediction('333333333333333333', 701, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: false
+    });
+
     const count = await scoringUtils.scoreFinishedFixtures(mockClient);
     expect(count).toBe(1);
     expect(mockLog.error).toHaveBeenCalled();

@@ -147,15 +147,23 @@ Set variables in Doppler (or `.env` for local experiments).
 | `FOOTBALL_PREDICTION_POLL_INTERVAL_MS` | How often to poll fixtures (ms) | `900000` (15 min) |
 | `FOOTBALL_PREDICTION_PENDING_TTL_MS` | How long in-progress dropdown picks are kept (ms) | `900000` (15 min) |
 | `FOOTBALL_PREDICTION_AI_ENABLED` | Add a Gemini score suggestion on each match prompt (`true` / `1` / `yes`) | *unset* |
-| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) key for Gemini match suggestions | *unset* |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) key for Gemini (match suggestions and optional command insights) | *unset* |
 | `FOOTBALL_PREDICTION_GEMINI_MODEL` | Gemini model id for match suggestions | `gemini-3.1-flash-lite` |
+| `GEMINI_CONTEXT_MODEL` | Gemini model for command AI insight fields (defaults to prediction model) | *prediction model* |
 
 AI match suggestions use **Google Search grounding** (via the Gemini API) to factor in current form, injuries, and competition context. Search queries may incur additional Gemini API usage.
 
 | `FOOTBALL_PREDICTION_AI_CACHE_TTL_MS` | How long to reuse a generated AI pick per fixture (`0` = until kickoff) | `0` |
-| `FOOTBALL_PREDICTION_AI_CONTEXT_CACHE_TTL_SECONDS` | Gemini explicit cache TTL for the shared system instruction | `3600` |
+| `FOOTBALL_PREDICTION_AI_CONTEXT_CACHE_TTL_SECONDS` | Gemini explicit cache TTL for shared system instructions (`GEMINI_CONTEXT_CACHE_TTL_SECONDS` alias) | `3600` |
+| `GEMINI_COMMAND_CONTEXT_CACHE_TTL_MS` | How long to reuse generated command AI insight per query/location/day | `3600000` (1 h) |
+| `WEATHER_AI_ENABLED` | Add a Gemini **AI insight** field on `/weather` (`true` / `1` / `yes`) | *unset* |
+| `ANIME_AI_ENABLED` | Add a Gemini **AI insight** field on `/anime` | *unset* |
+| `IMDB_AI_ENABLED` | Add a Gemini **AI insight** field on `/imdb` | *unset* |
+| `BOOK_AI_ENABLED` | Add a Gemini **AI insight** field on `/book` | *unset* |
+| `GOOGLE_AI_ENABLED` | Add a Gemini **AI insight** field on `/google` (`GOOGLE_SEARCH_AI_ENABLED` alias) | *unset* |
+| `GOOGLE_IMAGES_AI_ENABLED` | Add a Gemini **AI insight** field on `/googleimages` | *unset* |
 
-Caching reduces tokens and cost: the system prompt is stored in a Gemini context cache, and each fixture's AI prediction is reused until kickoff (or the TTL above).
+Caching reduces tokens and cost: system prompts are stored in Gemini context caches; match predictions reuse until kickoff (or `FOOTBALL_PREDICTION_AI_CACHE_TTL_MS`), and command insights reuse per domain for the cache TTL above.
 | `WORLD_CUP_COMPETITION_CODE` | football-data.org competition code (World Cup = `WC`) | `WC` |
 | `WORLD_CUP_SEASON` | World Cup season year | `2026` |
 | `FOOTBALL_COMPETITION_CODES` | Club leagues: `PL`, `BL1`, `PD`, `CL` | `PL,BL1,PD,CL` |
@@ -189,11 +197,11 @@ These run without a slash command:
 ### World Cup predictions
 
 1. For local testing set `FOOTBALL_PREDICTION_MOCK_API=true`, `FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID`, and `FOOTBALL_PREDICTION_CHANNEL_ID` (no football-data.org key required). For production add `FOOTBALL_DATA_API_KEY` as well.
-2. Users run `/football register` to join World Cup and club predictions and receive the participant role.
+2. Users run `/football register` to join World Cup and club predictions and receive the participant role. Registration is repaired if a user is only listed in one game’s registry; users who predict via the role alone still appear on the leaderboard once they earn points.
 3. Before each match (default 24 h ahead), the bot posts in the prediction channel with a **Submit prediction** button. Optionally enable **Gemini** suggestions with `FOOTBALL_PREDICTION_AI_ENABLED` and `GEMINI_API_KEY` (see table above).
 4. Users pick each team’s goals and the winner from dropdowns on one ephemeral message (any order).
 5. After full-time, the bot scores predictions and posts results plus who earned points. Use `/worldcup leaderboard` anytime.
-6. Server administrators can run `/worldcup reset` to wipe all game data (registrations, predictions, points, prompts) and optionally re-post open match prompts.
+6. Server administrators can run `/worldcup reset` to wipe all game data (registrations, predictions, points, prompts) and optionally re-post open match prompts. With `repost: false`, new match prompts stay paused until a later reset with `repost: true`.
 
 **Mock API (`FOOTBALL_PREDICTION_MOCK_API=true`):** enables one World Cup demo fixture and one club demo fixture (described below).
 
@@ -206,9 +214,9 @@ Real fixtures show country flag emojis (e.g. 🇧🇷 Brazil) wherever team name
 Separate from World Cup: same scoring and UI, but fixtures come from **Premier League**, **Bundesliga**, **La Liga**, and **UEFA Champions League** via football-data.org.
 
 1. Use the shared `FOOTBALL_PREDICTION_*` settings (same channel and role as `/worldcup`). Set `FOOTBALL_PREDICTION_MOCK_API=true` for local testing without an API key.
-2. Optionally set `FOOTBALL_COMPETITION_CODES` (default `PL,BL1,PD,CL`) and `FOOTBALL_SEASON` (e.g. `2025` for the 2025/26 season).
+2. Optionally set `FOOTBALL_COMPETITION_CODES` (default `PL,BL1,PD,CL`) and `FOOTBALL_SEASON` (e.g. `2025` for the 2025/26 season). Unknown codes in that list are ignored (logged at startup) and the default four leagues are used if none remain valid.
 3. Users run `/football register`, then predict from channel prompts. Use `/football matches` with optional `competition` and `status` filters.
-4. Administrators can run `/football reset` to wipe all club football game data.
+4. Administrators can run `/football reset` to wipe all club football game data. Same `repost` behavior as World Cup: `repost: false` pauses new prompts until `repost: true`.
 
 **Club mock demo** (with `FOOTBALL_PREDICTION_MOCK_API=true`): on each bot start, **Arsenal vs Chelsea** (Premier League) is posted with each club’s country flag from API-style team metadata. After at least one prediction it finishes **2-1**.
 

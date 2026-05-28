@@ -9,6 +9,11 @@ describe('worldCupInteractions', () => {
     jest.resetModules();
 
     const actualUtils = jest.requireActual('../../utils/worldCupUtils');
+    const savePendingPrediction = jest.fn().mockImplementation(async (_userId, _fixtureId, partial) => ({
+      ...partial,
+      updatedAt: new Date().toISOString()
+    }));
+
     mockUtils = {
       isUserRegistered: jest.fn().mockResolvedValue(true),
       getPrediction: jest.fn().mockResolvedValue(null),
@@ -18,15 +23,21 @@ describe('worldCupInteractions', () => {
       formatFixtureTeam: actualUtils.formatFixtureTeam,
       formatResultPickDisplay: actualUtils.formatResultPickDisplay,
       isPendingPredictionComplete: actualUtils.isPendingPredictionComplete,
-      savePendingPrediction: jest.fn().mockImplementation(async (userId, fixtureId, partial) => ({
-        ...partial,
-        updatedAt: new Date().toISOString()
-      })),
+      savePendingPrediction,
       getPendingPrediction: jest.fn().mockResolvedValue(null),
       clearPendingPrediction: jest.fn().mockResolvedValue(),
       scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
-      areAllMockPlayableFixturesPredicted: jest.fn().mockResolvedValue(true)
+      areAllMockPlayableFixturesPredicted: jest.fn().mockResolvedValue(true),
+      store: {}
     };
+    mockUtils.store.isUserRegistered = mockUtils.isUserRegistered;
+    mockUtils.store.getPrediction = mockUtils.getPrediction;
+    mockUtils.store.savePrediction = mockUtils.savePrediction;
+    mockUtils.store.savePendingPrediction = mockUtils.savePendingPrediction;
+    mockUtils.store.getPendingPrediction = mockUtils.getPendingPrediction;
+    mockUtils.store.clearPendingPrediction = mockUtils.clearPendingPrediction;
+    mockUtils.store.areAllMockPlayableFixturesPredicted =
+      mockUtils.areAllMockPlayableFixturesPredicted;
 
     mockClient = {
       getFixtureById: jest.fn().mockResolvedValue({

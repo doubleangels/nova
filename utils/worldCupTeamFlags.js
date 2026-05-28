@@ -61,7 +61,14 @@ const TLA_TO_ISO2 = {
   COD: 'CD', CGO: 'CG', GNQ: 'GQ', CTA: 'CF', SSD: 'SS',
   MTN: 'MR', GAM: 'GM', GNB: 'GW', STP: 'ST', LES: 'LS',
   SWZ: 'SZ', REU: 'RE', FIJ: 'FJ', PNG: 'PG', SOL: 'SB',
-  VAN: 'VU', SAM: 'WS', TGA: 'TO', TAH: 'PF', NCL: 'NC'
+  VAN: 'VU', SAM: 'WS', TGA: 'TO', TAH: 'PF', NCL: 'NC',
+  ARS: 'GB', CHE: 'GB', LIV: 'GB', MCI: 'GB', MUN: 'GB', TOT: 'GB',
+  NEW: 'GB', AVL: 'GB', WHU: 'GB', BHA: 'GB', CRY: 'GB', FUL: 'GB',
+  BRE: 'GB', EVE: 'GB', NFO: 'GB', BOU: 'GB', WOL: 'GB', LEI: 'GB',
+  IPS: 'GB', SOU: 'GB', BAY: 'DE', BVB: 'DE', RBL: 'DE', LEV: 'DE',
+  SGE: 'DE', WOB: 'DE', FRE: 'DE', HOF: 'DE', M05: 'DE', UNI: 'DE',
+  FCB: 'ES', RMA: 'ES', ATM: 'ES', BAR: 'ES', SEV: 'ES', VIL: 'ES',
+  BET: 'ES', RSO: 'ES', ATH: 'ES', VAL: 'ES', GIR: 'ES', OSA: 'ES'
 };
 
 /**
@@ -93,6 +100,21 @@ const NAME_TO_ISO2 = {
   philippines: 'PH', thailand: 'TH', vietnam: 'VN', 'saudi arabia': 'SA',
   uzbekistan: 'UZ', 'united arab emirates': 'AE', oman: 'OM', palestine: 'PS',
   montenegro: 'ME', kosovo: 'XK', haiti: 'HT',
+  arsenal: 'GB', chelsea: 'GB', liverpool: 'GB', 'manchester city': 'GB',
+  'manchester united': 'GB', tottenham: 'GB', 'tottenham hotspur': 'GB',
+  'newcastle united': 'GB', 'aston villa': 'GB', 'west ham united': 'GB',
+  'brighton and hove albion': 'GB', 'crystal palace': 'GB', fulham: 'GB',
+  brentford: 'GB', everton: 'GB', 'nottingham forest': 'GB',
+  'afc bournemouth': 'GB', bournemouth: 'GB', 'wolverhampton wanderers': 'GB',
+  wolves: 'GB', 'leicester city': 'GB', 'ipswich town': 'GB',
+  'southampton fc': 'GB', southampton: 'GB',
+  'bayern munich': 'DE', 'bayern münchen': 'DE', 'borussia dortmund': 'DE',
+  'rb leipzig': 'DE', 'bayer leverkusen': 'DE', 'eintracht frankfurt': 'DE',
+  'vfl wolfsburg': 'DE', 'sc freiburg': 'DE', 'tsg hoffenheim': 'DE',
+  'real madrid': 'ES', 'atletico madrid': 'ES', 'atlético madrid': 'ES',
+  barcelona: 'ES', sevilla: 'ES', 'villarreal cf': 'ES', betis: 'ES',
+  'real sociedad': 'ES', 'athletic bilbao': 'ES', 'athletic club': 'ES',
+  valencia: 'ES', girona: 'ES', osasuna: 'ES',
   'el salvador': 'SV', guatemala: 'GT', nicaragua: 'NI', suriname: 'SR',
   guyana: 'GY', botswana: 'BW', namibia: 'NA', angola: 'AO', mozambique: 'MZ',
   mali: 'ML', 'burkina faso': 'BF', guinea: 'GN', 'sierra leone': 'SL',

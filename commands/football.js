@@ -20,7 +20,8 @@ const {
   getUserPredictionFixtureIds,
   getUserPoints,
   resetFootballGame,
-  isFootballGameConfigured
+  isFootballGameConfigured,
+  setPromptingPaused
 } = require('../utils/footballUtils');
 const {
   isUserRegistered: isWorldCupUserRegistered,
@@ -151,7 +152,10 @@ module.exports = {
 
     const inFootball = await isUserRegistered(interaction.user.id);
     const inWorldCup = await isWorldCupUserRegistered(interaction.user.id);
-    if (inFootball && inWorldCup) {
+    const hasRole =
+      roleId && interaction.member.roles?.cache?.has(roleId);
+
+    if (hasRole && inFootball && inWorldCup) {
       await interaction.editReply({
         content: msgs.MSG_ALREADY_REGISTERED
       });
@@ -321,6 +325,10 @@ module.exports = {
     const lines = [];
     for (const fixtureId of fixtureIds) {
       const prediction = await getPrediction(interaction.user.id, fixtureId);
+      if (!prediction) {
+        lines.push(`• Match \`${fixtureId}\`: ${msgs.MSG_MISSING_PREDICTION}`);
+        continue;
+      }
       const fixture = fixtureMap.get(fixtureId);
       const label = fixture
         ? formatFixtureLine(fixture)
@@ -371,6 +379,10 @@ module.exports = {
     const repost = interaction.options.getBoolean('repost') ?? true;
 
     await resetFootballGame();
+
+    if (!repost) {
+      await setPromptingPaused(true);
+    }
 
     let repostSucceeded = false;
     let repostSkippedConfig = false;

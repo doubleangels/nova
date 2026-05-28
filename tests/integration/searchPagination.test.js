@@ -81,13 +81,15 @@ describe('Search Pagination Integration', () => {
     const mockButtonInteraction = {
       customId: 'myprefix_next_user-123_12345',
       user: { id: 'user-123' },
-      update: jest.fn().mockResolvedValue()
+      deferUpdate: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
     };
 
     await collectCallback(mockButtonInteraction);
 
     // Verify view updated to page 2
-    expect(mockButtonInteraction.update).toHaveBeenCalledWith(
+    expect(mockButtonInteraction.deferUpdate).toHaveBeenCalled();
+    expect(mockButtonInteraction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         embeds: [expect.objectContaining({
           data: expect.objectContaining({
@@ -101,13 +103,15 @@ describe('Search Pagination Integration', () => {
     const mockButtonInteractionPrev = {
       customId: 'myprefix_prev_user-123_12345',
       user: { id: 'user-123' },
-      update: jest.fn().mockResolvedValue()
+      deferUpdate: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
     };
 
     await collectCallback(mockButtonInteractionPrev);
 
     // Verify view updated back to page 1
-    expect(mockButtonInteractionPrev.update).toHaveBeenCalledWith(
+    expect(mockButtonInteractionPrev.deferUpdate).toHaveBeenCalled();
+    expect(mockButtonInteractionPrev.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         embeds: [expect.objectContaining({
           data: expect.objectContaining({

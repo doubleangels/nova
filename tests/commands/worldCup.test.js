@@ -66,7 +66,7 @@ describe('worldcup command', () => {
     };
     jest.doMock('../../logger', () => () => mockLogger);
 
-    worldcupCommand = require('../../commands/worldcup');
+    worldcupCommand = require('../../commands/worldCup');
   });
 
   it('should show leaderboard', async () => {

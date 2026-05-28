@@ -11,6 +11,8 @@ dayjs.extend(timezone);
 
 const config = require('../config');
 const { getGeocodingData, getTimezoneData } = require('../utils/locationUtils');
+const { fetchWeatherContext } = require('../utils/commandContextAi');
+const { formatAiContextField } = require('../utils/geminiContextMessages');
 
 const WEATHER_ICONS = {
   'clear-day': 'Clear',
@@ -298,8 +300,70 @@ module.exports = {
       .setColor(0xFF6E42)
       .addFields(fields)
       .setFooter({ text: 'Powered by PirateWeather' });
-    
+
+    if (config.weatherAiEnabled) {
+      const forecastSnippet = this.buildForecastSnippetForAi(
+        daily,
+        unitsOption,
+        forecastDays,
+        timezoneResult?.timezoneId
+      );
+      const aiContext = await fetchWeatherContext({
+        place: hideLocation ? 'requested location' : place,
+        summary: weatherInfo.summary,
+        forecastSnippet,
+        units: unitsOption
+      });
+      const aiField = formatAiContextField(aiContext?.note);
+      if (aiField) {
+        embed.addFields(aiField);
+      }
+    }
+
     return embed;
+  },
+
+  /**
+   * @param {Array} daily
+   * @param {string} unitsOption
+   * @param {number} daysToShow
+   * @param {string|null} timezoneId
+   * @returns {string}
+   */
+  buildForecastSnippetForAi(daily, unitsOption, daysToShow, timezoneId) {
+    const isMetric = unitsOption === 'metric';
+    const tempUnit = isMetric ? '°C' : '°F';
+    const days = Math.min(daysToShow, daily.length);
+    const lines = [];
+
+    for (let i = 0; i < days; i++) {
+      const day = daily[i] || {};
+      let forecastDate;
+      if (day.time) {
+        forecastDate = timezoneId
+          ? dayjs.unix(day.time).tz(timezoneId).format('YYYY-MM-DD')
+          : dayjs.unix(day.time).utc().format('YYYY-MM-DD UTC');
+      } else {
+        forecastDate = 'unknown';
+      }
+      const high =
+        typeof day.temperatureHigh === 'number'
+          ? day.temperatureHigh.toFixed(1)
+          : 'N/A';
+      const low =
+        typeof day.temperatureLow === 'number'
+          ? day.temperatureLow.toFixed(1)
+          : 'N/A';
+      const precip =
+        typeof day.precipProbability === 'number'
+          ? `${(day.precipProbability * 100).toFixed(0)}%`
+          : '0%';
+      lines.push(
+        `${forecastDate}: ${day.summary || 'no summary'}, high ${high}${tempUnit}, low ${low}${tempUnit}, precip ${precip}`
+      );
+    }
+
+    return lines.join('\n') || 'No forecast data.';
   },
 
   /**

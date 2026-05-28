@@ -4,6 +4,8 @@ const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
+const { fetchBookContext } = require('../utils/commandContextAi');
+const { formatAiContextField } = require('../utils/geminiContextMessages');
 
 /**
  * Command module for searching and displaying book information using Google Books API.
@@ -266,7 +268,7 @@ module.exports = {
    * @param {number} index - Index of the book to display
    * @returns {EmbedBuilder} Discord embed with book details
    */
-  createBookEmbed(books, index = 0) {
+  async createBookEmbed(books, index = 0) {
     const book = books[index];
     
     if (!book) {
@@ -325,6 +327,24 @@ module.exports = {
     // Set URL if available
     if (book.infoLink) {
       embed.setURL(book.infoLink);
+    }
+
+    if (config.bookAiEnabled) {
+      const ratingLabel = book.averageRating
+        ? `${book.averageRating}/5 (${this.formatNumber(book.ratingsCount)} ratings)`
+        : '';
+      const aiContext = await fetchBookContext({
+        title: book.title,
+        authors: (book.authors || []).join(', '),
+        bookId: book.id,
+        publishedDate: book.publishedDate,
+        rating: ratingLabel,
+        descriptionSnippet: (book.description || '').slice(0, 400)
+      });
+      const aiField = formatAiContextField(aiContext?.note);
+      if (aiField) {
+        embed.addFields(aiField);
+      }
     }
 
     return embed;

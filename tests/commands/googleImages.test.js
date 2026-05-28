@@ -41,7 +41,8 @@ describe('googleImages command', () => {
 
     mockConfig = {
       googleApiKey: 'mock-key',
-      imageSearchEngineId: 'mock-engine-id'
+      imageSearchEngineId: 'mock-engine-id',
+      googleImagesAiEnabled: false
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -146,10 +147,10 @@ describe('googleImages command', () => {
       expect(mockCreatePaginatedResults).toHaveBeenCalled();
       
       const embedGenerator = mockCreatePaginatedResults.mock.calls[0][2];
-      const embed1 = embedGenerator(0);
+      const embed1 = await Promise.resolve(embedGenerator(0));
       expect(embed1.data.title).toBe('Puppy 1');
       expect(embed1.data.image.url).toBe('http://img1.jpg');
-      expect(embed1.data.description).toBe('**[View Original Source](http://src1.html)**');
+      expect(embed1.data.fields?.find(f => f.name === 'Source')?.value).toContain('http://src1.html');
 
       expect(mockLogger.info).toHaveBeenCalledWith('/googleimages command completed successfully.', expect.any(Object));
     });
@@ -182,7 +183,7 @@ describe('googleImages command', () => {
   });
 
   describe('generateImageEmbed', () => {
-    it('should fall back to default title if title is missing', () => {
+    it('should fall back to default title if title is missing', async () => {
       const mockItems = [
         { link: null, image: { contextLink: 'http://src1.html' } }
       ];
@@ -191,21 +192,22 @@ describe('googleImages command', () => {
       EmbedBuilder.prototype.setImage = jest.fn().mockReturnThis();
 
       try {
-        const embed = googleImagesCommand.generateImageEmbed(mockItems, 0);
+        const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0, 'cats');
         expect(embed.data.title).toBe('No Title');
-        expect(embed.data.description).toBe('**[View Original Source](http://src1.html)**');
-        expect(EmbedBuilder.prototype.setImage).toHaveBeenCalledWith('');
+        expect(embed.data.fields?.find(f => f.name === 'Source')?.value).toContain('http://src1.html');
+        expect(EmbedBuilder.prototype.setImage).not.toHaveBeenCalled();
       } finally {
         EmbedBuilder.prototype.setImage = originalSetImage;
       }
     });
 
-    it('should fall back to imageLink if item.image is missing', () => {
+    it('should fall back to imageLink if item.image is missing', async () => {
       const mockItems = [
         { title: 'No Image Obj', link: 'http://img1.jpg', image: null }
       ];
-      const embed = googleImagesCommand.generateImageEmbed(mockItems, 0);
-      expect(embed.data.description).toBe('**[View Original Source](http://img1.jpg)**');
+      const embed = await googleImagesCommand.generateImageEmbed(mockItems, 0, 'cats');
+      const sourceField = embed.data.fields?.find(f => f.name === 'Source');
+      expect(sourceField?.value).toContain('http://img1.jpg');
     });
   });
 

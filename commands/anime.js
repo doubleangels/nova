@@ -4,6 +4,8 @@ const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
+const { fetchAnimeContext } = require('../utils/commandContextAi');
+const { formatAiContextField } = require('../utils/geminiContextMessages');
 
 /**
  * @typedef {Object} AnimeData
@@ -62,7 +64,7 @@ module.exports = {
       const animeData = await this.searchAndGetAnimeDetails(formattedTitle);
 
       if (animeData) {
-        const embed = this.createAnimeEmbed(animeData);
+        const embed = await this.createAnimeEmbed(animeData);
         await interaction.editReply({ embeds: [embed] });
 
         logger.info("/anime command completed successfully.", {
@@ -148,7 +150,7 @@ module.exports = {
    * @param {AnimeData} animeData - The anime data to display
    * @returns {EmbedBuilder} Discord embed with formatted anime information
    */
-  createAnimeEmbed(animeData) {
+  async createAnimeEmbed(animeData) {
     const malLink = `https://myanimelist.net/anime/${animeData.id}`;
     const genres = animeData.genres.length > 0
       ? animeData.genres.map(g => g.name).join(", ")
@@ -173,6 +175,21 @@ module.exports = {
 
     if (animeData.imageUrl) {
       embed.setThumbnail(animeData.imageUrl);
+    }
+
+    if (config.animeAiEnabled) {
+      const aiContext = await fetchAnimeContext({
+        title,
+        malId: animeData.id,
+        rating,
+        genres,
+        releaseDate,
+        synopsisSnippet: (animeData.synopsis || '').slice(0, 400)
+      });
+      const aiField = formatAiContextField(aiContext?.note);
+      if (aiField) {
+        embed.addFields(aiField);
+      }
     }
 
     return embed;

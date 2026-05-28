@@ -65,7 +65,7 @@ async function createPaginatedResults(
   };
 
   const message = await interaction.editReply({
-    embeds: [generateEmbed(currentIndex)],
+    embeds: [await Promise.resolve(generateEmbed(currentIndex))],
     components: [createArrowButtons(currentIndex)]
   });
 
@@ -80,7 +80,16 @@ async function createPaginatedResults(
     idle: 60000
   });
 
+  let pageUpdateInFlight = false;
+
   collector.on('collect', async i => {
+    if (pageUpdateInFlight) {
+      await i.deferUpdate().catch(() => {});
+      return;
+    }
+
+    pageUpdateInFlight = true;
+
     const buttonType = i.customId.split('_')[1];
 
     logger.debug("Navigation button pressed.", {
@@ -95,10 +104,26 @@ async function createPaginatedResults(
       currentIndex = Math.min(items.length - 1, currentIndex + 1);
     }
 
-    await i.update({
-      embeds: [generateEmbed(currentIndex)],
-      components: [createArrowButtons(currentIndex)]
-    });
+    try {
+      // Acknowledge within 3s; embed generation (e.g. Gemini) may take longer.
+      await i.deferUpdate();
+
+      const embed = await Promise.resolve(generateEmbed(currentIndex));
+
+      await i.editReply({
+        embeds: [embed],
+        components: [createArrowButtons(currentIndex)]
+      });
+    } catch (err) {
+      logger.error('Failed to update paginated result.', {
+        err,
+        currentIndex,
+        prefix,
+        userId: i.user?.id
+      });
+    } finally {
+      pageUpdateInFlight = false;
+    }
   });
 
   collector.on('end', async (collected) => {

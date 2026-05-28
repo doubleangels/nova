@@ -79,6 +79,8 @@ const MSG_NO_MATCHES_FILTER =
   'No matches match that filter. The schedule may not be published yet.';
 const MSG_NO_PREDICTIONS =
   'You have not submitted any predictions yet. Use **Submit prediction** on match posts in the prediction channel.';
+const MSG_MISSING_PREDICTION =
+  'prediction data missing (try again or contact an admin)';
 const MSG_ALREADY_REGISTERED =
   'You are already registered for World Cup and club football predictions.';
 const MSG_REGISTER_SUCCESS =
@@ -275,7 +277,9 @@ function buildResetDescription(gameId, repost, repostSucceeded, repostSkippedCon
   ];
 
   if (!repost) {
-    lines.push('Match prompts were not re-posted.');
+    lines.push(
+      'Match prompts were not re-posted. New prompts stay paused until an admin runs reset with **repost: true**.'
+    );
   } else if (repostSucceeded) {
     lines.push(
       'Open match prompts were re-posted in the prediction channel (if any matches are still open).'
@@ -378,6 +382,7 @@ module.exports = {
   MSG_EMPTY_LEADERBOARD,
   MSG_NO_MATCHES_FILTER,
   MSG_NO_PREDICTIONS,
+  MSG_MISSING_PREDICTION,
   MSG_ALREADY_REGISTERED,
   SAVED_PREDICTION_TITLE,
   WINNER_PLACEHOLDER,

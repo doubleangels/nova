@@ -22,7 +22,8 @@ describe('book command', () => {
     jest.resetModules();
 
     mockConfig = {
-      googleApiKey: 'google-api-key-xyz'
+      googleApiKey: 'google-api-key-xyz',
+      bookAiEnabled: false
     };
     jest.doMock('../../config', () => mockConfig);
 
@@ -297,11 +298,11 @@ describe('book command', () => {
   });
 
   describe('createBookEmbed', () => {
-    it('should throw error if book is undefined or index out of bounds', () => {
-      expect(() => bookCommand.createBookEmbed([], 0)).toThrow('No book data available');
+    it('should throw error if book is undefined or index out of bounds', async () => {
+      await expect(bookCommand.createBookEmbed([], 0)).rejects.toThrow('No book data available');
     });
 
-    it('should support default index value (index = 0)', () => {
+    it('should support default index value (index = 0)', async () => {
       const books = [{
         index: 0,
         title: 'Complete Title',
@@ -320,11 +321,11 @@ describe('book command', () => {
         previewLink: 'http://prev',
         infoLink: 'http://info'
       }];
-      const embed = bookCommand.createBookEmbed(books);
+      const embed = await bookCommand.createBookEmbed(books);
       expect(embed.data.title).toBe('Complete Title');
     });
 
-    it('should render all fields when they are provided', () => {
+    it('should render all fields when they are provided', async () => {
       const books = [{
         index: 0,
         title: 'Complete Title',
@@ -344,14 +345,14 @@ describe('book command', () => {
         infoLink: 'http://info'
       }];
 
-      const embed = bookCommand.createBookEmbed(books, 0);
+      const embed = await bookCommand.createBookEmbed(books, 0);
       expect(embed.data.title).toBe('Complete Title');
       expect(embed.data.url).toBe('http://info');
       expect(embed.data.thumbnail.url).toBe('http://img.png');
       expect(embed.data.fields).toHaveLength(10);
     });
 
-    it('should omit fields when they are missing or default values', () => {
+    it('should omit fields when they are missing or default values', async () => {
       const books = [{
         index: 0,
         title: 'Minimal Book',
@@ -371,7 +372,7 @@ describe('book command', () => {
         infoLink: null
       }];
 
-      const embed = bookCommand.createBookEmbed(books, 0);
+      const embed = await bookCommand.createBookEmbed(books, 0);
       expect(embed.data.title).toBe('Minimal Book');
       expect(embed.data.thumbnail).toBeUndefined();
       expect(embed.data.url).toBeUndefined();
@@ -425,8 +426,7 @@ describe('book command', () => {
       jest.spyOn(bookCommand, 'searchBooks').mockResolvedValueOnce(mockBooks);
 
       mockCreatePaginatedResults.mockImplementationOnce(async (inter, items, generateEmbed) => {
-        // Trigger embed generation
-        const embed = generateEmbed(0);
+        const embed = await Promise.resolve(generateEmbed(0));
         expect(embed.data.title).toBe('JS 1');
       });
 

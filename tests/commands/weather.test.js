@@ -24,7 +24,8 @@ describe('weather command', () => {
     jest.resetModules();
 
     mockConfig = {
-      pirateWeatherApiKey: 'mock-weather-key'
+      pirateWeatherApiKey: 'mock-weather-key',
+      weatherAiEnabled: false
     };
     jest.doMock('../../config', () => mockConfig);
 
