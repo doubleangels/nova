@@ -167,7 +167,7 @@ Caching reduces tokens and cost: system prompts are stored in Gemini context cac
 | `WORLD_CUP_COMPETITION_CODE` | football-data.org competition code (World Cup = `WC`) | `WC` |
 | `WORLD_CUP_SEASON` | World Cup season year | `2026` |
 | `FOOTBALL_COMPETITION_CODES` | Club leagues: `PL`, `BL1`, `PD`, `CL` | `PL,BL1,PD,CL` |
-| `FOOTBALL_SEASON` | Club competition season year | current calendar year |
+| `FOOTBALL_SEASON` | Club season **start** year (2025/26 → `2025`) | Aug–Jul default from current date |
 
 Legacy names (`WORLD_CUP_MOCK_API`, `FOOTBALL_MOCK_API`, `WORLD_CUP_CHANNEL_ID`, `WORLD_CUP_REMINDER_HOURS`, etc.) still work if the shared `FOOTBALL_PREDICTION_*` variables above are unset.
 
@@ -214,7 +214,7 @@ Real fixtures show country flag emojis (e.g. 🇧🇷 Brazil) wherever team name
 Separate from World Cup: same scoring and UI, but fixtures come from **Premier League**, **Bundesliga**, **La Liga**, and **UEFA Champions League** via football-data.org.
 
 1. Use the shared `FOOTBALL_PREDICTION_*` settings (same channel and role as `/worldcup`). Set `FOOTBALL_PREDICTION_MOCK_API=true` for local testing without an API key.
-2. Optionally set `FOOTBALL_COMPETITION_CODES` (default `PL,BL1,PD,CL`) and `FOOTBALL_SEASON` (e.g. `2025` for the 2025/26 season). Unknown codes in that list are ignored (logged at startup) and the default four leagues are used if none remain valid.
+2. Optionally set `FOOTBALL_COMPETITION_CODES` (default `PL,BL1,PD,CL`). `FOOTBALL_SEASON` defaults to the active European season start year (e.g. `2025` for 2025/26 until July 2026); override only if needed. Unknown codes are ignored (logged at startup).
 3. Users run `/football register`, then predict from channel prompts. Use `/football matches` with optional `competition` and `status` filters.
 4. Administrators can run `/football reset` to wipe all club football game data. Same `repost` behavior as World Cup: `repost: false` pauses new prompts until `repost: true`.
 

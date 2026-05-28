@@ -186,7 +186,10 @@ describe('worldCupScheduler', () => {
   it('should run poll and prompt fixtures in reminder window', async () => {
     await scheduler.runWorldCupPoll(mockClient);
 
-    expect(mockUtils.scoreFinishedFixtures).toHaveBeenCalledWith(mockClient);
+    expect(mockUtils.scoreFinishedFixtures).toHaveBeenCalledWith(
+      mockClient,
+      expect.any(Array)
+    );
     expect(mockUtils.markFixturePrompted).toHaveBeenCalledWith(77);
   });
 

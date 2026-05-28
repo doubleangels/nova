@@ -171,7 +171,7 @@ const googleImagesAiEnabled = isTruthyEnv(envFirst('GOOGLE_IMAGES_AI_ENABLED'));
  * @property {string} worldCupCompetitionCode - football-data.org competition code (from WORLD_CUP_COMPETITION_CODE env var)
  * @property {string} worldCupSeason - Season year for competition matches (from WORLD_CUP_SEASON env var)
  * @property {string[]} footballCompetitionCodes - football-data.org codes (PL, BL1, PD, CL)
- * @property {string} footballSeason - Season year for club competitions (from FOOTBALL_SEASON env var)
+ * @property {string} footballSeason - Club season start year (FOOTBALL_SEASON or Aug–Jul default)
  * // Spotify integration removed
  */
 
@@ -264,7 +264,11 @@ module.exports = {
     const { parseCompetitionCodes } = require('./utils/footballCompetitions');
     return parseCompetitionCodes(process.env.FOOTBALL_COMPETITION_CODES);
   })(),
-  footballSeason: process.env.FOOTBALL_SEASON || String(new Date().getFullYear()),
+  footballSeason: (() => {
+    const { getDefaultFootballSeasonYear } = require('./utils/footballSeason');
+    const fromEnv = process.env.FOOTBALL_SEASON?.trim();
+    return fromEnv || String(getDefaultFootballSeasonYear());
+  })(),
   // Spotify integration removed
 };
 

@@ -74,7 +74,7 @@ function alignResultPickWithScore(homeScore, awayScore, resultPick) {
 function createScoreFinishedFixtures(store, deps) {
   let scoringInFlight = false;
 
-  return async function scoreFinishedFixtures(client) {
+  return async function scoreFinishedFixtures(client, prefetchedFixtures) {
     if (!deps.isConfigured()) return 0;
     if (scoringInFlight) return 0;
 
@@ -84,7 +84,8 @@ function createScoreFinishedFixtures(store, deps) {
       const path = require('path');
       const logger = require('../logger')(path.basename(__filename));
 
-      const fixtures = await deps.getFixtures({ forceRefresh: true });
+      const fixtures =
+        prefetchedFixtures ?? (await deps.getFixtures({ forceRefresh: true }));
       const scoredList = await store.getScoredFixtures();
       const finished = fixtures.filter(
         f =>

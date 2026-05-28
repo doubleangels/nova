@@ -193,10 +193,10 @@ function resolveIso2FromTeam(team) {
   const fromArea = codeToIso2(areaCode);
   if (fromArea) return fromArea;
 
-  const fromTla = iso2FromTla(team.tla);
-  if (fromTla) return fromTla;
+  const fromName = iso2FromName(team.name) || iso2FromName(team.shortName);
+  if (fromName) return fromName;
 
-  return iso2FromName(team.name) || iso2FromName(team.shortName);
+  return iso2FromTla(team.tla);
 }
 
 /**

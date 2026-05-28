@@ -6,7 +6,13 @@ const { getMockSeasonMatches, getMockMatchById } = require('./worldCupMockData')
 const { resolveIso2FromTeam } = require('./worldCupTeamFlags');
 
 const BASE_URL = 'https://api.football-data.org/v4';
-const CACHE_TTL_MS = 5 * 60 * 1000;
+function getCacheTtlMs() {
+  const pollMs = config.predictionPollIntervalMs;
+  if (Number.isFinite(pollMs) && pollMs > 0) {
+    return Math.max(pollMs, 5 * 60 * 1000);
+  }
+  return 15 * 60 * 1000;
+}
 const FIXTURE_ID_CHUNK_SIZE = 20;
 
 /** @type {{ data: import('./worldCupUtils').NormalizedFixture[] | null, expiresAt: number }} */
@@ -108,23 +114,33 @@ async function fetchSeasonMatchesFromApi() {
     return applyMockFinish(fixtures);
   }
 
-  const response = await axios.get(
-    `${BASE_URL}/competitions/${config.worldCupCompetitionCode}/matches`,
-    {
-      headers: apiHeaders(),
-      params: { season: config.worldCupSeason }
+  try {
+    const response = await axios.get(
+      `${BASE_URL}/competitions/${config.worldCupCompetitionCode}/matches`,
+      {
+        headers: apiHeaders(),
+        params: { season: config.worldCupSeason }
+      }
+    );
+
+    const list = response.data?.matches;
+    if (!Array.isArray(list)) {
+      logger.warn('football-data.org returned unexpected matches payload.', {
+        message: response.data?.message
+      });
+      return [];
     }
-  );
 
-  const list = response.data?.matches;
-  if (!Array.isArray(list)) {
-    logger.warn('football-data.org returned unexpected matches payload.', {
-      message: response.data?.message
-    });
-    return [];
+    return list.map(normalizeFixture).filter(Boolean);
+  } catch (err) {
+    if (err.response?.status === 429 && seasonCache.data?.length) {
+      logger.warn('Rate limited; using cached World Cup fixtures.', {
+        cachedCount: seasonCache.data.length
+      });
+      return seasonCache.data;
+    }
+    throw err;
   }
-
-  return list.map(normalizeFixture).filter(Boolean);
 }
 
 /**
@@ -183,10 +199,10 @@ async function getSeasonFixtures(options = {}) {
 
   const fixtures = await fetchSeasonMatchesFromApi();
 
-  if (!isMockApiEnabled()) {
+  if (!isMockApiEnabled() && fixtures.length > 0) {
     seasonCache = {
       data: fixtures,
-      expiresAt: now + CACHE_TTL_MS
+      expiresAt: now + getCacheTtlMs()
     };
   }
 
@@ -269,5 +285,5 @@ module.exports = {
   getSeasonFixtures,
   getFixtureById,
   getFixturesByIds,
-  CACHE_TTL_MS
+  getCacheTtlMs
 };

@@ -85,6 +85,9 @@ const MSG_ALREADY_REGISTERED =
   'You are already registered for World Cup and club football predictions.';
 const MSG_REGISTER_SUCCESS =
   'You are registered for **World Cup** and **club football** predictions. Role **{roleName}** assigned - watch {channel} for match posts.';
+const REGISTER_EMBED_TITLE_SUCCESS = 'Registered for predictions!';
+const REGISTER_EMBED_TITLE_ALREADY = 'Already registered!';
+const REGISTER_EMBED_TITLE_ERROR = 'Could not register!';
 
 /**
  * @param {PredictionGameId} gameId
@@ -354,6 +357,22 @@ function formatRegisterSuccess(channelMention, roleName) {
   );
 }
 
+/**
+ * @param {string} channelMention
+ * @param {string} roleName
+ * @returns {string}
+ */
+function buildRegisterSuccessDescription(channelMention, roleName) {
+  return formatRegisterSuccess(channelMention, roleName);
+}
+
+/**
+ * @returns {string}
+ */
+function buildRegisterAlreadyDescription() {
+  return MSG_ALREADY_REGISTERED;
+}
+
 module.exports = {
   GAME,
   REGISTER_COMMAND,
@@ -384,6 +403,9 @@ module.exports = {
   MSG_NO_PREDICTIONS,
   MSG_MISSING_PREDICTION,
   MSG_ALREADY_REGISTERED,
+  REGISTER_EMBED_TITLE_SUCCESS,
+  REGISTER_EMBED_TITLE_ALREADY,
+  REGISTER_EMBED_TITLE_ERROR,
   SAVED_PREDICTION_TITLE,
   WINNER_PLACEHOLDER,
   POINTS_FIELD_NAME,
@@ -401,5 +423,7 @@ module.exports = {
   buildResetDescription,
   formatMyPickLine,
   formatAiPredictionField,
-  formatRegisterSuccess
+  formatRegisterSuccess,
+  buildRegisterSuccessDescription,
+  buildRegisterAlreadyDescription
 };

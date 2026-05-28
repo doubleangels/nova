@@ -105,13 +105,12 @@ function createPredictionScheduler(options) {
 
     pollInFlight = true;
     try {
-      await options.scoreFinishedFixtures(client);
+      const fixtures = await options.getSeasonFixtures({ forceRefresh: true });
+      await options.scoreFinishedFixtures(client, fixtures);
 
       if (await options.store.isPromptingPaused()) {
         return;
       }
-
-      const fixtures = await options.getSeasonFixtures({ forceRefresh: true });
       const prompted = await options.store.getPromptedFixtures();
       const now = new Date();
 

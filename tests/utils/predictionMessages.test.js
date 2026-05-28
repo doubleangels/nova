@@ -24,4 +24,11 @@ describe('predictionMessages', () => {
     expect(msgs.formatMyPickLine(2, 1, 'Home', true, 4)).toContain('+4');
     expect(msgs.formatMyPickLine(0, 0, 'Draw', false)).toContain('awaiting final score');
   });
+
+  it('should build register embed copy', () => {
+    expect(msgs.buildRegisterSuccessDescription('<#1>', 'Predictor')).toContain(
+      'World Cup'
+    );
+    expect(msgs.buildRegisterAlreadyDescription()).toContain('already registered');
+  });
 });

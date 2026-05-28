@@ -157,7 +157,12 @@ module.exports = {
 
     if (hasRole && inFootball && inWorldCup) {
       await interaction.editReply({
-        content: msgs.MSG_ALREADY_REGISTERED
+        embeds: [
+          new EmbedBuilder()
+            .setColor(config.baseEmbedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ALREADY)
+            .setDescription(msgs.buildRegisterAlreadyDescription())
+        ]
       });
       return;
     }
@@ -167,7 +172,12 @@ module.exports = {
 
     if (!role) {
       await interaction.editReply({
-        content: msgs.ERR_PARTICIPANT_ROLE_MISSING
+        embeds: [
+          new EmbedBuilder()
+            .setColor(config.baseEmbedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
+            .setDescription(msgs.ERR_PARTICIPANT_ROLE_MISSING)
+        ]
       });
       return;
     }
@@ -175,14 +185,24 @@ module.exports = {
     const me = interaction.guild.members.me;
     if (!me?.permissions.has(PermissionFlagsBits.ManageRoles)) {
       await interaction.editReply({
-        content: msgs.ERR_MANAGE_ROLES_REQUIRED
+        embeds: [
+          new EmbedBuilder()
+            .setColor(config.baseEmbedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
+            .setDescription(msgs.ERR_MANAGE_ROLES_REQUIRED)
+        ]
       });
       return;
     }
 
     if (role.position >= me.roles.highest.position) {
       await interaction.editReply({
-        content: msgs.ERR_ROLE_HIERARCHY
+        embeds: [
+          new EmbedBuilder()
+            .setColor(config.baseEmbedColor)
+            .setTitle(msgs.REGISTER_EMBED_TITLE_ERROR)
+            .setDescription(msgs.ERR_ROLE_HIERARCHY)
+        ]
       });
       return;
     }
@@ -195,7 +215,12 @@ module.exports = {
       ? `<#${config.predictionChannelId}>`
       : 'the prediction channel';
     await interaction.editReply({
-      content: msgs.formatRegisterSuccess(channelRef, role.name)
+      embeds: [
+        new EmbedBuilder()
+          .setColor(config.baseEmbedColor)
+          .setTitle(msgs.REGISTER_EMBED_TITLE_SUCCESS)
+          .setDescription(msgs.buildRegisterSuccessDescription(channelRef, role.name))
+      ]
     });
 
     logger.info('/football register completed.', {

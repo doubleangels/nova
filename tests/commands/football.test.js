@@ -86,9 +86,10 @@ describe('football command', () => {
     expect(interaction.member.roles.add).toHaveBeenCalledWith(role, 'Prediction game registration');
     expect(mockFootballUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
     expect(mockWorldCupUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
-    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-      content: expect.stringContaining('World Cup')
-    }));
+    const reply = interaction.editReply.mock.calls[0][0];
+    expect(reply.embeds).toHaveLength(1);
+    expect(reply.embeds[0].data.title).toBe('Registered for predictions');
+    expect(reply.embeds[0].data.description).toContain('World Cup');
   });
 
   it('should report already registered when in both games', async () => {
@@ -117,9 +118,9 @@ describe('football command', () => {
 
     await footballCommand.execute(interaction);
 
-    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-      content: expect.stringContaining('already registered')
-    }));
+    const reply = interaction.editReply.mock.calls[0][0];
+    expect(reply.embeds[0].data.title).toBe('Already registered');
+    expect(reply.embeds[0].data.description).toContain('already registered');
     expect(mockFootballUtils.addRegisteredUser).not.toHaveBeenCalled();
   });
 
