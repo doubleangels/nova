@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getBotMember } = require('../utils/asyncUtils');
 
 /**
  * @typedef {Object} ValidationResult
@@ -149,7 +150,7 @@ module.exports = {
      * @returns {Promise<RoleAssignmentResult>} Object containing role assignment result
      */
     async assignRole(interaction, role, targetMember) {
-        const botMember = interaction.guild.members.me;
+        const botMember = await getBotMember(interaction);
         if (botMember.roles.highest.position <= role.position) {
             logger.warn("Bot's highest role is not high enough to assign the specified role.", {
                 botHighestRolePosition: botMember.roles.highest.position,

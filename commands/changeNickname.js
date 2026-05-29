@@ -2,6 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } =
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
+const { getBotMember } = require('../utils/asyncUtils');
 
 /**
  * @typedef {Object} ValidationResult
@@ -66,7 +67,8 @@ module.exports = {
                 newNickname
             });
 
-            if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageNicknames)) {
+            const botMember = await getBotMember(interaction);
+            if (!botMember.permissions.has(PermissionFlagsBits.ManageNicknames)) {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 

@@ -3,6 +3,7 @@ const path = require('path');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { setInviteTag, getInviteTag, deleteInviteTag, setInviteNotificationChannel, getAllInviteTagsData, getInviteCodeToTagMap, setInviteCodeToTagMap } = require('../utils/database');
+const { getBotMember } = require('../utils/asyncUtils');
 
 let inviteTagsAutocompleteCache = { tags: [], expiresAt: 0 };
 const INVITE_TAGS_CACHE_TTL_MS = 30_000;
@@ -440,8 +441,10 @@ module.exports = {
     const maxUses = interaction.options.getInteger('max-uses');
     const maxAge = interaction.options.getInteger('max-age');
 
+    const botMember = await getBotMember(interaction);
+
     // Check if bot has permission to create invites
-    if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.CreateInstantInvite)) {
+    if (!botMember.permissions.has(PermissionFlagsBits.CreateInstantInvite)) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setTitle('Missing Permissions')
@@ -457,7 +460,7 @@ module.exports = {
     if (!targetChannel) {
       // Find first available text channel
       targetChannel = interaction.guild.channels.cache
-        .filter(ch => ch.type === ChannelType.GuildText && ch.permissionsFor(interaction.guild.members.me)?.has(PermissionFlagsBits.CreateInstantInvite))
+        .filter(ch => ch.type === ChannelType.GuildText && ch.permissionsFor(botMember)?.has(PermissionFlagsBits.CreateInstantInvite))
         .first();
 
       if (!targetChannel) {
@@ -472,7 +475,7 @@ module.exports = {
     }
 
     // Check if bot can create invites in the target channel
-    if (!targetChannel.permissionsFor(interaction.guild.members.me)?.has(PermissionFlagsBits.CreateInstantInvite)) {
+    if (!targetChannel.permissionsFor(botMember)?.has(PermissionFlagsBits.CreateInstantInvite)) {
       const embed = new EmbedBuilder()
         .setColor(0xFF0000)
         .setTitle('Missing Permissions')
@@ -635,7 +638,7 @@ module.exports = {
       // Try to delete the invite from Discord if we have the code
       if (inviteTag.code) {
         try {
-          const botMember = interaction.guild.members.me;
+          const botMember = await getBotMember(interaction);
           const hasManageGuild = botMember?.permissions.has('ManageGuild');
           const invite = await interaction.guild.invites.fetch(inviteTag.code).catch(() => null);
 

@@ -20,4 +20,14 @@ async function runWithConcurrency(tasks, limit = 3) {
   return results;
 }
 
-module.exports = { runWithConcurrency };
+/**
+ * Safely fetches the bot member in a guild, falling back to fetchMe() if uncached.
+ * @param {CommandInteraction} interaction
+ * @returns {Promise<GuildMember|null>}
+ */
+async function getBotMember(interaction) {
+  if (!interaction?.guild?.members) return null;
+  return interaction.guild.members.me || await interaction.guild.members.fetchMe();
+}
+
+module.exports = { runWithConcurrency, getBotMember };

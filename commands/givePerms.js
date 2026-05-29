@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
+const { getBotMember } = require('../utils/asyncUtils');
 
 /**
  * @typedef {Object} ValidationResult
@@ -241,7 +242,7 @@ module.exports = {
             };
         }
         
-        const botMember = interaction.guild.members.me;
+        const botMember = await getBotMember(interaction);
         const newRolePosition = positionRole.position + 1;
         // Bot can only assign roles that are below its highest role; new role must be strictly below bot.
         if (botMember.roles.highest.position <= newRolePosition) {

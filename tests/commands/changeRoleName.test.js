@@ -347,5 +347,47 @@ describe('changeRoleName command', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error reply.', expect.any(Object));
     });
+
+    it('should fall back to fetchMe if me is null', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getRole: jest.fn().mockReturnValue({
+            id: 'role-id',
+            name: 'Old Role',
+            position: 10,
+            managed: false,
+            color: 0x00ff00,
+            hexColor: '#00ff00',
+            setName: jest.fn().mockResolvedValue()
+          }),
+          getString: jest.fn().mockReturnValue('New Role Name')
+        }
+      });
+
+      const mockBotMember = {
+        permissions: {
+          has: jest.fn().mockImplementation((perm) => perm === PermissionFlagsBits.ManageRoles)
+        },
+        roles: {
+          highest: { position: 15 }
+        }
+      };
+
+      mockInteraction.guild = {
+        members: {
+          me: null,
+          fetchMe: jest.fn().mockResolvedValue(mockBotMember)
+        }
+      };
+
+      await changeRoleNameCommand.execute(mockInteraction);
+
+      expect(mockInteraction.guild.members.fetchMe).toHaveBeenCalled();
+      const targetRole = mockInteraction.options.getRole('role');
+      expect(targetRole.setName).toHaveBeenCalledWith(
+        'New Role Name',
+        expect.stringContaining('via /changerolename')
+      );
+    });
   });
 });

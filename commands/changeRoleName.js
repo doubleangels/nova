@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const { getBotMember } = require('../utils/asyncUtils');
 
 /**
  * Command module for changing a role's name.
@@ -44,7 +45,7 @@ module.exports = {
     });
 
     try {
-      const botMember = interaction.guild.members.me;
+      const botMember = await getBotMember(interaction);
       if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
         return await interaction.editReply({
           content: "⚠️ I don't have permission to manage roles.",

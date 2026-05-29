@@ -1,4 +1,4 @@
-const { runWithConcurrency } = require('../../utils/asyncUtils');
+const { runWithConcurrency, getBotMember } = require('../../utils/asyncUtils');
 
 describe('asyncUtils', () => {
   it('should return empty array for no tasks', async () => {
@@ -34,5 +34,43 @@ describe('asyncUtils', () => {
   it('should use limit capped to task count when limit exceeds tasks', async () => {
     const results = await runWithConcurrency([() => Promise.resolve('a')], 10);
     expect(results).toEqual(['a']);
+  });
+
+  describe('getBotMember', () => {
+    it('should return null if interaction is missing guild or members', async () => {
+      expect(await getBotMember(null)).toBeNull();
+      expect(await getBotMember({})).toBeNull();
+      expect(await getBotMember({ guild: {} })).toBeNull();
+    });
+
+    it('should return cached me if it exists', async () => {
+      const mockMe = { id: 'bot-id' };
+      const interaction = {
+        guild: {
+          members: {
+            me: mockMe,
+            fetchMe: jest.fn()
+          }
+        }
+      };
+      const result = await getBotMember(interaction);
+      expect(result).toBe(mockMe);
+      expect(interaction.guild.members.fetchMe).not.toHaveBeenCalled();
+    });
+
+    it('should call fetchMe if me is null', async () => {
+      const mockMe = { id: 'bot-id' };
+      const interaction = {
+        guild: {
+          members: {
+            me: null,
+            fetchMe: jest.fn().mockResolvedValue(mockMe)
+          }
+        }
+      };
+      const result = await getBotMember(interaction);
+      expect(result).toBe(mockMe);
+      expect(interaction.guild.members.fetchMe).toHaveBeenCalled();
+    });
   });
 });

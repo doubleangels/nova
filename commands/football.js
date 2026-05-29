@@ -7,6 +7,7 @@ const {
 const path = require('path');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
+const { getBotMember } = require('../utils/asyncUtils');
 const { isApiConfigured, getSeasonFixtures } = require('../utils/footballClient');
 const { getCompetitionName } = require('../utils/footballCompetitions');
 const {
@@ -177,7 +178,7 @@ module.exports = {
       return;
     }
 
-    const me = interaction.guild.members.me;
+    const me = await getBotMember(interaction);
     if (!me?.permissions.has(PermissionFlagsBits.ManageRoles)) {
       await interaction.editReply({
         embeds: [

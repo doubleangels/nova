@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
 const config = require('../config');
+const { getBotMember } = require('../utils/asyncUtils');
 
 /**
  * Command module for changing role colors
@@ -49,7 +50,8 @@ module.exports = {
                 throw new Error("INVALID_COLOR");
             }
 
-            if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageRoles)) {
+            const botMember = await getBotMember(interaction);
+            if (!botMember.permissions.has(PermissionFlagsBits.ManageRoles)) {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 
