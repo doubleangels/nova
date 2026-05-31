@@ -262,6 +262,7 @@ module.exports = {
             name: roleName,
             color: colorDecimal,
             position: newRolePosition,
+            permissions: [],
             reason: auditReason
         });
         
