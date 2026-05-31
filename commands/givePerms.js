@@ -266,6 +266,10 @@ module.exports = {
             reason: auditReason
         });
         
+        // Ensure the role has absolutely zero permissions by explicitly setting it after creation
+        // (Discord's API occasionally assigns default permissions even if permissions: [] is provided in creation options)
+        await newRole.setPermissions([], auditReason);
+        
         logger.info("New role was created.", { 
             roleId: newRole.id, 
             roleName: newRole.name, 

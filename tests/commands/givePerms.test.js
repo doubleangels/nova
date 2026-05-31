@@ -48,7 +48,7 @@ describe('giveperms command unit tests', () => {
   });
 
   it('should successfully run happy path and grant permissions', async () => {
-    const mockNewRole = { id: 'new-role-id', name: 'Elite' };
+    const mockNewRole = { id: 'new-role-id', name: 'Elite', setPermissions: jest.fn().mockResolvedValue() };
     const mockTargetMember = {
       id: 'user-123',
       user: { tag: 'Member#1234' },
@@ -334,6 +334,7 @@ describe('giveperms command unit tests', () => {
     const mockNewRole = {
       id: 'new-role-id',
       name: 'Elite',
+      setPermissions: jest.fn().mockResolvedValue(),
       delete: jest.fn().mockRejectedValue(new Error('delete failed'))
     };
     const mockTargetMember = {

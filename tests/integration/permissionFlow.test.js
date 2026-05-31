@@ -27,7 +27,7 @@ describe('Permission and Role Assignment Flow Integration', () => {
   });
 
   it('should successfully create and assign custom roles when permission hierarchy check passes', async () => {
-    const mockCreatedRole = { id: 'new-role-999', name: 'Elite Member', position: 6 };
+    const mockCreatedRole = { id: 'new-role-999', name: 'Elite Member', position: 6, setPermissions: jest.fn().mockResolvedValue() };
     const mockRefRole = { id: 'ref-role-id', position: 5 };
     const mockFrenRole = { id: 'fren-role-id', position: 4 };
 
