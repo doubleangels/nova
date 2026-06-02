@@ -222,17 +222,19 @@ module.exports = {
 
       const guildId = member.guild.id;
 
-      // Use a lock per guild to prevent race conditions
-      let lockPromise = inviteCheckLocks.get(guildId);
-      if (lockPromise) {
-        await lockPromise;
-      }
-
+      // Use a lock per guild to prevent race conditions.
+      // Acquire before awaiting: set our promise as the new tail of the chain,
+      // then wait for the previous tail. This correctly serialises any number
+      // of concurrent events (not just pairs).
+      const prev = inviteCheckLocks.get(guildId);
       let resolveLock;
       const newLockPromise = new Promise((resolve) => {
         resolveLock = resolve;
       });
       inviteCheckLocks.set(guildId, newLockPromise);
+      if (prev) {
+        await prev;
+      }
 
       let currentInvites;
       try {

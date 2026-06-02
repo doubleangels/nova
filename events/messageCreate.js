@@ -45,9 +45,6 @@ module.exports = {
       }
 
       if (message.channel?.type === ChannelType.DM) {
-        if (message.embeds?.length > 0) {
-          await checkForBumpMessages(message);
-        }
         return;
       }
 
@@ -145,7 +142,7 @@ module.exports = {
       captureError(error, { event: 'messageCreate' });
       logger.error('Error occurred while processing message.', {
         err: error,
-        userId: message.author.id,
+        userId: message.author?.id,
         messageId: message.id
       });
 

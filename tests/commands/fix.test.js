@@ -137,6 +137,26 @@ describe('fix command', () => {
       expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
     });
 
+    it('should return warning if reminder role is not configured in database', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getSubcommand: jest.fn().mockReturnValue('disboard')
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'reminder_channel') return 'channel-id';
+        return null;
+      });
+
+      await fixCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(
+        "⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder role first."
+      );
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
+    });
+
     it('should handle DATABASE_ERROR during handleFixReminder', async () => {
       const mockInteraction = createMockInteraction({
         options: {

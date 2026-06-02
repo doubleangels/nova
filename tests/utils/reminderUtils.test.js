@@ -397,6 +397,55 @@ describe('reminderUtils', () => {
         expect.any(Object)
       );
     });
+
+    it('should cancel existing timer when same type is rescheduled', async () => {
+      setupConfig();
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k.endsWith(':list')) return [];
+        return null;
+      });
+
+      await reminderUtils.handleReminder({ client: mockClient }, 60000, 'bump');
+      mockChannel.send.mockClear();
+      await reminderUtils.handleReminder({ client: mockClient }, 60000, 'bump');
+      await jest.runAllTimersAsync();
+      expect(mockChannel.send).toHaveBeenCalledWith(expect.stringContaining('Time to bump the server!'));
+    });
+
+    it('should warn when config missing at fire time from handleReminder timer', async () => {
+      setupConfig();
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k.endsWith(':list')) return [];
+        return null;
+      });
+
+      await reminderUtils.handleReminder({ client: mockClient }, 1000, 'bump');
+      mockDatabase.getValue.mockResolvedValue(null);
+      await jest.runAllTimersAsync();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Reminder config missing at fire time; skipping.',
+        expect.any(Object)
+      );
+    });
+
+    it('should warn when channel not found at fire time from handleReminder timer', async () => {
+      setupConfig();
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k.endsWith(':list')) return [];
+        return null;
+      });
+
+      await reminderUtils.handleReminder({ client: mockClient }, 1000, 'bump');
+      mockClient.channels.cache = new Map();
+      mockClient.channels.fetch.mockRejectedValue(new Error('gone'));
+      await jest.runAllTimersAsync();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Reminder channel not found at fire time; skipping.',
+        expect.any(Object)
+      );
+    });
   });
 
   describe('rescheduleReminder', () => {
@@ -527,7 +576,7 @@ describe('reminderUtils', () => {
       await reminderUtils.rescheduleReminder(mockClient);
       expect(reminderKeyvInstance.delete).toHaveBeenCalledWith('reminder:bad-bump');
       expect(mockLogger.debug).toHaveBeenCalledWith(
-        'Marked invalid bump reminder for cleanup.',
+        'Cleaned up expired reminders.',
         expect.any(Object)
       );
     });
@@ -589,15 +638,15 @@ describe('reminderUtils', () => {
 
       await reminderUtils.rescheduleReminder(mockClient);
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Bump reminder is in the past; skipping reschedule.',
+        'bump reminder is in the past; skipping reschedule.',
         expect.any(Object)
       );
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Promote reminder is in the past; skipping reschedule.',
+        'promote reminder is in the past; skipping reschedule.',
         expect.any(Object)
       );
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Needafriend reminder is in the past; skipping reschedule.',
+        'needafriend reminder is in the past; skipping reschedule.',
         expect.any(Object)
       );
       expect(mockChannel.send).not.toHaveBeenCalled();
@@ -622,8 +671,9 @@ describe('reminderUtils', () => {
       });
 
       await reminderUtils.rescheduleReminder(mockClient);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to fetch channel for rescheduled reminder.',
+      await jest.runAllTimersAsync();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Reminder channel not found at fire time; skipping.',
         expect.any(Object)
       );
       expect(mockChannel.send).not.toHaveBeenCalled();
@@ -648,7 +698,7 @@ describe('reminderUtils', () => {
       await jest.runAllTimersAsync();
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error occurred while sending rescheduled bump reminder.',
+        'Error sending rescheduled bump reminder.',
         expect.any(Object)
       );
     });
@@ -672,7 +722,7 @@ describe('reminderUtils', () => {
       await jest.runAllTimersAsync();
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error occurred while sending rescheduled promotion reminder.',
+        'Error sending rescheduled promote reminder.',
         expect.any(Object)
       );
     });
@@ -696,7 +746,7 @@ describe('reminderUtils', () => {
       await jest.runAllTimersAsync();
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Error occurred while sending rescheduled needafriend reminder.',
+        'Error sending rescheduled needafriend reminder.',
         expect.any(Object)
       );
     });
@@ -707,6 +757,28 @@ describe('reminderUtils', () => {
       await reminderUtils.rescheduleReminder(mockClient);
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred in rescheduleReminder.',
+        expect.any(Object)
+      );
+    });
+
+    it('should warn when config missing at fire time from reschedule timer', async () => {
+      setupConfig();
+      const future = dayjs().add(1, 'hour').toISOString();
+
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k === 'reminders:bump:list') return ['rem-c'];
+        if (k === 'reminders:promote:list') return [];
+        if (k === 'reminders:needafriend:list') return [];
+        if (k === 'reminder:rem-c') return { reminder_id: 'rem-c', remind_at: future, type: 'bump' };
+        return null;
+      });
+
+      await reminderUtils.rescheduleReminder(mockClient);
+      mockDatabase.getValue.mockResolvedValue(null);
+      await jest.runAllTimersAsync();
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Reminder config missing at fire time; skipping.',
         expect.any(Object)
       );
     });
@@ -727,6 +799,7 @@ describe('reminderUtils', () => {
       });
 
       await reminderUtils.rescheduleReminder(mockClient);
+      await jest.runAllTimersAsync();
       expect(mockClient.channels.fetch).toHaveBeenCalledWith('channel-123');
     });
 
