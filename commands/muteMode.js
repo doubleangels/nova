@@ -139,6 +139,13 @@ module.exports = {
       logger.info('Rescheduled mute kicks after enabling mute mode.', {
         guildId: interaction.guildId
       });
+    } else if (isEnabled && currentSettings.isEnabled && timeLimit !== currentSettings.timeLimit) {
+      await rescheduleAllMuteKicks(interaction.client);
+      logger.info('Rescheduled mute kicks after changing kick time.', {
+        guildId: interaction.guildId,
+        oldTimeLimit: currentSettings.timeLimit,
+        newTimeLimit: timeLimit
+      });
     } else if (!isEnabled && currentSettings.isEnabled) {
       clearAllScheduledMuteKicks();
       logger.info('Cleared scheduled mute kicks after disabling mute mode.', {

@@ -677,7 +677,7 @@ describe('messageCreate event', () => {
 
       await messageCreateEvent.execute(mockMessage);
 
-      expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
     });
 
     it('should process Disboard bump embed', async () => {

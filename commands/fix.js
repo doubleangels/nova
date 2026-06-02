@@ -95,6 +95,12 @@ module.exports = {
         await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder channel and role first.");
         return;
       }
+
+      const reminderRole = await getValue('reminder_role');
+      if (!reminderRole) {
+        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder role first.");
+        return;
+      }
       
       const scheduledTime = dayjs().add(delayMs, 'millisecond');
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);

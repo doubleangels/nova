@@ -289,7 +289,7 @@ describe('database utils', () => {
     });
 
     it('should handle addToUserList errors via mute mode add', async () => {
-      mainKeyvInstance.get.mockRejectedValue(new Error('list fail'));
+      mockWritableDb.transaction.mockImplementation(() => { throw new Error('list fail'); });
       await db.addMuteModeUser('u', 'name');
       expect(mockLogger.error).toHaveBeenCalled();
     });
@@ -321,9 +321,39 @@ describe('database utils', () => {
     });
 
     it('should handle removeFromUserList errors via spam remove', async () => {
-      mainKeyvInstance.get.mockRejectedValue(new Error('list fail'));
+      mockWritableDb.transaction.mockImplementation(() => { throw new Error('list fail'); });
       await db.removeSpamModeJoinTime('u');
       expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should skip adding user already present in stored Keyv-envelope list', async () => {
+      getStmt.get.mockReturnValue({ value: JSON.stringify({ value: ['u1'], expires: null }) });
+      await db.addMuteModeUser('u1', 'name');
+      expect(runStmt.run).not.toHaveBeenCalled();
+    });
+
+    it('should add user when stored list is plain JSON array', async () => {
+      getStmt.get.mockReturnValue({ value: JSON.stringify(['u2']) });
+      await db.addMuteModeUser('u1', 'name');
+      expect(runStmt.run).toHaveBeenCalled();
+    });
+
+    it('should start from empty list when stored value is invalid JSON', async () => {
+      getStmt.get.mockReturnValue({ value: 'invalid json{' });
+      await db.addMuteModeUser('u1', 'name');
+      expect(runStmt.run).toHaveBeenCalled();
+    });
+
+    it('should start from empty list when stored value is non-array JSON', async () => {
+      getStmt.get.mockReturnValue({ value: JSON.stringify({ value: 'not-an-array' }) });
+      await db.addMuteModeUser('u1', 'name');
+      expect(runStmt.run).toHaveBeenCalled();
+    });
+
+    it('should filter user out of non-empty list in removeFromUserList', async () => {
+      getStmt.get.mockReturnValue({ value: JSON.stringify({ value: ['u1', 'u2'], expires: null }) });
+      await db.removeSpamModeJoinTime('u1');
+      expect(runStmt.run).toHaveBeenCalled();
     });
   });
 

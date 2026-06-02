@@ -204,6 +204,28 @@ describe('muteMode command', () => {
       expect(muteModeUtils.rescheduleAllMuteKicks).not.toHaveBeenCalled();
     });
 
+    it('should reschedule kicks when mute mode stays enabled but kick time changes', async () => {
+      const mockInteraction = createMockInteraction({
+        client: 'mock-client',
+        options: {
+          getBoolean: jest.fn().mockReturnValue(true),
+          getInteger: jest.fn().mockReturnValue(6)
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'mute_mode_enabled') return true;
+        if (key === 'mute_mode_kick_time_hours') return '2';
+        return null;
+      });
+
+      const muteModeUtils = require('../../utils/muteModeUtils');
+      await muteModeCommand.handleSetSubcommand(mockInteraction);
+
+      expect(muteModeUtils.rescheduleAllMuteKicks).toHaveBeenCalledWith('mock-client');
+      expect(muteModeUtils.clearAllScheduledMuteKicks).not.toHaveBeenCalled();
+    });
+
     it('should set settings and reply with embed', async () => {
       const mockInteraction = createMockInteraction({
         options: {

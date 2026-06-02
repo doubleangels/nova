@@ -269,19 +269,44 @@ async function deleteValue(key) {
 }
 
 /**
- * Helper function to maintain a list of user IDs for a given type
+ * Parses a raw Keyv-serialised array value from the database.
+ * @param {string|null} rawValue
+ * @returns {string[]}
+ */
+function parseKeyvStoredList(rawValue) {
+  if (!rawValue) return [];
+  try {
+    const parsed = JSON.parse(rawValue);
+    const val = parsed?.value !== undefined ? parsed.value : parsed;
+    return Array.isArray(val) ? val : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Helper function to maintain a list of user IDs for a given type.
+ * Uses a synchronous SQLite transaction to prevent lost-update races when
+ * multiple guildMemberAdd events fire concurrently.
  * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
  * @param {string} userId - The user ID to add
  * @returns {Promise<void>}
  */
 async function addToUserList(listKey, userId) {
   try {
-    const configKey = `config:${listKey}`;
-    const list = await keyv.get(configKey) || [];
-    if (!list.includes(userId)) {
-      list.push(userId);
-      await keyv.set(configKey, list);
-    }
+    const fullKey = `main:config:${listKey}`;
+    const db = getWritableDb();
+    db.transaction(() => {
+      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey);
+      const list = parseKeyvStoredList(row?.value);
+      if (!list.includes(userId)) {
+        list.push(userId);
+        const wrapped = JSON.stringify({ value: list, expires: null });
+        db.prepare(
+          'INSERT INTO keyv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+        ).run(fullKey, wrapped);
+      }
+    })();
   } catch (error) {
     logger.error('Error occurred while adding to user list.', {
       err: error,
@@ -291,17 +316,25 @@ async function addToUserList(listKey, userId) {
 }
 
 /**
- * Helper function to remove a user ID from a list
+ * Helper function to remove a user ID from a list.
+ * Uses a synchronous SQLite transaction to prevent lost-update races.
  * @param {string} listKey - The key for the list (e.g., 'mute_mode_users')
  * @param {string} userId - The user ID to remove
  * @returns {Promise<void>}
  */
 async function removeFromUserList(listKey, userId) {
   try {
-    const configKey = `config:${listKey}`;
-    const list = await keyv.get(configKey) || [];
-    const filtered = list.filter(id => id !== userId);
-    await keyv.set(configKey, filtered);
+    const fullKey = `main:config:${listKey}`;
+    const db = getWritableDb();
+    db.transaction(() => {
+      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey);
+      const list = parseKeyvStoredList(row?.value);
+      const filtered = list.filter(id => id !== userId);
+      const wrapped = JSON.stringify({ value: filtered, expires: null });
+      db.prepare(
+        'INSERT INTO keyv (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+      ).run(fullKey, wrapped);
+    })();
   } catch (error) {
     logger.error('Error occurred while removing from user list.', {
       err: error,
