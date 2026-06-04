@@ -49,8 +49,8 @@
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "@sentry/node": "^10.55.0",
-    "axios": "^1.16.1",
+    "@sentry/node": "^10.56.0",
+    "axios": "^1.17.0",
     "better-sqlite3": "^12.10.0",
     "dayjs": "^1.11.21",
     "discord.js": "^14.26.4",
