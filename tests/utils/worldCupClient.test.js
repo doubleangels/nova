@@ -212,8 +212,9 @@ describe('worldCupClient', () => {
     });
 
     it('should get fixture by id from cache', async () => {
+      const futureKickoff = new Date(Date.now() + 3600000).toISOString();
       mockAxios.get.mockResolvedValue({
-        data: { matches: [sampleMatch({ id: 9 })] }
+        data: { matches: [sampleMatch({ id: 9, utcDate: futureKickoff })] }
       });
       await client.getSeasonFixtures();
       const fixture = await client.getFixtureById(9);

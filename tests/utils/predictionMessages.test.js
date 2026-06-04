@@ -175,9 +175,25 @@ describe('predictionMessages', () => {
   });
 
   it('should handle falsy text in truncateForEmbed (line 48 falsy text)', () => {
-    // test falsy input to truncateForEmbed directly
     expect(msgs.truncateForEmbed(null, 10)).toBe('');
     expect(msgs.truncateForEmbed(undefined, 10)).toBe('');
+  });
+
+  it('should truncate long text in truncateForEmbed', () => {
+    expect(msgs.truncateForEmbed('abcdefghij', 5)).toBe('abcd…');
+    expect(msgs.truncateForEmbed('  padded  ', 8)).toBe('padded');
+  });
+
+  it('should show score line when pending has goals but no winner yet', () => {
+    const formatTeam = (_f, side) => (side === 'home' ? 'Arsenal' : 'Chelsea');
+    const content = msgs.buildPredictionFormContentWithPick(
+      { home: 'Arsenal', away: 'Chelsea' },
+      formatTeam,
+      () => '',
+      { homeScore: 1, awayScore: 0, resultPick: null }
+    );
+    expect(content).toContain('Score: **1-0**');
+    expect(content).toContain('Choose home goals');
   });
 
   it('should build prediction form content with null pending (line 224)', () => {
