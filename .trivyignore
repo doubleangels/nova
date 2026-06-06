@@ -1,0 +1,3 @@
+# Trivy DB maps SiYuan (CVE-2026-32767) to Alpine libexpat; not applicable to this image.
+# https://github.com/aquasecurity/trivy/discussions/10412
+CVE-2026-32767
