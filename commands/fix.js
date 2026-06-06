@@ -3,8 +3,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
-const { getValue } = require('../utils/database');
-const { handleReminder, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
+const { handleReminder, NEEDAFRIEND_REMINDER_MS, isReminderConfigured, replyReminderNotConfigured } = require('../utils/reminderUtils');
 
 /**
  * Command module for fixing reminder data.
@@ -90,15 +89,8 @@ module.exports = {
         type: type
       });
 
-      const reminderChannelId = await getValue('reminder_channel');
-      if (!reminderChannelId) {
-        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder channel and role first.");
-        return;
-      }
-
-      const reminderRole = await getValue('reminder_role');
-      if (!reminderRole) {
-        await interaction.editReply("⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder role first.");
+      if (!(await isReminderConfigured())) {
+        await replyReminderNotConfigured(interaction);
         return;
       }
       

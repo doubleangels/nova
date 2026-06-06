@@ -59,7 +59,9 @@ describe('Reminder Cycle Integration', () => {
             mockChannel.send('Time to bump! <@&reminder-role-id>');
           }
         }, delay);
-      })
+      }),
+      isReminderConfigured: jest.fn().mockResolvedValue(true),
+      buildReminderIncompleteEmbed: jest.fn()
     };
     jest.doMock('../../utils/reminderUtils', () => mockReminderUtils);
 

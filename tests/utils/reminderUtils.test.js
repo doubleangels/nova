@@ -81,6 +81,149 @@ describe('reminderUtils', () => {
     it('should export NEEDAFRIEND_REMINDER_MS as seven days', () => {
       expect(reminderUtils.NEEDAFRIEND_REMINDER_MS).toBe(7 * 24 * 60 * 60 * 1000);
     });
+
+    it('should export PROMOTE_REMINDER_MS as twenty-four hours', () => {
+      expect(reminderUtils.PROMOTE_REMINDER_MS).toBe(24 * 60 * 60 * 1000);
+    });
+  });
+
+  describe('isReminderConfigured', () => {
+    it('should return false when role or channel is missing', async () => {
+      mockDatabase.getValue.mockResolvedValue(null);
+      await expect(reminderUtils.isReminderConfigured()).resolves.toBe(false);
+
+      mockDatabase.getValue.mockImplementation(async (k) => (k === 'reminder_role' ? 'role-123' : null));
+      await expect(reminderUtils.isReminderConfigured()).resolves.toBe(false);
+    });
+
+    it('should return true when role and channel are set', async () => {
+      setupConfig();
+      await expect(reminderUtils.isReminderConfigured()).resolves.toBe(true);
+    });
+
+    it('should build incomplete configuration embed matching reminder status style', async () => {
+      mockDatabase.getValue.mockResolvedValue(null);
+      const embed = await reminderUtils.buildReminderIncompleteEmbed(null);
+      expect(embed.data.title).toBe('Server Reminders Status');
+      expect(embed.data.description).toBe('Reminder configuration is incomplete.');
+      expect(embed.data.fields).toEqual([
+        { name: 'Channel', value: '⚠️ Not set!' },
+        { name: 'Role', value: '⚠️ Not set!' }
+      ]);
+    });
+
+    it('should show invalid channel and role when configured ids are missing from guild cache', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_channel') return 'missing-ch';
+        if (k === 'reminder_role') return 'missing-role';
+        return null;
+      });
+      const guild = {
+        channels: { cache: new Map() },
+        roles: { cache: new Map() }
+      };
+      const embed = await reminderUtils.buildReminderIncompleteEmbed(guild);
+      expect(embed.data.fields).toEqual([
+        { name: 'Channel', value: 'Invalid channel' },
+        { name: 'Role', value: 'Invalid role' }
+      ]);
+    });
+
+    it('should mention configured channel and role when present in guild cache', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_channel') return 'ch-1';
+        if (k === 'reminder_role') return 'role-1';
+        return null;
+      });
+      const guild = {
+        channels: { cache: new Map([['ch-1', { id: 'ch-1' }]]) },
+        roles: { cache: new Map([['role-1', { id: 'role-1' }]]) }
+      };
+      const embed = await reminderUtils.buildReminderIncompleteEmbed(guild);
+      expect(embed.data.fields).toEqual([
+        { name: 'Channel', value: '<#ch-1>' },
+        { name: 'Role', value: '<@&role-1>' }
+      ]);
+    });
+  });
+
+  describe('replyReminderNotConfigured', () => {
+    it('should reply when the interaction is not yet acknowledged', async () => {
+      mockDatabase.getValue.mockResolvedValue(null);
+      const interaction = {
+        guild: null,
+        deferred: false,
+        replied: false,
+        reply: jest.fn().mockResolvedValue(undefined),
+        editReply: jest.fn()
+      };
+
+      await reminderUtils.replyReminderNotConfigured(interaction);
+
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: [expect.any(Object)],
+        flags: expect.any(Number)
+      }));
+      expect(interaction.editReply).not.toHaveBeenCalled();
+    });
+
+    it('should editReply when the interaction is already deferred', async () => {
+      mockDatabase.getValue.mockResolvedValue(null);
+      const interaction = {
+        guild: null,
+        deferred: true,
+        replied: false,
+        reply: jest.fn(),
+        editReply: jest.fn().mockResolvedValue(undefined)
+      };
+
+      await reminderUtils.replyReminderNotConfigured(interaction);
+
+      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: [expect.any(Object)],
+        flags: expect.any(Number)
+      }));
+      expect(interaction.reply).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('scheduleCommandCooldownNotifications', () => {
+    it('should warn and skip notifications when reminder role is missing at notification time', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_role') return null;
+        if (k === 'reminder_channel') return 'channel-123';
+        return null;
+      });
+
+      await reminderUtils.scheduleCommandCooldownNotifications(mockClient, 'promote', {
+        reminderId: 'r1',
+        remind_at: dayjs().add(1, 'day').toISOString(),
+        delayMs: reminderUtils.PROMOTE_REMINDER_MS
+      });
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Reminder notifications were not scheduled because reminder_role is not set. Use /reminder to configure.'
+      );
+      expect(mockChannel.send).not.toHaveBeenCalled();
+    });
+
+    it('should warn and skip notifications when reminder channel is missing at notification time', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_role') return 'role-123';
+        return null;
+      });
+
+      await reminderUtils.scheduleCommandCooldownNotifications(mockClient, 'promote', {
+        reminderId: 'r1',
+        remind_at: dayjs().add(1, 'day').toISOString(),
+        delayMs: reminderUtils.PROMOTE_REMINDER_MS
+      });
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Reminder notifications were not scheduled because reminder_channel is not set. Use /reminder to configure.'
+      );
+      expect(mockChannel.send).not.toHaveBeenCalled();
+    });
   });
 
   describe('getLatestReminderData', () => {
@@ -211,28 +354,40 @@ describe('reminderUtils', () => {
   });
 
   describe('handleReminder', () => {
-    it('should not schedule if role is missing', async () => {
+    it('should not schedule when reminder role is missing', async () => {
       mockDatabase.getValue.mockResolvedValueOnce(null);
-      await reminderUtils.handleReminder({ client: mockClient }, 1000);
-      expect(reminderKeyvInstance.set).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining("reminder_role")
-      );
-    });
-
-    it('should not schedule if channel config is missing', async () => {
-      mockDatabase.getValue.mockImplementation(async (k) => {
-        if (k === 'reminder_role') return 'role-123';
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k.endsWith(':list')) return [];
         return null;
       });
       await reminderUtils.handleReminder({ client: mockClient }, 1000);
       expect(reminderKeyvInstance.set).not.toHaveBeenCalled();
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        expect.stringContaining("reminder_channel")
+      expect(mockChannel.send).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Reminder is not configured; skipping reminder scheduling.',
+        { type: 'bump' }
       );
     });
 
-    it('should return early when channel fetch fails', async () => {
+    it('should not schedule when reminder channel config is missing', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_role') return 'role-123';
+        return null;
+      });
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k.endsWith(':list')) return [];
+        return null;
+      });
+      await reminderUtils.handleReminder({ client: mockClient }, 1000);
+      expect(reminderKeyvInstance.set).not.toHaveBeenCalled();
+      expect(mockChannel.send).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'Reminder is not configured; skipping reminder scheduling.',
+        { type: 'bump' }
+      );
+    });
+
+    it('should save cooldown when channel fetch fails but skip notifications', async () => {
       setupConfig();
       mockClient.channels.cache = new Map();
       mockClient.channels.fetch.mockRejectedValue(new Error('channel gone'));
@@ -243,11 +398,47 @@ describe('reminderUtils', () => {
       });
 
       await reminderUtils.handleReminder({ client: mockClient }, 1000);
+      expect(reminderKeyvInstance.set).toHaveBeenCalled();
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to fetch channel.',
+        'Failed to fetch channel; reminder was saved but notifications were skipped.',
         expect.objectContaining({ channelId: 'channel-123' })
       );
+      expect(mockChannel.send).not.toHaveBeenCalled();
+    });
+
+    it('should reject tryAcquireCommandCooldown when reminder config is missing', async () => {
+      mockDatabase.getValue.mockResolvedValue(null);
+
+      const result = await reminderUtils.tryAcquireCommandCooldown('promote', reminderUtils.PROMOTE_REMINDER_MS);
+      expect(result).toEqual({ acquired: false, notConfigured: true });
       expect(reminderKeyvInstance.set).not.toHaveBeenCalled();
+    });
+
+    it('should block concurrent tryAcquireCommandCooldown calls for the same type', async () => {
+      setupConfig();
+
+      const [first, second] = await Promise.all([
+        reminderUtils.tryAcquireCommandCooldown('promote', reminderUtils.PROMOTE_REMINDER_MS),
+        reminderUtils.tryAcquireCommandCooldown('promote', reminderUtils.PROMOTE_REMINDER_MS)
+      ]);
+
+      const acquired = [first, second].filter((result) => result.acquired);
+      const blocked = [first, second].filter((result) => !result.acquired);
+
+      expect(acquired).toHaveLength(1);
+      expect(blocked).toHaveLength(1);
+      expect(blocked[0].nextTime).toBe(acquired[0].remind_at);
+    });
+
+    it('should release a reserved cooldown when releaseCommandCooldown is called', async () => {
+      setupConfig();
+
+      const acquired = await reminderUtils.tryAcquireCommandCooldown('needafriend', reminderUtils.NEEDAFRIEND_REMINDER_MS);
+      expect(acquired.acquired).toBe(true);
+
+      await reminderUtils.releaseCommandCooldown('needafriend');
+      const next = await reminderUtils.getNextReminderTimeAfterCleanup('needafriend');
+      expect(next).toBeNull();
     });
 
     it('should clean existing future, expired, and invalid reminders before scheduling', async () => {

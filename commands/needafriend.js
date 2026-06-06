@@ -3,7 +3,7 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
-const { handleReminder, getNextReminderTimeAfterCleanup, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
+const { tryAcquireCommandCooldown, releaseCommandCooldown, scheduleCommandCooldownNotifications, isReminderConfigured, replyReminderNotConfigured, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
 
 const NEEDAFRIEND_SUBREDDIT = 'needafriend';
 
@@ -107,26 +107,33 @@ module.exports = {
       });
     }
 
-    // Cooldown check must happen before deferReply — once deferred publicly
-    // Discord.js won't honour MessageFlags.Ephemeral on the subsequent editReply.
-    const nextNeedafriendTime = await getNextReminderTimeAfterCleanup('needafriend');
-    if (nextNeedafriendTime) {
-      const now = dayjs();
-      const nextTime = dayjs(nextNeedafriendTime);
-      if (now.isBefore(nextTime)) {
-        const totalMinutes = nextTime.diff(now, 'minute');
-        const days = Math.floor(totalMinutes / 1440);
-        const hours = Math.floor((totalMinutes % 1440) / 60);
-        const minutes = totalMinutes % 60;
-        const parts = [];
-        if (days > 0) parts.push(`${days} day${days === 1 ? '' : 's'}`);
-        if (hours > 0) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
-        if (minutes > 0 || parts.length === 0) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
-        return interaction.reply({
-          content: `⚠️ Please wait ${parts.join(', ')} before using /needafriend again.`,
-          flags: MessageFlags.Ephemeral
-        });
+    if (!(await isReminderConfigured())) {
+      logger.debug('Needafriend skipped because reminders are not configured.');
+      return replyReminderNotConfigured(interaction);
+    }
+
+    // Reserve cooldown before deferReply or Reddit calls so concurrent /needafriend cannot slip through.
+    const acquire = await tryAcquireCommandCooldown('needafriend', NEEDAFRIEND_REMINDER_MS);
+    if (!acquire.acquired) {
+      if (acquire.notConfigured) {
+        logger.debug('Needafriend skipped because reminders are not configured.');
+        return replyReminderNotConfigured(interaction);
       }
+
+      const now = dayjs();
+      const nextTime = dayjs(acquire.nextTime);
+      const totalMinutes = nextTime.diff(now, 'minute');
+      const days = Math.floor(totalMinutes / 1440);
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const minutes = totalMinutes % 60;
+      const parts = [];
+      if (days > 0) parts.push(`${days} day${days === 1 ? '' : 's'}`);
+      if (hours > 0) parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+      if (minutes > 0 || parts.length === 0) parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+      return interaction.reply({
+        content: `⚠️ Please wait ${parts.join(', ')} before using /needafriend again.`,
+        flags: MessageFlags.Ephemeral
+      });
     }
 
     await interaction.deferReply();
@@ -134,6 +141,7 @@ module.exports = {
     try {
       const post = await findWeeklyAdvertisementPost();
       if (!post) {
+        await releaseCommandCooldown('needafriend');
         logger.warn('Weekly needafriend thread was not found.', { subreddit: NEEDAFRIEND_SUBREDDIT, expectedTitle: WEEKLY_THREAD_TITLE });
         return interaction.editReply({
           content: `⚠️ Could not find a post titled **${WEEKLY_THREAD_TITLE}** on r/${NEEDAFRIEND_SUBREDDIT} (checked hot and new). If the title changed, update \`WEEKLY_THREAD_TITLE\` in \`commands/needafriend.js\`.`,
@@ -156,11 +164,11 @@ module.exports = {
           .setDescription(
             `Your advertisement has been commented on the weekly thread on \`r/needafriend\`.\n\n• \`r/needafriend\`: [View thread](https://www.reddit.com${post.permalink})`
           );
-        const mockMessage = { client: interaction.client };
-        await handleReminder(mockMessage, NEEDAFRIEND_REMINDER_MS, 'needafriend');
+        await scheduleCommandCooldownNotifications(interaction.client, 'needafriend', acquire);
         return interaction.editReply({ embeds: [embed] });
       }
 
+      await releaseCommandCooldown('needafriend');
       if (response?.json?.errors?.length) {
         const errMsg = response.json.errors.map((e) => (Array.isArray(e) ? e.join(': ') : String(e))).join(', ');
         return interaction.editReply({
@@ -174,6 +182,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (err) {
+      await releaseCommandCooldown('needafriend');
       logger.error('Error occurred in needafriend command.', { err });
       return interaction.editReply({
         content: `⚠️ ${formatRedditCommentError(err)}`,

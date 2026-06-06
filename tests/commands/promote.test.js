@@ -20,8 +20,19 @@ describe('promote command', () => {
     jest.doMock('../../config', () => ({}));
 
     mockReminderUtils = {
-      handleReminder: jest.fn(),
-      getNextReminderTimeAfterCleanup: jest.fn()
+      tryAcquireCommandCooldown: jest.fn().mockResolvedValue({
+        acquired: true,
+        reminderId: 'test-reminder',
+        remind_at: dayjs().add(1, 'day').toISOString(),
+        delayMs: 86400000,
+        type: 'promote'
+      }),
+      releaseCommandCooldown: jest.fn().mockResolvedValue(undefined),
+      scheduleCommandCooldownNotifications: jest.fn().mockResolvedValue(undefined),
+      getNextReminderTimeAfterCleanup: jest.fn(),
+      isReminderConfigured: jest.fn().mockResolvedValue(true),
+      replyReminderNotConfigured: jest.fn().mockResolvedValue(undefined),
+      PROMOTE_REMINDER_MS: 86400000
     };
     jest.doMock('../../utils/reminderUtils', () => mockReminderUtils);
 
@@ -50,6 +61,13 @@ describe('promote command', () => {
       const res = await promoteCommand.getLastPromotion();
       expect(res).toBe(mockTime);
       expect(mockLogger.debug).toHaveBeenCalledWith('Found next promotion time.', expect.any(Object));
+    });
+
+    it('should return null when no promotion time is scheduled', async () => {
+      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
+      const res = await promoteCommand.getLastPromotion();
+      expect(res).toBeNull();
+      expect(mockLogger.debug).not.toHaveBeenCalled();
     });
 
     it('should return null on error', async () => {
@@ -122,12 +140,34 @@ describe('promote command', () => {
       }));
     });
 
+    it('should show incomplete configuration embed when reminders are not configured', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(false);
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockReminderUtils.replyReminderNotConfigured).toHaveBeenCalledWith(mockInteraction);
+      expect(mockReminderUtils.tryAcquireCommandCooldown).not.toHaveBeenCalled();
+    });
+
+    it('should show incomplete configuration embed when cooldown acquire reports not configured', async () => {
+      const mockInteraction = createMockInteraction();
+      mockRedditClient.isRedditConfigured.mockReturnValue(true);
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, notConfigured: true });
+
+      await promoteCommand.execute(mockInteraction);
+
+      expect(mockReminderUtils.replyReminderNotConfigured).toHaveBeenCalledWith(mockInteraction);
+    });
+
     it('should return cooldown message if still on cooldown', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
 
       const futureTime = dayjs().add(2, 'hour').toISOString();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(futureTime);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, nextTime: futureTime });
 
       await promoteCommand.execute(mockInteraction);
 
@@ -141,7 +181,6 @@ describe('promote command', () => {
     it('should successfully post to all subreddits and register reminder (handles string-encoded data JSON and url matches)', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCount = 0;
       // flairs mock
@@ -190,7 +229,6 @@ describe('promote command', () => {
     it('should handle partial failure and display error subreddits', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCallCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -218,7 +256,6 @@ describe('promote command', () => {
     it('should handle banned or restricted subreddits (404 status)', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -240,7 +277,6 @@ describe('promote command', () => {
     it('should handle other flair fetching errors (e.g. 500 status)', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -269,7 +305,6 @@ describe('promote command', () => {
     it('should cover getRedditErrorMessage with thrown error response data errors', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCallCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -302,7 +337,6 @@ describe('promote command', () => {
     it('should cover getRedditErrorMessage with direct string match of errors', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCallCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -333,7 +367,6 @@ describe('promote command', () => {
     it('should cover response errors map branches and ternary check, plus SUBMIT_VALIDATION_REPOST thrown error', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCallCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -370,7 +403,6 @@ describe('promote command', () => {
     it('should handle unparseable API response', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -393,7 +425,6 @@ describe('promote command', () => {
     it('should handle unexpected execute errors and invoke handleError', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
       mockInteraction.deferReply.mockRejectedValue(new Error('DATABASE_ERROR')); // Cover lines 224
 
       await promoteCommand.execute(mockInteraction);
@@ -406,7 +437,6 @@ describe('promote command', () => {
     it('should handle json errors array in submit response without throwing', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -429,7 +459,6 @@ describe('promote command', () => {
     it('should parse post id from data.name when data.id is missing', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -458,7 +487,6 @@ describe('promote command', () => {
     it('should ignore invalid JSON in string-encoded data field', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -481,7 +509,6 @@ describe('promote command', () => {
     it('should match preferred flair text when available', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -507,7 +534,6 @@ describe('promote command', () => {
     it('should handle RATELIMIT and malformed API error arrays in response', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCallCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -538,7 +564,6 @@ describe('promote command', () => {
     it('should parse submission with json errors, relative url, and string-encoded name/url', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -573,7 +598,6 @@ describe('promote command', () => {
     it('should use first flair when preferred text does not match', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -599,7 +623,6 @@ describe('promote command', () => {
     it('should parse string-encoded submission with id and non-matching url', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -628,7 +651,6 @@ describe('promote command', () => {
     it('should parse string-encoded submission using name and url fallbacks', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -669,7 +691,6 @@ describe('promote command', () => {
     it('should handle submission response with null data object', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -691,7 +712,6 @@ describe('promote command', () => {
     it('should proceed when cooldown has expired', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(dayjs().subtract(1, 'hour').toISOString());
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -711,7 +731,6 @@ describe('promote command', () => {
     it('should parse string-encoded submission using name and https url path segment', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -740,7 +759,6 @@ describe('promote command', () => {
     it('should parse string-encoded submission using name and non-http url fallbacks', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       let submitCount = 0;
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
@@ -781,7 +799,6 @@ describe('promote command', () => {
     it('should fall through getRedditErrorMessage when API error tuple is too short', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -805,7 +822,6 @@ describe('promote command', () => {
     it('should select flair via flair_text when text is missing', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -828,7 +844,6 @@ describe('promote command', () => {
     it('should parse string-encoded submission with id and permalink only', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {
         if (method === 'GET' && path.includes('/api/link_flair')) {
@@ -857,7 +872,6 @@ describe('promote command', () => {
     it('should handle handlePost unexpected throws and log error in catch block', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(null);
 
       // Force logger.info to throw inside the try block of handlePost
       let isFirstInfo = true;

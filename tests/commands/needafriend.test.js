@@ -26,9 +26,18 @@ describe('needafriend command', () => {
     jest.doMock('../../utils/redditClient', () => mockRedditClient);
 
     mockReminderUtils = {
-      handleReminder: jest.fn().mockResolvedValue(true),
-      getNextReminderTimeAfterCleanup: jest.fn().mockResolvedValue(null),
-      NEEDAFRIEND_REMINDER_MS: 86400000
+      tryAcquireCommandCooldown: jest.fn().mockResolvedValue({
+        acquired: true,
+        reminderId: 'test-reminder',
+        remind_at: dayjs().add(7, 'day').toISOString(),
+        delayMs: 7 * 24 * 60 * 60 * 1000,
+        type: 'needafriend'
+      }),
+      releaseCommandCooldown: jest.fn().mockResolvedValue(undefined),
+      scheduleCommandCooldownNotifications: jest.fn().mockResolvedValue(undefined),
+      isReminderConfigured: jest.fn().mockResolvedValue(true),
+      replyReminderNotConfigured: jest.fn().mockResolvedValue(undefined),
+      NEEDAFRIEND_REMINDER_MS: 7 * 24 * 60 * 60 * 1000
     };
     jest.doMock('../../utils/reminderUtils', () => mockReminderUtils);
 
@@ -47,10 +56,30 @@ describe('needafriend command', () => {
       }));
     });
 
-    it('should enforce cooldown if getNextReminderTimeAfterCleanup returns a future time (days, hours, minutes)', async () => {
+    it('should show incomplete configuration embed when reminders are not configured', async () => {
+      const mockInteraction = createMockInteraction();
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(false);
+
+      await needafriendCommand.execute(mockInteraction);
+
+      expect(mockReminderUtils.replyReminderNotConfigured).toHaveBeenCalledWith(mockInteraction);
+      expect(mockReminderUtils.tryAcquireCommandCooldown).not.toHaveBeenCalled();
+    });
+
+    it('should show incomplete configuration embed when cooldown acquire reports not configured', async () => {
+      const mockInteraction = createMockInteraction();
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, notConfigured: true });
+
+      await needafriendCommand.execute(mockInteraction);
+
+      expect(mockReminderUtils.replyReminderNotConfigured).toHaveBeenCalledWith(mockInteraction);
+    });
+
+    it('should enforce cooldown if tryAcquireCommandCooldown returns blocked (days, hours, minutes)', async () => {
       const mockInteraction = createMockInteraction();
       const futureTime = dayjs().add(2, 'day').add(5, 'hour').add(10, 'minute').add(15, 'second').toDate();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(futureTime);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, nextTime: futureTime });
 
       await needafriendCommand.execute(mockInteraction);
 
@@ -62,7 +91,7 @@ describe('needafriend command', () => {
     it('should enforce cooldown with singular time strings (1 day, 1 hour, 1 minute)', async () => {
       const mockInteraction = createMockInteraction();
       const futureTime = dayjs().add(1, 'day').add(1, 'hour').add(1, 'minute').add(15, 'second').toDate();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(futureTime);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, nextTime: futureTime });
 
       await needafriendCommand.execute(mockInteraction);
 
@@ -205,10 +234,10 @@ describe('needafriend command', () => {
       }));
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.title).toBe('Comment Posted Successfully');
-      expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(
-        expect.any(Object),
-        86400000,
-        'needafriend'
+      expect(mockReminderUtils.scheduleCommandCooldownNotifications).toHaveBeenCalledWith(
+        mockInteraction.client,
+        'needafriend',
+        expect.objectContaining({ type: 'needafriend' })
       );
     });
 
@@ -415,7 +444,7 @@ describe('needafriend command', () => {
     it('should cover cooldown branches under 1 day (hours & minutes)', async () => {
       const mockInteraction = createMockInteraction();
       const futureTime = dayjs().add(5, 'hour').add(10, 'minute').add(15, 'second').toDate();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(futureTime);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, nextTime: futureTime });
 
       await needafriendCommand.execute(mockInteraction);
 
@@ -427,7 +456,7 @@ describe('needafriend command', () => {
     it('should cover cooldown branches under 1 hour (minutes only)', async () => {
       const mockInteraction = createMockInteraction();
       const futureTime = dayjs().add(10, 'minute').add(15, 'second').toDate();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(futureTime);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, nextTime: futureTime });
 
       await needafriendCommand.execute(mockInteraction);
 
@@ -439,7 +468,7 @@ describe('needafriend command', () => {
     it('should cover exact hours cooldown with no minutes (line 124 false branch)', async () => {
       const mockInteraction = createMockInteraction();
       const futureTime = dayjs().add(1, 'hour').add(15, 'second').toDate();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(futureTime);
+      mockReminderUtils.tryAcquireCommandCooldown.mockResolvedValue({ acquired: false, nextTime: futureTime });
 
       await needafriendCommand.execute(mockInteraction);
 
@@ -448,10 +477,8 @@ describe('needafriend command', () => {
       }));
     });
 
-    it('should bypass cooldown and proceed if nextNeedafriendTime is in the past (line 116 false branch)', async () => {
+    it('should bypass cooldown and proceed when tryAcquireCommandCooldown grants access', async () => {
       const mockInteraction = createMockInteraction();
-      const pastTime = dayjs().subtract(5, 'minute').toDate();
-      mockReminderUtils.getNextReminderTimeAfterCleanup.mockResolvedValue(pastTime);
       mockRedditClient.redditApiRequest.mockResolvedValue({
         data: { children: [] }
       });

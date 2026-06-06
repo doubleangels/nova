@@ -15,8 +15,8 @@ module.exports = {
     .setDescription('Configure a channel to only allow GIFs and stickers.')
     .addSubcommand(subcommand =>
       subcommand
-        .setName('set')
-        .setDescription('Set a channel to only allow GIFs and stickers.')
+        .setName('setup')
+        .setDescription('Set up a channel to only allow GIFs and stickers.')
         .addChannelOption(option =>
           option
             .setName('channel')
@@ -72,7 +72,7 @@ module.exports = {
         });
       }
 
-      if (subcommand === 'set') {
+      if (subcommand === 'setup') {
         const currentChannel = await getValue('notext_channel');
         if (currentChannel === channel.id) {
           return await interaction.editReply({
@@ -105,7 +105,7 @@ module.exports = {
           channelId: channel.id,
           guildId: interaction.guildId,
           userId: interaction.user.id,
-          action: 'set'
+          action: 'setup'
         });
 
       } else if (subcommand === 'remove') {

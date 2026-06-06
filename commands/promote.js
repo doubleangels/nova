@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js'
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
-const { handleReminder, getNextReminderTimeAfterCleanup } = require('../utils/reminderUtils');
+const { tryAcquireCommandCooldown, releaseCommandCooldown, scheduleCommandCooldownNotifications, getNextReminderTimeAfterCleanup, isReminderConfigured, replyReminderNotConfigured, PROMOTE_REMINDER_MS } = require('../utils/reminderUtils');
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 
 const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
@@ -236,12 +236,21 @@ module.exports = {
     const promotionTitle = await getPromotionTitle();
     const promotionBody = PROMOTION_BODY;
 
-    // Cooldown check must happen before deferReply — once deferred publicly
-    // Discord.js won't honour MessageFlags.Ephemeral on the subsequent editReply.
-    const nextPromotionTime = await this.getLastPromotion();
-    if (nextPromotionTime) {
+    if (!(await isReminderConfigured())) {
+      logger.debug('Promote skipped because reminders are not configured.');
+      return replyReminderNotConfigured(interaction);
+    }
+
+    // Reserve cooldown before deferReply or Reddit calls so concurrent /promote cannot slip through.
+    const acquire = await tryAcquireCommandCooldown('promote', PROMOTE_REMINDER_MS);
+    if (!acquire.acquired) {
+      if (acquire.notConfigured) {
+        logger.debug('Promote skipped because reminders are not configured.');
+        return replyReminderNotConfigured(interaction);
+      }
+
       const now = dayjs();
-      const nextTime = dayjs(nextPromotionTime);
+      const nextTime = dayjs(acquire.nextTime);
 
       logger.debug("Checking promotion cooldown.", {
         now: now.toISOString(),
@@ -249,15 +258,13 @@ module.exports = {
         diffHours: nextTime.diff(now, 'hour', true)
       });
 
-      if (now.isBefore(nextTime)) {
-        const totalMinutes = nextTime.diff(now, 'minute');
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        return interaction.reply({
-          content: `⚠️ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
-          flags: MessageFlags.Ephemeral
-        });
-      }
+      const totalMinutes = nextTime.diff(now, 'minute');
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return interaction.reply({
+        content: `⚠️ Please wait ${hours} hours and ${minutes} minutes before promoting again.`,
+        flags: MessageFlags.Ephemeral
+      });
     }
 
     await interaction.deferReply();
@@ -305,9 +312,9 @@ module.exports = {
 
         await interaction.editReply({ embeds: [embed] });
 
-        const mockMessage = { client: interaction.client };
-        await handleReminder(mockMessage, 86400000, 'promote');
+        await scheduleCommandCooldownNotifications(interaction.client, 'promote', acquire);
       } else {
+        await releaseCommandCooldown('promote');
         const errorList = failed.map(f => `r/${f.subreddit}: ${f.error}`).join('\n');
         await interaction.editReply({
           content: `⚠️ Failed to post to any subreddit:\n${errorList}`,
@@ -315,6 +322,7 @@ module.exports = {
         });
       }
     } catch (error) {
+      await releaseCommandCooldown('promote');
       logger.error("Error occurred while posting to Reddit.", { err: error });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",

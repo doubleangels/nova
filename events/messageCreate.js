@@ -3,7 +3,7 @@ const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
 const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
-const { handleReminder } = require('../utils/reminderUtils');
+const { handleReminder, isReminderConfigured, buildReminderIncompleteEmbed } = require('../utils/reminderUtils');
 const { Events, ChannelType } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
 const { trackNewUserMessage } = require('../utils/spamModeUtils');
@@ -279,6 +279,17 @@ async function checkForBumpMessages(message) {
       );
       
       if (bumpEmbed) {
+        if (!(await isReminderConfigured())) {
+          logger.debug('Disboard bump detected but reminders are not configured.');
+          try {
+            const embed = await buildReminderIncompleteEmbed(message.guild);
+            await message.channel.send({ embeds: [embed] });
+          } catch (err) {
+            logger.warn('Failed to send reminder configuration notice after bump.', { err });
+          }
+          return;
+        }
+
         logger.debug("Found Disboard bump embed in message.");
         logger.info("Disboard bump detected, scheduling reminder.");
         await handleReminder(message, 7200000, 'bump');

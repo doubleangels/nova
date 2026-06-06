@@ -42,7 +42,7 @@ describe('noText command', () => {
     it('should show error if channel is missing', async () => {
       const mockInteraction = createMockInteraction({
         options: {
-          getSubcommand: jest.fn().mockReturnValue('set'),
+          getSubcommand: jest.fn().mockReturnValue('setup'),
           getChannel: jest.fn().mockReturnValue(null)
         }
       });
@@ -64,7 +64,7 @@ describe('noText command', () => {
 
       const mockInteraction = createMockInteraction({
         options: {
-          getSubcommand: jest.fn().mockReturnValue('set'),
+          getSubcommand: jest.fn().mockReturnValue('setup'),
           getChannel: jest.fn().mockReturnValue(mockChannel)
         }
       });
@@ -98,7 +98,7 @@ describe('noText command', () => {
       expect(mockDatabase.setValue).not.toHaveBeenCalled();
     });
 
-    describe('subcommand set', () => {
+    describe('subcommand setup', () => {
       it('should return error if channel already configured', async () => {
         const mockChannel = {
           id: 'ch-text',
@@ -110,7 +110,7 @@ describe('noText command', () => {
 
         const mockInteraction = createMockInteraction({
           options: {
-            getSubcommand: jest.fn().mockReturnValue('set'),
+            getSubcommand: jest.fn().mockReturnValue('setup'),
             getChannel: jest.fn().mockReturnValue(mockChannel)
           }
         });
@@ -135,7 +135,7 @@ describe('noText command', () => {
 
         const mockInteraction = createMockInteraction({
           options: {
-            getSubcommand: jest.fn().mockReturnValue('set'),
+            getSubcommand: jest.fn().mockReturnValue('setup'),
             getChannel: jest.fn().mockReturnValue(mockChannel)
           }
         });
@@ -168,7 +168,7 @@ describe('noText command', () => {
 
         const mockInteraction = createMockInteraction({
           options: {
-            getSubcommand: jest.fn().mockReturnValue('set'),
+            getSubcommand: jest.fn().mockReturnValue('setup'),
             getChannel: jest.fn().mockReturnValue(mockChannel)
           }
         });
@@ -193,7 +193,7 @@ describe('noText command', () => {
 
         const mockInteraction = createMockInteraction({
           options: {
-            getSubcommand: jest.fn().mockReturnValue('set'),
+            getSubcommand: jest.fn().mockReturnValue('setup'),
             getChannel: jest.fn().mockReturnValue(mockChannel)
           }
         });
@@ -325,7 +325,7 @@ describe('noText command', () => {
     it('should catch unexpected errors and send error message', async () => {
       const mockInteraction = createMockInteraction({
         options: {
-          getSubcommand: jest.fn().mockReturnValue('set'),
+          getSubcommand: jest.fn().mockReturnValue('setup'),
           getChannel: jest.fn().mockImplementation(() => {
             throw new Error('Unexpected crash');
           })

@@ -36,7 +36,9 @@ describe('messageCreate event', () => {
     jest.doMock('../../utils/database', () => mockDatabase);
 
     mockReminderUtils = {
-      handleReminder: jest.fn()
+      handleReminder: jest.fn(),
+      isReminderConfigured: jest.fn().mockResolvedValue(true),
+      buildReminderIncompleteEmbed: jest.fn().mockResolvedValue({ data: { title: 'Server Reminders Status' } })
     };
     jest.doMock('../../utils/reminderUtils', () => mockReminderUtils);
 
@@ -118,7 +120,53 @@ describe('messageCreate event', () => {
 
       await messageCreateEvent.execute(mockMessage);
 
+      expect(mockReminderUtils.isReminderConfigured).toHaveBeenCalled();
       expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(mockMessage, 7200000, 'bump');
+    });
+
+    it('should post incomplete configuration embed when Disboard bump has no reminder config', async () => {
+      const mockSend = jest.fn().mockResolvedValue(undefined);
+      const mockMessage = {
+        partial: false,
+        author: { id: 'bot-1', tag: 'Bot#0000', bot: true },
+        webhookId: null,
+        guild: { channels: { cache: new Map() }, roles: { cache: new Map() } },
+        channel: { id: 'chan-1', name: 'general', send: mockSend },
+        content: '',
+        embeds: [{ description: 'Bump done! Server bumped!' }]
+      };
+
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockReminderUtils.isReminderConfigured).toHaveBeenCalled();
+      expect(mockReminderUtils.buildReminderIncompleteEmbed).toHaveBeenCalledWith(mockMessage.guild);
+      expect(mockSend).toHaveBeenCalledWith({ embeds: expect.any(Array) });
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
+    });
+
+    it('should warn when incomplete configuration embed fails to send after bump', async () => {
+      const mockSend = jest.fn().mockRejectedValue(new Error('send failed'));
+      const mockMessage = {
+        partial: false,
+        author: { id: 'bot-1', tag: 'Bot#0000', bot: true },
+        webhookId: null,
+        guild: { channels: { cache: new Map() }, roles: { cache: new Map() } },
+        channel: { id: 'chan-1', name: 'general', send: mockSend },
+        content: '',
+        embeds: [{ description: 'Bump done! Server bumped!' }]
+      };
+
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Failed to send reminder configuration notice after bump.',
+        expect.objectContaining({ err: expect.any(Error) })
+      );
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
     });
 
     it('should check bump embeds on bot messages and return early', async () => {

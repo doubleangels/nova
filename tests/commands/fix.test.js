@@ -20,7 +20,9 @@ jest.mock('../../utils/database', () => mockDatabase);
 
 let mockReminderUtils = {
   handleReminder: jest.fn(),
-  NEEDAFRIEND_REMINDER_MS: 604800000
+  NEEDAFRIEND_REMINDER_MS: 604800000,
+  isReminderConfigured: jest.fn().mockResolvedValue(true),
+  replyReminderNotConfigured: jest.fn().mockResolvedValue(undefined)
 };
 jest.mock('../../utils/reminderUtils', () => mockReminderUtils);
 
@@ -41,12 +43,12 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id-1');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockResolvedValue();
 
       await fixCommand.execute(mockInteraction);
 
-      expect(mockDatabase.getValue).toHaveBeenCalledWith('reminder_channel');
+      expect(mockReminderUtils.isReminderConfigured).toHaveBeenCalled();
       expect(mockReminderUtils.handleReminder).toHaveBeenCalledWith(
         expect.objectContaining({ client: mockInteraction.client }),
         7200000,
@@ -70,7 +72,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id-1');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockResolvedValue();
 
       await fixCommand.execute(mockInteraction);
@@ -92,7 +94,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id-1');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockResolvedValue();
 
       await fixCommand.execute(mockInteraction);
@@ -120,40 +122,18 @@ describe('fix command', () => {
       expect(mockInteraction.editReply).not.toHaveBeenCalled();
     });
 
-    it('should return warning if reminder channel is not configured in database', async () => {
+    it('should show incomplete configuration embed when reminders are not configured', async () => {
       const mockInteraction = createMockInteraction({
         options: {
           getSubcommand: jest.fn().mockReturnValue('disboard')
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue(null);
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(false);
 
       await fixCommand.execute(mockInteraction);
 
-      expect(mockInteraction.editReply).toHaveBeenCalledWith(
-        "⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder channel and role first."
-      );
-      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
-    });
-
-    it('should return warning if reminder role is not configured in database', async () => {
-      const mockInteraction = createMockInteraction({
-        options: {
-          getSubcommand: jest.fn().mockReturnValue('disboard')
-        }
-      });
-
-      mockDatabase.getValue.mockImplementation(async (key) => {
-        if (key === 'reminder_channel') return 'channel-id';
-        return null;
-      });
-
-      await fixCommand.execute(mockInteraction);
-
-      expect(mockInteraction.editReply).toHaveBeenCalledWith(
-        "⚠️ Reminder configuration is incomplete. Please use `/reminder setup` to configure the reminder role first."
-      );
+      expect(mockReminderUtils.replyReminderNotConfigured).toHaveBeenCalledWith(mockInteraction);
       expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
     });
 
@@ -164,7 +144,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockRejectedValue(new Error('DATABASE_ERROR'));
 
       await fixCommand.execute(mockInteraction);
@@ -181,7 +161,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockRejectedValue(new Error('CHANNEL_NOT_FOUND'));
 
       await fixCommand.execute(mockInteraction);
@@ -198,7 +178,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockRejectedValue(new Error('Unknown generic error'));
 
       await fixCommand.execute(mockInteraction);
@@ -216,7 +196,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockRejectedValue(new Error('DATABASE_ERROR'));
       mockInteraction.editReply.mockRejectedValue(new Error('editReply failed'));
 
@@ -235,7 +215,7 @@ describe('fix command', () => {
         }
       });
 
-      mockDatabase.getValue.mockResolvedValue('channel-id');
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
       mockReminderUtils.handleReminder.mockRejectedValue(new Error('DATABASE_ERROR'));
       mockInteraction.editReply.mockRejectedValue(new Error('editReply failed'));
       mockInteraction.reply.mockRejectedValue(new Error('reply failed'));

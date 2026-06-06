@@ -2,6 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
+const { EmbedBuilder, MessageFlags } = require('discord.js');
 const { getValue } = require('../utils/database');
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
@@ -16,9 +17,83 @@ reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error occ
 
 /** Interval for r/needafriend weekly comment reminder (7 days). */
 const NEEDAFRIEND_REMINDER_MS = 7 * 24 * 60 * 60 * 1000;
+/** Interval for r/findaserver promotion cooldown (24 hours). */
+const PROMOTE_REMINDER_MS = 24 * 60 * 60 * 1000;
+
+/** Matches `/reminder status` when channel or role is missing. */
+const REMINDER_INCOMPLETE_EMBED_COLOR = 0xc03728;
+
+/**
+ * @param {import('discord.js').Guild | null | undefined} guild
+ * @returns {Promise<{ channelStr: string, roleStr: string }>}
+ */
+async function getReminderConfigFieldValues(guild) {
+  const [channelId, roleId] = await Promise.all([
+    getValue('reminder_channel'),
+    getValue('reminder_role')
+  ]);
+
+  let channelStr = '⚠️ Not set!';
+  if (channelId) {
+    const channelObj = guild?.channels?.cache?.get(channelId);
+    channelStr = channelObj ? `<#${channelId}>` : 'Invalid channel';
+  }
+
+  let roleStr = '⚠️ Not set!';
+  if (roleId) {
+    const roleObj = guild?.roles?.cache?.get(roleId);
+    roleStr = roleObj ? `<@&${roleId}>` : 'Invalid role';
+  }
+
+  return { channelStr, roleStr };
+}
+
+/**
+ * Embed shown when reminder channel/role are not configured (same style as `/reminder status`).
+ * @param {import('discord.js').Guild | null | undefined} guild
+ * @returns {Promise<EmbedBuilder>}
+ */
+async function buildReminderIncompleteEmbed(guild) {
+  const { channelStr, roleStr } = await getReminderConfigFieldValues(guild);
+  return new EmbedBuilder()
+    .setColor(REMINDER_INCOMPLETE_EMBED_COLOR)
+    .setTitle('Server Reminders Status')
+    .setDescription('Reminder configuration is incomplete.')
+    .addFields(
+      { name: 'Channel', value: channelStr },
+      { name: 'Role', value: roleStr }
+    );
+}
+
+/**
+ * @param {import('discord.js').CommandInteraction} interaction
+ * @returns {Promise<void>}
+ */
+async function replyReminderNotConfigured(interaction) {
+  const embed = await buildReminderIncompleteEmbed(interaction.guild);
+  const payload = { embeds: [embed], flags: MessageFlags.Ephemeral };
+  if (interaction.deferred || interaction.replied) {
+    await interaction.editReply(payload);
+  } else {
+    await interaction.reply(payload);
+  }
+}
+
+/**
+ * @returns {Promise<boolean>}
+ */
+async function isReminderConfigured() {
+  const [reminderRole, reminderChannelId] = await Promise.all([
+    getValue('reminder_role'),
+    getValue('reminder_channel')
+  ]);
+  return Boolean(reminderRole && reminderChannelId);
+}
 
 /** Active in-process reminder timeouts keyed by type. Used to cancel stale timers. */
 const activeReminderTimeouts = new Map();
+/** Serializes cooldown check-and-set per type so concurrent commands cannot both acquire. */
+const cooldownLockChains = new Map();
 
 function cancelReminderTimeout(type) {
   const id = activeReminderTimeouts.get(type);
@@ -290,6 +365,247 @@ async function getNextReminderTimeAfterCleanup(type) {
 }
 
 /**
+ * @template T
+ * @param {string} type
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ */
+async function runSerializedByType(type, fn) {
+  const previous = cooldownLockChains.get(type) ?? Promise.resolve();
+  let releaseNext;
+  const gate = new Promise((resolve) => {
+    releaseNext = resolve;
+  });
+  cooldownLockChains.set(type, previous.then(() => gate));
+  await previous;
+  try {
+    return await fn();
+  } finally {
+    releaseNext();
+  }
+}
+
+/**
+ * Persists a command cooldown/reminder record (no Discord notifications).
+ * @param {string} type
+ * @param {number} delayMs
+ * @returns {Promise<{ reminderId: string, remind_at: string, delayMs: number, type: string }>}
+ */
+async function persistCommandCooldown(type, delayMs) {
+  const scheduledTime = dayjs().add(delayMs, 'millisecond');
+  const reminderId = randomUUID();
+
+  const reminderIds = await getReminderIds(type);
+  const now = dayjs();
+  let deletedCount = 0;
+  let expiredCount = 0;
+
+  const idsToRemove = [];
+  for (const id of reminderIds) {
+    const reminder = await reminderKeyv.get(`reminder:${id}`);
+    if (reminder && reminder.remind_at) {
+      const remindAt = dayjs(reminder.remind_at);
+      await reminderKeyv.delete(`reminder:${id}`);
+      idsToRemove.push(id);
+
+      if (remindAt.isValid() && remindAt.isAfter(now)) {
+        deletedCount++;
+      } else {
+        expiredCount++;
+      }
+    } else {
+      await reminderKeyv.delete(`reminder:${id}`);
+      idsToRemove.push(id);
+      deletedCount++;
+    }
+  }
+
+  if (idsToRemove.length > 0) {
+    const listKey = `reminders:${type}:list`;
+    const updatedList = reminderIds.filter((id) => !idsToRemove.includes(id));
+    await reminderKeyv.set(listKey, updatedList);
+    logger.debug('Updated reminder list for type.', {
+      type,
+      removedCount: idsToRemove.length,
+      remainingCount: updatedList.length
+    });
+  }
+
+  if (deletedCount > 0 || expiredCount > 0) {
+    logger.debug('Cleaned up existing reminders of the given type.', {
+      type,
+      deletedCount,
+      expiredCount,
+      totalCleaned: deletedCount + expiredCount
+    });
+  }
+
+  const reminderData = {
+    reminder_id: reminderId,
+    remind_at: scheduledTime.toISOString(),
+    type
+  };
+
+  await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
+  await reminderKeyv.set(`reminders:${type}:list`, [reminderId]);
+
+  logger.info('Successfully saved reminder in the database.', {
+    reminderId,
+    type,
+    scheduledTime: scheduledTime.toISOString(),
+    delayMs,
+    delayMinutes: Math.round(delayMs / 1000 / 60)
+  });
+
+  return {
+    reminderId,
+    remind_at: reminderData.remind_at,
+    delayMs,
+    type
+  };
+}
+
+/**
+ * Removes all stored cooldown/reminder records for a type.
+ * @param {string} type
+ * @returns {Promise<void>}
+ */
+async function clearCommandCooldown(type) {
+  cancelReminderTimeout(type);
+  const reminderIds = await getReminderIds(type);
+  for (const id of reminderIds) {
+    await reminderKeyv.delete(`reminder:${id}`);
+  }
+  await reminderKeyv.set(`reminders:${type}:list`, []);
+}
+
+/**
+ * Atomically checks cooldown and reserves it before long-running work (e.g. Reddit API).
+ * @param {string} type
+ * @param {number} delayMs
+ * @returns {Promise<{ acquired: true, reminderId: string, remind_at: string, delayMs: number, type: string } | { acquired: false, nextTime: string }>}
+ */
+async function tryAcquireCommandCooldown(type, delayMs) {
+  return runSerializedByType(type, async () => {
+    if (!(await isReminderConfigured())) {
+      return { acquired: false, notConfigured: true };
+    }
+
+    const nextTime = await getNextReminderTimeAfterCleanup(type);
+    if (nextTime && dayjs().isBefore(dayjs(nextTime))) {
+      return { acquired: false, nextTime };
+    }
+
+    const saved = await persistCommandCooldown(type, delayMs);
+    return { acquired: true, ...saved };
+  });
+}
+
+/**
+ * Rolls back a reserved cooldown when the command fails before completing.
+ * @param {string} type
+ * @returns {Promise<void>}
+ */
+async function releaseCommandCooldown(type) {
+  return runSerializedByType(type, () => clearCommandCooldown(type));
+}
+
+/**
+ * Sends confirmation/reminder pings and schedules the in-process timeout.
+ * @param {import('discord.js').Client} client
+ * @param {string} type
+ * @param {{ reminderId: string, remind_at: string, delayMs: number }} reminder
+ * @param {boolean} [skipConfirmation=false]
+ * @returns {Promise<void>}
+ */
+async function scheduleCommandCooldownNotifications(client, type, reminder, skipConfirmation = false) {
+  const unixTimestamp = Math.floor(dayjs(reminder.remind_at).valueOf() / 1000);
+
+  const reminderRole = await getValue('reminder_role');
+  if (!reminderRole) {
+    logger.warn('Reminder notifications were not scheduled because reminder_role is not set. Use /reminder to configure.');
+    return;
+  }
+
+  const reminderChannelId = await getValue('reminder_channel');
+  if (!reminderChannelId) {
+    logger.warn('Reminder notifications were not scheduled because reminder_channel is not set. Use /reminder to configure.');
+    return;
+  }
+
+  let channel;
+  try {
+    channel = client.channels.cache.get(reminderChannelId);
+    if (!channel) {
+      channel = await client.channels.fetch(reminderChannelId);
+    }
+  } catch (channelError) {
+    logger.error('Failed to fetch channel; reminder was saved but notifications were skipped.', {
+      err: channelError,
+      channelId: reminderChannelId
+    });
+    return;
+  }
+
+  if (!skipConfirmation) {
+    try {
+      let confirmationMessage;
+      if (type === 'promote') {
+        confirmationMessage = `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`;
+      } else if (type === 'needafriend') {
+        confirmationMessage = `🎯 Weekly r/needafriend comment posted successfully! I'll remind you to comment again <t:${unixTimestamp}:R>.`;
+      } else {
+        confirmationMessage = `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
+      }
+
+      await channel.send(`❤️ ${confirmationMessage}`);
+      logger.debug('Sent confirmation message.', { type, unixTimestamp });
+    } catch (sendError) {
+      logger.warn('Failed to send confirmation message, reminder was still saved.', {
+        err: sendError,
+        type,
+        reminderId: reminder.reminderId
+      });
+    }
+  } else {
+    logger.debug('Skipping confirmation message as requested.', {
+      type,
+      reminderId: reminder.reminderId
+    });
+  }
+
+  cancelReminderTimeout(type);
+
+  const timeoutId = setTimeout(async () => {
+    activeReminderTimeouts.delete(type);
+    try {
+      const currentRole = await getValue('reminder_role');
+      const currentChannelId = await getValue('reminder_channel');
+      if (!currentRole || !currentChannelId) {
+        logger.warn('Reminder config missing at fire time; skipping.', { type });
+        return;
+      }
+      let ch = client.channels.cache.get(currentChannelId);
+      if (!ch) ch = await client.channels.fetch(currentChannelId).catch(() => null);
+      if (!ch) {
+        logger.warn('Reminder channel not found at fire time; skipping.', { type, currentChannelId });
+        return;
+      }
+      /* istanbul ignore next */
+      const msgFn = REMINDER_MESSAGES[type] ?? REMINDER_MESSAGES.bump;
+      await ch.send(msgFn(currentRole));
+      logger.debug('Sent scheduled reminder ping.', { type });
+      await reminderKeyv.delete(`reminder:${reminder.reminderId}`);
+      await removeReminderId(type, reminder.reminderId);
+      logger.debug('Cleaned up sent reminder from recovery table.', { reminderId: reminder.reminderId });
+    } catch (err) {
+      logger.error('Error occurred while sending scheduled reminder.', { err, type });
+    }
+  }, reminder.delayMs);
+  activeReminderTimeouts.set(type, timeoutId);
+}
+
+/**
  * Handles the creation and scheduling of a reminder
  * @param {Message|Object} message - The Discord message that triggered the reminder, or an object with a client property
  * @param {number} delay - The delay in milliseconds before the reminder
@@ -300,172 +616,13 @@ async function getNextReminderTimeAfterCleanup(type) {
  */
 async function handleReminder(message, delay, type = 'bump', skipConfirmation = false) {
   try {
-    const reminderRole = await getValue('reminder_role');
-    if (!reminderRole) {
-      logger.warn("Reminder was not scheduled because reminder_role is not set. Use /reminder to configure.");
+    if (!(await isReminderConfigured())) {
+      logger.debug('Reminder is not configured; skipping reminder scheduling.', { type });
       return;
     }
 
-    const reminderChannelId = await getValue('reminder_channel');
-    if (!reminderChannelId) {
-      logger.warn("Reminder was not scheduled because reminder_channel is not set. Use /reminder to configure.");
-      return;
-    }
-
-    const scheduledTime = dayjs().add(delay, 'millisecond');
-    const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
-
-    const reminderId = randomUUID();
-
-    let channel;
-    try {
-      channel = message.client.channels.cache.get(reminderChannelId);
-      if (!channel) {
-        channel = await message.client.channels.fetch(reminderChannelId);
-      }
-    } catch (channelError) {
-      logger.error("Failed to fetch channel.", {
-        err: channelError,
-        channelId: reminderChannelId
-      });
-      return;
-    }
-
-    // Clean up existing reminders first (both future and expired)
-    // We only want one active reminder per type at a time
-    const reminderIds = await getReminderIds(type);
-    const now = dayjs();
-    let deletedCount = 0;
-    let expiredCount = 0;
-    
-    // Delete all existing reminders and track which ones to remove from the list
-    const idsToRemove = [];
-    for (const id of reminderIds) {
-      const reminder = await reminderKeyv.get(`reminder:${id}`);
-      if (reminder && reminder.remind_at) {
-        const remindAt = dayjs(reminder.remind_at);
-        
-        // Delete the reminder data
-        await reminderKeyv.delete(`reminder:${id}`);
-        idsToRemove.push(id);
-        
-        if (remindAt.isValid() && remindAt.isAfter(now)) {
-          deletedCount++; // Future reminder that was replaced
-        } else {
-          expiredCount++; // Expired reminder that was cleaned up
-        }
-      } else {
-        // Reminder data is missing or invalid, clean it up
-        await reminderKeyv.delete(`reminder:${id}`);
-        idsToRemove.push(id);
-        deletedCount++;
-      }
-    }
-    
-    // Update the list all at once to avoid race conditions
-    if (idsToRemove.length > 0) {
-      const listKey = `reminders:${type}:list`;
-      const updatedList = reminderIds.filter(id => !idsToRemove.includes(id));
-      await reminderKeyv.set(listKey, updatedList);
-      logger.debug('Updated reminder list for type.', {
-        type: type,
-        removedCount: idsToRemove.length,
-        remainingCount: updatedList.length
-      });
-    }
-    
-    if (deletedCount > 0 || expiredCount > 0) {
-      logger.debug("Cleaned up existing reminders of the given type.", { 
-        type, 
-        deletedCount, 
-        expiredCount,
-        totalCleaned: deletedCount + expiredCount
-      });
-    }
-
-    // Insert new reminder
-    const reminderData = {
-      reminder_id: reminderId,
-      remind_at: scheduledTime.toISOString(),
-      type: type
-    };
-    
-    // Save reminder data - SQLite provides ACID guarantees for immediate persistence
-    await reminderKeyv.set(`reminder:${reminderId}`, reminderData);
-    const listKey = `reminders:${type}:list`;
-    await reminderKeyv.set(listKey, [reminderId]);
-
-    logger.info("Successfully saved reminder in the database.", {
-      reminderId,
-      type,
-      scheduledTime: scheduledTime.toISOString(),
-      delayMs: delay,
-      delayMinutes: Math.round(delay / 1000 / 60)
-    });
-
-    // Send confirmation message unless skipped (e.g., when called from /fix command)
-    if (!skipConfirmation) {
-      try {
-        let confirmationMessage;
-        if (type === 'promote') {
-          confirmationMessage = `🎯 Server promoted successfully! I'll remind you to promote again <t:${unixTimestamp}:R>.`;
-        } else if (type === 'needafriend') {
-          confirmationMessage = `🎯 Weekly r/needafriend comment posted successfully! I'll remind you to comment again <t:${unixTimestamp}:R>.`;
-        } else {
-          confirmationMessage = `Thanks for bumping! I'll remind you again <t:${unixTimestamp}:R>.`;
-        }
-        
-        await channel.send(`❤️ ${confirmationMessage}`);
-        logger.debug("Sent confirmation message.", {
-          type: type,
-          unixTimestamp: unixTimestamp
-        });
-      } catch (sendError) {
-        // Non-fatal: reminder is already saved, just log the error
-        logger.warn("Failed to send confirmation message, reminder was still saved.", {
-          err: sendError,
-          type: type,
-          reminderId: reminderId
-        });
-      }
-    } else {
-      logger.debug("Skipping confirmation message as requested.", {
-        type: type,
-        reminderId: reminderId
-      });
-    }
-
-    cancelReminderTimeout(type);
-
-    const client = message.client;
-    const timeoutId = setTimeout(async () => {
-      activeReminderTimeouts.delete(type);
-      try {
-        const currentRole = await getValue('reminder_role');
-        const currentChannelId = await getValue('reminder_channel');
-        if (!currentRole || !currentChannelId) {
-          logger.warn('Reminder config missing at fire time; skipping.', { type });
-          return;
-        }
-        let ch = client.channels.cache.get(currentChannelId);
-        if (!ch) ch = await client.channels.fetch(currentChannelId).catch(() => null);
-        if (!ch) {
-          logger.warn('Reminder channel not found at fire time; skipping.', { type, currentChannelId });
-          return;
-        }
-        /* istanbul ignore next */
-        const msgFn = REMINDER_MESSAGES[type] ?? REMINDER_MESSAGES.bump;
-        await ch.send(msgFn(currentRole));
-        logger.debug("Sent scheduled reminder ping.", { type });
-        await reminderKeyv.delete(`reminder:${reminderId}`);
-        await removeReminderId(type, reminderId);
-        logger.debug("Cleaned up sent reminder from recovery table.", { reminderId });
-      } catch (err) {
-        logger.error("Error occurred while sending scheduled reminder.", { err: err, type });
-      }
-    }, delay);
-    activeReminderTimeouts.set(type, timeoutId);
-
+    const saved = await persistCommandCooldown(type, delay);
+    await scheduleCommandCooldownNotifications(message.client, type, saved, skipConfirmation);
   } catch (error) {
     logger.error('Unexpected error in handleReminder.', { err: error });
   }
@@ -579,7 +736,14 @@ module.exports = {
   rescheduleReminder,
   getLatestReminderData,
   getNextReminderTimeAfterCleanup,
+  tryAcquireCommandCooldown,
+  releaseCommandCooldown,
+  scheduleCommandCooldownNotifications,
+  isReminderConfigured,
+  buildReminderIncompleteEmbed,
+  replyReminderNotConfigured,
   addReminderId,
   handleError,
-  NEEDAFRIEND_REMINDER_MS
+  NEEDAFRIEND_REMINDER_MS,
+  PROMOTE_REMINDER_MS
 };
