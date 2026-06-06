@@ -36,13 +36,21 @@ describe('index bootstrap', () => {
     jest.doMock('../logger', () => () => mockLogger);
     jest.doMock('../instrument', () => ({ captureError, closeSentry }));
     jest.doMock('../utils/database', () => ({ closeDatabaseConnections }));
+    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler: jest.fn() }));
+    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler: jest.fn() }));
+    jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
+    jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
     jest.doMock('../deploy-commands', () => deployCommands);
 
     jest.doMock('../config', () => ({
       token: 'test-token',
       baseEmbedColor: 0xABCDEF,
-      settings: { deployCommandsOnStart: true },
-      ...configOverrides
+      ...configOverrides,
+      settings: {
+        deployCommandsOnStart: true,
+        disabledCommands: [],
+        ...(configOverrides.settings || {})
+      }
     }));
 
     jest.doMock('discord.js', () => ({
@@ -103,6 +111,60 @@ describe('index bootstrap', () => {
     );
   });
 
+  it('should skip loading disabled commands', () => {
+    loadIndex({ settings: { disabledCommands: ['okCmd'] } });
+    expect(mockClient.commands.get('okCmd')).toBeUndefined();
+    expect(mockLogger.info).toHaveBeenCalledWith('Skipping disabled command okCmd.');
+  });
+
+  it('should exit when login fails', async () => {
+    jest.resetModules();
+    processOnHandlers = {};
+    mockLogger = require('./__mocks__/logger.mock')();
+    captureError = jest.fn();
+    closeSentry = jest.fn().mockResolvedValue();
+    jest.spyOn(process, 'on').mockImplementation((event, handler) => {
+      processOnHandlers[event] = handler;
+      return process;
+    });
+    mockClient = {
+      commands: new Map(),
+      on: jest.fn(),
+      once: jest.fn(),
+      login: jest.fn().mockRejectedValue(new Error('bad token')),
+      destroy: jest.fn(),
+      cleanupInterval: null
+    };
+    jest.doMock('../logger', () => () => mockLogger);
+    jest.doMock('../instrument', () => ({ captureError, closeSentry }));
+    jest.doMock('../utils/database', () => ({ closeDatabaseConnections: jest.fn() }));
+    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler: jest.fn() }));
+    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler: jest.fn() }));
+    jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
+    jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
+    jest.doMock('../deploy-commands', () => jest.fn().mockResolvedValue());
+    jest.doMock('../config', () => ({
+      token: 'bad-token',
+      baseEmbedColor: 0xABCDEF,
+      settings: { deployCommandsOnStart: false, disabledCommands: [] }
+    }));
+    jest.doMock('discord.js', () => ({
+      Client: jest.fn(() => mockClient),
+      Collection: Map,
+      GatewayIntentBits: {},
+      Options: { cacheWithLimits: jest.fn(() => ({})) }
+    }));
+    jest.doMock('fs', () => ({ readdirSync: jest.fn(() => []) }));
+    jest.isolateModules(() => {
+      require('../index');
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(captureError).toHaveBeenCalledWith(expect.any(Error), { handler: 'clientLogin' });
+    expect(mockLogger.error).toHaveBeenCalledWith('Failed to log in to Discord.', expect.any(Object));
+    expect(process.exit).toHaveBeenCalledWith(1);
+  });
+
   it('should warn when base embed color is missing', () => {
     loadIndex({ baseEmbedColor: undefined });
     expect(mockLogger.warn).toHaveBeenCalledWith(
@@ -132,7 +194,7 @@ describe('index bootstrap', () => {
       settings: { deployCommandsOnStart: true }
     }));
     jest.doMock('discord.js', () => ({
-      Client: jest.fn(() => ({ commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn() })),
+      Client: jest.fn(() => ({ commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn().mockResolvedValue() })),
       Collection: Map,
       GatewayIntentBits: {},
       Options: { cacheWithLimits: jest.fn(() => ({})) }
@@ -165,7 +227,7 @@ describe('index bootstrap', () => {
       settings: { deployCommandsOnStart: false }
     }));
     jest.doMock('discord.js', () => ({
-      Client: jest.fn(() => ({ commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn() })),
+      Client: jest.fn(() => ({ commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn().mockResolvedValue() })),
       Collection: Map,
       GatewayIntentBits: {},
       Options: { cacheWithLimits: jest.fn(() => ({})) }
@@ -190,7 +252,7 @@ describe('index bootstrap', () => {
   it('should register once events with client.once', () => {
     jest.resetModules();
     mockLogger = require('./__mocks__/logger.mock')();
-    const client = { commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn() };
+    const client = { commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn().mockResolvedValue() };
     jest.doMock('../logger', () => () => mockLogger);
     jest.doMock('../instrument', () => ({ captureError: jest.fn(), closeSentry: jest.fn().mockResolvedValue() }));
     jest.doMock('../utils/database', () => ({ closeDatabaseConnections: jest.fn() }));
@@ -227,7 +289,7 @@ describe('index bootstrap', () => {
     jest.doMock('../deploy-commands', () => jest.fn().mockResolvedValue());
     jest.doMock('../config', () => ({ token: 't', baseEmbedColor: 1, settings: { deployCommandsOnStart: false } }));
     jest.doMock('discord.js', () => ({
-      Client: jest.fn(() => ({ commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn() })),
+      Client: jest.fn(() => ({ commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn().mockResolvedValue() })),
       Collection: Map,
       GatewayIntentBits: {},
       Options: { cacheWithLimits: jest.fn(() => ({})) }
@@ -250,7 +312,7 @@ describe('index bootstrap', () => {
     const execute = jest.fn().mockRejectedValue(new Error('event failed'));
     mockLogger = require('./__mocks__/logger.mock')();
     captureError = jest.fn();
-    const client = { commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn() };
+    const client = { commands: new Map(), on: jest.fn(), once: jest.fn(), login: jest.fn().mockResolvedValue() };
     jest.doMock('../logger', () => () => mockLogger);
     jest.doMock('../instrument', () => ({ captureError, closeSentry: jest.fn().mockResolvedValue() }));
     jest.doMock('../utils/database', () => ({ closeDatabaseConnections: jest.fn() }));
@@ -297,9 +359,80 @@ describe('index bootstrap', () => {
   });
 
   it('should gracefully shuts down on SIGINT', async () => {
-    loadIndex({ settings: { deployCommandsOnStart: false } });
+    const stopWorldCupScheduler = jest.fn();
+    const stopFootballScheduler = jest.fn();
+    const clearAllScheduledMuteKicks = jest.fn();
+    const cancelAllReminderTimeouts = jest.fn();
+    jest.resetModules();
+    processOnHandlers = {};
+    mockLogger = require('./__mocks__/logger.mock')();
+    captureError = jest.fn();
+    closeSentry = jest.fn().mockResolvedValue();
+    closeDatabaseConnections = jest.fn();
+    deployCommands = jest.fn().mockResolvedValue();
+    jest.spyOn(process, 'on').mockImplementation((event, handler) => {
+      processOnHandlers[event] = handler;
+      return process;
+    });
+    mockClient = {
+      commands: new Map(),
+      on: jest.fn(),
+      once: jest.fn(),
+      login: jest.fn().mockResolvedValue(),
+      destroy: jest.fn(),
+      cleanupInterval: null
+    };
+    jest.doMock('../logger', () => () => mockLogger);
+    jest.doMock('../instrument', () => ({ captureError, closeSentry }));
+    jest.doMock('../utils/database', () => ({ closeDatabaseConnections }));
+    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler }));
+    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler }));
+    jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks }));
+    jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts }));
+    jest.doMock('../deploy-commands', () => deployCommands);
+    jest.doMock('../config', () => ({
+      token: 'test-token',
+      baseEmbedColor: 0xABCDEF,
+      settings: { deployCommandsOnStart: false }
+    }));
+    jest.doMock('discord.js', () => ({
+      Client: jest.fn(() => mockClient),
+      Collection: Map,
+      GatewayIntentBits: {
+        Guilds: 1,
+        GuildMessages: 2,
+        MessageContent: 4,
+        GuildMembers: 8,
+        GuildMessageReactions: 16
+      },
+      Options: { cacheWithLimits: jest.fn(() => ({})) }
+    }));
+    jest.doMock('fs', () => ({
+      readdirSync: jest.fn((dir) => {
+        if (String(dir).includes('commands')) return ['okCmd.js'];
+        if (String(dir).includes('events')) return ['okEvent.js'];
+        return [];
+      })
+    }));
+    jest.doMock(path.join(__dirname, '../commands/okCmd.js'), () => ({
+      data: { name: 'okCmd' }
+    }), { virtual: true });
+    jest.doMock(path.join(__dirname, '../events/okEvent.js'), () => ({
+      name: 'okEvent',
+      once: false,
+      execute: jest.fn().mockResolvedValue()
+    }), { virtual: true });
+    jest.isolateModules(() => {
+      require('../index');
+    });
+
     mockClient.cleanupInterval = setInterval(() => {}, 1000);
+    mockClient.heartbeatInterval = setInterval(() => {}, 1000);
     await processOnHandlers.SIGINT();
+    expect(stopWorldCupScheduler).toHaveBeenCalled();
+    expect(stopFootballScheduler).toHaveBeenCalled();
+    expect(clearAllScheduledMuteKicks).toHaveBeenCalled();
+    expect(cancelAllReminderTimeouts).toHaveBeenCalled();
     expect(mockClient.destroy).toHaveBeenCalled();
     expect(closeDatabaseConnections).toHaveBeenCalled();
     expect(closeSentry).toHaveBeenCalled();

@@ -246,6 +246,43 @@ describe('dbScriptUtils', () => {
     });
   });
 
+  describe('config cache helpers', () => {
+    it('should resolve config cache keys from parsed CLI keys', () => {
+      expect(dbScriptUtils.resolveConfigCacheKey('config:', 'spam_mode_enabled', 'config:spam_mode_enabled'))
+        .toBe('spam_mode_enabled');
+      expect(dbScriptUtils.resolveConfigCacheKey(null, 'spam_mode_enabled', 'config:spam_mode_enabled'))
+        .toBe('spam_mode_enabled');
+      expect(dbScriptUtils.resolveConfigCacheKey(null, 'tags', 'tags:foo')).toBeNull();
+    });
+
+    it('should resolve config cache keys from raw database keys', () => {
+      expect(dbScriptUtils.configCacheKeyFromDbKey('main:config:reminder_channel')).toBe('reminder_channel');
+      expect(dbScriptUtils.configCacheKeyFromDbKey('main:mute_mode:123')).toBeNull();
+    });
+
+    it('should invalidate runtime config cache for config writes', () => {
+      jest.resetModules();
+      jest.doMock('../../utils/database', () => ({
+        invalidateConfigCache: jest.fn()
+      }));
+      const freshUtils = require('../../utils/dbScriptUtils');
+      freshUtils.invalidateRuntimeConfigCache('config:', 'spam_mode_enabled', 'config:spam_mode_enabled');
+      const { invalidateConfigCache } = require('../../utils/database');
+      expect(invalidateConfigCache).toHaveBeenCalledWith('spam_mode_enabled');
+    });
+
+    it('should skip runtime config cache invalidation for non-config keys', () => {
+      jest.resetModules();
+      jest.doMock('../../utils/database', () => ({
+        invalidateConfigCache: jest.fn()
+      }));
+      const freshUtils = require('../../utils/dbScriptUtils');
+      freshUtils.invalidateRuntimeConfigCache(null, 'disboard', 'tags:disboard');
+      const { invalidateConfigCache } = require('../../utils/database');
+      expect(invalidateConfigCache).not.toHaveBeenCalled();
+    });
+  });
+
   describe('parseKey edge cases', () => {
     it('should parse namespace without section colon', () => {
       const result = dbScriptUtils.parseKey('invites:tagname');

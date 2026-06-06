@@ -103,6 +103,45 @@ describe('messageReactionAdd event', () => {
     expect(mockLogger.error).toHaveBeenCalledWith('Error occurred while fetching reaction.', expect.any(Object));
   });
 
+  it('should log when execute throws before translation handler completes', async () => {
+    const mockReaction = {
+      partial: false,
+      emoji: { name: '🇺🇸' },
+      message: { id: 'msg-1' }
+    };
+    const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+    mockLanguageUtils.isValidTranslationFlag.mockImplementation(() => {
+      throw new Error('flag check exploded');
+    });
+
+    await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'Error occurred while processing reaction.',
+      expect.objectContaining({ err: expect.any(Error) })
+    );
+  });
+
+  it('should log outer catch when reaction message is missing', async () => {
+    const mockReaction = {
+      partial: false,
+      emoji: { name: '🇺🇸' }
+    };
+    const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+    mockLanguageUtils.isValidTranslationFlag.mockImplementation(() => {
+      throw new Error('flag check exploded');
+    });
+
+    await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'Error occurred while processing reaction.',
+      expect.objectContaining({ messageId: undefined })
+    );
+  });
+
   describe('handleTranslationRequest', () => {
     it('should ignore if reaction emoji is not a valid translation flag', async () => {
       const mockReaction = {
@@ -119,7 +158,7 @@ describe('messageReactionAdd event', () => {
       expect(mockLogger.info).not.toHaveBeenCalled();
     });
 
-    it('should reply with error if flag is valid but language info is not found', async () => {
+    it('should warn and skip if flag is valid but language info is not found', async () => {
       const mockReaction = {
         partial: false,
         emoji: { name: '🇺🇸' },
@@ -133,13 +172,10 @@ describe('messageReactionAdd event', () => {
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockLogger.warn).toHaveBeenCalledWith('Invalid translation flag provided.', expect.any(Object));
-      expect(mockReaction.message.reply).toHaveBeenCalledWith({
-        content: '⚠️ Failed to translate the message.',
-        allowedMentions: { repliedUser: false }
-      });
+      expect(mockReaction.message.reply).not.toHaveBeenCalled();
     });
 
-    it('should log warn and throw if message is null/undefined', async () => {
+    it('should warn and skip if message is null/undefined', async () => {
       const mockReaction = {
         partial: false,
         emoji: { name: '🇺🇸' },
@@ -153,13 +189,13 @@ describe('messageReactionAdd event', () => {
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockLogger.warn).toHaveBeenCalledWith('Message not found for translation.', expect.any(Object));
-      expect(mockLogger.error).toHaveBeenCalledWith(
+      expect(mockLogger.error).not.toHaveBeenCalledWith(
         'Error occurred in translation request.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.any(Object)
       );
     });
 
-    it('should reply with error if message content is empty', async () => {
+    it('should warn and skip if message content is empty', async () => {
       const mockReaction = {
         partial: false,
         emoji: { name: '🇺🇸' },
@@ -173,10 +209,7 @@ describe('messageReactionAdd event', () => {
       await messageReactionAddEvent.execute(mockReaction, mockUser);
 
       expect(mockLogger.warn).toHaveBeenCalledWith('Empty message content found for translation.', expect.any(Object));
-      expect(mockReaction.message.reply).toHaveBeenCalledWith({
-        content: '⚠️ Failed to translate the message.',
-        allowedMentions: { repliedUser: false }
-      });
+      expect(mockReaction.message.reply).not.toHaveBeenCalled();
     });
 
     it('should translate successfully and reply with the embed (guild member highest role color)', async () => {
@@ -313,6 +346,32 @@ describe('messageReactionAdd event', () => {
       expect(fetchedMessage.reply).toHaveBeenCalled();
     });
 
+    it('should warn and return when DeepL returns no translation text', async () => {
+      const mockReaction = {
+        partial: false,
+        emoji: { name: '🇺🇸' },
+        message: {
+          id: 'msg-1',
+          content: 'Hola',
+          reply: jest.fn().mockResolvedValue(),
+          guild: { members: { cache: { get: () => ({ roles: { highest: { color: 0xff0000 } } }) } } }
+        }
+      };
+      const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+      mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+      mockLanguageUtils.getLanguageInfo.mockReturnValue({ code: 'en', name: 'English' });
+      mockAxios.post.mockResolvedValue({ data: { translations: [] } });
+
+      await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'DeepL returned no translation.',
+        expect.objectContaining({ messageId: 'msg-1', userId: 'user-1' })
+      );
+      expect(mockReaction.message.reply).not.toHaveBeenCalled();
+    });
+
     it('should handle Google translation API 403 error specifically', async () => {
       const mockReaction = {
         partial: false,
@@ -338,6 +397,33 @@ describe('messageReactionAdd event', () => {
         content: '⚠️ Translation API error occurred.',
         allowedMentions: { repliedUser: false }
       });
+    });
+
+    it('should skip error reply when translation fails without a message reference', async () => {
+      const mockReaction = {
+        partial: false,
+        emoji: { name: '🇺🇸' },
+        message: {
+          id: 'msg-1',
+          content: 'Hola',
+          reply: jest.fn().mockResolvedValue()
+        }
+      };
+      const mockUser = { bot: false, id: 'user-1', tag: 'User#1234' };
+
+      mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+      mockLanguageUtils.getLanguageInfo.mockReturnValue({ code: 'en', name: 'English' });
+      mockAxios.post.mockImplementation(() => {
+        mockReaction.message = undefined;
+        throw new Error('api fail');
+      });
+
+      await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error occurred in translation request.',
+        expect.any(Object)
+      );
     });
 
     it('should catch secondary errors if reply rejects', async () => {

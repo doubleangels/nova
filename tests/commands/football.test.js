@@ -21,7 +21,7 @@ describe('football command', () => {
       scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
       getLeaderboard: jest.fn().mockResolvedValue([{ userId: '111', points: 5 }]),
       getUserPredictionFixtureIds: jest.fn().mockResolvedValue([]),
-      getPrediction: jest.fn().mockResolvedValue(null),
+      getPredictionsForUser: jest.fn().mockResolvedValue([]),
       getUserPoints: jest.fn().mockResolvedValue(0),
       formatFixtureLine: jest.fn().mockReturnValue('A vs B'),
       formatResultPickDisplay: jest.fn().mockReturnValue('A')
@@ -96,8 +96,11 @@ describe('football command', () => {
     await footballCommand.execute(interaction);
 
     expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
-    expect(interaction.member.roles.add).toHaveBeenCalledWith(role, 'Prediction game registration');
     expect(mockFootballUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
+    expect(interaction.member.roles.add).toHaveBeenCalledWith(role, 'Prediction game registration');
+    expect(mockFootballUtils.addRegisteredUser.mock.invocationCallOrder[0]).toBeLessThan(
+      interaction.member.roles.add.mock.invocationCallOrder[0]
+    );
     expect(mockWorldCupUtils.addRegisteredUser).not.toHaveBeenCalled();
     const reply = interaction.editReply.mock.calls[0][0];
     expect(reply.embeds).toHaveLength(1);
@@ -430,7 +433,12 @@ describe('football command', () => {
 
   it('should show mypicks', async () => {
     mockFootballUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
-    mockFootballUtils.getPrediction.mockResolvedValue({ homeScore: 1, awayScore: 0, resultPick: 'home', scored: true, pointsAwarded: 3 });
+    mockFootballUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 1,
+        prediction: { homeScore: 1, awayScore: 0, resultPick: 'home', scored: true, pointsAwarded: 3 }
+      }
+    ]);
     mockFootballUtils.getUserPoints.mockResolvedValue(3);
     mockClientApi.getSeasonFixtures.mockResolvedValue([
       { id: 1, home: 'A', away: 'B', kickoff: '2026-06-01T12:00:00Z', status: 'FT', goals: { home: 1, away: 0 } }
@@ -454,7 +462,9 @@ describe('football command', () => {
 
   it('should show mypicks with missing prediction data', async () => {
     mockFootballUtils.getUserPredictionFixtureIds.mockResolvedValue([999]);
-    mockFootballUtils.getPrediction.mockResolvedValue(null);
+    mockFootballUtils.getPredictionsForUser.mockResolvedValue([
+      { fixtureId: 999, prediction: null }
+    ]);
     mockClientApi.getSeasonFixtures.mockResolvedValue([]);
     const interaction = createMockInteraction({
       options: { getSubcommand: jest.fn().mockReturnValue('mypicks') }, client: {}
@@ -468,7 +478,12 @@ describe('football command', () => {
 
   it('should show mypicks for unknown fixture (no fixture in map)', async () => {
     mockFootballUtils.getUserPredictionFixtureIds.mockResolvedValue([999]);
-    mockFootballUtils.getPrediction.mockResolvedValue({ homeScore: 1, awayScore: 1, resultPick: 'draw', scored: false });
+    mockFootballUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 999,
+        prediction: { homeScore: 1, awayScore: 1, resultPick: 'draw', scored: false }
+      }
+    ]);
     mockFootballUtils.getUserPoints.mockResolvedValue(0);
     mockClientApi.getSeasonFixtures.mockResolvedValue([]);
     const interaction = createMockInteraction({

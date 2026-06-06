@@ -4,15 +4,21 @@ const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 const { tryAcquireCommandCooldown, releaseCommandCooldown, scheduleCommandCooldownNotifications, isReminderConfigured, replyReminderNotConfigured, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
+const config = require('../config');
+
+const DEFAULT_INVITE_LINK = 'https://discord.gg/j5sfQtCVSU';
+
+function buildNeedafriendComment() {
+  const inviteUrl = config.serverInviteUrl || DEFAULT_INVITE_LINK;
+  return `🐸 Da Frens | 21+ High-Energy Banter & Gaming
+The home of sharp wit, sweaty games, and zero wallflowers.
+🛸 The Vibe: Unfiltered honesty and real talk without the oversharing. We're rowdy, not reckless. 🎮 The Games: High-energy sessions where we play hard and laugh harder. 🔞 The Standard: 21+ only. We're looking for big personalities who actually participate - no spectators allowed.
+Join the chaos: ${inviteUrl}`;
+}
 
 const NEEDAFRIEND_SUBREDDIT = 'needafriend';
 
 const WEEKLY_THREAD_TITLE = 'Weekly Discord Server Advertisement Thread';
-
-const NEEDAFRIEND_COMMENT = `🐸 Da Frens | 21+ High-Energy Banter & Gaming
-The home of sharp wit, sweaty games, and zero wallflowers.
-🛸 The Vibe: Unfiltered honesty and real talk without the oversharing. We're rowdy, not reckless. 🎮 The Games: High-energy sessions where we play hard and laugh harder. 🔞 The Standard: 21+ only. We're looking for big personalities who actually participate - no spectators allowed.
-Join the chaos: https://discord.gg/Z9rYazqCA6`;
 
 /**
  * @param {string} title
@@ -152,7 +158,7 @@ module.exports = {
       const response = await redditApiRequest('POST', '/api/comment', {
         api_type: 'json',
         thing_id: post.name,
-        text: NEEDAFRIEND_COMMENT
+        text: buildNeedafriendComment()
       });
 
       const parsed = parseCommentResponse(response);

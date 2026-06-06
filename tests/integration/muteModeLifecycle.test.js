@@ -43,6 +43,13 @@ describe('Mute Mode Lifecycle Integration', () => {
         delete list[id];
         store.set('mute_mode_users', list);
       }),
+      isUserInMuteMode: jest.fn(async (id) => {
+        const list = store.get('mute_mode_users') || {};
+        return Boolean(list[id]);
+      }),
+      incrementMessageCount: jest.fn().mockResolvedValue(1),
+      getMessageCount: jest.fn().mockResolvedValue(0),
+      deleteMessageCount: jest.fn().mockResolvedValue(),
       addSpamModeJoinTime: jest.fn().mockResolvedValue(),
       isFormerMember: jest.fn().mockResolvedValue(false),
       getInviteNotificationChannel: jest.fn().mockResolvedValue(null)
@@ -91,6 +98,10 @@ describe('Mute Mode Lifecycle Integration', () => {
     };
     jest.doMock('../../config', () => mockConfig);
 
+    jest.doMock('../../utils/inviteInitGate', () => ({
+      waitForInviteInit: jest.fn().mockResolvedValue()
+    }));
+
     guildMemberAddEvent = require('../../events/guildMemberAdd');
     messageCreateEvent = require('../../events/messageCreate');
   });
@@ -135,7 +146,14 @@ describe('Mute Mode Lifecycle Integration', () => {
       author: { bot: false, tag: 'NewUser#1234', id: 'new-user-123' },
       channel: { id: 'chan-general', name: 'general' },
       channelId: 'chan-general',
-      content: 'Hello, Frens!'
+      content: 'Hello, Frens!',
+      member: {
+        roles: {
+          cache: new Collection(),
+          add: jest.fn().mockResolvedValue(),
+          remove: jest.fn().mockResolvedValue()
+        }
+      }
     };
 
     await messageCreateEvent.execute(mockMessage);

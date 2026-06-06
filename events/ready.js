@@ -7,8 +7,13 @@ const { rescheduleReminder } = require('../utils/reminderUtils');
 const { rescheduleAllMuteKicks } = require('../utils/muteModeUtils');
 const { initializeDatabase, cleanupOldTrackingUsers, setInviteUsage } = require('../utils/database');
 const { updateInviteSnapshotFromCollection } = require('../utils/inviteCache');
+const { resetInviteInitGate, markInviteInitComplete } = require('../utils/inviteInitGate');
 const { startWorldCupScheduler } = require('../utils/worldCupScheduler');
 const { startFootballScheduler } = require('../utils/footballScheduler');
+const { resolvePrimaryGuild } = require('../utils/guildResolver');
+const { writeBotHeartbeat } = require('../utils/botHealth');
+
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 const DEFAULT_BOT_ACTIVITY = {
   name: "for ways to help! ❤️",
@@ -70,10 +75,35 @@ module.exports = {
       logger.debug('Setting bot activity.', {
         activity: JSON.stringify(botActivity)
       });
-      client.user.setActivity(botActivity.name, { type: botActivity.type });
+      const activityOptions = { type: botActivity.type };
+      if (botActivity.type === ActivityType.Streaming) {
+        const streamUrl = config.botStatusStreamUrl;
+        if (streamUrl) {
+          activityOptions.url = streamUrl;
+        } else {
+          logger.warn('BOT_STATUS_TYPE is streaming but BOT_STATUS_STREAM_URL is not set; using Watching instead.');
+          activityOptions.type = ActivityType.Watching;
+        }
+      }
+      client.user.setActivity(botActivity.name, activityOptions);
       logger.info('Bot is ready and logged in.', {
         botTag: client.user.tag
       });
+
+      resolvePrimaryGuild(client, {
+        guildId: config.guildId,
+        warn: (message, meta) => logger.warn(message, meta)
+      });
+
+      writeBotHeartbeat();
+      client.heartbeatInterval = setInterval(() => {
+        try {
+          writeBotHeartbeat();
+        } catch (error) {
+          captureError(error, { event: 'ready', handler: 'heartbeat' });
+          logger.error('Failed to write bot heartbeat.', { err: error });
+        }
+      }, HEARTBEAT_INTERVAL_MS);
 
       const startupTasks = [];
       if (config.settings.rescheduleAllMuteKicksOnStart) {
@@ -87,25 +117,37 @@ module.exports = {
         logger.info('Skipping reminder reschedule on startup (rescheduleReminderOnStart is false).');
       }
       if (startupTasks.length > 0) {
-        await Promise.all(startupTasks);
-        logger.info('Startup reschedule tasks completed successfully.');
+        const results = await Promise.allSettled(startupTasks);
+        const failed = results.filter(r => r.status === 'rejected');
+        if (failed.length > 0) {
+          for (const result of failed) {
+            captureError(result.reason, { event: 'ready', handler: 'startupTask' });
+            logger.error('Startup reschedule task failed.', { err: result.reason });
+          }
+        } else {
+          logger.info('Startup reschedule tasks completed successfully.');
+        }
       }
 
-      // Run cleanup and invite init in parallel
-      await Promise.all([
-        cleanupOldTrackingUsers(client).then(() => {
-          logger.info('Initial cleanup of old tracking users completed.');
-        }).catch((error) => {
-          captureError(error, { event: 'ready', handler: 'initialCleanup' });
-          logger.error('Failed to run initial cleanup.', { err: error });
-        }),
-        initializeInviteUsage(client).then(() => {
-          logger.info('Invite usage tracking initialized for the guild.');
-        }).catch((error) => {
-          captureError(error, { event: 'ready', handler: 'initializeInviteUsage' });
-          logger.error('Failed to initialize invite usage tracking.', { err: error });
-        })
-      ]);
+      // Initialize invite baseline before join handlers attribute usage
+      resetInviteInitGate();
+      try {
+        await initializeInviteUsage(client);
+        logger.info('Invite usage tracking initialized for the guild.');
+      } catch (error) {
+        captureError(error, { event: 'ready', handler: 'initializeInviteUsage' });
+        logger.error('Failed to initialize invite usage tracking.', { err: error });
+      } finally {
+        markInviteInitComplete();
+      }
+
+      // Run cleanup in parallel with startup reschedule tasks above
+      await cleanupOldTrackingUsers(client).then(() => {
+        logger.info('Initial cleanup of old tracking users completed.');
+      }).catch((error) => {
+        captureError(error, { event: 'ready', handler: 'initialCleanup' });
+        logger.error('Failed to run initial cleanup.', { err: error });
+      });
 
       // Schedule periodic cleanup every hour; store reference so it can be cleared on shutdown
       const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
@@ -147,26 +189,6 @@ module.exports = {
         clientId: client.user?.id,
         clientTag: client.user?.tag
       });
-
-      let errorMessage = "⚠️ An unexpected error occurred during bot initialization.";
-      
-      if (error.message === "⚠️ Failed to initialize database connection.") {
-        errorMessage = "⚠️ Failed to initialize database connection.";
-      } else if (error.message === "⚠️ Failed to reschedule mute kicks.") {
-        errorMessage = "⚠️ Failed to reschedule mute kicks.";
-      } else if (error.message === "⚠️ Failed to reschedule reminders.") {
-        errorMessage = "⚠️ Failed to reschedule reminders.";
-      } else if (error.message === "⚠️ Failed to set bot activity.") {
-        errorMessage = "⚠️ Failed to set bot activity.";
-      } else if (error.message === "⚠️ Failed to set bot status.") {
-        errorMessage = "⚠️ Failed to set bot status.";
-      } else if (error.message === "⚠️ Failed to load voice join times.") {
-        errorMessage = "⚠️ Failed to load voice join times.";
-      } else if (error.message === "⚠️ Insufficient permissions for bot initialization.") {
-        errorMessage = "⚠️ Insufficient permissions for bot initialization.";
-      }
-      
-      throw new Error(errorMessage);
     }
   }
 };
@@ -177,8 +199,10 @@ module.exports = {
  * @returns {Promise<void>}
  */
 async function initializeInviteUsage(client) {
-  // Bot is only in one guild, so get it directly
-  const guild = client.guilds.cache.first();
+  const guild = resolvePrimaryGuild(client, {
+    guildId: config.guildId,
+    warn: (message, meta) => logger.warn(message, meta)
+  });
   if (!guild) {
     logger.warn('No guild found for invite usage initialization.');
     return;

@@ -9,6 +9,10 @@ const logger = require('../logger')(path.basename(__filename));
 const { buildRolePing, SUBMIT_BUTTON_LABEL } = require('./predictionMessages');
 const { fetchMatchAiPrediction } = require('./matchPredictionAi');
 const { isInReminderWindow } = require('./predictionGameUi');
+const { runWithConcurrency } = require('./asyncUtils');
+
+/** Max concurrent Gemini calls when posting multiple match prompts in one poll. */
+const AI_PROMPT_CONCURRENCY = 2;
 
 /**
  * @param {{
@@ -100,26 +104,33 @@ function createPredictionScheduler(options) {
 
   /**
    * @param {import('discord.js').Client} client
+   * @param {{ forceRefresh?: boolean }} [options]
    */
-  async function runPoll(client) {
+  async function runPoll(client, { forceRefresh = false } = {}) {
     if (!options.isApiConfigured() || !options.isGameConfigured()) return;
     if (pollInFlight) return;
 
     pollInFlight = true;
     try {
-      const fixtures = await options.getSeasonFixtures({ forceRefresh: true });
+      const fixtures = await options.getSeasonFixtures({ forceRefresh });
       await options.scoreFinishedFixtures(client, fixtures);
 
       if (await options.store.isPromptingPaused()) {
         return;
       }
       const prompted = await options.store.getPromptedFixtures();
+      const promptedSet = new Set(prompted);
       const now = new Date();
 
-      for (const fixture of fixtures) {
-        if (prompted.includes(fixture.id)) continue;
-        if (!shouldPromptFixture(fixture, now)) continue;
-        await sendPredictionPrompts(client, fixture);
+      const fixturesToPrompt = fixtures.filter(
+        fixture => !promptedSet.has(fixture.id) && shouldPromptFixture(fixture, now)
+      );
+
+      if (fixturesToPrompt.length > 0) {
+        await runWithConcurrency(
+          fixturesToPrompt.map(fixture => () => sendPredictionPrompts(client, fixture)),
+          AI_PROMPT_CONCURRENCY
+        );
       }
     } catch (err) {
       logger.error(`${options.logLabel} scheduler poll failed.`, { err });
@@ -136,7 +147,7 @@ function createPredictionScheduler(options) {
       await options.resetMockDemoState();
       logger.info(`${options.logLabel} mock demo reset (fresh test match).`);
     }
-    await runPoll(client);
+    await runPoll(client, { forceRefresh: true });
   }
 
   /**

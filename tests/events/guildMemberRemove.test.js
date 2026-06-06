@@ -3,6 +3,8 @@ describe('guildMemberRemove event', () => {
   let mockLogger;
   let mockInstrument;
   let mockDatabase;
+  let mockMuteModeUtils;
+  let mockConsumePendingAgeKick;
 
   beforeEach(() => {
     jest.resetModules();
@@ -27,6 +29,16 @@ describe('guildMemberRemove event', () => {
       deleteMessageCount: jest.fn()
     };
     jest.doMock('../../utils/database', () => mockDatabase);
+
+    mockMuteModeUtils = {
+      cancelMuteKick: jest.fn()
+    };
+    jest.doMock('../../utils/muteModeUtils', () => mockMuteModeUtils);
+
+    mockConsumePendingAgeKick = jest.fn().mockReturnValue(false);
+    jest.doMock('../../utils/ageKickTracking', () => ({
+      consumePendingAgeKick: (...args) => mockConsumePendingAgeKick(...args)
+    }));
 
     guildMemberRemoveEvent = require('../../events/guildMemberRemove');
   });
@@ -65,6 +77,7 @@ describe('guildMemberRemove event', () => {
 
     await guildMemberRemoveEvent.execute(mockMember);
 
+    expect(mockMuteModeUtils.cancelMuteKick).toHaveBeenCalledWith('user-123');
     expect(mockDatabase.removeMuteModeUser).toHaveBeenCalledWith('user-123');
     expect(mockDatabase.removeSpamModeJoinTime).toHaveBeenCalledWith('user-123');
     expect(mockDatabase.setFormerMember).toHaveBeenCalledWith('user-123');
@@ -73,6 +86,29 @@ describe('guildMemberRemove event', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       'Successfully processed member departure.',
       expect.any(Object)
+    );
+  });
+
+  it('should skip former-member tracking when user was age-kicked', async () => {
+    mockConsumePendingAgeKick.mockReturnValue(true);
+    const mockMember = {
+      id: 'user-123',
+      user: {
+        bot: false,
+        tag: 'User#1234'
+      }
+    };
+
+    mockDatabase.removeMuteModeUser.mockResolvedValue();
+    mockDatabase.removeSpamModeJoinTime.mockResolvedValue();
+    mockDatabase.deleteMessageCount.mockResolvedValue();
+
+    await guildMemberRemoveEvent.execute(mockMember);
+
+    expect(mockDatabase.setFormerMember).not.toHaveBeenCalled();
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'Skipping former-member record for age-kicked user.',
+      expect.objectContaining({ userId: 'user-123' })
     );
   });
 

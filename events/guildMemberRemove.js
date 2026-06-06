@@ -2,6 +2,8 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const { removeMuteModeUser, removeSpamModeJoinTime, setFormerMember, deleteMessageCount } = require('../utils/database');
+const { cancelMuteKick } = require('../utils/muteModeUtils');
+const { consumePendingAgeKick } = require('../utils/ageKickTracking');
 const { Events } = require('discord.js');
 
 module.exports = {
@@ -29,13 +31,22 @@ module.exports = {
         userId: member.id
       });
       
-      // Parallelize database writes (record as former member so on re-join they get "been in server before" role)
-      await Promise.all([
+      cancelMuteKick(member.id);
+      const skippedFormerMember = consumePendingAgeKick(member.id);
+      const departureTasks = [
         removeMuteModeUser(member.id),
         removeSpamModeJoinTime(member.id),
-        setFormerMember(member.id),
-        deleteMessageCount(member.id) // Clean up message count so it doesn't persist across rejoins
-      ]);
+        deleteMessageCount(member.id)
+      ];
+      if (!skippedFormerMember) {
+        departureTasks.push(setFormerMember(member.id));
+      } else {
+        logger.debug('Skipping former-member record for age-kicked user.', {
+          userId: member.id,
+          userTag: member.user.tag
+        });
+      }
+      await Promise.all(departureTasks);
 
       logger.info('Successfully processed member departure.', {
         userTag: member.user.tag

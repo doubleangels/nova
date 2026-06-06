@@ -22,6 +22,21 @@ describe('footballUtils', () => {
     expect(utils.isFootballGameConfigured()).toBe(true);
   });
 
+  it('should batch-fetch user predictions via getPredictionsForUser', async () => {
+    await utils.savePrediction('user-1', 7, {
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+
+    const rows = await utils.getPredictionsForUser('user-1', [7, 8]);
+    expect(rows).toEqual([
+      expect.objectContaining({ fixtureId: 7, prediction: expect.objectContaining({ homeScore: 2 }) }),
+      { fixtureId: 8, prediction: null }
+    ]);
+  });
+
   it('should return false from isFootballGameConfigured when no channel', () => {
     jest.resetModules();
     jest.doMock('../../config', () => ({ predictionMockApi: true, footballChannelId: '' }));

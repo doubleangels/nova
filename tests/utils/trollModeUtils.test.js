@@ -58,10 +58,10 @@ describe('trollModeUtils', () => {
       expect(result).toBe(false);
     });
 
-    it('should handle errors gracefully and allow user', async () => {
+    it('should handle errors gracefully and deny user when check fails', async () => {
       mockDatabase.getValue.mockRejectedValue(new Error('DB Error'));
       const result = await trollModeUtils.checkAccountAge(mockMember);
-      expect(result).toBe(true);
+      expect(result).toBe(false);
     });
   });
 
@@ -94,6 +94,25 @@ describe('trollModeUtils', () => {
 
       await expect(trollModeUtils.performKick(mockMember)).rejects.toThrow('Kick permissions denied');
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to kick member.', expect.any(Object));
+    });
+
+    it('should mark pending age kick before kicking and clear it when kick fails', async () => {
+      const {
+        consumePendingAgeKick,
+        resetPendingAgeKicksForTests
+      } = require('../../utils/ageKickTracking');
+      resetPendingAgeKicksForTests();
+
+      mockDatabase.getValue.mockResolvedValue('30');
+      mockMember.user.createdAt = dayjs().subtract(10, 'day').toDate();
+
+      await trollModeUtils.performKick(mockMember);
+      expect(consumePendingAgeKick(mockMember.id)).toBe(true);
+
+      resetPendingAgeKicksForTests();
+      mockMember.kick.mockRejectedValue(new Error('Kick permissions denied'));
+      await expect(trollModeUtils.performKick(mockMember)).rejects.toThrow('Kick permissions denied');
+      expect(consumePendingAgeKick(mockMember.id)).toBe(false);
     });
   });
 });

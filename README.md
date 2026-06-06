@@ -105,6 +105,8 @@ services:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
       - /tmp
+    mem_limit: 512m
+    mem_reservation: 256m
 ```
 
 ```bash
@@ -130,6 +132,7 @@ Set variables in Doppler (or `.env` for local experiments).
 | `BOT_STATUS_TYPE` | Activity type (`playing`, `watching`, etc.) | `watching` |
 | `BASE_EMBED_COLOR` | Default embed color (hex) | `#999999` |
 | `GUILD_NAME` | Guild display name | `Da Frens` |
+| `GUILD_ID` | Discord guild ID when the bot is in more than one guild | *unset* |
 | `LOG_LEVEL` | Pino log level | `info` |
 | `DISABLED_COMMANDS` | Slash command names to skip during deploy | `[]` |
 
@@ -434,17 +437,28 @@ pnpm test:debug     # Node inspector
 
 | Script | Command | Description |
 | :--- | :--- | :--- |
-| Set value | `pnpm set-value <key> <value>` | Create or update a key |
-| Remove value | `pnpm remove-value <key>` | Delete a key |
+| Set value | `pnpm set-value [--commit --force] <key> <value>` | Preview or write a key (dry-run by default) |
+| Remove value | `pnpm remove-value [--commit --force] <key>` | Preview or delete a key (dry-run by default) |
 | List values | `pnpm list-values [<key>]` | List all keys or read one |
-| Prune | `pnpm prune-db [--commit]` | Remove obsolete keys (dry-run by default) |
+| Prune | `pnpm prune-db [--commit --force]` | Remove obsolete keys (dry-run by default) |
 
-**Key format:** `[namespace:][section:]key` — namespaces: `main` (default), `invites`; sections include `config`, `tags`, `invite_usage`, `invite_code_to_tag_map`, `former_member`.
+**Stop the bot first.** All write operations require `--commit --force` after a dry run. Pruning or editing the SQLite file while Nova is running can cause `SQLITE_BUSY` errors or lost updates.
+
+**Key format:** `[namespace:][section:]key`
+
+| Namespace | Examples |
+| :--- | :--- |
+| `main` | `config:reminder_channel`, `mute_mode:<userId>`, `message_count:<userId>` |
+| `invites` | `tags:<tagName>` |
+| `football` / `worldcup` | `registered`, `prediction:<userId>:<fixtureId>`, `scoring_lock:<fixtureId>` |
+| `nova_reminders` | `reminders:bump:list`, `reminder:<uuid>` |
 
 ```bash
 pnpm set-value main:config:reminder_channel "123456789012345678"
+pnpm set-value --commit --force main:config:reminder_channel "123456789012345678"
 pnpm list-values
-pnpm prune-db --commit
+pnpm prune-db
+pnpm prune-db --commit --force
 ```
 
 ### Maintainer scripts
@@ -461,7 +475,7 @@ pnpm prune-db --commit
 
 | Workflow | Branch | Actions |
 | :--- | :--- | :--- |
-| [`build-docker.yml`](.github/workflows/build-docker.yml) | `main` | `pnpm test`, `pnpm audit`, Trivy FS + image scan, build and push `ghcr.io/doubleangels/nova` |
+| [`build-docker.yml`](.github/workflows/build-docker.yml) | `main` | `pnpm test`, `pnpm audit`, Trivy FS + image scan (image scan fails on **CRITICAL**), build and push `ghcr.io/doubleangels/nova` |
 | [`build-dev-docker.yml`](.github/workflows/build-dev-docker.yml) | `dev` | Same pipeline for the dev branch image |
 
 Images are published to **GitHub Container Registry** as `ghcr.io/doubleangels/nova:latest` on the default branch.
@@ -473,7 +487,7 @@ Images are published to **GitHub Container Registry** as `ghcr.io/doubleangels/n
 - `tests/`, `jest.config.js`, `coverage/`, `*.lcov`, `.nyc_output/`
 - Documentation, CI configs, and dev tooling
 
-The runtime stage contains application code and production dependencies only (`pnpm install --prod --frozen-lockfile` in the builder). The image runs as user `discordbot` (UID 1001), includes `dumb-init` and the Doppler CLI, mounts `/app/data` for SQLite, and exposes a health check on the Node process.
+The runtime stage contains application code and production dependencies only (`pnpm install --prod --frozen-lockfile` in the builder). Database CLI scripts (`set-value.js`, `remove-value.js`, `list-values.js`, `prune-db.js`) are removed from the image; run them from the repository on the host against the mounted `./data` volume. The image runs as user `discordbot` (UID 1001), includes `dumb-init` and the Doppler CLI, mounts `/app/data` for SQLite, and exposes a heartbeat-based health check (`scripts/healthcheck.js` reads `/app/data/bot-heartbeat.json`).
 
 ---
 
@@ -491,7 +505,8 @@ The runtime stage contains application code and production dependencies only (`p
 | `utils/` | Database, reminders, moderation modes, search pagination, APIs |
 | `tests/` | Jest suite (not shipped in Docker images) |
 | `scripts/audit-log-messages.js` | Log message style audit (maintainer) |
-| `set-value.js` / `remove-value.js` / `list-values.js` / `prune-db.js` | Database CLI tools |
+| `scripts/healthcheck.js` | Docker health check (reads bot heartbeat file) |
+| `set-value.js` / `remove-value.js` / `list-values.js` / `prune-db.js` | Database CLI tools (host-only; not shipped in Docker images) |
 | `Dockerfile` | Multi-stage production image (Node 24 Alpine) |
 | `docker-compose.yml` | Production compose stack |
 

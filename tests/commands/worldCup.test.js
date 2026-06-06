@@ -24,7 +24,7 @@ describe('worldcup command', () => {
         if (pick === 'draw') return 'Draw';
         return pick;
       }),
-      getPrediction: jest.fn(),
+      getPredictionsForUser: jest.fn().mockResolvedValue([]),
       getUserPredictionFixtureIds: jest.fn().mockResolvedValue([]),
       getUserPoints: jest.fn().mockResolvedValue(0),
       resetWorldCupGame: jest.fn().mockResolvedValue(),
@@ -279,13 +279,18 @@ describe('worldcup command', () => {
 
   it('should show mypicks', async () => {
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
-    mockUtils.getPrediction.mockResolvedValue({
-      homeScore: 2,
-      awayScore: 1,
-      resultPick: 'home',
-      scored: true,
-      pointsAwarded: 4
-    });
+    mockUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 1,
+        prediction: {
+          homeScore: 2,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          pointsAwarded: 4
+        }
+      }
+    ]);
     mockUtils.getUserPoints.mockResolvedValue(4);
 
     const interaction = createMockInteraction({
@@ -302,17 +307,19 @@ describe('worldcup command', () => {
 
   it('should show mypicks for unknown fixtures and missing predictions', async () => {
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([100, 200]);
-    mockUtils.getPrediction.mockImplementation(async (userId, fixtureId) => {
-      if (fixtureId === 200) return null; // Test missing prediction branch
-      return {
+    mockUtils.getPredictionsForUser.mockResolvedValue([
+      {
         fixtureId: 100,
-        homeScore: 1,
-        awayScore: 1,
-        resultPick: 'draw',
-        scored: false,
-        pointsAwarded: null
-      };
-    });
+        prediction: {
+          homeScore: 1,
+          awayScore: 1,
+          resultPick: 'draw',
+          scored: false,
+          pointsAwarded: null
+        }
+      },
+      { fixtureId: 200, prediction: null }
+    ]);
     mockClientApi.getSeasonFixtures.mockResolvedValue([]);
     const interaction = createMockInteraction({
       options: { getSubcommand: jest.fn().mockReturnValue('mypicks') }
@@ -327,12 +334,17 @@ describe('worldcup command', () => {
   it('should show mypicks for unknown fixtures and pending scores', async () => {
     mockClientApi.getSeasonFixtures.mockResolvedValue([]);
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([999]);
-    mockUtils.getPrediction.mockResolvedValue({
-      homeScore: 1,
-      awayScore: 1,
-      resultPick: 'draw',
-      scored: false
-    });
+    mockUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 999,
+        prediction: {
+          homeScore: 1,
+          awayScore: 1,
+          resultPick: 'draw',
+          scored: false
+        }
+      }
+    ]);
     mockUtils.getUserPoints.mockResolvedValue(0);
 
     const interaction = createMockInteraction({
@@ -349,13 +361,18 @@ describe('worldcup command', () => {
 
   it('should show zero points when scored pick has no pointsAwarded', async () => {
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
-    mockUtils.getPrediction.mockResolvedValue({
-      homeScore: 0,
-      awayScore: 0,
-      resultPick: 'draw',
-      scored: true,
-      pointsAwarded: null
-    });
+    mockUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 1,
+        prediction: {
+          homeScore: 0,
+          awayScore: 0,
+          resultPick: 'draw',
+          scored: true,
+          pointsAwarded: null
+        }
+      }
+    ]);
 
     const interaction = createMockInteraction({
       options: { getSubcommand: jest.fn().mockReturnValue('mypicks') },

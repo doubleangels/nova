@@ -46,6 +46,10 @@ const client = new Client({
 client.commands = new Collection();
 
 const { closeDatabaseConnections } = require('./utils/database');
+const { stopWorldCupScheduler } = require('./utils/worldCupScheduler');
+const { stopFootballScheduler } = require('./utils/footballScheduler');
+const { clearAllScheduledMuteKicks } = require('./utils/muteModeUtils');
+const { cancelAllReminderTimeouts } = require('./utils/reminderUtils');
 
 const deployCommands = require('./deploy-commands');
 if (config.settings.deployCommandsOnStart) {
@@ -64,6 +68,10 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 for (const file of commandFiles) {
   try {
     const command = require(path.join(commandsPath, file));
+    if (config.settings.disabledCommands.includes(command.data.name)) {
+      logger.info(`Skipping disabled command ${command.data.name}.`);
+      continue;
+    }
     client.commands.set(command.data.name, command);
     logger.info(`Loaded command ${command.data.name}.`);
   } catch (error) {
@@ -108,7 +116,11 @@ for (const file of eventFiles) {
   }
 }
 
-client.login(config.token);
+client.login(config.token).catch((err) => {
+  captureError(err, { handler: 'clientLogin' });
+  logger.error('Failed to log in to Discord.', { err });
+  closeSentry().finally(() => process.exit(1));
+});
 
 /**
  * Last-resort safety net: catches any exception that escapes all try-catch blocks.
@@ -136,6 +148,13 @@ async function gracefulShutdown(signal) {
   if (client.cleanupInterval) {
     clearInterval(client.cleanupInterval);
   }
+  if (client.heartbeatInterval) {
+    clearInterval(client.heartbeatInterval);
+  }
+  stopWorldCupScheduler();
+  stopFootballScheduler();
+  clearAllScheduledMuteKicks();
+  cancelAllReminderTimeouts();
   try {
     client.destroy();
   } catch (err) {

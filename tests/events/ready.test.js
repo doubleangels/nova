@@ -9,10 +9,20 @@ describe('ready event', () => {
   let mockMuteModeUtils;
   let mockDatabase;
   let mockWorldCupScheduler;
+  let mockResolvePrimaryGuild;
+  let mockWriteBotHeartbeat;
+  let realGuildResolver;
 
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
+
+    realGuildResolver = jest.requireActual('../../utils/guildResolver');
+
+    mockWriteBotHeartbeat = jest.fn();
+    mockResolvePrimaryGuild = jest.fn((client, options) =>
+      realGuildResolver.resolvePrimaryGuild(client, options)
+    );
 
     mockLogger = {
       debug: jest.fn(),
@@ -61,6 +71,23 @@ describe('ready event', () => {
     };
     jest.doMock('../../utils/worldCupScheduler', () => mockWorldCupScheduler);
 
+    jest.doMock('../../utils/footballScheduler', () => ({
+      startFootballScheduler: jest.fn()
+    }));
+
+    jest.doMock('../../utils/guildResolver', () => ({
+      resolvePrimaryGuild: (...args) => mockResolvePrimaryGuild(...args)
+    }));
+
+    jest.doMock('../../utils/botHealth', () => ({
+      writeBotHeartbeat: (...args) => mockWriteBotHeartbeat(...args)
+    }));
+
+    jest.doMock('../../utils/inviteInitGate', () => ({
+      resetInviteInitGate: jest.fn(),
+      markInviteInitComplete: jest.fn()
+    }));
+
     readyEvent = require('../../events/ready');
   });
 
@@ -89,6 +116,53 @@ describe('ready event', () => {
     expect(mockMuteModeUtils.rescheduleAllMuteKicks).toHaveBeenCalledWith(mockClient);
     expect(mockReminderUtils.rescheduleReminder).toHaveBeenCalledWith(mockClient);
     expect(mockDatabase.cleanupOldTrackingUsers).toHaveBeenCalledWith(mockClient);
+  });
+
+  it('should pass configured GUILD_ID to the guild resolver', async () => {
+    mockConfig.guildId = '222222222222222222';
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockResolvePrimaryGuild).toHaveBeenCalledWith(
+      mockClient,
+      expect.objectContaining({ guildId: '222222222222222222' })
+    );
+  });
+
+  it('should log heartbeat write failures from the interval', async () => {
+    mockWriteBotHeartbeat
+      .mockImplementationOnce(undefined)
+      .mockImplementationOnce(() => {
+        throw new Error('heartbeat fail');
+      });
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+    jest.advanceTimersByTime(61_000);
+
+    expect(mockInstrument.captureError).toHaveBeenCalledWith(
+      expect.any(Error),
+      { event: 'ready', handler: 'heartbeat' }
+    );
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'Failed to write bot heartbeat.',
+      expect.objectContaining({ err: expect.any(Error) })
+    );
   });
 
   it('should skip startup reschedule when config flags are false', async () => {
@@ -155,6 +229,77 @@ describe('ready event', () => {
     expect(mockClient.user.setActivity).toHaveBeenCalledWith(
       'something',
       { type: ActivityType.Watching }
+    );
+  });
+
+  it('should fall back to watching when streaming is configured without stream URL', async () => {
+    mockConfig.botStatus = 'live stream';
+    mockConfig.botStatusType = 'streaming';
+    mockConfig.botStatusStreamUrl = null;
+
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'BOT_STATUS_TYPE is streaming but BOT_STATUS_STREAM_URL is not set; using Watching instead.'
+    );
+    expect(mockClient.user.setActivity).toHaveBeenCalledWith(
+      'live stream',
+      { type: ActivityType.Watching }
+    );
+  });
+
+  it('should use stream URL when streaming activity is configured', async () => {
+    mockConfig.botStatus = 'live stream';
+    mockConfig.botStatusType = 'streaming';
+    mockConfig.botStatusStreamUrl = 'https://twitch.tv/nova';
+
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockClient.user.setActivity).toHaveBeenCalledWith(
+      'live stream',
+      { type: ActivityType.Streaming, url: 'https://twitch.tv/nova' }
+    );
+  });
+
+  it('should log startup task failures from Promise.allSettled', async () => {
+    mockMuteModeUtils.rescheduleAllMuteKicks.mockRejectedValue(new Error('mute reschedule fail'));
+
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockInstrument.captureError).toHaveBeenCalledWith(
+      expect.any(Error),
+      { event: 'ready', handler: 'startupTask' }
+    );
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'Startup reschedule task failed.',
+      expect.objectContaining({ err: expect.any(Error) })
     );
   });
 
@@ -241,6 +386,63 @@ describe('ready event', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       expect.stringContaining('New Member message tracking initialized.'),
       expect.any(Object)
+    );
+  });
+
+  it('should warn through the guild resolver when the bot is not in any guild', async () => {
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: {
+          first: jest.fn().mockReturnValue(null)
+        }
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockLogger.warn).toHaveBeenCalledWith('Bot is not in any guild.', undefined);
+  });
+
+  it('should warn when multiple guilds exist without GUILD_ID configured', async () => {
+    const guildA = { id: '111111111111111111', name: 'A' };
+    const guildB = { id: '222222222222222222', name: 'B' };
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: new Map([
+          [guildA.id, guildA],
+          [guildB.id, guildB]
+        ])
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Bot is in multiple guilds but GUILD_ID is not set; using the first guild.',
+      expect.objectContaining({ guildIds: [guildA.id, guildB.id] })
+    );
+  });
+
+  it('should warn when configured GUILD_ID does not match a joined guild', async () => {
+    mockConfig.guildId = '999999999999999999';
+    const guildA = { id: '111111111111111111', name: 'A' };
+    const mockClient = {
+      user: { tag: 'TestBot#1234', setActivity: jest.fn() },
+      guilds: {
+        cache: new Map([[guildA.id, guildA]])
+      }
+    };
+
+    await readyEvent.execute(mockClient);
+
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'GUILD_ID is set but the bot is not a member of that guild.',
+      expect.objectContaining({ guildId: '999999999999999999' })
+    );
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'No guild found for invite usage initialization.'
     );
   });
 
@@ -414,14 +616,25 @@ describe('ready event', () => {
     });
 
     it('should catch and log error if initializeInviteUsage throws', async () => {
+      let resolverCalls = 0;
+      mockResolvePrimaryGuild.mockImplementation((client, options) => {
+        resolverCalls += 1;
+        if (resolverCalls === 2) {
+          throw new TypeError('resolver failed');
+        }
+        return realGuildResolver.resolvePrimaryGuild(client, options);
+      });
+
+      const mockGuild = { id: 'guild-1', name: 'Guild 1' };
       const mockClient = {
         user: { tag: 'TestBot#1234', setActivity: jest.fn() },
-        guilds: null // Will throw TypeError in cache first access
+        guilds: {
+          cache: new Map([[mockGuild.id, mockGuild]])
+        }
       };
 
       await readyEvent.execute(mockClient);
 
-      // Cover lines 114-115
       expect(mockInstrument.captureError).toHaveBeenCalledWith(
         expect.any(TypeError),
         { event: 'ready', handler: 'initializeInviteUsage' }
@@ -434,36 +647,33 @@ describe('ready event', () => {
   });
 
   describe('error handling', () => {
-    it('should throw database error if database initialization fails', async () => {
+    it('should log database initialization failures without rethrowing', async () => {
       mockDatabase.initializeDatabase.mockRejectedValue(new Error('⚠️ Failed to initialize database connection.'));
 
       const mockClient = {
         user: { tag: 'TestBot#1234' }
       };
 
-      await expect(readyEvent.execute(mockClient)).rejects.toThrow(
-        '⚠️ Failed to initialize database connection.'
-      );
+      await expect(readyEvent.execute(mockClient)).resolves.toBeUndefined();
+      expect(mockInstrument.captureError).toHaveBeenCalled();
     });
 
-    it('should throw specific errors for other failed initialization tasks', async () => {
+    it('should log other initialization failures without rethrowing', async () => {
       const mockClient = {
         user: { tag: 'TestBot#1234' }
       };
 
       const testErrors = [
-        ['⚠️ Failed to reschedule mute kicks.', '⚠️ Failed to reschedule mute kicks.'],
-        ['⚠️ Failed to reschedule reminders.', '⚠️ Failed to reschedule reminders.'],
-        ['⚠️ Failed to set bot activity.', '⚠️ Failed to set bot activity.'],
-        ['⚠️ Failed to set bot status.', '⚠️ Failed to set bot status.'],
-        ['⚠️ Failed to load voice join times.', '⚠️ Failed to load voice join times.'],
-        ['⚠️ Insufficient permissions for bot initialization.', '⚠️ Insufficient permissions for bot initialization.'],
-        ['generic error', '⚠️ An unexpected error occurred during bot initialization.']
+        '⚠️ Failed to reschedule mute kicks.',
+        '⚠️ Failed to reschedule reminders.',
+        'generic error'
       ];
 
-      for (const [errMsg, expectedMsg] of testErrors) {
+      for (const errMsg of testErrors) {
+        mockInstrument.captureError.mockClear();
         mockDatabase.initializeDatabase.mockRejectedValue(new Error(errMsg));
-        await expect(readyEvent.execute(mockClient)).rejects.toThrow(expectedMsg);
+        await expect(readyEvent.execute(mockClient)).resolves.toBeUndefined();
+        expect(mockInstrument.captureError).toHaveBeenCalled();
       }
     });
   });

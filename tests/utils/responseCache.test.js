@@ -1,7 +1,8 @@
-const { getCached, setCached, cacheKey } = require('../../utils/responseCache');
+const { getCached, setCached, cacheKey, clearCache } = require('../../utils/responseCache');
 
 describe('responseCache', () => {
   beforeEach(() => {
+    clearCache();
     jest.useFakeTimers();
   });
 
@@ -46,10 +47,37 @@ describe('responseCache', () => {
     expect(getCached('prediction-ai:result:worldcup:2:b')).toEqual({ score: 2 });
     expect(getCached('other:keep')).toEqual({ ok: true });
   });
+
+  it('should evict oldest entries when the cache exceeds its cap', () => {
+    const { MAX_CACHE_ENTRIES } = require('../../utils/responseCache');
+
+    for (let i = 0; i < MAX_CACHE_ENTRIES + 3; i++) {
+      setCached(`cap-key-${i}`, `value-${i}`, 600000);
+    }
+
+    expect(getCached('cap-key-0')).toBeUndefined();
+    expect(getCached('cap-key-1')).toBeUndefined();
+    expect(getCached('cap-key-2')).toBeUndefined();
+    expect(getCached(`cap-key-${MAX_CACHE_ENTRIES + 2}`)).toBe(`value-${MAX_CACHE_ENTRIES + 2}`);
+  });
+
+  it('should remove expired entries during size enforcement', () => {
+    setCached('expired-one', 'old-a', 1000);
+    setCached('expired-two', 'old-b', 1000);
+    jest.advanceTimersByTime(5000);
+    setCached('fresh-entry', 'new', 600000);
+
+    expect(getCached('expired-one')).toBeUndefined();
+    expect(getCached('expired-two')).toBeUndefined();
+    expect(getCached('fresh-entry')).toBe('new');
+  });
 });
 
 describe('deleteCached', () => {
-  beforeEach(() => jest.useFakeTimers());
+  beforeEach(() => {
+    require('../../utils/responseCache').clearCache();
+    jest.useFakeTimers();
+  });
   afterEach(() => jest.useRealTimers());
 
   it('should delete a specific cached key (line 26)', () => {

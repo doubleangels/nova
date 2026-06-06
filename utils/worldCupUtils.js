@@ -111,6 +111,8 @@ module.exports = {
   getScoredFixtures: () => store.getScoredFixtures(),
   markFixtureScored: fixtureId => store.markFixtureScored(fixtureId),
   getPredictorIdsForFixture: fixtureId => store.getPredictorIdsForFixture(fixtureId),
+  getPredictionsForUser: (userId, fixtureIds) =>
+    store.getPredictionsForUser(userId, fixtureIds),
   isPendingPredictionComplete,
   savePendingPrediction: (userId, fixtureId, partial) =>
     store.savePendingPrediction(userId, fixtureId, partial),

@@ -4,6 +4,7 @@ const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const { getValue, addMuteModeUser, addSpamModeJoinTime, getInviteUsage, setInviteUsage, getInviteNotificationChannel, getInviteTag, getInviteCodeToTagMap, rebuildCodeToTagMap, isFormerMember } = require('../utils/database');
 const { updateInviteSnapshotFromCollection } = require('../utils/inviteCache');
+const { waitForInviteInit } = require('../utils/inviteInitGate');
 const { scheduleMuteKick } = require('../utils/muteModeUtils');
 const { checkAccountAge, performKick } = require('../utils/trollModeUtils');
 const config = require('../config');
@@ -126,6 +127,8 @@ module.exports = {
    */
   async checkTaggedInvite(member) {
     try {
+      await waitForInviteInit();
+
       logger.debug('Checking tagged invite for member.', {
         userTag: member.user.tag,
         userId: member.user.id
@@ -259,18 +262,6 @@ module.exports = {
         logger.debug('Built current invite usage data.', {
           currentUsage: JSON.stringify(currentUsage)
         });
-
-        const isFirstRun = Object.keys(lockedPreviousUsage).length === 0;
-        if (isFirstRun) {
-          logger.debug('No previous invite usage data found, initializing with current state. Skipping invite detection for this join.');
-          await setInviteUsage(guildId, currentUsage).catch((err) => {
-            logger.error('Failed to initialize invite usage tracking.', {
-              err: err,
-              guildId: guildId
-            });
-          });
-          return;
-        }
 
         // Find which tagged invite was used (usage count increased)
         let usedInviteCode = null;

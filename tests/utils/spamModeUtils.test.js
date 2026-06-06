@@ -2332,4 +2332,52 @@ describe('spamModeUtils', () => {
       expect(target.kick).toHaveBeenCalled();
     });
   });
+
+  describe('tracker caps', () => {
+    beforeEach(() => {
+      spamModeUtils.clearSpamMessageTracker();
+    });
+
+    it('should cap distinct content keys per user', () => {
+      const userMessages = new Map();
+      for (let i = 0; i < spamModeUtils.MAX_CONTENT_KEYS_PER_USER + 3; i++) {
+        userMessages.set(`content-key-${i}`, [{ timestamp: i * 1000 }]);
+      }
+
+      spamModeUtils.enforceUserContentKeyLimit(userMessages);
+
+      expect(userMessages.size).toBeLessThanOrEqual(spamModeUtils.MAX_CONTENT_KEYS_PER_USER);
+    });
+
+    it('should cap total tracked users', () => {
+      for (let i = 0; i < spamModeUtils.MAX_TRACKED_USERS + 3; i++) {
+        const userId = String(900000000000000000n + BigInt(i));
+        spamModeUtils.seedSpamTrackerUser(userId, i * 1000);
+      }
+
+      spamModeUtils.enforceGlobalSpamTrackerLimit('new-user-id');
+      expect(spamModeUtils.getSpamTrackerUserCount())
+        .toBeLessThanOrEqual(spamModeUtils.MAX_TRACKED_USERS);
+    });
+
+    it('should report zero content keys for untracked users', () => {
+      expect(spamModeUtils.getSpamTrackerContentKeyCount('unknown-user')).toBe(0);
+    });
+
+    it('should skip global eviction when the tracker is under the cap', () => {
+      spamModeUtils.seedSpamTrackerUser('existing-user', 1000);
+      const before = spamModeUtils.getSpamTrackerUserCount();
+
+      spamModeUtils.enforceGlobalSpamTrackerLimit('existing-user');
+
+      expect(spamModeUtils.getSpamTrackerUserCount()).toBe(before);
+    });
+
+    it('should reuse existing tracker state when seeding the same user twice', () => {
+      spamModeUtils.seedSpamTrackerUser('seed-twice', 1000);
+      spamModeUtils.seedSpamTrackerUser('seed-twice', 2000);
+
+      expect(spamModeUtils.getSpamTrackerContentKeyCount('seed-twice')).toBe(1);
+    });
+  });
 });

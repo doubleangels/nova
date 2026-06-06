@@ -287,6 +287,42 @@ function formatSectionName(section) {
   return section ? section.substring(0, section.length - 1) : '';
 }
 
+/**
+ * @param {string|null} section
+ * @param {string} actualKey
+ * @param {string} fullKey
+ * @returns {string|null}
+ */
+function resolveConfigCacheKey(section, actualKey, fullKey) {
+  if (section === 'config:') return actualKey;
+  if (typeof fullKey === 'string' && fullKey.startsWith('config:')) {
+    return fullKey.slice('config:'.length);
+  }
+  return null;
+}
+
+/**
+ * @param {string} dbKey - Raw keyv table key (e.g. main:config:spam_mode_enabled)
+ * @returns {string|null}
+ */
+function configCacheKeyFromDbKey(dbKey) {
+  const match = dbKey.match(/^main:config:(.+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Drops stale in-process config cache entries after CLI DB writes.
+ * @param {string|null} section
+ * @param {string} actualKey
+ * @param {string} fullKey
+ */
+function invalidateRuntimeConfigCache(section, actualKey, fullKey) {
+  const configKey = resolveConfigCacheKey(section, actualKey, fullKey);
+  if (!configKey) return;
+  const { invalidateConfigCache } = require('./database');
+  invalidateConfigCache(configKey);
+}
+
 module.exports = {
   ensureDataDir,
   parseKey,
@@ -299,6 +335,9 @@ module.exports = {
   checkDatabaseAccess,
   sqlitePath,
   NAMESPACES,
-  KNOWN_SECTIONS
+  KNOWN_SECTIONS,
+  resolveConfigCacheKey,
+  configCacheKeyFromDbKey,
+  invalidateRuntimeConfigCache
 };
 

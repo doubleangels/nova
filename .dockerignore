@@ -1,3 +1,9 @@
+# Database CLI tools (use host copies; excluded from runtime image)
+set-value.js
+remove-value.js
+list-values.js
+prune-db.js
+
 # Dependencies
 node_modules
 npm-debug.log*

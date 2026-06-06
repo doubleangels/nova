@@ -4,8 +4,13 @@ const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { tryAcquireCommandCooldown, releaseCommandCooldown, scheduleCommandCooldownNotifications, getNextReminderTimeAfterCleanup, isReminderConfigured, replyReminderNotConfigured, PROMOTE_REMINDER_MS } = require('../utils/reminderUtils');
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
+const config = require('../config');
 
-const PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+const DEFAULT_PROMOTION_LINK = 'https://discord.gg/j5sfQtCVSU';
+
+function getPromotionLink() {
+  return config.serverInviteUrl || DEFAULT_PROMOTION_LINK;
+}
 
 /** Markdown body text for Reddit link posts (below the invite URL). */
 const PROMOTION_BODY = `**🐸 Welcome to Da Frens!**
@@ -165,7 +170,7 @@ async function postToSubreddit(subredditName, promotionTitle, promotionBody = ''
 
   const submissionData = {
     title: promotionTitle,
-    url: PROMOTION_LINK,
+    url: getPromotionLink(),
     sr: subredditName,
     kind: 'link',
     api_type: 'json'
@@ -272,7 +277,7 @@ module.exports = {
       userId: interaction.user.id,
       guildId: interaction.guildId,
       promotionTitle: promotionTitle,
-      promotionLink: PROMOTION_LINK,
+      promotionLink: getPromotionLink(),
       hasPromotionBody: !!promotionBody
     });
 
@@ -280,7 +285,7 @@ module.exports = {
       logger.info("Attempting to post to Reddit.", {
         subreddits: PROMOTION_SUBREDDITS,
         title: promotionTitle,
-        link: PROMOTION_LINK,
+        link: getPromotionLink(),
         hasBody: !!promotionBody,
         userId: interaction.user.id
       });
@@ -312,7 +317,11 @@ module.exports = {
 
         await interaction.editReply({ embeds: [embed] });
 
-        await scheduleCommandCooldownNotifications(interaction.client, 'promote', acquire);
+        if (failed.length === 0) {
+          await scheduleCommandCooldownNotifications(interaction.client, 'promote', acquire);
+        } else {
+          await releaseCommandCooldown('promote');
+        }
       } else {
         await releaseCommandCooldown('promote');
         const errorList = failed.map(f => `r/${f.subreddit}: ${f.error}`).join('\n');

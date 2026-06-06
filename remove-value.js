@@ -1,39 +1,37 @@
 /**
  * Script to delete a value from the Keyv database
- * 
- * Usage: node remove-value.js <key>
- * 
- * Key format: [namespace:][section:]key
- *   - namespace: main (default), invites
- *   - section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.
- * 
- * Examples:
- *   node remove-value.js reminder_channel
- *   node remove-value.js main:config:reminder_channel
- *   node remove-value.js invites:tags:disboard
- *   node remove-value.js main:invite_usage:123456789
- *   node remove-value.js former_member:123456789   # Remove former member (returning tracking)
+ *
+ * Usage:
+ *   node remove-value.js <key>                    # Dry run (default)
+ *   node remove-value.js --commit --force <key>   # Delete (stop the bot first)
  */
 
 require('dotenv').config();
-const { parseKey, getKeyvForNamespace, withKeyv, formatSectionName } = require('./utils/dbScriptUtils');
+const {
+  parseKey,
+  getKeyvForNamespace,
+  withKeyv,
+  formatSectionName,
+  invalidateRuntimeConfigCache,
+  getDatabasePathInfo,
+  checkDatabaseAccess
+} = require('./utils/dbScriptUtils');
+const { parseDbWriteFlags, resolveDbWriteMode, printDbWriteDryRunHint } = require('./utils/dbWriteCli');
 
-async function deleteValue(keyString) {
+/**
+ * @param {string} keyString
+ * @param {{ commit: boolean }} options
+ */
+async function deleteValue(keyString, options = {}) {
   try {
-    const { getDatabasePathInfo, checkDatabaseAccess } = require('./utils/dbScriptUtils');
     const pathInfo = getDatabasePathInfo();
-    
-    // Check database access permissions first
     const accessCheck = checkDatabaseAccess();
-    
+
     if (!accessCheck.accessible && accessCheck.fileExists) {
-      // If running as root and gosu is available, try to re-execute automatically
       if (accessCheck.currentUser?.isRoot) {
         const { spawn } = require('child_process');
         try {
-          // Check if gosu is available
           require('child_process').execSync('which gosu', { stdio: 'ignore' });
-          // Re-execute with gosu
           const scriptPath = __filename;
           const args = ['discordbot', 'node', scriptPath, ...process.argv.slice(2)];
           const child = spawn('gosu', args, {
@@ -43,50 +41,55 @@ async function deleteValue(keyString) {
           child.on('exit', (code) => {
             process.exit(code || 0);
           });
-          return; // Exit after re-execution
-        } catch (e) {
-          // gosu not available or re-execution failed, show error
+          return;
+        } catch {
+          // gosu not available or re-execution failed
         }
       }
-      
+
       console.error('Cannot access the database file due to a permission error.');
-      console.error('');
       if (accessCheck.recommendation) {
-        console.error(accessCheck.recommendation);
         console.error('');
+        console.error(accessCheck.recommendation);
       }
       process.exit(1);
     }
-    
-    
+
     if (!pathInfo.databaseExists) {
       console.error('Database file does not exist.');
       console.error(`   Expected location: ${pathInfo.sqlitePath}`);
-      console.error('');
-      console.error('If running in a container, ensure:');
-      console.error('  1. The data volume is properly mounted');
-      console.error('  2. The database file exists in the mounted volume');
-      console.error('  3. You can set DATA_DIR environment variable to override the path');
       process.exit(1);
     }
-    
+
     const { namespace, section, actualKey, fullKey } = parseKey(keyString);
     const keyv = getKeyvForNamespace(namespace);
-    
+
     await withKeyv(keyv, async (kv) => {
-      // Check if key exists first
       const existingValue = await kv.get(fullKey);
-      
+
       if (existingValue === undefined) {
         console.log(`Key "${keyString}" does not exist in the database.`);
         console.log(`   Searched: namespace="${namespace}", key="${fullKey}"`);
         process.exit(0);
       }
-      
-      // Delete the key
+
+      if (!options.commit) {
+        console.log(`Would delete "${keyString}"`);
+        console.log(`   Namespace: ${namespace}`);
+        if (section) {
+          console.log(`   Section: ${formatSectionName(section)}`);
+        }
+        console.log(`   Key: ${actualKey}`);
+        console.log(`   Full Key: ${namespace}:${fullKey}`);
+        console.log(`   Current value: ${JSON.stringify(existingValue)}`);
+        printDbWriteDryRunHint('remove-value.js');
+        return;
+      }
+
       const deleted = await kv.delete(fullKey);
-      
+
       if (deleted) {
+        invalidateRuntimeConfigCache(section, actualKey, fullKey);
         console.log(`Successfully deleted "${keyString}"`);
         console.log(`   Namespace: ${namespace}`);
         if (section) {
@@ -109,29 +112,22 @@ async function deleteValue(keyString) {
   }
 }
 
-// Parse command line arguments
-const args = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const { isCommit, isForce, positional } = parseDbWriteFlags(rawArgs);
 
-if (args.length < 1) {
-  console.error('Usage: node remove-value.js <key>');
+if (positional.length < 1) {
+  console.error('Usage: node remove-value.js [--commit --force] <key>');
   console.error('');
-  console.error('Key format: [namespace:][section:]key');
-  console.error('  namespace: main (default), invites');
-  console.error('  section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.');
-  console.error('');
-  console.error('Examples:');
-  console.error('  node remove-value.js reminder_channel');
-  console.error('  node remove-value.js main:config:reminder_channel');
-  console.error('  node remove-value.js invites:tags:disboard');
-  console.error('  node remove-value.js main:invite_usage:123456789');
+  console.error('Dry run by default. Stop the bot, then use --commit --force to delete.');
   process.exit(1);
 }
 
-const key = args[0];
+const key = positional[0];
 
 if (!key || key.trim() === '') {
   console.error('Error: Key cannot be empty');
   process.exit(1);
 }
 
-deleteValue(key);
+const writeMode = resolveDbWriteMode({ isCommit, isForce }, { scriptName: 'remove-value.js' });
+deleteValue(key, { commit: writeMode.proceed });

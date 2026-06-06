@@ -43,7 +43,8 @@ module.exports = {
             userId: user.id,
             messageId: reaction.message.id
           });
-          throw new Error("⚠️ Failed to fetch reaction data.");
+          captureError(error, { event: 'messageReactionAdd', handler: 'partialFetch' });
+          return;
         }
       }
 
@@ -54,6 +55,7 @@ module.exports = {
 
       await handleTranslationRequest(reaction, user);
     } catch (error) {
+      captureError(error, { event: 'messageReactionAdd' });
       logger.error('Error occurred while processing reaction.', {
         err: error,
         emoji: reaction.emoji?.name,
@@ -90,7 +92,7 @@ async function handleTranslationRequest(reaction, user) {
     const languageInfo = getLanguageInfo(flagEmoji);
     if (!languageInfo) {
       logger.warn('Invalid translation flag provided.', { flagEmoji });
-      throw new Error("⚠️ Invalid translation flag provided.");
+      return;
     }
 
     const messageId = reaction.message?.id;
@@ -100,7 +102,7 @@ async function handleTranslationRequest(reaction, user) {
         messageId,
         userId: user.id
       });
-      throw new Error("⚠️ Message not found for translation.");
+      return;
     }
 
     if (message.partial) {
@@ -113,7 +115,7 @@ async function handleTranslationRequest(reaction, user) {
         messageId: message.id,
         userId: user.id
       });
-      throw new Error("⚠️ No text to translate found in the message.");
+      return;
     }
 
     const translationCacheKey = cacheKey('translation', message.id, languageInfo.code);
@@ -140,7 +142,14 @@ async function handleTranslationRequest(reaction, user) {
         }
       );
 
-      translatedText = response.data.translations[0].text;
+      translatedText = response.data?.translations?.[0]?.text;
+      if (!translatedText) {
+        logger.warn('DeepL returned no translation.', {
+          messageId: message.id,
+          userId: user.id
+        });
+        return;
+      }
       setCached(translationCacheKey, translatedText, 3600000);
     }
 

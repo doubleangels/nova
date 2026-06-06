@@ -1,39 +1,37 @@
 /**
  * Script to set/update a value in the Keyv database
- * 
- * Usage: node set-value.js <key> <value>
- * 
- * Key format: [namespace:][section:]key
- *   - namespace: main (default), invites
- *   - section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.
- * 
- * Examples:
- *   node set-value.js reminder_channel "123456789012345678"
- *   node set-value.js main:config:reminder_channel "123456789012345678"
- *   node set-value.js spam_mode_enabled true
- *   node set-value.js invites:tags:disboard '{"code":"abc123","name":"Disboard"}'
- *   node set-value.js main:invite_usage:123456789 '{"abc123":5}'
- *   node set-value.js former_member:123456789 1   # Mark user as former member (returning tracking)
+ *
+ * Usage:
+ *   node set-value.js <key> <value>                    # Dry run (default)
+ *   node set-value.js --commit --force <key> <value>   # Apply (stop the bot first)
  */
 
 require('dotenv').config();
-const { parseKey, getKeyvForNamespace, parseValue, withKeyv, formatSectionName } = require('./utils/dbScriptUtils');
+const {
+  parseKey,
+  getKeyvForNamespace,
+  parseValue,
+  withKeyv,
+  formatSectionName,
+  invalidateRuntimeConfigCache,
+  checkDatabaseAccess
+} = require('./utils/dbScriptUtils');
+const { parseDbWriteFlags, resolveDbWriteMode, printDbWriteDryRunHint } = require('./utils/dbWriteCli');
 
-async function setValue(keyString, value) {
+/**
+ * @param {string} keyString
+ * @param {string} value
+ * @param {{ commit: boolean }} options
+ */
+async function setValue(keyString, value, options = {}) {
   try {
-    const { checkDatabaseAccess } = require('./utils/dbScriptUtils');
-    
-    // Check database access permissions first
     const accessCheck = checkDatabaseAccess();
-    
+
     if (!accessCheck.accessible && accessCheck.fileExists) {
-      // If running as root and gosu is available, try to re-execute automatically
       if (accessCheck.currentUser?.isRoot) {
         const { spawn } = require('child_process');
         try {
-          // Check if gosu is available
           require('child_process').execSync('which gosu', { stdio: 'ignore' });
-          // Re-execute with gosu
           const scriptPath = __filename;
           const args = ['discordbot', 'node', scriptPath, ...process.argv.slice(2)];
           const child = spawn('gosu', args, {
@@ -43,30 +41,42 @@ async function setValue(keyString, value) {
           child.on('exit', (code) => {
             process.exit(code || 0);
           });
-          return; // Exit after re-execution
-        } catch (e) {
-          // gosu not available or re-execution failed, show error
+          return;
+        } catch {
+          // gosu not available or re-execution failed
         }
       }
-      
+
       console.error('Cannot access the database file due to a permission error.');
-      console.error('');
       if (accessCheck.recommendation) {
-        console.error(accessCheck.recommendation);
         console.error('');
+        console.error(accessCheck.recommendation);
       }
       process.exit(1);
     }
-    
-    
+
     const { namespace, section, actualKey, fullKey } = parseKey(keyString);
-    const keyv = getKeyvForNamespace(namespace);
-    
     const parsedValue = parseValue(value);
-    
+
+    if (!options.commit) {
+      console.log(`Would set "${keyString}"`);
+      console.log(`   Namespace: ${namespace}`);
+      if (section) {
+        console.log(`   Section: ${formatSectionName(section)}`);
+      }
+      console.log(`   Key: ${actualKey}`);
+      console.log(`   Full Key: ${namespace}:${fullKey}`);
+      console.log(`   Value: ${JSON.stringify(parsedValue)}`);
+      console.log(`   Type: ${typeof parsedValue}`);
+      printDbWriteDryRunHint('set-value.js');
+      return;
+    }
+
+    const keyv = getKeyvForNamespace(namespace);
     await withKeyv(keyv, async (kv) => {
       await kv.set(fullKey, parsedValue);
-      
+      invalidateRuntimeConfigCache(section, actualKey, fullKey);
+
       console.log(`Successfully set "${keyString}"`);
       console.log(`   Namespace: ${namespace}`);
       if (section) {
@@ -86,27 +96,22 @@ async function setValue(keyString, value) {
   }
 }
 
-// Parse command line arguments
-const args = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const { isCommit, isForce, positional } = parseDbWriteFlags(rawArgs);
 
-if (args.length < 2) {
-  console.error('Usage: node set-value.js <key> <value>');
+if (positional.length < 2) {
+  console.error('Usage: node set-value.js [--commit --force] <key> <value>');
   console.error('');
-  console.error('Key format: [namespace:][section:]key');
-  console.error('  namespace: main (default), invites');
-  console.error('  section: config, tags, invite_usage, invite_code_to_tag_map, former_member, etc.');
+  console.error('Dry run by default. Stop the bot, then use --commit --force to write.');
   console.error('');
   console.error('Examples:');
-  console.error('  node set-value.js reminder_channel "123456789012345678"');
   console.error('  node set-value.js main:config:reminder_channel "123456789012345678"');
-  console.error('  node set-value.js spam_mode_enabled true');
-  console.error('  node set-value.js invites:tags:disboard \'{"code":"abc123","name":"Disboard"}\'');
-  console.error('  node set-value.js main:invite_usage:123456789 \'{"abc123":5}\'');
+  console.error('  node set-value.js --commit --force spam_mode_enabled true');
   process.exit(1);
 }
 
-const key = args[0];
-const value = args.slice(1).join(' '); // Join remaining args in case value has spaces
+const key = positional[0];
+const value = positional.slice(1).join(' ');
 
 if (!key || key.trim() === '') {
   console.error('Error: Key cannot be empty');
@@ -114,8 +119,9 @@ if (!key || key.trim() === '') {
 }
 
 if (value === undefined || value === null) {
-  console.error('Error: Value cannot be undefined or null');
+  console.error('Error: Value cannot be empty');
   process.exit(1);
 }
 
-setValue(key, value);
+const writeMode = resolveDbWriteMode({ isCommit, isForce }, { scriptName: 'set-value.js' });
+setValue(key, value, { commit: writeMode.proceed });

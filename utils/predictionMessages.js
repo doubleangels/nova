@@ -66,6 +66,8 @@ const ERR_PREDICTIONS_CLOSED_SHORT = '⚠️ Predictions are closed for this mat
 const ERR_ALREADY_PREDICTED = '⚠️ You already submitted a prediction for this match.';
 const ERR_GOALS_RANGE = '⚠️ Goals must be a whole number from 0 to 15.';
 const ERR_INVALID_WINNER = '⚠️ Invalid winner selection.';
+const NOTE_WINNER_REALIGNED =
+  '_Your winner pick was adjusted to match your scoreline._';
 /**
  * @param {PredictionGameId} gameId
  * @returns {string}
@@ -405,6 +407,7 @@ module.exports = {
   ERR_ALREADY_PREDICTED,
   ERR_GOALS_RANGE,
   ERR_INVALID_WINNER,
+  NOTE_WINNER_REALIGNED,
   errRegisterFirst,
   ERR_REGISTER_NOT_CONFIGURED,
   ERR_PARTICIPANT_ROLE_MISSING,

@@ -95,11 +95,10 @@ describe('createScoreFinishedFixtures', () => {
 
   const makeStore = (overrides = {}) => ({
     getScoredFixtures: jest.fn().mockResolvedValue([]),
-    getPredictorIdsForFixture: jest.fn().mockResolvedValue([]),
-    getPrediction: jest.fn().mockResolvedValue(null),
-    savePrediction: jest.fn().mockResolvedValue(undefined),
-    addUserPoints: jest.fn().mockResolvedValue(1),
-    markFixtureScored: jest.fn().mockResolvedValue(undefined),
+    getPredictionsForFixture: jest.fn().mockResolvedValue([]),
+    tryAcquireScoringLock: jest.fn().mockResolvedValue(true),
+    releaseScoringLock: jest.fn().mockResolvedValue(undefined),
+    applyFixtureScoringResults: jest.fn().mockResolvedValue(undefined),
     ...overrides
   });
 
@@ -134,31 +133,99 @@ describe('createScoreFinishedFixtures', () => {
     await first; // cleanup
   });
 
-  it('should skip already-scored fixture (line 103)', async () => {
+  it('should skip already-scored fixture', async () => {
     const fixture = { id: 1, status: 'FT', goals: { home: 2, away: 1 } };
     const store = makeStore({
-      getScoredFixtures: jest.fn()
-        .mockResolvedValueOnce([]) // initial filter
-        .mockResolvedValueOnce([1]) // loop check → fixture already scored
+      getScoredFixtures: jest.fn().mockResolvedValue([1])
     });
     const deps = makeDeps({
       getFixtures: jest.fn().mockResolvedValue([fixture])
     });
     const scoreFinished = scoring.createScoreFinishedFixtures(store, deps);
     const count = await scoreFinished(null);
-    expect(count).toBe(0); // fixture was skipped, markFixtureScored not called
+    expect(count).toBe(0);
+    expect(store.applyFixtureScoringResults).not.toHaveBeenCalled();
+  });
+
+  it('should skip duplicate finished fixtures in one run', async () => {
+    const fixture = { id: 1, status: 'FT', goals: { home: 2, away: 1 } };
+    const store = makeStore({
+      getPredictionsForFixture: jest.fn().mockResolvedValue([])
+    });
+    const deps = makeDeps({
+      getFixtures: jest.fn().mockResolvedValue([fixture, fixture])
+    });
+    const scoreFinished = scoring.createScoreFinishedFixtures(store, deps);
+    const count = await scoreFinished(null);
+    expect(count).toBe(1);
+    expect(store.applyFixtureScoringResults).toHaveBeenCalledTimes(1);
+  });
+
+  it('should skip fixture when scoring lock is held', async () => {
+    const fixture = { id: 1, status: 'FT', goals: { home: 2, away: 1 } };
+    const store = makeStore({
+      tryAcquireScoringLock: jest.fn().mockResolvedValue(false)
+    });
+    const deps = makeDeps({
+      getFixtures: jest.fn().mockResolvedValue([fixture])
+    });
+    const scoreFinished = scoring.createScoreFinishedFixtures(store, deps);
+    const count = await scoreFinished(null);
+    expect(count).toBe(0);
+    expect(store.releaseScoringLock).not.toHaveBeenCalled();
+  });
+
+  it('should skip missing predictions in the scoring loop', async () => {
+    const fixture = { id: 7, status: 'FT', goals: { home: 2, away: 1 } };
+    const store = makeStore({
+      getPredictionsForFixture: jest.fn().mockResolvedValue([
+        { userId: 'user1', prediction: null }
+      ])
+    });
+    const deps = makeDeps({
+      getFixtures: jest.fn().mockResolvedValue([fixture])
+    });
+    const scoreFinished = scoring.createScoreFinishedFixtures(store, deps);
+    expect(await scoreFinished(null)).toBe(1);
+    expect(store.applyFixtureScoringResults).toHaveBeenCalledWith(7, []);
+  });
+
+  it('should skip already-scored predictions in the scoring loop', async () => {
+    const fixture = { id: 6, status: 'FT', goals: { home: 1, away: 0 } };
+    const store = makeStore({
+      getPredictionsForFixture: jest.fn().mockResolvedValue([
+        {
+          userId: 'user1',
+          prediction: {
+            homeScore: 1,
+            awayScore: 0,
+            resultPick: 'home',
+            scored: true,
+            pointsAwarded: 3
+          }
+        }
+      ])
+    });
+    const deps = makeDeps({
+      getFixtures: jest.fn().mockResolvedValue([fixture])
+    });
+    const scoreFinished = scoring.createScoreFinishedFixtures(store, deps);
+    const count = await scoreFinished(null);
+    expect(count).toBe(1);
+    expect(store.applyFixtureScoringResults).toHaveBeenCalledWith(6, []);
   });
 
   it('should score predictors and post announcement when earners exist (line 149)', async () => {
     const fixture = { id: 2, status: 'FT', goals: { home: 2, away: 1 } };
     const store = makeStore({
-      getScoredFixtures: jest.fn()
-        .mockResolvedValueOnce([]) // initial filter
-        .mockResolvedValueOnce([]), // loop check
-      getPredictorIdsForFixture: jest.fn().mockResolvedValue(['user1']),
-      getPrediction: jest.fn().mockResolvedValue({
-        homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
-      })
+      getPredictionsForFixture: jest.fn().mockResolvedValue([
+        {
+          userId: 'user1',
+          prediction: {
+            homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
+          }
+        }
+      ])
     });
     const mockChannel = { isTextBased: jest.fn().mockReturnValue(true), send: jest.fn().mockResolvedValue(undefined) };
     const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
@@ -176,10 +243,14 @@ describe('createScoreFinishedFixtures', () => {
   it('should not post announcement if channel is not text-based (line 149 false branch)', async () => {
     const fixture = { id: 3, status: 'FT', goals: { home: 2, away: 1 } };
     const store = makeStore({
-      getPredictorIdsForFixture: jest.fn().mockResolvedValue(['user1']),
-      getPrediction: jest.fn().mockResolvedValue({
-        homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
-      })
+      getPredictionsForFixture: jest.fn().mockResolvedValue([
+        {
+          userId: 'user1',
+          prediction: {
+            homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
+          }
+        }
+      ])
     });
     const mockChannel = { isTextBased: jest.fn().mockReturnValue(false), send: jest.fn() };
     const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
@@ -197,10 +268,14 @@ describe('createScoreFinishedFixtures', () => {
   it('should catch and log error if announcement posting fails (line 154)', async () => {
     const fixture = { id: 4, status: 'FT', goals: { home: 2, away: 1 } };
     const store = makeStore({
-      getPredictorIdsForFixture: jest.fn().mockResolvedValue(['user1']),
-      getPrediction: jest.fn().mockResolvedValue({
-        homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
-      })
+      getPredictionsForFixture: jest.fn().mockResolvedValue([
+        {
+          userId: 'user1',
+          prediction: {
+            homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
+          }
+        }
+      ])
     });
     const mockChannel = { isTextBased: jest.fn().mockReturnValue(true), send: jest.fn().mockRejectedValue(new Error('Discord err')) };
     const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };

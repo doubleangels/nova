@@ -2,8 +2,11 @@ const path = require('path');
 const config = require('../config');
 const keyvModule = require('keyv');
 const Keyv = keyvModule.default ?? keyvModule;
-const { getSharedKeyvStore } = require('./sqliteStore');
+const { getSharedKeyvStore, getWritableDb } = require('./sqliteStore');
 const logger = require('../logger')(path.basename(__filename));
+
+/** Max fixture IDs kept in prompted/scored tracking lists before oldest entries are pruned. */
+const MAX_TRACKED_FIXTURES = 512;
 
 /**
  * @typedef {Object} GamePrediction
@@ -59,7 +62,69 @@ function createPredictionStore(namespace, logLabel) {
     logger.error(`${logLabel} Keyv connection error.`, { err })
   );
 
+  const keyPrefix = `${namespace}:`;
+
+  function fullKey(key) {
+    return `${keyPrefix}${key}`;
+  }
+
+  function parseKeyvValue(rawValue) {
+    if (rawValue == null) return null;
+    try {
+      const parsed = JSON.parse(rawValue);
+      return parsed?.value !== undefined ? parsed.value : parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  function wrapKeyvValue(value) {
+    return JSON.stringify({ value, expires: null });
+  }
+
+  function getInTx(db, key) {
+    const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey(key));
+    return parseKeyvValue(row?.value);
+  }
+
+  function setInTx(db, key, value) {
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(fullKey(key), wrapKeyvValue(value));
+  }
+
+  function appendTrackedIdInTx(db, listKey, fixtureId) {
+    let list = getInTx(db, listKey) || [];
+    if (!list.includes(fixtureId)) {
+      list.push(fixtureId);
+      if (list.length > MAX_TRACKED_FIXTURES) {
+        list = list.slice(-MAX_TRACKED_FIXTURES);
+      }
+      setInTx(db, listKey, list);
+    }
+  }
+
   const PENDING_PREDICTION_TTL_MS = config.predictionPendingTtlMs;
+
+  let keyvTableReady = false;
+
+  function ensureKeyvTable(db) {
+    if (keyvTableReady) return;
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS keyv (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      )
+    `);
+    keyvTableReady = true;
+  }
+
+  function runStoreTransaction(fn) {
+    const db = getWritableDb();
+    ensureKeyvTable(db);
+    return db.transaction(() => fn(db))();
+  }
 
   /**
    * @param {string} userId
@@ -82,12 +147,18 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   async function addRegisteredUser(userId) {
-    const list = await getRegisteredUserIds();
-    if (!list.includes(userId)) {
-      list.push(userId);
-      await keyv.set('registered', list);
-    }
-    await trackParticipant(userId);
+    runStoreTransaction((db) => {
+      const list = getInTx(db, 'registered') || [];
+      if (!list.includes(userId)) {
+        list.push(userId);
+        setInTx(db, 'registered', list);
+      }
+      const participants = getInTx(db, 'all_participants') || [];
+      if (!participants.includes(userId)) {
+        participants.push(userId);
+        setInTx(db, 'all_participants', participants);
+      }
+    });
   }
 
   async function getPrediction(userId, fixtureId) {
@@ -95,23 +166,29 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   async function savePrediction(userId, fixtureId, prediction) {
-    await keyv.set(`prediction:${userId}:${fixtureId}`, prediction);
+    runStoreTransaction((db) => {
+      setInTx(db, `prediction:${userId}:${fixtureId}`, prediction);
 
-    const indexKey = `predictions_by_fixture:${fixtureId}`;
-    const userIds = (await keyv.get(indexKey)) || [];
-    if (!userIds.includes(userId)) {
-      userIds.push(userId);
-      await keyv.set(indexKey, userIds);
-    }
+      const indexKey = `predictions_by_fixture:${fixtureId}`;
+      const userIds = getInTx(db, indexKey) || [];
+      if (!userIds.includes(userId)) {
+        userIds.push(userId);
+        setInTx(db, indexKey, userIds);
+      }
 
-    const userIndexKey = `user_predictions:${userId}`;
-    const fixtureIds = (await keyv.get(userIndexKey)) || [];
-    if (!fixtureIds.includes(fixtureId)) {
-      fixtureIds.push(fixtureId);
-      await keyv.set(userIndexKey, fixtureIds);
-    }
+      const userIndexKey = `user_predictions:${userId}`;
+      const fixtureIds = getInTx(db, userIndexKey) || [];
+      if (!fixtureIds.includes(fixtureId)) {
+        fixtureIds.push(fixtureId);
+        setInTx(db, userIndexKey, fixtureIds);
+      }
 
-    await trackParticipant(userId);
+      const participants = getInTx(db, 'all_participants') || [];
+      if (!participants.includes(userId)) {
+        participants.push(userId);
+        setInTx(db, 'all_participants', participants);
+      }
+    });
   }
 
   async function getUserPredictionFixtureIds(userId) {
@@ -142,11 +219,9 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   async function markFixturePrompted(fixtureId) {
-    const list = await getPromptedFixtures();
-    if (!list.includes(fixtureId)) {
-      list.push(fixtureId);
-      await keyv.set('prompted_fixtures', list);
-    }
+    runStoreTransaction((db) => {
+      appendTrackedIdInTx(db, 'prompted_fixtures', fixtureId);
+    });
   }
 
   async function getScoredFixtures() {
@@ -154,15 +229,92 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   async function markFixtureScored(fixtureId) {
-    const list = await getScoredFixtures();
-    if (!list.includes(fixtureId)) {
-      list.push(fixtureId);
-      await keyv.set('scored_fixtures', list);
-    }
+    runStoreTransaction((db) => {
+      appendTrackedIdInTx(db, 'scored_fixtures', fixtureId);
+    });
+  }
+
+  /**
+   * @param {number} fixtureId
+   * @returns {Promise<boolean>}
+   */
+  async function tryAcquireScoringLock(fixtureId) {
+    return runStoreTransaction((db) => {
+      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey(`scoring_lock:${fixtureId}`));
+      if (row) return false;
+      db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
+        fullKey(`scoring_lock:${fixtureId}`),
+        wrapKeyvValue(1)
+      );
+      return true;
+    });
+  }
+
+  /**
+   * @param {number} fixtureId
+   * @returns {Promise<void>}
+   */
+  async function releaseScoringLock(fixtureId) {
+    await keyv.delete(`scoring_lock:${fixtureId}`);
+  }
+
+  /**
+   * Persists scored predictions and points for a finished fixture in one transaction.
+   * @param {number} fixtureId
+   * @param {Array<{ userId: string, prediction: GamePrediction, pointsDelta: number }>} updates
+   * @returns {Promise<void>}
+   */
+  async function applyFixtureScoringResults(fixtureId, updates) {
+    runStoreTransaction((db) => {
+      for (const { userId, prediction, pointsDelta } of updates) {
+        setInTx(db, `prediction:${userId}:${fixtureId}`, prediction);
+        if (pointsDelta > 0) {
+          const current = getInTx(db, `points:${userId}`) || 0;
+          const next = current + pointsDelta;
+          setInTx(db, `points:${userId}`, next);
+          if (next > 0) {
+            const participants = getInTx(db, 'all_participants') || [];
+            if (!participants.includes(userId)) {
+              participants.push(userId);
+              setInTx(db, 'all_participants', participants);
+            }
+          }
+        }
+      }
+      appendTrackedIdInTx(db, 'scored_fixtures', fixtureId);
+    });
   }
 
   async function getPredictorIdsForFixture(fixtureId) {
     return (await keyv.get(`predictions_by_fixture:${fixtureId}`)) || [];
+  }
+
+  /**
+   * @param {number} fixtureId
+   * @returns {Promise<Array<{ userId: string, prediction: GamePrediction|null }>>}
+   */
+  async function getPredictionsForFixture(fixtureId) {
+    const userIds = await getPredictorIdsForFixture(fixtureId);
+    return Promise.all(
+      userIds.map(async (userId) => ({
+        userId,
+        prediction: await getPrediction(userId, fixtureId)
+      }))
+    );
+  }
+
+  /**
+   * @param {string} userId
+   * @param {number[]} fixtureIds
+   * @returns {Promise<Array<{ fixtureId: number, prediction: GamePrediction|null }>>}
+   */
+  async function getPredictionsForUser(userId, fixtureIds) {
+    return Promise.all(
+      fixtureIds.map(async (fixtureId) => ({
+        fixtureId,
+        prediction: await getPrediction(userId, fixtureId)
+      }))
+    );
   }
 
   async function isPromptingPaused() {
@@ -296,7 +448,12 @@ function createPredictionStore(namespace, logLabel) {
     markFixturePrompted,
     getScoredFixtures,
     markFixtureScored,
+    tryAcquireScoringLock,
+    releaseScoringLock,
+    applyFixtureScoringResults,
     getPredictorIdsForFixture,
+    getPredictionsForFixture,
+    getPredictionsForUser,
     savePendingPrediction,
     getPendingPrediction,
     clearPendingPrediction,
@@ -313,5 +470,6 @@ function createPredictionStore(namespace, logLabel) {
 
 module.exports = {
   createPredictionStore,
-  isPendingPredictionComplete
+  isPendingPredictionComplete,
+  MAX_TRACKED_FIXTURES
 };

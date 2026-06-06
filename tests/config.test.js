@@ -49,6 +49,18 @@ describe('config', () => {
     expect(config.settings.deployCommandsOnStart).toBe(true);
   });
 
+  it('should load optional GUILD_ID when set', () => {
+    process.env.GUILD_ID = '123456789012345678';
+    const config = require('../config');
+    expect(config.guildId).toBe('123456789012345678');
+  });
+
+  it('should leave guildId null when GUILD_ID is unset', () => {
+    delete process.env.GUILD_ID;
+    const config = require('../config');
+    expect(config.guildId).toBeNull();
+  });
+
   it('should parse baseEmbedColor with hash prefix', () => {
     process.env.BASE_EMBED_COLOR = '#CD41FF';
     const config = require('../config');
@@ -103,6 +115,36 @@ describe('config', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
     );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('should warn when DISCORD_CLIENT_ID is not set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    delete process.env.DISCORD_CLIENT_ID;
+    require('../config');
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('DISCORD_CLIENT_ID is not set')
+    );
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('should not warn about DISCORD_CLIENT_ID when it is set', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    process.env.DISCORD_CLIENT_ID = '123456789';
+    require('../config');
+    expect(consoleWarnSpy.mock.calls.some(([msg]) => String(msg).includes('DISCORD_CLIENT_ID is not set'))).toBe(false);
+    delete process.env.DISCORD_CLIENT_ID;
+    consoleWarnSpy.mockRestore();
+  });
+
+  it('should warn and fall back when positive int env is invalid', () => {
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    process.env.FOOTBALL_PREDICTION_POLL_INTERVAL_MS = 'not-a-number';
+    require('../config');
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Invalid positive integer for FOOTBALL_PREDICTION_POLL_INTERVAL_MS')
+    );
+    delete process.env.FOOTBALL_PREDICTION_POLL_INTERVAL_MS;
     consoleWarnSpy.mockRestore();
   });
 

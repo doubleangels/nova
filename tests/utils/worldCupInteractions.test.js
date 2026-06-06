@@ -127,6 +127,10 @@ describe('worldCupInteractions', () => {
     const interaction = {
       customId: 'worldcup:pick:home:42',
       user: { id: '111111111111111111' },
+      guild: { id: 'guild-1' },
+      member: {
+        roles: { cache: { has: jest.fn().mockReturnValue(true) } }
+      },
       values: ['2'],
       update: jest.fn().mockResolvedValue()
     };
@@ -152,6 +156,10 @@ describe('worldCupInteractions', () => {
     const interaction = {
       customId: 'worldcup:pick:winner:42',
       user: { id: '111111111111111111' },
+      guild: { id: 'guild-1' },
+      member: {
+        roles: { cache: { has: jest.fn().mockReturnValue(true) } }
+      },
       values: ['home'],
       client: {},
       update: jest.fn().mockResolvedValue()

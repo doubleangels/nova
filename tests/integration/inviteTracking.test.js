@@ -54,6 +54,10 @@ describe('Invite Tracking Integration Flow', () => {
     };
     jest.doMock('../../utils/database', () => mockDatabase);
 
+    jest.doMock('../../utils/inviteInitGate', () => ({
+      waitForInviteInit: jest.fn().mockResolvedValue()
+    }));
+
     // Mock trollModeUtils to pass age verification
     mockTrollModeUtils = {
       checkAccountAge: jest.fn().mockResolvedValue(true),

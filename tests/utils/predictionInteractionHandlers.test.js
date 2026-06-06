@@ -275,6 +275,59 @@ describe('predictionInteractionHandlers', () => {
       store.getPendingPrediction.mockResolvedValue({});
     });
 
+    it('should reply when pick select is used outside a guild', async () => {
+      interaction.guild = null;
+      interaction.member = null;
+      msgs.ERR_USE_IN_SERVER = 'Use in server';
+
+      await handlers.handlePickSelect(interaction);
+
+      expect(interaction.reply).toHaveBeenCalledWith({
+        content: 'Use in server',
+        flags: MessageFlags.Ephemeral
+      });
+    });
+
+    it('should reply when pick select is used without a member', async () => {
+      interaction.guild = { id: 'guild-1' };
+      interaction.member = null;
+      msgs.ERR_USE_IN_SERVER = 'Use in server';
+
+      await handlers.handlePickSelect(interaction);
+
+      expect(interaction.reply).toHaveBeenCalledWith({
+        content: 'Use in server',
+        flags: MessageFlags.Ephemeral
+      });
+    });
+
+    it('should reject unregistered club users without participant role', async () => {
+      options.gameId = 'club';
+      store.isUserRegistered.mockResolvedValue(false);
+      interaction.member = { roles: { cache: { has: () => false } } };
+      config.footballParticipantRoleId = 'club-role';
+
+      await handlers.handlePickSelect(interaction);
+
+      expect(interaction.update).toHaveBeenCalledWith({
+        content: 'not registered',
+        components: []
+      });
+    });
+
+    it('should reject unregistered users without participant role', async () => {
+      store.isUserRegistered.mockResolvedValue(false);
+      interaction.member = { roles: { cache: { has: () => false } } };
+      config.worldCupParticipantRoleId = 'role1';
+
+      await handlers.handlePickSelect(interaction);
+
+      expect(interaction.update).toHaveBeenCalledWith({
+        content: 'not registered',
+        components: []
+      });
+    });
+
     it('should reply with ERR_INVALID_MATCH if parse PickCustomId fails', async () => {
       interaction.customId = 'pred_wc_invalid:abc';
       msgs.ERR_INVALID_MATCH = 'Invalid match';
@@ -308,9 +361,9 @@ describe('predictionInteractionHandlers', () => {
       
       await handlers.handlePickSelect(interaction);
       
-      expect(interaction.followUp).toHaveBeenCalledWith({
+      expect(interaction.update).toHaveBeenCalledWith({
         content: 'Invalid goals',
-        flags: MessageFlags.Ephemeral
+        components: []
       });
     });
 
@@ -322,9 +375,9 @@ describe('predictionInteractionHandlers', () => {
       
       await handlers.handlePickSelect(interaction);
       
-      expect(interaction.followUp).toHaveBeenCalledWith({
+      expect(interaction.update).toHaveBeenCalledWith({
         content: 'Invalid winner',
-        flags: MessageFlags.Ephemeral
+        components: []
       });
     });
 
@@ -392,6 +445,19 @@ describe('predictionInteractionHandlers', () => {
         content: null,
         components: []
       }));
+    });
+
+    it('should note when winner pick is realigned to match the scoreline', async () => {
+      ui.isPendingPredictionComplete.mockReturnValue(true);
+      msgs.NOTE_WINNER_REALIGNED = '_Your winner pick was adjusted to match your scoreline._';
+      store.savePendingPrediction.mockResolvedValue({ homeScore: 2, awayScore: 1, resultPick: 'away' });
+      alignResultPickWithScore.mockReturnValue('home');
+      ui.formatResultPickDisplay.mockReturnValue('Home');
+
+      await handlers.handlePickSelect(interaction);
+
+      const updateArg = interaction.update.mock.calls[0][0];
+      expect(updateArg.embeds[0].data.description).toContain(msgs.NOTE_WINNER_REALIGNED);
     });
 
     it('should trigger scoreFinishedFixtures if mock Api and all predicted', async () => {

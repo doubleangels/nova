@@ -54,7 +54,11 @@ function parsePositiveIntEnv(keys, defaultValue) {
   const raw = envFirst(...keys);
   if (raw == null) return defaultValue;
   const parsed = parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    console.warn(`Invalid positive integer for ${keys[0]}: "${raw}". Using default ${defaultValue}.`);
+    return defaultValue;
+  }
+  return parsed;
 }
 
 /** Football club participant role ID (FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID or FOOTBALL_PARTICIPANT_ROLE_ID). */
@@ -65,6 +69,7 @@ const footballParticipantRoleId = envFirst(
 /** World Cup participant role ID (WORLD_CUP_PARTICIPANT_ROLE_ID; falls back to football role if not set). */
 const worldCupParticipantRoleId = envFirst(
   'WORLD_CUP_PARTICIPANT_ROLE_ID',
+  'FOOTBALL_PARTICIPANT_ROLE_ID',
   'FOOTBALL_PREDICTION_PARTICIPANT_ROLE_ID'
 );
 /** @deprecated Use footballParticipantRoleId or worldCupParticipantRoleId. Kept for backward compat. */
@@ -212,6 +217,7 @@ module.exports = {
   botStatus: process.env.BOT_STATUS,
   // Bot activity type (playing, watching, listening, streaming, competing)
   botStatusType: process.env.BOT_STATUS_TYPE || 'watching',
+  botStatusStreamUrl: process.env.BOT_STATUS_STREAM_URL,
   clientId: process.env.DISCORD_CLIENT_ID || '1280311987154456657',
   // Authentication token for your Discord bot
   token: process.env.DISCORD_BOT_TOKEN,
@@ -225,6 +231,8 @@ module.exports = {
   deeplApiKey: process.env.DEEPL_API_KEY,
   // Name of the guild/server
   guildName: process.env.GUILD_NAME || 'Da Frens',
+  // Optional Discord guild ID when the bot is in multiple guilds
+  guildId: isSet(process.env.GUILD_ID) ? String(process.env.GUILD_ID).trim() : null,
   // Google Custom Search Engine ID for image searches
   imageSearchEngineId: process.env.IMAGE_SEARCH_ENGINE_ID,
   // Determines the verbosity of logs (error, warn, info, debug)
@@ -329,6 +337,12 @@ if (missing.length > 0) {
 
 if (!isSet(process.env.DEEPL_API_KEY)) {
   console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
+}
+
+if (!isSet(process.env.DISCORD_CLIENT_ID)) {
+  console.warn(
+    'DISCORD_CLIENT_ID is not set; using built-in default. Set it for deploy-commands and multi-application setups.'
+  );
 }
 
 if (predictionMockApi) {

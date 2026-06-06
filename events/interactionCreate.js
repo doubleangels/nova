@@ -1,6 +1,7 @@
 const path = require('path');
 const { captureError } = require('../instrument');
 const logger = require('../logger')(path.basename(__filename));
+const config = require('../config');
 const { MessageFlags, Events } = require('discord.js');
 const { handleSpamWarningButton } = require('../utils/spamModeUtils');
 const {
@@ -136,6 +137,13 @@ module.exports = {
 
     const command = interaction.client.commands.get(interaction.commandName);
     if (!command) {
+      if (config.settings.disabledCommands.includes(interaction.commandName)) {
+        await interaction.reply({
+          content: '⚠️ This command is currently disabled.',
+          flags: MessageFlags.Ephemeral
+        }).catch(() => {});
+        return;
+      }
       logger.warn('No command matching the requested command name was found.', {
         commandName: interaction.commandName
       });

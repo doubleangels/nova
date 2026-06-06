@@ -389,14 +389,14 @@ describe('database utils', () => {
       expect(mainKeyvInstance.get).not.toHaveBeenCalled();
     });
 
-    it('should return null on get error', async () => {
+    it('should reject on get error', async () => {
       mainKeyvInstance.get.mockRejectedValueOnce(new Error('get fail'));
-      expect(await db.getValue('err_key')).toBeNull();
+      await expect(db.getValue('err_key')).rejects.toThrow('get fail');
     });
 
     it('should handle set errors', async () => {
       mainKeyvInstance.set.mockRejectedValueOnce(new Error('set fail'));
-      await db.setValue('err', 'v');
+      await expect(db.setValue('err', 'v')).rejects.toThrow('set fail');
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
@@ -407,7 +407,7 @@ describe('database utils', () => {
 
     it('should handle delete errors', async () => {
       mainKeyvInstance.delete.mockRejectedValueOnce(new Error('del fail'));
-      await db.deleteValue('err');
+      await expect(db.deleteValue('err')).rejects.toThrow('del fail');
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
@@ -416,6 +416,28 @@ describe('database utils', () => {
       await db.getValue('cache_key');
       await db.getValue('cache_key');
       expect(mainKeyvInstance.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('should invalidate cached config values when requested', async () => {
+      await db.setValue('cached_invalidate', 'first');
+      expect(await db.getValue('cached_invalidate')).toBe('first');
+
+      db.invalidateConfigCache('cached_invalidate');
+      mainKeyvInstance.get.mockResolvedValueOnce('second');
+      expect(await db.getValue('cached_invalidate')).toBe('second');
+      expect(mainKeyvInstance.get).toHaveBeenCalledWith('config:cached_invalidate');
+    });
+
+    it('should clear all cached config values when no key is provided', async () => {
+      await db.setValue('cache_a', 'a');
+      await db.setValue('cache_b', 'b');
+      db.invalidateConfigCache();
+
+      mainKeyvInstance.get.mockResolvedValueOnce('fresh-a');
+      mainKeyvInstance.get.mockResolvedValueOnce('fresh-b');
+      expect(await db.getValue('cache_a')).toBe('fresh-a');
+      expect(await db.getValue('cache_b')).toBe('fresh-b');
+      expect(mainKeyvInstance.get).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -440,9 +462,31 @@ describe('database utils', () => {
       expect(mainKeyvInstance.delete).toHaveBeenCalledWith('mute_mode:user123');
     });
 
+    it('should skip list update when user was not in mute mode', async () => {
+      mainKeyvInstance.delete.mockResolvedValueOnce(false);
+      await db.removeMuteModeUser('user123');
+      expect(mainKeyvInstance.delete).toHaveBeenCalledWith('mute_mode:user123');
+    });
+
     it('should handle remove mute mode errors', async () => {
       mainKeyvInstance.delete.mockRejectedValueOnce(new Error('fail'));
-      await db.removeMuteModeUser('u');
+      await expect(db.removeMuteModeUser('u')).rejects.toThrow('fail');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('should return true when user is tracked in mute mode', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce({ userId: 'u1' });
+      expect(await db.isUserInMuteMode('u1')).toBe(true);
+    });
+
+    it('should return false when user is not tracked in mute mode', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      expect(await db.isUserInMuteMode('u1')).toBe(false);
+    });
+
+    it('should return false when mute mode lookup fails', async () => {
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('fail'));
+      expect(await db.isUserInMuteMode('u1')).toBe(false);
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
@@ -1062,75 +1106,20 @@ describe('database utils', () => {
       expect(await db.isFormerMember('u')).toBe(false);
     });
 
-    it('should start at 1 when no prior row exists in incrementMessageCount', async () => {
-      const selectStmt = { get: jest.fn().mockReturnValue(undefined) };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+    it('should start at 1 when no prior count exists in incrementMessageCount', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.incrementMessageCount('new-user')).toBe(1);
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith('message_count:new-user', 1);
     });
 
-    it('should treat invalid stored JSON as zero in incrementMessageCount', async () => {
-      const selectStmt = {
-        get: jest.fn().mockReturnValue({ value: 'not-json' })
-      };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
-      const count = await db.incrementMessageCount('u1');
-      expect(count).toBe(1);
-    });
-
-    it('should parse unwrapped numeric JSON values in incrementMessageCount', async () => {
-      const selectStmt = {
-        get: jest.fn().mockReturnValue({ value: '7' })
-      };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
-      expect(await db.incrementMessageCount('u-wrap')).toBe(8);
-    });
-
-    it('should via writable db in incrementMessageCount', async () => {
-      const selectStmt = {
-        get: jest.fn().mockReturnValue({ value: JSON.stringify({ value: 5, expires: null }) })
-      };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
-      const count = await db.incrementMessageCount('u1');
-      expect(count).toBe(6);
-      expect(writable.transaction).toHaveBeenCalled();
+    it('should increment from stored count in incrementMessageCount', async () => {
+      mainKeyvInstance.get.mockResolvedValueOnce(5);
+      expect(await db.incrementMessageCount('u1')).toBe(6);
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith('message_count:u1', 6);
     });
 
     it('should return null on error in incrementMessageCount', async () => {
-      const writable = {
-        transaction: jest.fn(() => {
-          throw new Error('tx fail');
-        }),
-        prepare: jest.fn()
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
+      mainKeyvInstance.get.mockRejectedValueOnce(new Error('keyv fail'));
       expect(await db.incrementMessageCount('u')).toBeNull();
     });
 
@@ -1142,55 +1131,6 @@ describe('database utils', () => {
     it('should return zero when no count is stored in getMessageCount', async () => {
       mainKeyvInstance.get.mockResolvedValueOnce(null);
       expect(await db.getMessageCount('u-missing')).toBe(0);
-    });
-
-    it('should treat non-numeric wrapped count as zero before increment in incrementMessageCount', async () => {
-      const selectStmt = {
-        get: jest.fn().mockReturnValue({
-          value: JSON.stringify({ value: 'not-a-number', expires: null })
-        })
-      };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
-      expect(await db.incrementMessageCount('u-nan')).toBe(1);
-    });
-
-    it('should treat zero wrapped count as zero before increment in incrementMessageCount', async () => {
-      const selectStmt = {
-        get: jest.fn().mockReturnValue({
-          value: JSON.stringify({ value: 0, expires: null })
-        })
-      };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
-      expect(await db.incrementMessageCount('u-zero-wrap')).toBe(1);
-    });
-
-    it('should parse bare numeric JSON without value wrapper in incrementMessageCount', async () => {
-      const selectStmt = {
-        get: jest.fn().mockReturnValue({ value: '12' })
-      };
-      const insertStmt = { run: jest.fn() };
-      const writable = {
-        transaction: jest.fn((fn) => () => fn()),
-        prepare: jest.fn()
-          .mockReturnValueOnce(selectStmt)
-          .mockReturnValueOnce(insertStmt)
-      };
-      loadDatabase({ sqliteOverrides: { getWritableDb: jest.fn(() => writable) } });
-      expect(await db.incrementMessageCount('u-bare')).toBe(13);
     });
 
     it('should and deleteMessageCount in getMessageCount', async () => {

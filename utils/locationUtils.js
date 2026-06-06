@@ -6,7 +6,7 @@ const dayjs = require('dayjs');
 const config = require('../config');
 
 /** @type {NodeCache} Cache for storing geocoding and timezone results */
-const LOC_CACHE = new NodeCache({ stdTTL: 3600 });
+const LOC_CACHE = new NodeCache({ stdTTL: 3600, maxKeys: 512 });
 
 /** @type {Map<string, number[]>} Map to track API rate limits */
 const LOC_RATE_LIMIT_COUNTS = new Map();

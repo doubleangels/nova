@@ -376,6 +376,74 @@ describe('interactionCreate event', () => {
       expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
+    it('should reply ephemerally when a disabled command is invoked', async () => {
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => mockLogger);
+      jest.doMock('../../instrument', () => mockInstrument);
+      jest.doMock('../../utils/spamModeUtils', () => mockSpamModeUtils);
+      jest.doMock('../../utils/worldCupInteractions', () => mockWorldCupInteractions);
+      jest.doMock('../../utils/footballInteractions', () => ({
+        handleFootballPredictButton: jest.fn().mockResolvedValue(),
+        handleFootballPickSelect: jest.fn().mockResolvedValue(),
+        isFootballPickSelect: jest.fn(),
+        BUTTON_PREFIX: 'football:predict:'
+      }));
+      jest.doMock('../../config', () => ({
+        settings: { disabledCommands: ['disabledCmd'] }
+      }));
+      interactionCreateEvent = require('../../events/interactionCreate');
+
+      const mockInteraction = createMockInteraction({
+        commandName: 'disabledCmd'
+      });
+      mockInteraction.isButton = jest.fn().mockReturnValue(false);
+      mockInteraction.isAutocomplete = jest.fn().mockReturnValue(false);
+      mockInteraction.isChatInputCommand = jest.fn().mockReturnValue(true);
+      mockInteraction.reply = jest.fn().mockResolvedValue();
+      mockInteraction.client = {
+        commands: new Collection()
+      };
+
+      await interactionCreateEvent.execute(mockInteraction);
+
+      expect(mockInteraction.reply).toHaveBeenCalledWith({
+        content: '⚠️ This command is currently disabled.',
+        flags: expect.any(Number)
+      });
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+
+    it('should swallow reply errors for disabled commands', async () => {
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => mockLogger);
+      jest.doMock('../../instrument', () => mockInstrument);
+      jest.doMock('../../utils/spamModeUtils', () => mockSpamModeUtils);
+      jest.doMock('../../utils/worldCupInteractions', () => mockWorldCupInteractions);
+      jest.doMock('../../utils/footballInteractions', () => ({
+        handleFootballPredictButton: jest.fn().mockResolvedValue(),
+        handleFootballPickSelect: jest.fn().mockResolvedValue(),
+        isFootballPickSelect: jest.fn(),
+        BUTTON_PREFIX: 'football:predict:'
+      }));
+      jest.doMock('../../config', () => ({
+        settings: { disabledCommands: ['disabledCmd'] }
+      }));
+      interactionCreateEvent = require('../../events/interactionCreate');
+
+      const mockInteraction = createMockInteraction({
+        commandName: 'disabledCmd'
+      });
+      mockInteraction.isButton = jest.fn().mockReturnValue(false);
+      mockInteraction.isAutocomplete = jest.fn().mockReturnValue(false);
+      mockInteraction.isChatInputCommand = jest.fn().mockReturnValue(true);
+      mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+      mockInteraction.client = {
+        commands: new Collection()
+      };
+
+      await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+    });
+
     it('should log warning if matching command is not found', async () => {
       const mockInteraction = createMockInteraction({
         commandName: 'unknownCommand'

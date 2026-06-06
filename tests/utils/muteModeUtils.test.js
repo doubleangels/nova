@@ -36,7 +36,8 @@ describe('muteModeUtils', () => {
     jest.doMock('../../logger', () => () => mockLogger);
     jest.doMock('../../config', () => ({
       serverInviteUrl: 'http://invite.link',
-      baseEmbedColor: '#ffffff'
+      baseEmbedColor: '#ffffff',
+      guildId: null
     }));
 
     mockDatabase = {
@@ -84,7 +85,7 @@ describe('muteModeUtils', () => {
   describe('scheduleMuteKick', () => {
     it('should execute kick immediately if time is already up', async () => {
       const joinTime = dayjs().subtract(2, 'hour').toDate();
-      mockDatabase.getUserJoinTime.mockResolvedValueOnce(joinTime);
+      mockDatabase.getUserJoinTime.mockResolvedValue(joinTime);
 
       await muteModeUtils.scheduleMuteKick('user123', joinTime, 1, mockClient, 'guild123');
 
@@ -104,9 +105,24 @@ describe('muteModeUtils', () => {
       );
     });
 
+    it('should skip immediate kick when user clears mute mode before executeKick', async () => {
+      const joinTime = dayjs().subtract(2, 'hour').toDate();
+      mockDatabase.getUserJoinTime
+        .mockResolvedValueOnce(joinTime)
+        .mockResolvedValueOnce(null);
+
+      await muteModeUtils.scheduleMuteKick('user123', joinTime, 1, mockClient, 'guild123');
+
+      expect(mockMember.kick).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'User is no longer in mute mode, skipping kick.',
+        expect.objectContaining({ userId: 'user123', context: 'immediate' })
+      );
+    });
+
     it('should warn and still kick when DM fails', async () => {
       const joinTime = dayjs().subtract(2, 'hour').toDate();
-      mockDatabase.getUserJoinTime.mockResolvedValueOnce(joinTime);
+      mockDatabase.getUserJoinTime.mockResolvedValue(joinTime);
       mockMember.send.mockRejectedValueOnce(new Error('Cannot DM'));
 
       await muteModeUtils.scheduleMuteKick('user123', joinTime, 1, mockClient, 'guild123');
@@ -211,6 +227,22 @@ describe('muteModeUtils', () => {
 
       expect(mockLogger.debug).toHaveBeenCalledWith(
         'Cancelled mute kick timeout for user.',
+        expect.objectContaining({ userId: 'user123' })
+      );
+    });
+
+    it('should skip timeout kick when user clears mute mode before executeKick', async () => {
+      const joinTime = new Date();
+      mockDatabase.getUserJoinTime
+        .mockResolvedValueOnce(joinTime)
+        .mockResolvedValueOnce(null);
+
+      await muteModeUtils.scheduleMuteKick('user123', joinTime, 1, mockClient, 'guild123');
+      await jest.runAllTimersAsync();
+
+      expect(mockMember.kick).not.toHaveBeenCalled();
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'User is no longer in mute mode, skipping kick.',
         expect.objectContaining({ userId: 'user123' })
       );
     });
@@ -335,6 +367,25 @@ describe('muteModeUtils', () => {
       );
     });
 
+    it('should warn when guild cannot be resolved for rescheduling', async () => {
+      mockDatabase.getValue.mockResolvedValueOnce('2');
+      mockDatabase.getAllMuteModeUsers.mockResolvedValueOnce([
+        { user_id: 'user1', join_time: new Date() }
+      ]);
+      const unresolvedClient = {
+        guilds: {
+          cache: {
+            size: 1,
+            first: () => null
+          }
+        }
+      };
+
+      await muteModeUtils.rescheduleAllMuteKicks(unresolvedClient);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith('Could not resolve guild for mute kick rescheduling.');
+    });
+
     it('should do nothing if no users found', async () => {
       mockDatabase.getValue.mockResolvedValueOnce('2');
       mockDatabase.getAllMuteModeUsers.mockResolvedValueOnce([]);
@@ -375,7 +426,7 @@ describe('muteModeUtils', () => {
     it('should log error when rescheduling throws', async () => {
       mockDatabase.getValue.mockRejectedValueOnce(new Error('db unavailable'));
 
-      await muteModeUtils.rescheduleAllMuteKicks(mockClient);
+      await expect(muteModeUtils.rescheduleAllMuteKicks(mockClient)).rejects.toThrow('db unavailable');
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred while rescheduling mute kicks on startup.',

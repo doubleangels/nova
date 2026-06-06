@@ -29,6 +29,7 @@ describe('messageCreate event', () => {
     mockDatabase = {
       getValue: jest.fn(),
       removeMuteModeUser: jest.fn(),
+      isUserInMuteMode: jest.fn(),
       incrementMessageCount: jest.fn(),
       deleteMessageCount: jest.fn(),
       getMessageCount: jest.fn()
@@ -86,7 +87,7 @@ describe('messageCreate event', () => {
         author: { id: 'user-1' }
       };
 
-      await expect(messageCreateEvent.execute(mockMessage)).rejects.toThrow('⚠️ Failed to fetch message content.');
+      await expect(messageCreateEvent.execute(mockMessage)).resolves.toBeUndefined();
       expect(mockInstrument.captureError).toHaveBeenCalled();
     });
 
@@ -260,7 +261,7 @@ describe('messageCreate event', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it('should clear mute mode tracking after any user message', async () => {
+    it('should clear mute mode tracking when mute mode is enabled and user is tracked', async () => {
       const mockMessage = {
         partial: false,
         author: { id: 'user-1', tag: 'User#1234', bot: false },
@@ -268,14 +269,51 @@ describe('messageCreate event', () => {
         content: 'hello'
       };
 
-      mockDatabase.getValue.mockResolvedValue(false);
+      mockDatabase.getValue.mockImplementation(async (key) => key === 'mute_mode_enabled');
+      mockDatabase.isUserInMuteMode.mockResolvedValue(true);
       mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
       mockDatabase.removeMuteModeUser.mockResolvedValue();
 
       await messageCreateEvent.execute(mockMessage);
 
       expect(mockMuteModeUtils.cancelMuteKick).toHaveBeenCalledWith('user-1');
+      expect(mockDatabase.isUserInMuteMode).toHaveBeenCalledWith('user-1');
       expect(mockDatabase.removeMuteModeUser).toHaveBeenCalledWith('user-1');
+    });
+
+    it('should not remove mute mode user when mute mode is enabled but user is not tracked', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello'
+      };
+
+      mockDatabase.getValue.mockImplementation(async (key) => key === 'mute_mode_enabled');
+      mockDatabase.isUserInMuteMode.mockResolvedValue(false);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.isUserInMuteMode).toHaveBeenCalledWith('user-1');
+      expect(mockDatabase.removeMuteModeUser).not.toHaveBeenCalled();
+    });
+
+    it('should not remove mute mode user when mute mode is disabled', async () => {
+      const mockMessage = {
+        partial: false,
+        author: { id: 'user-1', tag: 'User#1234', bot: false },
+        channel: { id: 'chan-1', name: 'general' },
+        content: 'hello'
+      };
+
+      mockDatabase.getValue.mockImplementation(async (key) => key === 'mute_mode_enabled' ? false : null);
+      mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+      await messageCreateEvent.execute(mockMessage);
+
+      expect(mockDatabase.isUserInMuteMode).not.toHaveBeenCalled();
+      expect(mockDatabase.removeMuteModeUser).not.toHaveBeenCalled();
     });
 
     describe('no-text channel enforcement', () => {
@@ -388,8 +426,8 @@ describe('messageCreate event', () => {
       });
     });
 
-    describe('error throwing wrappers', () => {
-      it('should throw specific wrapper errors', async () => {
+    describe('error handling', () => {
+      it('should log and capture errors without rethrowing', async () => {
         const mockMessage = {
           partial: false,
           author: { id: 'user-1', tag: 'User#1234', bot: false },
@@ -397,18 +435,17 @@ describe('messageCreate event', () => {
         };
 
         const errorCases = [
-          ['⚠️ Failed to track message data.', '⚠️ Failed to track message data.'],
-          ['⚠️ Failed to process bump message.', '⚠️ Failed to process bump message.'],
-          ['⚠️ Database error occurred while processing message.', '⚠️ Database error occurred while processing message.'],
-          ['⚠️ Insufficient permissions to process message.', '⚠️ Insufficient permissions to process message.'],
-          ['⚠️ Invalid message data received.', '⚠️ Invalid message data received.'],
-          ['⚠️ Failed to set reminder for bump message.', '⚠️ Failed to set reminder for bump message.'],
-          ['generic error', '⚠️ An unexpected error occurred while processing the message.']
+          '⚠️ Failed to track message data.',
+          '⚠️ Failed to process bump message.',
+          '⚠️ Database error occurred while processing message.',
+          'generic error'
         ];
 
-        for (const [errText, expectedMessage] of errorCases) {
+        for (const errText of errorCases) {
+          mockInstrument.captureError.mockClear();
           mockDatabase.getValue.mockRejectedValue(new Error(errText));
-          await expect(messageCreateEvent.execute(mockMessage)).rejects.toThrow(expectedMessage);
+          await expect(messageCreateEvent.execute(mockMessage)).resolves.toBeUndefined();
+          expect(mockInstrument.captureError).toHaveBeenCalled();
         }
       });
     });

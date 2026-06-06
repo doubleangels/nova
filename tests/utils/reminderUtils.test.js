@@ -205,6 +205,43 @@ describe('reminderUtils', () => {
         'Reminder notifications were not scheduled because reminder_role is not set. Use /reminder to configure.'
       );
       expect(mockChannel.send).not.toHaveBeenCalled();
+      expect(reminderKeyvInstance.delete).toHaveBeenCalledWith('reminder:r1');
+    });
+
+    it('should log rollback failure when reminder cleanup throws', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_role') return null;
+        if (k === 'reminder_channel') return 'channel-123';
+        return null;
+      });
+      reminderKeyvInstance.delete.mockRejectedValueOnce(new Error('rollback fail'));
+
+      await reminderUtils.scheduleCommandCooldownNotifications(mockClient, 'promote', {
+        reminderId: 'r1',
+        remind_at: dayjs().add(1, 'day').toISOString(),
+        delayMs: reminderUtils.PROMOTE_REMINDER_MS
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Failed to roll back reminder record.',
+        expect.objectContaining({ type: 'promote', reminderId: 'r1' })
+      );
+    });
+
+    it('should skip rollback delete when reminder id is missing', async () => {
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_role') return null;
+        if (k === 'reminder_channel') return 'channel-123';
+        return null;
+      });
+
+      await reminderUtils.scheduleCommandCooldownNotifications(mockClient, 'promote', {
+        reminderId: '',
+        remind_at: dayjs().add(1, 'day').toISOString(),
+        delayMs: reminderUtils.PROMOTE_REMINDER_MS
+      });
+
+      expect(reminderKeyvInstance.delete).not.toHaveBeenCalled();
     });
 
     it('should warn and skip notifications when reminder channel is missing at notification time', async () => {
@@ -580,13 +617,11 @@ describe('reminderUtils', () => {
       expect(mockClient.channels.fetch).toHaveBeenCalledWith('channel-123');
     });
 
-    it('should log unexpected errors from getValue', async () => {
+    it('should propagate errors from getValue', async () => {
       mockDatabase.getValue.mockRejectedValue(new Error('db down'));
-      await reminderUtils.handleReminder({ client: mockClient }, 1000);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Unexpected error in handleReminder.',
-        expect.any(Object)
-      );
+      await expect(
+        reminderUtils.handleReminder({ client: mockClient }, 1000)
+      ).rejects.toThrow('db down');
     });
 
     it('should cancel existing timer when same type is rescheduled', async () => {
@@ -945,7 +980,7 @@ describe('reminderUtils', () => {
     it('should log top-level errors', async () => {
       setupConfig();
       reminderKeyvInstance.get.mockRejectedValue(new Error('reschedule boom'));
-      await reminderUtils.rescheduleReminder(mockClient);
+      await expect(reminderUtils.rescheduleReminder(mockClient)).rejects.toThrow('reschedule boom');
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred in rescheduleReminder.',
         expect.any(Object)
@@ -1050,6 +1085,25 @@ describe('reminderUtils', () => {
     it.each(cases)('maps %s to user-facing error', async (code, fragment) => {
       await expect(reminderUtils.handleError(new Error(code), 'test')).rejects.toThrow(fragment);
       expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('cancelAllReminderTimeouts', () => {
+    it('should clear every active reminder timeout', async () => {
+      setupConfig();
+      reminderKeyvInstance.get.mockImplementation(async (k) => {
+        if (k.endsWith(':list')) return [];
+        return null;
+      });
+
+      await reminderUtils.handleReminder({ client: mockClient }, 60000, 'bump');
+      await reminderUtils.handleReminder({ client: mockClient }, 60000, 'promote');
+
+      reminderUtils.cancelAllReminderTimeouts();
+      mockChannel.send.mockClear();
+      await jest.runAllTimersAsync();
+
+      expect(mockChannel.send).not.toHaveBeenCalled();
     });
   });
 });

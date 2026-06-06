@@ -3,6 +3,7 @@ const logger = require('../logger')(path.basename(__filename));
 const { getAllMuteModeUsers, getValue, getUserJoinTime, getGuildName } = require('./database');
 const dayjs = require('dayjs');
 const config = require('../config');
+const { resolvePrimaryGuild } = require('./guildResolver');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 
@@ -37,6 +38,12 @@ function cancelMuteKick(userId) {
  * @returns {Promise<void>}
  */
 async function executeKick(member, userId, context) {
+  const stillTracked = await getUserJoinTime(userId);
+  if (!stillTracked) {
+    logger.debug('User is no longer in mute mode, skipping kick.', { userId, context });
+    return;
+  }
+
   try {
     const inviteUrl = config.serverInviteUrl;
     const guildName = await getGuildName();
@@ -117,6 +124,11 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
             activeTimeouts.delete(userId);
             return;
           }
+          if (!(await getUserJoinTime(userId))) {
+            logger.debug('User is no longer in mute mode, skipping kick.', { userId });
+            activeTimeouts.delete(userId);
+            return;
+          }
           await executeKick(member, userId, 'timeout');
         }
       }
@@ -156,7 +168,14 @@ async function rescheduleAllMuteKicks(client) {
       logger.debug("No mute mode users found for mute kick rescheduling.");
       return;
     }
-    const guildId = client.guilds.cache.first().id;
+    const guildId = resolvePrimaryGuild(client, {
+      guildId: config.guildId,
+      warn: (message, meta) => logger.warn(message, meta)
+    })?.id;
+    if (!guildId) {
+      logger.warn('Could not resolve guild for mute kick rescheduling.');
+      return;
+    }
     await Promise.all(muteModeUsers.map((userData) => {
       logger.debug('Rescheduling mute kick for user.', {
         userData: JSON.stringify(userData)
@@ -173,6 +192,7 @@ async function rescheduleAllMuteKicks(client) {
     logger.error('Error occurred while rescheduling mute kicks on startup.', {
       err: e
     });
+    throw e;
   }
 }
 

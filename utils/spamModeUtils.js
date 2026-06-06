@@ -17,6 +17,12 @@ const { runWithConcurrency } = require('./asyncUtils');
 /** @type {Map<string, Map<string, Array>>} userId -> normalizedContent -> message occurrences */
 const userMessageTracker = new Map();
 
+/** Max users tracked concurrently in memory. */
+const MAX_TRACKED_USERS = 512;
+
+/** Max distinct content keys tracked per user. */
+const MAX_CONTENT_KEYS_PER_USER = 64;
+
 // ── Detection constants ───────────────────────────────────────────────────────
 
 /** Levenshtein similarity ratio above which two messages are treated as duplicates */
@@ -272,6 +278,102 @@ function cleanupUserEntries(userId, cutoffTime) {
   if (userMessages.size === 0) userMessageTracker.delete(userId);
 }
 
+/**
+ * @param {Array<{ timestamp: number }>} occurrences
+ * @returns {number}
+ */
+function getLatestOccurrenceTimestamp(occurrences) {
+  let latest = 0;
+  for (const occ of occurrences) {
+    if (occ.timestamp > latest) latest = occ.timestamp;
+  }
+  return latest;
+}
+
+/**
+ * @param {Map<string, Array>} userMessages
+ * @returns {number}
+ */
+function getUserLatestActivity(userMessages) {
+  let latest = 0;
+  for (const occurrences of userMessages.values()) {
+    latest = Math.max(latest, getLatestOccurrenceTimestamp(occurrences));
+  }
+  return latest;
+}
+
+/**
+ * Evicts least-recently-active users when the global tracker cap is reached.
+ * @param {string} userId
+ */
+function enforceGlobalSpamTrackerLimit(userId) {
+  while (!userMessageTracker.has(userId) && userMessageTracker.size >= MAX_TRACKED_USERS) {
+    let evictUserId = null;
+    let oldestActivity = Infinity;
+    for (const [trackedUserId, userMessages] of userMessageTracker.entries()) {
+      const activity = getUserLatestActivity(userMessages);
+      if (activity < oldestActivity) {
+        oldestActivity = activity;
+        evictUserId = trackedUserId;
+      }
+    }
+    /* istanbul ignore next -- defensive guard for an empty tracker at cap */
+    if (evictUserId == null) break;
+    userMessageTracker.delete(evictUserId);
+  }
+}
+
+/**
+ * Evicts stale content keys when a user exceeds the per-user cap.
+ * @param {Map<string, Array>} userMessages
+ */
+function enforceUserContentKeyLimit(userMessages) {
+  while (userMessages.size >= MAX_CONTENT_KEYS_PER_USER) {
+    let oldestKey = null;
+    let oldestTimestamp = Infinity;
+    for (const [key, occurrences] of userMessages.entries()) {
+      const latest = getLatestOccurrenceTimestamp(occurrences);
+      if (latest < oldestTimestamp) {
+        oldestTimestamp = latest;
+        oldestKey = key;
+      }
+    }
+    /* istanbul ignore next -- defensive guard for an empty content map at cap */
+    if (oldestKey == null) break;
+    userMessages.delete(oldestKey);
+  }
+}
+
+/** Clears in-memory spam tracking (for tests). */
+function clearSpamMessageTracker() {
+  userMessageTracker.clear();
+}
+
+/**
+ * Seeds tracker state for tests.
+ * @param {string} userId
+ * @param {number} timestamp
+ */
+function seedSpamTrackerUser(userId, timestamp) {
+  if (!userMessageTracker.has(userId)) {
+    userMessageTracker.set(userId, new Map());
+  }
+  userMessageTracker.get(userId).set(`seed-${userId}`, [{ timestamp }]);
+}
+
+/** @returns {number} */
+function getSpamTrackerUserCount() {
+  return userMessageTracker.size;
+}
+
+/**
+ * @param {string} userId
+ * @returns {number}
+ */
+function getSpamTrackerContentKeyCount(userId) {
+  return userMessageTracker.get(userId)?.size ?? 0;
+}
+
 // ── Main tracking entry point ─────────────────────────────────────────────────
 
 /**
@@ -369,6 +471,7 @@ async function trackNewUserMessage(message) {
     const now = dayjs();
     cleanupUserEntries(userId, now.subtract(windowMs, 'millisecond').valueOf());
 
+    enforceGlobalSpamTrackerLimit(userId);
     if (!userMessageTracker.has(userId)) userMessageTracker.set(userId, new Map());
     const userMessages = userMessageTracker.get(userId);
 
@@ -483,6 +586,7 @@ async function trackNewUserMessage(message) {
       }
     } else {
       // First occurrence of this content (or similar group) for this user
+      enforceUserContentKeyLimit(userMessages);
       userMessages.set(trackingKey, [messageOccurrence]);
     }
   } catch (error) {
@@ -924,5 +1028,13 @@ module.exports = {
   levenshtein,
   similarityScore,
   findSimilarContent,
-  parseSpamWarnButtonId
+  parseSpamWarnButtonId,
+  MAX_TRACKED_USERS,
+  MAX_CONTENT_KEYS_PER_USER,
+  clearSpamMessageTracker,
+  getSpamTrackerUserCount,
+  getSpamTrackerContentKeyCount,
+  seedSpamTrackerUser,
+  enforceGlobalSpamTrackerLimit,
+  enforceUserContentKeyLimit
 };

@@ -85,78 +85,91 @@ function createScoreFinishedFixtures(store, deps) {
       const logger = require('../logger')(path.basename(__filename));
 
       const fixtures =
-        prefetchedFixtures ?? (await deps.getFixtures({ forceRefresh: true }));
+        prefetchedFixtures ?? (await deps.getFixtures({ forceRefresh: false }));
       const scoredList = await store.getScoredFixtures();
+      const scoredSet = new Set(scoredList);
       const finished = fixtures.filter(
         f =>
           f.status === 'FT' &&
           f.goals.home != null &&
           f.goals.away != null &&
-          !scoredList.includes(f.id)
+          !scoredSet.has(f.id)
       );
 
       let scoredCount = 0;
       const channelId = deps.channelId;
 
       for (const fixture of finished) {
-        const scoredNow = await store.getScoredFixtures();
-        if (scoredNow.includes(fixture.id)) continue;
+        if (scoredSet.has(fixture.id)) continue;
 
-        const predictorIds = await store.getPredictorIdsForFixture(fixture.id);
-        /** @type {Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>} */
-        const earners = [];
+        if (!(await store.tryAcquireScoringLock(fixture.id))) continue;
 
-        for (const userId of predictorIds) {
-          const prediction = await store.getPrediction(userId, fixture.id);
-          if (!prediction || prediction.scored) continue;
+        try {
+          const predictorEntries = await store.getPredictionsForFixture(fixture.id);
+          /** @type {Array<{ userId: string, prediction: import('./predictionGameStore').GamePrediction, pointsDelta: number }>} */
+          const updates = [];
+          /** @type {Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>} */
+          const earners = [];
 
-          const scorePts = calculateScorePoints(
-            prediction.homeScore,
-            prediction.awayScore,
-            fixture.goals.home,
-            fixture.goals.away
-          );
-          const resultPts = calculateResultPoints(
-            prediction.resultPick,
-            fixture.goals.home,
-            fixture.goals.away
-          );
-          const total = scorePts + resultPts;
+          for (const { userId, prediction } of predictorEntries) {
+            if (!prediction || prediction.scored) continue;
 
-          prediction.scored = true;
-          prediction.scorePoints = scorePts;
-          prediction.resultPoints = resultPts;
-          prediction.pointsAwarded = total;
-          await store.savePrediction(userId, fixture.id, prediction);
+            const scorePts = calculateScorePoints(
+              prediction.homeScore,
+              prediction.awayScore,
+              fixture.goals.home,
+              fixture.goals.away
+            );
+            const resultPts = calculateResultPoints(
+              prediction.resultPick,
+              fixture.goals.home,
+              fixture.goals.away
+            );
+            const total = scorePts + resultPts;
 
-          if (total > 0) {
-            await store.addUserPoints(userId, total);
-            earners.push({
+            updates.push({
               userId,
-              scorePoints: scorePts,
-              resultPoints: resultPts,
-              total
+              prediction: {
+                ...prediction,
+                scored: true,
+                scorePoints: scorePts,
+                resultPoints: resultPts,
+                pointsAwarded: total
+              },
+              pointsDelta: total
             });
-          }
-        }
 
-        await store.markFixtureScored(fixture.id);
-        scoredCount += 1;
-
-        if (client && channelId && earners.length > 0) {
-          try {
-            const channel = await client.channels.fetch(channelId);
-            if (channel?.isTextBased()) {
-              const embed = deps.buildAnnouncementEmbed(fixture, earners);
-              await channel.send({ embeds: [embed] });
+            if (total > 0) {
+              earners.push({
+                userId,
+                scorePoints: scorePts,
+                resultPoints: resultPts,
+                total
+              });
             }
-          } catch (err) {
-            logger.error(`Failed to post ${deps.logLabel} match announcement.`, {
-              err,
-              fixtureId: fixture.id,
-              channelId
-            });
           }
+
+          await store.applyFixtureScoringResults(fixture.id, updates);
+          scoredSet.add(fixture.id);
+          scoredCount += 1;
+
+          if (client && channelId && earners.length > 0) {
+            try {
+              const channel = await client.channels.fetch(channelId);
+              if (channel?.isTextBased()) {
+                const embed = deps.buildAnnouncementEmbed(fixture, earners);
+                await channel.send({ embeds: [embed] });
+              }
+            } catch (err) {
+              logger.error(`Failed to post ${deps.logLabel} match announcement.`, {
+                err,
+                fixtureId: fixture.id,
+                channelId
+              });
+            }
+          }
+        } finally {
+          await store.releaseScoringLock(fixture.id);
         }
       }
 

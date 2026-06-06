@@ -4,6 +4,7 @@ const dayjs = require('dayjs');
 const { getValue, getGuildName } = require('../utils/database');
 const { EmbedBuilder } = require('discord.js');
 const config = require('../config');
+const { markPendingAgeKick, clearPendingAgeKick } = require('./ageKickTracking');
 
 /**
  * Checks if a member's account meets the minimum age requirement
@@ -37,7 +38,7 @@ async function checkAccountAge(member) {
       err: error,
       userTag: member.user.tag
     });
-    return true;
+    return false;
   }
 }
 
@@ -48,6 +49,7 @@ async function checkAccountAge(member) {
  * @throws {Error} If the kick operation fails
  */
 async function performKick(member) {
+  markPendingAgeKick(member.id);
   try {
     const requiredAge = parseInt(await getValue('troll_mode_account_age'), 10) || 30;
     const accountAge = dayjs().diff(dayjs(member.user.createdAt), 'day');
@@ -79,6 +81,7 @@ async function performKick(member) {
       requiredAge
     });
   } catch (error) {
+    clearPendingAgeKick(member.id);
     logger.error('Failed to kick member.', {
       err: error,
       userTag: member.user.tag

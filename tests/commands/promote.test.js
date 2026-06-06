@@ -224,6 +224,12 @@ describe('promote command', () => {
 
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.title).toBe('Server Promotion Successful');
+      expect(mockReminderUtils.scheduleCommandCooldownNotifications).toHaveBeenCalledWith(
+        mockInteraction.client,
+        'promote',
+        expect.objectContaining({ acquired: true })
+      );
+      expect(mockReminderUtils.releaseCommandCooldown).not.toHaveBeenCalled();
     });
 
     it('should handle partial failure and display error subreddits', async () => {
@@ -251,6 +257,8 @@ describe('promote command', () => {
 
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.description).toContain('_Could not post to:_ `r/DiscordPromote` (r/DiscordPromote: Subreddit does not exist or is private.); `r/DiscordServerPromos` (r/DiscordServerPromos: Subreddit does not exist or is private.)');
+      expect(mockReminderUtils.releaseCommandCooldown).toHaveBeenCalledWith('promote');
+      expect(mockReminderUtils.scheduleCommandCooldownNotifications).not.toHaveBeenCalled();
     });
 
     it('should handle banned or restricted subreddits (404 status)', async () => {

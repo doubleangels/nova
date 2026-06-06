@@ -17,7 +17,7 @@ const {
   scoreFinishedFixtures,
   formatFixtureLine,
   formatResultPickDisplay,
-  getPrediction,
+  getPredictionsForUser,
   getUserPredictionFixtureIds,
   getUserPoints,
   resetFootballGame,
@@ -203,8 +203,8 @@ module.exports = {
       return;
     }
 
-    await interaction.member.roles.add(role, 'Prediction game registration');
     await addRegisteredUser(interaction.user.id);
+    await interaction.member.roles.add(role, 'Prediction game registration');
 
     const channelRef = config.footballChannelId
       ? `<#${config.footballChannelId}>`
@@ -328,8 +328,6 @@ module.exports = {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    await scoreFinishedFixtures(interaction.client);
-
     const fixtures = await getSeasonFixtures();
     const fixtureMap = new Map(fixtures.map(f => [f.id, f]));
 
@@ -342,9 +340,13 @@ module.exports = {
       return;
     }
 
+    const predictionEntries = await getPredictionsForUser(
+      interaction.user.id,
+      fixtureIds
+    );
+
     const lines = [];
-    for (const fixtureId of fixtureIds) {
-      const prediction = await getPrediction(interaction.user.id, fixtureId);
+    for (const { fixtureId, prediction } of predictionEntries) {
       if (!prediction) {
         lines.push(`• Match \`${fixtureId}\`: ${msgs.MSG_MISSING_PREDICTION}`);
         continue;

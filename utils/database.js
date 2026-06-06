@@ -13,6 +13,7 @@ const {
   getWritableDb,
   closeDatabaseConnections
 } = require('./sqliteStore');
+const { resolvePrimaryGuild } = require('./guildResolver');
 
 // Log database path for debugging
 logger.info('Database path initialized.', {
@@ -202,6 +203,18 @@ async function initializeDatabase() {
 // Cache for config values to avoid DB reads on hot paths (e.g. every message)
 const configCache = new Map();
 
+/**
+ * Clears cached config values after external DB writes (CLI scripts, prune-db).
+ * @param {string} [key] - Config key without the `config:` prefix; omit to clear all.
+ */
+function invalidateConfigCache(key) {
+  if (key) {
+    configCache.delete(key);
+  } else {
+    configCache.clear();
+  }
+}
+
 const INVITE_MAP_CACHE_TTL_MS = 60_000;
 /** @type {Map<string, { map: Object, expiresAt: number }>} */
 const inviteCodeToTagMapCache = new Map();
@@ -231,7 +244,7 @@ async function getValue(key) {
     return finalValue;
   } catch (err) {
     logger.error('Error occurred while getting key.', { err: err, key: key });
-    return null;
+    throw err;
   }
 }
 
@@ -249,6 +262,7 @@ async function setValue(key, value) {
     logger.debug('Set config for key successfully.', { key: key });
   } catch (err) {
     logger.error('Error occurred while setting key.', { err: err, key: key });
+    throw err;
   }
 }
 
@@ -265,6 +279,7 @@ async function deleteValue(key) {
     logger.debug('Deleted config for key successfully.', { key: key });
   } catch (err) {
     logger.error('Error occurred while deleting key.', { err: err, key: key });
+    throw err;
   }
 }
 
@@ -379,17 +394,31 @@ async function addMuteModeUser(userId, username) {
 async function removeMuteModeUser(userId) {
   try {
     const deleted = await keyv.delete(`mute_mode:${userId}`);
+    if (!deleted) return;
     await removeFromUserList('mute_mode_users', userId);
-    if (deleted) {
-      logger.debug('Removed user from mute mode tracking.', {
-        userId: userId
-      });
-    }
+    logger.debug('Removed user from mute mode tracking.', {
+      userId: userId
+    });
   } catch (error) {
     logger.error('Error occurred while removing mute mode user.', {
       err: error,
       userId: userId
     });
+    throw error;
+  }
+}
+
+/**
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+async function isUserInMuteMode(userId) {
+  try {
+    const userData = await keyv.get(`mute_mode:${userId}`);
+    return userData != null;
+  } catch (error) {
+    logger.error('Error checking mute mode status for user.', { err: error, userId });
+    return false;
   }
 }
 
@@ -592,7 +621,10 @@ async function cleanupOldTrackingUsers(client = null) {
         // If client is provided, also check if user is still in guild
         // Bot is only in one guild, so check that guild directly
         if (!shouldRemove && client) {
-          const guild = client.guilds.cache.first();
+          const guild = resolvePrimaryGuild(client, {
+            guildId: config.guildId,
+            warn: (message, meta) => logger.warn(message, meta)
+          });
           if (guild) {
             try {
               const member = await guild.members.fetch(userId).catch(() => null);
@@ -984,32 +1016,13 @@ async function setFormerMember(userId) {
  * @param {string} userId - The Discord user ID
  * @returns {Promise<number>} The updated message count
  */
-function parseKeyvStoredCount(rawValue) {
-  if (rawValue == null) return 0;
-  try {
-    const parsed = JSON.parse(rawValue);
-    const val = parsed?.value !== undefined ? parsed.value : parsed;
-    return Number(val) || 0;
-  } catch {
-    return 0;
-  }
-}
-
 async function incrementMessageCount(userId) {
   try {
     logger.debug('Incrementing message count for user.', { userId: userId });
-    const fullKey = `main:message_count:${userId}`;
-    const db = getWritableDb();
-    const count = db.transaction(() => {
-      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey);
-      const nextCount = parseKeyvStoredCount(row?.value) + 1;
-      const wrapped = JSON.stringify({ value: nextCount, expires: null });
-      db.prepare(`
-        INSERT INTO keyv (key, value) VALUES (?, ?)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value
-      `).run(fullKey, wrapped);
-      return nextCount;
-    })();
+    const key = `message_count:${userId}`;
+    const current = (await keyv.get(key)) || 0;
+    const count = current + 1;
+    await keyv.set(key, count);
     logger.debug('Incremented message count for user successfully.', {
       userId: userId,
       count: count
@@ -1071,11 +1084,13 @@ module.exports = {
   initializeDatabase,
   closeDatabaseConnections,
   invalidateInviteCodeToTagMapCache,
+  invalidateConfigCache,
   getValue,
   setValue,
   deleteValue,
   addMuteModeUser,
   removeMuteModeUser,
+  isUserInMuteMode,
   getAllMuteModeUsers,
   getUserJoinTime,
   addSpamModeJoinTime,

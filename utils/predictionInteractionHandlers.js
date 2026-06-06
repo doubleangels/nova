@@ -206,6 +206,27 @@ function createPredictionInteractionHandlers(options) {
     const { side, fixtureId } = parsed;
     const value = interaction.values[0];
 
+    if (!interaction.guild || !interaction.member) {
+      await interaction.reply({
+        content: msgs.ERR_USE_IN_SERVER,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    const registered = await store.isUserRegistered(interaction.user.id);
+    const roleId = options.gameId === 'worldcup'
+      ? config.worldCupParticipantRoleId
+      : config.footballParticipantRoleId;
+    const hasRole = roleId && interaction.member.roles?.cache?.has(roleId);
+    if (!registered && !hasRole) {
+      await interaction.update({
+        content: msgs.errRegisterFirst(options.gameId),
+        components: []
+      });
+      return;
+    }
+
     const fixture = await options.getFixtureById(fixtureId);
     if (!fixture || !isFixtureOpenForPrediction(fixture)) {
       await store.clearPendingPrediction(interaction.user.id, fixtureId);
@@ -232,18 +253,18 @@ function createPredictionInteractionHandlers(options) {
     if (side === 'home' || side === 'away') {
       const goals = parseInt(value, 10);
       if (!Number.isInteger(goals) || goals < 0 || goals > 15) {
-        await interaction.followUp({
+        await interaction.update({
           content: msgs.ERR_GOALS_RANGE,
-          flags: MessageFlags.Ephemeral
+          components: []
         });
         return;
       }
       partial = side === 'home' ? { homeScore: goals } : { awayScore: goals };
     } else { // side === 'winner'
       if (!['home', 'draw', 'away'].includes(value)) {
-        await interaction.followUp({
+        await interaction.update({
           content: msgs.ERR_INVALID_WINNER,
-          flags: MessageFlags.Ephemeral
+          components: []
         });
         return;
       }
@@ -264,6 +285,7 @@ function createPredictionInteractionHandlers(options) {
       return;
     }
 
+    const rawResultPick = pending.resultPick;
     const resultPick = alignResultPickWithScore(
       pending.homeScore,
       pending.awayScore,
@@ -279,13 +301,18 @@ function createPredictionInteractionHandlers(options) {
     });
     await store.clearPendingPrediction(interaction.user.id, fixtureId);
 
+    let winnerLine = `Winner: **${formatResultPickDisplay(fixture, options.formatFixtureTeam, resultPick)}**`;
+    if (resultPick !== rawResultPick) {
+      winnerLine += `\n${msgs.NOTE_WINNER_REALIGNED}`;
+    }
+
     const embed = new EmbedBuilder()
       .setColor(msgs.GAME[options.gameId].embedColor)
       .setTitle(msgs.SAVED_PREDICTION_TITLE)
       .setDescription(
         `**${options.formatFixtureTeam(fixture, 'home')}** vs **${options.formatFixtureTeam(fixture, 'away')}**\n` +
         `Score: **${pending.homeScore}-${pending.awayScore}**\n` +
-        `Winner: **${formatResultPickDisplay(fixture, options.formatFixtureTeam, resultPick)}**`
+        winnerLine
       );
 
     await interaction.update({ embeds: [embed], content: null, components: [] });

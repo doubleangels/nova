@@ -58,6 +58,10 @@ describe('guildMemberAdd event', () => {
     };
     jest.doMock('../../config', () => mockConfig);
 
+    jest.doMock('../../utils/inviteInitGate', () => ({
+      waitForInviteInit: jest.fn().mockResolvedValue()
+    }));
+
     guildMemberAddEvent = require('../../events/guildMemberAdd');
   });
 
@@ -637,7 +641,7 @@ describe('guildMemberAdd event', () => {
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to fetch invites from guild.', expect.any(Object));
     });
 
-    it('should initialize invite usage tracking and skip notification on first run, even if setInviteUsage rejects', async () => {
+    it('should still update invite usage when previous usage is empty', async () => {
       const mockChannel = {
         id: 'chan-123',
         name: 'notifications',
@@ -671,13 +675,13 @@ describe('guildMemberAdd event', () => {
       };
 
       mockDatabase.getInviteNotificationChannel.mockResolvedValue('chan-123');
-      mockDatabase.getInviteUsage.mockResolvedValue({}); // First run
+      mockDatabase.getInviteCodeToTagMap.mockResolvedValue({ code123: 'tag1' });
+      mockDatabase.getInviteUsage.mockResolvedValue({});
       mockDatabase.setInviteUsage.mockRejectedValue(new Error('DB write failure'));
 
       await guildMemberAddEvent.checkTaggedInvite(mockMember);
 
-      // Cover line 240
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to initialize invite usage tracking.', expect.any(Object));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update invite usage tracking.', expect.any(Object));
     });
 
     it('should acquire lock sequentially when called concurrently', async () => {

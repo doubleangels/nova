@@ -173,12 +173,14 @@ function scheduleReminderTimeout(client, type, reminder) {
       const currentChannelId = await getValue('reminder_channel');
       if (!currentRole || !currentChannelId) {
         logger.warn('Reminder config missing at fire time; skipping.', { type });
+        await rollbackScheduledReminder(type, reminder.reminder_id);
         return;
       }
       let ch = client.channels.cache.get(currentChannelId);
       if (!ch) ch = await client.channels.fetch(currentChannelId).catch(() => null);
       if (!ch) {
         logger.warn('Reminder channel not found at fire time; skipping.', { type, currentChannelId });
+        await rollbackScheduledReminder(type, reminder.reminder_id);
         return;
       }
       /* istanbul ignore next */
@@ -189,6 +191,7 @@ function scheduleReminderTimeout(client, type, reminder) {
       await removeReminderId(type, reminder.reminder_id);
     } catch (err) {
       logger.error(`Error sending rescheduled ${type} reminder.`, { err });
+      await rollbackScheduledReminder(type, reminder.reminder_id);
     }
   }, delay);
 
@@ -237,6 +240,24 @@ async function removeReminderId(type, reminderId) {
   const list = await getReminderIds(type);
   const filtered = list.filter(id => id !== reminderId);
   await reminderKeyv.set(listKey, filtered);
+}
+
+/**
+ * Removes a reminder that was persisted but could not be scheduled or delivered.
+ * @param {string} type
+ * @param {string} reminderId
+ * @returns {Promise<void>}
+ */
+async function rollbackScheduledReminder(type, reminderId) {
+  cancelReminderTimeout(type);
+  if (!reminderId) return;
+  try {
+    await reminderKeyv.delete(`reminder:${reminderId}`);
+    await removeReminderId(type, reminderId);
+    logger.debug('Rolled back unsent reminder after scheduling failure.', { type, reminderId });
+  } catch (err) {
+    logger.error('Failed to roll back reminder record.', { err, type, reminderId });
+  }
 }
 
 /**
@@ -401,8 +422,12 @@ async function persistCommandCooldown(type, delayMs) {
   let expiredCount = 0;
 
   const idsToRemove = [];
-  for (const id of reminderIds) {
-    const reminder = await reminderKeyv.get(`reminder:${id}`);
+  const reminders = await Promise.all(
+    reminderIds.map((id) => reminderKeyv.get(`reminder:${id}`))
+  );
+  for (let i = 0; i < reminderIds.length; i++) {
+    const id = reminderIds[i];
+    const reminder = reminders[i];
     if (reminder && reminder.remind_at) {
       const remindAt = dayjs(reminder.remind_at);
       await reminderKeyv.delete(`reminder:${id}`);
@@ -524,12 +549,14 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
   const reminderRole = await getValue('reminder_role');
   if (!reminderRole) {
     logger.warn('Reminder notifications were not scheduled because reminder_role is not set. Use /reminder to configure.');
+    await rollbackScheduledReminder(type, reminder.reminderId);
     return;
   }
 
   const reminderChannelId = await getValue('reminder_channel');
   if (!reminderChannelId) {
     logger.warn('Reminder notifications were not scheduled because reminder_channel is not set. Use /reminder to configure.');
+    await rollbackScheduledReminder(type, reminder.reminderId);
     return;
   }
 
@@ -544,6 +571,7 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
       err: channelError,
       channelId: reminderChannelId
     });
+    await rollbackScheduledReminder(type, reminder.reminderId);
     return;
   }
 
@@ -583,12 +611,14 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
       const currentChannelId = await getValue('reminder_channel');
       if (!currentRole || !currentChannelId) {
         logger.warn('Reminder config missing at fire time; skipping.', { type });
+        await rollbackScheduledReminder(type, reminder.reminderId);
         return;
       }
       let ch = client.channels.cache.get(currentChannelId);
       if (!ch) ch = await client.channels.fetch(currentChannelId).catch(() => null);
       if (!ch) {
         logger.warn('Reminder channel not found at fire time; skipping.', { type, currentChannelId });
+        await rollbackScheduledReminder(type, reminder.reminderId);
         return;
       }
       /* istanbul ignore next */
@@ -600,6 +630,7 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
       logger.debug('Cleaned up sent reminder from recovery table.', { reminderId: reminder.reminderId });
     } catch (err) {
       logger.error('Error occurred while sending scheduled reminder.', { err, type });
+      await rollbackScheduledReminder(type, reminder.reminderId);
     }
   }, reminder.delayMs);
   activeReminderTimeouts.set(type, timeoutId);
@@ -615,7 +646,7 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
  * @throws {Error} If reminder creation fails or configuration is missing
  */
 async function handleReminder(message, delay, type = 'bump', skipConfirmation = false) {
-  try {
+  return runSerializedByType(type, async () => {
     if (!(await isReminderConfigured())) {
       logger.debug('Reminder is not configured; skipping reminder scheduling.', { type });
       return;
@@ -623,9 +654,7 @@ async function handleReminder(message, delay, type = 'bump', skipConfirmation = 
 
     const saved = await persistCommandCooldown(type, delay);
     await scheduleCommandCooldownNotifications(message.client, type, saved, skipConfirmation);
-  } catch (error) {
-    logger.error('Unexpected error in handleReminder.', { err: error });
-  }
+  });
 }
 
 /**
@@ -695,6 +724,7 @@ async function rescheduleReminder(client) {
     logger.error("Error occurred in rescheduleReminder.", {
       err: error
     });
+    throw error;
   }
 }
 
@@ -731,6 +761,12 @@ async function handleError(error, context) {
   }
 }
 
+function cancelAllReminderTimeouts() {
+  for (const type of [...activeReminderTimeouts.keys()]) {
+    cancelReminderTimeout(type);
+  }
+}
+
 module.exports = {
   handleReminder,
   rescheduleReminder,
@@ -744,6 +780,7 @@ module.exports = {
   replyReminderNotConfigured,
   addReminderId,
   handleError,
+  cancelAllReminderTimeouts,
   NEEDAFRIEND_REMINDER_MS,
   PROMOTE_REMINDER_MS
 };

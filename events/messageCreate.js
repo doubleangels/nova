@@ -2,7 +2,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
-const { getValue, removeMuteModeUser, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
+const { getValue, removeMuteModeUser, isUserInMuteMode, incrementMessageCount, deleteMessageCount, getMessageCount } = require('../utils/database');
 const { handleReminder, isReminderConfigured, buildReminderIncompleteEmbed } = require('../utils/reminderUtils');
 const { Events, ChannelType } = require('discord.js');
 const { cancelMuteKick } = require('../utils/muteModeUtils');
@@ -33,7 +33,8 @@ module.exports = {
           logger.error("Failed to fetch partial message.", {
             err: fetchError
           });
-          throw new Error("⚠️ Failed to fetch message content.");
+          captureError(fetchError, { event: 'messageCreate', handler: 'partialFetch' });
+          return;
         }
       }
 
@@ -74,10 +75,17 @@ module.exports = {
       }
 
       cancelMuteKick(message.author.id);
-      await removeMuteModeUser(message.author.id);
-      logger.debug('Cleared mute mode tracking after user message.', {
-        userTag: message.author.tag
-      });
+
+      const muteModeEnabled = await getValue('mute_mode_enabled');
+      if (muteModeEnabled === true) {
+        const inMuteMode = await isUserInMuteMode(message.author.id);
+        if (inMuteMode) {
+          await removeMuteModeUser(message.author.id);
+          logger.debug('Cleared mute mode tracking after user message.', {
+            userTag: message.author.tag
+          });
+        }
+      }
 
       await processUserMessage(message);
       
@@ -145,26 +153,6 @@ module.exports = {
         userId: message.author?.id,
         messageId: message.id
       });
-
-      let errorMessage = "⚠️ An unexpected error occurred while processing the message.";
-      
-      if (error.message === "⚠️ Failed to fetch message content.") {
-        errorMessage = "⚠️ Failed to fetch message content.";
-      } else if (error.message === "⚠️ Failed to track message data.") {
-        errorMessage = "⚠️ Failed to track message data.";
-      } else if (error.message === "⚠️ Failed to process bump message.") {
-        errorMessage = "⚠️ Failed to process bump message.";
-      } else if (error.message === "⚠️ Database error occurred while processing message.") {
-        errorMessage = "⚠️ Database error occurred while processing message.";
-      } else if (error.message === "⚠️ Insufficient permissions to process message.") {
-        errorMessage = "⚠️ Insufficient permissions to process message.";
-      } else if (error.message === "⚠️ Invalid message data received.") {
-        errorMessage = "⚠️ Invalid message data received.";
-      } else if (error.message === "⚠️ Failed to set reminder for bump message.") {
-        errorMessage = "⚠️ Failed to set reminder for bump message.";
-      }
-      
-      throw new Error(errorMessage);
     }
   }
 };

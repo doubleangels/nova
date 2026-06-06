@@ -118,10 +118,10 @@ jobs:
         with:
           image-ref: ${{ steps.build.outputs.imageid }}
           ignore-unfixed: true
-          exit-code: '0'
+          exit-code: '1'
           format: 'sarif'
           output: 'trivy-image-results.sarif'
-          severity: 'CRITICAL,HIGH'
+          severity: 'CRITICAL'
 
       - name: Push Docker image to GitHub Container Registry
         if: github.event_name != 'pull_request'

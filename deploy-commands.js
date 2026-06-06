@@ -22,6 +22,8 @@ async function deployCommands() {
   
   const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
   
+  const loadErrors = [];
+
   for (const file of commandFiles) {
     let command;
     try {
@@ -31,6 +33,7 @@ async function deployCommands() {
         error: error.stack,
         message: error.message
       });
+      loadErrors.push({ file, error });
       continue;
     }
     const commandName = command.data.name;
@@ -44,7 +47,13 @@ async function deployCommands() {
     commands.push(command.data.toJSON());
     logger.debug(`Loaded command ${file}.`);
   }
-  
+
+  if (loadErrors.length > 0) {
+    throw new Error(
+      `Aborting command deploy: ${loadErrors.length} command file(s) failed to load (${loadErrors.map(e => e.file).join(', ')}).`
+    );
+  }
+
   const rest = new REST({ version: '10', timeout: 30_000 }).setToken(config.token);
   
   const clientId = process.env.DISCORD_CLIENT_ID || config.clientId;
