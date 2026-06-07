@@ -124,6 +124,8 @@ jobs:
           format: 'sarif'
           output: 'trivy-image-results.sarif'
           severity: 'CRITICAL'
+          limit-severities-for-sarif: true
+          trivyignores: .trivyignore
           scanners: 'vuln'
 
       - name: Push Docker image to GitHub Container Registry
