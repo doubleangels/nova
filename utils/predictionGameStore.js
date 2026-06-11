@@ -94,6 +94,25 @@ function createPredictionStore(namespace, logLabel) {
     `).run(fullKey(key), wrapKeyvValue(value));
   }
 
+  /**
+   * @param {unknown} fixtureId
+   * @returns {number|null}
+   */
+  function normalizeFixtureId(fixtureId) {
+    const id = Number(fixtureId);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  /**
+   * @param {unknown[]} list
+   * @param {unknown} fixtureId
+   * @returns {boolean}
+   */
+  function listIncludesFixtureId(list, fixtureId) {
+    const normalized = normalizeFixtureId(fixtureId);
+    return list.some(id => normalizeFixtureId(id) === normalized);
+  }
+
   function appendTrackedIdInTx(db, listKey, fixtureId) {
     let list = getInTx(db, listKey) || [];
     if (!list.includes(fixtureId)) {
@@ -219,9 +238,71 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   async function markFixturePrompted(fixtureId) {
-    runStoreTransaction((db) => {
-      appendTrackedIdInTx(db, 'prompted_fixtures', fixtureId);
+    const normalizedId = normalizeFixtureId(fixtureId);
+    if (normalizedId == null) return;
+
+    const list = runStoreTransaction((db) => {
+      let prompted = getInTx(db, 'prompted_fixtures') || [];
+      if (listIncludesFixtureId(prompted, normalizedId)) {
+        return prompted;
+      }
+      prompted.push(normalizedId);
+      if (prompted.length > MAX_TRACKED_FIXTURES) {
+        prompted = prompted.slice(-MAX_TRACKED_FIXTURES);
+      }
+      setInTx(db, 'prompted_fixtures', prompted);
+      return prompted;
     });
+    await keyv.set('prompted_fixtures', list);
+  }
+
+  /**
+   * Atomically reserves a fixture for prompting. Returns false if already prompted.
+   * @param {unknown} fixtureId
+   * @returns {Promise<boolean>}
+   */
+  async function tryClaimFixtureForPrompt(fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    if (normalizedId == null) return false;
+
+    const list = runStoreTransaction((db) => {
+      let prompted = getInTx(db, 'prompted_fixtures') || [];
+      if (listIncludesFixtureId(prompted, normalizedId)) {
+        return null;
+      }
+      prompted.push(normalizedId);
+      if (prompted.length > MAX_TRACKED_FIXTURES) {
+        prompted = prompted.slice(-MAX_TRACKED_FIXTURES);
+      }
+      setInTx(db, 'prompted_fixtures', prompted);
+      return prompted;
+    });
+
+    if (!list) return false;
+    await keyv.set('prompted_fixtures', list);
+    return true;
+  }
+
+  /**
+   * Rolls back a prompt claim when the channel post fails.
+   * @param {unknown} fixtureId
+   * @returns {Promise<void>}
+   */
+  async function releaseFixturePromptClaim(fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    if (normalizedId == null) return;
+
+    const list = runStoreTransaction((db) => {
+      const prompted = getInTx(db, 'prompted_fixtures') || [];
+      const next = prompted.filter(id => normalizeFixtureId(id) !== normalizedId);
+      if (next.length === prompted.length) return null;
+      setInTx(db, 'prompted_fixtures', next);
+      return next;
+    });
+
+    if (list) {
+      await keyv.set('prompted_fixtures', list);
+    }
   }
 
   async function getScoredFixtures() {
@@ -446,6 +527,8 @@ function createPredictionStore(namespace, logLabel) {
     subtractUserPoints,
     getPromptedFixtures,
     markFixturePrompted,
+    tryClaimFixtureForPrompt,
+    releaseFixturePromptClaim,
     getScoredFixtures,
     markFixtureScored,
     tryAcquireScoringLock,

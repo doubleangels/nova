@@ -13,7 +13,8 @@ describe('predictionScheduler', () => {
 
     mockStore = {
       getPromptedFixtures: jest.fn().mockResolvedValue([]),
-      markFixturePrompted: jest.fn().mockResolvedValue(undefined),
+      tryClaimFixtureForPrompt: jest.fn().mockResolvedValue(true),
+      releaseFixturePromptClaim: jest.fn().mockResolvedValue(undefined),
       isPromptingPaused: jest.fn().mockResolvedValue(false)
     };
 
@@ -96,7 +97,7 @@ describe('predictionScheduler', () => {
     await scheduler.runPoll(mockClient);
 
     expect(fetchMatchAiPrediction).toHaveBeenCalledTimes(2);
-    expect(mockStore.markFixturePrompted).toHaveBeenCalledTimes(2);
+    expect(mockStore.tryClaimFixtureForPrompt).toHaveBeenCalledTimes(2);
     expect(maxInFlight).toBeLessThanOrEqual(2);
   });
 
@@ -106,8 +107,8 @@ describe('predictionScheduler', () => {
     await scheduler.runPoll(mockClient);
 
     expect(fetchMatchAiPrediction).toHaveBeenCalledTimes(1);
-    expect(mockStore.markFixturePrompted).toHaveBeenCalledWith(2);
-    expect(mockStore.markFixturePrompted).not.toHaveBeenCalledWith(1);
+    expect(mockStore.tryClaimFixtureForPrompt).toHaveBeenCalledWith(2);
+    expect(mockStore.tryClaimFixtureForPrompt).not.toHaveBeenCalledWith(1);
   });
 
   it('should skip AI calls when every open fixture was already prompted', async () => {
@@ -116,6 +117,67 @@ describe('predictionScheduler', () => {
     await scheduler.runPoll(mockClient);
 
     expect(fetchMatchAiPrediction).not.toHaveBeenCalled();
-    expect(mockStore.markFixturePrompted).not.toHaveBeenCalled();
+    expect(mockStore.tryClaimFixtureForPrompt).not.toHaveBeenCalled();
+  });
+
+  it('should skip fixtures with invalid ids', async () => {
+    const channelSend = jest.fn().mockResolvedValue({});
+    mockClient.channels.fetch.mockResolvedValue({
+      isTextBased: () => true,
+      send: channelSend
+    });
+
+    await scheduler.sendPredictionPrompts(mockClient, {
+      id: 'not-a-number',
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    });
+
+    expect(mockStore.tryClaimFixtureForPrompt).not.toHaveBeenCalled();
+    expect(channelSend).not.toHaveBeenCalled();
+  });
+
+  it('should not send when prompt claim fails', async () => {
+    const channelSend = jest.fn().mockResolvedValue({});
+    mockClient.channels.fetch.mockResolvedValue({
+      isTextBased: () => true,
+      send: channelSend
+    });
+    mockStore.tryClaimFixtureForPrompt.mockResolvedValue(false);
+
+    const fixture = {
+      id: 9,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    await scheduler.sendPredictionPrompts(mockClient, fixture);
+    await scheduler.sendPredictionPrompts(mockClient, fixture);
+
+    expect(channelSend).not.toHaveBeenCalled();
+    expect(fetchMatchAiPrediction).not.toHaveBeenCalled();
+  });
+
+  it('should release claim when channel send fails', async () => {
+    mockClient.channels.fetch.mockRejectedValue(new Error('channel down'));
+    const fixture = {
+      id: 11,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    await scheduler.sendPredictionPrompts(mockClient, fixture);
+
+    expect(mockStore.tryClaimFixtureForPrompt).toHaveBeenCalledWith(11);
+    expect(mockStore.releaseFixturePromptClaim).toHaveBeenCalledWith(11);
   });
 });

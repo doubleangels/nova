@@ -60,6 +60,10 @@ function createPredictionScheduler(options) {
    * @param {object} fixture
    */
   async function sendPredictionPrompts(client, fixture) {
+    const fixtureId = Number(fixture.id);
+    if (!Number.isFinite(fixtureId)) return;
+    if (!(await options.store.tryClaimFixtureForPrompt(fixtureId))) return;
+
     const channelId = options.channelId;
     const aiPrediction = await fetchMatchAiPrediction({
       game: options.aiGameId,
@@ -85,13 +89,13 @@ function createPredictionScheduler(options) {
     } catch (err) {
       logger.error(`Failed to post ${options.logLabel} channel prompt.`, {
         err,
-        fixtureId: fixture.id,
+        fixtureId,
         channelId
       });
     }
 
-    if (posted) {
-      await options.store.markFixturePrompted(fixture.id);
+    if (!posted) {
+      await options.store.releaseFixturePromptClaim(fixtureId);
     }
   }
 
@@ -119,12 +123,19 @@ function createPredictionScheduler(options) {
         return;
       }
       const prompted = await options.store.getPromptedFixtures();
-      const promptedSet = new Set(prompted);
+      const promptedSet = new Set(
+        prompted.map(id => Number(id)).filter(Number.isFinite)
+      );
       const now = new Date();
 
-      const fixturesToPrompt = fixtures.filter(
-        fixture => !promptedSet.has(fixture.id) && shouldPromptFixture(fixture, now)
-      );
+      const fixturesToPrompt = fixtures.filter(fixture => {
+        const fixtureId = Number(fixture.id);
+        return (
+          Number.isFinite(fixtureId) &&
+          !promptedSet.has(fixtureId) &&
+          shouldPromptFixture(fixture, now)
+        );
+      });
 
       if (fixturesToPrompt.length > 0) {
         await runWithConcurrency(

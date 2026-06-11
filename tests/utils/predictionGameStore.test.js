@@ -158,6 +158,83 @@ describe('predictionGameStore', () => {
     expect(await freshStore.getPromptedFixtures()).toEqual([77]);
   });
 
+  it('should claim a fixture for prompt only once', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const claimStore = createPredictionStore('claim-prompt-store', 'Claim');
+
+    expect(await claimStore.tryClaimFixtureForPrompt(42)).toBe(true);
+    expect(await claimStore.tryClaimFixtureForPrompt(42)).toBe(false);
+    expect(await claimStore.getPromptedFixtures()).toEqual([42]);
+  });
+
+  it('should release prompt claim and allow reclaim', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const claimStore = createPredictionStore('release-prompt-store', 'Release');
+
+    expect(await claimStore.tryClaimFixtureForPrompt(88)).toBe(true);
+    await claimStore.releaseFixturePromptClaim(88);
+    expect(await claimStore.getPromptedFixtures()).toEqual([]);
+    expect(await claimStore.tryClaimFixtureForPrompt(88)).toBe(true);
+  });
+
+  it('should reject invalid fixture ids for prompt claims', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const claimStore = createPredictionStore('invalid-prompt-store', 'Invalid');
+
+    expect(await claimStore.tryClaimFixtureForPrompt('not-a-number')).toBe(false);
+    expect(await claimStore.releaseFixturePromptClaim('not-a-number')).toBeUndefined();
+    await claimStore.markFixturePrompted('not-a-number');
+    expect(await claimStore.getPromptedFixtures()).toEqual([]);
+  });
+
+  it('should no-op when releasing a prompt claim that was never made', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const claimStore = createPredictionStore('release-missing-store', 'ReleaseMissing');
+
+    await claimStore.releaseFixturePromptClaim(404);
+    expect(await claimStore.getPromptedFixtures()).toEqual([]);
+  });
+
+  it('should prune prompted_fixtures when claiming beyond the cap', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
+    const claimStore = createPredictionStore('claim-cap-store', 'ClaimCap');
+
+    for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
+      expect(await claimStore.tryClaimFixtureForPrompt(i)).toBe(true);
+    }
+    const prompted = await claimStore.getPromptedFixtures();
+    expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
+    expect(prompted[0]).toBe(5);
+    expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
+  });
+
+  it('should normalize string and number fixture ids for prompt claims', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const claimStore = createPredictionStore('normalize-prompt-store', 'Normalize');
+
+    expect(await claimStore.tryClaimFixtureForPrompt('12345')).toBe(true);
+    expect(await claimStore.tryClaimFixtureForPrompt(12345)).toBe(false);
+    expect(await claimStore.getPromptedFixtures()).toEqual([12345]);
+  });
+
   it('should prune prompted_fixtures when the cap is exceeded', async () => {
     jest.resetModules();
     jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
@@ -172,6 +249,22 @@ describe('predictionGameStore', () => {
     expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
     expect(prompted[0]).toBe(5);
     expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
+  });
+
+  it('should prune scored_fixtures when the cap is exceeded', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
+    const capStore = createPredictionStore('cap-scored-store', 'ScoredCap');
+
+    for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
+      await capStore.markFixtureScored(i);
+    }
+    const scored = await capStore.getScoredFixtures();
+    expect(scored).toHaveLength(MAX_TRACKED_FIXTURES);
+    expect(scored[0]).toBe(5);
+    expect(scored[scored.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
   });
 
   it('should apply fixture scoring results atomically', async () => {
