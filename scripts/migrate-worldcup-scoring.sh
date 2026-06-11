@@ -1,6 +1,7 @@
 #!/bin/sh
 # Run the World Cup scoring migration inside the Nova container.
-# Uses Doppler for secrets and the mounted /app/data SQLite database.
+# Uses Doppler for FOOTBALL_DATA_API_KEY and the mounted /app/data SQLite database.
+# Fetches the fixture and final score from football-data.org.
 #
 # Dry run (default):
 #   docker compose stop nova

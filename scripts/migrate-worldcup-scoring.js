@@ -2,24 +2,31 @@
 /**
  * Re-scores a finished World Cup fixture after a scoring-rule change.
  *
- * Defaults to Mexico vs South Africa (June 2026 opener). Resolves the fixture
- * from football-data.org unless --fixture-id or --goals-home/--goals-away are set.
+ * Fetches the fixture and final score from football-data.org using
+ * FOOTBALL_DATA_API_KEY (injected by Doppler in production).
  *
- * Usage (host):
- *   node scripts/migrate-worldcup-scoring.js
- *   node scripts/migrate-worldcup-scoring.js --fixture-id=12345
- *   node scripts/migrate-worldcup-scoring.js --home=Mexico --away="South Africa"
- *   node scripts/migrate-worldcup-scoring.js --commit --force
+ * Usage (host — requires Doppler):
+ *   doppler run -- node scripts/migrate-worldcup-scoring.js
+ *   pnpm run migrate-worldcup-scoring
  *
  * Usage (Docker — stop nova first):
  *   docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh
  *   docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh --commit --force
  *
+ * Optional: --fixture-id=ID, --home=Team, --away=Team
+ * Fallback only: --goals-home=N --goals-away=N (when the API has no final score yet)
+ *
  * Dry run by default. Stop the Nova bot before --commit --force.
  */
 
-require('dotenv').config();
+const {
+  bootstrapMigrationEnv,
+  getFootballApiReadiness
+} = require('../utils/migrateWorldCupScoringEnv');
 
+bootstrapMigrationEnv();
+
+const config = require('../config');
 const { checkDatabaseAccess } = require('../utils/dbScriptUtils');
 const { sqlitePath } = require('../utils/sqliteStore');
 const {
@@ -28,7 +35,11 @@ const {
   printDbWriteDryRunHint
 } = require('../utils/dbWriteCli');
 const { buildFixtureRescoreUpdates } = require('../utils/predictionGameScoring');
-const { getSeasonFixtures, getFixtureById } = require('../utils/worldCupClient');
+const {
+  getSeasonFixtures,
+  getFixtureById,
+  isApiConfigured
+} = require('../utils/worldCupClient');
 const { store } = require('../utils/worldCupUtils');
 
 const SCRIPT_NAME = 'scripts/migrate-worldcup-scoring.js';
@@ -94,21 +105,28 @@ function teamNameMatches(needle, teamName) {
  * @param {{
  *   fixtureId: number|null,
  *   home: string,
- *   away: string,
- *   goalsHome: number|null,
- *   goalsAway: number|null
+ *   away: string
  * }} opts
  */
-async function resolveFixture(opts) {
+async function resolveFixtureFromApi(opts) {
   if (opts.fixtureId != null) {
     const fixture = await getFixtureById(opts.fixtureId);
     if (!fixture) {
-      throw new Error(`Fixture ${opts.fixtureId} was not found via the API.`);
+      throw new Error(
+        `Fixture ${opts.fixtureId} was not found on football-data.org.`
+      );
     }
     return fixture;
   }
 
   const fixtures = await getSeasonFixtures({ forceRefresh: true });
+  if (fixtures.length === 0) {
+    throw new Error(
+      'football-data.org returned no World Cup fixtures. ' +
+        'Check FOOTBALL_DATA_API_KEY, WORLD_CUP_COMPETITION_CODE, and WORLD_CUP_SEASON.'
+    );
+  }
+
   const match = fixtures.find(
     f =>
       (teamNameMatches(opts.home, f.home) && teamNameMatches(opts.away, f.away)) ||
@@ -116,7 +134,9 @@ async function resolveFixture(opts) {
   );
 
   if (!match) {
-    throw new Error(`No World Cup fixture found for ${opts.home} vs ${opts.away}.`);
+    throw new Error(
+      `No World Cup fixture found for ${opts.home} vs ${opts.away} on football-data.org.`
+    );
   }
 
   return match;
@@ -134,7 +154,7 @@ function resolveFinalScore(fixture, goalsHomeOverride, goalsAwayOverride) {
 
   if (fixture.goals.home == null || fixture.goals.away == null) {
     throw new Error(
-      `Fixture ${fixture.id} (${fixture.home} vs ${fixture.away}) has no final score. ` +
+      `Fixture ${fixture.id} (${fixture.home} vs ${fixture.away}) has no final score on football-data.org yet. ` +
         'Pass --goals-home and --goals-away to override.'
     );
   }
@@ -175,10 +195,24 @@ async function main() {
     { scriptName: SCRIPT_NAME }
   );
 
+  const apiReadiness = getFootballApiReadiness(config);
+  if (!apiReadiness.ready) {
+    console.error(apiReadiness.message);
+    process.exit(1);
+  }
+
+  if (!isApiConfigured()) {
+    console.error('football-data.org API is not configured after bootstrap.');
+    process.exit(1);
+  }
+
   console.log('=== World Cup scoring migration ===');
   console.log(`Database: ${sqlitePath}`);
   console.log(
     `Mode: ${writeMode.proceed ? 'COMMIT (database WILL be updated)' : 'DRY RUN (read-only)'}\n`
+  );
+  console.log(
+    `football-data.org: competition ${config.worldCupCompetitionCode}, season ${config.worldCupSeason}\n`
   );
 
   const accessCheck = checkDatabaseAccess();
@@ -192,7 +226,8 @@ async function main() {
 
   let fixture;
   try {
-    fixture = await resolveFixture(args);
+    console.log('Fetching fixture from football-data.org...');
+    fixture = await resolveFixtureFromApi(args);
   } catch (err) {
     console.error(err.message);
     process.exit(1);

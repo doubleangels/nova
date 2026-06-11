@@ -225,7 +225,7 @@ docker compose start nova
 
 Or `pnpm run migrate-worldcup-scoring:docker` for the dry run step (stop `nova` before `--commit --force`).
 
-**Host / local dev:** `pnpm run migrate-worldcup-scoring` or `node scripts/migrate-worldcup-scoring.js --commit --force`.
+**Host / local dev:** requires Doppler for `FOOTBALL_DATA_API_KEY` — `pnpm run migrate-worldcup-scoring` (dry run) or `doppler run -- node scripts/migrate-worldcup-scoring.js --commit --force`. The script always fetches the fixture and final score from football-data.org (mock API is disabled). Use `--goals-home` / `--goals-away` only if the API has not posted the result yet.
 
 Defaults to Mexico vs South Africa; use `--fixture-id` to target another match.
 
