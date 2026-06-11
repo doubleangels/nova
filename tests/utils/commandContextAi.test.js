@@ -28,9 +28,7 @@ describe('commandContextAi', () => {
   });
 
   it('should fetch and cache weather context', async () => {
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/weather1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [
             {
@@ -57,7 +55,7 @@ describe('commandContextAi', () => {
 
     expect(first?.note).toContain('Heat advisory');
     expect(second).toEqual(first);
-    expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
   });
 
   it('should fetch anime context when enabled', async () => {
@@ -76,9 +74,7 @@ describe('commandContextAi', () => {
     }));
     const animeAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/anime1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [
             {
@@ -140,9 +136,7 @@ describe('commandContextAi', () => {
   });
 
   it('should return null when Gemini returns invalid payload', async () => {
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/w1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [
             { content: { parts: [{ text: '{"bad":"payload"}' }] } }
@@ -171,9 +165,7 @@ describe('commandContextAi', () => {
     }));
     const imdbAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/imdb1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [{ content: { parts: [{ text: JSON.stringify({ note: 'Won 3 Oscars.' }) }] } }]
         }
@@ -204,9 +196,7 @@ describe('commandContextAi', () => {
     }));
     const bookAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/book1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [{ content: { parts: [{ text: JSON.stringify({ note: 'Bestseller for 52 weeks.' }) }] } }]
         }
@@ -236,9 +226,7 @@ describe('commandContextAi', () => {
     }));
     const googleAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/google1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [{ content: { parts: [{ text: JSON.stringify({ note: 'Official docs.' }) }] } }]
         }
@@ -267,9 +255,7 @@ describe('commandContextAi', () => {
     }));
     const googleImagesAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/gi1' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [{ content: { parts: [{ text: JSON.stringify({ note: 'Aerial photo of Paris.' }) }] } }]
         }
@@ -298,9 +284,7 @@ describe('commandContextAi', () => {
     }));
     const noTtlAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/w2' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: {
           candidates: [{ content: { parts: [{ text: JSON.stringify({ note: 'Mild weather.' }) }] } }]
         }
@@ -325,9 +309,7 @@ describe('commandContextAi', () => {
     }));
     const imdbAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/imdb2' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: { candidates: [{ content: { parts: [{ text: '{"note":"Good"}' }] } }] }
       });
 
@@ -352,9 +334,7 @@ describe('commandContextAi', () => {
     }));
     const bookAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/book2' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: { candidates: [{ content: { parts: [{ text: '{"note":"Good book"}' }] } }] }
       });
 
@@ -378,9 +358,7 @@ describe('commandContextAi', () => {
     }));
     const googleAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/google2' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: { candidates: [{ content: { parts: [{ text: '{"note":"Result ok"}' }] } }] }
       });
 
@@ -403,9 +381,7 @@ describe('commandContextAi', () => {
     }));
     const googleImagesAi = require('../../utils/commandContextAi');
 
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/gi2' } })
-      .mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
         data: { candidates: [{ content: { parts: [{ text: '{"note":"Image ok"}' }] } }] }
       });
 

@@ -6,11 +6,17 @@ describe('football command', () => {
   let mockFootballUtils;
   let mockWorldCupUtils;
   let mockClientApi;
+  let mockPromptCommand;
   let mockConfig;
   let mockLogger;
 
   beforeEach(() => {
     jest.resetModules();
+
+    mockPromptCommand = {
+      handlePromptSubcommand: jest.fn().mockResolvedValue(),
+      handlePromptSelect: jest.fn().mockResolvedValue()
+    };
 
     mockFootballUtils = {
       isUserRegistered: jest.fn().mockResolvedValue(false),
@@ -35,7 +41,8 @@ describe('football command', () => {
 
     mockClientApi = {
       isApiConfigured: jest.fn().mockReturnValue(true),
-      getSeasonFixtures: jest.fn().mockResolvedValue([])
+      getSeasonFixtures: jest.fn().mockResolvedValue([]),
+      getFixtureById: jest.fn().mockResolvedValue(null)
     };
 
     mockConfig = {
@@ -47,6 +54,11 @@ describe('football command', () => {
     jest.doMock('../../utils/footballUtils', () => mockFootballUtils);
     jest.doMock('../../utils/worldCupUtils', () => mockWorldCupUtils);
     jest.doMock('../../utils/footballClient', () => mockClientApi);
+    jest.doMock('../../utils/predictionPromptCommand', () => mockPromptCommand);
+    jest.doMock('../../utils/footballScheduler', () => ({
+      repromptFootballFixture: jest.fn().mockResolvedValue(true),
+      runFootballStartup: jest.fn().mockResolvedValue()
+    }));
     jest.doMock('../../utils/footballCompetitions', () => ({
       getCompetitionName: (code) => code
     }));
@@ -452,6 +464,30 @@ describe('football command', () => {
       client: {}
     });
     await footballCommand.execute(interaction);
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
+  });
+
+  it('should show predictions for another user publicly', async () => {
+    mockFootballUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
+    mockFootballUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 1,
+        prediction: { homeScore: 1, awayScore: 0, resultPick: 'home', scored: true, pointsAwarded: 3 }
+      }
+    ]);
+    mockFootballUtils.getUserPoints.mockResolvedValue(3);
+    mockClientApi.getSeasonFixtures.mockResolvedValue([
+      { id: 1, home: 'A', away: 'B', kickoff: '2026-06-01T12:00:00Z', status: 'FT', goals: { home: 1, away: 0 } }
+    ]);
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: '999', displayName: 'Alice' })
+      },
+      client: {}
+    });
+    await footballCommand.execute(interaction);
     expect(interaction.deferReply).toHaveBeenCalledWith();
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
   });
@@ -541,6 +577,26 @@ describe('football command', () => {
     });
     await footballCommand.execute(interaction);
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('not set up') }));
+  });
+
+  it('should dispatch prompt subcommand to shared handler', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('prompt'),
+        getString: jest.fn().mockReturnValue('PL')
+      },
+      guild: { id: 'g1' },
+      memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) }
+    });
+    await footballCommand.execute(interaction);
+    expect(mockPromptCommand.handlePromptSubcommand).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'club',
+        selectCustomId: 'football:prompt:select',
+        competition: 'PL'
+      })
+    );
   });
 
   it('should deny reset outside a guild', async () => {

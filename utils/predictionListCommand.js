@@ -205,11 +205,17 @@ async function handlePredictionsSubcommand(interaction, deps) {
     return;
   }
 
-  await interaction.deferReply();
+  const targetUser = interaction.options.getUser('user');
+  const isSelfLookup = Boolean(targetUser && targetUser.id === interaction.user.id);
+
+  if (isSelfLookup) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  } else {
+    await interaction.deferReply();
+  }
 
   const fixtures = await getSeasonFixtures();
   const fixtureMap = new Map(fixtures.map(f => [f.id, f]));
-  const targetUser = interaction.options.getUser('user');
 
   if (targetUser) {
     const isSelf = targetUser.id === interaction.user.id;

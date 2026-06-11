@@ -16,6 +16,8 @@ const {
   isFootballPickSelect,
   BUTTON_PREFIX: FOOTBALL_BUTTON_PREFIX
 } = require('../utils/footballInteractions');
+const footballCommand = require('../commands/football');
+const worldCupCommand = require('../commands/worldCup');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -102,6 +104,46 @@ module.exports = {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong saving your prediction.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    if (
+      typeof interaction.isStringSelectMenu === 'function' &&
+      interaction.isStringSelectMenu() &&
+      interaction.customId === 'worldcup:prompt:select'
+    ) {
+      try {
+        await worldCupCommand.handlePromptSelect(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'worldcupPromptSelect' });
+        logger.error('Error handling World Cup prompt select.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong posting the match prompt.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    if (
+      typeof interaction.isStringSelectMenu === 'function' &&
+      interaction.isStringSelectMenu() &&
+      interaction.customId === 'football:prompt:select'
+    ) {
+      try {
+        await footballCommand.handlePromptSelect(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'footballPromptSelect' });
+        logger.error('Error handling Football prompt select.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong posting the match prompt.',
             flags: MessageFlags.Ephemeral
           }).catch(() => {});
         }

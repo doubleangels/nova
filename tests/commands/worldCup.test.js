@@ -5,12 +5,18 @@ describe('worldcup command', () => {
   let worldcupCommand;
   let mockUtils;
   let mockClientApi;
+  let mockPromptCommand;
   let mockConfig;
   let mockLogger;
   let mockScheduler;
 
   beforeEach(() => {
     jest.resetModules();
+
+    mockPromptCommand = {
+      handlePromptSubcommand: jest.fn().mockResolvedValue(),
+      handlePromptSelect: jest.fn().mockResolvedValue()
+    };
 
     mockUtils = {
       getLeaderboard: jest.fn().mockResolvedValue([
@@ -36,11 +42,13 @@ describe('worldcup command', () => {
     };
 
     mockScheduler = {
-      runWorldCupStartup: jest.fn().mockResolvedValue()
+      runWorldCupStartup: jest.fn().mockResolvedValue(),
+      repromptWorldCupFixture: jest.fn().mockResolvedValue(true)
     };
 
     mockClientApi = {
       isApiConfigured: jest.fn().mockReturnValue(true),
+      getFixtureById: jest.fn().mockResolvedValue(null),
       getSeasonFixtures: jest.fn().mockResolvedValue([
         {
           id: 1,
@@ -62,6 +70,7 @@ describe('worldcup command', () => {
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);
     jest.doMock('../../utils/worldCupScheduler', () => mockScheduler);
     jest.doMock('../../utils/worldCupClient', () => mockClientApi);
+    jest.doMock('../../utils/predictionPromptCommand', () => mockPromptCommand);
     jest.doMock('../../config', () => mockConfig);
     mockLogger = {
       info: jest.fn(),
@@ -304,10 +313,41 @@ describe('worldcup command', () => {
 
     await worldcupCommand.execute(interaction);
 
-    expect(interaction.deferReply).toHaveBeenCalledWith();
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.any(Array)
     }));
+  });
+
+  it('should show predictions for another user publicly', async () => {
+    mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
+    mockUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 1,
+        prediction: {
+          homeScore: 2,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          pointsAwarded: 4
+        }
+      }
+    ]);
+    mockUtils.getUserPoints.mockResolvedValue(4);
+
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: '999', displayName: 'Alice' })
+      },
+      client: {}
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.deferReply).toHaveBeenCalledWith();
+    const embed = interaction.editReply.mock.calls[0][0].embeds[0];
+    expect(embed.data.title).toContain("Alice's Predictions");
   });
 
   it('should show predictions for unknown fixtures and missing predictions', async () => {
@@ -538,36 +578,6 @@ describe('worldcup command', () => {
     }));
   });
 
-  it('should show predictions for another user', async () => {
-    mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
-    mockUtils.getPredictionsForUser.mockResolvedValue([
-      {
-        fixtureId: 1,
-        prediction: {
-          homeScore: 2,
-          awayScore: 1,
-          resultPick: 'home',
-          scored: true,
-          pointsAwarded: 4
-        }
-      }
-    ]);
-    mockUtils.getUserPoints.mockResolvedValue(4);
-
-    const interaction = createMockInteraction({
-      options: {
-        getSubcommand: jest.fn().mockReturnValue('predictions'),
-        getUser: jest.fn().mockReturnValue({ id: '999', displayName: 'Alice' })
-      },
-      client: {}
-    });
-
-    await worldcupCommand.execute(interaction);
-
-    const embed = interaction.editReply.mock.calls[0][0].embeds[0];
-    expect(embed.data.title).toContain("Alice's Predictions");
-  });
-
   it('should show all predictions when user is omitted', async () => {
     mockUtils.getAllPredictorUserIds.mockResolvedValue(['111', '222']);
     mockUtils.getUserPredictionFixtureIds.mockImplementation(userId =>
@@ -663,6 +673,22 @@ describe('worldcup command', () => {
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('Unknown subcommand')
     }));
+  });
+
+  it('should dispatch prompt subcommand to shared handler', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('prompt') },
+      guild: { id: 'g1' },
+      memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) }
+    });
+    await worldcupCommand.execute(interaction);
+    expect(mockPromptCommand.handlePromptSubcommand).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'worldcup',
+        selectCustomId: 'worldcup:prompt:select'
+      })
+    );
   });
 
   it('should deny reset for non-administrators', async () => {

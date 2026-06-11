@@ -37,6 +37,7 @@ module.exports = {
   buildPromptChannelContent: scheduler.buildPromptChannelContent,
   buildPredictButtonRow: scheduler.buildPredictButtonRow,
   sendPredictionPrompts: scheduler.sendPredictionPrompts,
+  repromptFootballFixture: scheduler.repromptFixture,
   runFootballPoll: scheduler.runPoll,
   runFootballStartup: scheduler.runStartup,
   startFootballScheduler: scheduler.startScheduler,

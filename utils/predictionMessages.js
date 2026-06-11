@@ -163,6 +163,27 @@ function errAdminResetOnly(gameId) {
 }
 
 /**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function errAdminPromptOnly(gameId) {
+  return `⚠️ Only administrators can re-post ${GAME[gameId].label.toLowerCase()} match prompts.`;
+}
+
+const MSG_PROMPT_SELECT_PLACEHOLDER = 'Choose an upcoming match…';
+const MSG_PROMPT_NO_UPCOMING = '⚠️ No upcoming open matches to prompt.';
+const ERR_PROMPT_FAILED =
+  '⚠️ Could not post the match prompt (check the prediction channel configuration).';
+
+/**
+ * @param {string} fixtureLine
+ * @returns {string}
+ */
+function msgPromptReposted(fixtureLine) {
+  return `Match prompt posted in the prediction channel:\n${fixtureLine}`;
+}
+
+/**
  * @param {string} roleId
  * @returns {string}
  */
@@ -455,6 +476,11 @@ module.exports = {
   PROMPT_FOOTER,
   errNotConfigured,
   errAdminResetOnly,
+  errAdminPromptOnly,
+  MSG_PROMPT_SELECT_PLACEHOLDER,
+  MSG_PROMPT_NO_UPCOMING,
+  ERR_PROMPT_FAILED,
+  msgPromptReposted,
   buildRolePing,
   buildPromptDescription,
   buildPromptTitle,

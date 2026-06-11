@@ -44,6 +44,13 @@ describe('interactionCreate event', () => {
       BUTTON_PREFIX: 'football:predict:'
     }));
 
+    jest.doMock('../../commands/football', () => ({
+      handlePromptSelect: jest.fn().mockResolvedValue()
+    }));
+    jest.doMock('../../commands/worldCup', () => ({
+      handlePromptSelect: jest.fn().mockResolvedValue()
+    }));
+
     interactionCreateEvent = require('../../events/interactionCreate');
   });
 
@@ -286,6 +293,49 @@ describe('interactionCreate event', () => {
     mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
 
     await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+  });
+
+  it('should handle World Cup prompt select menus', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(worldCupCommand.handlePromptSelect).toHaveBeenCalledWith(mockInteraction);
+  });
+
+  it('should handle Football prompt select menus', async () => {
+    const footballCommand = require('../../commands/football');
+    const mockInteraction = createMockInteraction({
+      customId: 'football:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(footballCommand.handlePromptSelect).toHaveBeenCalledWith(mockInteraction);
+  });
+
+  it('should capture errors from World Cup prompt select handler', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    worldCupCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockInteraction.reply).toHaveBeenCalled();
   });
 
   describe('autocomplete interactions', () => {

@@ -76,6 +76,44 @@ describe('predictionListCommand', () => {
     expect(buildAllPredictionsPages([])).toEqual([]);
   });
 
+  it('should defer ephemerally when viewing your own predictions', async () => {
+    const { handlePredictionsSubcommand } = require('../../utils/predictionListCommand');
+    const { MessageFlags } = require('discord.js');
+    const interaction = {
+      user: { id: 'caller-1' },
+      options: {
+        getUser: jest.fn().mockReturnValue({ id: 'caller-1', displayName: 'Caller' })
+      },
+      reply: jest.fn(),
+      deferReply: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
+    };
+
+    await handlePredictionsSubcommand(interaction, {
+      gameId: 'worldcup',
+      paginationPrefix: 'worldcup_predictions',
+      logger: { debug: jest.fn(), error: jest.fn() },
+      isApiConfigured: () => true,
+      getSeasonFixtures: async () => [],
+      getAllPredictorUserIds: async () => [],
+      getUserPredictionFixtureIds: async () => [1],
+      getPredictionsForUser: async () => [{
+        fixtureId: 1,
+        prediction: {
+          homeScore: 1,
+          awayScore: 0,
+          resultPick: 'home',
+          scored: false
+        }
+      }],
+      getUserPoints: async () => 0,
+      formatFixtureLine: () => 'fixture',
+      formatResultPickDisplay: () => 'home'
+    });
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+  });
+
   it('should show another user empty message', async () => {
     const { handlePredictionsSubcommand } = require('../../utils/predictionListCommand');
     const interaction = {

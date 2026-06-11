@@ -15,6 +15,7 @@ describe('predictionScheduler', () => {
       getPromptedFixtures: jest.fn().mockResolvedValue([]),
       tryClaimFixtureForPrompt: jest.fn().mockResolvedValue(true),
       releaseFixturePromptClaim: jest.fn().mockResolvedValue(undefined),
+      markFixturePrompted: jest.fn().mockResolvedValue(undefined),
       isPromptingPaused: jest.fn().mockResolvedValue(false)
     };
 
@@ -179,5 +180,47 @@ describe('predictionScheduler', () => {
 
     expect(mockStore.tryClaimFixtureForPrompt).toHaveBeenCalledWith(11);
     expect(mockStore.releaseFixturePromptClaim).toHaveBeenCalledWith(11);
+  });
+
+  it('should reprompt fixture by releasing claim, posting, and marking prompted', async () => {
+    const channelSend = jest.fn().mockResolvedValue({});
+    mockClient.channels.fetch.mockResolvedValue({
+      isTextBased: () => true,
+      send: channelSend
+    });
+    const fixture = {
+      id: 42,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    const posted = await scheduler.repromptFixture(mockClient, fixture);
+
+    expect(posted).toBe(true);
+    expect(mockStore.releaseFixturePromptClaim).toHaveBeenCalledWith(42);
+    expect(mockStore.tryClaimFixtureForPrompt).not.toHaveBeenCalled();
+    expect(channelSend).toHaveBeenCalled();
+    expect(mockStore.markFixturePrompted).toHaveBeenCalledWith(42);
+  });
+
+  it('should return false from repromptFixture when channel send fails', async () => {
+    mockClient.channels.fetch.mockRejectedValue(new Error('channel down'));
+    const fixture = {
+      id: 43,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    const posted = await scheduler.repromptFixture(mockClient, fixture);
+
+    expect(posted).toBe(false);
+    expect(mockStore.releaseFixturePromptClaim).toHaveBeenCalledWith(43);
+    expect(mockStore.markFixturePrompted).not.toHaveBeenCalled();
   });
 });

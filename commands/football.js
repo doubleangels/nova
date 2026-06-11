@@ -8,7 +8,12 @@ const path = require('path');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
 const { getBotMember } = require('../utils/asyncUtils');
-const { isApiConfigured, getSeasonFixtures } = require('../utils/footballClient');
+const { isApiConfigured, getSeasonFixtures, getFixtureById } = require('../utils/footballClient');
+const { repromptFootballFixture } = require('../utils/footballScheduler');
+const {
+  handlePromptSubcommand,
+  handlePromptSelect
+} = require('../utils/predictionPromptCommand');
 const { getCompetitionName } = require('../utils/footballCompetitions');
 const {
   isUserRegistered,
@@ -94,6 +99,22 @@ module.exports = {
     )
     .addSubcommand(sub =>
       sub
+        .setName('prompt')
+        .setDescription('Re-post a match prediction prompt (administrators).')
+        .addStringOption(opt =>
+          opt
+            .setName('competition')
+            .setDescription('Filter by competition')
+            .addChoices(
+              { name: 'Premier League', value: 'PL' },
+              { name: 'Bundesliga', value: 'BL1' },
+              { name: 'La Liga', value: 'PD' },
+              { name: 'Champions League', value: 'CL' }
+            )
+        )
+    )
+    .addSubcommand(sub =>
+      sub
         .setName('reset')
         .setDescription('Clear all club football prediction data (administrators).')
         .addBooleanOption(opt =>
@@ -122,6 +143,9 @@ module.exports = {
           break;
         case 'predictions':
           await this.handlePredictions(interaction);
+          break;
+        case 'prompt':
+          await this.handlePrompt(interaction);
           break;
         case 'reset':
           await this.handleReset(interaction);
@@ -343,6 +367,19 @@ module.exports = {
     });
   },
 
+  async handlePrompt(interaction) {
+    const competition = interaction.options.getString('competition');
+    await handlePromptSubcommand(interaction, {
+      gameId: 'club',
+      selectCustomId: 'football:prompt:select',
+      isApiConfigured,
+      isGameConfigured: isFootballGameConfigured,
+      getSeasonFixtures,
+      formatFixtureLine,
+      competition
+    });
+  },
+
   async handleReset(interaction) {
     if (!interaction.guild) {
       await interaction.reply({
@@ -416,5 +453,17 @@ module.exports = {
     } catch (followUpError) {
       logger.error('Failed to send football error reply.', { err: followUpError });
     }
+  },
+
+  async handlePromptSelect(interaction) {
+    await handlePromptSelect(interaction, {
+      gameId: 'club',
+      isApiConfigured,
+      isGameConfigured: isFootballGameConfigured,
+      getFixtureById,
+      formatFixtureLine,
+      repromptFixture: repromptFootballFixture,
+      logger
+    });
   }
 };

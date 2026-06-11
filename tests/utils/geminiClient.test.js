@@ -2,6 +2,11 @@ describe('geminiClient', () => {
   let mockAxios;
   let client;
 
+  /** System instruction long enough for Gemini explicit context caching. */
+  function cacheEligibleInstruction(clientRef = client) {
+    return 'x'.repeat(clientRef.MIN_CONTEXT_CACHE_TOKENS * 3);
+  }
+
   beforeEach(() => {
     jest.resetModules();
     mockAxios = { post: jest.fn() };
@@ -137,11 +142,57 @@ describe('geminiClient', () => {
     expect(c.getGeminiModel()).toBe(c.DEFAULT_MODEL);
   });
 
-  it('should reuse cached context and skip creation on second getOrCreate call', async () => {
-    mockAxios.post.mockResolvedValue({ data: { name: 'cachedContents/ctx1' } });
+  it('should treat prediction system instruction as ineligible for context cache', () => {
+    const matchAi = require('../../utils/matchPredictionAi');
+    const instruction = matchAi.buildSystemInstruction(false);
+    expect(client.isContextCacheEligible(instruction)).toBe(false);
+    expect(client.estimateInstructionTokens(instruction)).toBeLessThan(
+      client.MIN_CONTEXT_CACHE_TOKENS
+    );
+  });
+
+  it('should not call axios from createSystemContextCache when instruction is too short', async () => {
+    const result = await client.createSystemContextCache('short system text', 'display');
+    expect(result).toBeNull();
+    expect(mockAxios.post).not.toHaveBeenCalled();
+  });
+
+  it('should memoize skip for short instructions in getOrCreate', async () => {
     const mgr = new client.SystemContextCacheManager('test');
     const first = await mgr.getOrCreate('key', 'system text', 'display-name');
     const second = await mgr.getOrCreate('key', 'system text', 'display-name');
+    expect(first).toBeNull();
+    expect(second).toBeNull();
+    expect(mockAxios.post).not.toHaveBeenCalled();
+    const entry = mgr.entries.get(mgr.fullKey('key'));
+    expect(entry?.skipped).toBe(true);
+  });
+
+  it('should memoize too-small API failures and avoid retrying getOrCreate', async () => {
+    const instruction = cacheEligibleInstruction();
+    mockAxios.post.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            message: 'Cached content is too small. total_token_count=124, min_total_token_count=1024'
+          }
+        }
+      }
+    });
+    const mgr = new client.SystemContextCacheManager('test');
+    const first = await mgr.getOrCreate('key2', instruction, 'display');
+    const second = await mgr.getOrCreate('key2', instruction, 'display');
+    expect(first).toBeNull();
+    expect(second).toBeNull();
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('should reuse cached context and skip creation on second getOrCreate call', async () => {
+    mockAxios.post.mockResolvedValue({ data: { name: 'cachedContents/ctx1' } });
+    const mgr = new client.SystemContextCacheManager('test');
+    const instruction = cacheEligibleInstruction();
+    const first = await mgr.getOrCreate('key', instruction, 'display-name');
+    const second = await mgr.getOrCreate('key', instruction, 'display-name');
     expect(first).toBe('cachedContents/ctx1');
     expect(second).toBe('cachedContents/ctx1');
     expect(mockAxios.post).toHaveBeenCalledTimes(1);
@@ -150,13 +201,16 @@ describe('geminiClient', () => {
   it('should return null from getOrCreate when cache creation fails', async () => {
     mockAxios.post.mockRejectedValue(new Error('network'));
     const mgr = new client.SystemContextCacheManager('test');
-    const result = await mgr.getOrCreate('key2', 'sys', 'display');
+    const result = await mgr.getOrCreate('key2', cacheEligibleInstruction(), 'display');
     expect(result).toBeNull();
+    const second = await mgr.getOrCreate('key2', cacheEligibleInstruction(), 'display');
+    expect(second).toBeNull();
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
   });
 
   it('should return null from createSystemContextCache when response has no name', async () => {
     mockAxios.post.mockResolvedValue({ data: {} });
-    const result = await client.createSystemContextCache('sys', 'display');
+    const result = await client.createSystemContextCache(cacheEligibleInstruction(), 'display');
     expect(result).toBeNull();
   });
 
@@ -165,19 +219,21 @@ describe('geminiClient', () => {
       .mockResolvedValueOnce({ data: { name: 'cachedContents/c1' } })
       .mockResolvedValueOnce({ data: { name: 'cachedContents/c2' } });
     const mgr = new client.SystemContextCacheManager('ns');
-    await mgr.getOrCreate('k', 'sys', 'disp');
+    const instruction = cacheEligibleInstruction();
+    await mgr.getOrCreate('k', instruction, 'disp');
     mgr.clear();
-    await mgr.getOrCreate('k', 'sys', 'disp');
+    await mgr.getOrCreate('k', instruction, 'disp');
     expect(mockAxios.post).toHaveBeenCalledTimes(2);
   });
 
   it('should store entry with expiry in getOrCreate (line 271)', async () => {
     mockAxios.post.mockResolvedValue({ data: { name: 'cachedContents/new' } });
     const mgr = new client.SystemContextCacheManager('ns2');
-    const name = await mgr.getOrCreate('k2', 'sys', 'disp');
+    const instruction = cacheEligibleInstruction();
+    const name = await mgr.getOrCreate('k2', instruction, 'disp');
     expect(name).toBe('cachedContents/new');
     // Second call should reuse without hitting the API again
-    const name2 = await mgr.getOrCreate('k2', 'sys', 'disp');
+    const name2 = await mgr.getOrCreate('k2', instruction, 'disp');
     expect(name2).toBe('cachedContents/new');
     expect(mockAxios.post).toHaveBeenCalledTimes(1);
   });
@@ -226,7 +282,8 @@ describe('geminiClient', () => {
     }));
     const c = require('../../utils/geminiClient');
     const mgr = new c.SystemContextCacheManager('ns3');
-    await mgr.getOrCreate('k3', 'sys', 'disp');
+    const instruction = 'x'.repeat(c.MIN_CONTEXT_CACHE_TOKENS * 3);
+    await mgr.getOrCreate('k3', instruction, 'disp');
     // We can't directly check the internal TTL easily without inspecting `mgr.entries`, so we inspect that.
     const entry = mgr.entries.get(mgr.fullKey('k3'));
     // 3600000 ms - buffer

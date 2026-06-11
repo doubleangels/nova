@@ -8,7 +8,12 @@ const path = require('path');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
 const { getBotMember } = require('../utils/asyncUtils');
-const { isApiConfigured, getSeasonFixtures } = require('../utils/worldCupClient');
+const { isApiConfigured, getSeasonFixtures, getFixtureById } = require('../utils/worldCupClient');
+const { repromptWorldCupFixture } = require('../utils/worldCupScheduler');
+const {
+  handlePromptSubcommand,
+  handlePromptSelect
+} = require('../utils/predictionPromptCommand');
 const {
   isUserRegistered,
   addRegisteredUser,
@@ -82,6 +87,11 @@ module.exports = {
     )
     .addSubcommand(sub =>
       sub
+        .setName('prompt')
+        .setDescription('Re-post a match prediction prompt (administrators).')
+    )
+    .addSubcommand(sub =>
+      sub
         .setName('reset')
         .setDescription('Clear all World Cup prediction data (administrators).')
         .addBooleanOption(opt =>
@@ -110,6 +120,9 @@ module.exports = {
           break;
         case 'predictions':
           await this.handlePredictions(interaction);
+          break;
+        case 'prompt':
+          await this.handlePrompt(interaction);
           break;
         case 'reset':
           await this.handleReset(interaction);
@@ -325,6 +338,17 @@ module.exports = {
     });
   },
 
+  async handlePrompt(interaction) {
+    await handlePromptSubcommand(interaction, {
+      gameId: 'worldcup',
+      selectCustomId: 'worldcup:prompt:select',
+      isApiConfigured,
+      isGameConfigured: isWorldCupGameConfigured,
+      getSeasonFixtures,
+      formatFixtureLine
+    });
+  },
+
   async handleReset(interaction) {
     if (!interaction.guild) {
       await interaction.reply({
@@ -398,5 +422,17 @@ module.exports = {
     } catch (followUpError) {
       logger.error('Failed to send worldcup error reply.', { err: followUpError });
     }
+  },
+
+  async handlePromptSelect(interaction) {
+    await handlePromptSelect(interaction, {
+      gameId: 'worldcup',
+      isApiConfigured,
+      isGameConfigured: isWorldCupGameConfigured,
+      getFixtureById,
+      formatFixtureLine,
+      repromptFixture: repromptWorldCupFixture,
+      logger
+    });
   }
 };

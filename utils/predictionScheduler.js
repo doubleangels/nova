@@ -193,10 +193,60 @@ function createPredictionScheduler(options) {
     pollInFlight = false;
   }
 
+  /**
+   * Admin override: clear prior prompt claim and post again.
+   * @param {import('discord.js').Client} client
+   * @param {object} fixture
+   * @returns {Promise<boolean>} true if the prompt was posted
+   */
+  async function repromptFixture(client, fixture) {
+    const fixtureId = Number(fixture.id);
+    if (!Number.isFinite(fixtureId)) return false;
+
+    await options.store.releaseFixturePromptClaim(fixtureId);
+
+    const channelId = options.channelId;
+    const aiPrediction = await fetchMatchAiPrediction({
+      game: options.aiGameId,
+      fixture
+    });
+    const embed = options.buildPromptEmbed(fixture, {
+      aiPrediction: aiPrediction || undefined
+    });
+    const components = [buildPredictButtonRow(fixture)];
+
+    let posted = false;
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (channel?.isTextBased()) {
+        const content = buildPromptChannelContent();
+        await channel.send({
+          ...(content ? { content } : {}),
+          embeds: [embed],
+          components
+        });
+        posted = true;
+      }
+    } catch (err) {
+      logger.error(`Failed to re-post ${options.logLabel} channel prompt.`, {
+        err,
+        fixtureId,
+        channelId
+      });
+    }
+
+    if (posted) {
+      await options.store.markFixturePrompted(fixtureId);
+    }
+
+    return posted;
+  }
+
   return {
     buildPromptChannelContent,
     buildPredictButtonRow,
     sendPredictionPrompts,
+    repromptFixture,
     runPoll,
     runStartup,
     startScheduler,

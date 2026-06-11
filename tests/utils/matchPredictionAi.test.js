@@ -130,29 +130,27 @@ describe('matchPredictionAi', () => {
   });
 
   it('should fetch and cache predictions from Gemini', async () => {
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys1' } })
-      .mockResolvedValueOnce({
-        data: {
-          usageMetadata: { cached_content_token_count: 400, prompt_token_count: 500 },
-          candidates: [
-            {
-              content: {
-                parts: [
-                  {
-                    text: JSON.stringify({
-                      homeScore: 1,
-                      awayScore: 0,
-                      winner: 'home',
-                      reasoning: 'Slight home edge.'
-                    })
-                  }
-                ]
-              }
+    mockAxios.post.mockResolvedValueOnce({
+      data: {
+        usageMetadata: { cached_content_token_count: 0, prompt_token_count: 500 },
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    homeScore: 1,
+                    awayScore: 0,
+                    winner: 'home',
+                    reasoning: 'Slight home edge.'
+                  })
+                }
+              ]
             }
-          ]
-        }
-      });
+          }
+        ]
+      }
+    });
 
     const fixture = {
       id: 900001,
@@ -167,16 +165,15 @@ describe('matchPredictionAi', () => {
 
     expect(first?.homeScore).toBe(1);
     expect(second).toEqual(first);
-    expect(mockAxios.post).toHaveBeenCalledTimes(2);
-    expect(mockAxios.post.mock.calls[0][0]).toContain('cachedContents');
-    expect(mockAxios.post.mock.calls[1][0]).toContain('gemini-3.1-flash-lite');
-    expect(mockAxios.post.mock.calls[1][1].cachedContent).toBe('cachedContents/sys1');
-    expect(mockAxios.post.mock.calls[1][1].tools).toEqual([{ google_search: {} }]);
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
+    expect(mockAxios.post.mock.calls[0][0]).toContain('gemini-3.1-flash-lite');
+    expect(mockAxios.post.mock.calls[0][1].cachedContent).toBeUndefined();
+    expect(mockAxios.post.mock.calls[0][1].systemInstruction.parts[0].text).toContain('analyst');
+    expect(mockAxios.post.mock.calls[0][1].tools).toEqual([{ google_search: {} }]);
   });
 
-  it('should reuse system context cache across fixtures in the same mode', async () => {
+  it('should reuse inline system instruction across fixtures in the same mode', async () => {
     mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys1' } })
       .mockResolvedValueOnce({
         data: {
           candidates: [
@@ -236,8 +233,11 @@ describe('matchPredictionAi', () => {
     await ai.fetchMatchAiPrediction({ game: 'worldcup', fixture: fixtureA });
     await ai.fetchMatchAiPrediction({ game: 'worldcup', fixture: fixtureB });
 
-    expect(mockAxios.post).toHaveBeenCalledTimes(3);
-    expect(mockAxios.post.mock.calls.filter(c => c[0].includes('cachedContents'))).toHaveLength(1);
+    expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    expect(mockAxios.post.mock.calls.filter(c => c[0].includes('cachedContents'))).toHaveLength(0);
+    expect(mockAxios.post.mock.calls[0][1].systemInstruction.parts[0].text).toBe(
+      mockAxios.post.mock.calls[1][1].systemInstruction.parts[0].text
+    );
   });
 
   it('should return null when Gemini request fails', async () => {
@@ -289,15 +289,13 @@ describe('matchPredictionAi', () => {
 
   it('should return null from fetchMatchAiPrediction when Gemini returns invalid payload (lines 367-373)', async () => {
     // Gemini returns malformed JSON that normalizes to null
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys_bad' } })
-      .mockResolvedValueOnce({
-        data: {
-          candidates: [{
-            content: { parts: [{ text: JSON.stringify({ homeScore: -1, awayScore: 0, winner: 'INVALID' }) }] }
-          }]
-        }
-      });
+    mockAxios.post.mockResolvedValueOnce({
+      data: {
+        candidates: [{
+          content: { parts: [{ text: JSON.stringify({ homeScore: -1, awayScore: 0, winner: 'INVALID' }) }] }
+        }]
+      }
+    });
     const fixture = {
       id: 999991, home: 'Brazil', away: 'Argentina',
       kickoff: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
@@ -350,17 +348,15 @@ describe('matchPredictionAi', () => {
   });
 
   it('should return cached prediction without calling Gemini on second call', async () => {
-    mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys_cached' } })
-      .mockResolvedValueOnce({
-        data: {
-          candidates: [{
-            content: {
-              parts: [{ text: JSON.stringify({ homeScore: 3, awayScore: 1, winner: 'home', reasoning: 'Home form.' }) }]
-            }
-          }]
-        }
-      });
+    mockAxios.post.mockResolvedValueOnce({
+      data: {
+        candidates: [{
+          content: {
+            parts: [{ text: JSON.stringify({ homeScore: 3, awayScore: 1, winner: 'home', reasoning: 'Home form.' }) }]
+          }
+        }]
+      }
+    });
 
     const fixture = { id: 920001, home: 'Liverpool', away: 'Man City', kickoff: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() };
     const first = await ai.fetchMatchAiPrediction({ game: 'club', fixture });
@@ -368,13 +364,11 @@ describe('matchPredictionAi', () => {
 
     expect(first?.homeScore).toBe(3);
     expect(second).toEqual(first);
-    // Only 2 API calls (1 for context cache creation, 1 for Gemini generation)
-    expect(mockAxios.post).toHaveBeenCalledTimes(2);
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
   });
 
   it('should force refresh prediction when forceRefresh is true', async () => {
     mockAxios.post
-      .mockResolvedValueOnce({ data: { name: 'cachedContents/sys_fr' } })
       .mockResolvedValueOnce({
         data: {
           candidates: [{ content: { parts: [{ text: JSON.stringify({ homeScore: 0, awayScore: 0, winner: 'draw', reasoning: 'Even.' }) }] } }]
@@ -466,7 +460,7 @@ describe('matchPredictionAi', () => {
 
   it('should handle fetchMatchAiPrediction without forceRefresh in params (line 344)', async () => {
     // If we call fetchMatchAiPrediction and omit forceRefresh, it defaults to false
-    mockAxios.post.mockResolvedValueOnce({ data: { name: 'cachedContents/x' } }).mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
       data: { candidates: [{ content: { parts: [{ text: JSON.stringify({ homeScore: 1, awayScore: 0, winner: 'home', reasoning: 'x' }) }] } }] }
     });
     const fixture = { id: 999992, home: 'A', away: 'B', kickoff: new Date(Date.now() + 600000).toISOString() };
@@ -475,7 +469,7 @@ describe('matchPredictionAi', () => {
   });
 
   it('should handle fetchMatchAiPrediction with explicit forceRefresh: false (line 344)', async () => {
-    mockAxios.post.mockResolvedValueOnce({ data: { name: 'cachedContents/x2' } }).mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
       data: { candidates: [{ content: { parts: [{ text: JSON.stringify({ homeScore: 2, awayScore: 0, winner: 'home', reasoning: 'y' }) }] } }] }
     });
     const fixture = { id: 999993, home: 'C', away: 'D', kickoff: new Date(Date.now() + 600000).toISOString() };
@@ -484,19 +478,19 @@ describe('matchPredictionAi', () => {
   });
 
   it('should handle getOrCreateSystemContextCache missing demoMode (lines 297-309)', async () => {
-    mockAxios.post.mockResolvedValueOnce({ data: { name: 'cachedContents/sys_default' } });
     const name = await ai.getOrCreateSystemContextCache();
-    expect(name).toBe('cachedContents/sys_default');
+    expect(name).toBeNull();
+    expect(mockAxios.post).not.toHaveBeenCalled();
   });
 
   it('should handle getOrCreateSystemContextCache with demoMode = true (lines 297-309)', async () => {
-    mockAxios.post.mockResolvedValueOnce({ data: { name: 'cachedContents/sys_demo' } });
     const name = await ai.getOrCreateSystemContextCache(true);
-    expect(name).toBe('cachedContents/sys_demo');
+    expect(name).toBeNull();
+    expect(mockAxios.post).not.toHaveBeenCalled();
   });
 
   it('should handle fetchMatchAiPrediction with explicit forceRefresh: undefined (line 344)', async () => {
-    mockAxios.post.mockResolvedValueOnce({ data: { name: 'cachedContents/sys_undefined' } }).mockResolvedValueOnce({
+    mockAxios.post.mockResolvedValueOnce({
       data: { candidates: [{ content: { parts: [{ text: JSON.stringify({ homeScore: 0, awayScore: 0, winner: 'draw', reasoning: 'z' }) }] } }] }
     });
     const fixture = { id: 999994, home: 'E', away: 'F', kickoff: new Date(Date.now() + 600000).toISOString() };

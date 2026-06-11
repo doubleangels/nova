@@ -7,6 +7,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
 const REQUEST_TIMEOUT_MS = 45000;
 const CONTEXT_CACHE_REFRESH_BUFFER_MS = 60 * 1000;
+const MIN_CONTEXT_CACHE_TOKENS = 1024;
 
 /**
  * @returns {boolean}
@@ -109,6 +110,42 @@ function buildGenerateContentBody(
 }
 
 /**
+ * @param {string} text
+ * @returns {number}
+ */
+function estimateInstructionTokens(text) {
+  return Math.ceil(String(text || '').length / 3);
+}
+
+/**
+ * @param {string} systemInstruction
+ * @returns {boolean}
+ */
+function isContextCacheEligible(systemInstruction) {
+  return estimateInstructionTokens(systemInstruction) >= MIN_CONTEXT_CACHE_TOKENS;
+}
+
+/**
+ * @returns {number}
+ */
+function getContextCacheExpiresAt() {
+  const ttlSeconds = config.geminiContextCacheTtlSeconds || 3600;
+  return Date.now() + ttlSeconds * 1000 - CONTEXT_CACHE_REFRESH_BUFFER_MS;
+}
+
+/**
+ * @param {unknown} err
+ * @returns {boolean}
+ */
+function isContextCacheTooSmallError(err) {
+  const message = err?.response?.data?.error?.message;
+  return (
+    typeof message === 'string' &&
+    (message.includes('too small') || message.includes('min_total_token_count'))
+  );
+}
+
+/**
  * @param {string} systemInstruction
  * @param {string} displayName
  * @returns {Promise<string|null>}
@@ -116,8 +153,19 @@ function buildGenerateContentBody(
 async function createSystemContextCache(systemInstruction, displayName) {
   if (!isGeminiConfigured()) return null;
 
-  const ttlSeconds = config.geminiContextCacheTtlSeconds || 3600;
   const model = getGeminiModel();
+
+  if (!isContextCacheEligible(systemInstruction)) {
+    logger.debug('Gemini context cache skipped: system instruction below minimum token count.', {
+      displayName,
+      model,
+      estimatedTokens: estimateInstructionTokens(systemInstruction),
+      minTokens: MIN_CONTEXT_CACHE_TOKENS
+    });
+    return null;
+  }
+
+  const ttlSeconds = config.geminiContextCacheTtlSeconds || 3600;
 
   try {
     const response = await axios.post(
@@ -151,11 +199,19 @@ async function createSystemContextCache(systemInstruction, displayName) {
 
     return name;
   } catch (err) {
-    logger.warn('Gemini context cache unavailable; using inline system instruction.', {
-      err,
-      displayName,
-      model
-    });
+    if (isContextCacheTooSmallError(err)) {
+      logger.debug('Gemini context cache skipped: content below minimum token count.', {
+        displayName,
+        model,
+        message: err.response?.data?.error?.message
+      });
+    } else {
+      logger.warn('Gemini context cache unavailable; using inline system instruction.', {
+        err: err?.message,
+        displayName,
+        model
+      });
+    }
     return null;
   }
 }
@@ -240,7 +296,7 @@ class SystemContextCacheManager {
    */
   constructor(namespace) {
     this.namespace = namespace;
-    /** @type {Map<string, { name: string, expiresAt: number }>} */
+    /** @type {Map<string, { name: string|null, skipped?: boolean, expiresAt: number }>} */
     this.entries = new Map();
   }
 
@@ -262,18 +318,23 @@ class SystemContextCacheManager {
     const key = this.fullKey(cacheKey);
     const existing = this.entries.get(key);
     if (existing && existing.expiresAt > Date.now()) {
-      return existing.name;
+      return existing.skipped ? null : existing.name;
+    }
+
+    const expiresAt = getContextCacheExpiresAt();
+
+    if (!isContextCacheEligible(systemInstruction)) {
+      this.entries.set(key, { name: null, skipped: true, expiresAt });
+      return null;
     }
 
     const name = await createSystemContextCache(systemInstruction, displayName);
-    if (!name) return null;
+    if (!name) {
+      this.entries.set(key, { name: null, skipped: true, expiresAt });
+      return null;
+    }
 
-    const ttlSeconds = config.geminiContextCacheTtlSeconds || 3600;
-    this.entries.set(key, {
-      name,
-      expiresAt:
-        Date.now() + ttlSeconds * 1000 - CONTEXT_CACHE_REFRESH_BUFFER_MS
-    });
+    this.entries.set(key, { name, expiresAt });
 
     return name;
   }
@@ -287,10 +348,13 @@ module.exports = {
   GEMINI_API_BASE,
   DEFAULT_MODEL,
   REQUEST_TIMEOUT_MS,
+  MIN_CONTEXT_CACHE_TOKENS,
   isGeminiConfigured,
   getGeminiModel,
   parseJsonFromModelText,
   readUsageMetadata,
+  estimateInstructionTokens,
+  isContextCacheEligible,
   buildGenerateContentBody,
   createSystemContextCache,
   generateStructuredJson,
