@@ -237,7 +237,6 @@ describe('predictionMessages', () => {
 
     it('should format prediction listing helpers', () => {
       expect(msgs.msgNoPredictionsForUser('Alice')).toContain('Alice has not submitted');
-      expect(msgs.msgNoPredictionsAnywhere('worldcup')).toContain('No one has submitted world cup');
       expect(msgs.predictionsTitleOther('Bob')).toBe("Bob's Predictions");
     });
 

@@ -291,7 +291,8 @@ describe('worldcup command', () => {
     await worldcupCommand.execute(interaction);
 
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
-      embeds: expect.any(Array)
+      embeds: expect.any(Array),
+      flags: MessageFlags.Ephemeral
     }));
   });
 
@@ -341,7 +342,7 @@ describe('worldcup command', () => {
     }));
   });
 
-  it('should show predictions for another user publicly', async () => {
+  it('should show predictions for another user ephemerally', async () => {
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
     mockUtils.getPredictionsForUser.mockResolvedValue([
       {
@@ -367,7 +368,7 @@ describe('worldcup command', () => {
 
     await worldcupCommand.execute(interaction);
 
-    expect(interaction.deferReply).toHaveBeenCalledWith();
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     const embed = interaction.editReply.mock.calls[0][0].embeds[0];
     expect(embed.data.title).toContain("Alice's Predictions");
   });
@@ -597,60 +598,6 @@ describe('worldcup command', () => {
     await worldcupCommand.execute(interaction);
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('not submitted any predictions')
-    }));
-  });
-
-  it('should show all predictions when user is omitted', async () => {
-    mockUtils.getAllPredictorUserIds.mockResolvedValue(['111', '222']);
-    mockUtils.getUserPredictionFixtureIds.mockImplementation(userId =>
-      Promise.resolve(userId === '111' ? [1] : [2])
-    );
-    mockUtils.getPredictionsForUser.mockImplementation((userId, fixtureIds) =>
-      Promise.resolve([{
-        fixtureId: fixtureIds[0],
-        prediction: {
-          homeScore: 1,
-          awayScore: 0,
-          resultPick: 'home',
-          scored: true,
-          pointsAwarded: 3
-        }
-      }])
-    );
-    mockUtils.getUserPoints.mockImplementation(userId =>
-      Promise.resolve(userId === '111' ? 5 : 2)
-    );
-
-    const interaction = createMockInteraction({
-      options: {
-        getSubcommand: jest.fn().mockReturnValue('predictions'),
-        getUser: jest.fn().mockReturnValue(null)
-      },
-      client: {}
-    });
-
-    await worldcupCommand.execute(interaction);
-
-    expect(mockUtils.getAllPredictorUserIds).toHaveBeenCalled();
-    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-      embeds: expect.any(Array)
-    }));
-    const description = interaction.editReply.mock.calls[0][0].embeds[0].data.description;
-    expect(description).toContain('<@111>');
-    expect(description).toContain('<@222>');
-  });
-
-  it('should show empty all-predictions message when nobody has picks', async () => {
-    const interaction = createMockInteraction({
-      options: {
-        getSubcommand: jest.fn().mockReturnValue('predictions'),
-        getUser: jest.fn().mockReturnValue(null)
-      },
-      client: {}
-    });
-    await worldcupCommand.execute(interaction);
-    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-      content: expect.stringContaining('No one has submitted')
     }));
   });
 

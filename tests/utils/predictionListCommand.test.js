@@ -1,9 +1,8 @@
 const {
-  buildAllPredictionsPages,
   splitContentIntoPages,
   buildUserPredictionLines,
   buildPredictionsEmbed,
-  buildAllPredictionsPageEmbed
+  buildPredictionsFooter
 } = require('../../utils/predictionListCommand');
 
 describe('predictionListCommand', () => {
@@ -15,44 +14,11 @@ describe('predictionListCommand', () => {
     expect(pages.join('')).toContain('line 199');
   });
 
-  it('should build all-predictions pages without splitting user sections when possible', () => {
-    const usersData = [
-      {
-        userId: '111',
-        points: 5,
-        lines: ['• A vs B: pick']
-      },
-      {
-        userId: '222',
-        points: 2,
-        lines: ['• C vs D: pick']
-      }
-    ];
-
-    const pages = buildAllPredictionsPages(usersData, 3800);
-    expect(pages).toHaveLength(1);
-    expect(pages[0]).toContain('<@111>');
-    expect(pages[0]).toContain('<@222>');
-  });
-
-  it('should paginate all-predictions across users when content is large', () => {
-    const usersData = [
-      {
-        userId: '111',
-        points: 5,
-        lines: Array.from({ length: 80 }, (_, i) => `• match ${i} ${'y'.repeat(50)}`)
-      },
-      {
-        userId: '222',
-        points: 2,
-        lines: ['• short pick']
-      }
-    ];
-
-    const pages = buildAllPredictionsPages(usersData, 800);
+  it('should chunk individual lines that exceed the page length', () => {
+    const longLine = `• ${'x'.repeat(1200)}`;
+    const pages = splitContentIntoPages([longLine], 500);
     expect(pages.length).toBeGreaterThan(1);
-    expect(pages[0]).toContain('<@111>');
-    expect(pages[pages.length - 1]).toContain('<@222>');
+    expect(pages.join('')).toBe(longLine);
   });
 
   it('should build user prediction lines with missing data', () => {
@@ -66,14 +32,22 @@ describe('predictionListCommand', () => {
     expect(lines[0]).toContain('prediction data missing');
   });
 
-  it('should build all-predictions page embed with footer when paginated', () => {
-    const embed = buildAllPredictionsPageEmbed('worldcup', 'content', 1, 3);
-    expect(embed.data.footer.text).toBe('Page 2/3');
-  });
-
   it('should return a blank page for empty line lists', () => {
     expect(splitContentIntoPages([])).toEqual(['']);
-    expect(buildAllPredictionsPages([])).toEqual([]);
+  });
+
+  it('should build footer with page numbers when paginated', () => {
+    expect(buildPredictionsFooter(12, 0, 3)).toBe('Total points: 12 · Page 1/3');
+    expect(buildPredictionsFooter(12, 1, 3)).toBe('Total points: 12 · Page 2/3');
+    expect(buildPredictionsFooter(5, 0, 1)).toBe('Total points: 5');
+  });
+
+  it('should build embed with or without footer', () => {
+    const withFooter = buildPredictionsEmbed('worldcup', 'Title', 'content', 'footer text');
+    expect(withFooter.data.footer.text).toBe('footer text');
+
+    const withoutFooter = buildPredictionsEmbed('worldcup', 'Title', 'content');
+    expect(withoutFooter.data.footer).toBeUndefined();
   });
 
   it('should defer ephemerally when viewing your own predictions', async () => {
@@ -95,7 +69,6 @@ describe('predictionListCommand', () => {
       logger: { debug: jest.fn(), error: jest.fn() },
       isApiConfigured: () => true,
       getSeasonFixtures: async () => [],
-      getAllPredictorUserIds: async () => [],
       getUserPredictionFixtureIds: async () => [1],
       getPredictionsForUser: async () => [{
         fixtureId: 1,
@@ -107,6 +80,43 @@ describe('predictionListCommand', () => {
         }
       }],
       getUserPoints: async () => 0,
+      formatFixtureLine: () => 'fixture',
+      formatResultPickDisplay: () => 'home'
+    });
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+  });
+
+  it('should defer ephemerally when viewing another user predictions', async () => {
+    const { handlePredictionsSubcommand } = require('../../utils/predictionListCommand');
+    const { MessageFlags } = require('discord.js');
+    const interaction = {
+      user: { id: 'caller-1' },
+      options: {
+        getUser: jest.fn().mockReturnValue({ id: 'other-1', displayName: 'Other User' })
+      },
+      reply: jest.fn(),
+      deferReply: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
+    };
+
+    await handlePredictionsSubcommand(interaction, {
+      gameId: 'club',
+      paginationPrefix: 'football_predictions',
+      logger: { debug: jest.fn(), error: jest.fn() },
+      isApiConfigured: () => true,
+      getSeasonFixtures: async () => [],
+      getUserPredictionFixtureIds: async () => [1],
+      getPredictionsForUser: async () => [{
+        fixtureId: 1,
+        prediction: {
+          homeScore: 1,
+          awayScore: 0,
+          resultPick: 'home',
+          scored: false
+        }
+      }],
+      getUserPoints: async () => 3,
       formatFixtureLine: () => 'fixture',
       formatResultPickDisplay: () => 'home'
     });
@@ -132,7 +142,6 @@ describe('predictionListCommand', () => {
       logger: { debug: jest.fn(), error: jest.fn() },
       isApiConfigured: () => true,
       getSeasonFixtures: async () => [],
-      getAllPredictorUserIds: async () => [],
       getUserPredictionFixtureIds: async () => [],
       getPredictionsForUser: async () => [],
       getUserPoints: async () => 0,
@@ -143,44 +152,6 @@ describe('predictionListCommand', () => {
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('Other User has not submitted')
     }));
-  });
-
-  it('should sort tied users by id when showing all predictions', async () => {
-    const { handlePredictionsSubcommand } = require('../../utils/predictionListCommand');
-    const interaction = {
-      user: { id: 'caller-1' },
-      options: {
-        getUser: jest.fn().mockReturnValue(null)
-      },
-      reply: jest.fn(),
-      deferReply: jest.fn().mockResolvedValue(),
-      editReply: jest.fn().mockResolvedValue()
-    };
-
-    await handlePredictionsSubcommand(interaction, {
-      gameId: 'worldcup',
-      paginationPrefix: 'worldcup_predictions',
-      logger: { debug: jest.fn(), error: jest.fn() },
-      isApiConfigured: () => true,
-      getSeasonFixtures: async () => [],
-      getAllPredictorUserIds: async () => ['user-b', 'user-a'],
-      getUserPredictionFixtureIds: async () => [1],
-      getPredictionsForUser: async () => [{
-        fixtureId: 1,
-        prediction: {
-          homeScore: 1,
-          awayScore: 0,
-          resultPick: 'home',
-          scored: false
-        }
-      }],
-      getUserPoints: async () => 3,
-      formatFixtureLine: () => 'fixture',
-      formatResultPickDisplay: () => 'home'
-    });
-
-    const description = interaction.editReply.mock.calls[0][0].embeds[0].data.description;
-    expect(description.indexOf('<@user-a>')).toBeLessThan(description.indexOf('<@user-b>'));
   });
 });
 

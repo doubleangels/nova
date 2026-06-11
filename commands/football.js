@@ -22,7 +22,6 @@ const {
   scoreFinishedFixtures,
   formatFixtureLine,
   formatResultPickDisplay,
-  getAllPredictorUserIds,
   getUserPredictionFixtureIds,
   getPredictionsForUser,
   getUserPoints,
@@ -93,8 +92,8 @@ module.exports = {
         .addUserOption(opt =>
           opt
             .setName('user')
-            .setDescription('Show one user\'s predictions; omit to show everyone\'s')
-            .setRequired(false)
+            .setDescription('User whose predictions to show')
+            .setRequired(true)
         )
     )
     .addSubcommand(sub =>
@@ -301,7 +300,7 @@ module.exports = {
       .setTitle(msgs.GAME.club.rulesTitle)
       .setDescription(msgs.buildRulesDescription('club'));
 
-    await interaction.reply({ embeds: [embed] });
+    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   },
 
   async handleMatches(interaction) {
@@ -358,7 +357,6 @@ module.exports = {
       logger,
       isApiConfigured,
       getSeasonFixtures,
-      getAllPredictorUserIds,
       getUserPredictionFixtureIds,
       getPredictionsForUser,
       getUserPoints,

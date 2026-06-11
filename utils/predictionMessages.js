@@ -5,7 +5,7 @@
 
 /** @typedef {'worldcup' | 'club'} PredictionGameId */
 
-/** @type {Record<PredictionGameId, { label: string, embedColor: number, registerCommand: string, leaderboardCommand: string, rulesCommand: string, predictionsTitleSelf: string, predictionsTitleAll: string, resetTitle: string, leaderboardTitle: string, rulesTitle: string, matchesTitle: string, leaderboardFooter: string }> */
+/** @type {Record<PredictionGameId, { label: string, embedColor: number, registerCommand: string, leaderboardCommand: string, rulesCommand: string, predictionsTitleSelf: string, resetTitle: string, leaderboardTitle: string, rulesTitle: string, matchesTitle: string, leaderboardFooter: string }> */
 const GAME = {
   worldcup: {
     label: 'World Cup',
@@ -14,7 +14,6 @@ const GAME = {
     leaderboardCommand: '/worldcup leaderboard',
     rulesCommand: '/worldcup rules',
     predictionsTitleSelf: 'Your World Cup Predictions',
-    predictionsTitleAll: 'World Cup Predictions',
     resetTitle: 'World Cup Predictions Reset',
     leaderboardTitle: 'World Cup Leaderboard',
     rulesTitle: 'World Cup - How It Works',
@@ -28,7 +27,6 @@ const GAME = {
     leaderboardCommand: '/football leaderboard',
     rulesCommand: '/football rules',
     predictionsTitleSelf: 'Your Club Football Predictions',
-    predictionsTitleAll: 'Club Football Predictions',
     resetTitle: 'Club Football Predictions Reset',
     leaderboardTitle: 'Club Football Leaderboard',
     rulesTitle: 'Club Football - How It Works',
@@ -104,14 +102,6 @@ const MSG_NO_PREDICTIONS =
  */
 function msgNoPredictionsForUser(displayName) {
   return `${displayName} has not submitted any predictions yet.`;
-}
-
-/**
- * @param {PredictionGameId} gameId
- * @returns {string}
- */
-function msgNoPredictionsAnywhere(gameId) {
-  return `No one has submitted ${GAME[gameId].label.toLowerCase()} predictions yet.`;
 }
 
 /**
@@ -498,7 +488,6 @@ module.exports = {
   MSG_NO_MATCHES_FILTER,
   MSG_NO_PREDICTIONS,
   msgNoPredictionsForUser,
-  msgNoPredictionsAnywhere,
   predictionsTitleOther,
   MSG_MISSING_PREDICTION,
   REGISTER_EMBED_TITLE_SUCCESS,

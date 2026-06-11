@@ -339,7 +339,10 @@ describe('football command', () => {
       options: { getSubcommand: jest.fn().mockReturnValue('rules') }
     });
     await footballCommand.execute(interaction);
-    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.any(Array),
+      flags: MessageFlags.Ephemeral
+    }));
   });
 
   it('should list matches', async () => {
@@ -468,7 +471,7 @@ describe('football command', () => {
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
   });
 
-  it('should show predictions for another user publicly', async () => {
+  it('should show predictions for another user ephemerally', async () => {
     mockFootballUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
     mockFootballUtils.getPredictionsForUser.mockResolvedValue([
       {
@@ -488,7 +491,7 @@ describe('football command', () => {
       client: {}
     });
     await footballCommand.execute(interaction);
-    expect(interaction.deferReply).toHaveBeenCalledWith();
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
   });
 
@@ -545,29 +548,6 @@ describe('football command', () => {
     const call = interaction.editReply.mock.calls[0][0];
     const text = call.embeds ? call.embeds[0].data.description : call.content;
     expect(text).toContain('999');
-  });
-
-  it('should show all predictions when user is omitted', async () => {
-    mockFootballUtils.getAllPredictorUserIds.mockResolvedValue(['111']);
-    mockFootballUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
-    mockFootballUtils.getPredictionsForUser.mockResolvedValue([
-      {
-        fixtureId: 1,
-        prediction: { homeScore: 2, awayScore: 1, resultPick: 'home', scored: true, pointsAwarded: 4 }
-      }
-    ]);
-    mockFootballUtils.getUserPoints.mockResolvedValue(4);
-
-    const interaction = createMockInteraction({
-      options: {
-        getSubcommand: jest.fn().mockReturnValue('predictions'),
-        getUser: jest.fn().mockReturnValue(null)
-      },
-      client: {}
-    });
-    await footballCommand.execute(interaction);
-    expect(mockFootballUtils.getAllPredictorUserIds).toHaveBeenCalled();
-    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
   });
 
   it('should reject predictions when API not configured', async () => {

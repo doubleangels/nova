@@ -53,11 +53,28 @@ function buildPredictionsEmbed(gameId, title, description, footerText) {
   const embed = new EmbedBuilder()
     .setColor(msgs.GAME[gameId].embedColor)
     .setTitle(title)
-    .setDescription(description.slice(0, 4000));
+    .setDescription(description);
   if (footerText) {
     embed.setFooter({ text: footerText });
   }
   return embed;
+}
+
+/**
+ * @param {string} line
+ * @param {number} maxPageLength
+ * @returns {string[]}
+ */
+function chunkLongLine(line, maxPageLength) {
+  if (line.length <= maxPageLength) {
+    return [line];
+  }
+
+  const chunks = [];
+  for (let i = 0; i < line.length; i += maxPageLength) {
+    chunks.push(line.slice(i, i + maxPageLength));
+  }
+  return chunks;
 }
 
 /**
@@ -71,14 +88,19 @@ function splitContentIntoPages(lines, maxPageLength = DEFAULT_PAGE_LENGTH) {
   let currentLen = 0;
 
   for (const line of lines) {
-    const lineLen = line.length + 1;
-    if (current.length > 0 && currentLen + lineLen > maxPageLength) {
-      pages.push(current.join('\n'));
-      current = [line];
-      currentLen = lineLen;
-    } else {
-      current.push(line);
-      currentLen += lineLen;
+    for (const segment of chunkLongLine(line, maxPageLength)) {
+      const segmentLen = segment.length + (current.length > 0 ? 1 : 0);
+      if (current.length > 0 && currentLen + segmentLen > maxPageLength) {
+        pages.push(current.join('\n'));
+        current = [segment];
+        currentLen = segment.length;
+      } else {
+        if (current.length > 0) {
+          currentLen += 1;
+        }
+        current.push(segment);
+        currentLen += segment.length;
+      }
     }
   }
 
@@ -90,51 +112,16 @@ function splitContentIntoPages(lines, maxPageLength = DEFAULT_PAGE_LENGTH) {
 }
 
 /**
- * @param {Array<{ userId: string, points: number, lines: string[] }>} usersData
- * @param {number} [maxPageLength]
- * @returns {string[]}
- */
-function buildAllPredictionsPages(usersData, maxPageLength = DEFAULT_PAGE_LENGTH) {
-  const pages = [];
-  let current = '';
-
-  for (const { userId, points, lines } of usersData) {
-    const section = [`**<@${userId}>** — **${points}** pts`, ...lines].join('\n');
-    const separator = current ? '\n\n' : '';
-    const addition = `${separator}${section}`;
-
-    if (current && current.length + addition.length > maxPageLength) {
-      pages.push(current);
-      current = section;
-    } else {
-      current += addition;
-    }
-  }
-
-  if (current) {
-    pages.push(current);
-  }
-
-  return pages;
-}
-
-/**
- * @param {'worldcup'|'club'} gameId
- * @param {string} pageContent
+ * @param {number} total
  * @param {number} pageIndex
  * @param {number} pageCount
- * @returns {EmbedBuilder}
+ * @returns {string}
  */
-function buildAllPredictionsPageEmbed(gameId, pageContent, pageIndex, pageCount) {
-  const embed = buildPredictionsEmbed(
-    gameId,
-    msgs.GAME[gameId].predictionsTitleAll,
-    pageContent
-  );
+function buildPredictionsFooter(total, pageIndex, pageCount) {
   if (pageCount > 1) {
-    embed.setFooter({ text: `Page ${pageIndex + 1}/${pageCount}` });
+    return `Total points: ${total} · Page ${pageIndex + 1}/${pageCount}`;
   }
-  return embed;
+  return `Total points: ${total}`;
 }
 
 /**
@@ -174,7 +161,6 @@ async function replyWithPagination(interaction, pages, generateEmbed, pagination
  * @param {import('../logger')} deps.logger
  * @param {() => boolean} deps.isApiConfigured
  * @param {() => Promise<object[]>} deps.getSeasonFixtures
- * @param {() => Promise<string[]>} deps.getAllPredictorUserIds
  * @param {(userId: string) => Promise<number[]>} deps.getUserPredictionFixtureIds
  * @param {(userId: string, fixtureIds: number[]) => Promise<Array<{ fixtureId: number, prediction: object|null }>>} deps.getPredictionsForUser
  * @param {(userId: string) => Promise<number>} deps.getUserPoints
@@ -189,7 +175,6 @@ async function handlePredictionsSubcommand(interaction, deps) {
     logger,
     isApiConfigured,
     getSeasonFixtures,
-    getAllPredictorUserIds,
     getUserPredictionFixtureIds,
     getPredictionsForUser,
     getUserPoints,
@@ -206,90 +191,46 @@ async function handlePredictionsSubcommand(interaction, deps) {
   }
 
   const targetUser = interaction.options.getUser('user');
-  const isSelfLookup = Boolean(targetUser && targetUser.id === interaction.user.id);
-
-  if (isSelfLookup) {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  } else {
-    await interaction.deferReply();
-  }
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
   const fixtures = await getSeasonFixtures();
   const fixtureMap = new Map(fixtures.map(f => [f.id, f]));
 
-  if (targetUser) {
-    const isSelf = targetUser.id === interaction.user.id;
-    const fixtureIds = await getUserPredictionFixtureIds(targetUser.id);
+  const isSelf = targetUser.id === interaction.user.id;
+  const fixtureIds = await getUserPredictionFixtureIds(targetUser.id);
 
-    if (fixtureIds.length === 0) {
-      await interaction.editReply({
-        content: isSelf
-          ? msgs.MSG_NO_PREDICTIONS
-          : msgs.msgNoPredictionsForUser(targetUser.displayName)
-      });
-      return;
-    }
-
-    const predictionEntries = await getPredictionsForUser(targetUser.id, fixtureIds);
-    const lines = buildUserPredictionLines(
-      predictionEntries,
-      fixtureMap,
-      formatFixtureLine,
-      formatResultPickDisplay
-    );
-    const total = await getUserPoints(targetUser.id);
-    const title = isSelf
-      ? msgs.GAME[gameId].predictionsTitleSelf
-      : msgs.predictionsTitleOther(targetUser.displayName);
-    const pages = splitContentIntoPages(lines);
-
-    await replyWithPagination(
-      interaction,
-      pages,
-      index => buildPredictionsEmbed(
-        gameId,
-        title,
-        pages[index],
-        `Total points: ${total}`
-      ),
-      paginationPrefix,
-      logger
-    );
-    return;
-  }
-
-  const userIds = await getAllPredictorUserIds();
-  if (userIds.length === 0) {
+  if (fixtureIds.length === 0) {
     await interaction.editReply({
-      content: msgs.msgNoPredictionsAnywhere(gameId)
+      content: isSelf
+        ? msgs.MSG_NO_PREDICTIONS
+        : msgs.msgNoPredictionsForUser(targetUser.displayName)
     });
     return;
   }
 
-  const usersData = await Promise.all(
-    userIds.map(async userId => {
-      const fixtureIds = await getUserPredictionFixtureIds(userId);
-      const predictionEntries = await getPredictionsForUser(userId, fixtureIds);
-      const points = await getUserPoints(userId);
-      const lines = buildUserPredictionLines(
-        predictionEntries,
-        fixtureMap,
-        formatFixtureLine,
-        formatResultPickDisplay
-      );
-      return { userId, points, lines };
-    })
+  const predictionEntries = await getPredictionsForUser(targetUser.id, fixtureIds);
+  const lines = buildUserPredictionLines(
+    predictionEntries,
+    fixtureMap,
+    formatFixtureLine,
+    formatResultPickDisplay
   );
-
-  usersData.sort((a, b) => b.points - a.points || a.userId.localeCompare(b.userId));
-
-  const pages = buildAllPredictionsPages(usersData);
+  const total = await getUserPoints(targetUser.id);
+  const title = isSelf
+    ? msgs.GAME[gameId].predictionsTitleSelf
+    : msgs.predictionsTitleOther(targetUser.displayName);
+  const pages = splitContentIntoPages(lines);
   const pageCount = pages.length;
 
   await replyWithPagination(
     interaction,
     pages,
-    index => buildAllPredictionsPageEmbed(gameId, pages[index], index, pageCount),
+    index => buildPredictionsEmbed(
+      gameId,
+      title,
+      pages[index],
+      buildPredictionsFooter(total, index, pageCount)
+    ),
     paginationPrefix,
     logger
   );
@@ -299,9 +240,8 @@ module.exports = {
   DEFAULT_PAGE_LENGTH,
   buildUserPredictionLines,
   buildPredictionsEmbed,
-  buildAllPredictionsPageEmbed,
   splitContentIntoPages,
-  buildAllPredictionsPages,
+  buildPredictionsFooter,
   replyWithPagination,
   handlePredictionsSubcommand
 };
