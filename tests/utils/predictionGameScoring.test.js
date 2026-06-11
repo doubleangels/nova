@@ -43,8 +43,9 @@ describe('predictionGameScoring', () => {
       expect(scoring.calculateScorePoints(2, 1, 2, 1)).toBe(3);
     });
 
-    it('should return 1 for correct outcome only', () => {
-      expect(scoring.calculateScorePoints(2, 0, 3, 1)).toBe(1);
+    it('should return 0 when scoreline outcome matches but numbers differ', () => {
+      expect(scoring.calculateScorePoints(2, 0, 3, 1)).toBe(0);
+      expect(scoring.calculateScorePoints(1, 1, 0, 0)).toBe(0);
     });
 
     it('should return 0 for wrong outcome', () => {
@@ -70,6 +71,64 @@ describe('predictionGameScoring', () => {
 
     it('should return 0 when actual outcome is null (line 103 — actual && branch false)', () => {
       expect(scoring.calculateResultPoints('home', null, null)).toBe(0);
+    });
+  });
+
+  describe('buildFixtureRescoreUpdates', () => {
+    it('should lower totals when the old outcome-only score point is removed', () => {
+      const updates = scoring.buildFixtureRescoreUpdates(
+        [
+          {
+            userId: 'user-a',
+            prediction: {
+              homeScore: 1,
+              awayScore: 0,
+              resultPick: 'home',
+              submittedAt: '2026-06-11T12:00:00.000Z',
+              scored: true,
+              scorePoints: 1,
+              resultPoints: 1,
+              pointsAwarded: 2
+            }
+          }
+        ],
+        2,
+        0
+      );
+
+      expect(updates).toHaveLength(1);
+      expect(updates[0]).toMatchObject({
+        userId: 'user-a',
+        oldTotal: 2,
+        newTotal: 1,
+        pointsDelta: -1,
+        scorePts: 0,
+        resultPts: 1
+      });
+    });
+
+    it('should skip predictions that already match the new scoring', () => {
+      const updates = scoring.buildFixtureRescoreUpdates(
+        [
+          {
+            userId: 'user-b',
+            prediction: {
+              homeScore: 2,
+              awayScore: 0,
+              resultPick: 'home',
+              submittedAt: '2026-06-11T12:00:00.000Z',
+              scored: true,
+              scorePoints: 3,
+              resultPoints: 1,
+              pointsAwarded: 4
+            }
+          }
+        ],
+        2,
+        0
+      );
+
+      expect(updates).toHaveLength(0);
     });
   });
 

@@ -32,9 +32,6 @@ function resultPickFromScore(homeScore, awayScore) {
  */
 function calculateScorePoints(homeScore, awayScore, actualHome, actualAway) {
   if (homeScore === actualHome && awayScore === actualAway) return 3;
-  const predicted = getOutcome(homeScore, awayScore);
-  const actual = getOutcome(actualHome, actualAway);
-  if (predicted && predicted === actual) return 1;
   return 0;
 }
 
@@ -180,11 +177,85 @@ function createScoreFinishedFixtures(store, deps) {
   };
 }
 
+/**
+ * Recomputes score/result points for already-scored predictions (e.g. after a rule change).
+ * @param {Array<{ userId: string, prediction: import('./predictionGameStore').GamePrediction|null }>} predictorEntries
+ * @param {number} actualHome
+ * @param {number} actualAway
+ * @returns {Array<{
+ *   userId: string,
+ *   prediction: import('./predictionGameStore').GamePrediction,
+ *   pointsDelta: number,
+ *   oldTotal: number,
+ *   newTotal: number,
+ *   scorePts: number,
+ *   resultPts: number
+ * }>}
+ */
+function buildFixtureRescoreUpdates(predictorEntries, actualHome, actualAway) {
+  /** @type {Array<{
+   *   userId: string,
+   *   prediction: import('./predictionGameStore').GamePrediction,
+   *   pointsDelta: number,
+   *   oldTotal: number,
+   *   newTotal: number,
+   *   scorePts: number,
+   *   resultPts: number
+   * }>} */
+  const updates = [];
+
+  for (const { userId, prediction } of predictorEntries) {
+    if (!prediction?.scored) continue;
+
+    const oldTotal = prediction.pointsAwarded ?? 0;
+    const scorePts = calculateScorePoints(
+      prediction.homeScore,
+      prediction.awayScore,
+      actualHome,
+      actualAway
+    );
+    const resultPts = calculateResultPoints(
+      prediction.resultPick,
+      actualHome,
+      actualAway
+    );
+    const newTotal = scorePts + resultPts;
+    const pointsDelta = newTotal - oldTotal;
+
+    if (
+      pointsDelta === 0 &&
+      prediction.scorePoints === scorePts &&
+      prediction.resultPoints === resultPts
+    ) {
+      continue;
+    }
+
+    updates.push({
+      userId,
+      prediction: {
+        ...prediction,
+        scored: true,
+        scorePoints: scorePts,
+        resultPoints: resultPts,
+        pointsAwarded: newTotal
+      },
+      pointsDelta,
+      oldTotal,
+      newTotal,
+      scorePts,
+      resultPts
+    });
+  }
+
+  return updates;
+}
+
 module.exports = {
   getOutcome,
   resultPickFromScore,
   calculateScorePoints,
   calculateResultPoints,
   alignResultPickWithScore,
-  createScoreFinishedFixtures
+  createScoreFinishedFixtures,
+  buildFixtureRescoreUpdates
 };

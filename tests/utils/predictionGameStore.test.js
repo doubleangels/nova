@@ -295,6 +295,40 @@ describe('predictionGameStore', () => {
     expect(await store.getScoredFixtures()).toContain(55);
   });
 
+  it('should apply signed fixture rescore deltas atomically', async () => {
+    await store.savePrediction('user-rescore', 8801, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 1,
+      resultPoints: 1,
+      pointsAwarded: 2
+    });
+    await store.addUserPoints('user-rescore', 2);
+
+    await store.applyFixtureRescoreUpdates(8801, [{
+      userId: 'user-rescore',
+      prediction: {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        submittedAt: new Date().toISOString(),
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      },
+      pointsDelta: -1
+    }]);
+
+    expect(await store.getUserPoints('user-rescore')).toBe(1);
+    const saved = await store.getPrediction('user-rescore', 8801);
+    expect(saved.pointsAwarded).toBe(1);
+    expect(saved.scorePoints).toBe(0);
+  });
+
   it('should recover from corrupted registered list JSON during addRegisteredUser', async () => {
     const { getWritableDb } = require('../../utils/sqliteStore');
     const db = getWritableDb();

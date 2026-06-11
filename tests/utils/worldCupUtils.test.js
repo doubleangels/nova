@@ -63,9 +63,9 @@ describe('worldCupUtils', () => {
       expect(utils.calculateScorePoints(2, 1, 2, 1)).toBe(3);
     });
 
-    it('should return 1 for correct outcome only on score prediction', () => {
-      expect(utils.calculateScorePoints(2, 0, 3, 1)).toBe(1);
-      expect(utils.calculateScorePoints(1, 1, 0, 0)).toBe(1);
+    it('should return 0 when scoreline outcome matches but numbers differ', () => {
+      expect(utils.calculateScorePoints(2, 0, 3, 1)).toBe(0);
+      expect(utils.calculateScorePoints(1, 1, 0, 0)).toBe(0);
     });
 
     it('should return 0 for wrong score prediction', () => {

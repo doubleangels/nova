@@ -210,7 +210,9 @@ These run without a slash command:
 
 Real fixtures show country flag emojis (e.g. 🇧🇷 Brazil) wherever team names appear, resolved from the API team code/TLA or a built-in name map.
 
-**Scoring:** exact score = 3 pts; correct outcome from your predicted score = 1 pt; correct separate winner/draw pick = 1 pt (max 4 per match).
+**Scoring:** exact score = 3 pts; correct winner/draw pick = 1 pt (max 4 per match).
+
+To re-score a finished World Cup match after a rule change (e.g. remove stale outcome points), stop the bot and run `pnpm run migrate-worldcup-scoring` (dry run) or `node scripts/migrate-worldcup-scoring.js --commit --force` (defaults to Mexico vs South Africa; use `--fixture-id` to target another match).
 
 ### Club football predictions (`/football`)
 

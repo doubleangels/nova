@@ -11,6 +11,7 @@
     "remove-value": "node remove-value.js",
     "list-values": "node list-values.js",
     "prune-db": "node prune-db.js",
+    "migrate-worldcup-scoring": "node scripts/migrate-worldcup-scoring.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:debug": "pnpm exec jest --inspect-brk --runInBand"
