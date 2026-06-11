@@ -36,6 +36,13 @@ describe('worldCupUtils', () => {
     clearSpy.mockRestore();
   });
 
+  it('should remove a user via removeWorldCupUser', async () => {
+    await utils.addRegisteredUser('123456789012345678');
+    const summary = await utils.removeWorldCupUser('123456789012345678');
+    expect(summary.wasRegistered).toBe(true);
+    expect(await utils.isUserRegistered('123456789012345678')).toBe(false);
+  });
+
   it('should batch-fetch user predictions via getPredictionsForUser', async () => {
     await utils.savePrediction('user-1', 7, {
       homeScore: 2,

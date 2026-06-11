@@ -37,6 +37,13 @@ describe('worldcup command', () => {
       getAllPredictorUserIds: jest.fn().mockResolvedValue([]),
       getUserPoints: jest.fn().mockResolvedValue(0),
       resetWorldCupGame: jest.fn().mockResolvedValue(),
+      removeWorldCupUser: jest.fn().mockResolvedValue({
+        hadData: true,
+        wasRegistered: true,
+        predictionCount: 1,
+        pendingCount: 0,
+        points: 4
+      }),
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
       isUserRegistered: jest.fn().mockResolvedValue(false),
       addRegisteredUser: jest.fn().mockResolvedValue(),
@@ -88,6 +95,15 @@ describe('worldcup command', () => {
     };
 
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);
+    jest.doMock('../../utils/footballUtils', () => ({
+      removeFootballUser: jest.fn().mockResolvedValue({
+        hadData: true,
+        wasRegistered: false,
+        predictionCount: 2,
+        pendingCount: 0,
+        points: 6
+      })
+    }));
     jest.doMock('../../utils/worldCupScheduler', () => mockScheduler);
     jest.doMock('../../utils/worldCupScheduledEvents', () => mockScheduledEvents);
     jest.doMock('../../utils/asyncUtils', () => ({ getBotMember: mockGetBotMember }));
@@ -911,6 +927,72 @@ describe('worldcup command', () => {
       content: expect.stringContaining('not set up')
     }));
     expect(mockScheduledEvents.syncWorldCupScheduledEvents).not.toHaveBeenCalled();
+  });
+
+  it('should deny removeuser for non-administrators', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('removeuser'),
+        getString: jest.fn().mockReturnValue('123456789012345678')
+      },
+      guild: { id: 'guild-1' },
+      memberPermissions: { has: jest.fn().mockReturnValue(false) }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('administrators')
+    }));
+    expect(mockUtils.removeWorldCupUser).not.toHaveBeenCalled();
+  });
+
+  it('should reject invalid user IDs for removeuser', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('removeuser'),
+        getString: jest.fn().mockReturnValue('bad-id')
+      },
+      guild: { id: 'guild-1' },
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('valid Discord user ID')
+    }));
+    expect(mockUtils.removeWorldCupUser).not.toHaveBeenCalled();
+  });
+
+  it('should remove user from both games for administrators', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('removeuser'),
+        getString: jest.fn().mockReturnValue('123456789012345678')
+      },
+      guild: { id: 'guild-1' },
+      user: { id: 'admin-1' },
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+    expect(mockUtils.removeWorldCupUser).toHaveBeenCalledWith('123456789012345678');
+    const footballUtils = require('../../utils/footballUtils');
+    expect(footballUtils.removeFootballUser).toHaveBeenCalledWith('123456789012345678');
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.arrayContaining([
+        expect.objectContaining({
+          data: expect.objectContaining({ title: 'Prediction User Removed' })
+        })
+      ])
+    }));
   });
 
 

@@ -15,6 +15,7 @@ const {
   handlePromptSubcommand,
   handlePromptSelect
 } = require('../utils/predictionPromptCommand');
+const { handleRemoveUserSubcommand } = require('../utils/predictionRemoveUserCommand');
 const {
   isUserRegistered,
   addRegisteredUser,
@@ -26,10 +27,12 @@ const {
   getPredictionsForUser,
   getUserPoints,
   resetWorldCupGame,
+  removeWorldCupUser,
   isWorldCupGameConfigured,
   setPromptingPaused
 } = require('../utils/worldCupUtils');
 const { handlePredictionsSubcommand } = require('../utils/predictionListCommand');
+const { removeFootballUser } = require('../utils/footballUtils');
 const msgs = require('../utils/predictionMessages');
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE']);
@@ -104,6 +107,17 @@ module.exports = {
             .setName('repost')
             .setDescription('Re-post open match prompts after reset')
         )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('removeuser')
+        .setDescription('Remove a user from all prediction data (administrators).')
+        .addStringOption(opt =>
+          opt
+            .setName('userid')
+            .setDescription('Discord user ID to remove')
+            .setRequired(true)
+        )
     ),
 
   async execute(interaction) {
@@ -134,6 +148,9 @@ module.exports = {
           break;
         case 'reset':
           await this.handleReset(interaction);
+          break;
+        case 'removeuser':
+          await this.handleRemoveUser(interaction);
           break;
         default:
           await interaction.reply({
@@ -465,6 +482,19 @@ module.exports = {
     });
 
     await interaction.editReply({ embeds: [embed] });
+  },
+
+  async handleRemoveUser(interaction) {
+    await handleRemoveUserSubcommand(interaction, {
+      removeFromGames: async userId => {
+        const [worldcup, football] = await Promise.all([
+          removeWorldCupUser(userId),
+          removeFootballUser(userId)
+        ]);
+        return { worldcup, football };
+      },
+      logger
+    });
   },
 
   async handleError(interaction, error) {

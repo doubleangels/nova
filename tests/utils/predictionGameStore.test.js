@@ -452,4 +452,148 @@ describe('predictionGameStore', () => {
     const userIds = await store.getAllPredictorUserIds();
     expect(userIds).not.toContain('');
   });
+
+  it('should remove all user data including predictions, points, pending, and registration', async () => {
+    const userId = '123456789012345678';
+    const otherUserId = '987654321098765432';
+
+    await store.addRegisteredUser(userId);
+    await store.savePrediction(userId, 42, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+    await store.addUserPoints(userId, 3);
+    await store.savePendingPrediction(userId, 99, { homeScore: 2 });
+    await store.savePrediction(otherUserId, 42, {
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+
+    const summary = await store.removeUser(userId);
+
+    expect(summary).toEqual({
+      hadData: true,
+      wasRegistered: true,
+      predictionCount: 1,
+      pendingCount: 1,
+      points: 3
+    });
+    expect(await store.isUserRegistered(userId)).toBe(false);
+    expect(await store.getUserPoints(userId)).toBe(0);
+    expect(await store.getPrediction(userId, 42)).toBeNull();
+    expect(await store.getPendingPrediction(userId, 99)).toBeNull();
+    expect(await store.getUserPredictionFixtureIds(userId)).toEqual([]);
+    expect(await store.getPredictorIdsForFixture(42)).toEqual([otherUserId]);
+
+    const board = await store.getLeaderboard(10);
+    expect(board.some(entry => entry.userId === userId)).toBe(false);
+  });
+
+  it('should return hadData false when removing an unknown user', async () => {
+    const summary = await store.removeUser('999999999999999999');
+    expect(summary.hadData).toBe(false);
+    expect(summary.wasRegistered).toBe(false);
+    expect(summary.predictionCount).toBe(0);
+    expect(summary.pendingCount).toBe(0);
+    expect(summary.points).toBe(0);
+  });
+
+  it('should delete predictions_by_fixture index when user is the sole predictor', async () => {
+    const userId = '111111111111111111';
+    await store.savePrediction(userId, 77, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+    expect(await store.getPredictorIdsForFixture(77)).toEqual([userId]);
+
+    await store.removeUser(userId);
+
+    expect(await store.getPredictorIdsForFixture(77)).toEqual([]);
+  });
+
+  it('should remove a user who only has a zero-point record', async () => {
+    const userId = '222222222222222222';
+    await store.addUserPoints(userId, 0);
+
+    const summary = await store.removeUser(userId);
+
+    expect(summary.hadData).toBe(true);
+    expect(summary.points).toBe(0);
+    expect(await store.getUserPoints(userId)).toBe(0);
+  });
+
+  it('should remove a participant who was never registered', async () => {
+    const userId = '333333333333333333';
+    await store.savePrediction(userId, 88, {
+      homeScore: 0,
+      awayScore: 0,
+      resultPick: 'draw',
+      submittedAt: new Date().toISOString()
+    });
+
+    const summary = await store.removeUser(userId);
+
+    expect(summary.hadData).toBe(true);
+    expect(summary.wasRegistered).toBe(false);
+    expect(summary.predictionCount).toBe(1);
+  });
+
+  it('should tolerate a missing predictions_by_fixture index during removal', async () => {
+    const userId = '444444444444444444';
+    await store.savePrediction(userId, 66, {
+      homeScore: 2,
+      awayScore: 2,
+      resultPick: 'draw',
+      submittedAt: new Date().toISOString()
+    });
+    await store.keyv.delete('predictions_by_fixture:66');
+
+    const summary = await store.removeUser(userId);
+
+    expect(summary.predictionCount).toBe(1);
+    expect(await store.getPrediction(userId, 66)).toBeNull();
+  });
+
+  it('should tolerate a non-array predictions_by_fixture index during removal', async () => {
+    const userId = '555555555555555555';
+    await store.savePrediction(userId, 67, {
+      homeScore: 1,
+      awayScore: 1,
+      resultPick: 'draw',
+      submittedAt: new Date().toISOString()
+    });
+    await store.keyv.set('predictions_by_fixture:67', 'invalid');
+
+    const summary = await store.removeUser(userId);
+
+    expect(summary.predictionCount).toBe(1);
+    expect(await store.getPrediction(userId, 67)).toBeNull();
+  });
+
+  it('should handle removeUser when registered and participant lists exist without the user', async () => {
+    await store.keyv.set('registered', ['999999999999999999']);
+    await store.keyv.set('all_participants', ['999999999999999999']);
+
+    const summary = await store.removeUser('123456789012345678');
+
+    expect(summary.hadData).toBe(false);
+    expect(await store.getRegisteredUserIds()).toEqual(['999999999999999999']);
+  });
+
+  it('should treat non-array registered and participant values as empty lists', async () => {
+    await store.keyv.set('registered', 'invalid');
+    await store.keyv.set('all_participants', 123);
+    await store.keyv.set('points:123456789012345678', 4);
+
+    const summary = await store.removeUser('123456789012345678');
+
+    expect(summary.hadData).toBe(true);
+    expect(summary.points).toBe(4);
+  });
 });

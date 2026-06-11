@@ -271,4 +271,53 @@ describe('predictionMessages', () => {
       expect(msgs.winnerPlaceholderSelected('Draw')).toBe('Winner: Draw');
     });
   });
+
+  describe('remove user messages', () => {
+    const emptySummary = {
+      hadData: false,
+      wasRegistered: false,
+      predictionCount: 0,
+      pendingCount: 0,
+      points: 0
+    };
+
+    it('should build no-data message', () => {
+      expect(msgs.msgRemoveUserNoData('123456789012345678')).toContain(
+        'No World Cup or club football prediction data found'
+      );
+    });
+
+    it('should build remove user description with no-data sections', () => {
+      const desc = msgs.buildRemoveUserDescription('123456789012345678', emptySummary, emptySummary);
+      expect(desc).toContain('**World Cup:** no data');
+      expect(desc).toContain('**Club football:** no data');
+    });
+
+    it('should build remove user description with pending picks cleared', () => {
+      const desc = msgs.buildRemoveUserDescription('123456789012345678', {
+        hadData: true,
+        wasRegistered: false,
+        predictionCount: 0,
+        pendingCount: 2,
+        points: 0
+      }, emptySummary);
+      expect(desc).toContain('Cleared 2 in-progress pick(s)');
+    });
+
+    it('should build remove user description for zero-point cleanup', () => {
+      const desc = msgs.buildRemoveUserDescription('123456789012345678', {
+        hadData: true,
+        wasRegistered: false,
+        predictionCount: 0,
+        pendingCount: 0,
+        points: 0
+      }, emptySummary);
+      expect(desc).toContain('Cleared stored points');
+    });
+
+    it('should export admin remove user error constants', () => {
+      expect(msgs.ERR_ADMIN_REMOVE_USER_ONLY).toContain('administrators');
+      expect(msgs.ERR_INVALID_USER_ID).toContain('valid Discord user ID');
+    });
+  });
 });

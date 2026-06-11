@@ -492,6 +492,93 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   /**
+   * Removes all stored data for a user in this namespace.
+   * @param {string} userId
+   * @returns {Promise<{ hadData: boolean, wasRegistered: boolean, predictionCount: number, pendingCount: number, points: number }>}
+   */
+  async function removeUser(userId) {
+    return runStoreTransaction((db) => {
+      const summary = {
+        hadData: false,
+        wasRegistered: false,
+        predictionCount: 0,
+        pendingCount: 0,
+        points: 0
+      };
+
+      const registeredRaw = getInTx(db, 'registered');
+      const registered = Array.isArray(registeredRaw) ? registeredRaw : [];
+      if (registered.includes(userId)) {
+        setInTx(
+          db,
+          'registered',
+          registered.filter(id => id !== userId)
+        );
+        summary.wasRegistered = true;
+        summary.hadData = true;
+      }
+
+      const participantsRaw = getInTx(db, 'all_participants');
+      const participants = Array.isArray(participantsRaw) ? participantsRaw : [];
+      if (participants.includes(userId)) {
+        setInTx(
+          db,
+          'all_participants',
+          participants.filter(id => id !== userId)
+        );
+        summary.hadData = true;
+      }
+
+      const pointsRow = db
+        .prepare('SELECT value FROM keyv WHERE key = ?')
+        .get(fullKey(`points:${userId}`));
+      if (pointsRow) {
+        const points = getInTx(db, `points:${userId}`) || 0;
+        summary.points = points;
+        db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey(`points:${userId}`));
+        summary.hadData = true;
+      }
+
+      const fixtureIds = getInTx(db, `user_predictions:${userId}`) || [];
+      for (const fixtureId of fixtureIds) {
+        db.prepare('DELETE FROM keyv WHERE key = ?').run(
+          fullKey(`prediction:${userId}:${fixtureId}`)
+        );
+
+        const indexKey = `predictions_by_fixture:${fixtureId}`;
+        const predictorIdsRaw = getInTx(db, indexKey);
+        const predictorIds = Array.isArray(predictorIdsRaw) ? predictorIdsRaw : [];
+        const nextPredictorIds = predictorIds.filter(id => id !== userId);
+        if (nextPredictorIds.length === 0) {
+          db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey(indexKey));
+        } else {
+          setInTx(db, indexKey, nextPredictorIds);
+        }
+        summary.predictionCount += 1;
+        summary.hadData = true;
+      }
+
+      if (fixtureIds.length > 0) {
+        db.prepare('DELETE FROM keyv WHERE key = ?').run(
+          fullKey(`user_predictions:${userId}`)
+        );
+      }
+
+      const pendingPattern = `${fullKey(`pending_prediction:${userId}:`)}%`;
+      const pendingRows = db
+        .prepare('SELECT key FROM keyv WHERE key LIKE ?')
+        .all(pendingPattern);
+      for (const row of pendingRows) {
+        db.prepare('DELETE FROM keyv WHERE key = ?').run(row.key);
+        summary.pendingCount += 1;
+        summary.hadData = true;
+      }
+
+      return summary;
+    });
+  }
+
+  /**
    * @param {number[]} mockIds
    * @param {'worldcup'|'club'} aiGameId
    */
@@ -560,6 +647,7 @@ function createPredictionStore(namespace, logLabel) {
     clearPendingPrediction,
     getLeaderboard,
     resetGame,
+    removeUser,
     resetMockDemoState,
     isPromptingPaused,
     setPromptingPaused,

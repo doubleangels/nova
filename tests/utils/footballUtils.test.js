@@ -138,6 +138,13 @@ describe('footballUtils', () => {
     expect(await utils.isUserRegistered('user-fu-6')).toBe(false);
   });
 
+  it('should remove a user via removeFootballUser', async () => {
+    await utils.addRegisteredUser('123456789012345678');
+    const summary = await utils.removeFootballUser('123456789012345678');
+    expect(summary.wasRegistered).toBe(true);
+    expect(await utils.isUserRegistered('123456789012345678')).toBe(false);
+  });
+
   it('should call resetMockDemoState without error', async () => {
     await expect(utils.resetMockDemoState()).resolves.not.toThrow();
   });

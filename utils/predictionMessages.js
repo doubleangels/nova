@@ -168,6 +168,67 @@ function errAdminAddEventsOnly(gameId) {
   return `⚠️ Only administrators can create ${GAME[gameId].label.toLowerCase()} Discord events.`;
 }
 
+const ERR_ADMIN_REMOVE_USER_ONLY =
+  '⚠️ Only administrators can remove users from prediction data.';
+
+const ERR_INVALID_USER_ID =
+  '⚠️ That is not a valid Discord user ID (expected 17–20 digits).';
+
+/**
+ * @param {string} targetUserId
+ * @returns {string}
+ */
+function msgRemoveUserNoData(targetUserId) {
+  return `No World Cup or club football prediction data found for <@${targetUserId}> (\`${targetUserId}\`).`;
+}
+
+/**
+ * @typedef {{ hadData: boolean, wasRegistered: boolean, predictionCount: number, pendingCount: number, points: number }} RemoveUserSummary
+ */
+
+/**
+ * @param {string} label
+ * @param {RemoveUserSummary} stats
+ * @returns {string[]}
+ */
+function formatRemoveUserGameLines(label, stats) {
+  if (!stats.hadData) {
+    return [`**${label}:** no data`];
+  }
+
+  const lines = [`**${label}:**`];
+  if (stats.wasRegistered) lines.push('• Removed registration');
+  if (stats.predictionCount > 0) {
+    lines.push(`• Removed ${stats.predictionCount} prediction(s)`);
+  }
+  if (stats.pendingCount > 0) {
+    lines.push(`• Cleared ${stats.pendingCount} in-progress pick(s)`);
+  }
+  if (stats.points > 0) {
+    lines.push(`• Removed ${stats.points} point(s)`);
+  } else if (stats.hadData && !stats.wasRegistered && stats.predictionCount === 0 && stats.pendingCount === 0) {
+    lines.push('• Cleared stored points');
+  }
+  return lines;
+}
+
+/**
+ * @param {string} targetUserId
+ * @param {RemoveUserSummary} worldcupStats
+ * @param {RemoveUserSummary} footballStats
+ * @returns {string}
+ */
+function buildRemoveUserDescription(targetUserId, worldcupStats, footballStats) {
+  const lines = [
+    `Removed prediction data for <@${targetUserId}> (\`${targetUserId}\`):`,
+    '',
+    ...formatRemoveUserGameLines(GAME.worldcup.label, worldcupStats),
+    '',
+    ...formatRemoveUserGameLines(GAME.club.label, footballStats)
+  ];
+  return lines.join('\n');
+}
+
 const ERR_MANAGE_EVENTS_REQUIRED =
   '⚠️ I need the **Manage Events** permission to create server events.';
 
@@ -501,6 +562,10 @@ module.exports = {
   errAdminResetOnly,
   errAdminPromptOnly,
   errAdminAddEventsOnly,
+  ERR_ADMIN_REMOVE_USER_ONLY,
+  ERR_INVALID_USER_ID,
+  msgRemoveUserNoData,
+  buildRemoveUserDescription,
   ERR_MANAGE_EVENTS_REQUIRED,
   buildAddEventsDescription,
   MSG_PROMPT_SELECT_PLACEHOLDER,

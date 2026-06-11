@@ -66,6 +66,10 @@ async function resetWorldCupGame() {
   await store.resetGame();
 }
 
+async function removeWorldCupUser(userId) {
+  return store.removeUser(userId);
+}
+
 async function resetMockDemoState() {
   return store.resetMockDemoState(MOCK_PLAYABLE_MATCH_IDS, 'worldcup');
 }
@@ -130,6 +134,7 @@ module.exports = {
   getLeaderboard: limit => store.getLeaderboard(limit),
   areAllMockPlayableFixturesPredicted,
   resetWorldCupGame,
+  removeWorldCupUser,
   resetMockDemoState,
   applyMockInstantFinishToFixtures,
   isPromptingPaused: () => store.isPromptingPaused(),
