@@ -107,6 +107,55 @@ describe('predictionGameScoring', () => {
       });
     });
 
+    it('should skip unscored and missing predictions', () => {
+      const updates = scoring.buildFixtureRescoreUpdates(
+        [
+          { userId: 'missing', prediction: null },
+          {
+            userId: 'open',
+            prediction: {
+              homeScore: 1,
+              awayScore: 0,
+              resultPick: 'home',
+              submittedAt: '2026-06-11T12:00:00.000Z',
+              scored: false
+            }
+          }
+        ],
+        2,
+        0
+      );
+
+      expect(updates).toHaveLength(0);
+    });
+
+    it('should treat missing pointsAwarded as zero when rescoring', () => {
+      const updates = scoring.buildFixtureRescoreUpdates(
+        [
+          {
+            userId: 'legacy',
+            prediction: {
+              homeScore: 2,
+              awayScore: 0,
+              resultPick: 'home',
+              submittedAt: '2026-06-11T12:00:00.000Z',
+              scored: true
+            }
+          }
+        ],
+        2,
+        0
+      );
+
+      expect(updates).toHaveLength(1);
+      expect(updates[0]).toMatchObject({
+        userId: 'legacy',
+        oldTotal: 0,
+        newTotal: 4,
+        pointsDelta: 4
+      });
+    });
+
     it('should skip predictions that already match the new scoring', () => {
       const updates = scoring.buildFixtureRescoreUpdates(
         [

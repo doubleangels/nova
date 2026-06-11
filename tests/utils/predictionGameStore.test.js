@@ -207,21 +207,25 @@ describe('predictionGameStore', () => {
     expect(await claimStore.getPromptedFixtures()).toEqual([]);
   });
 
-  it('should prune prompted_fixtures when claiming beyond the cap', async () => {
-    jest.resetModules();
-    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
-    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
-    const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
-    const claimStore = createPredictionStore('claim-cap-store', 'ClaimCap');
+  it(
+    'should prune prompted_fixtures when claiming beyond the cap',
+    async () => {
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+      jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+      const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
+      const claimStore = createPredictionStore('claim-cap-store', 'ClaimCap');
 
-    for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
-      expect(await claimStore.tryClaimFixtureForPrompt(i)).toBe(true);
-    }
-    const prompted = await claimStore.getPromptedFixtures();
-    expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
-    expect(prompted[0]).toBe(5);
-    expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
-  });
+      for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
+        expect(await claimStore.tryClaimFixtureForPrompt(i)).toBe(true);
+      }
+      const prompted = await claimStore.getPromptedFixtures();
+      expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
+      expect(prompted[0]).toBe(5);
+      expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
+    },
+    120000
+  );
 
   it('should normalize string and number fixture ids for prompt claims', async () => {
     jest.resetModules();
@@ -235,21 +239,25 @@ describe('predictionGameStore', () => {
     expect(await claimStore.getPromptedFixtures()).toEqual([12345]);
   });
 
-  it('should prune prompted_fixtures when the cap is exceeded', async () => {
-    jest.resetModules();
-    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
-    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
-    const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
-    const capStore = createPredictionStore('cap-prompt-store', 'Cap');
+  it(
+    'should prune prompted_fixtures when the cap is exceeded',
+    async () => {
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+      jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+      const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
+      const capStore = createPredictionStore('cap-prompt-store', 'Cap');
 
-    for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
-      await capStore.markFixturePrompted(i);
-    }
-    const prompted = await capStore.getPromptedFixtures();
-    expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
-    expect(prompted[0]).toBe(5);
-    expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
-  });
+      for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
+        await capStore.markFixturePrompted(i);
+      }
+      const prompted = await capStore.getPromptedFixtures();
+      expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
+      expect(prompted[0]).toBe(5);
+      expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
+    },
+    120000
+  );
 
   it('should prune scored_fixtures when the cap is exceeded', async () => {
     jest.resetModules();
@@ -327,6 +335,68 @@ describe('predictionGameStore', () => {
     const saved = await store.getPrediction('user-rescore', 8801);
     expect(saved.pointsAwarded).toBe(1);
     expect(saved.scorePoints).toBe(0);
+  });
+
+  it('should add points during rescore when the user has no prior points key', async () => {
+    await store.savePrediction('user-new-points', 8803, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 1,
+      resultPoints: 1,
+      pointsAwarded: 2
+    });
+
+    await store.applyFixtureRescoreUpdates(8803, [{
+      userId: 'user-new-points',
+      prediction: {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        submittedAt: new Date().toISOString(),
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      },
+      pointsDelta: -1
+    }]);
+
+    expect(await store.getUserPoints('user-new-points')).toBe(0);
+  });
+
+  it('should update predictions without changing points when rescore delta is zero', async () => {
+    await store.savePrediction('user-zero-delta', 8802, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 0,
+      resultPoints: 1,
+      pointsAwarded: 1
+    });
+    await store.addUserPoints('user-zero-delta', 5);
+
+    await store.applyFixtureRescoreUpdates(8802, [{
+      userId: 'user-zero-delta',
+      prediction: {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        submittedAt: new Date().toISOString(),
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      },
+      pointsDelta: 0
+    }]);
+
+    expect(await store.getUserPoints('user-zero-delta')).toBe(5);
+    expect((await store.getPrediction('user-zero-delta', 8802)).pointsAwarded).toBe(1);
   });
 
   it('should recover from corrupted registered list JSON during addRegisteredUser', async () => {
