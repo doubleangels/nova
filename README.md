@@ -203,8 +203,8 @@ These run without a slash command:
 2. Users run `/football register` to join World Cup and club predictions and receive the participant role. Registration is repaired if a user is only listed in one game’s registry; users who predict via the role alone still appear on the leaderboard once they earn points.
 3. Before each match (default 24 h ahead), the bot posts in the prediction channel with a **Submit prediction** button. Optionally enable **Gemini** suggestions with `FOOTBALL_PREDICTION_AI_ENABLED` and `GEMINI_API_KEY` (see table above).
 4. Users pick each team’s goals and the winner from dropdowns on one ephemeral message (any order).
-5. After full-time, the bot scores predictions and posts results plus who earned points. Use `/worldcup leaderboard` anytime.
-6. Server administrators can run `/worldcup reset` to wipe all game data (registrations, predictions, points, prompts) and optionally re-post open match prompts. With `repost: false`, new match prompts stay paused until a later reset with `repost: true`.
+5. After full-time, the bot scores predictions and posts a public result announcement in the prediction channel (who earned points). `/worldcup leaderboard`, `/worldcup rules`, and `/worldcup predictions` reply ephemerally (only you see them).
+6. Server administrators can run `/worldcup reset` to wipe all game data (registrations, predictions, points, prompts) and optionally re-post open match prompts. With `repost: false`, new match prompts stay paused until a later reset with `repost: true`. Other admin tools: `/worldcup prompt` (re-post a match prompt), `/worldcup repostscore` (re-post a finished-match announcement), `/worldcup addevents` (create Discord events for upcoming matches), and `/worldcup removeuser` (purge one user from World Cup and club data).
 
 **Mock API (`FOOTBALL_PREDICTION_MOCK_API=true`):** enables one World Cup demo fixture and one club demo fixture (described below).
 
@@ -218,8 +218,8 @@ Separate from World Cup: same scoring and UI, but fixtures come from **Premier L
 
 1. Use the shared `FOOTBALL_PREDICTION_*` settings (same channel and role as `/worldcup`). Set `FOOTBALL_PREDICTION_MOCK_API=true` for local testing without an API key.
 2. Optionally set `FOOTBALL_COMPETITION_CODES` (default `PL,BL1,PD,CL`). `FOOTBALL_SEASON` defaults to the active European season start year (e.g. `2025` for 2025/26 until July 2026); override only if needed. Unknown codes are ignored (logged at startup).
-3. Users run `/football register`, then predict from channel prompts. Use `/football matches` with optional `competition` and `status` filters.
-4. Administrators can run `/football reset` to wipe all club football game data. Same `repost` behavior as World Cup: `repost: false` pauses new prompts until `repost: true`.
+3. Users run `/football register`, then predict from channel prompts. Use `/football matches` with optional `competition` and `status` filters. `/football predictions` requires a `user` and is ephemeral (paginated when long).
+4. Administrators can run `/football reset` to wipe all club football game data. Same `repost` behavior as World Cup: `repost: false` pauses new prompts until `repost: true`. Other admin tools: `/football prompt`, `/football repostscore`, and `/football removeuser` (same shared remove-user flow as `/worldcup removeuser`).
 
 **Club mock demo** (with `FOOTBALL_PREDICTION_MOCK_API=true`): on each bot start, **Arsenal vs Chelsea** (Premier League) is posted with each club’s country flag from API-style team metadata. After at least one prediction it finishes **2-1**.
 
@@ -259,8 +259,8 @@ Separate from World Cup: same scoring and UI, but fixtures come from **Premier L
 | `/country` | Country information | Everyone |
 | `/joindate` | Server join date for a user | Everyone |
 | `/newuser` | Profile and account creation info | Everyone |
-| `/worldcup` | World Cup 2026 predictions (`predictions`, leaderboard, matches, rules); `reset` is admin-only | Everyone (`reset`: Administrator) |
-| `/football` | Club football + **register** for both games (PL, Bundesliga, La Liga, CL); `predictions` shows one user or everyone (paginated); `reset` is admin-only | Everyone (`reset`: Administrator) |
+| `/worldcup` | World Cup 2026 predictions (`register`, `leaderboard`, `matches`, `predictions`, `rules`); admin: `prompt`, `repostscore`, `addevents`, `reset`, `removeuser` | Everyone (admin subcommands: Administrator) |
+| `/football` | Club football + **register** for both games (PL, Bundesliga, La Liga, CL); `predictions` requires `user` (ephemeral, paginated); admin: `prompt`, `repostscore`, `reset`, `removeuser` | Everyone (admin subcommands: Administrator) |
 | `/coinflip` | Flip a coin | Everyone |
 | `/cat` | Random cat image | Everyone |
 | `/dog` | Random dog image (optional breed) | Everyone |
@@ -502,7 +502,7 @@ The runtime stage contains application code and production dependencies only (`p
 | `deploy-commands.js` | Slash command registration |
 | `commands/` | Slash and context menu command modules |
 | `events/` | Discord event handlers (`ready`, `messageCreate`, `guildMemberAdd`, etc.) |
-| `utils/` | Database, reminders, moderation modes, search pagination, APIs |
+| `utils/` | Database, reminders, moderation modes, search pagination, APIs, prediction game helpers (`predictionGameUi.js`, `predictionScoreRepostCommand.js`, `predictionRemoveUserCommand.js`, etc.) |
 | `tests/` | Jest suite (not shipped in Docker images) |
 | `scripts/audit-log-messages.js` | Log message style audit (maintainer) |
 | `scripts/healthcheck.js` | Docker health check (reads bot heartbeat file) |
