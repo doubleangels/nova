@@ -71,6 +71,9 @@ function normalizeFixture(match) {
     awayTla: match.awayTeam?.tla || null,
     kickoff: match.utcDate,
     status: mapStatus(match.status),
+    venue: match.venue || null,
+    stage: match.stage || null,
+    group: match.group || null,
     goals: {
       home: fullTime?.home ?? null,
       away: fullTime?.away ?? null

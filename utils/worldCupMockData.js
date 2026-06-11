@@ -27,6 +27,9 @@ function buildMockMatches() {
       status: 'TIMED',
       homeTeam: { name: 'Brazil', tla: 'BRA', area: { code: 'BRA' } },
       awayTeam: { name: 'Argentina', tla: 'ARG', area: { code: 'ARG' } },
+      venue: 'Mock Stadium',
+      stage: 'GROUP_STAGE',
+      group: 'GROUP_A',
       score: { fullTime: { home: null, away: null } }
     }
   ];

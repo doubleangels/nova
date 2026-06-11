@@ -38,6 +38,9 @@ describe('worldCupClient', () => {
         awayTla: null,
         kickoff: '2026-06-01T12:00:00Z',
         status: 'NS',
+        venue: null,
+        stage: null,
+        group: null,
         goals: { home: null, away: null }
       });
     });
@@ -67,6 +70,19 @@ describe('worldCupClient', () => {
       expect(normalized.awayIso2).toBe('AR');
       expect(normalized.homeTla).toBe('BRA');
       expect(normalized.awayTla).toBe('ARG');
+    });
+
+    it('should normalize venue stage and group', () => {
+      const normalized = client.normalizeFixture(
+        sampleMatch({
+          venue: 'MetLife Stadium',
+          stage: 'GROUP_STAGE',
+          group: 'GROUP_C'
+        })
+      );
+      expect(normalized.venue).toBe('MetLife Stadium');
+      expect(normalized.stage).toBe('GROUP_STAGE');
+      expect(normalized.group).toBe('GROUP_C');
     });
 
     it('should map FINISHED status to FT', () => {

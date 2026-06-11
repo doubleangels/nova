@@ -170,6 +170,40 @@ function errAdminPromptOnly(gameId) {
   return `⚠️ Only administrators can re-post ${GAME[gameId].label.toLowerCase()} match prompts.`;
 }
 
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function errAdminAddEventsOnly(gameId) {
+  return `⚠️ Only administrators can create ${GAME[gameId].label.toLowerCase()} Discord events.`;
+}
+
+const ERR_MANAGE_EVENTS_REQUIRED =
+  '⚠️ I need the **Manage Events** permission to create server events.';
+
+/**
+ * @param {number} created
+ * @param {number} skipped
+ * @param {number} failed
+ * @param {string[]} [errors]
+ * @returns {string}
+ */
+function buildAddEventsDescription(created, skipped, failed, errors = []) {
+  const lines = [
+    `**Created:** ${created}`,
+    `**Skipped:** ${skipped} (past matches or already scheduled)`,
+    `**Failed:** ${failed}`
+  ];
+  if (errors.length > 0) {
+    const preview = errors.slice(0, 5).join('\n');
+    lines.push(`\n${preview}`);
+    if (errors.length > 5) {
+      lines.push(`\n…and ${errors.length - 5} more.`);
+    }
+  }
+  return lines.join('\n');
+}
+
 const MSG_PROMPT_SELECT_PLACEHOLDER = 'Choose an upcoming match…';
 const MSG_PROMPT_NO_UPCOMING = '⚠️ No upcoming open matches to prompt.';
 const ERR_PROMPT_FAILED =
@@ -477,6 +511,9 @@ module.exports = {
   errNotConfigured,
   errAdminResetOnly,
   errAdminPromptOnly,
+  errAdminAddEventsOnly,
+  ERR_MANAGE_EVENTS_REQUIRED,
+  buildAddEventsDescription,
   MSG_PROMPT_SELECT_PLACEHOLDER,
   MSG_PROMPT_NO_UPCOMING,
   ERR_PROMPT_FAILED,

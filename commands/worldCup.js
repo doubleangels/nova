@@ -8,6 +8,7 @@ const path = require('path');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
 const { getBotMember } = require('../utils/asyncUtils');
+const { syncWorldCupScheduledEvents } = require('../utils/worldCupScheduledEvents');
 const { isApiConfigured, getSeasonFixtures, getFixtureById } = require('../utils/worldCupClient');
 const { repromptWorldCupFixture } = require('../utils/worldCupScheduler');
 const {
@@ -92,6 +93,11 @@ module.exports = {
     )
     .addSubcommand(sub =>
       sub
+        .setName('addevents')
+        .setDescription('Create Discord events for all upcoming World Cup matches (administrators).')
+    )
+    .addSubcommand(sub =>
+      sub
         .setName('reset')
         .setDescription('Clear all World Cup prediction data (administrators).')
         .addBooleanOption(opt =>
@@ -123,6 +129,9 @@ module.exports = {
           break;
         case 'prompt':
           await this.handlePrompt(interaction);
+          break;
+        case 'addevents':
+          await this.handleAddEvents(interaction);
           break;
         case 'reset':
           await this.handleReset(interaction);
@@ -347,6 +356,61 @@ module.exports = {
       getSeasonFixtures,
       formatFixtureLine
     });
+  },
+
+
+  async handleAddEvents(interaction) {
+    if (!interaction.guild) {
+      await interaction.reply({
+        content: msgs.ERR_GUILD_ONLY,
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      await interaction.reply({
+        content: msgs.errAdminAddEventsOnly('worldcup'),
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    if (!isApiConfigured()) {
+      await interaction.reply({
+        content: msgs.errNotConfigured('worldcup'),
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const me = await getBotMember(interaction);
+    if (!me?.permissions.has(PermissionFlagsBits.ManageEvents)) {
+      await interaction.editReply({ content: msgs.ERR_MANAGE_EVENTS_REQUIRED });
+      return;
+    }
+
+    const fixtures = await getSeasonFixtures({ forceRefresh: true });
+    const result = await syncWorldCupScheduledEvents(interaction.guild, fixtures);
+
+    const embed = new EmbedBuilder()
+      .setColor(msgs.GAME.worldcup.embedColor)
+      .setTitle('World Cup Events Created')
+      .setDescription(
+        msgs.buildAddEventsDescription(result.created, result.skipped, result.failed, result.errors)
+      );
+
+    logger.info('World Cup Discord events synced by administrator.', {
+      userId: interaction.user.id,
+      guildId: interaction.guild.id,
+      created: result.created,
+      skipped: result.skipped,
+      failed: result.failed
+    });
+
+    await interaction.editReply({ embeds: [embed] });
   },
 
   async handleReset(interaction) {

@@ -9,6 +9,8 @@ describe('worldcup command', () => {
   let mockConfig;
   let mockLogger;
   let mockScheduler;
+  let mockScheduledEvents;
+  let mockGetBotMember;
 
   beforeEach(() => {
     jest.resetModules();
@@ -46,6 +48,24 @@ describe('worldcup command', () => {
       repromptWorldCupFixture: jest.fn().mockResolvedValue(true)
     };
 
+    mockScheduledEvents = {
+      syncWorldCupScheduledEvents: jest.fn().mockResolvedValue({
+        created: 2,
+        skipped: 1,
+        failed: 0,
+        errors: []
+      })
+    };
+
+    mockGetBotMember = jest.fn(async interaction => {
+      if (!interaction?.guild?.members) return null;
+      return (
+        interaction.guild.members.me ||
+        (interaction.guild.members.fetchMe &&
+          (await interaction.guild.members.fetchMe()))
+      );
+    });
+
     mockClientApi = {
       isApiConfigured: jest.fn().mockReturnValue(true),
       getFixtureById: jest.fn().mockResolvedValue(null),
@@ -69,6 +89,8 @@ describe('worldcup command', () => {
 
     jest.doMock('../../utils/worldCupUtils', () => mockUtils);
     jest.doMock('../../utils/worldCupScheduler', () => mockScheduler);
+    jest.doMock('../../utils/worldCupScheduledEvents', () => mockScheduledEvents);
+    jest.doMock('../../utils/asyncUtils', () => ({ getBotMember: mockGetBotMember }));
     jest.doMock('../../utils/worldCupClient', () => mockClientApi);
     jest.doMock('../../utils/predictionPromptCommand', () => mockPromptCommand);
     jest.doMock('../../config', () => mockConfig);
@@ -835,5 +857,80 @@ describe('worldcup command', () => {
     const embed = interaction.editReply.mock.calls[0][0].embeds[0];
     expect(embed.data.description).toContain('Match prompts were not re-posted');
   });
+
+  it('should deny addevents for non-administrators', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('addevents') },
+      guild: { id: 'guild-1' },
+      memberPermissions: { has: jest.fn().mockReturnValue(false) }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('administrators')
+    }));
+    expect(mockScheduledEvents.syncWorldCupScheduledEvents).not.toHaveBeenCalled();
+  });
+
+  it('should sync Discord events for administrators', async () => {
+    const guild = {
+      id: 'guild-1',
+      members: {
+        me: {
+          permissions: {
+            has: jest.fn(perm => perm === PermissionFlagsBits.ManageEvents)
+          }
+        }
+      }
+    };
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('addevents') },
+      guild,
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+    expect(mockClientApi.getSeasonFixtures).toHaveBeenCalledWith({ forceRefresh: true });
+    expect(mockScheduledEvents.syncWorldCupScheduledEvents).toHaveBeenCalledWith(
+      guild,
+      expect.any(Array)
+    );
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.arrayContaining([
+        expect.objectContaining({
+          data: expect.objectContaining({ title: 'World Cup Events Created' })
+        })
+      ])
+    }));
+  });
+
+  it('should deny addevents when bot lacks Manage Events permission', async () => {
+    mockGetBotMember.mockResolvedValue({
+      permissions: {
+        has: jest.fn(perm => perm !== PermissionFlagsBits.ManageEvents)
+      }
+    });
+
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('addevents') },
+      guild: { id: 'guild-1' },
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('Manage Events')
+    }));
+    expect(mockScheduledEvents.syncWorldCupScheduledEvents).not.toHaveBeenCalled();
+  });
+
 
 });
