@@ -147,7 +147,7 @@ function buildAnnouncementEmbed(
   const embed = new EmbedBuilder()
     .setColor(msgs.GAME[gameId].embedColor)
     .setTitle(
-      `Full time - ${formatTeam(fixture, 'home')} ${home}-${away} ${formatTeam(fixture, 'away')}`
+      `Full Time - ${formatTeam(fixture, 'home')} ${home}-${away} ${formatTeam(fixture, 'away')}`
     )
     .setDescription(formatFixtureLine(fixture, formatTeam, formatLinePrefix));
 

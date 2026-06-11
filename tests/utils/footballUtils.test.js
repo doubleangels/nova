@@ -154,7 +154,7 @@ describe('footballUtils', () => {
       goals: { home: null, away: null }, competitionCode: 'PL'
     };
     const embed = utils.buildPromptEmbed(fixture);
-    expect(embed.data.title).toContain('match open');
+    expect(embed.data.title).toContain('Match Open');
   });
 
   it('should build a prompt embed with competition label', () => {

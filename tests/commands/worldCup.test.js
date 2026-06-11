@@ -106,7 +106,7 @@ describe('worldcup command', () => {
       expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array)
       }));
-      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.title).toContain('Already registered!');
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.title).toContain('Already Registered!');
     });
 
     it('should reply error if role is missing in guild', async () => {
@@ -182,7 +182,7 @@ describe('worldcup command', () => {
       await worldcupCommand.execute(interaction);
       expect(interaction.member.roles.add).toHaveBeenCalledWith(mockRole, 'Prediction game registration');
       expect(mockUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
-      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.title).toContain('Registered for predictions!');
+      expect(interaction.editReply.mock.calls[0][0].embeds[0].data.title).toContain('Registered for Predictions!');
     });
 
     it('should successfully register user when worldCupChannelId is missing', async () => {
@@ -565,7 +565,7 @@ describe('worldcup command', () => {
     await worldcupCommand.execute(interaction);
 
     const embed = interaction.editReply.mock.calls[0][0].embeds[0];
-    expect(embed.data.title).toContain("Alice's predictions");
+    expect(embed.data.title).toContain("Alice's Predictions");
   });
 
   it('should show all predictions when user is omitted', async () => {
@@ -704,7 +704,7 @@ describe('worldcup command', () => {
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.arrayContaining([
         expect.objectContaining({
-          data: expect.objectContaining({ title: 'World Cup predictions reset' })
+          data: expect.objectContaining({ title: 'World Cup Predictions Reset' })
         })
       ])
     }));

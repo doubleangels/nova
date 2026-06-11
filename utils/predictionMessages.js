@@ -13,12 +13,12 @@ const GAME = {
     registerCommand: '/worldcup register',
     leaderboardCommand: '/worldcup leaderboard',
     rulesCommand: '/worldcup rules',
-    predictionsTitleSelf: 'Your World Cup predictions',
-    predictionsTitleAll: 'World Cup predictions',
-    resetTitle: 'World Cup predictions reset',
-    leaderboardTitle: 'World Cup leaderboard',
-    rulesTitle: 'World Cup - how it works',
-    matchesTitle: 'World Cup fixtures',
+    predictionsTitleSelf: 'Your World Cup Predictions',
+    predictionsTitleAll: 'World Cup Predictions',
+    resetTitle: 'World Cup Predictions Reset',
+    leaderboardTitle: 'World Cup Leaderboard',
+    rulesTitle: 'World Cup - How It Works',
+    matchesTitle: 'World Cup Fixtures',
     leaderboardFooter: 'FIFA World Cup 2026'
   },
   club: {
@@ -27,16 +27,16 @@ const GAME = {
     registerCommand: '/football register',
     leaderboardCommand: '/football leaderboard',
     rulesCommand: '/football rules',
-    predictionsTitleSelf: 'Your club football predictions',
-    predictionsTitleAll: 'Club football predictions',
-    resetTitle: 'Club football predictions reset',
-    leaderboardTitle: 'Club football leaderboard',
-    rulesTitle: 'Club football - how it works',
-    matchesTitle: 'Club football fixtures',
+    predictionsTitleSelf: 'Your Club Football Predictions',
+    predictionsTitleAll: 'Club Football Predictions',
+    resetTitle: 'Club Football Predictions Reset',
+    leaderboardTitle: 'Club Football Leaderboard',
+    rulesTitle: 'Club Football - How It Works',
+    matchesTitle: 'Club Football Fixtures',
     leaderboardFooter: 'Premier League · Bundesliga · La Liga · Champions League'
   }
 };
-const SUBMIT_BUTTON_LABEL = 'Submit prediction';
+const SUBMIT_BUTTON_LABEL = 'Submit Prediction';
 const AI_PICK_FIELD_NAME = 'AI Prediction:';
 /** Max characters for Gemini reasoning (fits Discord embed field with score line). */
 const AI_REASONING_MAX_LENGTH = 120;
@@ -96,7 +96,7 @@ function msgEmptyLeaderboard(gameId) {
 const MSG_NO_MATCHES_FILTER =
   'No matches match that filter. The schedule may not be published yet.';
 const MSG_NO_PREDICTIONS =
-  'You have not submitted any predictions yet. Use **Submit prediction** on match posts in the prediction channel.';
+  'You have not submitted any predictions yet. Use **Submit Prediction** on match posts in the prediction channel.';
 
 /**
  * @param {string} displayName
@@ -119,7 +119,7 @@ function msgNoPredictionsAnywhere(gameId) {
  * @returns {string}
  */
 function predictionsTitleOther(displayName) {
-  return `${displayName}'s predictions`;
+  return `${displayName}'s Predictions`;
 }
 const MSG_MISSING_PREDICTION =
   'prediction data missing (try again or contact an admin)';
@@ -138,9 +138,9 @@ function msgAlreadyRegistered(gameId) {
 function msgRegisterSuccess(gameId) {
   return `You are registered for the ${GAME[gameId].label} predictions game. Watch {channel} for match posts and submit your predictions.`;
 }
-const REGISTER_EMBED_TITLE_SUCCESS = 'Registered for predictions!';
-const REGISTER_EMBED_TITLE_ALREADY = 'Already registered!';
-const REGISTER_EMBED_TITLE_ERROR = 'Could not register!';
+const REGISTER_EMBED_TITLE_SUCCESS = 'Registered for Predictions!';
+const REGISTER_EMBED_TITLE_ALREADY = 'Already Registered!';
+const REGISTER_EMBED_TITLE_ERROR = 'Could Not Register!';
 
 /**
  * @param {PredictionGameId} gameId
@@ -192,9 +192,9 @@ const PROMPT_FOOTER = `Tap ${SUBMIT_BUTTON_LABEL} below to open the form.`;
  * @returns {string}
  */
 function buildPromptTitle(gameId, competitionLabel) {
-  if (gameId === 'worldcup') return 'World Cup - match open';
-  if (competitionLabel) return `${competitionLabel} - match open`;
-  return 'Club football - match open';
+  if (gameId === 'worldcup') return 'World Cup - Match Open';
+  if (competitionLabel) return `${competitionLabel} - Match Open`;
+  return 'Club Football - Match Open';
 }
 
 /**
@@ -300,7 +300,7 @@ function buildPredictionFormContentWithPick(
   return lines.join('\n');
 }
 
-const SAVED_PREDICTION_TITLE = 'Prediction saved';
+const SAVED_PREDICTION_TITLE = 'Prediction Saved';
 const WINNER_PLACEHOLDER = 'Pick the winner';
 const WINNER_PLACEHOLDER_SELECTED = 'Winner: {label}';
 

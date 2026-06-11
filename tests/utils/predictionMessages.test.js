@@ -39,15 +39,15 @@ describe('predictionMessages', () => {
   });
 
   it('should return worldcup prompt title without competition', () => {
-    expect(msgs.buildPromptTitle('worldcup')).toBe('World Cup - match open');
+    expect(msgs.buildPromptTitle('worldcup')).toBe('World Cup - Match Open');
   });
 
   it('should return club prompt title with competition label', () => {
-    expect(msgs.buildPromptTitle('club', 'Premier League')).toBe('Premier League - match open');
+    expect(msgs.buildPromptTitle('club', 'Premier League')).toBe('Premier League - Match Open');
   });
 
   it('should return default club prompt title when no competition', () => {
-    expect(msgs.buildPromptTitle('club')).toBe('Club football - match open');
+    expect(msgs.buildPromptTitle('club')).toBe('Club Football - Match Open');
   });
 
   it('should build prediction form content with resultPick only', () => {
@@ -219,7 +219,7 @@ describe('predictionMessages', () => {
     it('should format prediction listing helpers', () => {
       expect(msgs.msgNoPredictionsForUser('Alice')).toContain('Alice has not submitted');
       expect(msgs.msgNoPredictionsAnywhere('worldcup')).toContain('No one has submitted world cup');
-      expect(msgs.predictionsTitleOther('Bob')).toBe("Bob's predictions");
+      expect(msgs.predictionsTitleOther('Bob')).toBe("Bob's Predictions");
     });
 
     it('should format errAdminResetOnly', () => {
@@ -231,7 +231,7 @@ describe('predictionMessages', () => {
       const desc = msgs.buildPromptDescription({}, formatTeam);
       expect(desc).toContain('homeTeam');
       expect(desc).toContain('awayTeam');
-      expect(desc).toContain('Tap **Submit prediction**');
+      expect(desc).toContain('Tap **Submit Prediction**');
     });
 
     it('should format formatPointsEarnedField with no earners', () => {

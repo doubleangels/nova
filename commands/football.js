@@ -320,7 +320,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(msgs.GAME.club.embedColor)
       .setTitle(
-        competition ? `${getCompetitionName(competition)} fixtures` : msgs.GAME.club.matchesTitle
+        competition ? `${getCompetitionName(competition)} Fixtures` : msgs.GAME.club.matchesTitle
       )
       .setDescription(lines.join('\n').slice(0, 4000));
 

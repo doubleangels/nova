@@ -105,7 +105,7 @@ describe('football command', () => {
     expect(mockWorldCupUtils.addRegisteredUser).not.toHaveBeenCalled();
     const reply = interaction.editReply.mock.calls[0][0];
     expect(reply.embeds).toHaveLength(1);
-    expect(reply.embeds[0].data.title).toBe('Registered for predictions!');
+    expect(reply.embeds[0].data.title).toBe('Registered for Predictions!');
     expect(reply.embeds[0].data.description).toContain('Club football');
   });
 
@@ -154,7 +154,7 @@ describe('football command', () => {
     await footballCommand.execute(interaction);
 
     const reply = interaction.editReply.mock.calls[0][0];
-    expect(reply.embeds[0].data.title).toBe('Already registered!');
+    expect(reply.embeds[0].data.title).toBe('Already Registered!');
     expect(reply.embeds[0].data.description).toContain('already registered');
     expect(mockFootballUtils.addRegisteredUser).not.toHaveBeenCalled();
   });

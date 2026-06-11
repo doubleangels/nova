@@ -489,7 +489,7 @@ describe('worldCupUtils', () => {
         status: 'NS',
         goals: { home: null, away: null }
       });
-      expect(embed.data.title).toBe('World Cup - match open');
+      expect(embed.data.title).toBe('World Cup - Match Open');
     });
 
     it('should add Gemini AI pick field when provided', () => {
