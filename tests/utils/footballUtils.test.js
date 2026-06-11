@@ -220,6 +220,17 @@ describe('footballUtils', () => {
     expect(Array.isArray(board)).toBe(true);
   });
 
+  it('should list all predictor user ids', async () => {
+    await utils.savePrediction('user-fu-8', 55, {
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+    const userIds = await utils.getAllPredictorUserIds();
+    expect(userIds).toContain('user-fu-8');
+  });
+
   it('should call applyMockInstantFinishToFixtures', async () => {
     const fixtures = [
       { id: 1, status: 'NS', goals: { home: null, away: null } }

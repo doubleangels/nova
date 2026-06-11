@@ -17,13 +17,15 @@ const {
   scoreFinishedFixtures,
   formatFixtureLine,
   formatResultPickDisplay,
-  getPredictionsForUser,
+  getAllPredictorUserIds,
   getUserPredictionFixtureIds,
+  getPredictionsForUser,
   getUserPoints,
   resetFootballGame,
   isFootballGameConfigured,
   setPromptingPaused
 } = require('../utils/footballUtils');
+const { handlePredictionsSubcommand } = require('../utils/predictionListCommand');
 const msgs = require('../utils/predictionMessages');
 
 const LIVE_STATUSES = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'LIVE']);
@@ -80,7 +82,15 @@ module.exports = {
         )
     )
     .addSubcommand(sub =>
-      sub.setName('mypicks').setDescription('View your predictions and points per match.')
+      sub
+        .setName('predictions')
+        .setDescription('View predictions and points.')
+        .addUserOption(opt =>
+          opt
+            .setName('user')
+            .setDescription('Show one user\'s predictions; omit to show everyone\'s')
+            .setRequired(false)
+        )
     )
     .addSubcommand(sub =>
       sub
@@ -110,8 +120,8 @@ module.exports = {
         case 'matches':
           await this.handleMatches(interaction);
           break;
-        case 'mypicks':
-          await this.handleMyPicks(interaction);
+        case 'predictions':
+          await this.handlePredictions(interaction);
           break;
         case 'reset':
           await this.handleReset(interaction);
@@ -317,66 +327,20 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   },
 
-  async handleMyPicks(interaction) {
-    if (!isApiConfigured()) {
-      await interaction.reply({
-        content: msgs.errNotConfigured('club'),
-        flags: MessageFlags.Ephemeral
-      });
-      return;
-    }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    const fixtures = await getSeasonFixtures();
-    const fixtureMap = new Map(fixtures.map(f => [f.id, f]));
-
-    const fixtureIds = await getUserPredictionFixtureIds(interaction.user.id);
-
-    if (fixtureIds.length === 0) {
-      await interaction.editReply({
-        content: msgs.MSG_NO_PREDICTIONS
-      });
-      return;
-    }
-
-    const predictionEntries = await getPredictionsForUser(
-      interaction.user.id,
-      fixtureIds
-    );
-
-    const lines = [];
-    for (const { fixtureId, prediction } of predictionEntries) {
-      if (!prediction) {
-        lines.push(`• Match \`${fixtureId}\`: ${msgs.MSG_MISSING_PREDICTION}`);
-        continue;
-      }
-      const fixture = fixtureMap.get(fixtureId);
-      const label = fixture
-        ? formatFixtureLine(fixture)
-        : `Match \`${fixtureId}\``;
-      const resultLabel = fixture
-        ? formatResultPickDisplay(fixture, prediction.resultPick)
-        : prediction.resultPick;
-      const pick = msgs.formatMyPickLine(
-        prediction.homeScore,
-        prediction.awayScore,
-        resultLabel,
-        prediction.scored,
-        prediction.pointsAwarded
-      );
-      lines.push(`• ${label}: ${pick}`);
-    }
-
-    const total = await getUserPoints(interaction.user.id);
-
-    const embed = new EmbedBuilder()
-      .setColor(msgs.GAME.club.embedColor)
-      .setTitle(msgs.GAME.club.myPicksTitle)
-      .setDescription(lines.join('\n').slice(0, 4000))
-      .setFooter({ text: `Total points: ${total}` });
-
-    await interaction.editReply({ embeds: [embed] });
+  async handlePredictions(interaction) {
+    await handlePredictionsSubcommand(interaction, {
+      gameId: 'club',
+      paginationPrefix: 'football_predictions',
+      logger,
+      isApiConfigured,
+      getSeasonFixtures,
+      getAllPredictorUserIds,
+      getUserPredictionFixtureIds,
+      getPredictionsForUser,
+      getUserPoints,
+      formatFixtureLine,
+      formatResultPickDisplay
+    });
   },
 
   async handleReset(interaction) {

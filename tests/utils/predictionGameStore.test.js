@@ -418,4 +418,38 @@ describe('predictionGameStore', () => {
     const participants = await store.keyv.get('all_participants');
     expect(participants ?? []).not.toContain('user-negative');
   });
+
+  it('should getAllPredictorUserIds from user_predictions keys', async () => {
+    await store.savePrediction('predictor-a', 10, {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+    await store.savePrediction('predictor-b', 11, {
+      homeScore: 0,
+      awayScore: 0,
+      resultPick: 'draw',
+      submittedAt: new Date().toISOString()
+    });
+    await store.keyv.set('user_predictions:empty-user', []);
+
+    const userIds = await store.getAllPredictorUserIds();
+    expect(userIds).toEqual(expect.arrayContaining(['predictor-a', 'predictor-b']));
+    expect(userIds).not.toContain('empty-user');
+  });
+
+  it('should ignore malformed user_predictions keys without a user id', async () => {
+    const db = require('../../utils/sqliteStore').getWritableDb();
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:user_predictions:',
+      JSON.stringify({ value: [99], expires: null })
+    );
+
+    const userIds = await store.getAllPredictorUserIds();
+    expect(userIds).not.toContain('');
+  });
 });

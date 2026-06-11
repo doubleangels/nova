@@ -582,6 +582,17 @@ describe('worldCupUtils', () => {
       expect(defaultBoard.length).toBeLessThanOrEqual(10);
     });
 
+    it('should list all predictor user ids', async () => {
+      await utils.savePrediction('333333333333333333', 44, {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        submittedAt: new Date().toISOString()
+      });
+      const userIds = await utils.getAllPredictorUserIds();
+      expect(userIds).toContain('333333333333333333');
+    });
+
     it('should mark prompted and scored fixtures', async () => {
       await utils.markFixturePrompted(99);
       expect(await utils.getPromptedFixtures()).toContain(99);

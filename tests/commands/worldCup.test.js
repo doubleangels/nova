@@ -26,6 +26,7 @@ describe('worldcup command', () => {
       }),
       getPredictionsForUser: jest.fn().mockResolvedValue([]),
       getUserPredictionFixtureIds: jest.fn().mockResolvedValue([]),
+      getAllPredictorUserIds: jest.fn().mockResolvedValue([]),
       getUserPoints: jest.fn().mockResolvedValue(0),
       resetWorldCupGame: jest.fn().mockResolvedValue(),
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
@@ -277,7 +278,7 @@ describe('worldcup command', () => {
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
-  it('should show mypicks', async () => {
+  it('should show predictions', async () => {
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
     mockUtils.getPredictionsForUser.mockResolvedValue([
       {
@@ -294,18 +295,22 @@ describe('worldcup command', () => {
     mockUtils.getUserPoints.mockResolvedValue(4);
 
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') },
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'test' })
+      },
       client: {}
     });
 
     await worldcupCommand.execute(interaction);
 
+    expect(interaction.deferReply).toHaveBeenCalledWith();
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.any(Array)
     }));
   });
 
-  it('should show mypicks for unknown fixtures and missing predictions', async () => {
+  it('should show predictions for unknown fixtures and missing predictions', async () => {
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([100, 200]);
     mockUtils.getPredictionsForUser.mockResolvedValue([
       {
@@ -322,7 +327,10 @@ describe('worldcup command', () => {
     ]);
     mockClientApi.getSeasonFixtures.mockResolvedValue([]);
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') }
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'test' })
+      }
     });
     await worldcupCommand.execute(interaction);
     expect(interaction.editReply).toHaveBeenCalled();
@@ -331,7 +339,7 @@ describe('worldcup command', () => {
     expect(embed.data.description).toContain('prediction data missing');
   });
 
-  it('should show mypicks for unknown fixtures and pending scores', async () => {
+  it('should show predictions for unknown fixtures and pending scores', async () => {
     mockClientApi.getSeasonFixtures.mockResolvedValue([]);
     mockUtils.getUserPredictionFixtureIds.mockResolvedValue([999]);
     mockUtils.getPredictionsForUser.mockResolvedValue([
@@ -348,7 +356,10 @@ describe('worldcup command', () => {
     mockUtils.getUserPoints.mockResolvedValue(0);
 
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') },
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'test' })
+      },
       client: {}
     });
 
@@ -375,7 +386,10 @@ describe('worldcup command', () => {
     ]);
 
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') },
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'test' })
+      },
       client: {}
     });
 
@@ -418,10 +432,10 @@ describe('worldcup command', () => {
     }));
   });
 
-  it('should reject mypicks when API missing', async () => {
+  it('should reject predictions when API missing', async () => {
     mockClientApi.isApiConfigured.mockReturnValue(false);
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') }
+      options: { getSubcommand: jest.fn().mockReturnValue('predictions') }
     });
     await worldcupCommand.execute(interaction);
     expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
@@ -510,14 +524,101 @@ describe('worldcup command', () => {
     }));
   });
 
-  it('should show mypicks with no predictions', async () => {
+  it('should show predictions with no predictions for a user', async () => {
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('mypicks') },
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'test' })
+      },
       client: {}
     });
     await worldcupCommand.execute(interaction);
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('not submitted any predictions')
+    }));
+  });
+
+  it('should show predictions for another user', async () => {
+    mockUtils.getUserPredictionFixtureIds.mockResolvedValue([1]);
+    mockUtils.getPredictionsForUser.mockResolvedValue([
+      {
+        fixtureId: 1,
+        prediction: {
+          homeScore: 2,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          pointsAwarded: 4
+        }
+      }
+    ]);
+    mockUtils.getUserPoints.mockResolvedValue(4);
+
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue({ id: '999', displayName: 'Alice' })
+      },
+      client: {}
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    const embed = interaction.editReply.mock.calls[0][0].embeds[0];
+    expect(embed.data.title).toContain("Alice's predictions");
+  });
+
+  it('should show all predictions when user is omitted', async () => {
+    mockUtils.getAllPredictorUserIds.mockResolvedValue(['111', '222']);
+    mockUtils.getUserPredictionFixtureIds.mockImplementation(userId =>
+      Promise.resolve(userId === '111' ? [1] : [2])
+    );
+    mockUtils.getPredictionsForUser.mockImplementation((userId, fixtureIds) =>
+      Promise.resolve([{
+        fixtureId: fixtureIds[0],
+        prediction: {
+          homeScore: 1,
+          awayScore: 0,
+          resultPick: 'home',
+          scored: true,
+          pointsAwarded: 3
+        }
+      }])
+    );
+    mockUtils.getUserPoints.mockImplementation(userId =>
+      Promise.resolve(userId === '111' ? 5 : 2)
+    );
+
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue(null)
+      },
+      client: {}
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(mockUtils.getAllPredictorUserIds).toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.any(Array)
+    }));
+    const description = interaction.editReply.mock.calls[0][0].embeds[0].data.description;
+    expect(description).toContain('<@111>');
+    expect(description).toContain('<@222>');
+  });
+
+  it('should show empty all-predictions message when nobody has picks', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('predictions'),
+        getUser: jest.fn().mockReturnValue(null)
+      },
+      client: {}
+    });
+    await worldcupCommand.execute(interaction);
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('No one has submitted')
     }));
   });
 

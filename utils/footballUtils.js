@@ -105,6 +105,7 @@ module.exports = {
   savePrediction: (userId, fixtureId, prediction) =>
     store.savePrediction(userId, fixtureId, prediction),
   getUserPredictionFixtureIds: userId => store.getUserPredictionFixtureIds(userId),
+  getAllPredictorUserIds: () => store.getAllPredictorUserIds(),
   getUserPoints: userId => store.getUserPoints(userId),
   addUserPoints: (userId, delta) => store.addUserPoints(userId, delta),
   getPromptedFixtures: () => store.getPromptedFixtures(),

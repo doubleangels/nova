@@ -216,6 +216,12 @@ describe('predictionMessages', () => {
       expect(msgs.msgEmptyLeaderboard('club')).toContain('Run /football register to join');
     });
 
+    it('should format prediction listing helpers', () => {
+      expect(msgs.msgNoPredictionsForUser('Alice')).toContain('Alice has not submitted');
+      expect(msgs.msgNoPredictionsAnywhere('worldcup')).toContain('No one has submitted world cup');
+      expect(msgs.predictionsTitleOther('Bob')).toBe("Bob's predictions");
+    });
+
     it('should format errAdminResetOnly', () => {
       expect(msgs.errAdminResetOnly('worldcup')).toContain('Only administrators can reset world cup');
     });

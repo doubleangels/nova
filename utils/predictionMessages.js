@@ -5,7 +5,7 @@
 
 /** @typedef {'worldcup' | 'club'} PredictionGameId */
 
-/** @type {Record<PredictionGameId, { label: string, embedColor: number, registerCommand: string, leaderboardCommand: string, rulesCommand: string, myPicksTitle: string, resetTitle: string, leaderboardTitle: string, rulesTitle: string, matchesTitle: string, leaderboardFooter: string }> */
+/** @type {Record<PredictionGameId, { label: string, embedColor: number, registerCommand: string, leaderboardCommand: string, rulesCommand: string, predictionsTitleSelf: string, predictionsTitleAll: string, resetTitle: string, leaderboardTitle: string, rulesTitle: string, matchesTitle: string, leaderboardFooter: string }> */
 const GAME = {
   worldcup: {
     label: 'World Cup',
@@ -13,7 +13,8 @@ const GAME = {
     registerCommand: '/worldcup register',
     leaderboardCommand: '/worldcup leaderboard',
     rulesCommand: '/worldcup rules',
-    myPicksTitle: 'Your World Cup predictions',
+    predictionsTitleSelf: 'Your World Cup predictions',
+    predictionsTitleAll: 'World Cup predictions',
     resetTitle: 'World Cup predictions reset',
     leaderboardTitle: 'World Cup leaderboard',
     rulesTitle: 'World Cup - how it works',
@@ -26,7 +27,8 @@ const GAME = {
     registerCommand: '/football register',
     leaderboardCommand: '/football leaderboard',
     rulesCommand: '/football rules',
-    myPicksTitle: 'Your club football predictions',
+    predictionsTitleSelf: 'Your club football predictions',
+    predictionsTitleAll: 'Club football predictions',
     resetTitle: 'Club football predictions reset',
     leaderboardTitle: 'Club football leaderboard',
     rulesTitle: 'Club football - how it works',
@@ -95,6 +97,30 @@ const MSG_NO_MATCHES_FILTER =
   'No matches match that filter. The schedule may not be published yet.';
 const MSG_NO_PREDICTIONS =
   'You have not submitted any predictions yet. Use **Submit prediction** on match posts in the prediction channel.';
+
+/**
+ * @param {string} displayName
+ * @returns {string}
+ */
+function msgNoPredictionsForUser(displayName) {
+  return `${displayName} has not submitted any predictions yet.`;
+}
+
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function msgNoPredictionsAnywhere(gameId) {
+  return `No one has submitted ${GAME[gameId].label.toLowerCase()} predictions yet.`;
+}
+
+/**
+ * @param {string} displayName
+ * @returns {string}
+ */
+function predictionsTitleOther(displayName) {
+  return `${displayName}'s predictions`;
+}
 const MSG_MISSING_PREDICTION =
   'prediction data missing (try again or contact an admin)';
 /**
@@ -416,6 +442,9 @@ module.exports = {
   msgEmptyLeaderboard,
   MSG_NO_MATCHES_FILTER,
   MSG_NO_PREDICTIONS,
+  msgNoPredictionsForUser,
+  msgNoPredictionsAnywhere,
+  predictionsTitleOther,
   MSG_MISSING_PREDICTION,
   REGISTER_EMBED_TITLE_SUCCESS,
   REGISTER_EMBED_TITLE_ALREADY,

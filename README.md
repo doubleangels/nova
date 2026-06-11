@@ -259,8 +259,8 @@ Separate from World Cup: same scoring and UI, but fixtures come from **Premier L
 | `/country` | Country information | Everyone |
 | `/joindate` | Server join date for a user | Everyone |
 | `/newuser` | Profile and account creation info | Everyone |
-| `/worldcup` | World Cup 2026 predictions (leaderboard, matches, rules); `reset` is admin-only | Everyone (`reset`: Administrator) |
-| `/football` | Club football + **register** for both games (PL, Bundesliga, La Liga, CL); `reset` is admin-only | Everyone (`reset`: Administrator) |
+| `/worldcup` | World Cup 2026 predictions (`predictions`, leaderboard, matches, rules); `reset` is admin-only | Everyone (`reset`: Administrator) |
+| `/football` | Club football + **register** for both games (PL, Bundesliga, La Liga, CL); `predictions` shows one user or everyone (paginated); `reset` is admin-only | Everyone (`reset`: Administrator) |
 | `/coinflip` | Flip a coin | Everyone |
 | `/cat` | Random cat image | Everyone |
 | `/dog` | Random dog image (optional breed) | Everyone |

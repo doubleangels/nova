@@ -214,6 +214,23 @@ function createPredictionStore(namespace, logLabel) {
     return (await keyv.get(`user_predictions:${userId}`)) || [];
   }
 
+  async function getAllPredictorUserIds() {
+    const db = getWritableDb();
+    const likePattern = `${fullKey('user_predictions:')}%`;
+    const rows = db
+      .prepare('SELECT key, value FROM keyv WHERE key LIKE ?')
+      .all(likePattern);
+
+    const userIds = [];
+    for (const row of rows) {
+      const fixtureIds = parseKeyvValue(row.value);
+      if (!Array.isArray(fixtureIds) || fixtureIds.length === 0) continue;
+      const userId = row.key.slice(fullKey('user_predictions:').length);
+      if (userId) userIds.push(userId);
+    }
+    return userIds;
+  }
+
   async function getUserPoints(userId) {
     return (await keyv.get(`points:${userId}`)) || 0;
   }
@@ -522,6 +539,7 @@ function createPredictionStore(namespace, logLabel) {
     getPrediction,
     savePrediction,
     getUserPredictionFixtureIds,
+    getAllPredictorUserIds,
     getUserPoints,
     addUserPoints,
     subtractUserPoints,
