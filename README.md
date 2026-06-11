@@ -212,7 +212,22 @@ Real fixtures show country flag emojis (e.g. 🇧🇷 Brazil) wherever team name
 
 **Scoring:** exact score = 3 pts; correct winner/draw pick = 1 pt (max 4 per match).
 
-To re-score a finished World Cup match after a rule change (e.g. remove stale outcome points), stop the bot and run `pnpm run migrate-worldcup-scoring` (dry run) or `node scripts/migrate-worldcup-scoring.js --commit --force` (defaults to Mexico vs South Africa; use `--fixture-id` to target another match).
+To re-score a finished World Cup match after a rule change (e.g. remove stale outcome points), stop the bot first, then dry-run and apply:
+
+**Docker (production):**
+
+```bash
+docker compose stop nova
+docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh
+docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh --commit --force
+docker compose start nova
+```
+
+Or `pnpm run migrate-worldcup-scoring:docker` for the dry run step (stop `nova` before `--commit --force`).
+
+**Host / local dev:** `pnpm run migrate-worldcup-scoring` or `node scripts/migrate-worldcup-scoring.js --commit --force`.
+
+Defaults to Mexico vs South Africa; use `--fixture-id` to target another match.
 
 ### Club football predictions (`/football`)
 
@@ -468,6 +483,7 @@ pnpm prune-db --commit --force
 | Script | Command | Purpose |
 | :--- | :--- | :--- |
 | Log audit | `node scripts/audit-log-messages.js` | Enforce log message style |
+| World Cup scoring migration | `docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh` | Re-score a finished match after rule changes (stop `nova` first; add `--commit --force` to apply) |
 
 ---
 
@@ -489,7 +505,7 @@ Images are published to **GitHub Container Registry** as `ghcr.io/doubleangels/n
 - `tests/`, `jest.config.js`, `coverage/`, `*.lcov`, `.nyc_output/`
 - Documentation, CI configs, and dev tooling
 
-The runtime stage contains application code and production dependencies only (`pnpm install --prod --frozen-lockfile` in the builder). Database CLI scripts (`set-value.js`, `remove-value.js`, `list-values.js`, `prune-db.js`) are removed from the image; run them from the repository on the host against the mounted `./data` volume. The image runs as user `discordbot` (UID 1001), includes `dumb-init` and the Doppler CLI, mounts `/app/data` for SQLite, and exposes a heartbeat-based health check (`scripts/healthcheck.js` reads `/app/data/bot-heartbeat.json`).
+The runtime stage contains application code and production dependencies only (`pnpm install --prod --frozen-lockfile` in the builder). Database CLI scripts (`set-value.js`, `remove-value.js`, `list-values.js`, `prune-db.js`) are removed from the image; run them from the repository on the host against the mounted `./data` volume. World Cup scoring migrations run inside the container via `scripts/migrate-worldcup-scoring.sh` (uses Doppler and `/app/data`). The image runs as user `discordbot` (UID 1001), includes `dumb-init` and the Doppler CLI, mounts `/app/data` for SQLite, and exposes a heartbeat-based health check (`scripts/healthcheck.js` reads `/app/data/bot-heartbeat.json`).
 
 ---
 
@@ -508,6 +524,8 @@ The runtime stage contains application code and production dependencies only (`p
 | `tests/` | Jest suite (not shipped in Docker images) |
 | `scripts/audit-log-messages.js` | Log message style audit (maintainer) |
 | `scripts/healthcheck.js` | Docker health check (reads bot heartbeat file) |
+| `scripts/migrate-worldcup-scoring.sh` | Container entrypoint for World Cup scoring migrations (Doppler + `/app/data`) |
+| `scripts/migrate-worldcup-scoring.js` | World Cup scoring migration logic (also runnable on the host) |
 | `set-value.js` / `remove-value.js` / `list-values.js` / `prune-db.js` | Database CLI tools (host-only; not shipped in Docker images) |
 | `Dockerfile` | Multi-stage production image (Node 24 Alpine) |
 | `docker-compose.yml` | Production compose stack |

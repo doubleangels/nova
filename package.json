@@ -12,6 +12,7 @@
     "list-values": "node list-values.js",
     "prune-db": "node prune-db.js",
     "migrate-worldcup-scoring": "node scripts/migrate-worldcup-scoring.js",
+    "migrate-worldcup-scoring:docker": "docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:debug": "pnpm exec jest --inspect-brk --runInBand"

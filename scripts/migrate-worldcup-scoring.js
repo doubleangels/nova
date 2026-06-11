@@ -5,11 +5,15 @@
  * Defaults to Mexico vs South Africa (June 2026 opener). Resolves the fixture
  * from football-data.org unless --fixture-id or --goals-home/--goals-away are set.
  *
- * Usage:
+ * Usage (host):
  *   node scripts/migrate-worldcup-scoring.js
  *   node scripts/migrate-worldcup-scoring.js --fixture-id=12345
  *   node scripts/migrate-worldcup-scoring.js --home=Mexico --away="South Africa"
  *   node scripts/migrate-worldcup-scoring.js --commit --force
+ *
+ * Usage (Docker — stop nova first):
+ *   docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh
+ *   docker compose run --rm --no-deps nova /app/scripts/migrate-worldcup-scoring.sh --commit --force
  *
  * Dry run by default. Stop the Nova bot before --commit --force.
  */
