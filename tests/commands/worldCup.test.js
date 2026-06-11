@@ -336,11 +336,11 @@ describe('worldcup command', () => {
           awayScore: 1,
           resultPick: 'home',
           scored: true,
-          pointsAwarded: 4
+          pointsAwarded: 3
         }
       }
     ]);
-    mockUtils.getUserPoints.mockResolvedValue(4);
+    mockUtils.getUserPoints.mockResolvedValue(3);
 
     const interaction = createMockInteraction({
       options: {
@@ -368,11 +368,11 @@ describe('worldcup command', () => {
           awayScore: 1,
           resultPick: 'home',
           scored: true,
-          pointsAwarded: 4
+          pointsAwarded: 3
         }
       }
     ]);
-    mockUtils.getUserPoints.mockResolvedValue(4);
+    mockUtils.getUserPoints.mockResolvedValue(3);
 
     const interaction = createMockInteraction({
       options: {

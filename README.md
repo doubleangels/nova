@@ -210,7 +210,7 @@ These run without a slash command:
 
 Real fixtures show country flag emojis (e.g. 🇧🇷 Brazil) wherever team names appear, resolved from the API team code/TLA or a built-in name map.
 
-**Scoring:** exact score = 3 pts; correct winner/draw pick = 1 pt (max 4 per match).
+**Scoring:** correct winner/draw pick = 1 pt; exact score = 2 additional pts (max 3 per match).
 
 To re-score a finished World Cup match after a rule change (e.g. remove stale outcome points), stop the bot first, then dry-run and apply:
 

@@ -329,9 +329,9 @@ function buildRulesDescription(gameId) {
     '• Away goals (0-15)',
     '• Winner (home team, draw, or away team)',
     '',
-    '**Scoring (per match, max 4 points)**',
-    '• Exact score - **3** points',
+    '**Scoring (per match, max 3 points)**',
     '• Correct winner pick - **1** point',
+    '• Exact score - **2** additional points',
     '',
     'After full time, results and points are posted in the channel. ' +
     `Check standings anytime with ${g.leaderboardCommand}.`

@@ -39,8 +39,8 @@ describe('predictionGameScoring', () => {
   });
 
   describe('calculateScorePoints', () => {
-    it('should return 3 for exact match', () => {
-      expect(scoring.calculateScorePoints(2, 1, 2, 1)).toBe(3);
+    it('should return 2 for exact match', () => {
+      expect(scoring.calculateScorePoints(2, 1, 2, 1)).toBe(2);
     });
 
     it('should return 0 when scoreline outcome matches but numbers differ', () => {
@@ -151,8 +151,8 @@ describe('predictionGameScoring', () => {
       expect(updates[0]).toMatchObject({
         userId: 'legacy',
         oldTotal: 0,
-        newTotal: 4,
-        pointsDelta: 4
+        newTotal: 3,
+        pointsDelta: 3
       });
     });
 
@@ -167,9 +167,9 @@ describe('predictionGameScoring', () => {
               resultPick: 'home',
               submittedAt: '2026-06-11T12:00:00.000Z',
               scored: true,
-              scorePoints: 3,
+              scorePoints: 2,
               resultPoints: 1,
-              pointsAwarded: 4
+              pointsAwarded: 3
             }
           }
         ],

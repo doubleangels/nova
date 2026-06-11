@@ -31,7 +31,7 @@ function resultPickFromScore(homeScore, awayScore) {
  * @returns {number}
  */
 function calculateScorePoints(homeScore, awayScore, actualHome, actualAway) {
-  if (homeScore === actualHome && awayScore === actualAway) return 3;
+  if (homeScore === actualHome && awayScore === actualAway) return 2;
   return 0;
 }
 

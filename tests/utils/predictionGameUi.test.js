@@ -225,7 +225,7 @@ describe('predictionGameUi', () => {
   describe('buildAnnouncementEmbed (lines 145-160)', () => {
     it('should build announcement embed', () => {
       const fixture = { goals: { home: 2, away: 1 } };
-      const earners = [{ userId: '123', scorePoints: 3, resultPoints: 0, total: 3 }];
+      const earners = [{ userId: '123', scorePoints: 2, resultPoints: 1, total: 3 }];
       const embed = ui.buildAnnouncementEmbed('club', fixture, earners, formatTeam, undefined);
       expect(embed.data.title).toContain('2-1');
       expect(embed.data.fields[0].value).toContain('<@123>');

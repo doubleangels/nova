@@ -38,9 +38,9 @@ describe('predictionGameStore', () => {
       resultPick: 'home',
       submittedAt: new Date().toISOString(),
       scored: true,
-      pointsAwarded: 4
+      pointsAwarded: 3
     });
-    await store.addUserPoints('user-a', 4);
+    await store.addUserPoints('user-a', 3);
 
     await store.resetMockDemoState([900001], 'worldcup');
 
@@ -284,18 +284,18 @@ describe('predictionGameStore', () => {
         resultPick: 'home',
         submittedAt: new Date().toISOString(),
         scored: true,
-        scorePoints: 3,
+        scorePoints: 2,
         resultPoints: 1,
-        pointsAwarded: 4
+        pointsAwarded: 3
       },
-      pointsDelta: 4
+      pointsDelta: 3
     }]);
 
-    expect(await store.getUserPoints('user-score')).toBe(4);
+    expect(await store.getUserPoints('user-score')).toBe(3);
     expect(await store.getScoredFixtures()).toContain(42);
     const saved = await store.getPrediction('user-score', 42);
     expect(saved.scored).toBe(true);
-    expect(saved.pointsAwarded).toBe(4);
+    expect(saved.pointsAwarded).toBe(3);
   });
 
   it('should mark a fixture scored even when there are no prediction updates', async () => {

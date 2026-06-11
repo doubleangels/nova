@@ -59,8 +59,8 @@ describe('worldCupUtils', () => {
   });
 
   describe('scoring', () => {
-    it('should return 3 for exact score', () => {
-      expect(utils.calculateScorePoints(2, 1, 2, 1)).toBe(3);
+    it('should return 2 for exact score', () => {
+      expect(utils.calculateScorePoints(2, 1, 2, 1)).toBe(2);
     });
 
     it('should return 0 when scoreline outcome matches but numbers differ', () => {
@@ -456,7 +456,7 @@ describe('worldCupUtils', () => {
         goals: { home: 2, away: 1 }
       };
       const embed = utils.buildAnnouncementEmbed(fixture, [
-        { userId: '111111111111111111', scorePoints: 3, resultPoints: 1, total: 4 }
+        { userId: '111111111111111111', scorePoints: 2, resultPoints: 1, total: 3 }
       ]);
       expect(embed.data.title).toContain('Brazil');
       expect(embed.data.fields[0].value).toContain('<@111111111111111111>');
@@ -548,8 +548,8 @@ describe('worldCupUtils', () => {
         goals: { home: 1, away: 0 }
       };
       const embed = utils.buildAnnouncementEmbed(fixture, [
-        { userId: '1', scorePoints: 1, resultPoints: 0, total: 1 },
-        { userId: '2', scorePoints: 3, resultPoints: 1, total: 4 }
+        { userId: '1', scorePoints: 0, resultPoints: 1, total: 1 },
+        { userId: '2', scorePoints: 2, resultPoints: 1, total: 3 }
       ]);
       expect(embed.data.fields[0].value.indexOf('<@2>')).toBeLessThan(
         embed.data.fields[0].value.indexOf('<@1>')

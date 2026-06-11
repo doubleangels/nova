@@ -114,7 +114,11 @@ describe('predictionMessages', () => {
   });
 
   it('should build rules description for worldcup and club', () => {
-    expect(msgs.buildRulesDescription('worldcup')).toContain('Join');
+    const worldcup = msgs.buildRulesDescription('worldcup');
+    expect(worldcup).toContain('Join');
+    expect(worldcup).toContain('max 3 points');
+    expect(worldcup).toContain('Correct winner pick - **1** point');
+    expect(worldcup).toContain('Exact score - **2** additional points');
     const club = msgs.buildRulesDescription('club');
     expect(club).toContain('Premier League');
     expect(club).toContain('Demo mode');
@@ -259,10 +263,10 @@ describe('predictionMessages', () => {
     it('should format formatPointsEarnedField with earners sorted by total', () => {
       const earners = [
         { userId: '1', scorePoints: 0, resultPoints: 1, total: 1 },
-        { userId: '2', scorePoints: 3, resultPoints: 1, total: 4 }
+        { userId: '2', scorePoints: 2, resultPoints: 1, total: 3 }
       ];
       const result = msgs.formatPointsEarnedField(earners);
-      expect(result).toContain('<@2> - **+4** pts (3 score, 1 result)');
+      expect(result).toContain('<@2> - **+3** pts (2 score, 1 result)');
       expect(result).toContain('<@1> - **+1** pts (0 score, 1 result)');
       expect(result.indexOf('<@2>')).toBeLessThan(result.indexOf('<@1>')); // Sorting check
     });
