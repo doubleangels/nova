@@ -338,6 +338,85 @@ describe('interactionCreate event', () => {
     expect(mockInteraction.reply).toHaveBeenCalled();
   });
 
+  it('should capture errors from Football prompt select handler', async () => {
+    const footballCommand = require('../../commands/football');
+    footballCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockInteraction.reply).toHaveBeenCalled();
+  });
+
+  it('should not reply again when World Cup prompt select fails after defer', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    worldCupCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = true;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+  });
+
+  it('should not reply again when Football prompt select fails after reply', async () => {
+    const footballCommand = require('../../commands/football');
+    footballCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = true;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+  });
+
+  it('should swallow reply failures after World Cup prompt select errors', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    worldCupCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+    mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+
+    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+  });
+
+  it('should swallow reply failures after Football prompt select errors', async () => {
+    const footballCommand = require('../../commands/football');
+    footballCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:prompt:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+    mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+
+    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+  });
+
   describe('autocomplete interactions', () => {
     it('should log warning if no matching command is found', async () => {
       const mockInteraction = createMockInteraction({

@@ -599,6 +599,21 @@ describe('football command', () => {
     );
   });
 
+  it('should dispatch prompt select to shared handler', async () => {
+    const interaction = createMockInteraction({
+      values: ['42'],
+      guild: { id: 'g1' }
+    });
+    await footballCommand.handlePromptSelect(interaction);
+    expect(mockPromptCommand.handlePromptSelect).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'club',
+        repromptFixture: expect.any(Function)
+      })
+    );
+  });
+
   it('should deny reset outside a guild', async () => {
     const interaction = createMockInteraction({
       options: { getSubcommand: jest.fn().mockReturnValue('reset'), getBoolean: jest.fn().mockReturnValue(true) },

@@ -691,6 +691,21 @@ describe('worldcup command', () => {
     );
   });
 
+  it('should dispatch prompt select to shared handler', async () => {
+    const interaction = createMockInteraction({
+      values: ['42'],
+      guild: { id: 'g1' }
+    });
+    await worldcupCommand.handlePromptSelect(interaction);
+    expect(mockPromptCommand.handlePromptSelect).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'worldcup',
+        repromptFixture: expect.any(Function)
+      })
+    );
+  });
+
   it('should deny reset for non-administrators', async () => {
     const interaction = createMockInteraction({
       options: {

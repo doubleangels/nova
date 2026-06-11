@@ -71,12 +71,57 @@ describe('predictionPromptCommand', () => {
       formatFixtureLine: jest.fn().mockReturnValue('A vs B')
     };
 
+    it('should require a guild', async () => {
+      const interaction = createMockInteraction({
+        guild: null,
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        }
+      });
+      await promptCommand.handlePromptSubcommand(interaction, baseDeps);
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ flags: MessageFlags.Ephemeral })
+      );
+    });
+
     it('should deny non-administrators', async () => {
       const interaction = createMockInteraction({
         guild: { id: 'g1' },
         memberPermissions: { has: jest.fn().mockReturnValue(false) }
       });
       await promptCommand.handlePromptSubcommand(interaction, baseDeps);
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ flags: MessageFlags.Ephemeral })
+      );
+    });
+
+    it('should reject when API is not configured', async () => {
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        }
+      });
+      await promptCommand.handlePromptSubcommand(interaction, {
+        ...baseDeps,
+        isApiConfigured: () => false
+      });
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ flags: MessageFlags.Ephemeral })
+      );
+    });
+
+    it('should reject when game is not configured', async () => {
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        }
+      });
+      await promptCommand.handlePromptSubcommand(interaction, {
+        ...baseDeps,
+        isGameConfigured: () => false
+      });
       expect(interaction.reply).toHaveBeenCalledWith(
         expect.objectContaining({ flags: MessageFlags.Ephemeral })
       );
@@ -101,6 +146,28 @@ describe('predictionPromptCommand', () => {
       expect(interaction.editReply).toHaveBeenCalledWith(
         expect.objectContaining({ components: expect.any(Array) })
       );
+    });
+
+    it('should pass competition filter when provided', async () => {
+      const getSeasonFixtures = jest.fn().mockResolvedValue([
+        {
+          id: 1,
+          status: 'NS',
+          kickoff: dayjs().add(1, 'day').toISOString()
+        }
+      ]);
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        }
+      });
+      await promptCommand.handlePromptSubcommand(interaction, {
+        ...baseDeps,
+        getSeasonFixtures,
+        competition: 'PL'
+      });
+      expect(getSeasonFixtures).toHaveBeenCalledWith({ competition: 'PL' });
     });
 
     it('should report when no upcoming fixtures exist', async () => {
@@ -137,6 +204,83 @@ describe('predictionPromptCommand', () => {
         repromptFixture: jest.fn().mockResolvedValue(true),
         logger: mockLogger
       };
+    });
+
+    it('should require a guild for select handling', async () => {
+      const interaction = createMockInteraction({
+        guild: null,
+        values: ['7'],
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        }
+      });
+      await promptCommand.handlePromptSelect(interaction, baseDeps);
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ flags: MessageFlags.Ephemeral })
+      );
+    });
+
+    it('should deny non-administrators for select handling', async () => {
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        values: ['7'],
+        memberPermissions: { has: jest.fn().mockReturnValue(false) }
+      });
+      await promptCommand.handlePromptSelect(interaction, baseDeps);
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ flags: MessageFlags.Ephemeral })
+      );
+    });
+
+    it('should reject select when API or game is not configured', async () => {
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        values: ['7'],
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        }
+      });
+      await promptCommand.handlePromptSelect(interaction, {
+        ...baseDeps,
+        isGameConfigured: () => false
+      });
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({ flags: MessageFlags.Ephemeral })
+      );
+    });
+
+    it('should reject invalid fixture ids', async () => {
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        values: ['not-a-number'],
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        },
+        client: { id: 'bot' },
+        deferUpdate: jest.fn().mockResolvedValue({})
+      });
+      await promptCommand.handlePromptSelect(interaction, baseDeps);
+      expect(baseDeps.repromptFixture).not.toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('invalid') })
+      );
+    });
+
+    it('should report when fixture cannot be loaded', async () => {
+      baseDeps.getFixtureById.mockResolvedValue(null);
+      const interaction = createMockInteraction({
+        guild: { id: 'g1' },
+        values: ['7'],
+        memberPermissions: {
+          has: jest.fn(p => p === PermissionFlagsBits.Administrator)
+        },
+        client: { id: 'bot' },
+        deferUpdate: jest.fn().mockResolvedValue({})
+      });
+      await promptCommand.handlePromptSelect(interaction, baseDeps);
+      expect(interaction.editReply).toHaveBeenCalledWith(
+        expect.objectContaining({ content: expect.stringContaining('load') })
+      );
     });
 
     it('should reprompt selected fixture for administrators', async () => {

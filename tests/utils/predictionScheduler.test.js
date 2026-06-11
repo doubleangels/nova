@@ -223,4 +223,71 @@ describe('predictionScheduler', () => {
     expect(mockStore.releaseFixturePromptClaim).toHaveBeenCalledWith(43);
     expect(mockStore.markFixturePrompted).not.toHaveBeenCalled();
   });
+
+  it('should return false from repromptFixture when fixture id is invalid', async () => {
+    const posted = await scheduler.repromptFixture(mockClient, { id: 'bad' });
+    expect(posted).toBe(false);
+    expect(mockStore.releaseFixturePromptClaim).not.toHaveBeenCalled();
+  });
+
+  it('should return false from repromptFixture when channel is not text-based', async () => {
+    mockClient.channels.fetch.mockResolvedValue({
+      isTextBased: () => false,
+      send: jest.fn()
+    });
+    const fixture = {
+      id: 44,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    const posted = await scheduler.repromptFixture(mockClient, fixture);
+
+    expect(posted).toBe(false);
+    expect(mockStore.releaseFixturePromptClaim).toHaveBeenCalledWith(44);
+    expect(mockStore.markFixturePrompted).not.toHaveBeenCalled();
+  });
+
+  it('should omit role ping content when participant role is unset', async () => {
+    const channelSend = jest.fn().mockResolvedValue({});
+    mockClient.channels.fetch.mockResolvedValue({
+      isTextBased: () => true,
+      send: channelSend
+    });
+    const noRoleScheduler = createPredictionScheduler({
+      logLabel: 'Test',
+      buttonPrefix: 'test:predict:',
+      aiGameId: 'club',
+      participantRoleId: '',
+      channelId: 'channel-1',
+      isApiConfigured: () => true,
+      isGameConfigured: () => true,
+      isMockApiEnabled: () => false,
+      mockPlayableIds: [],
+      getSeasonFixtures,
+      store: mockStore,
+      buildPromptEmbed: jest.fn().mockReturnValue({ data: { title: 'Prompt' } }),
+      scoreFinishedFixtures: jest.fn().mockResolvedValue(0),
+      resetMockDemoState: jest.fn().mockResolvedValue(undefined),
+      isInReminderWindow: jest.fn().mockReturnValue(true)
+    });
+    const fixture = {
+      id: 45,
+      home: 'A',
+      away: 'B',
+      kickoff: dayjs().add(6, 'hour').toISOString(),
+      status: 'NS',
+      goals: { home: null, away: null }
+    };
+
+    const posted = await noRoleScheduler.repromptFixture(mockClient, fixture);
+
+    expect(posted).toBe(true);
+    expect(channelSend).toHaveBeenCalledWith(
+      expect.not.objectContaining({ content: expect.any(String) })
+    );
+  });
 });

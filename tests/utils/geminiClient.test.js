@@ -58,6 +58,69 @@ describe('geminiClient', () => {
     expect(body.systemInstruction.parts[0].text).toBe('system text');
   });
 
+  it('should default useGoogleSearch to true when omitted', () => {
+    const body = client.buildGenerateContentBody(
+      'user prompt',
+      'system text',
+      { responseMimeType: 'application/json' }
+    );
+    expect(body.tools).toEqual([{ google_search: {} }]);
+  });
+
+  it('should estimate zero tokens for empty or missing instruction text', () => {
+    expect(client.estimateInstructionTokens(null)).toBe(0);
+    expect(client.estimateInstructionTokens(undefined)).toBe(0);
+    expect(client.estimateInstructionTokens('')).toBe(0);
+  });
+
+  it('should treat long instructions as context-cache eligible', () => {
+    const instruction = cacheEligibleInstruction();
+    expect(client.isContextCacheEligible(instruction)).toBe(true);
+  });
+
+  it('should log debug and return null when API reports content too small', async () => {
+    mockAxios.post.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            message: 'Cached content is too small. total_token_count=124, min_total_token_count=1024'
+          }
+        }
+      }
+    });
+    const result = await client.createSystemContextCache(cacheEligibleInstruction(), 'display');
+    expect(result).toBeNull();
+    expect(mockAxios.post).toHaveBeenCalledTimes(1);
+  });
+
+  it('should warn on unexpected cache creation failures', async () => {
+    mockAxios.post.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            message: 123
+          }
+        }
+      }
+    });
+    const result = await client.createSystemContextCache(cacheEligibleInstruction(), 'display');
+    expect(result).toBeNull();
+  });
+
+  it('should treat min_total_token_count-only API messages as too-small errors', async () => {
+    mockAxios.post.mockRejectedValue({
+      response: {
+        data: {
+          error: {
+            message: 'min_total_token_count=1024 required'
+          }
+        }
+      }
+    });
+    const result = await client.createSystemContextCache(cacheEligibleInstruction(), 'display');
+    expect(result).toBeNull();
+  });
+
   it('should build body without google search when disabled', () => {
     const body = client.buildGenerateContentBody('prompt', 'sys', {}, undefined, false);
     expect(body.tools).toBeUndefined();
