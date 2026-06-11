@@ -1,6 +1,25 @@
 const msgs = require('../../utils/predictionMessages');
 
 describe('predictionMessages', () => {
+
+  it('should format reposted prompt message', () => {
+    expect(msgs.msgPromptReposted('Brazil vs Argentina')).toContain('Brazil vs Argentina');
+  });
+
+  it('should build admin-only add events and prompt errors', () => {
+    expect(msgs.errAdminAddEventsOnly('worldcup')).toContain('Discord events');
+    expect(msgs.errAdminPromptOnly('club')).toContain('re-post');
+  });
+
+  it('should build add events summary with error preview', () => {
+    expect(msgs.buildAddEventsDescription(1, 2, 0)).toContain('**Created:** 1');
+    const manyErrors = Array.from({ length: 7 }, (_, i) => `err ${i}`);
+    const summary = msgs.buildAddEventsDescription(0, 0, 7, manyErrors);
+    expect(summary).toContain('err 0');
+    expect(summary).toContain('2 more');
+    expect(msgs.buildAddEventsDescription(0, 0, 3, ['a', 'b', 'c'])).not.toContain('more');
+  });
+
   it('should build game-specific not-configured errors', () => {
     expect(msgs.errNotConfigured('worldcup')).toContain('World Cup');
     expect(msgs.errNotConfigured('club')).toContain('Club football');

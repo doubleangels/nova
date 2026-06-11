@@ -44,6 +44,10 @@ describe('worldCupScheduledEvents', () => {
       expect(description).toContain('Stage: Group Stage');
       expect(description).toContain('Group: GROUP A');
       expect(description).toContain('Kickoff:');
+      const noKickoff = events.buildScheduledEventDescription(
+        sampleFixture({ kickoff: null })
+      );
+      expect(noKickoff).not.toContain('Kickoff:');
       expect(description).toContain('Match ID: 100');
     });
   });
@@ -177,5 +181,67 @@ describe('worldCupScheduledEvents', () => {
       expect(result.failed).toBe(1);
       expect(result.errors[0]).toContain('Fixture 100');
     });
+    it('should stringify non-Error failures', async () => {
+      const guild = {
+        scheduledEvents: {
+          fetch: jest.fn().mockResolvedValue(new Collection()),
+          create: jest.fn().mockRejectedValue('boom')
+        }
+      };
+
+      const result = await events.syncWorldCupScheduledEvents(guild, [sampleFixture()]);
+
+      expect(result.failed).toBe(1);
+      expect(result.errors[0]).toBe('Fixture 100: boom');
+    });
+
   });
+  describe('truncation and edge cases', () => {
+    it('should truncate long event names', () => {
+      const longName = 'A'.repeat(60);
+      const name = events.buildScheduledEventName(
+        sampleFixture({ home: longName, away: longName, homeIso2: null, awayIso2: null })
+      );
+      expect(name.length).toBe(events.EVENT_NAME_MAX_LENGTH);
+      expect(name.endsWith('…')).toBe(true);
+    });
+
+    it('should truncate long descriptions', () => {
+      const description = events.buildScheduledEventDescription(
+        sampleFixture({ venue: 'V'.repeat(1200) })
+      );
+      expect(description.length).toBe(1000);
+      expect(description.endsWith('…')).toBe(true);
+    });
+
+    it('should truncate long locations', () => {
+      const location = events.buildScheduledEventLocation(
+        sampleFixture({ venue: 'S'.repeat(150) })
+      );
+      expect(location.length).toBe(events.EVENT_LOCATION_MAX_LENGTH);
+      expect(location.endsWith('…')).toBe(true);
+    });
+
+    it('should reject fixtures without kickoff', () => {
+      expect(events.isFixtureEligibleForScheduledEvent(sampleFixture({ kickoff: null }))).toBe(false);
+    });
+
+    it('should reject cancelled fixtures', () => {
+      expect(events.isFixtureEligibleForScheduledEvent(sampleFixture({ status: 'CANC' }))).toBe(false);
+    });
+
+    it('should build minimal descriptions', () => {
+      const description = events.buildScheduledEventDescription(
+        sampleFixture({ venue: null, stage: null, group: null, kickoff: 'not-a-date' })
+      );
+      expect(description).toContain('Kickoff: TBD');
+      expect(description).toContain('Match ID: 100');
+    });
+
+    it('should ignore events with empty descriptions when checking duplicates', () => {
+      const collection = new Collection([['1', { description: null }]]);
+      expect(events.hasExistingEventForFixture(collection, 100)).toBe(false);
+    });
+  });
+
 });

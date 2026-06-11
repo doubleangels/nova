@@ -148,9 +148,9 @@ async function syncWorldCupScheduledEvents(guild, fixtures, now = new Date()) {
   const existingEvents = await guild.scheduledEvents.fetch();
   const result = { created: 0, skipped: 0, failed: 0, errors: [] };
 
-  const eligible = fixtures.filter(fixture =>
-    isFixtureEligibleForScheduledEvent(fixture, now)
-  );
+  const eligible = fixtures
+    .filter(fixture => isFixtureEligibleForScheduledEvent(fixture, now))
+    .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
 
   for (const fixture of eligible) {
     if (hasExistingEventForFixture(existingEvents, fixture.id)) {

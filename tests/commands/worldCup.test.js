@@ -933,4 +933,38 @@ describe('worldcup command', () => {
   });
 
 
+  it('should deny addevents outside a guild', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('addevents') },
+      guild: null
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('server')
+    }));
+    expect(mockScheduledEvents.syncWorldCupScheduledEvents).not.toHaveBeenCalled();
+  });
+
+  it('should deny addevents when API is not configured', async () => {
+    mockClientApi.isApiConfigured.mockReturnValue(false);
+
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('addevents') },
+      guild: { id: 'guild-1' },
+      memberPermissions: {
+        has: jest.fn(perm => perm === PermissionFlagsBits.Administrator)
+      }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('not set up')
+    }));
+    expect(mockScheduledEvents.syncWorldCupScheduledEvents).not.toHaveBeenCalled();
+  });
+
+
 });
