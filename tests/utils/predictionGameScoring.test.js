@@ -74,113 +74,6 @@ describe('predictionGameScoring', () => {
     });
   });
 
-  describe('buildFixtureRescoreUpdates', () => {
-    it('should lower totals when the old outcome-only score point is removed', () => {
-      const updates = scoring.buildFixtureRescoreUpdates(
-        [
-          {
-            userId: 'user-a',
-            prediction: {
-              homeScore: 1,
-              awayScore: 0,
-              resultPick: 'home',
-              submittedAt: '2026-06-11T12:00:00.000Z',
-              scored: true,
-              scorePoints: 1,
-              resultPoints: 1,
-              pointsAwarded: 2
-            }
-          }
-        ],
-        2,
-        0
-      );
-
-      expect(updates).toHaveLength(1);
-      expect(updates[0]).toMatchObject({
-        userId: 'user-a',
-        oldTotal: 2,
-        newTotal: 1,
-        pointsDelta: -1,
-        scorePts: 0,
-        resultPts: 1
-      });
-    });
-
-    it('should skip unscored and missing predictions', () => {
-      const updates = scoring.buildFixtureRescoreUpdates(
-        [
-          { userId: 'missing', prediction: null },
-          {
-            userId: 'open',
-            prediction: {
-              homeScore: 1,
-              awayScore: 0,
-              resultPick: 'home',
-              submittedAt: '2026-06-11T12:00:00.000Z',
-              scored: false
-            }
-          }
-        ],
-        2,
-        0
-      );
-
-      expect(updates).toHaveLength(0);
-    });
-
-    it('should treat missing pointsAwarded as zero when rescoring', () => {
-      const updates = scoring.buildFixtureRescoreUpdates(
-        [
-          {
-            userId: 'legacy',
-            prediction: {
-              homeScore: 2,
-              awayScore: 0,
-              resultPick: 'home',
-              submittedAt: '2026-06-11T12:00:00.000Z',
-              scored: true
-            }
-          }
-        ],
-        2,
-        0
-      );
-
-      expect(updates).toHaveLength(1);
-      expect(updates[0]).toMatchObject({
-        userId: 'legacy',
-        oldTotal: 0,
-        newTotal: 3,
-        pointsDelta: 3
-      });
-    });
-
-    it('should skip predictions that already match the new scoring', () => {
-      const updates = scoring.buildFixtureRescoreUpdates(
-        [
-          {
-            userId: 'user-b',
-            prediction: {
-              homeScore: 2,
-              awayScore: 0,
-              resultPick: 'home',
-              submittedAt: '2026-06-11T12:00:00.000Z',
-              scored: true,
-              scorePoints: 2,
-              resultPoints: 1,
-              pointsAwarded: 3
-            }
-          }
-        ],
-        2,
-        0
-      );
-
-      expect(updates).toHaveLength(0);
-    });
-  });
-
   describe('alignResultPickWithScore', () => {
     it('should return resultPick when it matches the score outcome', () => {
       expect(scoring.alignResultPickWithScore(2, 1, 'home')).toBe('home');
@@ -400,5 +293,176 @@ describe('createScoreFinishedFixtures', () => {
     const count = await scoreFinished(mockClient);
     expect(count).toBe(1);
     expect(mockLogger.error).toHaveBeenCalled();
+  });
+});
+
+describe('buildEarnersFromScoredPredictions', () => {
+  const scoring = require('../../utils/predictionGameScoring');
+
+  it('should build earners from scored predictions with points', () => {
+    const earners = scoring.buildEarnersFromScoredPredictions([
+      {
+        userId: 'u1',
+        prediction: { scored: true, scorePoints: 2, resultPoints: 1, pointsAwarded: 3 }
+      },
+      {
+        userId: 'u2',
+        prediction: { scored: true, scorePoints: 0, resultPoints: 0, pointsAwarded: 0 }
+      },
+      { userId: 'u3', prediction: null }
+    ]);
+    expect(earners).toEqual([
+      { userId: 'u1', scorePoints: 2, resultPoints: 1, total: 3 }
+    ]);
+  });
+
+  it('should derive points from score and result when pointsAwarded is missing', () => {
+    const earners = scoring.buildEarnersFromScoredPredictions([
+      {
+        userId: 'u1',
+        prediction: { scored: true, scorePoints: 2, resultPoints: 1 }
+      }
+    ]);
+    expect(earners).toEqual([
+      { userId: 'u1', scorePoints: 2, resultPoints: 1, total: 3 }
+    ]);
+  });
+
+  it('should default missing score and result points to zero', () => {
+    const earners = scoring.buildEarnersFromScoredPredictions([
+      {
+        userId: 'u1',
+        prediction: { scored: true, pointsAwarded: 2 }
+      }
+    ]);
+    expect(earners).toEqual([
+      { userId: 'u1', scorePoints: 0, resultPoints: 0, total: 2 }
+    ]);
+  });
+
+  it('should skip unscored predictions', () => {
+    expect(
+      scoring.buildEarnersFromScoredPredictions([
+        { userId: 'u1', prediction: { scored: false, scorePoints: 2, resultPoints: 1 } }
+      ])
+    ).toEqual([]);
+  });
+});
+
+describe('createRepostFinalScore', () => {
+  const scoring = require('../../utils/predictionGameScoring');
+
+  const fixture = {
+    id: 10,
+    status: 'FT',
+    goals: { home: 2, away: 1 },
+    home: 'A',
+    away: 'B',
+    kickoff: '2026-06-01T12:00:00Z'
+  };
+
+  it('should return false for invalid fixture id', async () => {
+    const repost = scoring.createRepostFinalScore(
+      { getScoredFixtures: jest.fn(), getPredictionsForFixture: jest.fn() },
+      { buildAnnouncementEmbed: jest.fn(), channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost({}, { id: 'bad', status: 'FT', goals: { home: 1, away: 0 } })).toBe(false);
+  });
+
+  it('should return false when fixture is not finished', async () => {
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([10]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([])
+      },
+      { buildAnnouncementEmbed: jest.fn(), channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost({}, { ...fixture, status: 'NS' })).toBe(false);
+  });
+
+  it('should return false when fixture goals are incomplete', async () => {
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([10]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([])
+      },
+      { buildAnnouncementEmbed: jest.fn(), channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost({}, { ...fixture, goals: { home: 1, away: null } })).toBe(false);
+  });
+
+  it('should return false when channel id is missing', async () => {
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([10]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([])
+      },
+      { buildAnnouncementEmbed: jest.fn(), channelId: undefined, logLabel: 'test' }
+    );
+    expect(await repost({ channels: { fetch: jest.fn() } }, fixture)).toBe(false);
+  });
+
+  it('should return false when channel is not text-based', async () => {
+    const mockChannel = { isTextBased: jest.fn().mockReturnValue(false), send: jest.fn() };
+    const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([10]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([])
+      },
+      { buildAnnouncementEmbed: jest.fn().mockReturnValue({}), channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost(mockClient, fixture)).toBe(false);
+    expect(mockChannel.send).not.toHaveBeenCalled();
+  });
+
+  it('should return false when fixture has not been scored', async () => {
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([])
+      },
+      { buildAnnouncementEmbed: jest.fn(), channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost({}, fixture)).toBe(false);
+  });
+
+  it('should post announcement embed for scored finished fixture', async () => {
+    const mockChannel = {
+      isTextBased: jest.fn().mockReturnValue(true),
+      send: jest.fn().mockResolvedValue(undefined)
+    };
+    const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
+    const buildAnnouncementEmbed = jest.fn().mockReturnValue({ title: 'FT' });
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([10]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([
+          {
+            userId: 'u1',
+            prediction: { scored: true, scorePoints: 2, resultPoints: 0, pointsAwarded: 2 }
+          }
+        ])
+      },
+      { buildAnnouncementEmbed, channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost(mockClient, fixture)).toBe(true);
+    expect(mockChannel.send).toHaveBeenCalledWith({ embeds: [{ title: 'FT' }] });
+  });
+
+  it('should return false when channel send fails', async () => {
+    const mockChannel = {
+      isTextBased: jest.fn().mockReturnValue(true),
+      send: jest.fn().mockRejectedValue(new Error('fail'))
+    };
+    const mockClient = { channels: { fetch: jest.fn().mockResolvedValue(mockChannel) } };
+    const repost = scoring.createRepostFinalScore(
+      {
+        getScoredFixtures: jest.fn().mockResolvedValue([10]),
+        getPredictionsForFixture: jest.fn().mockResolvedValue([])
+      },
+      { buildAnnouncementEmbed: jest.fn().mockReturnValue({}), channelId: 'ch1', logLabel: 'test' }
+    );
+    expect(await repost(mockClient, fixture)).toBe(false);
   });
 });

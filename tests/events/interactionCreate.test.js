@@ -45,10 +45,12 @@ describe('interactionCreate event', () => {
     }));
 
     jest.doMock('../../commands/football', () => ({
-      handlePromptSelect: jest.fn().mockResolvedValue()
+      handlePromptSelect: jest.fn().mockResolvedValue(),
+      handleRepostScoreSelect: jest.fn().mockResolvedValue()
     }));
     jest.doMock('../../commands/worldCup', () => ({
-      handlePromptSelect: jest.fn().mockResolvedValue()
+      handlePromptSelect: jest.fn().mockResolvedValue(),
+      handleRepostScoreSelect: jest.fn().mockResolvedValue()
     }));
 
     interactionCreateEvent = require('../../events/interactionCreate');
@@ -321,6 +323,32 @@ describe('interactionCreate event', () => {
     expect(footballCommand.handlePromptSelect).toHaveBeenCalledWith(mockInteraction);
   });
 
+  it('should handle World Cup repost score select menus', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(worldCupCommand.handleRepostScoreSelect).toHaveBeenCalledWith(mockInteraction);
+  });
+
+  it('should handle Football repost score select menus', async () => {
+    const footballCommand = require('../../commands/football');
+    const mockInteraction = createMockInteraction({
+      customId: 'football:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(footballCommand.handleRepostScoreSelect).toHaveBeenCalledWith(mockInteraction);
+  });
+
   it('should capture errors from World Cup prompt select handler', async () => {
     const worldCupCommand = require('../../commands/worldCup');
     worldCupCommand.handlePromptSelect.mockRejectedValue(new Error('prompt fail'));
@@ -353,6 +381,102 @@ describe('interactionCreate event', () => {
 
     expect(mockInstrument.captureError).toHaveBeenCalled();
     expect(mockInteraction.reply).toHaveBeenCalled();
+  });
+
+  it('should capture errors from World Cup repost score select handler', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    worldCupCommand.handleRepostScoreSelect.mockRejectedValue(new Error('repost fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockInteraction.reply).toHaveBeenCalled();
+  });
+
+  it('should capture errors from Football repost score select handler', async () => {
+    const footballCommand = require('../../commands/football');
+    footballCommand.handleRepostScoreSelect.mockRejectedValue(new Error('repost fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockInteraction.reply).toHaveBeenCalled();
+  });
+
+  it('should not reply again when World Cup repost score select fails after defer', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    worldCupCommand.handleRepostScoreSelect.mockRejectedValue(new Error('repost fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = true;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+  });
+
+  it('should not reply again when Football repost score select fails after reply', async () => {
+    const footballCommand = require('../../commands/football');
+    footballCommand.handleRepostScoreSelect.mockRejectedValue(new Error('repost fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = true;
+    mockInteraction.deferred = false;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+  });
+
+  it('should swallow reply failures after World Cup repost score select errors', async () => {
+    const worldCupCommand = require('../../commands/worldCup');
+    worldCupCommand.handleRepostScoreSelect.mockRejectedValue(new Error('repost fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+    mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+
+    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+  });
+
+  it('should swallow reply failures after Football repost score select errors', async () => {
+    const footballCommand = require('../../commands/football');
+    footballCommand.handleRepostScoreSelect.mockRejectedValue(new Error('repost fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:repostscore:select'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = false;
+    mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+
+    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
   });
 
   it('should not reply again when World Cup prompt select fails after defer', async () => {

@@ -1,6 +1,6 @@
 const config = require('../config');
 const { createPredictionStore } = require('./predictionGameStore');
-const { createScoreFinishedFixtures } = require('./predictionGameScoring');
+const { createScoreFinishedFixtures, createRepostFinalScore } = require('./predictionGameScoring');
 const {
   isFixtureOpenForPrediction,
   isInReminderWindow,
@@ -92,6 +92,12 @@ const scoreFinishedFixtures = createScoreFinishedFixtures(store, {
   logLabel: 'World Cup'
 });
 
+const repostFinalScore = createRepostFinalScore(store, {
+  buildAnnouncementEmbed,
+  channelId: config.worldCupChannelId,
+  logLabel: 'World Cup'
+});
+
 module.exports = {
   worldCupKeyv: store.keyv,
   store,
@@ -140,6 +146,7 @@ module.exports = {
   isPromptingPaused: () => store.isPromptingPaused(),
   setPromptingPaused: paused => store.setPromptingPaused(paused),
   scoreFinishedFixtures,
+  repostFinalScore,
   isInReminderWindow,
   truncateModalLabel,
   goalsModalLabel,

@@ -6,6 +6,7 @@ describe('worldcup command', () => {
   let mockUtils;
   let mockClientApi;
   let mockPromptCommand;
+  let mockRepostScoreCommand;
   let mockConfig;
   let mockLogger;
   let mockScheduler;
@@ -18,6 +19,11 @@ describe('worldcup command', () => {
     mockPromptCommand = {
       handlePromptSubcommand: jest.fn().mockResolvedValue(),
       handlePromptSelect: jest.fn().mockResolvedValue()
+    };
+
+    mockRepostScoreCommand = {
+      handleRepostScoreSubcommand: jest.fn().mockResolvedValue(),
+      handleRepostScoreSelect: jest.fn().mockResolvedValue()
     };
 
     mockUtils = {
@@ -47,7 +53,9 @@ describe('worldcup command', () => {
       isWorldCupGameConfigured: jest.fn().mockReturnValue(true),
       isUserRegistered: jest.fn().mockResolvedValue(false),
       addRegisteredUser: jest.fn().mockResolvedValue(),
-      setPromptingPaused: jest.fn().mockResolvedValue()
+      setPromptingPaused: jest.fn().mockResolvedValue(),
+      getScoredFixtures: jest.fn().mockResolvedValue([]),
+      repostFinalScore: jest.fn().mockResolvedValue(true)
     };
 
     mockScheduler = {
@@ -109,6 +117,7 @@ describe('worldcup command', () => {
     jest.doMock('../../utils/asyncUtils', () => ({ getBotMember: mockGetBotMember }));
     jest.doMock('../../utils/worldCupClient', () => mockClientApi);
     jest.doMock('../../utils/predictionPromptCommand', () => mockPromptCommand);
+    jest.doMock('../../utils/predictionScoreRepostCommand', () => mockRepostScoreCommand);
     jest.doMock('../../config', () => mockConfig);
     mockLogger = {
       info: jest.fn(),
@@ -269,6 +278,7 @@ describe('worldcup command', () => {
 
     await worldcupCommand.execute(interaction);
 
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(mockUtils.scoreFinishedFixtures).toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.any(Array)
@@ -292,6 +302,7 @@ describe('worldcup command', () => {
 
     await worldcupCommand.execute(interaction);
 
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     const description = interaction.editReply.mock.calls[0][0].embeds[0].data.description;
     expect(description).toContain('🥇');
     expect(description).toContain('🥈');
@@ -687,6 +698,37 @@ describe('worldcup command', () => {
       expect.objectContaining({
         gameId: 'worldcup',
         repromptFixture: expect.any(Function)
+      })
+    );
+  });
+
+  it('should dispatch repostscore subcommand to shared handler', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('repostscore') },
+      guild: { id: 'g1' },
+      memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) }
+    });
+    await worldcupCommand.execute(interaction);
+    expect(mockRepostScoreCommand.handleRepostScoreSubcommand).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'worldcup',
+        selectCustomId: 'worldcup:repostscore:select'
+      })
+    );
+  });
+
+  it('should dispatch repost score select to shared handler', async () => {
+    const interaction = createMockInteraction({
+      values: ['42'],
+      guild: { id: 'g1' }
+    });
+    await worldcupCommand.handleRepostScoreSelect(interaction);
+    expect(mockRepostScoreCommand.handleRepostScoreSelect).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'worldcup',
+        repostFinalScore: expect.any(Function)
       })
     );
   });

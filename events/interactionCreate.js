@@ -151,6 +151,46 @@ module.exports = {
       return;
     }
 
+    if (
+      typeof interaction.isStringSelectMenu === 'function' &&
+      interaction.isStringSelectMenu() &&
+      interaction.customId === 'worldcup:repostscore:select'
+    ) {
+      try {
+        await worldCupCommand.handleRepostScoreSelect(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'worldcupRepostScoreSelect' });
+        logger.error('Error handling World Cup repost score select.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong posting the final score announcement.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
+    if (
+      typeof interaction.isStringSelectMenu === 'function' &&
+      interaction.isStringSelectMenu() &&
+      interaction.customId === 'football:repostscore:select'
+    ) {
+      try {
+        await footballCommand.handleRepostScoreSelect(interaction);
+      } catch (error) {
+        captureError(error, { handler: 'footballRepostScoreSelect' });
+        logger.error('Error handling Football repost score select.', { err: error });
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '⚠️ Something went wrong posting the final score announcement.',
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+      return;
+    }
+
     // Handle autocomplete interactions
     if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);

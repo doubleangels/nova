@@ -15,6 +15,10 @@ const {
   handlePromptSubcommand,
   handlePromptSelect
 } = require('../utils/predictionPromptCommand');
+const {
+  handleRepostScoreSubcommand,
+  handleRepostScoreSelect
+} = require('../utils/predictionScoreRepostCommand');
 const { handleRemoveUserSubcommand } = require('../utils/predictionRemoveUserCommand');
 const {
   isUserRegistered,
@@ -29,7 +33,9 @@ const {
   resetWorldCupGame,
   removeWorldCupUser,
   isWorldCupGameConfigured,
-  setPromptingPaused
+  setPromptingPaused,
+  getScoredFixtures,
+  repostFinalScore
 } = require('../utils/worldCupUtils');
 const { handlePredictionsSubcommand } = require('../utils/predictionListCommand');
 const { removeFootballUser } = require('../utils/footballUtils');
@@ -95,6 +101,11 @@ module.exports = {
     )
     .addSubcommand(sub =>
       sub
+        .setName('repostscore')
+        .setDescription('Re-post a final score announcement (administrators).')
+    )
+    .addSubcommand(sub =>
+      sub
         .setName('addevents')
         .setDescription('Create Discord events for all upcoming World Cup matches (administrators).')
     )
@@ -142,6 +153,9 @@ module.exports = {
           break;
         case 'prompt':
           await this.handlePrompt(interaction);
+          break;
+        case 'repostscore':
+          await this.handleRepostScore(interaction);
           break;
         case 'addevents':
           await this.handleAddEvents(interaction);
@@ -268,7 +282,7 @@ module.exports = {
       return;
     }
 
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     await scoreFinishedFixtures(interaction.client);
 
@@ -369,6 +383,18 @@ module.exports = {
       isApiConfigured,
       isGameConfigured: isWorldCupGameConfigured,
       getSeasonFixtures,
+      formatFixtureLine
+    });
+  },
+
+  async handleRepostScore(interaction) {
+    await handleRepostScoreSubcommand(interaction, {
+      gameId: 'worldcup',
+      selectCustomId: 'worldcup:repostscore:select',
+      isApiConfigured,
+      isGameConfigured: isWorldCupGameConfigured,
+      getSeasonFixtures,
+      getScoredFixtures,
       formatFixtureLine
     });
   },
@@ -524,6 +550,19 @@ module.exports = {
       getFixtureById,
       formatFixtureLine,
       repromptFixture: repromptWorldCupFixture,
+      logger
+    });
+  },
+
+  async handleRepostScoreSelect(interaction) {
+    await handleRepostScoreSelect(interaction, {
+      gameId: 'worldcup',
+      isApiConfigured,
+      isGameConfigured: isWorldCupGameConfigured,
+      getFixtureById,
+      getScoredFixtures,
+      formatFixtureLine,
+      repostFinalScore,
       logger
     });
   }

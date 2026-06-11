@@ -7,6 +7,7 @@ describe('football command', () => {
   let mockWorldCupUtils;
   let mockClientApi;
   let mockPromptCommand;
+  let mockRepostScoreCommand;
   let mockConfig;
   let mockLogger;
 
@@ -16,6 +17,11 @@ describe('football command', () => {
     mockPromptCommand = {
       handlePromptSubcommand: jest.fn().mockResolvedValue(),
       handlePromptSelect: jest.fn().mockResolvedValue()
+    };
+
+    mockRepostScoreCommand = {
+      handleRepostScoreSubcommand: jest.fn().mockResolvedValue(),
+      handleRepostScoreSelect: jest.fn().mockResolvedValue()
     };
 
     mockFootballUtils = {
@@ -38,7 +44,9 @@ describe('football command', () => {
       getPredictionsForUser: jest.fn().mockResolvedValue([]),
       getUserPoints: jest.fn().mockResolvedValue(0),
       formatFixtureLine: jest.fn().mockReturnValue('A vs B'),
-      formatResultPickDisplay: jest.fn().mockReturnValue('A')
+      formatResultPickDisplay: jest.fn().mockReturnValue('A'),
+      getScoredFixtures: jest.fn().mockResolvedValue([]),
+      repostFinalScore: jest.fn().mockResolvedValue(true)
     };
 
     mockWorldCupUtils = {
@@ -69,6 +77,7 @@ describe('football command', () => {
     jest.doMock('../../utils/worldCupUtils', () => mockWorldCupUtils);
     jest.doMock('../../utils/footballClient', () => mockClientApi);
     jest.doMock('../../utils/predictionPromptCommand', () => mockPromptCommand);
+    jest.doMock('../../utils/predictionScoreRepostCommand', () => mockRepostScoreCommand);
     jest.doMock('../../utils/footballScheduler', () => ({
       repromptFootballFixture: jest.fn().mockResolvedValue(true),
       runFootballStartup: jest.fn().mockResolvedValue()
@@ -326,6 +335,7 @@ describe('football command', () => {
       options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) }
     });
     await footballCommand.execute(interaction);
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
   });
 
@@ -336,6 +346,7 @@ describe('football command', () => {
       options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) }
     });
     await footballCommand.execute(interaction);
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('leaderboard is empty') }));
   });
 
@@ -604,6 +615,41 @@ describe('football command', () => {
       expect.objectContaining({
         gameId: 'club',
         repromptFixture: expect.any(Function)
+      })
+    );
+  });
+
+  it('should dispatch repostscore subcommand to shared handler', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('repostscore'),
+        getString: jest.fn().mockReturnValue('PL')
+      },
+      guild: { id: 'g1' },
+      memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) }
+    });
+    await footballCommand.execute(interaction);
+    expect(mockRepostScoreCommand.handleRepostScoreSubcommand).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'club',
+        selectCustomId: 'football:repostscore:select',
+        competition: 'PL'
+      })
+    );
+  });
+
+  it('should dispatch repost score select to shared handler', async () => {
+    const interaction = createMockInteraction({
+      values: ['42'],
+      guild: { id: 'g1' }
+    });
+    await footballCommand.handleRepostScoreSelect(interaction);
+    expect(mockRepostScoreCommand.handleRepostScoreSelect).toHaveBeenCalledWith(
+      interaction,
+      expect.objectContaining({
+        gameId: 'club',
+        repostFinalScore: expect.any(Function)
       })
     );
   });

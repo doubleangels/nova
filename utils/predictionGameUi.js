@@ -156,7 +156,6 @@ function buildAnnouncementEmbed(
     value: msgs.formatPointsEarnedField(earners).slice(0, 1024)
   });
 
-  embed.setFooter({ text: msgs.buildResultsFooter(gameId) });
   return embed;
 }
 

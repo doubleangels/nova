@@ -383,24 +383,6 @@ function createPredictionStore(namespace, logLabel) {
     });
   }
 
-  /**
-   * Applies rescored prediction totals and signed point deltas for one fixture.
-   * @param {number} fixtureId
-   * @param {Array<{ userId: string, prediction: GamePrediction, pointsDelta: number }>} updates
-   * @returns {Promise<void>}
-   */
-  async function applyFixtureRescoreUpdates(fixtureId, updates) {
-    runStoreTransaction((db) => {
-      for (const { userId, prediction, pointsDelta } of updates) {
-        setInTx(db, `prediction:${userId}:${fixtureId}`, prediction);
-        if (pointsDelta !== 0) {
-          const current = getInTx(db, `points:${userId}`) || 0;
-          setInTx(db, `points:${userId}`, Math.max(0, current + pointsDelta));
-        }
-      }
-    });
-  }
-
   async function getPredictorIdsForFixture(fixtureId) {
     return (await keyv.get(`predictions_by_fixture:${fixtureId}`)) || [];
   }
@@ -657,7 +639,6 @@ function createPredictionStore(namespace, logLabel) {
     tryAcquireScoringLock,
     releaseScoringLock,
     applyFixtureScoringResults,
-    applyFixtureRescoreUpdates,
     getPredictorIdsForFixture,
     getPredictionsForFixture,
     getPredictionsForUser,

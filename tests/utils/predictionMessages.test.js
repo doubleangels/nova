@@ -9,6 +9,11 @@ describe('predictionMessages', () => {
   it('should build admin-only add events and prompt errors', () => {
     expect(msgs.errAdminAddEventsOnly('worldcup')).toContain('Discord events');
     expect(msgs.errAdminPromptOnly('club')).toContain('re-post');
+    expect(msgs.errAdminRepostScoreOnly('worldcup')).toContain('final score');
+  });
+
+  it('should format reposted score message', () => {
+    expect(msgs.msgScoreReposted('Brazil 2-1 Argentina')).toContain('Brazil 2-1 Argentina');
   });
 
   it('should build add events summary with error preview', () => {
@@ -122,11 +127,6 @@ describe('predictionMessages', () => {
     const club = msgs.buildRulesDescription('club');
     expect(club).toContain('Premier League');
     expect(club).toContain('Demo mode');
-  });
-
-  it('should build buildResultsFooter for both game types', () => {
-    expect(msgs.buildResultsFooter('worldcup')).toContain('/worldcup leaderboard');
-    expect(msgs.buildResultsFooter('club')).toContain('/football leaderboard');
   });
 
   it('should truncate reasoning when value too long but reasoningBudget >= 24 (lines 337-339)', () => {

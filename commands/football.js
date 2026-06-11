@@ -14,6 +14,10 @@ const {
   handlePromptSubcommand,
   handlePromptSelect
 } = require('../utils/predictionPromptCommand');
+const {
+  handleRepostScoreSubcommand,
+  handleRepostScoreSelect
+} = require('../utils/predictionScoreRepostCommand');
 const { handleRemoveUserSubcommand } = require('../utils/predictionRemoveUserCommand');
 const { getCompetitionName } = require('../utils/footballCompetitions');
 const {
@@ -29,7 +33,9 @@ const {
   resetFootballGame,
   removeFootballUser,
   isFootballGameConfigured,
-  setPromptingPaused
+  setPromptingPaused,
+  getScoredFixtures,
+  repostFinalScore
 } = require('../utils/footballUtils');
 const { handlePredictionsSubcommand } = require('../utils/predictionListCommand');
 const { removeWorldCupUser } = require('../utils/worldCupUtils');
@@ -117,6 +123,22 @@ module.exports = {
     )
     .addSubcommand(sub =>
       sub
+        .setName('repostscore')
+        .setDescription('Re-post a final score announcement (administrators).')
+        .addStringOption(opt =>
+          opt
+            .setName('competition')
+            .setDescription('Filter by competition')
+            .addChoices(
+              { name: 'Premier League', value: 'PL' },
+              { name: 'Bundesliga', value: 'BL1' },
+              { name: 'La Liga', value: 'PD' },
+              { name: 'Champions League', value: 'CL' }
+            )
+        )
+    )
+    .addSubcommand(sub =>
+      sub
         .setName('reset')
         .setDescription('Clear all club football prediction data (administrators).')
         .addBooleanOption(opt =>
@@ -159,6 +181,9 @@ module.exports = {
           break;
         case 'prompt':
           await this.handlePrompt(interaction);
+          break;
+        case 'repostscore':
+          await this.handleRepostScore(interaction);
           break;
         case 'reset':
           await this.handleReset(interaction);
@@ -283,7 +308,7 @@ module.exports = {
       return;
     }
 
-    await interaction.deferReply();
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     await scoreFinishedFixtures(interaction.client);
 
@@ -395,6 +420,20 @@ module.exports = {
     });
   },
 
+  async handleRepostScore(interaction) {
+    const competition = interaction.options.getString('competition');
+    await handleRepostScoreSubcommand(interaction, {
+      gameId: 'club',
+      selectCustomId: 'football:repostscore:select',
+      isApiConfigured,
+      isGameConfigured: isFootballGameConfigured,
+      getSeasonFixtures,
+      getScoredFixtures,
+      formatFixtureLine,
+      competition
+    });
+  },
+
   async handleReset(interaction) {
     if (!interaction.guild) {
       await interaction.reply({
@@ -491,6 +530,19 @@ module.exports = {
       getFixtureById,
       formatFixtureLine,
       repromptFixture: repromptFootballFixture,
+      logger
+    });
+  },
+
+  async handleRepostScoreSelect(interaction) {
+    await handleRepostScoreSelect(interaction, {
+      gameId: 'club',
+      isApiConfigured,
+      isGameConfigured: isFootballGameConfigured,
+      getFixtureById,
+      getScoredFixtures,
+      formatFixtureLine,
+      repostFinalScore,
       logger
     });
   }

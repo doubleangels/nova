@@ -164,6 +164,14 @@ function errAdminPromptOnly(gameId) {
  * @param {PredictionGameId} gameId
  * @returns {string}
  */
+function errAdminRepostScoreOnly(gameId) {
+  return `⚠️ Only administrators can re-post ${GAME[gameId].label.toLowerCase()} final score announcements.`;
+}
+
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
 function errAdminAddEventsOnly(gameId) {
   return `⚠️ Only administrators can create ${GAME[gameId].label.toLowerCase()} Discord events.`;
 }
@@ -268,6 +276,22 @@ function msgPromptReposted(fixtureLine) {
   return `Match prompt posted in the prediction channel:\n${fixtureLine}`;
 }
 
+const MSG_REPOST_SCORE_SELECT_PLACEHOLDER = 'Choose a finished match…';
+const MSG_REPOST_SCORE_NO_MATCHES = '⚠️ No scored finished matches to re-post.';
+const ERR_REPOST_SCORE_FAILED =
+  '⚠️ Could not post the final score announcement (check the prediction channel configuration).';
+const ERR_MATCH_NOT_FINISHED = '⚠️ That match is not finished yet.';
+const ERR_MATCH_NOT_SCORED =
+  '⚠️ That match has not been scored yet (wait for the scheduler or check match status).';
+
+/**
+ * @param {string} fixtureLine
+ * @returns {string}
+ */
+function msgScoreReposted(fixtureLine) {
+  return `Final score announcement posted in the prediction channel:\n${fixtureLine}`;
+}
+
 /**
  * @param {string} roleId
  * @returns {string}
@@ -358,14 +382,6 @@ function formatPointsEarnedField(earners) {
 }
 
 const POINTS_FIELD_NAME = 'Points';
-
-/**
- * @param {PredictionGameId} gameId
- * @returns {string}
- */
-function buildResultsFooter(gameId) {
-  return `Standings: ${GAME[gameId].leaderboardCommand}`;
-}
 
 /**
  * @param {import('./worldCupUtils').NormalizedFixture} fixture
@@ -561,6 +577,7 @@ module.exports = {
   errNotConfigured,
   errAdminResetOnly,
   errAdminPromptOnly,
+  errAdminRepostScoreOnly,
   errAdminAddEventsOnly,
   ERR_ADMIN_REMOVE_USER_ONLY,
   ERR_INVALID_USER_ID,
@@ -572,12 +589,17 @@ module.exports = {
   MSG_PROMPT_NO_UPCOMING,
   ERR_PROMPT_FAILED,
   msgPromptReposted,
+  MSG_REPOST_SCORE_SELECT_PLACEHOLDER,
+  MSG_REPOST_SCORE_NO_MATCHES,
+  ERR_REPOST_SCORE_FAILED,
+  ERR_MATCH_NOT_FINISHED,
+  ERR_MATCH_NOT_SCORED,
+  msgScoreReposted,
   buildRolePing,
   buildPromptDescription,
   buildPromptTitle,
   buildRulesDescription,
   formatPointsEarnedField,
-  buildResultsFooter,
   buildPredictionFormContentWithPick,
   winnerPlaceholderSelected,
   buildResetDescription,

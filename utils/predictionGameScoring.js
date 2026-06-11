@@ -178,76 +178,72 @@ function createScoreFinishedFixtures(store, deps) {
 }
 
 /**
- * Recomputes score/result points for already-scored predictions (e.g. after a rule change).
  * @param {Array<{ userId: string, prediction: import('./predictionGameStore').GamePrediction|null }>} predictorEntries
- * @param {number} actualHome
- * @param {number} actualAway
- * @returns {Array<{
- *   userId: string,
- *   prediction: import('./predictionGameStore').GamePrediction,
- *   pointsDelta: number,
- *   oldTotal: number,
- *   newTotal: number,
- *   scorePts: number,
- *   resultPts: number
- * }>}
+ * @returns {Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>}
  */
-function buildFixtureRescoreUpdates(predictorEntries, actualHome, actualAway) {
-  /** @type {Array<{
-   *   userId: string,
-   *   prediction: import('./predictionGameStore').GamePrediction,
-   *   pointsDelta: number,
-   *   oldTotal: number,
-   *   newTotal: number,
-   *   scorePts: number,
-   *   resultPts: number
-   * }>} */
-  const updates = [];
+function buildEarnersFromScoredPredictions(predictorEntries) {
+  /** @type {Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>} */
+  const earners = [];
 
   for (const { userId, prediction } of predictorEntries) {
     if (!prediction?.scored) continue;
 
-    const oldTotal = prediction.pointsAwarded ?? 0;
-    const scorePts = calculateScorePoints(
-      prediction.homeScore,
-      prediction.awayScore,
-      actualHome,
-      actualAway
-    );
-    const resultPts = calculateResultPoints(
-      prediction.resultPick,
-      actualHome,
-      actualAway
-    );
-    const newTotal = scorePts + resultPts;
-    const pointsDelta = newTotal - oldTotal;
+    const scorePoints = prediction.scorePoints ?? 0;
+    const resultPoints = prediction.resultPoints ?? 0;
+    const total = prediction.pointsAwarded ?? scorePoints + resultPoints;
 
-    if (
-      pointsDelta === 0 &&
-      prediction.scorePoints === scorePts &&
-      prediction.resultPoints === resultPts
-    ) {
-      continue;
+    if (total > 0) {
+      earners.push({ userId, scorePoints, resultPoints, total });
     }
-
-    updates.push({
-      userId,
-      prediction: {
-        ...prediction,
-        scored: true,
-        scorePoints: scorePts,
-        resultPoints: resultPts,
-        pointsAwarded: newTotal
-      },
-      pointsDelta,
-      oldTotal,
-      newTotal,
-      scorePts,
-      resultPts
-    });
   }
 
-  return updates;
+  return earners;
+}
+
+/**
+ * @param {import('./predictionGameStore').PredictionStore} store
+ * @param {{
+ *   buildAnnouncementEmbed: (fixture: unknown, earners: unknown[]) => import('discord.js').EmbedBuilder,
+ *   channelId?: string,
+ *   logLabel: string
+ * }} deps
+ * @returns {(client: import('discord.js').Client, fixture: object) => Promise<boolean>}
+ */
+function createRepostFinalScore(store, deps) {
+  return async function repostFinalScore(client, fixture) {
+    const fixtureId = Number(fixture.id);
+    if (!Number.isFinite(fixtureId)) return false;
+    if (fixture.status !== 'FT') return false;
+    if (fixture.goals?.home == null || fixture.goals?.away == null) return false;
+
+    const scoredList = await store.getScoredFixtures();
+    if (!scoredList.includes(fixtureId)) return false;
+
+    const predictorEntries = await store.getPredictionsForFixture(fixtureId);
+    const earners = buildEarnersFromScoredPredictions(predictorEntries);
+
+    const channelId = deps.channelId;
+    if (!channelId) return false;
+
+    const path = require('path');
+    const logger = require('../logger')(path.basename(__filename));
+
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (!channel?.isTextBased()) return false;
+
+      const embed = deps.buildAnnouncementEmbed(fixture, earners);
+      await channel.send({ embeds: [embed] });
+      return true;
+    } catch (err) {
+      logger.error(`Failed to re-post ${deps.logLabel} match announcement.`, {
+        err,
+        fixtureId,
+        channelId
+      });
+      return false;
+    }
+  };
 }
 
 module.exports = {
@@ -256,6 +252,7 @@ module.exports = {
   calculateScorePoints,
   calculateResultPoints,
   alignResultPickWithScore,
+  buildEarnersFromScoredPredictions,
   createScoreFinishedFixtures,
-  buildFixtureRescoreUpdates
+  createRepostFinalScore
 };
