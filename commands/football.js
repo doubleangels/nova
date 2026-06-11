@@ -60,7 +60,7 @@ module.exports = {
         .addIntegerOption(opt =>
           opt
             .setName('limit')
-            .setDescription('Number of players to show (1-25)')
+            .setDescription('How many players do you want to show? (1-25)')
             .setMinValue(1)
             .setMaxValue(25)
         )
@@ -75,7 +75,7 @@ module.exports = {
         .addStringOption(opt =>
           opt
             .setName('status')
-            .setDescription('Filter by match status')
+            .setDescription('Which status do you want to view matches for?')
             .addChoices(
               { name: 'Upcoming', value: 'upcoming' },
               { name: 'Live', value: 'live' },
@@ -85,7 +85,7 @@ module.exports = {
         .addStringOption(opt =>
           opt
             .setName('competition')
-            .setDescription('Filter by competition')
+            .setDescription('Which competition do you want to view matches for?')
             .addChoices(
               { name: 'Premier League', value: 'PL' },
               { name: 'Bundesliga', value: 'BL1' },
@@ -101,18 +101,18 @@ module.exports = {
         .addUserOption(opt =>
           opt
             .setName('user')
-            .setDescription('User whose predictions to show')
+            .setDescription('Which user do you want to view predictions for?')
             .setRequired(true)
         )
     )
     .addSubcommand(sub =>
       sub
         .setName('prompt')
-        .setDescription('Re-post a match prediction prompt (administrators).')
+        .setDescription('Re-post a match prediction prompt.')
         .addStringOption(opt =>
           opt
             .setName('competition')
-            .setDescription('Filter by competition')
+            .setDescription('Which competition do you want to re-post a prompt for?')
             .addChoices(
               { name: 'Premier League', value: 'PL' },
               { name: 'Bundesliga', value: 'BL1' },
@@ -124,11 +124,11 @@ module.exports = {
     .addSubcommand(sub =>
       sub
         .setName('repostscore')
-        .setDescription('Re-post a final score announcement (administrators).')
+        .setDescription('Re-post a final score announcement.')
         .addStringOption(opt =>
           opt
             .setName('competition')
-            .setDescription('Filter by competition')
+            .setDescription('Which competition do you want to re-post a final score announcement for?')
             .addChoices(
               { name: 'Premier League', value: 'PL' },
               { name: 'Bundesliga', value: 'BL1' },
@@ -140,21 +140,21 @@ module.exports = {
     .addSubcommand(sub =>
       sub
         .setName('reset')
-        .setDescription('Clear all club football prediction data (administrators).')
+        .setDescription('Clear all club football prediction data.')
         .addBooleanOption(opt =>
           opt
             .setName('repost')
-            .setDescription('Re-post open match prompts after reset')
+            .setDescription('Do you want to re-post open match prompts after reset?')
         )
     )
     .addSubcommand(sub =>
       sub
         .setName('removeuser')
-        .setDescription('Remove a user from all prediction data (administrators).')
+        .setDescription('Remove a user from all prediction data.')
         .addStringOption(opt =>
           opt
             .setName('userid')
-            .setDescription('Discord user ID to remove')
+            .setDescription('What Discord user ID do you want to remove?')
             .setRequired(true)
         )
     ),
