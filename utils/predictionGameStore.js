@@ -497,7 +497,10 @@ function createPredictionStore(namespace, logLabel) {
    * @returns {Promise<{ hadData: boolean, wasRegistered: boolean, predictionCount: number, pendingCount: number, points: number }>}
    */
   async function removeUser(userId) {
-    return runStoreTransaction((db) => {
+    /** @type {Array<{ type: 'delete' | 'set', key: string, value?: unknown }>} */
+    const cacheSyncOps = [];
+
+    const summary = runStoreTransaction((db) => {
       const summary = {
         hadData: false,
         wasRegistered: false,
@@ -509,11 +512,9 @@ function createPredictionStore(namespace, logLabel) {
       const registeredRaw = getInTx(db, 'registered');
       const registered = Array.isArray(registeredRaw) ? registeredRaw : [];
       if (registered.includes(userId)) {
-        setInTx(
-          db,
-          'registered',
-          registered.filter(id => id !== userId)
-        );
+        const nextRegistered = registered.filter(id => id !== userId);
+        setInTx(db, 'registered', nextRegistered);
+        cacheSyncOps.push({ type: 'set', key: 'registered', value: nextRegistered });
         summary.wasRegistered = true;
         summary.hadData = true;
       }
@@ -521,11 +522,9 @@ function createPredictionStore(namespace, logLabel) {
       const participantsRaw = getInTx(db, 'all_participants');
       const participants = Array.isArray(participantsRaw) ? participantsRaw : [];
       if (participants.includes(userId)) {
-        setInTx(
-          db,
-          'all_participants',
-          participants.filter(id => id !== userId)
-        );
+        const nextParticipants = participants.filter(id => id !== userId);
+        setInTx(db, 'all_participants', nextParticipants);
+        cacheSyncOps.push({ type: 'set', key: 'all_participants', value: nextParticipants });
         summary.hadData = true;
       }
 
@@ -536,6 +535,7 @@ function createPredictionStore(namespace, logLabel) {
         const points = getInTx(db, `points:${userId}`) || 0;
         summary.points = points;
         db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey(`points:${userId}`));
+        cacheSyncOps.push({ type: 'delete', key: `points:${userId}` });
         summary.hadData = true;
       }
 
@@ -544,6 +544,7 @@ function createPredictionStore(namespace, logLabel) {
         db.prepare('DELETE FROM keyv WHERE key = ?').run(
           fullKey(`prediction:${userId}:${fixtureId}`)
         );
+        cacheSyncOps.push({ type: 'delete', key: `prediction:${userId}:${fixtureId}` });
 
         const indexKey = `predictions_by_fixture:${fixtureId}`;
         const predictorIdsRaw = getInTx(db, indexKey);
@@ -551,8 +552,10 @@ function createPredictionStore(namespace, logLabel) {
         const nextPredictorIds = predictorIds.filter(id => id !== userId);
         if (nextPredictorIds.length === 0) {
           db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey(indexKey));
+          cacheSyncOps.push({ type: 'delete', key: indexKey });
         } else {
           setInTx(db, indexKey, nextPredictorIds);
+          cacheSyncOps.push({ type: 'set', key: indexKey, value: nextPredictorIds });
         }
         summary.predictionCount += 1;
         summary.hadData = true;
@@ -562,6 +565,7 @@ function createPredictionStore(namespace, logLabel) {
         db.prepare('DELETE FROM keyv WHERE key = ?').run(
           fullKey(`user_predictions:${userId}`)
         );
+        cacheSyncOps.push({ type: 'delete', key: `user_predictions:${userId}` });
       }
 
       const pendingPattern = `${fullKey(`pending_prediction:${userId}:`)}%`;
@@ -570,12 +574,24 @@ function createPredictionStore(namespace, logLabel) {
         .all(pendingPattern);
       for (const row of pendingRows) {
         db.prepare('DELETE FROM keyv WHERE key = ?').run(row.key);
+        const logicalKey = row.key.slice(keyPrefix.length);
+        cacheSyncOps.push({ type: 'delete', key: logicalKey });
         summary.pendingCount += 1;
         summary.hadData = true;
       }
 
       return summary;
     });
+
+    for (const op of cacheSyncOps) {
+      if (op.type === 'delete') {
+        await keyv.delete(op.key);
+      } else {
+        await keyv.set(op.key, op.value);
+      }
+    }
+
+    return summary;
   }
 
   /**

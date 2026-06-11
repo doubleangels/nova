@@ -25,6 +25,16 @@ function setAllRequiredEnv() {
   });
 }
 
+function withStartupWarningsEnabled(fn) {
+  const savedNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'development';
+  try {
+    fn();
+  } finally {
+    process.env.NODE_ENV = savedNodeEnv;
+  }
+}
+
 describe('config', () => {
   let exitSpy;
   let consoleErrorSpy;
@@ -109,32 +119,38 @@ describe('config', () => {
   });
 
   it('should warn when DEEPL_API_KEY is not set', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    delete process.env.DEEPL_API_KEY;
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      delete process.env.DEEPL_API_KEY;
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should warn when DISCORD_CLIENT_ID is not set', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    delete process.env.DISCORD_CLIENT_ID;
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('DISCORD_CLIENT_ID is not set')
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      delete process.env.DISCORD_CLIENT_ID;
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('DISCORD_CLIENT_ID is not set')
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should not warn about DISCORD_CLIENT_ID when it is set', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.DISCORD_CLIENT_ID = '123456789';
-    require('../config');
-    expect(consoleWarnSpy.mock.calls.some(([msg]) => String(msg).includes('DISCORD_CLIENT_ID is not set'))).toBe(false);
-    delete process.env.DISCORD_CLIENT_ID;
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.DISCORD_CLIENT_ID = '123456789';
+      require('../config');
+      expect(consoleWarnSpy.mock.calls.some(([msg]) => String(msg).includes('DISCORD_CLIENT_ID is not set'))).toBe(false);
+      delete process.env.DISCORD_CLIENT_ID;
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should warn and fall back when positive int env is invalid', () => {
@@ -149,15 +165,17 @@ describe('config', () => {
   });
 
   it('should warn when FOOTBALL_PREDICTION_MOCK_API is enabled', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.FOOTBALL_PREDICTION_MOCK_API = 'true';
-    delete process.env.FOOTBALL_DATA_API_KEY;
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'FOOTBALL_PREDICTION_MOCK_API is enabled. /worldcup and /football use simulated fixtures instead of football-data.org.'
-    );
-    delete process.env.FOOTBALL_PREDICTION_MOCK_API;
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.FOOTBALL_PREDICTION_MOCK_API = 'true';
+      delete process.env.FOOTBALL_DATA_API_KEY;
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'FOOTBALL_PREDICTION_MOCK_API is enabled. /worldcup and /football use simulated fixtures instead of football-data.org.'
+      );
+      delete process.env.FOOTBALL_PREDICTION_MOCK_API;
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should enable mock mode from legacy WORLD_CUP_MOCK_API', () => {
@@ -180,30 +198,34 @@ describe('config', () => {
   });
 
   it('should warn when FOOTBALL_DATA_API_KEY is not set', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    delete process.env.WORLD_CUP_MOCK_API;
-    delete process.env.FOOTBALL_DATA_API_KEY;
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'FOOTBALL_DATA_API_KEY is not set. /worldcup and /football predictions will be unavailable.'
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      delete process.env.WORLD_CUP_MOCK_API;
+      delete process.env.FOOTBALL_DATA_API_KEY;
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'FOOTBALL_DATA_API_KEY is not set. /worldcup and /football predictions will be unavailable.'
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should warn when prediction channel is missing but API key set', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.FOOTBALL_DATA_API_KEY = 'test-football-key';
-    delete process.env.FOOTBALL_PREDICTION_CHANNEL_ID;
-    delete process.env.WORLD_CUP_CHANNEL_ID;
-    delete process.env.FOOTBALL_CHANNEL_ID;
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'FOOTBALL_CHANNEL_ID is not set. Football prediction prompts and announcements will not be posted.'
-    );
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'WORLD_CUP_CHANNEL_ID is not set. World Cup prediction prompts and announcements will not be posted.'
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.FOOTBALL_DATA_API_KEY = 'test-football-key';
+      delete process.env.FOOTBALL_PREDICTION_CHANNEL_ID;
+      delete process.env.WORLD_CUP_CHANNEL_ID;
+      delete process.env.FOOTBALL_CHANNEL_ID;
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'FOOTBALL_CHANNEL_ID is not set. Football prediction prompts and announcements will not be posted.'
+      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'WORLD_CUP_CHANNEL_ID is not set. World Cup prediction prompts and announcements will not be posted.'
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should resolve shared prediction settings from legacy env vars', () => {
@@ -219,14 +241,16 @@ describe('config', () => {
   });
 
   it('should not warn when DEEPL_API_KEY is set', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.DEEPL_API_KEY = 'test-deepl-key';
-    consoleWarnSpy.mockClear();
-    require('../config');
-    expect(consoleWarnSpy).not.toHaveBeenCalledWith(
-      'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.DEEPL_API_KEY = 'test-deepl-key';
+      consoleWarnSpy.mockClear();
+      require('../config');
+      expect(consoleWarnSpy).not.toHaveBeenCalledWith(
+        'DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.'
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should use custom prediction reminder and poll intervals when valid', () => {
@@ -264,26 +288,30 @@ describe('config', () => {
   });
 
   it('should warn if FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.FOOTBALL_PREDICTION_AI_ENABLED = 'true';
-    delete process.env.GEMINI_API_KEY;
-    consoleWarnSpy.mockClear();
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing. AI match suggestions will be skipped.'
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.FOOTBALL_PREDICTION_AI_ENABLED = 'true';
+      delete process.env.GEMINI_API_KEY;
+      consoleWarnSpy.mockClear();
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing. AI match suggestions will be skipped.'
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 
   it('should warn if an AI command flag is set but GEMINI_API_KEY is missing', () => {
-    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    process.env.WEATHER_AI_ENABLED = 'true';
-    delete process.env.GEMINI_API_KEY;
-    consoleWarnSpy.mockClear();
-    require('../config');
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      'WEATHER_AI_ENABLED is set but GEMINI_API_KEY is missing. That command\'s AI insight field will be skipped.'
-    );
-    consoleWarnSpy.mockRestore();
+    withStartupWarningsEnabled(() => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      process.env.WEATHER_AI_ENABLED = 'true';
+      delete process.env.GEMINI_API_KEY;
+      consoleWarnSpy.mockClear();
+      require('../config');
+      expect(consoleWarnSpy).toHaveBeenCalledWith(
+        'WEATHER_AI_ENABLED is set but GEMINI_API_KEY is missing. That command\'s AI insight field will be skipped.'
+      );
+      consoleWarnSpy.mockRestore();
+    });
   });
 });

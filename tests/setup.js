@@ -8,6 +8,7 @@ process.env.DATA_DIR = jestDataDir;
 
 process.env.TZ = 'UTC';
 process.env.NODE_ENV = 'test';
+process.env.DOTENV_CONFIG_QUIET = 'true';
 process.env.LOG_LEVEL = 'error';
 process.env.DISCORD_BOT_TOKEN = 'test-token';
 process.env.BOT_STATUS = 'test status';
@@ -30,5 +31,16 @@ process.env.SERVER_INVITE_URL = 'https://discord.gg/test';
 
 jest.setTimeout(10000);
 
-// config.js registers process.exit listeners; many test files load it and can exceed the default limit
-process.setMaxListeners(20);
+// moduleLoad.test.js reloads config once per command module and can exceed the default limit
+process.setMaxListeners(200);
+
+afterEach(() => {
+  try {
+    const sqliteStorePath = require.resolve('../utils/sqliteStore');
+    if (require.cache[sqliteStorePath]) {
+      require('../utils/sqliteStore').closeDatabaseConnections();
+    }
+  } catch {
+    // sqliteStore may be mocked or not loaded in this test file
+  }
+});

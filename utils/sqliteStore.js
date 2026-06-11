@@ -50,6 +50,7 @@ function closeDatabaseConnections() {
     writableDb.close();
     writableDb = null;
   }
+  sharedStore = null;
 }
 
 module.exports = {

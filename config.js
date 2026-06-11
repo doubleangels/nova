@@ -1,4 +1,6 @@
-require('dotenv').config();
+const isTestEnv = process.env.NODE_ENV === 'test';
+
+require('dotenv').config({ quiet: isTestEnv });
 
 /**
  * @typedef {Object} BotSettings
@@ -335,73 +337,75 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-if (!isSet(process.env.DEEPL_API_KEY)) {
-  console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
-}
+if (!isTestEnv) {
+  if (!isSet(process.env.DEEPL_API_KEY)) {
+    console.warn('DEEPL_API_KEY is not set. Flag-emoji translation reactions will be unavailable.');
+  }
 
-if (!isSet(process.env.DISCORD_CLIENT_ID)) {
-  console.warn(
-    'DISCORD_CLIENT_ID is not set; using built-in default. Set it for deploy-commands and multi-application setups.'
-  );
-}
-
-if (predictionMockApi) {
-  console.warn(
-    'FOOTBALL_PREDICTION_MOCK_API is enabled. /worldcup and /football use simulated fixtures instead of football-data.org.'
-  );
-} else if (!isSet(process.env.FOOTBALL_DATA_API_KEY)) {
-  console.warn(
-    'FOOTBALL_DATA_API_KEY is not set. /worldcup and /football predictions will be unavailable.'
-  );
-}
-
-const predictionApiActive =
-  predictionMockApi || isSet(process.env.FOOTBALL_DATA_API_KEY);
-
-if (predictionApiActive && !footballChannelId) {
-  console.warn(
-    'FOOTBALL_CHANNEL_ID is not set. Football prediction prompts and announcements will not be posted.'
-  );
-}
-
-if (predictionApiActive && !worldCupChannelId) {
-  console.warn(
-    'WORLD_CUP_CHANNEL_ID is not set. World Cup prediction prompts and announcements will not be posted.'
-  );
-}
-
-if (predictionApiActive && !footballParticipantRoleId) {
-  console.warn(
-    'FOOTBALL_PARTICIPANT_ROLE_ID is not set. /football register cannot assign a participant role.'
-  );
-}
-
-if (predictionApiActive && !worldCupParticipantRoleId) {
-  console.warn(
-    'WORLD_CUP_PARTICIPANT_ROLE_ID is not set. /worldcup register cannot assign a participant role.'
-  );
-}
-
-if (predictionAiEnabled && !geminiApiKey) {
-  console.warn(
-    'FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing. AI match suggestions will be skipped.'
-  );
-}
-
-const commandAiFlags = [
-  ['WEATHER_AI_ENABLED', weatherAiEnabled],
-  ['ANIME_AI_ENABLED', animeAiEnabled],
-  ['IMDB_AI_ENABLED', imdbAiEnabled],
-  ['BOOK_AI_ENABLED', bookAiEnabled],
-  ['GOOGLE_AI_ENABLED', googleAiEnabled],
-  ['GOOGLE_IMAGES_AI_ENABLED', googleImagesAiEnabled]
-];
-
-for (const [envName, enabled] of commandAiFlags) {
-  if (enabled && !geminiApiKey) {
+  if (!isSet(process.env.DISCORD_CLIENT_ID)) {
     console.warn(
-      `${envName} is set but GEMINI_API_KEY is missing. That command's AI insight field will be skipped.`
+      'DISCORD_CLIENT_ID is not set; using built-in default. Set it for deploy-commands and multi-application setups.'
     );
+  }
+
+  if (predictionMockApi) {
+    console.warn(
+      'FOOTBALL_PREDICTION_MOCK_API is enabled. /worldcup and /football use simulated fixtures instead of football-data.org.'
+    );
+  } else if (!isSet(process.env.FOOTBALL_DATA_API_KEY)) {
+    console.warn(
+      'FOOTBALL_DATA_API_KEY is not set. /worldcup and /football predictions will be unavailable.'
+    );
+  }
+
+  const predictionApiActive =
+    predictionMockApi || isSet(process.env.FOOTBALL_DATA_API_KEY);
+
+  if (predictionApiActive && !footballChannelId) {
+    console.warn(
+      'FOOTBALL_CHANNEL_ID is not set. Football prediction prompts and announcements will not be posted.'
+    );
+  }
+
+  if (predictionApiActive && !worldCupChannelId) {
+    console.warn(
+      'WORLD_CUP_CHANNEL_ID is not set. World Cup prediction prompts and announcements will not be posted.'
+    );
+  }
+
+  if (predictionApiActive && !footballParticipantRoleId) {
+    console.warn(
+      'FOOTBALL_PARTICIPANT_ROLE_ID is not set. /football register cannot assign a participant role.'
+    );
+  }
+
+  if (predictionApiActive && !worldCupParticipantRoleId) {
+    console.warn(
+      'WORLD_CUP_PARTICIPANT_ROLE_ID is not set. /worldcup register cannot assign a participant role.'
+    );
+  }
+
+  if (predictionAiEnabled && !geminiApiKey) {
+    console.warn(
+      'FOOTBALL_PREDICTION_AI_ENABLED is set but GEMINI_API_KEY is missing. AI match suggestions will be skipped.'
+    );
+  }
+
+  const commandAiFlags = [
+    ['WEATHER_AI_ENABLED', weatherAiEnabled],
+    ['ANIME_AI_ENABLED', animeAiEnabled],
+    ['IMDB_AI_ENABLED', imdbAiEnabled],
+    ['BOOK_AI_ENABLED', bookAiEnabled],
+    ['GOOGLE_AI_ENABLED', googleAiEnabled],
+    ['GOOGLE_IMAGES_AI_ENABLED', googleImagesAiEnabled]
+  ];
+
+  for (const [envName, enabled] of commandAiFlags) {
+    if (enabled && !geminiApiKey) {
+      console.warn(
+        `${envName} is set but GEMINI_API_KEY is missing. That command's AI insight field will be skipped.`
+      );
+    }
   }
 }
 
