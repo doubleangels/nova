@@ -17,6 +17,7 @@ function createWritableDbMock(rowValue = null) {
   const getStmt = { get: jest.fn().mockReturnValue(rowValue ? { value: rowValue } : undefined) };
   const runStmt = { run: jest.fn() };
   const mockDb = {
+    exec: jest.fn(),
     transaction: jest.fn((fn) => () => fn()),
     prepare: jest.fn((sql) => {
       if (sql.includes('SELECT')) return getStmt;
@@ -244,7 +245,7 @@ describe('database utils', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Final database error occurred.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
       exitSpy.mockRestore();
     });
@@ -267,7 +268,7 @@ describe('database utils', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Final database error occurred.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
       exitSpy.mockRestore();
     });
@@ -447,6 +448,23 @@ describe('database utils', () => {
       expect(mainKeyvInstance.set).toHaveBeenCalledWith(
         'mute_mode:user123',
         expect.objectContaining({ userId: 'user123' })
+      );
+    });
+
+    it('should store provided join time for mute mode user', async () => {
+      const joinedAt = new Date('2026-06-01T12:00:00.000Z');
+      await db.addMuteModeUser('user123', 'testuser', joinedAt);
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith(
+        'mute_mode:user123',
+        expect.objectContaining({ joinTime: joinedAt.toISOString() })
+      );
+    });
+
+    it('should normalize string join time for mute mode user', async () => {
+      await db.addMuteModeUser('user123', 'testuser', '2026-06-01T12:00:00.000Z');
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith(
+        'mute_mode:user123',
+        expect.objectContaining({ joinTime: '2026-06-01T12:00:00.000Z' })
       );
     });
 
@@ -1079,6 +1097,10 @@ describe('database utils', () => {
         }
       });
       expect(await db.rebuildCodeToTagMap('guild1')).toEqual({});
+      expect(mainKeyvInstance.set).toHaveBeenCalledWith(
+        'invite_code_to_tag_map:guild1',
+        {}
+      );
     });
   });
 
@@ -1107,20 +1129,63 @@ describe('database utils', () => {
     });
 
     it('should start at 1 when no prior count exists in incrementMessageCount', async () => {
-      mainKeyvInstance.get.mockResolvedValueOnce(null);
+      getStmt.get.mockReturnValueOnce(undefined);
       expect(await db.incrementMessageCount('new-user')).toBe(1);
-      expect(mainKeyvInstance.set).toHaveBeenCalledWith('message_count:new-user', 1);
+      expect(runStmt.run).toHaveBeenCalledWith(
+        'main:message_count:new-user',
+        JSON.stringify({ value: 1, expires: null })
+      );
     });
 
     it('should increment from stored count in incrementMessageCount', async () => {
-      mainKeyvInstance.get.mockResolvedValueOnce(5);
+      getStmt.get.mockReturnValueOnce({
+        value: JSON.stringify({ value: 5, expires: null })
+      });
       expect(await db.incrementMessageCount('u1')).toBe(6);
-      expect(mainKeyvInstance.set).toHaveBeenCalledWith('message_count:u1', 6);
+      expect(runStmt.run).toHaveBeenCalledWith(
+        'main:message_count:u1',
+        JSON.stringify({ value: 6, expires: null })
+      );
     });
 
     it('should return null on error in incrementMessageCount', async () => {
-      mainKeyvInstance.get.mockRejectedValueOnce(new Error('keyv fail'));
+      mockWritableDb.transaction.mockImplementationOnce(() => () => {
+        throw new Error('sqlite fail');
+      });
       expect(await db.incrementMessageCount('u')).toBeNull();
+    });
+
+    it('should treat invalid stored count payloads as zero in incrementMessageCount', async () => {
+      getStmt.get.mockReturnValueOnce({ value: 'not-json' });
+      expect(await db.incrementMessageCount('bad-json-user')).toBe(1);
+    });
+
+    it('should treat non-numeric wrapped count payloads as zero in incrementMessageCount', async () => {
+      getStmt.get.mockReturnValueOnce({
+        value: JSON.stringify({ value: { invalid: true }, expires: null })
+      });
+      expect(await db.incrementMessageCount('bad-shape-user')).toBe(1);
+    });
+
+    it('should treat string count payloads as zero in incrementMessageCount', async () => {
+      getStmt.get.mockReturnValueOnce({
+        value: JSON.stringify({ value: 'not-a-number', expires: null })
+      });
+      expect(await db.incrementMessageCount('string-count-user')).toBe(1);
+    });
+
+    it('should increment from a stored zero count in incrementMessageCount', async () => {
+      getStmt.get.mockReturnValueOnce({
+        value: JSON.stringify({ value: 0, expires: null })
+      });
+      expect(await db.incrementMessageCount('zero-count-user')).toBe(1);
+    });
+
+    it('should treat non-finite stored counts as zero in incrementMessageCount', async () => {
+      getStmt.get.mockReturnValueOnce({
+        value: JSON.stringify({ value: Infinity, expires: null })
+      });
+      expect(await db.incrementMessageCount('infinite-count-user')).toBe(1);
     });
 
     it('should return zero when stored count is zero in getMessageCount', async () => {

@@ -14,9 +14,17 @@ function getCacheTtlMs() {
   return 15 * 60 * 1000;
 }
 const FIXTURE_ID_CHUNK_SIZE = 20;
+/** Free tier is ~10 requests/minute; space API calls apart. */
+const MIN_REQUEST_GAP_MS =
+  process.env.NODE_ENV === 'test' ? 0 : 6_500;
+const RATE_LIMIT_MAX_RETRIES = 3;
 
 /** @type {{ data: import('./worldCupUtils').NormalizedFixture[] | null, expiresAt: number }} */
 let seasonCache = { data: null, expiresAt: 0 };
+/** @type {Promise<import('./worldCupUtils').NormalizedFixture[]>|null} */
+let seasonFetchInFlight = null;
+/** @type {number} */
+let lastApiRequestAt = 0;
 
 /** @type {Record<string, string>} football-data.org status → internal short code */
 const STATUS_MAP = {
@@ -101,6 +109,73 @@ function isApiConfigured() {
  */
 function clearSeasonCache() {
   seasonCache = { data: null, expiresAt: 0 };
+  seasonFetchInFlight = null;
+  lastApiRequestAt = 0;
+}
+
+/**
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * @param {import('axios').AxiosResponse|undefined} response
+ * @returns {number}
+ */
+function rateLimitWaitMs(response) {
+  const resetHeader = response?.headers?.['x-requestcounter-reset'];
+  const resetSeconds = parseInt(String(resetHeader ?? ''), 10);
+  if (Number.isFinite(resetSeconds) && resetSeconds > 0) {
+    return resetSeconds * 1000 + 500;
+  }
+
+  const retryAfter = response?.headers?.['retry-after'];
+  const retrySeconds = parseInt(String(retryAfter ?? ''), 10);
+  if (Number.isFinite(retrySeconds) && retrySeconds > 0) {
+    return retrySeconds * 1000 + 500;
+  }
+
+  return 60_000;
+}
+
+/**
+ * @returns {Promise<void>}
+ */
+async function throttleBeforeApiRequest() {
+  if (MIN_REQUEST_GAP_MS <= 0) return;
+  const elapsed = Date.now() - lastApiRequestAt;
+  if (elapsed < MIN_REQUEST_GAP_MS) {
+    await sleep(MIN_REQUEST_GAP_MS - elapsed);
+  }
+  lastApiRequestAt = Date.now();
+}
+
+/**
+ * @param {() => Promise<import('./worldCupUtils').NormalizedFixture[]|import('./worldCupUtils').NormalizedFixture|null>} request
+ * @param {Record<string, unknown>} [context]
+ * @returns {Promise<import('./worldCupUtils').NormalizedFixture[]|import('./worldCupUtils').NormalizedFixture|null>}
+ */
+async function withRateLimitRetry(request, context) {
+  for (let attempt = 0; attempt < RATE_LIMIT_MAX_RETRIES; attempt++) {
+    try {
+      await throttleBeforeApiRequest();
+      return await request();
+    } catch (err) {
+      if (err.response?.status !== 429 || attempt >= RATE_LIMIT_MAX_RETRIES - 1) {
+        throw err;
+      }
+      const waitMs = process.env.NODE_ENV === 'test' ? 0 : rateLimitWaitMs(err.response);
+      logger.warn('football-data.org rate limit; retrying.', {
+        ...context,
+        attempt: attempt + 1,
+        waitMs
+      });
+      await sleep(waitMs);
+    }
+  }
 }
 
 /**
@@ -117,7 +192,7 @@ async function fetchSeasonMatchesFromApi() {
     return applyMockFinish(fixtures);
   }
 
-  try {
+  return withRateLimitRetry(async () => {
     const response = await axios.get(
       `${BASE_URL}/competitions/${config.worldCupCompetitionCode}/matches`,
       {
@@ -135,15 +210,7 @@ async function fetchSeasonMatchesFromApi() {
     }
 
     return list.map(normalizeFixture).filter(Boolean);
-  } catch (err) {
-    if (err.response?.status === 429 && seasonCache.data?.length) {
-      logger.warn('Rate limited; using cached World Cup fixtures.', {
-        cachedCount: seasonCache.data.length
-      });
-      return seasonCache.data;
-    }
-    throw err;
-  }
+  }, { competition: config.worldCupCompetitionCode });
 }
 
 /**
@@ -165,10 +232,12 @@ async function fetchMatchByIdFromApi(matchId) {
   }
 
   try {
-    const response = await axios.get(`${BASE_URL}/matches/${matchId}`, {
-      headers: apiHeaders()
-    });
-    return normalizeFixture(response.data);
+    return await withRateLimitRetry(async () => {
+      const response = await axios.get(`${BASE_URL}/matches/${matchId}`, {
+        headers: apiHeaders()
+      });
+      return normalizeFixture(response.data);
+    }, { matchId });
   } catch (error) {
     if (error.response?.status === 404) {
       return null;
@@ -181,39 +250,58 @@ async function fetchMatchByIdFromApi(matchId) {
  * @param {{ status?: string, date?: string, forceRefresh?: boolean }} [options]
  * @returns {Promise<import('./worldCupUtils').NormalizedFixture[]>}
  */
+async function refreshSeasonFixturesFromApi() {
+  seasonFetchInFlight = fetchSeasonMatchesFromApi().finally(() => {
+    seasonFetchInFlight = null;
+  });
+  return seasonFetchInFlight;
+}
+
+/**
+ * @param {{ status?: string, date?: string, forceRefresh?: boolean }} [options]
+ * @returns {Promise<import('./worldCupUtils').NormalizedFixture[]>}
+ */
 async function getSeasonFixtures(options = {}) {
   const now = Date.now();
+  const cacheTtlMs = getCacheTtlMs();
   const canUseCache =
     !isMockApiEnabled() &&
     !options.forceRefresh &&
     seasonCache.data &&
     seasonCache.expiresAt > now;
 
+  let fixtures;
   if (canUseCache) {
-    let fixtures = seasonCache.data;
-    if (options.status) {
-      fixtures = fixtures.filter(f => f.status === options.status);
+    fixtures = seasonCache.data;
+  } else if (!isMockApiEnabled() && options.forceRefresh && seasonFetchInFlight) {
+    fixtures = await seasonFetchInFlight;
+  } else {
+    try {
+      fixtures = await refreshSeasonFixturesFromApi();
+      if (!isMockApiEnabled() && fixtures.length > 0) {
+        seasonCache = {
+          data: fixtures,
+          expiresAt: now + cacheTtlMs
+        };
+      }
+    } catch (err) {
+      if (err.response?.status === 429 && seasonCache.data?.length) {
+        logger.warn('Rate limited; using cached World Cup fixtures.', {
+          cachedCount: seasonCache.data.length,
+          cacheAgeMs: now - (seasonCache.expiresAt - cacheTtlMs)
+        });
+        fixtures = seasonCache.data;
+      } else {
+        throw err;
+      }
     }
-    if (options.date) {
-      fixtures = fixtures.filter(f => f.kickoff && f.kickoff.startsWith(options.date));
-    }
-    return fixtures;
-  }
-
-  const fixtures = await fetchSeasonMatchesFromApi();
-
-  if (!isMockApiEnabled() && fixtures.length > 0) {
-    seasonCache = {
-      data: fixtures,
-      expiresAt: now + getCacheTtlMs()
-    };
   }
 
   if (options.status) {
-    return fixtures.filter(f => f.status === options.status);
+    fixtures = fixtures.filter(f => f.status === options.status);
   }
   if (options.date) {
-    return fixtures.filter(f => f.kickoff && f.kickoff.startsWith(options.date));
+    fixtures = fixtures.filter(f => f.kickoff && f.kickoff.startsWith(options.date));
   }
   return fixtures;
 }
@@ -288,5 +376,10 @@ module.exports = {
   getSeasonFixtures,
   getFixtureById,
   getFixturesByIds,
-  getCacheTtlMs
+  getCacheTtlMs,
+  __test__: {
+    rateLimitWaitMs,
+    throttleBeforeApiRequest,
+    withRateLimitRetry
+  }
 };

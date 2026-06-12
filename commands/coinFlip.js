@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 
@@ -65,8 +66,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error occurred in coinflip command.", {
-            err: error,
+        logger.error("Error occurred in coinflip command.", { ...serializeError(error, { includeStack: true }),
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
         });
@@ -85,8 +85,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for coin flip command.", {
-                err: followUpError,
+            logger.error("Failed to send error response for coin flip command.", { ...serializeError(followUpError, { includeStack: true }),
                 originalError: error.message,
                 userId: interaction.user?.id
             });

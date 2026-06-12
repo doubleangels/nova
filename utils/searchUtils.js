@@ -1,4 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { serializeError } = require('./logSanitize.js');
 
 /**
  * Creates a paginated message with navigation buttons
@@ -90,7 +91,12 @@ async function createPaginatedResults(
 
     pageUpdateInFlight = true;
 
-    const buttonType = i.customId.split('_')[1];
+    let buttonType = null;
+    if (i.customId.startsWith(`${prefix}_prev_`)) {
+      buttonType = 'prev';
+    } else if (i.customId.startsWith(`${prefix}_next_`)) {
+      buttonType = 'next';
+    }
 
     logger.debug("Navigation button pressed.", {
       buttonType,
@@ -163,7 +169,7 @@ async function createPaginatedResults(
 
     await interaction.editReply({
       components: [disabledNavRow]
-    }).catch(err => logger.error("Failed to update timed out message.", { err: err }));
+    }).catch(err => logger.error("Failed to update timed out message.", { ...serializeError(err, { includeStack: true }) }));
   });
 }
 

@@ -277,7 +277,7 @@ describe('worldCupClient', () => {
 
       const rateLimitErr = new Error('Rate limited');
       rateLimitErr.response = { status: 429 };
-      mockAxios.get.mockRejectedValueOnce(rateLimitErr);
+      mockAxios.get.mockRejectedValue(rateLimitErr);
 
       const fixtures = await client.getSeasonFixtures({ forceRefresh: true });
       expect(fixtures).toHaveLength(1);
@@ -289,6 +289,140 @@ describe('worldCupClient', () => {
       err.response = { status: 500 };
       mockAxios.get.mockRejectedValue(err);
       await expect(client.getSeasonFixtures({ forceRefresh: true })).rejects.toMatchObject({ response: { status: 500 } });
+    });
+
+    it('should dedupe concurrent forceRefresh requests', async () => {
+      mockAxios.get.mockResolvedValue({
+        data: { matches: [sampleMatch({ id: 77 })] }
+      });
+
+      const [fixturesA, fixturesB] = await Promise.all([
+        client.getSeasonFixtures({ forceRefresh: true }),
+        client.getSeasonFixtures({ forceRefresh: true })
+      ]);
+
+      expect(mockAxios.get).toHaveBeenCalledTimes(1);
+      expect(fixturesA[0].id).toBe(77);
+      expect(fixturesB[0].id).toBe(77);
+    });
+
+    it('should use cached fixtures when getSeasonFixtures refresh throws 429', async () => {
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 55 })] }
+      });
+      await client.getSeasonFixtures();
+
+      const rateLimitErr = new Error('Rate limited');
+      rateLimitErr.response = { status: 429 };
+      mockAxios.get.mockRejectedValue(rateLimitErr);
+
+      const fixtures = await client.getSeasonFixtures({ forceRefresh: true });
+      expect(fixtures[0].id).toBe(55);
+    });
+
+    it('should use stale cache in getSeasonFixtures when refresh throws after retries without fetchSeason cache fallback', async () => {
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 88 })] }
+      });
+      await client.getSeasonFixtures();
+      client.clearSeasonCache();
+      mockAxios.get.mockResolvedValueOnce({
+        data: { matches: [sampleMatch({ id: 88 })] }
+      });
+      await client.getSeasonFixtures();
+
+      const rateLimitErr = new Error('Rate limited');
+      rateLimitErr.response = { status: 429 };
+      mockAxios.get.mockRejectedValue(rateLimitErr);
+
+      const fixtures = await client.getSeasonFixtures({ forceRefresh: true });
+      expect(fixtures[0].id).toBe(88);
+    });
+
+    it('should rethrow non-429 errors from getSeasonFixtures refresh path', async () => {
+      mockAxios.get.mockRejectedValueOnce({ response: { status: 503 } });
+      await expect(client.getSeasonFixtures({ forceRefresh: true })).rejects.toEqual(
+        expect.objectContaining({ response: { status: 503 } })
+      );
+    });
+  });
+
+  describe('__test__ helpers', () => {
+    it('should compute rate limit wait from response headers', () => {
+      expect(client.__test__.rateLimitWaitMs({ headers: { 'x-requestcounter-reset': '30' } })).toBe(30_500);
+      expect(client.__test__.rateLimitWaitMs({ headers: { 'retry-after': '15' } })).toBe(15_500);
+      expect(client.__test__.rateLimitWaitMs({ headers: {} })).toBe(60_000);
+    });
+
+    it('should wait between consecutive API requests in production mode', async () => {
+      const savedEnv = process.env.NODE_ENV;
+      try {
+        jest.useFakeTimers();
+        process.env.NODE_ENV = 'production';
+        let prodClient;
+        jest.isolateModules(() => {
+          jest.doMock('../../utils/httpClient', () => mockAxios);
+          jest.doMock('../../config', () => ({
+            footballDataApiKey: 'test-api-key',
+            worldCupCompetitionCode: 'WC',
+            worldCupSeason: '2026'
+          }));
+          prodClient = require('../../utils/worldCupClient');
+          prodClient.clearSeasonCache();
+        });
+
+        await prodClient.__test__.throttleBeforeApiRequest();
+        const second = prodClient.__test__.throttleBeforeApiRequest();
+        jest.advanceTimersByTime(6_500);
+        await second;
+      } finally {
+        process.env.NODE_ENV = savedEnv;
+        jest.useRealTimers();
+      }
+    });
+
+    it('should retry rate-limited requests via withRateLimitRetry', async () => {
+      let attempts = 0;
+      const result = await client.__test__.withRateLimitRetry(async () => {
+        attempts += 1;
+        if (attempts < 2) {
+          const err = new Error('Rate limited');
+          err.response = { status: 429, headers: { 'retry-after': '0' } };
+          throw err;
+        }
+        return [{ id: 1 }];
+      }, { test: true });
+
+      expect(result).toEqual([{ id: 1 }]);
+      expect(attempts).toBe(2);
+    });
+
+    it('should use production rate-limit backoff in withRateLimitRetry', async () => {
+      const savedEnv = process.env.NODE_ENV;
+      try {
+        jest.useFakeTimers();
+        process.env.NODE_ENV = 'production';
+
+        let attempts = 0;
+        const promise = client.__test__.withRateLimitRetry(async () => {
+          attempts += 1;
+          if (attempts < 2) {
+            const err = new Error('Rate limited');
+            err.response = { status: 429, headers: { 'retry-after': '1' } };
+            throw err;
+          }
+          return [{ id: 1 }];
+        }, { competition: 'WC' });
+
+        await jest.runAllTimersAsync();
+        const result = await promise;
+
+        expect(result).toEqual([{ id: 1 }]);
+        expect(attempts).toBe(2);
+      } finally {
+        process.env.NODE_ENV = savedEnv;
+        jest.useRealTimers();
+      }
     });
 
     it('should return null from getFixtureById when not configured (line 152)', async () => {

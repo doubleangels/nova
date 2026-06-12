@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const httpClient = require('../utils/httpClient');
@@ -210,9 +211,7 @@ module.exports = {
 
       await interaction.respond(suggestions);
     } catch (error) {
-      logger.error("Error occurred in dog breed autocomplete.", {
-        err: error
-      });
+      logger.error("Error occurred in dog breed autocomplete.", { ...serializeError(error, { includeStack: true }) });
       try {
         await interaction.respond([]);
       } catch {
@@ -281,8 +280,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in dog command.", {
-      err: error,
+    logger.error("Error occurred in dog command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -305,8 +303,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for dog command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for dog command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

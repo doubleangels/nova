@@ -1,6 +1,7 @@
 const path = require('path');
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const dayjs = require('dayjs');
+const { serializeError } = require('../utils/logSanitize');
 const logger = require('../logger')(path.basename(__filename));
 const { redditApiRequest, isRedditConfigured } = require('../utils/redditClient');
 const { tryAcquireCommandCooldown, releaseCommandCooldown, scheduleCommandCooldownNotifications, isReminderConfigured, replyReminderNotConfigured, NEEDAFRIEND_REMINDER_MS } = require('../utils/reminderUtils');
@@ -142,9 +143,9 @@ module.exports = {
       });
     }
 
-    await interaction.deferReply();
-
     try {
+      await interaction.deferReply();
+
       const post = await findWeeklyAdvertisementPost();
       if (!post) {
         await releaseCommandCooldown('needafriend');
@@ -189,11 +190,12 @@ module.exports = {
       });
     } catch (err) {
       await releaseCommandCooldown('needafriend');
-      logger.error('Error occurred in needafriend command.', { err });
-      return interaction.editReply({
-        content: `⚠️ ${formatRedditCommentError(err)}`,
-        flags: MessageFlags.Ephemeral
-      });
+      logger.error('Error occurred in needafriend command.', serializeError(err, { includeStack: true }));
+      const content = `⚠️ ${formatRedditCommentError(err)}`;
+      if (interaction.deferred || interaction.replied) {
+        return interaction.editReply({ content, flags: MessageFlags.Ephemeral });
+      }
+      return interaction.reply({ content, flags: MessageFlags.Ephemeral });
     }
   }
 };

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -124,8 +125,7 @@ module.exports = {
         scheduledTime: scheduledTime.toISOString()
       });
     } catch (error) {
-      logger.error('Error occurred in /fix command.', {
-        err: error,
+      logger.error('Error occurred in /fix command.', { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         guildId: interaction.guild?.id,
         type: type
@@ -145,8 +145,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral 
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for fix command.", {
-          err: followUpError,
+        logger.error("Failed to send error response for fix command.", { ...serializeError(followUpError, { includeStack: true }),
           originalError: error.message,
           userId: interaction.user?.id
         });
@@ -169,8 +168,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in fix command.", {
-      err: error,
+    logger.error("Error occurred in fix command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -189,8 +187,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for fix command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for fix command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

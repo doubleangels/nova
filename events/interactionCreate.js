@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('../utils/logSanitize.js');
 const { captureError } = require('../instrument');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -44,7 +45,7 @@ module.exports = {
         await handleWorldCupPredictButton(interaction);
       } catch (error) {
         captureError(error, { handler: 'worldcupButton' });
-        logger.error('Error handling World Cup predict button.', { err: error });
+        logger.error('Error handling World Cup predict button.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong opening the prediction form.',
@@ -60,7 +61,7 @@ module.exports = {
         await handleFootballPredictButton(interaction);
       } catch (error) {
         captureError(error, { handler: 'footballButton' });
-        logger.error('Error handling Football predict button.', { err: error });
+        logger.error('Error handling Football predict button.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong opening the prediction form.',
@@ -80,7 +81,7 @@ module.exports = {
         await handleWorldCupPickSelect(interaction);
       } catch (error) {
         captureError(error, { handler: 'worldcupPickSelect' });
-        logger.error('Error handling World Cup prediction select.', { err: error });
+        logger.error('Error handling World Cup prediction select.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong saving your prediction.',
@@ -100,7 +101,7 @@ module.exports = {
         await handleFootballPickSelect(interaction);
       } catch (error) {
         captureError(error, { handler: 'footballPickSelect' });
-        logger.error('Error handling Football prediction select.', { err: error });
+        logger.error('Error handling Football prediction select.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong saving your prediction.',
@@ -120,7 +121,7 @@ module.exports = {
         await worldCupCommand.handlePromptSelect(interaction);
       } catch (error) {
         captureError(error, { handler: 'worldcupPromptSelect' });
-        logger.error('Error handling World Cup prompt select.', { err: error });
+        logger.error('Error handling World Cup prompt select.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong posting the match prompt.',
@@ -140,7 +141,7 @@ module.exports = {
         await footballCommand.handlePromptSelect(interaction);
       } catch (error) {
         captureError(error, { handler: 'footballPromptSelect' });
-        logger.error('Error handling Football prompt select.', { err: error });
+        logger.error('Error handling Football prompt select.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong posting the match prompt.',
@@ -160,7 +161,7 @@ module.exports = {
         await worldCupCommand.handleRepostScoreSelect(interaction);
       } catch (error) {
         captureError(error, { handler: 'worldcupRepostScoreSelect' });
-        logger.error('Error handling World Cup repost score select.', { err: error });
+        logger.error('Error handling World Cup repost score select.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong posting the final score announcement.',
@@ -180,7 +181,7 @@ module.exports = {
         await footballCommand.handleRepostScoreSelect(interaction);
       } catch (error) {
         captureError(error, { handler: 'footballRepostScoreSelect' });
-        logger.error('Error handling Football repost score select.', { err: error });
+        logger.error('Error handling Football repost score select.', { ...serializeError(error, { includeStack: true }) });
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: '⚠️ Something went wrong posting the final score announcement.',
@@ -207,8 +208,7 @@ module.exports = {
         }
       } catch (error) {
         captureError(error, { handler: 'autocomplete', command: interaction.commandName });
-        logger.error('Error occurred while handling autocomplete request.', {
-          err: error,
+        logger.error('Error occurred while handling autocomplete request.', { ...serializeError(error, { includeStack: true }),
           commandName: interaction.commandName
         });
       }
@@ -232,14 +232,39 @@ module.exports = {
       return;
     }
 
+    const startedAt = Date.now();
+    logger.debug('Executing command.', {
+      command: interaction.commandName,
+      user: interaction.user.tag,
+      userId: interaction.user.id,
+      guildId: interaction.guildId,
+      channelId: interaction.channelId,
+      interactionId: interaction.id
+    });
+
     try {
       await command.execute(interaction);
+      logger.debug('Command executed successfully.', {
+        command: interaction.commandName,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        interactionId: interaction.id,
+        durationMs: Date.now() - startedAt,
+        outcome: 'success'
+      });
     } catch (error) {
       captureError(error, { handler: 'command', command: interaction.commandName });
       logger.error('Error occurred while executing command.', {
-        err: error,
-        commandName: interaction.commandName,
-        user: interaction.user.tag
+        command: interaction.commandName,
+        user: interaction.user.tag,
+        userId: interaction.user.id,
+        guildId: interaction.guildId,
+        channelId: interaction.channelId,
+        interactionId: interaction.id,
+        durationMs: Date.now() - startedAt,
+        outcome: 'error',
+        ...serializeError(error, { includeStack: true })
       });
 
       // Only send generic error if the command hasn't already replied (e.g. with its own error message)
@@ -259,8 +284,11 @@ module.exports = {
         }
       } catch (replyError) {
         logger.error('Error occurred while sending error response.', {
-          err: replyError,
-          originalError: error.message
+          command: interaction.commandName,
+          interactionId: interaction.id,
+          guildId: interaction.guildId,
+          ...serializeError(replyError, { includeStack: true }),
+          originalErrorMessage: error.message
         });
       }
     }

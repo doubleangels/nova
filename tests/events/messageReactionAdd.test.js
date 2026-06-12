@@ -119,7 +119,7 @@ describe('messageReactionAdd event', () => {
 
     expect(mockLogger.error).toHaveBeenCalledWith(
       'Error occurred while processing reaction.',
-      expect.objectContaining({ err: expect.any(Error) })
+      expect.objectContaining({ errorMessage: expect.any(String) })
     );
   });
 

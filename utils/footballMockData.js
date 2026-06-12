@@ -3,8 +3,10 @@ const dayjs = require('dayjs');
 /** Mock match ID for the club-football one-game demo (distinct from World Cup 900xxx). */
 const MOCK_PLAYABLE_MATCH_IDS = [910001];
 
-/** Stable kickoff for mock fixtures (set once at module load). */
-const MOCK_KICKOFF_ISO = dayjs().add(2, 'hour').toISOString();
+/** Kickoff for mock fixtures (refreshed on each build). */
+function getMockKickoffIso() {
+  return dayjs().add(2, 'hour').toISOString();
+}
 
 /**
  * Full-time score applied once at least one prediction exists for the fixture.
@@ -23,7 +25,7 @@ function buildMockMatches() {
   return [
     {
       id: 910001,
-      utcDate: MOCK_KICKOFF_ISO,
+      utcDate: getMockKickoffIso(),
       status: 'TIMED',
       competition: { code: 'PL', name: 'Premier League' },
       homeTeam: { name: 'Arsenal', tla: 'ARS', area: { code: 'ENG' } },

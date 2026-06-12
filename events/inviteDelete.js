@@ -1,4 +1,5 @@
 const { Events } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
@@ -66,8 +67,7 @@ module.exports = {
       }
     } catch (error) {
       captureError(error, { event: 'inviteDelete' });
-      logger.error('Error occurred while cleaning up deleted invite from tracking.', {
-        err: error,
+      logger.error('Error occurred while cleaning up deleted invite from tracking.', { ...serializeError(error, { includeStack: true }),
         inviteCode: invite.code,
         guildId: invite.guild.id
       });

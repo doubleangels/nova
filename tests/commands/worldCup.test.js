@@ -152,6 +152,78 @@ describe('worldcup command', () => {
       }));
     });
 
+    it('should reject register for bot users', async () => {
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        user: { id: 'bot-1', bot: true, username: 'bot', tag: 'bot#0000' }
+      });
+      await worldcupCommand.execute(interaction);
+      expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('Bots cannot register')
+      }));
+      expect(mockUtils.addRegisteredUser).not.toHaveBeenCalled();
+    });
+
+    it('should roll back role when registration persistence fails', async () => {
+      mockUtils.addRegisteredUser.mockRejectedValueOnce(new Error('db fail'));
+      const mockRole = { id: 'role-1', position: 5, name: 'WC Predictor' };
+      const interaction = createMockInteraction({
+        options: { getSubcommand: jest.fn().mockReturnValue('register') },
+        guild: {
+          roles: {
+            cache: { get: jest.fn().mockReturnValue(mockRole) },
+            fetch: jest.fn()
+          },
+          members: {
+            me: {
+              permissions: { has: jest.fn().mockReturnValue(true) },
+              roles: { highest: { position: 10 } }
+            }
+          }
+        },
+        member: {
+          roles: {
+            cache: { has: jest.fn().mockReturnValue(false) },
+            add: jest.fn().mockResolvedValue(),
+            remove: jest.fn().mockResolvedValue()
+          }
+        }
+      });
+
+    await worldcupCommand.execute(interaction);
+    expect(interaction.member.roles.remove).toHaveBeenCalledWith(mockRole, 'Prediction registration rollback');
+  });
+
+  it('should ignore role rollback failures after registration persistence fails', async () => {
+    mockUtils.addRegisteredUser.mockRejectedValueOnce(new Error('db fail'));
+    const mockRole = { id: 'role-1', position: 5, name: 'WC Predictor' };
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      guild: {
+        roles: {
+          cache: { get: jest.fn().mockReturnValue(mockRole) },
+          fetch: jest.fn()
+        },
+        members: {
+          me: {
+            permissions: { has: jest.fn().mockReturnValue(true) },
+            roles: { highest: { position: 10 } }
+          }
+        }
+      },
+      member: {
+        roles: {
+          cache: { has: jest.fn().mockReturnValue(false) },
+          add: jest.fn().mockResolvedValue(),
+          remove: jest.fn().mockRejectedValue(new Error('remove fail'))
+        }
+      }
+    });
+
+    await worldcupCommand.execute(interaction);
+    expect(interaction.member.roles.remove).toHaveBeenCalled();
+  });
+
     it('should reply already registered if user has role and in db', async () => {
       mockUtils.isUserRegistered.mockResolvedValueOnce(true);
       const interaction = createMockInteraction({
@@ -643,22 +715,28 @@ describe('worldcup command', () => {
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
-  it('should handle errors via handleError when not deferred', async () => {
+  it('should handle errors via handleError after deferring', async () => {
     mockUtils.getLeaderboard.mockRejectedValue(new Error('fail'));
     const interaction = createMockInteraction({
       client: {},
       options: {
         getSubcommand: jest.fn().mockReturnValue('leaderboard'),
         getInteger: jest.fn().mockReturnValue(null)
-      },
-      deferred: false,
-      replied: false,
-      reply: jest.fn().mockResolvedValue({})
+      }
     });
     await worldcupCommand.execute(interaction);
-    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       content: expect.stringContaining('Something went wrong')
     }));
+  });
+
+  it('should reply via handleError when interaction is not deferred', async () => {
+    const interaction = createMockInteraction({ deferred: false, replied: false });
+    await worldcupCommand.handleError(interaction, new Error('fail'));
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: expect.stringContaining('Something went wrong'),
+      flags: expect.any(Number)
+    });
   });
 
   it('should reply for unknown subcommand', async () => {
@@ -768,6 +846,7 @@ describe('worldcup command', () => {
 
     expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(mockUtils.resetWorldCupGame).toHaveBeenCalled();
+    expect(mockUtils.setPromptingPaused).toHaveBeenCalledWith(false);
     expect(mockScheduler.runWorldCupStartup).toHaveBeenCalledWith(interaction.client);
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
       embeds: expect.arrayContaining([

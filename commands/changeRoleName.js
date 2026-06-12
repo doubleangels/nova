@@ -1,7 +1,9 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getBotMember } = require('../utils/asyncUtils');
+const { validateExistingRoleChange } = require('../utils/roleHierarchyUtils');
 
 /**
  * Command module for changing a role's name.
@@ -53,16 +55,15 @@ module.exports = {
         });
       }
 
-      if (botMember.roles.highest.position <= role.position) {
+      const hierarchy = validateExistingRoleChange({
+        botMember,
+        invokerMember: interaction.member,
+        role,
+        guild: interaction.guild
+      });
+      if (!hierarchy.ok) {
         return await interaction.editReply({
-          content: "⚠️ I can't edit that role. It is above or equal to my highest role.",
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      if (role.managed) {
-        return await interaction.editReply({
-          content: "⚠️ That role is managed by an integration (e.g. bot or Booster) and can't be renamed.",
+          content: hierarchy.message,
           flags: MessageFlags.Ephemeral
         });
       }
@@ -107,8 +108,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(error, interaction) {
-    logger.error('Error in changeRoleName command.', {
-      err: error,
+    logger.error('Error in changeRoleName command.', { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
       channelId: interaction.channel?.id
@@ -124,8 +124,7 @@ module.exports = {
     try {
       await interaction.editReply({ content: message, flags: MessageFlags.Ephemeral });
     } catch (e) {
-      logger.error('Failed to send error reply.', {
-        err: e,
+      logger.error('Failed to send error reply.', { ...serializeError(e, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

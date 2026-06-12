@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -177,8 +178,7 @@ module.exports = {
 
       return books;
     } catch (error) {
-      logger.error("Failed to search for books.", {
-        err: error,
+      logger.error("Failed to search for books.", { ...serializeError(error, { includeStack: true }),
         query
       });
       return null;
@@ -240,8 +240,7 @@ module.exports = {
 
       return [book];
     } catch (error) {
-      logger.error("Failed to search for book by ISBN.", {
-        err: error,
+      logger.error("Failed to search for book by ISBN.", { ...serializeError(error, { includeStack: true }),
         isbn
       });
       return null;
@@ -382,8 +381,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in book command.", {
-      err: error,
+    logger.error("Error occurred in book command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -412,8 +410,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for book command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for book command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

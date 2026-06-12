@@ -129,7 +129,7 @@ describe('muteModeUtils', () => {
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'Failed to send DM to member before mute kick.',
-        expect.objectContaining({ err: expect.any(Error), userTag: mockMember.user.tag })
+        expect.objectContaining({ errorMessage: expect.any(String), userTag: mockMember.user.tag })
       );
       expect(mockMember.kick).toHaveBeenCalled();
     });
@@ -174,7 +174,7 @@ describe('muteModeUtils', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to kick user on reschedule.',
-        expect.objectContaining({ err: expect.any(Error), userId: 'user123' })
+        expect.objectContaining({ errorMessage: expect.any(String), userId: 'user123' })
       );
     });
 
@@ -291,7 +291,7 @@ describe('muteModeUtils', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to kick user after timeout.',
-        expect.objectContaining({ err: expect.any(Error), userId: 'user123' })
+        expect.objectContaining({ errorMessage: expect.any(String), userId: 'user123' })
       );
     });
 
@@ -430,7 +430,7 @@ describe('muteModeUtils', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred while rescheduling mute kicks on startup.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
     });
   });

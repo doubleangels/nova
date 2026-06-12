@@ -1,7 +1,13 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const axios = require('axios');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
+const {
+  truncateEmbedTitle,
+  truncateEmbedDescription,
+  sanitizeEmbedField
+} = require('../utils/embedUtils');
 
 /**
  * Command module for searching word definitions using Free Dictionary API.
@@ -52,13 +58,13 @@ module.exports = {
       const partOfSpeech = meanings ? meanings.partOfSpeech : 'Unknown';
 
       const fields = [
-        { name: 'Phonetic', value: phonetic || 'N/A', inline: true },
-        { name: 'Part of Speech', value: partOfSpeech, inline: true }
+        sanitizeEmbedField({ name: 'Phonetic', value: phonetic || 'N/A', inline: true }),
+        sanitizeEmbedField({ name: 'Part of Speech', value: partOfSpeech, inline: true })
       ];
       const embed = new EmbedBuilder()
         .setColor(0x820627)
-        .setTitle(`Dictionary: ${data.word}`)
-        .setDescription(definition ? definition.definition : 'No definition found.')
+        .setTitle(truncateEmbedTitle(`Dictionary: ${data.word}`))
+        .setDescription(truncateEmbedDescription(definition ? definition.definition : 'No definition found.'))
         .addFields(fields)
         .setFooter({ text: 'Powered by Free Dictionary API' });
 
@@ -79,8 +85,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error('Error occurred in dictionary command.', {
-      err: error,
+    logger.error('Error occurred in dictionary command.', { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -100,8 +105,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
-      logger.error('Failed to send error response for dictionary command.', {
-        err: followUpError,
+      logger.error('Failed to send error response for dictionary command.', { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

@@ -100,6 +100,15 @@ describe('needafriend command', () => {
       }));
     });
 
+    it('should release cooldown when deferReply fails', async () => {
+      const mockInteraction = createMockInteraction();
+      mockInteraction.deferReply.mockRejectedValue(new Error('defer fail'));
+
+      await needafriendCommand.execute(mockInteraction);
+
+      expect(mockReminderUtils.releaseCommandCooldown).toHaveBeenCalledWith('needafriend');
+    });
+
     it('should cover fallback title check when title contains key phrase but is not exact match (line 33)', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.redditApiRequest.mockImplementation(async (method, path) => {

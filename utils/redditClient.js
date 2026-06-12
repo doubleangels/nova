@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const httpClient = require('./httpClient');
 const dayjs = require('dayjs');
 const config = require('../config');
@@ -56,9 +57,8 @@ async function getRedditAccessToken() {
       throw new Error('No access token in Reddit OAuth response');
     } catch (error) {
       logger.error('Failed to get Reddit OAuth token.', {
-        err: error,
-        status: error.response?.status,
-        data: error.response?.data
+        ...serializeError(error, { includeStack: true }),
+        status: error.response?.status
       });
       throw new Error('Failed to authenticate with Reddit API');
     } finally {
@@ -99,11 +99,10 @@ async function redditApiRequest(method, endpoint, data = null, isRetry = false) 
     return response.data;
   } catch (error) {
     logger.error('Reddit API request failed.', {
-      err: error,
+      ...serializeError(error, { includeStack: true }),
       method,
       endpoint,
-      status: error.response?.status,
-      data: error.response?.data
+      status: error.response?.status
     });
 
     if (!isRetry && error.response?.status === 401 && accessToken) {

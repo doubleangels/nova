@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const { getAllMuteModeUsers, getValue, getUserJoinTime, getGuildName } = require('./database');
 const dayjs = require('dayjs');
@@ -57,8 +58,7 @@ async function executeKick(member, userId, context) {
     };
     await member.send({ embeds: [embed] });
   } catch (dmError) {
-    logger.warn('Failed to send DM to member before mute kick.', {
-      err: dmError,
+    logger.warn('Failed to send DM to member before mute kick.', { ...serializeError(dmError, { includeStack: true }),
       userTag: member.user.tag
     });
   }
@@ -101,7 +101,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         }
       }
     } catch (e) {
-      logger.error('Failed to kick user on reschedule.', { err: e, userId });
+      logger.error('Failed to kick user on reschedule.', { ...serializeError(e, { includeStack: true }), userId });
     }
     return;
   }
@@ -133,7 +133,7 @@ async function scheduleMuteKick(userId, joinTime, hours, client, guildId) {
         }
       }
     } catch (e) {
-      logger.error('Failed to kick user after timeout.', { err: e, userId });
+      logger.error('Failed to kick user after timeout.', { ...serializeError(e, { includeStack: true }), userId });
     } finally {
       activeTimeouts.delete(userId);
     }
@@ -189,9 +189,7 @@ async function rescheduleAllMuteKicks(client) {
       );
     }));
   } catch (e) {
-    logger.error('Error occurred while rescheduling mute kicks on startup.', {
-      err: e
-    });
+    logger.error('Error occurred while rescheduling mute kicks on startup.', { ...serializeError(e, { includeStack: true }) });
     throw e;
   }
 }

@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize');
 const {
   ActionRowBuilder,
   ButtonBuilder,
@@ -144,7 +145,7 @@ function createPredictionScheduler(options) {
         );
       }
     } catch (err) {
-      logger.error(`${options.logLabel} scheduler poll failed.`, { err });
+      logger.error(`${options.logLabel} scheduler poll failed.`, serializeError(err, { includeStack: true }));
     } finally {
       pollInFlight = false;
     }
@@ -157,6 +158,12 @@ function createPredictionScheduler(options) {
     if (options.isMockApiEnabled()) {
       await options.resetMockDemoState();
       logger.info(`${options.logLabel} mock demo reset (fresh test match).`);
+    }
+    if (typeof options.store.clearStaleScoringLocks === 'function') {
+      const cleared = options.store.clearStaleScoringLocks();
+      if (cleared > 0) {
+        logger.info(`${options.logLabel} cleared stale scoring locks on startup.`, { cleared });
+      }
     }
     await runPoll(client, { forceRefresh: true });
   }
@@ -189,6 +196,18 @@ function createPredictionScheduler(options) {
     if (pollInterval) {
       clearInterval(pollInterval);
       pollInterval = null;
+    }
+    pollInFlight = false;
+  }
+
+  async function waitForPollDrain(timeoutMs = 30_000) {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+    const deadline = Date.now() + timeoutMs;
+    while (pollInFlight && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     pollInFlight = false;
   }
@@ -250,7 +269,8 @@ function createPredictionScheduler(options) {
     runPoll,
     runStartup,
     startScheduler,
-    stopScheduler
+    stopScheduler,
+    waitForPollDrain
   };
 }
 

@@ -1,10 +1,16 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
+const {
+  truncateEmbedTitle,
+  truncateEmbedDescription,
+  truncateEmbedAuthor
+} = require('../utils/embedUtils');
 
 /**
  * Command module for searching and displaying YouTube content.
@@ -105,8 +111,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in youtube command.", {
-      err: error,
+    logger.error("Error occurred in youtube command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -139,8 +144,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for youtube command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for youtube command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });
@@ -196,8 +200,7 @@ module.exports = {
 
       return results;
     } catch (error) {
-      logger.error("YouTube API search failed.", {
-        err: error,
+      logger.error("YouTube API search failed.", { ...serializeError(error, { includeStack: true }),
         query,
         contentType
       });
@@ -245,9 +248,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich video results.", {
-        err: error
-      });
+      logger.error("Failed to enrich video results.", { ...serializeError(error, { includeStack: true }) });
       return videos;
     }
   },
@@ -291,9 +292,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich channel results.", {
-        err: error
-      });
+      logger.error("Failed to enrich channel results.", { ...serializeError(error, { includeStack: true }) });
       return channels;
     }
   },
@@ -337,9 +336,7 @@ module.exports = {
         };
       });
     } catch (error) {
-      logger.error("Failed to enrich playlist results.", {
-        err: error
-      });
+      logger.error("Failed to enrich playlist results.", { ...serializeError(error, { includeStack: true }) });
       return playlists;
     }
   },
@@ -395,20 +392,16 @@ module.exports = {
     const stats = [viewCount, likeCount].filter(Boolean).join(' • ');
 
     let description = snippet.description || 'No description available';
-    if (description.length > 1024) {
-      description = description.substring(0, 1021) + '...';
-    }
-
     const uploadDate = snippet.publishedAt
       ? `📅 ${dayjs(snippet.publishedAt).format('MM/DD/YYYY')}` : '';
 
     return embed
-      .setTitle(`📺 ${snippet.title}`)
+      .setTitle(truncateEmbedTitle(`📺 ${snippet.title}`))
       .setURL(videoUrl)
-      .setDescription(`${description}\n\n${stats}\n${uploadDate}`)
+      .setDescription(truncateEmbedDescription(`${description}\n\n${stats}\n${uploadDate}`))
       .setImage(thumbnailUrl)
       .setAuthor({
-        name: snippet.channelTitle,
+        name: truncateEmbedAuthor(snippet.channelTitle),
         url: `https://www.youtube.com/channel/${snippet.channelId}`
       });
   },
@@ -436,14 +429,11 @@ module.exports = {
     const stats = [subscriberCount, videoCount].filter(Boolean).join(' • ');
 
     let description = snippet.description || 'No description available';
-    if (description.length > 1024) {
-      description = description.substring(0, 1021) + '...';
-    }
 
     return embed
-      .setTitle(`📺 ${snippet.title}`)
+      .setTitle(truncateEmbedTitle(`📺 ${snippet.title}`))
       .setURL(channelUrl)
-      .setDescription(`${description}\n\n${stats}`)
+      .setDescription(truncateEmbedDescription(`${description}\n\n${stats}`))
       .setThumbnail(thumbnailUrl);
   },
 
@@ -467,17 +457,14 @@ module.exports = {
       `🎬 ${contentDetails.itemCount} videos` : '';
 
     let description = snippet.description || 'No description available';
-    if (description.length > 1024) {
-      description = description.substring(0, 1021) + '...';
-    }
 
     return embed
-      .setTitle(`📺 ${snippet.title}`)
+      .setTitle(truncateEmbedTitle(`📺 ${snippet.title}`))
       .setURL(playlistUrl)
-      .setDescription(`${description}\n\n${itemCount}`)
+      .setDescription(truncateEmbedDescription(`${description}\n\n${itemCount}`))
       .setThumbnail(thumbnailUrl)
       .setAuthor({
-        name: snippet.channelTitle,
+        name: truncateEmbedAuthor(snippet.channelTitle),
         url: `https://www.youtube.com/channel/${snippet.channelId}`
       });
   },

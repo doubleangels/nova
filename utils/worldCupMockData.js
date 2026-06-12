@@ -3,8 +3,10 @@ const dayjs = require('dayjs');
 /** Mock match ID used for the one-game instant demo flow. */
 const MOCK_PLAYABLE_MATCH_IDS = [900001];
 
-/** Stable kickoff for mock fixtures (set once at module load). */
-const MOCK_KICKOFF_ISO = dayjs().add(2, 'hour').toISOString();
+/** Kickoff for mock fixtures (refreshed on each build). */
+function getMockKickoffIso() {
+  return dayjs().add(2, 'hour').toISOString();
+}
 
 /**
  * Full-time score applied once at least one prediction exists for the fixture.
@@ -23,7 +25,7 @@ function buildMockMatches() {
   return [
     {
       id: 900001,
-      utcDate: MOCK_KICKOFF_ISO,
+      utcDate: getMockKickoffIso(),
       status: 'TIMED',
       homeTeam: { name: 'Brazil', tla: 'BRA', area: { code: 'BRA' } },
       awayTeam: { name: 'Argentina', tla: 'ARG', area: { code: 'ARG' } },

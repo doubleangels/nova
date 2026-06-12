@@ -131,7 +131,7 @@ describe('Mute Mode Lifecycle Integration', () => {
     await guildMemberAddEvent.execute(mockMember);
 
     // Verify user added to database and mute kick scheduled
-    expect(mockDatabase.addMuteModeUser).toHaveBeenCalledWith('new-user-123', 'NewUser#1234');
+    expect(mockDatabase.addMuteModeUser).toHaveBeenCalledWith('new-user-123', 'NewUser#1234', mockMember.joinedAt);
     expect(mockMuteModeUtils.scheduleMuteKick).toHaveBeenCalledWith(
       'new-user-123',
       mockMember.joinedAt,

@@ -1,4 +1,5 @@
 const { Events, EmbedBuilder } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
@@ -60,7 +61,7 @@ module.exports = {
       ]);
 
       if (muteModeEnabled) {
-        await addMuteModeUser(member.id, member.user.tag);
+        await addMuteModeUser(member.id, member.user.tag, member.joinedAt);
         const muteKickTime = parseInt(muteKickTimeValue, 10) || 4;
         await scheduleMuteKick(
           member.id,
@@ -77,7 +78,7 @@ module.exports = {
         if (returning) {
           await member.roles.add(config.returningMemberRoleId).catch(err => {
             logger.warn('Could not add been-in-server-before role on re-join.', {
-              err: err.message,
+              ...serializeError(err, { includeStack: true }),
               guildId: member.guild?.id,
               userId: member.id,
               roleId: config.returningMemberRoleId
@@ -93,7 +94,7 @@ module.exports = {
         if (!hasFrenRole) {
           await member.roles.add(config.newMemberRoleId, 'Assigned Noobies role on join (< 100 messages, no Fren role)').catch(err => {
             logger.warn('Could not add Noobies role on join.', {
-              err: err.message,
+              ...serializeError(err, { includeStack: true }),
               guildId: member.guild?.id,
               userId: member.id,
               roleId: config.newMemberRoleId
@@ -113,8 +114,7 @@ module.exports = {
       captureError(error, { event: 'guildMemberAdd' });
       // Do not rethrow — event handlers have no caller to receive the error.
       // Rethrowing here causes an unhandled promise rejection.
-      logger.error('Error occurred while processing new member.', {
-        err: error,
+      logger.error('Error occurred while processing new member.', { ...serializeError(error, { includeStack: true }),
         userId: member.user.id
       });
     }
@@ -170,8 +170,7 @@ module.exports = {
             channelId: notificationChannel.id
           });
         } catch (fetchError) {
-          logger.error('Failed to fetch notification channel from API.', {
-            err: fetchError,
+          logger.error('Failed to fetch notification channel from API.', { ...serializeError(fetchError, { includeStack: true }),
             channelId: notificationChannelId
           });
           return;
@@ -252,9 +251,7 @@ module.exports = {
           });
         } catch (error) {
           captureError(error, { event: 'guildMemberAdd', handler: 'fetchInvites' });
-          logger.error('Failed to fetch invites from guild.', {
-            err: error
-          });
+          logger.error('Failed to fetch invites from guild.', { ...serializeError(error, { includeStack: true }) });
           return;
         }
 
@@ -314,8 +311,7 @@ module.exports = {
         });
 
         await setInviteUsage(member.guild.id, currentUsage).catch((err) => {
-          logger.error('Failed to update invite usage tracking.', {
-            err: err,
+          logger.error('Failed to update invite usage tracking.', { ...serializeError(err, { includeStack: true }),
             guildId: member.guild?.id
           });
         });
@@ -364,8 +360,7 @@ module.exports = {
                   messageId: sentMessage.id
                 });
               } catch (sendError) {
-                logger.error('Failed to send notification to channel.', {
-                  err: sendError,
+                logger.error('Failed to send notification to channel.', { ...serializeError(sendError, { includeStack: true }),
                   channelId: notificationChannel.id,
                   channelName: notificationChannel.name,
                   guildId: member.guild?.id
@@ -384,8 +379,7 @@ module.exports = {
       }
     } catch (error) {
       captureError(error, { event: 'guildMemberAdd', handler: 'checkTaggedInvite' });
-      logger.error('Error occurred while checking tagged invite.', {
-        err: error,
+      logger.error('Error occurred while checking tagged invite.', { ...serializeError(error, { includeStack: true }),
         userId: member.user.id,
         guildId: member.guild?.id
       });

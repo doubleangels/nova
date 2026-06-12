@@ -33,7 +33,8 @@ describe('changeNickname command', () => {
             toString: () => '<@target-user-id>'
           }),
           getString: jest.fn().mockReturnValue('New Nick')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       const mockMember = {
@@ -41,7 +42,7 @@ describe('changeNickname command', () => {
         manageable: true,
         setNickname: jest.fn().mockResolvedValue(),
         roles: {
-          highest: { color: 0x990000 }
+          highest: { color: 0x990000, position: 5 }
         }
       };
 
@@ -83,7 +84,8 @@ describe('changeNickname command', () => {
             toString: () => '<@target-user-id-2>'
           }),
           getString: jest.fn().mockReturnValue(null) // Reset nickname
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       const mockMember = {
@@ -91,7 +93,7 @@ describe('changeNickname command', () => {
         manageable: true,
         setNickname: jest.fn().mockResolvedValue(),
         roles: {
-          highest: { color: 0 } // fallback color
+          highest: { color: 0, position: 5 } // fallback color
         }
       };
 
@@ -148,7 +150,7 @@ describe('changeNickname command', () => {
         }
       });
 
-      const mockMember = { manageable: true };
+      const mockMember = { manageable: true, roles: { highest: { position: 5 } } };
 
       mockInteraction.guild = {
         members: {
@@ -173,10 +175,11 @@ describe('changeNickname command', () => {
         options: {
           getUser: jest.fn().mockReturnValue({ id: 'user-id', username: 'targetuser' }),
           getString: jest.fn().mockReturnValue('New Nick')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
-      const mockMember = { manageable: false };
+      const mockMember = { manageable: false, roles: { highest: { position: 5 } } };
 
       mockInteraction.guild = {
         members: {
@@ -196,15 +199,46 @@ describe('changeNickname command', () => {
       }));
     });
 
+    it('should catch INVOKER_HIERARCHY error when invoker cannot moderate the member', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getUser: jest.fn().mockReturnValue({ id: 'user-id', username: 'targetuser' }),
+          getString: jest.fn().mockReturnValue('New Nick')
+        },
+        member: { roles: { highest: { position: 5 } } }
+      });
+
+      const mockMember = { manageable: true, roles: { highest: { position: 20 } } };
+
+      mockInteraction.guild = {
+        ownerId: 'owner-id',
+        members: {
+          cache: { get: () => mockMember },
+          me: {
+            permissions: {
+              has: jest.fn().mockReturnValue(true)
+            }
+          }
+        }
+      };
+
+      await changeNicknameCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ You cannot manage this member (role hierarchy).'
+      }));
+    });
+
     it('should catch INVALID_NICKNAME_LENGTH error if new nickname length is too long', async () => {
       const mockInteraction = createMockInteraction({
         options: {
           getUser: jest.fn().mockReturnValue({ id: 'user-id', username: 'targetuser' }),
           getString: jest.fn().mockReturnValue('A'.repeat(33)) // Length 33
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
-      const mockMember = { manageable: true };
+      const mockMember = { manageable: true, roles: { highest: { position: 5 } } };
 
       mockInteraction.guild = {
         members: {
@@ -229,12 +263,14 @@ describe('changeNickname command', () => {
         options: {
           getUser: jest.fn().mockReturnValue({ id: 'user-id', username: 'targetuser' }),
           getString: jest.fn().mockReturnValue('New Nick')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       const mockMember = {
         manageable: true,
-        setNickname: jest.fn().mockRejectedValue(new Error('Discord API error'))
+        setNickname: jest.fn().mockRejectedValue(new Error('Discord API error')),
+        roles: { highest: { position: 5 } }
       };
 
       mockInteraction.guild = {
@@ -261,12 +297,14 @@ describe('changeNickname command', () => {
         options: {
           getUser: jest.fn().mockReturnValue({ id: 'user-id', username: 'targetuser' }),
           getString: jest.fn().mockReturnValue('New Nick')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       const mockMember = {
         manageable: true,
-        setNickname: jest.fn().mockRejectedValue(new Error('Discord API error'))
+        setNickname: jest.fn().mockRejectedValue(new Error('Discord API error')),
+        roles: { highest: { position: 5 } }
       };
 
       mockInteraction.guild = {
@@ -295,12 +333,14 @@ describe('changeNickname command', () => {
         options: {
           getUser: jest.fn().mockReturnValue({ id: 'user-id', username: 'targetuser' }),
           getString: jest.fn().mockReturnValue('New Nick')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       const mockMember = {
         manageable: true,
-        setNickname: jest.fn().mockRejectedValue(new Error('Discord API error'))
+        setNickname: jest.fn().mockRejectedValue(new Error('Discord API error')),
+        roles: { highest: { position: 5 } }
       };
 
       mockInteraction.guild = {

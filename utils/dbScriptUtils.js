@@ -8,8 +8,16 @@ const fs = require('fs');
 const { getSharedKeyvStore, sqlitePath, dataDir } = require('./sqliteStore');
 
 // Configuration constants
-const NAMESPACES = ['main', 'invites'];
-const KNOWN_SECTIONS = ['config:', 'tags:', 'invite_usage:', 'invite_code_to_tag_map:', 'former_member:'];
+const NAMESPACES = ['main', 'invites', 'worldcup', 'football', 'nova_reminders'];
+const KNOWN_SECTIONS = [
+  'config:',
+  'tags:',
+  'invite_usage:',
+  'invite_code_to_tag_map:',
+  'former_member:',
+  'mute_mode:',
+  'spam_mode:'
+];
 
 /** @type {Map<string, import('keyv')>} */
 const keyvInstanceCache = new Map();

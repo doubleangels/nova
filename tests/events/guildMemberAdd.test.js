@@ -120,7 +120,7 @@ describe('guildMemberAdd event', () => {
 
       await guildMemberAddEvent.execute(mockMember);
 
-      expect(mockDatabase.addMuteModeUser).toHaveBeenCalledWith('user-123', 'User#1234');
+      expect(mockDatabase.addMuteModeUser).toHaveBeenCalledWith('user-123', 'User#1234', mockMember.joinedAt);
       expect(mockDatabase.addSpamModeJoinTime).toHaveBeenCalledWith('user-123', 'User#1234', mockMember.joinedAt);
       expect(mockMuteModeUtils.scheduleMuteKick).toHaveBeenCalledWith(
         'user-123',

@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const NodeCache = require('node-cache');
@@ -46,8 +47,7 @@ async function getGeocodingInfo(location) {
 
         return result;
     } catch (error) {
-        logger.error("Error occurred while getting geocoding info.", {
-            err: error,
+        logger.error("Error occurred while getting geocoding info.", { ...serializeError(error, { includeStack: true }),
             location
         });
         throw error;
@@ -102,8 +102,7 @@ async function getTimezoneInfo(lat, lng) {
 
         return result;
     } catch (error) {
-        logger.error("Error occurred while getting timezone info.", {
-            err: error,
+        logger.error("Error occurred while getting timezone info.", { ...serializeError(error, { includeStack: true }),
             lat,
             lng
         });
@@ -168,8 +167,7 @@ async function getUtcOffset(location) {
             error: false
         };
     } catch (error) {
-        logger.error("Error occurred while getting UTC offset.", {
-            err: error,
+        logger.error("Error occurred while getting UTC offset.", { ...serializeError(error, { includeStack: true }),
             location
         });
         return {
@@ -222,8 +220,7 @@ async function getGeocodingData(place) {
             formattedAddress: geocodingInfo.formatted_address
         };
     } catch (error) {
-        logger.error("Error occurred while getting geocoding data.", {
-            err: error,
+        logger.error("Error occurred while getting geocoding data.", { ...serializeError(error, { includeStack: true }),
             place
         });
         return {
@@ -246,8 +243,7 @@ async function getTimezoneData(location) {
             timezoneId: timezoneInfo.timeZoneId
         };
     } catch (error) {
-        logger.error("Error occurred while getting timezone data.", {
-            err: error,
+        logger.error("Error occurred while getting timezone data.", { ...serializeError(error, { includeStack: true }),
             location
         });
         return {

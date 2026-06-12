@@ -1,4 +1,5 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -105,8 +106,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error occurred in mock context menu command.", {
-            err: error,
+        logger.error("Error occurred in mock context menu command.", { ...serializeError(error, { includeStack: true }),
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             targetMessageId: interaction.targetMessage?.id
@@ -130,8 +130,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for mock command.", {
-                err: followUpError,
+            logger.error("Failed to send error response for mock command.", { ...serializeError(followUpError, { includeStack: true }),
                 originalError: error.message,
                 userId: interaction.user?.id
             });

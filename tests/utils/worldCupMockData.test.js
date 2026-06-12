@@ -31,9 +31,12 @@ describe('worldCupMockData', () => {
     expect(mockData.getMockMatchById(999999)).toBeNull();
   });
 
-  it('should use a stable kickoff across repeated mock builds', () => {
+  it('should use a fresh kickoff on each mock build', () => {
+    jest.useFakeTimers();
     const first = mockData.buildMockMatches()[0].utcDate;
+    jest.advanceTimersByTime(60_000);
     const second = mockData.buildMockMatches()[0].utcDate;
-    expect(first).toBe(second);
+    expect(second).not.toBe(first);
+    jest.useRealTimers();
   });
 });

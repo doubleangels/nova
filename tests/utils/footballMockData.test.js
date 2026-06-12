@@ -33,4 +33,13 @@ describe('footballMockData', () => {
     expect(mockData.getMockMatchById(910001)).toHaveProperty('id', 910001);
     expect(mockData.getMockMatchById(123)).toBeNull();
   });
+
+  it('should refresh kickoff on each mock build', () => {
+    jest.useFakeTimers();
+    const first = mockData.buildMockMatches()[0].utcDate;
+    jest.advanceTimersByTime(60_000);
+    const second = mockData.buildMockMatches()[0].utcDate;
+    expect(second).not.toBe(first);
+    jest.useRealTimers();
+  });
 });

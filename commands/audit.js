@@ -1,8 +1,10 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags, ButtonStyle } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { createPaginatedResults } = require('../utils/searchUtils');
+const { truncateEmbedField } = require('../utils/embedUtils');
 
 const PERMISSION_LABELS = [
   { bit: PermissionFlagsBits.Administrator, label: 'Administrator' },
@@ -26,7 +28,7 @@ function formatLine(member, showPerms, excludePowerPerms = false) {
   const boldName = `**${name}**`;
 
   if (!showPerms) {
-    return boldName;
+    return truncateEmbedField(boldName);
   }
 
   const memberPermLabels = PERMISSION_LABELS
@@ -41,7 +43,7 @@ function formatLine(member, showPerms, excludePowerPerms = false) {
     ? memberPermLabels.join(', ')
     : 'None';
 
-  return `${boldName} — ${permsText}`;
+  return truncateEmbedField(`${boldName} — ${permsText}`);
 }
 
 function buildPages(membersList, showPerms, excludePowerPerms = false) {
@@ -70,7 +72,7 @@ function buildPages(membersList, showPerms, excludePowerPerms = false) {
   for (const line of lines) {
     const extraLength = (currentLines.length > 0 ? 1 : 0) + line.length;
 
-    if (currentLines.length >= 25 || currentLength + extraLength > 900) {
+    if (currentLines.length >= 25 || currentLength + extraLength > 1024) {
       pages.push(currentLines.join('\n'));
       currentLines = [line];
       currentLength = line.length;
@@ -247,7 +249,7 @@ module.exports = {
           .setDescription(description)
           .addFields({
             name: 'Members',
-            value: pages[index]
+            value: truncateEmbedField(pages[index])
           });
       };
 
@@ -283,8 +285,7 @@ module.exports = {
         banCount: banMembers.length
       });
     } catch (error) {
-      logger.error('Error in audit command.', {
-        err: error,
+      logger.error('Error in audit command.', { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         guildId: interaction.guild?.id,
         channelId: interaction.channel?.id
@@ -303,8 +304,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral
         });
       } catch (replyError) {
-        logger.error('Failed to send error reply for audit command.', {
-          err: replyError,
+        logger.error('Failed to send error reply for audit command.', { ...serializeError(replyError, { includeStack: true }),
           originalError: error.message,
           userId: interaction.user?.id
         });

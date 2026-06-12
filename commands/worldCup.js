@@ -4,6 +4,7 @@ const {
   MessageFlags,
   PermissionFlagsBits
 } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const config = require('../config');
 const logger = require('../logger')(path.basename(__filename));
@@ -195,6 +196,14 @@ module.exports = {
       return;
     }
 
+    if (interaction.user.bot) {
+      await interaction.reply({
+        content: '⚠️ Bots cannot register for the prediction game.',
+        flags: MessageFlags.Ephemeral
+      });
+      return;
+    }
+
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const inWorldCup = await isUserRegistered(interaction.user.id);
@@ -252,8 +261,13 @@ module.exports = {
       return;
     }
 
-    await addRegisteredUser(interaction.user.id);
     await interaction.member.roles.add(role, 'Prediction game registration');
+    try {
+      await addRegisteredUser(interaction.user.id);
+    } catch (registerError) {
+      await interaction.member.roles.remove(role, 'Prediction registration rollback').catch(() => {});
+      throw registerError;
+    }
 
     const channelRef = config.worldCupChannelId
       ? `<#${config.worldCupChannelId}>`
@@ -479,6 +493,8 @@ module.exports = {
 
     if (!repost) {
       await setPromptingPaused(true);
+    } else {
+      await setPromptingPaused(false);
     }
 
     let repostSucceeded = false;
@@ -524,8 +540,7 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logger.error('Error in worldcup command.', {
-      err: error,
+    logger.error('Error in worldcup command.', { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       subcommand: interaction.options?.getSubcommand?.()
     });
@@ -538,7 +553,7 @@ module.exports = {
         await interaction.reply({ content: message, flags: MessageFlags.Ephemeral });
       }
     } catch (followUpError) {
-      logger.error('Failed to send worldcup error reply.', { err: followUpError });
+      logger.error('Failed to send worldcup error reply.', { ...serializeError(followUpError, { includeStack: true }) });
     }
   },
 

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, EmbedBuilder } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -84,7 +85,7 @@ module.exports = {
         try {
           await setValue('notext_channel', channel.id);
         } catch (error) {
-          logger.error("Failed to save no-text channel configuration.", { err: error });
+          logger.error("Failed to save no-text channel configuration.", { ...serializeError(error, { includeStack: true }) });
           return await interaction.editReply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
@@ -120,7 +121,7 @@ module.exports = {
         try {
           await setValue('notext_channel', null);
         } catch (error) {
-          logger.error("Failed to remove no-text channel configuration.", { err: error });
+          logger.error("Failed to remove no-text channel configuration.", { ...serializeError(error, { includeStack: true }) });
           return await interaction.editReply({
             content: "⚠️ Failed to save channel configuration. Please try again later.",
             flags: MessageFlags.Ephemeral
@@ -146,7 +147,7 @@ module.exports = {
       }
 
     } catch (error) {
-      logger.error("Error occurred in notext command.", { err: error });
+      logger.error("Error occurred in notext command.", { ...serializeError(error, { includeStack: true }) });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred while configuring the channel. Please try again later.",
         flags: MessageFlags.Ephemeral

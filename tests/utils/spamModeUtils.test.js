@@ -643,7 +643,7 @@ describe('spamModeUtils', () => {
       await spamModeUtils.trackNewUserMessage(mockMessage);
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred while tracking new user message for spam mode.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
     });
 
@@ -844,7 +844,7 @@ describe('spamModeUtils', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred while posting spam warning.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
     });
 
@@ -904,7 +904,7 @@ describe('spamModeUtils', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred while timing out user.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
     });
 

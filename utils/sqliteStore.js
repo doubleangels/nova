@@ -37,6 +37,7 @@ function getWritableDb() {
     const Database = require('better-sqlite3');
     writableDb = new Database(sqlitePath);
     writableDb.pragma('busy_timeout = 10000');
+    writableDb.pragma('journal_mode = WAL');
   }
   return writableDb;
 }

@@ -204,7 +204,7 @@ describe('redditClient', () => {
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to get Reddit OAuth token.',
         expect.objectContaining({
-          err: expect.any(Error)
+          errorMessage: expect.any(String)
         })
       );
     });

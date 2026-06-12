@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('../utils/logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const { removeMuteModeUser, removeSpamModeJoinTime, setFormerMember, deleteMessageCount } = require('../utils/database');
@@ -46,15 +47,23 @@ module.exports = {
           userTag: member.user.tag
         });
       }
-      await Promise.all(departureTasks);
+      const results = await Promise.allSettled(departureTasks);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          captureError(result.reason, { event: 'guildMemberRemove', handler: 'departureCleanup' });
+          logger.error('Error occurred while processing member leave cleanup task.', {
+            ...serializeError(result.reason, { includeStack: true }),
+            userId: member.id
+          });
+        }
+      }
 
       logger.info('Successfully processed member departure.', {
         userTag: member.user.tag
       });
     } catch (error) {
       captureError(error, { event: 'guildMemberRemove' });
-      logger.error('Error occurred while processing member leave.', {
-        err: error,
+      logger.error('Error occurred while processing member leave.', { ...serializeError(error, { includeStack: true }),
         userId: member.user?.id
       });
       // Log only; do not rethrow so the event handler does not propagate the error

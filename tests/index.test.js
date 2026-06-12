@@ -36,8 +36,14 @@ describe('index bootstrap', () => {
     jest.doMock('../logger', () => () => mockLogger);
     jest.doMock('../instrument', () => ({ captureError, closeSentry }));
     jest.doMock('../utils/database', () => ({ closeDatabaseConnections }));
-    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler: jest.fn() }));
-    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler: jest.fn() }));
+    jest.doMock('../utils/worldCupScheduler', () => ({
+      stopWorldCupScheduler: jest.fn(),
+      waitForWorldCupPollDrain: jest.fn().mockResolvedValue(undefined)
+    }));
+    jest.doMock('../utils/footballScheduler', () => ({
+      stopFootballScheduler: jest.fn(),
+      waitForFootballPollDrain: jest.fn().mockResolvedValue(undefined)
+    }));
     jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
     jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
     jest.doMock('../deploy-commands', () => deployCommands);
@@ -106,15 +112,14 @@ describe('index bootstrap', () => {
     expect(mockClient.on).toHaveBeenCalledWith('okEvent', expect.any(Function));
     expect(deployCommands).toHaveBeenCalled();
     expect(mockLogger.info).toHaveBeenCalledWith(
-      expect.stringContaining('Base embed color was loaded'),
-      expect.any(Object)
+      expect.stringContaining('Base embed color was loaded')
     );
   });
 
   it('should skip loading disabled commands', () => {
     loadIndex({ settings: { disabledCommands: ['okCmd'] } });
     expect(mockClient.commands.get('okCmd')).toBeUndefined();
-    expect(mockLogger.info).toHaveBeenCalledWith('Skipping disabled command okCmd.');
+    expect(mockLogger.info).toHaveBeenCalledWith('Skipping disabled command.', { command: 'okCmd' });
   });
 
   it('should exit when login fails', async () => {
@@ -138,8 +143,14 @@ describe('index bootstrap', () => {
     jest.doMock('../logger', () => () => mockLogger);
     jest.doMock('../instrument', () => ({ captureError, closeSentry }));
     jest.doMock('../utils/database', () => ({ closeDatabaseConnections: jest.fn() }));
-    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler: jest.fn() }));
-    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler: jest.fn() }));
+    jest.doMock('../utils/worldCupScheduler', () => ({
+      stopWorldCupScheduler: jest.fn(),
+      waitForWorldCupPollDrain: jest.fn().mockResolvedValue(undefined)
+    }));
+    jest.doMock('../utils/footballScheduler', () => ({
+      stopFootballScheduler: jest.fn(),
+      waitForFootballPollDrain: jest.fn().mockResolvedValue(undefined)
+    }));
     jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
     jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
     jest.doMock('../deploy-commands', () => jest.fn().mockResolvedValue());
@@ -208,7 +219,7 @@ describe('index bootstrap', () => {
     await Promise.resolve();
     expect(mockLogger.error).toHaveBeenCalledWith(
       'Failed to deploy slash commands on startup.',
-      { err: expect.any(Error) }
+      expect.objectContaining({ errorMessage: expect.any(String) })
     );
   });
 
@@ -360,7 +371,9 @@ describe('index bootstrap', () => {
 
   it('should gracefully shuts down on SIGINT', async () => {
     const stopWorldCupScheduler = jest.fn();
+    const waitForWorldCupPollDrain = jest.fn().mockResolvedValue(undefined);
     const stopFootballScheduler = jest.fn();
+    const waitForFootballPollDrain = jest.fn().mockResolvedValue(undefined);
     const clearAllScheduledMuteKicks = jest.fn();
     const cancelAllReminderTimeouts = jest.fn();
     jest.resetModules();
@@ -385,8 +398,8 @@ describe('index bootstrap', () => {
     jest.doMock('../logger', () => () => mockLogger);
     jest.doMock('../instrument', () => ({ captureError, closeSentry }));
     jest.doMock('../utils/database', () => ({ closeDatabaseConnections }));
-    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler }));
-    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler }));
+    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler, waitForWorldCupPollDrain }));
+    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler, waitForFootballPollDrain }));
     jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks }));
     jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts }));
     jest.doMock('../deploy-commands', () => deployCommands);
@@ -430,13 +443,77 @@ describe('index bootstrap', () => {
     mockClient.heartbeatInterval = setInterval(() => {}, 1000);
     await processOnHandlers.SIGINT();
     expect(stopWorldCupScheduler).toHaveBeenCalled();
+    expect(waitForWorldCupPollDrain).toHaveBeenCalled();
     expect(stopFootballScheduler).toHaveBeenCalled();
+    expect(waitForFootballPollDrain).toHaveBeenCalled();
     expect(clearAllScheduledMuteKicks).toHaveBeenCalled();
     expect(cancelAllReminderTimeouts).toHaveBeenCalled();
     expect(mockClient.destroy).toHaveBeenCalled();
     expect(closeDatabaseConnections).toHaveBeenCalled();
     expect(closeSentry).toHaveBeenCalled();
     expect(process.exit).toHaveBeenCalledWith(0);
+  });
+
+  it('should ignore duplicate shutdown signals while shutdown is in progress', async () => {
+    const stopWorldCupScheduler = jest.fn();
+    const waitForWorldCupPollDrain = jest.fn().mockImplementation(() => new Promise(() => {}));
+    const stopFootballScheduler = jest.fn();
+    const waitForFootballPollDrain = jest.fn().mockResolvedValue(undefined);
+    jest.resetModules();
+    processOnHandlers = {};
+    mockLogger = require('./__mocks__/logger.mock')();
+    closeSentry = jest.fn().mockResolvedValue();
+    closeDatabaseConnections = jest.fn();
+    jest.spyOn(process, 'on').mockImplementation((event, handler) => {
+      processOnHandlers[event] = handler;
+      return process;
+    });
+    mockClient = {
+      commands: new Map(),
+      on: jest.fn(),
+      once: jest.fn(),
+      login: jest.fn().mockResolvedValue(),
+      destroy: jest.fn(),
+      cleanupInterval: null
+    };
+    jest.doMock('../logger', () => () => mockLogger);
+    jest.doMock('../instrument', () => ({ captureError: jest.fn(), closeSentry }));
+    jest.doMock('../utils/database', () => ({ closeDatabaseConnections }));
+    jest.doMock('../utils/worldCupScheduler', () => ({ stopWorldCupScheduler, waitForWorldCupPollDrain }));
+    jest.doMock('../utils/footballScheduler', () => ({ stopFootballScheduler, waitForFootballPollDrain }));
+    jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
+    jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
+    jest.doMock('../deploy-commands', () => jest.fn().mockResolvedValue());
+    jest.doMock('../config', () => ({
+      token: 'test-token',
+      settings: { deployCommandsOnStart: false }
+    }));
+    jest.doMock('discord.js', () => ({
+      Client: jest.fn(() => mockClient),
+      Collection: Map,
+      GatewayIntentBits: { Guilds: 1, GuildMessages: 2, MessageContent: 4, GuildMembers: 8, GuildMessageReactions: 16 },
+      Options: { cacheWithLimits: jest.fn(() => ({})) }
+    }));
+    jest.doMock('fs', () => ({
+      readdirSync: jest.fn((dir) => {
+        if (String(dir).includes('commands')) return ['okCmd.js'];
+        if (String(dir).includes('events')) return ['okEvent.js'];
+        return [];
+      })
+    }));
+    jest.doMock(path.join(__dirname, '../commands/okCmd.js'), () => ({ data: { name: 'okCmd' } }), { virtual: true });
+    jest.doMock(path.join(__dirname, '../events/okEvent.js'), () => ({
+      name: 'okEvent',
+      once: false,
+      execute: jest.fn().mockResolvedValue()
+    }), { virtual: true });
+    jest.isolateModules(() => {
+      require('../index');
+    });
+
+    void processOnHandlers.SIGINT();
+    await processOnHandlers.SIGINT();
+    expect(stopWorldCupScheduler).toHaveBeenCalledTimes(1);
   });
 
   it('should log errors during graceful shutdown', async () => {

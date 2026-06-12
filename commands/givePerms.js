@@ -1,9 +1,15 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { validateAndNormalizeColor, hexToDecimal } = require('../utils/colorUtils');
 const { getBotMember } = require('../utils/asyncUtils');
+const {
+    canInvokerManageRole,
+    canInvokerManageRolePosition,
+    canInvokerModerateMember
+} = require('../utils/roleHierarchyUtils');
 
 /**
  * @typedef {Object} ValidationResult
@@ -243,7 +249,44 @@ module.exports = {
         }
         
         const botMember = await getBotMember(interaction);
+        const invokerMember = interaction.member;
+        if (!invokerMember) {
+            return {
+                success: false,
+                message: '⚠️ Could not verify your member permissions in this server.'
+            };
+        }
+
+        if (!canInvokerModerateMember(invokerMember, targetMember, interaction.guild)) {
+            return {
+                success: false,
+                message: '⚠️ You cannot manage this member (role hierarchy).'
+            };
+        }
+
+        if (!canInvokerManageRole(invokerMember, positionRole, interaction.guild)) {
+            return {
+                success: false,
+                message: '⚠️ You cannot manage a role that is above or equal to your highest role.'
+            };
+        }
+
+        if (!canInvokerManageRole(invokerMember, additionalRole, interaction.guild)) {
+            return {
+                success: false,
+                message: '⚠️ You cannot manage a role that is above or equal to your highest role.'
+            };
+        }
+
         const newRolePosition = positionRole.position + 1;
+
+        if (!canInvokerManageRolePosition(invokerMember, newRolePosition, interaction.guild)) {
+            return {
+                success: false,
+                message: '⚠️ You cannot create a role above or equal to your highest role.'
+            };
+        }
+
         // Bot can only assign roles that are below its highest role; new role must be strictly below bot.
         if (botMember.roles.highest.position <= newRolePosition) {
             logger.warn("Bot's highest role is not high enough to create and assign a role above the reference role.", {
@@ -280,8 +323,7 @@ module.exports = {
         try {
             await targetMember.roles.add([newRole.id, additionalRole.id], auditReason);
         } catch (assignError) {
-            logger.error("Failed to assign roles to member; deleting created role.", {
-                err: assignError,
+            logger.error("Failed to assign roles to member; deleting created role.", { ...serializeError(assignError, { includeStack: true }),
                 newRoleId: newRole.id,
                 targetUserId: targetMember.id
             });
@@ -311,8 +353,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error occurred in giveperms command.", {
-            err: error,
+        logger.error("Error occurred in giveperms command.", { ...serializeError(error, { includeStack: true }),
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             channelId: interaction.channel?.id
@@ -338,8 +379,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for giveperms command.", {
-                err: followUpError,
+            logger.error("Failed to send error response for giveperms command.", { ...serializeError(followUpError, { includeStack: true }),
                 originalError: error.message,
                 userId: interaction.user?.id
             });

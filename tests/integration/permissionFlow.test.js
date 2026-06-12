@@ -35,12 +35,14 @@ describe('Permission and Role Assignment Flow Integration', () => {
       id: 'target-user-id',
       user: { tag: 'Member#1234' },
       roles: {
+        highest: { position: 3 },
         add: jest.fn().mockResolvedValue()
       }
     };
 
     const mockInteraction = {
       user: { id: 'admin-user-id', tag: 'Admin#0001' },
+      member: { roles: { highest: { position: 20 } } },
       guildId: 'guild-123',
       deferReply: jest.fn().mockResolvedValue(),
       editReply: jest.fn().mockResolvedValue(),
@@ -94,11 +96,13 @@ describe('Permission and Role Assignment Flow Integration', () => {
 
     const mockTargetMember = {
       id: 'target-user-id',
-      user: { tag: 'Member#1234' }
+      user: { tag: 'Member#1234' },
+      roles: { highest: { position: 3 } }
     };
 
     const mockInteraction = {
       user: { id: 'admin-user-id', tag: 'Admin#0001' },
+      member: { roles: { highest: { position: 20 } } },
       guildId: 'guild-123',
       deferReply: jest.fn().mockResolvedValue(),
       editReply: jest.fn().mockResolvedValue(),

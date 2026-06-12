@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const httpClient = require('../utils/httpClient');
@@ -94,8 +95,7 @@ module.exports = {
   },
 
   async handleError(interaction, error) {
-    logger.error("Error occurred in wikipedia command.", {
-      err: error,
+    logger.error("Error occurred in wikipedia command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -128,8 +128,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for wikipedia command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for wikipedia command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

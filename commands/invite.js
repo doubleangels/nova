@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ChannelType, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
@@ -226,8 +227,7 @@ module.exports = {
           await interaction.editReply({ embeds: [embed] });
           return;
         }
-        logger.warn('Failed to validate invite existence, proceeding anyway.', {
-          err: fetchError,
+        logger.warn('Failed to validate invite existence, proceeding anyway.', { ...serializeError(fetchError, { includeStack: true }),
           code: cleanCode
         });
       }
@@ -589,8 +589,7 @@ module.exports = {
       });
 
     } catch (error) {
-      logger.error("Error occurred while creating invite.", {
-        err: error,
+      logger.error("Error occurred while creating invite.", { ...serializeError(error, { includeStack: true }),
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -658,8 +657,7 @@ module.exports = {
             });
           }
         } catch (deleteError) {
-          logger.warn('Failed to delete invite from Discord.', {
-            err: deleteError,
+          logger.warn('Failed to delete invite from Discord.', { ...serializeError(deleteError, { includeStack: true }),
             inviteCode: inviteTag.code
           });
         }
@@ -703,8 +701,7 @@ module.exports = {
       });
 
     } catch (error) {
-      logger.error("Error occurred while removing invite tag.", {
-        err: error,
+      logger.error("Error occurred while removing invite tag.", { ...serializeError(error, { includeStack: true }),
         userId: interaction.user.id,
         guildId: interaction.guildId,
         tagName
@@ -749,9 +746,7 @@ module.exports = {
 
         await interaction.respond(filtered);
       } catch (error) {
-        logger.error("Error occurred in autocomplete.", {
-          err: error
-        });
+        logger.error("Error occurred in autocomplete.", { ...serializeError(error, { includeStack: true }) });
         await interaction.respond([]);
       }
     }
@@ -765,8 +760,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in invite command.", {
-      err: error,
+    logger.error("Error occurred in invite command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -785,8 +779,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for invite command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for invite command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

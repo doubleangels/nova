@@ -25,7 +25,7 @@ describe('worldCupUtils', () => {
     utils.worldCupKeyv.emit('error', new Error('keyv fail'));
     expect(mockLogger.error).toHaveBeenCalledWith(
       'World Cup Keyv connection error.',
-      expect.objectContaining({ err: expect.any(Error) })
+      expect.objectContaining({ errorMessage: expect.any(String) })
     );
   });
 

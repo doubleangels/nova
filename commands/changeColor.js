@@ -1,9 +1,11 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { validateAndNormalizeColor } = require('../utils/colorUtils');
 const config = require('../config');
 const { getBotMember } = require('../utils/asyncUtils');
+const { validateExistingRoleChange } = require('../utils/roleHierarchyUtils');
 
 /**
  * Command module for changing role colors
@@ -55,6 +57,22 @@ module.exports = {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 
+            const hierarchy = validateExistingRoleChange({
+                botMember,
+                invokerMember: interaction.member,
+                role,
+                guild: interaction.guild
+            });
+            if (!hierarchy.ok) {
+                if (hierarchy.message.includes('integration')) {
+                    throw new Error('ROLE_NOT_MANAGEABLE');
+                }
+                if (hierarchy.message.includes('You cannot')) {
+                    throw new Error('INVOKER_HIERARCHY');
+                }
+                throw new Error('BOT_PERMISSION_DENIED');
+            }
+
             await role.setColor(colorValidation.normalizedColor);
             
             const embed = new EmbedBuilder()
@@ -70,8 +88,7 @@ module.exports = {
                 newColor: colorValidation.normalizedColor
             });
         } catch (error) {
-            logger.error("Error occurred in change color command.", {
-                err: error,
+            logger.error("Error occurred in change color command.", { ...serializeError(error, { includeStack: true }),
                 userId: interaction.user?.id,
                 guildId: interaction.guild?.id,
                 roleId: interaction.options?.getRole('role')?.id
@@ -84,7 +101,9 @@ module.exports = {
             } else if (error.message === "BOT_PERMISSION_DENIED") {
                 errorMessage = "⚠️ I don't have permission to manage roles in this server.";
             } else if (error.message === "ROLE_NOT_MANAGEABLE") {
-                errorMessage = "⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.";
+                errorMessage = "⚠️ This role is managed by an integration and cannot be modified.";
+            } else if (error.message === "INVOKER_HIERARCHY") {
+                errorMessage = '⚠️ You cannot manage a role that is above or equal to your highest role.';
             }
             
             try {
@@ -93,8 +112,7 @@ module.exports = {
                     flags: MessageFlags.Ephemeral 
                 });
             } catch (followUpError) {
-                logger.error("Failed to send error response for change color command.", {
-                    err: followUpError,
+                logger.error("Failed to send error response for change color command.", { ...serializeError(followUpError, { includeStack: true }),
                     originalError: error.message,
                     userId: interaction.user?.id
                 });

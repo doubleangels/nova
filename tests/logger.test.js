@@ -84,6 +84,29 @@ describe('logger', () => {
     expect(mockChildLogger.error).toHaveBeenCalledWith(meta, 'err');
   });
 
+  it('should redact secret fields from log metadata', () => {
+    const log = getLogger('test.js');
+    log.info('hello', { userId: '1', token: 'secret-token' });
+    log.warn('warn', { apiKey: 'secret-key' });
+    log.debug('dbg', { password: 'secret-password' });
+    expect(mockChildLogger.info).toHaveBeenCalledWith(
+      { userId: '1', token: '[REDACTED]' },
+      'hello'
+    );
+    expect(mockChildLogger.warn).toHaveBeenCalledWith(
+      { apiKey: '[REDACTED]' },
+      'warn'
+    );
+    expect(mockChildLogger.debug).toHaveBeenCalledWith(
+      { password: '[REDACTED]' },
+      'dbg'
+    );
+  });
+
+  it('should expose sanitizeLogMeta helper', () => {
+    expect(getLogger.sanitizeLogMeta({ token: 'x' })).toEqual({ token: '[REDACTED]' });
+  });
+
   it('should expose raw pino child logger', () => {
     const log = getLogger('test.js');
     expect(log._pino).toBe(mockChildLogger);

@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const {
   EmbedBuilder,
@@ -493,10 +494,10 @@ async function trackNewUserMessage(message) {
 
     logger.debug('Tracking message for new user in spam mode.', {
       userId,
-      contentPreview: normalizedContent.substring(0, 50),
+      contentLength: normalizedContent.length,
       hasLink,
       isSimilarMatch,
-      trackingKey: trackingKey.substring(0, 50)
+      trackingKeyLength: trackingKey.length
     });
 
     if (userMessages.has(trackingKey)) {
@@ -563,7 +564,7 @@ async function trackNewUserMessage(message) {
           dmSent = true;
           logger.debug('Sent spam-detection DM to user.', { userId });
         } catch (dmErr) {
-          logger.debug('Could not DM user about spam detection (DMs may be disabled).', { err: dmErr, userId });
+          logger.debug('Could not DM user about spam detection (DMs may be disabled).', { ...serializeError(dmErr, { includeStack: true }), userId });
         }
 
         // Delete the most-recent copy now that we no longer need to reply to it
@@ -590,8 +591,7 @@ async function trackNewUserMessage(message) {
       userMessages.set(trackingKey, [messageOccurrence]);
     }
   } catch (error) {
-    logger.error('Error occurred while tracking new user message for spam mode.', {
-      err: error,
+    logger.error('Error occurred while tracking new user message for spam mode.', { ...serializeError(error, { includeStack: true }),
       messageId: message?.id,
       userId: message?.author?.id
     });
@@ -640,8 +640,7 @@ async function deleteOffendingMessages(guild, occurrences) {
         });
         return true;
       } catch (error) {
-        logger.warn('Failed to delete message from channel.', {
-          err: error,
+        logger.warn('Failed to delete message from channel.', { ...serializeError(error, { includeStack: true }),
           messageId: occurrence.messageId,
           channelId: occurrence.channelId,
           channelName: occurrence.channelName
@@ -662,8 +661,7 @@ async function deleteOffendingMessages(guild, occurrences) {
       mostRecentMessage = await channel.messages.fetch(mostRecentOccurrence.messageId).catch(() => null);
     }
   } catch (error) {
-    logger.warn('Failed to fetch most recent message.', {
-      err: error,
+    logger.warn('Failed to fetch most recent message.', { ...serializeError(error, { includeStack: true }),
       messageId: mostRecentOccurrence.messageId
     });
   }
@@ -711,8 +709,7 @@ async function postSpamWarning(guild, user, occurrences, dmSent = false) {
       userTag: user.tag
     });
   } catch (error) {
-    logger.error('Error occurred while posting spam warning.', {
-      err: error,
+    logger.error('Error occurred while posting spam warning.', { ...serializeError(error, { includeStack: true }),
       guildId: guild.id,
       userId: user.id
     });
@@ -770,7 +767,7 @@ async function handleSpamWarningButton(interaction) {
       }
       await interaction.deferUpdate();
       await interaction.message.edit({ components: [] }).catch(err => {
-        logger.warn('Could not remove spam alert buttons.', { err });
+        logger.warn('Could not remove spam alert buttons.', serializeError(err, { includeStack: true }));
       });
       return true;
     }
@@ -952,7 +949,7 @@ async function handleSpamWarningButton(interaction) {
     await interaction.reply({ content: 'Unknown action.', flags: MessageFlags.Ephemeral });
     return true;
   } catch (error) {
-    logger.error('Error handling spam warning button.', { err: error });
+    logger.error('Error handling spam warning button.', { ...serializeError(error, { includeStack: true }) });
     try {
       if (interaction.deferred || interaction.replied) {
         await interaction.followUp({ content: 'Something went wrong.', flags: MessageFlags.Ephemeral });
@@ -1013,7 +1010,7 @@ async function timeoutUser(guild, user, durationSeconds, reason = 'Spam detected
     await member.timeout(clampedMs, reason);
     logger.info('Timed out user due to spam detection.', { userTag: user.tag, userId: user.id, durationSeconds });
   } catch (error) {
-    logger.error('Error occurred while timing out user.', { err: error, userId: user.id, guildId: guild.id });
+    logger.error('Error occurred while timing out user.', { ...serializeError(error, { includeStack: true }), userId: user.id, guildId: guild.id });
   }
 }
 

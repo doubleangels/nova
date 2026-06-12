@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
@@ -13,7 +14,7 @@ const reminderKeyv = new Keyv({
   namespace: 'nova_reminders'
 });
 
-reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error occurred.', { err: err }));
+reminderKeyv.on('error', err => logger.error('Reminder Keyv connection error occurred.', { ...serializeError(err, { includeStack: true }) }));
 
 /** Interval for r/needafriend weekly comment reminder (7 days). */
 const NEEDAFRIEND_REMINDER_MS = 7 * 24 * 60 * 60 * 1000;
@@ -190,7 +191,7 @@ function scheduleReminderTimeout(client, type, reminder) {
       await reminderKeyv.delete(`reminder:${reminder.reminder_id}`);
       await removeReminderId(type, reminder.reminder_id);
     } catch (err) {
-      logger.error(`Error sending rescheduled ${type} reminder.`, { err });
+      logger.error(`Error sending rescheduled ${type} reminder.`, serializeError(err, { includeStack: true }));
       await rollbackScheduledReminder(type, reminder.reminder_id);
     }
   }, delay);
@@ -341,9 +342,7 @@ async function getLatestReminderData(type) {
     
     return latestReminder;
   } catch (err) {
-    logger.error("Error occurred while getting latest reminder data.", {
-      err: err
-    });
+    logger.error("Error occurred while getting latest reminder data.", { ...serializeError(err, { includeStack: true }) });
     return null;
   }
 }
@@ -380,7 +379,7 @@ async function getNextReminderTimeAfterCleanup(type) {
     }
     return null;
   } catch (error) {
-    logger.error('Error in getNextReminderTimeAfterCleanup.', { err: error, type });
+    logger.error('Error in getNextReminderTimeAfterCleanup.', { ...serializeError(error, { includeStack: true }), type });
     return null;
   }
 }
@@ -567,8 +566,7 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
       channel = await client.channels.fetch(reminderChannelId);
     }
   } catch (channelError) {
-    logger.error('Failed to fetch channel; reminder was saved but notifications were skipped.', {
-      err: channelError,
+    logger.error('Failed to fetch channel; reminder was saved but notifications were skipped.', { ...serializeError(channelError, { includeStack: true }),
       channelId: reminderChannelId
     });
     await rollbackScheduledReminder(type, reminder.reminderId);
@@ -589,8 +587,7 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
       await channel.send(`❤️ ${confirmationMessage}`);
       logger.debug('Sent confirmation message.', { type, unixTimestamp });
     } catch (sendError) {
-      logger.warn('Failed to send confirmation message, reminder was still saved.', {
-        err: sendError,
+      logger.warn('Failed to send confirmation message, reminder was still saved.', { ...serializeError(sendError, { includeStack: true }),
         type,
         reminderId: reminder.reminderId
       });
@@ -603,6 +600,15 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
   }
 
   cancelReminderTimeout(type);
+
+  const delay = dayjs(reminder.remind_at).diff(dayjs(), 'millisecond');
+  if (delay <= 0) {
+    logger.warn(`${type} reminder is in the past; skipping in-process timeout.`, {
+      reminderId: reminder.reminderId,
+      remind_at: reminder.remind_at
+    });
+    return;
+  }
 
   const timeoutId = setTimeout(async () => {
     activeReminderTimeouts.delete(type);
@@ -632,7 +638,7 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
       logger.error('Error occurred while sending scheduled reminder.', { err, type });
       await rollbackScheduledReminder(type, reminder.reminderId);
     }
-  }, reminder.delayMs);
+  }, delay);
   activeReminderTimeouts.set(type, timeoutId);
 }
 
@@ -721,9 +727,7 @@ async function rescheduleReminder(client) {
 
     logger.info("Reminder rescheduling completed.");
   } catch (error) {
-    logger.error("Error occurred in rescheduleReminder.", {
-      err: error
-    });
+    logger.error("Error occurred in rescheduleReminder.", { ...serializeError(error, { includeStack: true }) });
     throw error;
   }
 }
@@ -735,8 +739,7 @@ async function rescheduleReminder(client) {
  * @throws {Error} A formatted error message based on the error type
  */
 async function handleError(error, context) {
-  logger.error('Error occurred in context.', {
-    err: error,
+  logger.error('Error occurred in context.', { ...serializeError(error, { includeStack: true }),
     context: context
   });
 

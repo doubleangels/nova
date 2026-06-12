@@ -165,7 +165,7 @@ describe('messageCreate event', () => {
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'Failed to send reminder configuration notice after bump.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
       expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
     });

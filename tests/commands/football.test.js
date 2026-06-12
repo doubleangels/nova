@@ -134,8 +134,8 @@ describe('football command', () => {
     expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(mockFootballUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
     expect(interaction.member.roles.add).toHaveBeenCalledWith(role, 'Prediction game registration');
-    expect(mockFootballUtils.addRegisteredUser.mock.invocationCallOrder[0]).toBeLessThan(
-      interaction.member.roles.add.mock.invocationCallOrder[0]
+    expect(interaction.member.roles.add.mock.invocationCallOrder[0]).toBeLessThan(
+      mockFootballUtils.addRegisteredUser.mock.invocationCallOrder[0]
     );
     expect(mockWorldCupUtils.addRegisteredUser).not.toHaveBeenCalled();
     const reply = interaction.editReply.mock.calls[0][0];
@@ -223,6 +223,116 @@ describe('football command', () => {
 
     expect(mockFootballUtils.addRegisteredUser).toHaveBeenCalledWith('user-123');
     expect(mockWorldCupUtils.addRegisteredUser).not.toHaveBeenCalled();
+  });
+
+  it('should reject register for bot users', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      user: { id: 'bot-1', bot: true, username: 'bot', tag: 'bot#0000' }
+    });
+
+    await footballCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('Bots cannot register')
+    }));
+    expect(mockFootballUtils.addRegisteredUser).not.toHaveBeenCalled();
+  });
+
+  it('should roll back role when registration persistence fails', async () => {
+    mockFootballUtils.addRegisteredUser.mockRejectedValueOnce(new Error('db fail'));
+    const role = {
+      id: '444444444444444444',
+      name: 'Predictor',
+      position: 1
+    };
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      guild: {
+        id: 'guild-1',
+        roles: {
+          cache: new Map([[role.id, role]]),
+          fetch: jest.fn()
+        },
+        members: {
+          me: {
+            permissions: { has: jest.fn().mockReturnValue(true) },
+            roles: { highest: { position: 5 } }
+          }
+        }
+      },
+      member: {
+        roles: {
+          cache: { has: jest.fn().mockReturnValue(false) },
+          add: jest.fn().mockResolvedValue(),
+          remove: jest.fn().mockResolvedValue(),
+          highest: { position: 0 }
+        }
+      }
+    });
+
+    await footballCommand.execute(interaction);
+
+    expect(interaction.member.roles.remove).toHaveBeenCalledWith(role, 'Prediction registration rollback');
+  });
+
+  it('should ignore role rollback failures after registration persistence fails', async () => {
+    mockFootballUtils.addRegisteredUser.mockRejectedValueOnce(new Error('db fail'));
+    const role = {
+      id: '444444444444444444',
+      name: 'Predictor',
+      position: 1
+    };
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      guild: {
+        id: 'guild-1',
+        roles: {
+          cache: new Map([[role.id, role]]),
+          fetch: jest.fn()
+        },
+        members: {
+          me: {
+            permissions: { has: jest.fn().mockReturnValue(true) },
+            roles: { highest: { position: 5 } }
+          }
+        }
+      },
+      member: {
+        roles: {
+          cache: { has: jest.fn().mockReturnValue(false) },
+          add: jest.fn().mockResolvedValue(),
+          remove: jest.fn().mockRejectedValue(new Error('remove fail')),
+          highest: { position: 0 }
+        }
+      }
+    });
+
+    await footballCommand.execute(interaction);
+    expect(interaction.member.roles.remove).toHaveBeenCalled();
+  });
+
+  it('should reject register when participant role cannot be resolved', async () => {
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('register') },
+      guild: {
+        id: 'guild-1',
+        roles: {
+          cache: { get: jest.fn().mockReturnValue(null) },
+          fetch: jest.fn().mockRejectedValue(new Error('not found'))
+        },
+        members: {
+          me: {
+            permissions: { has: jest.fn().mockReturnValue(true) },
+            roles: { highest: { position: 5 } }
+          }
+        }
+      }
+    });
+
+    await footballCommand.execute(interaction);
+
+    expect(interaction.editReply.mock.calls[0][0].embeds[0].data.description).toContain('was not found');
   });
 
   it('should reject register when role id missing', async () => {
@@ -428,26 +538,30 @@ describe('football command', () => {
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
-  it('should handle errors via handleError when not deferred', async () => {
-    mockFootballUtils.getLeaderboard.mockRejectedValue(new Error('Test error'));
-    const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) },
-      deferred: false,
-      replied: false
+  it('should reply via handleError when interaction is not deferred', async () => {
+    const interaction = createMockInteraction({ deferred: false, replied: false });
+    await footballCommand.handleError(interaction, new Error('fail'));
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: expect.stringContaining('Something went wrong'),
+      flags: MessageFlags.Ephemeral
     });
-    interaction.reply = jest.fn().mockResolvedValue();
-    await footballCommand.execute(interaction);
-    expect(interaction.reply).toHaveBeenCalled();
   });
 
-  it('should log error when handleError fails to send reply', async () => {
+  it('should handle errors via handleError after deferring', async () => {
     mockFootballUtils.getLeaderboard.mockRejectedValue(new Error('Test error'));
     const interaction = createMockInteraction({
-      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) },
-      deferred: false,
-      replied: false
+      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) }
     });
-    interaction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+    await footballCommand.execute(interaction);
+    expect(interaction.editReply).toHaveBeenCalled();
+  });
+
+  it('should log error when handleError fails to send editReply', async () => {
+    mockFootballUtils.getLeaderboard.mockRejectedValue(new Error('Test error'));
+    const interaction = createMockInteraction({
+      options: { getSubcommand: jest.fn().mockReturnValue('leaderboard'), getInteger: jest.fn().mockReturnValue(null) }
+    });
+    interaction.editReply = jest.fn().mockRejectedValue(new Error('edit fail'));
     await footballCommand.execute(interaction);
     expect(mockLogger.error).toHaveBeenCalledWith('Failed to send football error reply.', expect.any(Object));
   });
@@ -683,6 +797,7 @@ describe('football command', () => {
     });
     await footballCommand.execute(interaction);
     expect(mockFootballUtils.resetFootballGame).toHaveBeenCalled();
+    expect(mockFootballUtils.setPromptingPaused).toHaveBeenCalledWith(false);
     expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ embeds: expect.any(Array) }));
   });
 
@@ -730,7 +845,7 @@ describe('football command', () => {
     expect(interaction.editReply).toHaveBeenCalled();
   });
 
-  it('should handle errors via handleError when not deferred', async () => {
+  it('should handle errors via handleError after deferring predictions', async () => {
     mockClientApi.getSeasonFixtures.mockRejectedValue(new Error('fail'));
     mockFootballUtils.scoreFinishedFixtures = jest.fn().mockResolvedValue(0);
     mockFootballUtils.getUserPredictionFixtureIds = jest.fn().mockRejectedValue(new Error('fail'));
@@ -739,12 +854,10 @@ describe('football command', () => {
         getSubcommand: jest.fn().mockReturnValue('predictions'),
         getUser: jest.fn().mockReturnValue({ id: 'user-123', displayName: 'test' })
       },
-      client: {},
-      deferred: false,
-      replied: false
+      client: {}
     });
     await footballCommand.execute(interaction);
-    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('Something went wrong') }));
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('Something went wrong') }));
   });
 
   it('should deny removeuser for non-administrators', async () => {

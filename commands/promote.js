@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -272,7 +273,10 @@ module.exports = {
       });
     }
 
-    await interaction.deferReply();
+    await interaction.deferReply().catch(async (deferError) => {
+      await releaseCommandCooldown('promote');
+      throw deferError;
+    });
     logger.info("/promote command initiated.", {
       userId: interaction.user.id,
       guildId: interaction.guildId,
@@ -332,7 +336,7 @@ module.exports = {
       }
     } catch (error) {
       await releaseCommandCooldown('promote');
-      logger.error("Error occurred while posting to Reddit.", { err: error });
+      logger.error("Error occurred while posting to Reddit.", { ...serializeError(error, { includeStack: true }) });
       await interaction.editReply({
         content: "⚠️ An unexpected error occurred. Please try again later.",
         flags: MessageFlags.Ephemeral
@@ -345,8 +349,7 @@ module.exports = {
   },
 
   async handleError(error, interaction) {
-    logger.error('Error occurred in promote command.', {
-      err: error,
+    logger.error('Error occurred in promote command.', { ...serializeError(error, { includeStack: true }),
       userId: interaction.user.id,
       guildId: interaction.guildId
     });
@@ -370,9 +373,13 @@ module.exports = {
     }
 
     try {
-      await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+      } else {
+        await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
+      }
     } catch (replyError) {
-      logger.error('Failed to send error message.', { err: replyError });
+      logger.error('Failed to send error message.', { ...serializeError(replyError, { includeStack: true }) });
     }
   },
 
@@ -387,7 +394,7 @@ module.exports = {
       }
       return remindAt;
     } catch (error) {
-      logger.error('Error occurred while getting next promotion time.', { err: error });
+      logger.error('Error occurred while getting next promotion time.', { ...serializeError(error, { includeStack: true }) });
       return null;
     }
   }

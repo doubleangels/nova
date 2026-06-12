@@ -1,8 +1,10 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { getBotMember } = require('../utils/asyncUtils');
+const { canInvokerModerateMember } = require('../utils/roleHierarchyUtils');
 
 /**
  * @typedef {Object} ValidationResult
@@ -72,6 +74,10 @@ module.exports = {
                 throw new Error("BOT_PERMISSION_DENIED");
             }
 
+            if (!canInvokerModerateMember(interaction.member, member, interaction.guild)) {
+                throw new Error("INVOKER_HIERARCHY");
+            }
+
             if (!member.manageable) {
                 throw new Error("USER_NOT_MANAGEABLE");
             }
@@ -116,8 +122,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error occurred in changenickname command.", {
-            err: error,
+        logger.error("Error occurred in changenickname command.", { ...serializeError(error, { includeStack: true }),
             userId: interaction.user?.id,
             guildId: interaction.guild?.id,
             targetUserId: interaction.options?.getUser('user')?.id
@@ -129,6 +134,8 @@ module.exports = {
             errorMessage = "⚠️ I don't have permission to manage nicknames in this server.";
         } else if (error.message === "USER_NOT_MANAGEABLE") {
             errorMessage = "⚠️ I cannot modify this user's nickname.";
+        } else if (error.message === "INVOKER_HIERARCHY") {
+            errorMessage = '⚠️ You cannot manage this member (role hierarchy).';
         } else if (error.message === "INVALID_NICKNAME_LENGTH") {
             errorMessage = "⚠️ Nickname must be between 1 and 32 characters.";
         }
@@ -139,8 +146,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for change nickname command.", {
-                err: followUpError,
+            logger.error("Failed to send error response for change nickname command.", { ...serializeError(followUpError, { includeStack: true }),
                 originalError: error.message,
                 userId: interaction.user?.id
             });

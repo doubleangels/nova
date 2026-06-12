@@ -1,7 +1,9 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getBotMember } = require('../utils/asyncUtils');
+const { validateExistingRoleChange } = require('../utils/roleHierarchyUtils');
 
 /**
  * Command module for removing roles from users.
@@ -71,8 +73,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error('Error occurred in takeRole command.', {
-      err: error,
+    logger.error('Error occurred in takeRole command.', { ...serializeError(error, { includeStack: true }),
       userId: interaction.user.id,
       guildId: interaction.guildId,
       channelId: interaction.channelId
@@ -88,12 +89,14 @@ module.exports = {
       errorMessage = "⚠️ The specified user could not be found in this server.";
     } else if (error.message === "ROLE_NOT_ASSIGNED") {
       errorMessage = "⚠️ The user doesn't have this role.";
+    } else if (error.message === "INVOKER_HIERARCHY") {
+      errorMessage = '⚠️ You cannot manage this member or role (role hierarchy).';
     }
 
     try {
       await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
     } catch (replyError) {
-      logger.error('Failed to send error message.', { err: replyError });
+      logger.error('Failed to send error message.', { ...serializeError(replyError, { includeStack: true }) });
     }
   },
 
@@ -112,17 +115,27 @@ module.exports = {
       throw new Error("ROLE_NOT_ASSIGNED");
     }
 
-    if (role.managed) {
-      throw new Error("MANAGED_ROLE");
-    }
-
     const botMember = await getBotMember(interaction);
-    if (botMember.roles.highest.position <= role.position) {
-      logger.warn("Bot's highest role is not high enough to remove the specified role.", {
-        botHighestRolePosition: botMember.roles.highest.position,
-        rolePosition: role.position
-      });
-      throw new Error("INSUFFICIENT_PERMISSIONS");
+    const invokerMember = interaction.member;
+    const hierarchy = validateExistingRoleChange({
+      botMember,
+      invokerMember,
+      role,
+      targetMember,
+      guild: interaction.guild
+    });
+    if (!hierarchy.ok) {
+      if (hierarchy.message.includes('integration')) {
+        throw new Error('MANAGED_ROLE');
+      }
+      if (hierarchy.message.includes("I don't")) {
+        logger.warn("Bot's highest role is not high enough to remove the specified role.", {
+          botHighestRolePosition: botMember.roles.highest.position,
+          rolePosition: role.position
+        });
+        throw new Error('INSUFFICIENT_PERMISSIONS');
+      }
+      throw new Error('INVOKER_HIERARCHY');
     }
 
     await targetMember.roles.remove(role, reason);

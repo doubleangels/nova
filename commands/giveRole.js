@@ -1,7 +1,9 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getBotMember } = require('../utils/asyncUtils');
+const { validateExistingRoleChange } = require('../utils/roleHierarchyUtils');
 
 /**
  * @typedef {Object} ValidationResult
@@ -151,15 +153,29 @@ module.exports = {
      */
     async assignRole(interaction, role, targetMember) {
         const botMember = await getBotMember(interaction);
-        if (botMember.roles.highest.position <= role.position) {
-            logger.warn("Bot's highest role is not high enough to assign the specified role.", {
-                botHighestRolePosition: botMember.roles.highest.position,
-                rolePosition: role.position
-            });
+        const invokerMember = interaction.member;
+        if (!invokerMember) {
             return {
                 success: false,
-                message: "⚠️ I don't have permission to assign this role."
+                message: '⚠️ Could not verify your member permissions in this server.'
             };
+        }
+
+        const hierarchy = validateExistingRoleChange({
+            botMember,
+            invokerMember,
+            role,
+            targetMember,
+            guild: interaction.guild
+        });
+        if (!hierarchy.ok) {
+            if (hierarchy.message.includes("I don't")) {
+                logger.warn("Bot's highest role is not high enough to assign the specified role.", {
+                    botHighestRolePosition: botMember.roles.highest.position,
+                    rolePosition: role.position
+                });
+            }
+            return { success: false, message: hierarchy.message };
         }
 
         const auditReason = `Role assigned by ${interaction.user.tag} (ID: ${interaction.user.id}) using giverole command.`;
@@ -184,8 +200,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error('Error occurred in giveRole command.', {
-            err: error,
+        logger.error('Error occurred in giveRole command.', { ...serializeError(error, { includeStack: true }),
             userId: interaction.user.id,
             guildId: interaction.guildId,
             channelId: interaction.channelId
@@ -206,7 +221,7 @@ module.exports = {
         try {
             await interaction.editReply({ content: errorMessage, flags: MessageFlags.Ephemeral });
         } catch (replyError) {
-            logger.error('Failed to send error message.', { err: replyError });
+            logger.error('Failed to send error message.', { ...serializeError(replyError, { includeStack: true }) });
             try {
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp({ content: errorMessage, flags: MessageFlags.Ephemeral });
@@ -214,7 +229,7 @@ module.exports = {
                     await interaction.reply({ content: errorMessage, flags: MessageFlags.Ephemeral });
                 }
             } catch (followUpError) {
-                logger.error('Failed to send error follow-up.', { err: followUpError });
+                logger.error('Failed to send error follow-up.', { ...serializeError(followUpError, { includeStack: true }) });
             }
         }
     }

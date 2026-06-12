@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const { getValue, getGuildName } = require('../utils/database');
@@ -34,8 +35,7 @@ async function checkAccountAge(member) {
 
     return accountAge >= requiredAge;
   } catch (error) {
-    logger.error('Error occurred while checking account age for user.', {
-      err: error,
+    logger.error('Error occurred while checking account age for user.', { ...serializeError(error, { includeStack: true }),
       userTag: member.user.tag
     });
     return false;
@@ -68,8 +68,7 @@ async function performKick(member) {
         );
       await member.send({ embeds: [embed] });
     } catch (dmError) {
-      logger.warn('Failed to send DM to member before kick.', {
-        err: dmError,
+      logger.warn('Failed to send DM to member before kick.', { ...serializeError(dmError, { includeStack: true }),
         userTag: member.user.tag
       });
     }
@@ -82,8 +81,7 @@ async function performKick(member) {
     });
   } catch (error) {
     clearPendingAgeKick(member.id);
-    logger.error('Failed to kick member.', {
-      err: error,
+    logger.error('Failed to kick member.', { ...serializeError(error, { includeStack: true }),
       userTag: member.user.tag
     });
     throw error;

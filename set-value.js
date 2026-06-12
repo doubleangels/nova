@@ -106,7 +106,7 @@ if (positional.length < 2) {
   console.error('');
   console.error('Examples:');
   console.error('  node set-value.js main:config:reminder_channel "123456789012345678"');
-  console.error('  node set-value.js --commit --force spam_mode_enabled true');
+  console.error('  node set-value.js --commit --force main:mute_mode_enabled true');
   process.exit(1);
 }
 

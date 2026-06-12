@@ -36,6 +36,9 @@ describe('takeRole command', () => {
           getUser: jest.fn().mockReturnValue(mockTargetUser),
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue(undefined) // reason is undefined
+        },
+        member: {
+          roles: { highest: { position: 20 } }
         }
       });
 
@@ -44,8 +47,9 @@ describe('takeRole command', () => {
         user: { tag: 'target#1234' },
         roles: {
           cache: {
-            has: jest.fn().mockReturnValue(true) // member has the role
+            has: jest.fn().mockReturnValue(true)
           },
+          highest: { position: 5 },
           remove: jest.fn().mockResolvedValue()
         }
       };
@@ -107,6 +111,9 @@ describe('takeRole command', () => {
           getUser: jest.fn().mockReturnValue(mockTargetUser),
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue('Demoted')
+        },
+        member: {
+          roles: { highest: { position: 20 } }
         }
       });
 
@@ -117,6 +124,7 @@ describe('takeRole command', () => {
           cache: {
             has: jest.fn().mockReturnValue(true)
           },
+          highest: { position: 5 },
           remove: jest.fn().mockResolvedValue()
         }
       };
@@ -226,7 +234,8 @@ describe('takeRole command', () => {
         roles: {
           cache: {
             has: jest.fn().mockReturnValue(true)
-          }
+          },
+          highest: { position: 5 }
         }
       };
 
@@ -235,7 +244,12 @@ describe('takeRole command', () => {
           cache: {
             get: jest.fn().mockReturnValue(mockTargetMember)
           },
-          fetch: jest.fn().mockResolvedValue(mockTargetMember)
+          fetch: jest.fn().mockResolvedValue(mockTargetMember),
+          me: {
+            roles: {
+              highest: { position: 15 }
+            }
+          }
         }
       };
 
@@ -255,6 +269,9 @@ describe('takeRole command', () => {
           getUser: jest.fn().mockReturnValue(mockTargetUser),
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue(undefined)
+        },
+        member: {
+          roles: { highest: { position: 20 } }
         }
       });
 
@@ -262,7 +279,8 @@ describe('takeRole command', () => {
         roles: {
           cache: {
             has: jest.fn().mockReturnValue(true)
-          }
+          },
+          highest: { position: 5 }
         }
       };
 
@@ -300,6 +318,9 @@ describe('takeRole command', () => {
           getUser: jest.fn().mockReturnValue(mockTargetUser),
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue(undefined)
+        },
+        member: {
+          roles: { highest: { position: 20 } }
         }
       });
 
@@ -308,11 +329,13 @@ describe('takeRole command', () => {
           cache: {
             has: jest.fn().mockReturnValue(true)
           },
+          highest: { position: 5 },
           remove: jest.fn().mockRejectedValue(new Error('Discord API error offline'))
         }
       };
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           cache: {
             get: jest.fn().mockReturnValue(mockTargetMember)
@@ -341,6 +364,60 @@ describe('takeRole command', () => {
       await expect(takeRoleCommand.handleError(mockInteraction, new Error('ROLE_NOT_ASSIGNED'))).resolves.not.toThrow();
 
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message.', expect.any(Object));
+    });
+
+    it('should handle INVOKER_HIERARCHY error in handleError', async () => {
+      const mockInteraction = createMockInteraction();
+      await takeRoleCommand.handleError(mockInteraction, new Error('INVOKER_HIERARCHY'));
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ You cannot manage this member or role (role hierarchy).'
+      }));
+    });
+
+    it('should reject invoker hierarchy during execute', async () => {
+      const mockRole = { id: 'role-id-1', name: 'Admin Role', managed: false, position: 25 };
+      const mockTargetUser = { id: 'target-user-id' };
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getUser: jest.fn().mockReturnValue(mockTargetUser),
+          getRole: jest.fn().mockReturnValue(mockRole),
+          getString: jest.fn().mockReturnValue(undefined)
+        },
+        member: {
+          roles: { highest: { position: 10 } }
+        }
+      });
+
+      const mockTargetMember = {
+        roles: {
+          cache: {
+            has: jest.fn().mockReturnValue(true)
+          },
+          highest: { position: 5 }
+        }
+      };
+
+      mockInteraction.guild = {
+        ownerId: 'owner-123',
+        members: {
+          cache: {
+            get: jest.fn().mockReturnValue(mockTargetMember)
+          },
+          fetch: jest.fn().mockResolvedValue(mockTargetMember),
+          me: {
+            roles: {
+              highest: { position: 30 }
+            }
+          }
+        }
+      };
+
+      await takeRoleCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ You cannot manage this member or role (role hierarchy).'
+      }));
     });
   });
 });

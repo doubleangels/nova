@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('../utils/logSanitize.js');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
 const config = require('../config');
@@ -30,9 +31,7 @@ module.exports = {
         try {
           await message.fetch();
         } catch (fetchError) {
-          logger.error("Failed to fetch partial message.", {
-            err: fetchError
-          });
+          logger.error("Failed to fetch partial message.", { ...serializeError(fetchError, { includeStack: true }) });
           captureError(fetchError, { event: 'messageCreate', handler: 'partialFetch' });
           return;
         }
@@ -52,7 +51,7 @@ module.exports = {
       logger.debug("Message received from user.", {
         author: message.author?.tag || "Unknown Author",
         channelId: message.channel.id,
-        content: message.content?.replace(/\n/g, ' ') || "No Content"
+        messageId: message.id
       });
 
       // Track new user messages for spam mode if enabled (BEFORE removing from mute mode)
@@ -68,8 +67,7 @@ module.exports = {
         }
       } catch (error) {
         captureError(error, { event: 'messageCreate', handler: 'spamMode' });
-        logger.error("Error occurred while checking spam mode or tracking new user message.", {
-          err: error,
+        logger.error("Error occurred while checking spam mode or tracking new user message.", { ...serializeError(error, { includeStack: true }),
           messageId: message.id
         });
       }
@@ -87,6 +85,9 @@ module.exports = {
         }
       }
 
+      const noTextViolationDeleted = await enforceNoTextChannel(message, noTextChannelId);
+      if (noTextViolationDeleted) return;
+
       await processUserMessage(message);
       
       // Check for bump messages (Disboard with embeds)
@@ -99,63 +100,74 @@ module.exports = {
         channelName: message.channel.name
       });
 
-      // No-text channel enforcement (human guild messages only)
-      if (String(message.channelId) !== String(noTextChannelId)) return;
-
-      const content = message.content ?? '';
-      const hasGif = message.attachments.some(attachment => 
-        attachment.url.toLowerCase().endsWith('.gif') || 
-        attachment.contentType?.toLowerCase() === 'image/gif'
-      ) || content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
-      
-      const hasImage = message.attachments.some(attachment => 
-        attachment.contentType?.toLowerCase().startsWith('image/')
-      );
-      
-      const hasSticker = message.stickers.size > 0;
-
-      const hasEmote = content.match(/<a?:\w+:\d+>/g);
-      const hasTag = content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g);
-
-      if (!hasGif && !hasImage && !hasSticker && !hasEmote && !hasTag) {
-        try {
-          await message.delete();
-          logger.debug("Deleted message with no allowed content in no-text channel.", {
-            channelId: message.channelId,
-            userId: message.author.id,
-            messageId: message.id,
-            hasGif,
-            hasImage,
-            hasSticker,
-            hasEmote,
-            hasTag,
-            contentType: message.attachments.map(a => a.contentType),
-            content: message.content
-          });
-        } catch (error) {
-          captureError(error, { event: 'messageCreate', handler: 'noTextChannelDelete' });
-          logger.error("Failed to delete message in no-text channel.", {
-            err: error,
-            channelId: message.channelId,
-            userId: message.author.id,
-            messageId: message.id
-          });
-          return await message.channel.send({
-            content: "⚠️ Failed to process the message."
-          });
-        }
-      }
-
     } catch (error) {
       captureError(error, { event: 'messageCreate' });
-      logger.error('Error occurred while processing message.', {
-        err: error,
+      logger.error('Error occurred while processing message.', { ...serializeError(error, { includeStack: true }),
         userId: message.author?.id,
         messageId: message.id
       });
     }
   }
 };
+
+/**
+ * @param {import('discord.js').Message} message
+ * @returns {boolean}
+ */
+function isDisallowedNoTextMessage(message) {
+  const content = message.content ?? '';
+  const hasGif = message.attachments.some(attachment =>
+    attachment.url.toLowerCase().endsWith('.gif') ||
+    attachment.contentType?.toLowerCase() === 'image/gif'
+  ) || content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
+
+  const hasImage = message.attachments.some(attachment =>
+    attachment.contentType?.toLowerCase().startsWith('image/')
+  );
+
+  const hasSticker = message.stickers.size > 0;
+  const hasEmote = content.match(/<a?:\w+:\d+>/g);
+  const hasTag = content.match(/<@!?\d+>|<@&\d+>|<#\d+>/g);
+
+  return !hasGif && !hasImage && !hasSticker && !hasEmote && !hasTag;
+}
+
+/**
+ * Deletes disallowed human messages in the no-text channel before role/count processing.
+ * @param {import('discord.js').Message} message
+ * @param {string|undefined|null} noTextChannelId
+ * @returns {Promise<boolean>} true when the message was removed or should not be processed further
+ */
+async function enforceNoTextChannel(message, noTextChannelId) {
+  if (!noTextChannelId || String(message.channelId) !== String(noTextChannelId)) {
+    return false;
+  }
+  if (!isDisallowedNoTextMessage(message)) {
+    return false;
+  }
+
+  try {
+    await message.delete();
+    logger.debug('Deleted message with no allowed content in no-text channel.', {
+      channelId: message.channelId,
+      userId: message.author.id,
+      messageId: message.id,
+      contentType: message.attachments.map(a => a.contentType)
+    });
+    return true;
+  } catch (error) {
+    captureError(error, { event: 'messageCreate', handler: 'noTextChannelDelete' });
+    logger.error('Failed to delete message in no-text channel.', { ...serializeError(error, { includeStack: true }),
+      channelId: message.channelId,
+      userId: message.author.id,
+      messageId: message.id
+    });
+    await message.channel.send({
+      content: '⚠️ Failed to process the message.'
+    });
+    return true;
+  }
+}
 
 /**
  * Processes a user message and handles mute mode tracking
@@ -209,8 +221,7 @@ async function processUserMessage(message) {
     }
   } catch (error) {
     captureError(error, { event: 'messageCreate', handler: 'processUserMessage' });
-    logger.error('Error handling role assignment in processUserMessage.', { 
-      err: error, 
+    logger.error('Error handling role assignment in processUserMessage.', { ...serializeError(error, { includeStack: true }), 
       userId: message.author.id 
     });
   }
@@ -229,7 +240,7 @@ async function checkForBumpMessages(message) {
     author: message.author?.tag,
     hasEmbeds: message.embeds?.length > 0,
     embedCount: message.embeds?.length || 0,
-    content: message.content?.replace(/\n/g, ' ') || "No Content",
+    messageId: message.id,
     hasWebhook: !!message.webhookId,
     isInteraction: !!message.interaction,
     isPartial: message.partial
@@ -273,7 +284,7 @@ async function checkForBumpMessages(message) {
             const embed = await buildReminderIncompleteEmbed(message.guild);
             await message.channel.send({ embeds: [embed] });
           } catch (err) {
-            logger.warn('Failed to send reminder configuration notice after bump.', { err });
+            logger.warn('Failed to send reminder configuration notice after bump.', serializeError(err, { includeStack: true }));
           }
           return;
         }
@@ -295,8 +306,7 @@ async function checkForBumpMessages(message) {
     }
   } catch (error) {
     captureError(error, { event: 'messageCreate', handler: 'checkForBumpMessages' });
-    logger.error("Failed to process bump message.", {
-      err: error,
+    logger.error("Failed to process bump message.", { ...serializeError(error, { includeStack: true }),
       messageId: message.id,
       author: message.author?.tag
     });

@@ -93,6 +93,37 @@ describe('searchUtils', () => {
       expect(mockMessage.createMessageComponentCollector).toHaveBeenCalled();
     });
 
+    it('should handle prev and next buttons with underscore prefixes', async () => {
+      await searchUtils.createPaginatedResults(
+        mockInteraction,
+        items,
+        generateEmbed,
+        'football_predictions',
+        60000,
+        mockLogger
+      );
+
+      const mockButtonInteraction = {
+        customId: 'football_predictions_next_user-123_123',
+        user: { id: 'user-123' },
+        deferUpdate: jest.fn().mockResolvedValue(true),
+        editReply: jest.fn().mockResolvedValue(true)
+      };
+
+      await collectorEmitter.listeners['collect'](mockButtonInteraction);
+
+      expect(mockButtonInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: [{ title: 'Page 1' }]
+      }));
+
+      mockButtonInteraction.customId = 'football_predictions_prev_user-123_123';
+      await collectorEmitter.listeners['collect'](mockButtonInteraction);
+
+      expect(mockButtonInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        embeds: [{ title: 'Page 0' }]
+      }));
+    });
+
     it('should handle prev and next buttons', async () => {
       await searchUtils.createPaginatedResults(mockInteraction, items, generateEmbed, 'test', 60000, mockLogger);
       

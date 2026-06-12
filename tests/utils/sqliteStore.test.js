@@ -64,6 +64,7 @@ describe('sqliteStore', () => {
     expect(db1).toBe(mockWritableDb);
     expect(db2).toBe(mockWritableDb);
     expect(mockWritableDb.pragma).toHaveBeenCalledWith('busy_timeout = 10000');
+    expect(mockWritableDb.pragma).toHaveBeenCalledWith('journal_mode = WAL');
   });
 
   it('should close only readonly connection when writable was never opened', () => {

@@ -139,7 +139,7 @@ describe('youtube command', () => {
           id: { channelId: 'chan1' },
           snippet: {
             title: 'JS Channel',
-            description: 'a'.repeat(1100),
+            description: 'a'.repeat(4100),
             thumbnails: {
               medium: { url: 'http://img-med.jpg' }
             }
@@ -159,7 +159,7 @@ describe('youtube command', () => {
 
       expect(embed.data.title).toBe('📺 JS Channel');
       expect(embed.data.url).toBe('https://www.youtube.com/channel/chan1');
-      expect(embed.data.description).toContain('...');
+      expect(embed.data.description).toContain('…');
       expect(embed.data.thumbnail.url).toBe('http://img-med.jpg');
     });
 
@@ -438,7 +438,7 @@ describe('youtube command', () => {
         id: { videoId: 'vid1' },
         snippet: {
           title: 'Long Video',
-          description: 'a'.repeat(1100),
+          description: 'a'.repeat(4100),
           thumbnails: {},
           channelTitle: 'DummyChannel',
           channelId: 'chan1'
@@ -447,7 +447,7 @@ describe('youtube command', () => {
 
       const embed = youtubeCommand.createContentEmbed(item, 'video', 0, 1);
       expect(embed.data.title).toBe('📺 Long Video');
-      expect(embed.data.description).toContain('...');
+      expect(embed.data.description).toContain('…');
       expect(embed.data.image).toBeUndefined();
     });
 
@@ -456,7 +456,7 @@ describe('youtube command', () => {
         id: { playlistId: 'play1' },
         snippet: {
           title: 'Long Playlist',
-          description: 'a'.repeat(1100),
+          description: 'a'.repeat(4100),
           thumbnails: {},
           channelTitle: 'DummyChannel',
           channelId: 'chan1'
@@ -465,7 +465,7 @@ describe('youtube command', () => {
 
       const embed = youtubeCommand.createContentEmbed(item, 'playlist', 0, 1);
       expect(embed.data.title).toBe('📺 Long Playlist');
-      expect(embed.data.description).toContain('...');
+      expect(embed.data.description).toContain('…');
       expect(embed.data.thumbnail).toBeUndefined();
     });
 

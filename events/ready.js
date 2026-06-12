@@ -1,4 +1,5 @@
 const { ActivityType, Events } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
@@ -101,7 +102,7 @@ module.exports = {
           writeBotHeartbeat();
         } catch (error) {
           captureError(error, { event: 'ready', handler: 'heartbeat' });
-          logger.error('Failed to write bot heartbeat.', { err: error });
+          logger.error('Failed to write bot heartbeat.', { ...serializeError(error, { includeStack: true }) });
         }
       }, HEARTBEAT_INTERVAL_MS);
 
@@ -122,7 +123,7 @@ module.exports = {
         if (failed.length > 0) {
           for (const result of failed) {
             captureError(result.reason, { event: 'ready', handler: 'startupTask' });
-            logger.error('Startup reschedule task failed.', { err: result.reason });
+            logger.error('Startup reschedule task failed.', serializeError(result.reason, { includeStack: true }));
           }
         } else {
           logger.info('Startup reschedule tasks completed successfully.');
@@ -136,7 +137,7 @@ module.exports = {
         logger.info('Invite usage tracking initialized for the guild.');
       } catch (error) {
         captureError(error, { event: 'ready', handler: 'initializeInviteUsage' });
-        logger.error('Failed to initialize invite usage tracking.', { err: error });
+        logger.error('Failed to initialize invite usage tracking.', { ...serializeError(error, { includeStack: true }) });
       } finally {
         markInviteInitComplete();
       }
@@ -146,7 +147,7 @@ module.exports = {
         logger.info('Initial cleanup of old tracking users completed.');
       }).catch((error) => {
         captureError(error, { event: 'ready', handler: 'initialCleanup' });
-        logger.error('Failed to run initial cleanup.', { err: error });
+        logger.error('Failed to run initial cleanup.', { ...serializeError(error, { includeStack: true }) });
       });
 
       // Schedule periodic cleanup every hour; store reference so it can be cleared on shutdown
@@ -156,9 +157,7 @@ module.exports = {
           await cleanupOldTrackingUsers(client);
         } catch (error) {
           captureError(error, { event: 'ready', handler: 'scheduledCleanup' });
-          logger.error('Error occurred during scheduled cleanup.', {
-            err: error
-          });
+          logger.error('Error occurred during scheduled cleanup.', { ...serializeError(error, { includeStack: true }) });
         }
       }, CLEANUP_INTERVAL_MS);
       logger.info('Scheduled periodic cleanup task.', {
@@ -184,8 +183,7 @@ module.exports = {
 
     } catch (error) {
       captureError(error, { event: 'ready' });
-      logger.error('Error occurred in ready event.', {
-        err: error,
+      logger.error('Error occurred in ready event.', { ...serializeError(error, { includeStack: true }),
         clientId: client.user?.id,
         clientTag: client.user?.tag
       });
@@ -227,8 +225,7 @@ async function initializeInviteUsage(client) {
       });
     }
   } catch (error) {
-    logger.warn('Failed to initialize invite usage for guild.', {
-      err: error,
+    logger.warn('Failed to initialize invite usage for guild.', { ...serializeError(error, { includeStack: true }),
       guildName: guild.name
     });
   }

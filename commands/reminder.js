@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
@@ -100,8 +101,7 @@ module.exports = {
         setValue('reminder_role', roleOption.id)
       ]);
     } catch (dbError) {
-      logger.error("Database operation failed during reminder setup.", { 
-        err: dbError,
+      logger.error("Database operation failed during reminder setup.", { ...serializeError(dbError, { includeStack: true }),
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -207,8 +207,7 @@ module.exports = {
         configComplete
       });
     } catch (dbError) {
-      logger.error("Database operation failed while retrieving reminder data.", { 
-        err: dbError,
+      logger.error("Database operation failed while retrieving reminder data.", { ...serializeError(dbError, { includeStack: true }),
         userId: interaction.user.id,
         guildId: interaction.guildId
       });
@@ -230,7 +229,7 @@ module.exports = {
     try {
       return await getLatestReminderData(type);
     } catch (err) {
-      logger.error("Error occurred while getting latest reminder data.", { err: err, type });
+      logger.error("Error occurred while getting latest reminder data.", { ...serializeError(err, { includeStack: true }), type });
       return null;
     }
   },
@@ -265,8 +264,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in reminder command.", {
-      err: error,
+    logger.error("Error occurred in reminder command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -289,8 +287,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for reminder command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for reminder command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

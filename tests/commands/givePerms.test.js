@@ -53,12 +53,14 @@ describe('giveperms command unit tests', () => {
       id: 'user-123',
       user: { tag: 'Member#1234' },
       roles: {
+        highest: { position: 3 },
         add: jest.fn().mockResolvedValue()
       }
     };
 
     const mockInteraction = {
       user: { id: 'admin-123', tag: 'Admin#0001' },
+      member: { roles: { highest: { position: 20 } } },
       guildId: 'guild-123',
       deferReply: jest.fn().mockResolvedValue(),
       editReply: jest.fn().mockResolvedValue(),
@@ -295,9 +297,10 @@ describe('giveperms command unit tests', () => {
   });
 
   it('should return error if bot highest role is below position reference role', async () => {
-    const mockTargetMember = { id: 'user-123' };
+    const mockTargetMember = { id: 'user-123', roles: { highest: { position: 3 } } };
     const mockInteraction = {
       user: { id: 'admin-123', tag: 'Admin#0001' },
+      member: { roles: { highest: { position: 20 } } },
       guildId: 'guild-123',
       deferReply: jest.fn().mockResolvedValue(),
       editReply: jest.fn().mockResolvedValue(),
@@ -341,12 +344,14 @@ describe('giveperms command unit tests', () => {
       id: 'user-123',
       user: { tag: 'Member#1234' },
       roles: {
+        highest: { position: 3 },
         add: jest.fn().mockRejectedValue(new Error('Add role permission error'))
       }
     };
 
     const mockInteraction = {
       user: { id: 'admin-123', tag: 'Admin#0001' },
+      member: { roles: { highest: { position: 20 } } },
       guildId: 'guild-123',
       deferReply: jest.fn().mockResolvedValue(),
       editReply: jest.fn().mockResolvedValue(),
@@ -507,5 +512,134 @@ describe('giveperms command unit tests', () => {
     await expect(
       givePermsCommand.handleError(mockInteraction, new Error('CONFIG_MISSING'))
     ).resolves.not.toThrow();
+  });
+
+  function buildHierarchyInteraction(overrides = {}) {
+    const mockTargetMember = {
+      id: 'user-123',
+      user: { tag: 'Member#1234' },
+      roles: {
+        highest: { position: 3 },
+        add: jest.fn().mockResolvedValue()
+      }
+    };
+
+    return {
+      user: { id: 'admin-123', tag: 'Admin#0001' },
+      member: { roles: { highest: { position: 20 } } },
+      guild: {
+        ownerId: 'owner-123',
+        members: {
+          cache: { get: jest.fn().mockReturnValue(mockTargetMember) },
+          me: { roles: { highest: { position: 30 } } }
+        },
+        roles: {
+          fetch: jest.fn().mockImplementation(async (id) => {
+            if (id === 'ref-role-id') return { id: 'ref-role-id', position: 5 };
+            if (id === 'fren-role-id') return { id: 'fren-role-id', position: 4 };
+            return null;
+          }),
+          create: jest.fn()
+        }
+      },
+      ...overrides
+    };
+  }
+
+  it('should reject when invoker member is missing', async () => {
+    const mockInteraction = buildHierarchyInteraction({ member: null });
+    const result = await givePermsCommand.createAndAssignRoles(
+      mockInteraction,
+      'Elite',
+      16711680,
+      mockInteraction.guild.members.cache.get()
+    );
+    expect(result).toEqual({
+      success: false,
+      message: '⚠️ Could not verify your member permissions in this server.'
+    });
+  });
+
+  it('should reject when invoker cannot moderate target member', async () => {
+    const mockInteraction = buildHierarchyInteraction({
+      member: { roles: { highest: { position: 2 } } }
+    });
+    const result = await givePermsCommand.createAndAssignRoles(
+      mockInteraction,
+      'Elite',
+      16711680,
+      mockInteraction.guild.members.cache.get()
+    );
+    expect(result).toEqual({
+      success: false,
+      message: '⚠️ You cannot manage this member (role hierarchy).'
+    });
+  });
+
+  it('should reject when invoker cannot manage reference role', async () => {
+    const mockInteraction = buildHierarchyInteraction({
+      member: { roles: { highest: { position: 5 } } }
+    });
+    const result = await givePermsCommand.createAndAssignRoles(
+      mockInteraction,
+      'Elite',
+      16711680,
+      mockInteraction.guild.members.cache.get()
+    );
+    expect(result).toEqual({
+      success: false,
+      message: '⚠️ You cannot manage a role that is above or equal to your highest role.'
+    });
+  });
+
+  it('should reject when invoker cannot manage fren role', async () => {
+    const mockInteraction = buildHierarchyInteraction({
+      member: { roles: { highest: { position: 4 } } },
+      guild: {
+        ownerId: 'owner-123',
+        members: {
+          cache: {
+            get: jest.fn().mockReturnValue({
+              id: 'user-123',
+              roles: { highest: { position: 1 }, add: jest.fn() }
+            })
+          },
+          me: { roles: { highest: { position: 30 } } }
+        },
+        roles: {
+          fetch: jest.fn().mockImplementation(async (id) => {
+            if (id === 'ref-role-id') return { id: 'ref-role-id', position: 2 };
+            if (id === 'fren-role-id') return { id: 'fren-role-id', position: 4 };
+            return null;
+          })
+        }
+      }
+    });
+    const result = await givePermsCommand.createAndAssignRoles(
+      mockInteraction,
+      'Elite',
+      16711680,
+      mockInteraction.guild.members.cache.get()
+    );
+    expect(result).toEqual({
+      success: false,
+      message: '⚠️ You cannot manage a role that is above or equal to your highest role.'
+    });
+  });
+
+  it('should reject when invoker cannot create role at requested position', async () => {
+    const mockInteraction = buildHierarchyInteraction({
+      member: { roles: { highest: { position: 6 } } }
+    });
+    const result = await givePermsCommand.createAndAssignRoles(
+      mockInteraction,
+      'Elite',
+      16711680,
+      mockInteraction.guild.members.cache.get()
+    );
+    expect(result).toEqual({
+      success: false,
+      message: '⚠️ You cannot create a role above or equal to your highest role.'
+    });
   });
 });

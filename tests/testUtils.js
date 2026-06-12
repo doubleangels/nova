@@ -18,7 +18,10 @@ function createMockInteraction(overrides = {}) {
       getBoolean: jest.fn(() => false),
     },
     reply: jest.fn().mockResolvedValue({}),
-    deferReply: jest.fn().mockResolvedValue({}),
+    deferReply: jest.fn().mockImplementation(async function deferReplyMock() {
+      this.deferred = true;
+      return {};
+    }),
     editReply: jest.fn().mockResolvedValue({}),
     followUp: jest.fn().mockResolvedValue({}),
     isCommand: jest.fn(() => true),

@@ -1,9 +1,33 @@
 const pino = require('pino');
 const config = require('./config');
+const { sanitizeLogMeta } = require('./utils/logSanitize');
 
-// Create base logger with configuration
 const baseLogger = pino({
   level: config.logLevel || 'info',
+  redact: {
+    paths: [
+      'token',
+      'apiKey',
+      '*.apiKey',
+      'openaiApiKey',
+      'geminiApiKey',
+      'anthropicApiKey',
+      'deeplApiKey',
+      'googleApiKey',
+      'pirateWeatherApiKey',
+      'redditClientSecret',
+      'redditPassword',
+      'omdbApiKey',
+      'footballDataApiKey',
+      'malClientId',
+      'discordBotToken',
+      'headers.authorization',
+      'authorization',
+      'password',
+      'secret'
+    ],
+    censor: '[REDACTED]'
+  },
   formatters: {
     level: (label) => {
       return { level: label.toUpperCase() };
@@ -24,41 +48,31 @@ function getLogger(label) {
   }
 
   try {
-    // Create a child logger with the label as context
     const childLogger = baseLogger.child({ label });
-    
-    // Wrap the logger methods to maintain compatibility with winston-style usage
-    // where metadata objects are passed as second parameter
+
+    function write(level, message, meta) {
+      const sanitizedMeta = meta && typeof meta === 'object' ? sanitizeLogMeta(meta) : meta;
+
+      if (sanitizedMeta && typeof sanitizedMeta === 'object') {
+        childLogger[level](sanitizedMeta, message);
+      } else {
+        childLogger[level](message);
+      }
+    }
+
     return {
       info: (message, meta) => {
-        if (meta && typeof meta === 'object') {
-          childLogger.info(meta, message);
-        } else {
-          childLogger.info(message);
-        }
+        write('info', message, meta);
       },
       error: (message, meta) => {
-        if (meta && typeof meta === 'object') {
-          childLogger.error(meta, message);
-        } else {
-          childLogger.error(message);
-        }
+        write('error', message, meta);
       },
       warn: (message, meta) => {
-        if (meta && typeof meta === 'object') {
-          childLogger.warn(meta, message);
-        } else {
-          childLogger.warn(message);
-        }
+        write('warn', message, meta);
       },
       debug: (message, meta) => {
-        if (meta && typeof meta === 'object') {
-          childLogger.debug(meta, message);
-        } else {
-          childLogger.debug(message);
-        }
+        write('debug', message, meta);
       },
-      // Expose the raw pino logger for advanced usage if needed
       _pino: childLogger
     };
   } catch (error) {
@@ -67,4 +81,5 @@ function getLogger(label) {
   }
 }
 
+getLogger.sanitizeLogMeta = sanitizeLogMeta;
 module.exports = getLogger;

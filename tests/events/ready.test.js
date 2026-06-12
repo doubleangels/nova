@@ -161,7 +161,7 @@ describe('ready event', () => {
     );
     expect(mockLogger.error).toHaveBeenCalledWith(
       'Failed to write bot heartbeat.',
-      expect.objectContaining({ err: expect.any(Error) })
+      expect.objectContaining({ errorMessage: expect.any(String) })
     );
   });
 
@@ -299,7 +299,7 @@ describe('ready event', () => {
     );
     expect(mockLogger.error).toHaveBeenCalledWith(
       'Startup reschedule task failed.',
-      expect.objectContaining({ err: expect.any(Error) })
+      expect.objectContaining({ errorMessage: expect.any(String) })
     );
   });
 

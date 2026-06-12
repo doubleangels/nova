@@ -1,10 +1,16 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
 const config = require('../config');
 const { fetchImdbContext } = require('../utils/commandContextAi');
 const { formatAiContextField } = require('../utils/geminiContextMessages');
+const {
+  truncateEmbedTitle,
+  truncateEmbedDescription,
+  sanitizeEmbedField
+} = require('../utils/embedUtils');
 
 /**
  * Command module for searching movies and TV shows using IMDb data.
@@ -116,19 +122,19 @@ module.exports = {
   async createMediaEmbed(data, typeLabel) {
     const imdbUrl = data.imdbID ? `https://www.imdb.com/title/${data.imdbID}/` : null;
     const fields = [
-      { name: '📅 Year', value: data.Year || 'N/A', inline: true },
-      { name: '⭐ Rating', value: data.imdbRating || 'N/A', inline: true },
-      { name: '🎭 Genre', value: data.Genre || 'N/A', inline: true },
-      { name: '🎬 Director', value: data.Director || 'N/A', inline: true },
-      { name: '👥 Actors', value: data.Actors || 'N/A', inline: true },
-      { name: '🏆 Awards', value: data.Awards || 'N/A', inline: true },
-      imdbUrl ? { name: '🔗 IMDb', value: `[View on IMDb](${imdbUrl})`, inline: false } : null
+      sanitizeEmbedField({ name: '📅 Year', value: data.Year || 'N/A', inline: true }),
+      sanitizeEmbedField({ name: '⭐ Rating', value: data.imdbRating || 'N/A', inline: true }),
+      sanitizeEmbedField({ name: '🎭 Genre', value: data.Genre || 'N/A', inline: true }),
+      sanitizeEmbedField({ name: '🎬 Director', value: data.Director || 'N/A', inline: true }),
+      sanitizeEmbedField({ name: '👥 Actors', value: data.Actors || 'N/A', inline: true }),
+      sanitizeEmbedField({ name: '🏆 Awards', value: data.Awards || 'N/A', inline: true }),
+      imdbUrl ? sanitizeEmbedField({ name: '🔗 IMDb', value: `[View on IMDb](${imdbUrl})`, inline: false }) : null
     ].filter(field => field !== null);
     
     const embed = new EmbedBuilder()
       .setColor(0xF5C518)
-      .setTitle(data.Title)
-      .setDescription(data.Plot || 'No plot available')
+      .setTitle(truncateEmbedTitle(data.Title))
+      .setDescription(truncateEmbedDescription(data.Plot || 'No plot available'))
       .addFields(fields)
       .setFooter({ text: `Powered by OMDb API` });
     if (imdbUrl) embed.setURL(imdbUrl);
@@ -164,8 +170,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in imdb command.", {
-      err: error,
+    logger.error("Error occurred in imdb command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -190,8 +195,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for imdb command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for imdb command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

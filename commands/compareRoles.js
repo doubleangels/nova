@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -140,8 +141,7 @@ module.exports = {
         onlyRoleTwoCount: onlyTwoFormatted.length
       });
     } catch (error) {
-      logger.error('Error in compareroles command.', {
-        err: error,
+      logger.error('Error in compareroles command.', { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         guildId: interaction.guild?.id,
         channelId: interaction.channel?.id
@@ -152,8 +152,7 @@ module.exports = {
           content: '⚠️ An unexpected error occurred while comparing permissions. Please try again later.'
         });
       } catch (replyError) {
-        logger.error('Failed to send error reply for compareroles command.', {
-          err: replyError,
+        logger.error('Failed to send error reply for compareroles command.', { ...serializeError(replyError, { includeStack: true }),
           originalError: error.message,
           userId: interaction.user?.id
         });

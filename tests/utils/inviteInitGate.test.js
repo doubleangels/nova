@@ -24,4 +24,15 @@ describe('inviteInitGate', () => {
     gate.markInviteInitComplete();
     expect(() => gate.markInviteInitComplete()).not.toThrow();
   });
+
+  it('should resolve waiters on the previous promise when reset twice', async () => {
+    const gate = require('../../utils/inviteInitGate');
+    gate.resetInviteInitGate();
+    const firstWait = gate.waitForInviteInit();
+    gate.resetInviteInitGate();
+    const secondWait = gate.waitForInviteInit();
+    gate.markInviteInitComplete();
+    await expect(firstWait).resolves.toBeUndefined();
+    await expect(secondWait).resolves.toBeUndefined();
+  });
 });

@@ -1,12 +1,16 @@
 const path = require('path');
 const config = require('../config');
+const { serializeError } = require('./logSanitize');
 const keyvModule = require('keyv');
 const Keyv = keyvModule.default ?? keyvModule;
 const { getSharedKeyvStore, getWritableDb } = require('./sqliteStore');
 const logger = require('../logger')(path.basename(__filename));
 
-/** Max fixture IDs kept in prompted/scored tracking lists before oldest entries are pruned. */
+/** @deprecated Legacy list cap; per-fixture flags are authoritative. Kept for export/tests. */
 const MAX_TRACKED_FIXTURES = 512;
+
+/** Stale scoring locks older than this are cleared on startup or replaced on acquire. */
+const SCORING_LOCK_TTL_MS = 10 * 60 * 1000;
 
 /**
  * @typedef {Object} GamePrediction
@@ -59,7 +63,7 @@ function createPredictionStore(namespace, logLabel) {
   });
 
   keyv.on('error', err =>
-    logger.error(`${logLabel} Keyv connection error.`, { err })
+    logger.error(`${logLabel} Keyv connection error.`, serializeError(err, { includeStack: true }))
   );
 
   const keyPrefix = `${namespace}:`;
@@ -113,15 +117,106 @@ function createPredictionStore(namespace, logLabel) {
     return list.some(id => normalizeFixtureId(id) === normalized);
   }
 
-  function appendTrackedIdInTx(db, listKey, fixtureId) {
-    let list = getInTx(db, listKey) || [];
-    if (!list.includes(fixtureId)) {
-      list.push(fixtureId);
-      if (list.length > MAX_TRACKED_FIXTURES) {
-        list = list.slice(-MAX_TRACKED_FIXTURES);
-      }
-      setInTx(db, listKey, list);
+  function promptedFlagKey(fixtureId) {
+    return `fixture_prompted:${normalizeFixtureId(fixtureId)}`;
+  }
+
+  function scoredFlagKey(fixtureId) {
+    return `fixture_scored:${normalizeFixtureId(fixtureId)}`;
+  }
+
+  function isFixturePromptedInTx(db, fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    /* istanbul ignore next -- defensive guard for invalid fixture ids */
+    if (normalizedId == null) return false;
+    const legacy = getInTx(db, 'prompted_fixtures') || [];
+    if (listIncludesFixtureId(legacy, normalizedId)) return true;
+    const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey(promptedFlagKey(normalizedId)));
+    return Boolean(parseKeyvValue(row?.value));
+  }
+
+  function setFixturePromptedInTx(db, fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    /* istanbul ignore next -- defensive guard for invalid fixture ids */
+    if (normalizedId == null) return;
+    setInTx(db, promptedFlagKey(normalizedId), true);
+  }
+
+  function clearFixturePromptedInTx(db, fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    /* istanbul ignore next -- defensive guard for invalid fixture ids */
+    if (normalizedId == null) return;
+    db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey(promptedFlagKey(normalizedId)));
+    const legacy = getInTx(db, 'prompted_fixtures') || [];
+    const next = legacy.filter(id => normalizeFixtureId(id) !== normalizedId);
+    if (next.length !== legacy.length) {
+      setInTx(db, 'prompted_fixtures', next);
     }
+  }
+
+  function isFixtureScoredInTx(db, fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    /* istanbul ignore next -- defensive guard for invalid fixture ids */
+    if (normalizedId == null) return false;
+    const legacy = getInTx(db, 'scored_fixtures') || [];
+    if (listIncludesFixtureId(legacy, normalizedId)) return true;
+    const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey(scoredFlagKey(normalizedId)));
+    return Boolean(parseKeyvValue(row?.value));
+  }
+
+  function setFixtureScoredInTx(db, fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    /* istanbul ignore next -- defensive guard for invalid fixture ids */
+    if (normalizedId == null) return;
+    if (isFixtureScoredInTx(db, normalizedId)) return;
+    setInTx(db, scoredFlagKey(normalizedId), true);
+  }
+
+  function clearFixtureScoredInTx(db, fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    /* istanbul ignore next -- defensive guard for invalid fixture ids */
+    if (normalizedId == null) return;
+    db.prepare('DELETE FROM keyv WHERE key = ?').run(fullKey(scoredFlagKey(normalizedId)));
+    const legacy = getInTx(db, 'scored_fixtures') || [];
+    const next = legacy.filter(id => normalizeFixtureId(id) !== normalizedId);
+    if (next.length !== legacy.length) {
+      setInTx(db, 'scored_fixtures', next);
+    }
+  }
+
+  function collectFixtureIdsFromFlagPrefix(db, flagPrefix) {
+    const ids = new Set();
+    const keyPrefix = fullKey(flagPrefix);
+    const rows = db.prepare('SELECT key FROM keyv WHERE key LIKE ?').all(`${keyPrefix}%`);
+    for (const row of rows) {
+      const idPart = row.key.slice(keyPrefix.length);
+      const normalized = normalizeFixtureId(idPart);
+      if (normalized != null) ids.add(normalized);
+    }
+    return ids;
+  }
+
+  function parseScoringLockPayload(rawValue) {
+    const parsed = parseKeyvValue(rawValue);
+    if (parsed && typeof parsed === 'object' && parsed.acquiredAt) {
+      return parsed;
+    }
+    if (parsed === 1 || parsed === true) {
+      return { acquiredAt: null };
+    }
+    return null;
+  }
+
+  function isScoringLockStale(payload, nowMs = Date.now()) {
+    if (!payload) return true;
+    if (!payload.acquiredAt) return true;
+    const acquiredMs = Date.parse(payload.acquiredAt);
+    if (!Number.isFinite(acquiredMs)) return true;
+    return nowMs - acquiredMs >= SCORING_LOCK_TTL_MS;
+  }
+
+  function appendTrackedIdInTx(db, listKey, fixtureId) {
+    setFixtureScoredInTx(db, fixtureId);
   }
 
   const PENDING_PREDICTION_TTL_MS = config.predictionPendingTtlMs;
@@ -251,26 +346,25 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   async function getPromptedFixtures() {
-    return (await keyv.get('prompted_fixtures')) || [];
+    return runStoreTransaction((db) => {
+      const ids = collectFixtureIdsFromFlagPrefix(db, 'fixture_prompted:');
+      for (const id of getInTx(db, 'prompted_fixtures') || []) {
+        const normalized = normalizeFixtureId(id);
+        if (normalized != null) ids.add(normalized);
+      }
+      return Array.from(ids).sort((a, b) => a - b);
+    });
   }
 
   async function markFixturePrompted(fixtureId) {
     const normalizedId = normalizeFixtureId(fixtureId);
     if (normalizedId == null) return;
 
-    const list = runStoreTransaction((db) => {
-      let prompted = getInTx(db, 'prompted_fixtures') || [];
-      if (listIncludesFixtureId(prompted, normalizedId)) {
-        return prompted;
+    runStoreTransaction((db) => {
+      if (!isFixturePromptedInTx(db, normalizedId)) {
+        setFixturePromptedInTx(db, normalizedId);
       }
-      prompted.push(normalizedId);
-      if (prompted.length > MAX_TRACKED_FIXTURES) {
-        prompted = prompted.slice(-MAX_TRACKED_FIXTURES);
-      }
-      setInTx(db, 'prompted_fixtures', prompted);
-      return prompted;
     });
-    await keyv.set('prompted_fixtures', list);
   }
 
   /**
@@ -282,22 +376,15 @@ function createPredictionStore(namespace, logLabel) {
     const normalizedId = normalizeFixtureId(fixtureId);
     if (normalizedId == null) return false;
 
-    const list = runStoreTransaction((db) => {
-      let prompted = getInTx(db, 'prompted_fixtures') || [];
-      if (listIncludesFixtureId(prompted, normalizedId)) {
-        return null;
+    const acquired = runStoreTransaction((db) => {
+      if (isFixturePromptedInTx(db, normalizedId)) {
+        return false;
       }
-      prompted.push(normalizedId);
-      if (prompted.length > MAX_TRACKED_FIXTURES) {
-        prompted = prompted.slice(-MAX_TRACKED_FIXTURES);
-      }
-      setInTx(db, 'prompted_fixtures', prompted);
-      return prompted;
+      setFixturePromptedInTx(db, normalizedId);
+      return true;
     });
 
-    if (!list) return false;
-    await keyv.set('prompted_fixtures', list);
-    return true;
+    return acquired;
   }
 
   /**
@@ -309,26 +396,25 @@ function createPredictionStore(namespace, logLabel) {
     const normalizedId = normalizeFixtureId(fixtureId);
     if (normalizedId == null) return;
 
-    const list = runStoreTransaction((db) => {
-      const prompted = getInTx(db, 'prompted_fixtures') || [];
-      const next = prompted.filter(id => normalizeFixtureId(id) !== normalizedId);
-      if (next.length === prompted.length) return null;
-      setInTx(db, 'prompted_fixtures', next);
-      return next;
+    runStoreTransaction((db) => {
+      clearFixturePromptedInTx(db, normalizedId);
     });
-
-    if (list) {
-      await keyv.set('prompted_fixtures', list);
-    }
   }
 
   async function getScoredFixtures() {
-    return (await keyv.get('scored_fixtures')) || [];
+    return runStoreTransaction((db) => {
+      const ids = collectFixtureIdsFromFlagPrefix(db, 'fixture_scored:');
+      for (const id of getInTx(db, 'scored_fixtures') || []) {
+        const normalized = normalizeFixtureId(id);
+        if (normalized != null) ids.add(normalized);
+      }
+      return Array.from(ids).sort((a, b) => a - b);
+    });
   }
 
   async function markFixtureScored(fixtureId) {
     runStoreTransaction((db) => {
-      appendTrackedIdInTx(db, 'scored_fixtures', fixtureId);
+      setFixtureScoredInTx(db, fixtureId);
     });
   }
 
@@ -337,12 +423,23 @@ function createPredictionStore(namespace, logLabel) {
    * @returns {Promise<boolean>}
    */
   async function tryAcquireScoringLock(fixtureId) {
+    const normalizedId = normalizeFixtureId(fixtureId);
+    if (normalizedId == null) return false;
+    const now = Date.now();
+
     return runStoreTransaction((db) => {
-      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey(`scoring_lock:${fixtureId}`));
-      if (row) return false;
+      const key = fullKey(`scoring_lock:${normalizedId}`);
+      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(key);
+      if (row) {
+        const payload = parseScoringLockPayload(row.value);
+        if (!isScoringLockStale(payload, now)) {
+          return false;
+        }
+        db.prepare('DELETE FROM keyv WHERE key = ?').run(key);
+      }
       db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
-        fullKey(`scoring_lock:${fixtureId}`),
-        wrapKeyvValue(1)
+        key,
+        wrapKeyvValue({ acquiredAt: new Date(now).toISOString() })
       );
       return true;
     });
@@ -353,7 +450,30 @@ function createPredictionStore(namespace, logLabel) {
    * @returns {Promise<void>}
    */
   async function releaseScoringLock(fixtureId) {
-    await keyv.delete(`scoring_lock:${fixtureId}`);
+    const normalizedId = normalizeFixtureId(fixtureId);
+    if (normalizedId == null) return;
+    await keyv.delete(`scoring_lock:${normalizedId}`);
+  }
+
+  /**
+   * Removes scoring locks that expired or predate TTL metadata (e.g. after a crash).
+   * @returns {number} Count of cleared locks
+   */
+  function clearStaleScoringLocks() {
+    const now = Date.now();
+    return runStoreTransaction((db) => {
+      const prefix = fullKey('scoring_lock:');
+      const rows = db.prepare('SELECT key, value FROM keyv WHERE key LIKE ?').all(`${prefix}%`);
+      let cleared = 0;
+      for (const row of rows) {
+        const payload = parseScoringLockPayload(row.value);
+        if (isScoringLockStale(payload, now)) {
+          db.prepare('DELETE FROM keyv WHERE key = ?').run(row.key);
+          cleared += 1;
+        }
+      }
+      return cleared;
+    });
   }
 
   /**
@@ -605,16 +725,20 @@ function createPredictionStore(namespace, logLabel) {
     clearAiPredictionCache(mockIds, aiGameId);
 
     const prompted = await getPromptedFixtures();
-    await keyv.set(
-      'prompted_fixtures',
-      prompted.filter(id => !mockIds.includes(id))
-    );
+    for (const fixtureId of mockIds) {
+      if (prompted.includes(fixtureId)) {
+        await releaseFixturePromptClaim(fixtureId);
+      }
+    }
 
     const scored = await getScoredFixtures();
-    await keyv.set(
-      'scored_fixtures',
-      scored.filter(id => !mockIds.includes(id))
-    );
+    for (const fixtureId of mockIds) {
+      if (scored.includes(fixtureId)) {
+        runStoreTransaction((db) => {
+          clearFixtureScoredInTx(db, fixtureId);
+        });
+      }
+    }
 
     for (const fixtureId of mockIds) {
       const userIds = await getPredictorIdsForFixture(fixtureId);
@@ -634,7 +758,7 @@ function createPredictionStore(namespace, logLabel) {
     }
   }
 
-  return {
+  const api = {
     keyv,
     getRegisteredUserIds,
     isUserRegistered,
@@ -654,6 +778,7 @@ function createPredictionStore(namespace, logLabel) {
     markFixtureScored,
     tryAcquireScoringLock,
     releaseScoringLock,
+    clearStaleScoringLocks,
     applyFixtureScoringResults,
     getPredictorIdsForFixture,
     getPredictionsForFixture,
@@ -671,10 +796,17 @@ function createPredictionStore(namespace, logLabel) {
     PENDING_PREDICTION_TTL_MS,
     isPendingPredictionComplete
   };
+
+  if (process.env.NODE_ENV === 'test') {
+    api.__test__ = { isScoringLockStale };
+  }
+
+  return api;
 }
 
 module.exports = {
   createPredictionStore,
   isPendingPredictionComplete,
-  MAX_TRACKED_FIXTURES
+  MAX_TRACKED_FIXTURES,
+  SCORING_LOCK_TTL_MS
 };

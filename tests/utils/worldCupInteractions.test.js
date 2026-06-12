@@ -44,7 +44,7 @@ describe('worldCupInteractions', () => {
         id: 42,
         home: 'Brazil',
         away: 'Argentina',
-        kickoff: '2026-06-12T18:00:00+00:00',
+        kickoff: '2030-06-12T18:00:00+00:00',
         status: 'NS',
         goals: { home: null, away: null }
       })

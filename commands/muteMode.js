@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { setValue, getValue } = require('../utils/database');
@@ -187,9 +188,7 @@ module.exports = {
         timeLimit: timeLimit ? Number(timeLimit) : 2
       };
     } catch (error) {
-      logger.error("Failed to retrieve current mute mode settings.", {
-        err: error
-      });
+      logger.error("Failed to retrieve current mute mode settings.", { ...serializeError(error, { includeStack: true }) });
 
       throw new Error("DATABASE_READ_ERROR");
     }
@@ -210,9 +209,7 @@ module.exports = {
         setValue("mute_mode_kick_time_hours", timeLimit)
       ]);
     } catch (error) {
-      logger.error("Database operation failed during mute mode update.", { 
-        err: error
-      });
+      logger.error("Database operation failed during mute mode update.", { ...serializeError(error, { includeStack: true }) });
       
       throw new Error("DATABASE_WRITE_ERROR");
     }
@@ -286,8 +283,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in mutemode command.", {
-      err: error,
+    logger.error("Error occurred in mutemode command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -308,8 +304,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for mutemode command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for mutemode command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

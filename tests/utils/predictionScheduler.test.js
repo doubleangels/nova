@@ -290,4 +290,44 @@ describe('predictionScheduler', () => {
       expect.not.objectContaining({ content: expect.any(String) })
     );
   });
+
+  it('should clear stale scoring locks during startup', async () => {
+    mockStore.clearStaleScoringLocks = jest.fn().mockReturnValue(2);
+
+    await scheduler.runStartup(mockClient);
+
+    expect(mockStore.clearStaleScoringLocks).toHaveBeenCalled();
+    expect(getSeasonFixtures).toHaveBeenCalledWith({ forceRefresh: true });
+  });
+
+  it('should skip stale lock logging when startup finds none', async () => {
+    mockStore.clearStaleScoringLocks = jest.fn().mockReturnValue(0);
+
+    await scheduler.runStartup(mockClient);
+
+    expect(mockStore.clearStaleScoringLocks).toHaveBeenCalled();
+  });
+
+  it('should wait for in-flight polls to finish during drain', async () => {
+    let releasePoll;
+    const pollGate = new Promise(resolve => {
+      releasePoll = resolve;
+    });
+    getSeasonFixtures.mockImplementation(async () => {
+      await pollGate;
+      return [];
+    });
+
+    const pollPromise = scheduler.runPoll(mockClient);
+    await new Promise(resolve => setImmediate(resolve));
+    const drainPromise = scheduler.waitForPollDrain(5_000);
+    releasePoll();
+    await pollPromise;
+    await drainPromise;
+  });
+
+  it('should clear poll interval while waiting for drain', async () => {
+    scheduler.startScheduler(mockClient);
+    await scheduler.waitForPollDrain();
+  });
 });

@@ -31,10 +31,12 @@ describe('changeRoleName command', () => {
             setName: jest.fn().mockResolvedValue()
           }),
           getString: jest.fn().mockReturnValue('  New Role Name  ')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -73,6 +75,7 @@ describe('changeRoleName command', () => {
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -94,10 +97,12 @@ describe('changeRoleName command', () => {
         options: {
           getRole: jest.fn().mockReturnValue({ id: 'role-id', name: 'Old Role', position: 15 }),
           getString: jest.fn().mockReturnValue('New Role')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -113,7 +118,7 @@ describe('changeRoleName command', () => {
       await changeRoleNameCommand.execute(mockInteraction);
 
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-        content: "⚠️ I can't edit that role. It is above or equal to my highest role."
+        content: "⚠️ I don't have permission to manage this role."
       }));
     });
 
@@ -122,10 +127,12 @@ describe('changeRoleName command', () => {
         options: {
           getRole: jest.fn().mockReturnValue({ id: 'role-id', name: 'Old Role', position: 5, managed: true }),
           getString: jest.fn().mockReturnValue('New Role')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -141,7 +148,7 @@ describe('changeRoleName command', () => {
       await changeRoleNameCommand.execute(mockInteraction);
 
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-        content: "⚠️ That role is managed by an integration (e.g. bot or Booster) and can't be renamed."
+        content: "⚠️ This role is managed by an integration and cannot be modified."
       }));
     });
 
@@ -150,10 +157,12 @@ describe('changeRoleName command', () => {
         options: {
           getRole: jest.fn().mockReturnValue({ id: 'role-id', name: 'Old Role', position: 5, managed: false }),
           getString: jest.fn().mockReturnValue('   ') // Trimmed length is 0
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -186,10 +195,12 @@ describe('changeRoleName command', () => {
             setName: jest.fn().mockResolvedValue()
           }),
           getString: jest.fn().mockReturnValue('New Name')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -219,10 +230,12 @@ describe('changeRoleName command', () => {
             setName: jest.fn().mockRejectedValue({ code: 50013 })
           }),
           getString: jest.fn().mockReturnValue('New Name')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -256,10 +269,12 @@ describe('changeRoleName command', () => {
             })
           }),
           getString: jest.fn().mockReturnValue('New Name')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -290,10 +305,12 @@ describe('changeRoleName command', () => {
             setName: jest.fn().mockRejectedValue(new Error('Discord offline'))
           }),
           getString: jest.fn().mockReturnValue('New Name')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -329,6 +346,7 @@ describe('changeRoleName command', () => {
       });
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: {
             permissions: {
@@ -361,7 +379,8 @@ describe('changeRoleName command', () => {
             setName: jest.fn().mockResolvedValue()
           }),
           getString: jest.fn().mockReturnValue('New Role Name')
-        }
+        },
+        member: { roles: { highest: { position: 50 } } }
       });
 
       const mockBotMember = {
@@ -374,6 +393,7 @@ describe('changeRoleName command', () => {
       };
 
       mockInteraction.guild = {
+        ownerId: 'owner-123',
         members: {
           me: null,
           fetchMe: jest.fn().mockResolvedValue(mockBotMember)

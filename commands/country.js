@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const axios = require('axios');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
@@ -89,8 +90,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error('Error occurred in country command.', {
-      err: error,
+    logger.error('Error occurred in country command.', { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -108,8 +108,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral
       });
     } catch (followUpError) {
-      logger.error('Failed to send error response for country command.', {
-        err: followUpError,
+      logger.error('Failed to send error response for country command.', { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

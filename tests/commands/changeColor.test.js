@@ -49,12 +49,14 @@ describe('changeColor command', () => {
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue('#ff0000')
         },
+        member: { roles: { highest: { position: 50 } } },
         guild: {
           members: {
             me: {
               permissions: {
-                has: jest.fn().mockReturnValue(true) // BOT_PERMISSION_DENIED is false
-              }
+                has: jest.fn().mockReturnValue(true)
+              },
+              roles: { highest: { position: 50 } }
             }
           }
         }
@@ -103,6 +105,7 @@ describe('changeColor command', () => {
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue('#ff0000')
         },
+        member: { roles: { highest: { position: 50 } } },
         guild: {
           members: {
             me: {
@@ -130,7 +133,8 @@ describe('changeColor command', () => {
       const mockRole = createMockRole({
         id: 'role-color',
         hexColor: '#123456',
-        setColor: jest.fn().mockRejectedValue(new Error('ROLE_NOT_MANAGEABLE'))
+        managed: true,
+        position: 5
       });
 
       const mockInteraction = createMockInteraction({
@@ -138,12 +142,14 @@ describe('changeColor command', () => {
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue('#ff0000')
         },
+        member: { roles: { highest: { position: 50 } } },
         guild: {
           members: {
             me: {
               permissions: {
                 has: jest.fn().mockReturnValue(true)
-              }
+              },
+              roles: { highest: { position: 50 } }
             }
           }
         }
@@ -157,7 +163,84 @@ describe('changeColor command', () => {
       await changeColorCommand.execute(mockInteraction);
 
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-        content: '⚠️ I cannot modify this role. It may be managed by an integration or have higher permissions than me.'
+        content: "⚠️ This role is managed by an integration and cannot be modified."
+      }));
+    });
+
+    it('should map INVOKER_HIERARCHY error when invoker cannot manage the role', async () => {
+      const mockRole = createMockRole({
+        id: 'role-color',
+        hexColor: '#123456',
+        managed: false,
+        position: 25
+      });
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getRole: jest.fn().mockReturnValue(mockRole),
+          getString: jest.fn().mockReturnValue('#ff0000')
+        },
+        member: { roles: { highest: { position: 20 } } },
+        guild: {
+          ownerId: 'owner-id',
+          members: {
+            me: {
+              permissions: {
+                has: jest.fn().mockReturnValue(true)
+              },
+              roles: { highest: { position: 30 } }
+            }
+          }
+        }
+      });
+
+      mockColorUtils.validateAndNormalizeColor.mockReturnValue({
+        success: true,
+        normalizedColor: '#ff0000'
+      });
+
+      await changeColorCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ You cannot manage a role that is above or equal to your highest role.'
+      }));
+    });
+
+    it('should map BOT_PERMISSION_DENIED when bot cannot manage the role position', async () => {
+      const mockRole = createMockRole({
+        id: 'role-color',
+        hexColor: '#123456',
+        managed: false,
+        position: 25
+      });
+
+      const mockInteraction = createMockInteraction({
+        options: {
+          getRole: jest.fn().mockReturnValue(mockRole),
+          getString: jest.fn().mockReturnValue('#ff0000')
+        },
+        member: { roles: { highest: { position: 50 } } },
+        guild: {
+          members: {
+            me: {
+              permissions: {
+                has: jest.fn().mockReturnValue(true)
+              },
+              roles: { highest: { position: 20 } }
+            }
+          }
+        }
+      });
+
+      mockColorUtils.validateAndNormalizeColor.mockReturnValue({
+        success: true,
+        normalizedColor: '#ff0000'
+      });
+
+      await changeColorCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: "⚠️ I don't have permission to manage roles in this server."
       }));
     });
 
@@ -173,12 +256,14 @@ describe('changeColor command', () => {
           getRole: jest.fn().mockReturnValue(mockRole),
           getString: jest.fn().mockReturnValue('#ff0000')
         },
+        member: { roles: { highest: { position: 50 } } },
         guild: {
           members: {
             me: {
               permissions: {
                 has: jest.fn().mockReturnValue(true)
-              }
+              },
+              roles: { highest: { position: 50 } }
             }
           }
         }

@@ -1,8 +1,14 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const httpClient = require('../utils/httpClient');
 const { getCached, setCached, cacheKey } = require('../utils/responseCache');
 const logger = require('../logger')(path.basename(__filename));
+const {
+  truncateEmbedTitle,
+  truncateEmbedDescription,
+  sanitizeEmbedField
+} = require('../utils/embedUtils');
 
 /**
  * Command module for searching Urban Dictionary definitions.
@@ -67,15 +73,15 @@ module.exports = {
                 return currentScore > bestScore ? current : best;
             }, null);
             const fields = [
-                { name: 'Example', value: definition.example || 'No example provided.' },
-                { name: 'Author', value: definition.author || 'Unknown' },
-                { name: '👍', value: definition.thumbs_up.toString(), inline: true },
-                { name: '👎', value: definition.thumbs_down.toString(), inline: true }
+                sanitizeEmbedField({ name: 'Example', value: definition.example || 'No example provided.' }),
+                sanitizeEmbedField({ name: 'Author', value: definition.author || 'Unknown' }),
+                sanitizeEmbedField({ name: '👍', value: definition.thumbs_up.toString(), inline: true }),
+                sanitizeEmbedField({ name: '👎', value: definition.thumbs_down.toString(), inline: true })
             ];
             const embed = new EmbedBuilder()
                 .setColor(0x202C34)
-                .setTitle(`Urban Dictionary: ${definition.word}`)
-                .setDescription(definition.definition)
+                .setTitle(truncateEmbedTitle(`Urban Dictionary: ${definition.word}`))
+                .setDescription(truncateEmbedDescription(definition.definition))
                 .addFields(fields);
 
             setCached(cacheId, embed, 900000);
@@ -99,8 +105,7 @@ module.exports = {
      * @returns {Promise<void>}
      */
     async handleError(interaction, error) {
-        logger.error("Error occurred in urban command.", {
-            err: error,
+        logger.error("Error occurred in urban command.", { ...serializeError(error, { includeStack: true }),
             userId: interaction.user?.id,
             guildId: interaction.guild?.id
         });
@@ -125,8 +130,7 @@ module.exports = {
                 flags: MessageFlags.Ephemeral 
             });
         } catch (followUpError) {
-            logger.error("Failed to send error response for urban command.", {
-                err: followUpError,
+            logger.error("Failed to send error response for urban command.", { ...serializeError(followUpError, { includeStack: true }),
                 originalError: error.message,
                 userId: interaction.user?.id
             });

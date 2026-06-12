@@ -1,4 +1,5 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -62,8 +63,7 @@ module.exports = {
         targetMessageId: targetMessage.id
       });
     } catch (error) {
-      logger.error('Error in Quote context menu command.', {
-        err: error,
+      logger.error('Error in Quote context menu command.', { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         targetMessageId: interaction.targetMessage?.id
       });

@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('../utils/logSanitize.js');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
 const { captureError } = require('../instrument');
@@ -38,8 +39,7 @@ module.exports = {
         try {
           await reaction.fetch();
         } catch (error) {
-          logger.error('Error occurred while fetching reaction.', {
-            err: error,
+          logger.error('Error occurred while fetching reaction.', { ...serializeError(error, { includeStack: true }),
             userId: user.id,
             messageId: reaction.message.id
           });
@@ -56,8 +56,7 @@ module.exports = {
       await handleTranslationRequest(reaction, user);
     } catch (error) {
       captureError(error, { event: 'messageReactionAdd' });
-      logger.error('Error occurred while processing reaction.', {
-        err: error,
+      logger.error('Error occurred while processing reaction.', { ...serializeError(error, { includeStack: true }),
         emoji: reaction.emoji?.name,
         userId: user.id,
         messageId: reaction.message?.id
@@ -190,11 +189,8 @@ async function handleTranslationRequest(reaction, user) {
   } catch (error) {
     captureError(error, { event: 'messageReactionAdd' });
     logger.error('Error occurred in translation request.', {
-      err: error,
+      ...serializeError(error, { includeStack: true }),
       status: error.response?.status,
-      statusText: error.response?.statusText,
-      responseData: error.response?.data,
-      requestUrl: error.config?.url,
       requestMethod: error.config?.method
     });
 
@@ -210,8 +206,7 @@ async function handleTranslationRequest(reaction, user) {
         });
       }
     } catch (replyError) {
-      logger.error('Failed to send error message.', {
-        err: replyError,
+      logger.error('Failed to send error message.', { ...serializeError(replyError, { includeStack: true }),
         originalError: error.message
       });
     }

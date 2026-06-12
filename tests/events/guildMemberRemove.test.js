@@ -128,4 +128,21 @@ describe('guildMemberRemove event', () => {
     expect(mockInstrument.captureError).toHaveBeenCalled();
     expect(mockLogger.error).toHaveBeenCalled();
   });
+
+  it('should catch unexpected errors before cleanup tasks run', async () => {
+    mockMuteModeUtils.cancelMuteKick.mockImplementation(() => {
+      throw new Error('cancel fail');
+    });
+
+    await expect(guildMemberRemoveEvent.execute({
+      id: 'user-123',
+      user: { bot: false, tag: 'User#1234' }
+    })).resolves.not.toThrow();
+
+    expect(mockInstrument.captureError).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'Error occurred while processing member leave.',
+      expect.any(Object)
+    );
+  });
 });

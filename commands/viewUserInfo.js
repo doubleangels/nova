@@ -1,8 +1,10 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
 const { isFormerMember } = require('../utils/database');
+const { truncateEmbedAuthor, sanitizeEmbedField } = require('../utils/embedUtils');
 
 /**
  * Formats a permission key for display (e.g. "KickMembers" -> "Kick Members").
@@ -62,41 +64,41 @@ module.exports = {
 
       const avatarURL = serverAvatarURL ?? globalAvatarURL;
       const fields = [
-        { name: 'Username', value: targetUser.username, inline: true },
-        { name: 'Display Name', value: `<@${targetUser.id}>`, inline: true },
-        { name: 'Bot', value: targetUser.bot ? 'Yes' : 'No', inline: true },
-        { name: 'Returning', value: returningValue, inline: true },
-        { name: 'ID', value: targetUser.id, inline: true },
-        {
+        sanitizeEmbedField({ name: 'Username', value: targetUser.username, inline: true }),
+        sanitizeEmbedField({ name: 'Display Name', value: `<@${targetUser.id}>`, inline: true }),
+        sanitizeEmbedField({ name: 'Bot', value: targetUser.bot ? 'Yes' : 'No', inline: true }),
+        sanitizeEmbedField({ name: 'Returning', value: returningValue, inline: true }),
+        sanitizeEmbedField({ name: 'ID', value: targetUser.id, inline: true }),
+        sanitizeEmbedField({
           name: 'Created',
           value: `<t:${createdTimestamp}:F>\n(<t:${createdTimestamp}:R>)`,
           inline: false
-        }
+        })
       ];
       if (member?.joinedAt) {
         const joinedTimestamp = Math.floor(member.joinedAt.getTime() / 1000);
-        fields.push({
+        fields.push(sanitizeEmbedField({
           name: 'Joined',
           value: `<t:${joinedTimestamp}:F>\n(<t:${joinedTimestamp}:R>)`,
           inline: false
-        });
+        }));
       }
       if (member) {
         if (member.communicationDisabledUntilTimestamp != null && member.communicationDisabledUntilTimestamp > Date.now()) {
           const untilTimestamp = Math.floor(member.communicationDisabledUntilTimestamp / 1000);
-          fields.push({
+          fields.push(sanitizeEmbedField({
             name: 'Timeout',
             value: `Until <t:${untilTimestamp}:F>\n(<t:${untilTimestamp}:R>)`,
             inline: true
-          });
+          }));
         }
         if (member.premiumSince) {
           const boostTimestamp = Math.floor(member.premiumSince.getTime() / 1000);
-          fields.push({
+          fields.push(sanitizeEmbedField({
             name: 'Booster',
             value: `Since <t:${boostTimestamp}:F>\n(<t:${boostTimestamp}:R>)`,
             inline: true
-          });
+          }));
         }
         const diffRole = config.permissionBenchmarkRoleId
           ? member.guild.roles.cache.get(config.permissionBenchmarkRoleId)
@@ -105,18 +107,18 @@ module.exports = {
           const memberPerms = member.permissions.toArray();
           extraPermissions = memberPerms.filter(p => !diffRole.permissions.has(p)).map(formatPermissionName).sort();
           if (extraPermissions.length > 0) {
-            fields.push({
+            fields.push(sanitizeEmbedField({
               name: 'Permissions',
               value: `**Extra:** ${extraPermissions.join(', ')}`,
               inline: false
-            });
+            }));
           }
         }
       }
       const embed = new EmbedBuilder()
         .setColor(config.baseEmbedColor ?? 0)
         .setAuthor({
-          name: displayName,
+          name: truncateEmbedAuthor(displayName),
           iconURL: avatarURL
         })
         .setImage(avatarURL)
@@ -129,8 +131,7 @@ module.exports = {
         targetUserId: targetUser.id
       });
     } catch (error) {
-      logger.error('Error in View User Information context menu command.', {
-        err: error,
+      logger.error('Error in View User Information context menu command.', { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         guildId: interaction.guild?.id,
         channelId: interaction.channel?.id
@@ -141,8 +142,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral
         });
       } catch (e) {
-        logger.error('Failed to send error reply.', {
-          err: e,
+        logger.error('Failed to send error reply.', { ...serializeError(e, { includeStack: true }),
           originalError: error.message,
           userId: interaction.user?.id
         });

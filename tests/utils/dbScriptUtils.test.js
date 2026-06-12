@@ -67,6 +67,17 @@ describe('dbScriptUtils', () => {
       const result = dbScriptUtils.parseKey('config:my_key');
       expect(result).toEqual({ namespace: 'main', section: 'config:', actualKey: 'my_key', fullKey: 'config:my_key' });
     });
+
+    it('should parse prediction game namespaces', () => {
+      expect(dbScriptUtils.parseKey('worldcup:fixture:1').namespace).toBe('worldcup');
+      expect(dbScriptUtils.parseKey('football:fixture:1').namespace).toBe('football');
+      expect(dbScriptUtils.parseKey('nova_reminders:abc').namespace).toBe('nova_reminders');
+    });
+
+    it('should parse mute and spam mode sections in main namespace', () => {
+      expect(dbScriptUtils.parseKey('mute_mode:user1').section).toBe('mute_mode:');
+      expect(dbScriptUtils.parseKey('spam_mode:user1').section).toBe('spam_mode:');
+    });
   });
 
   describe('parseDatabaseKey', () => {

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const dayjs = require('dayjs');
 const logger = require('../logger')(path.basename(__filename));
@@ -6,6 +7,11 @@ const axios = require('axios');
 const config = require('../config');
 const { fetchAnimeContext } = require('../utils/commandContextAi');
 const { formatAiContextField } = require('../utils/geminiContextMessages');
+const {
+  truncateEmbedTitle,
+  truncateEmbedDescription,
+  sanitizeEmbedField
+} = require('../utils/embedUtils');
 
 /**
  * @typedef {Object} AnimeData
@@ -79,8 +85,7 @@ module.exports = {
         });
       }
     } catch (error) {
-      logger.error("Error occurred in anime command.", {
-        err: error,
+      logger.error("Error occurred in anime command.", { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         guildId: interaction.guild?.id
       });
@@ -101,8 +106,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral
         });
       } catch (followUpError) {
-        logger.error("Failed to send error response for anime command.", {
-          err: followUpError,
+        logger.error("Failed to send error response for anime command.", { ...serializeError(followUpError, { includeStack: true }),
           originalError: error.message,
           userId: interaction.user?.id
         });
@@ -157,18 +161,18 @@ module.exports = {
       : "Unknown";
     const releaseDate = this.formatReleaseDate(animeData.releaseDate);
     const rating = animeData.rating != null && animeData.rating !== "" ? String(animeData.rating) : "N/A";
-    const synopsis = (animeData.synopsis || "No synopsis available.").slice(0, 4090);
-    const title = (animeData.title || "Unknown").slice(0, 256);
+    const synopsis = animeData.synopsis || 'No synopsis available.';
+    const title = truncateEmbedTitle(animeData.title || 'Unknown');
 
     const fields = [
-      { name: "🎭 Genre", value: genres.slice(0, 1024), inline: true },
-      { name: "⭐ MAL Rating", value: rating, inline: true },
-      { name: "📅 Release Date", value: releaseDate.slice(0, 1024), inline: true },
-      { name: "🔗 MAL Link", value: `[Click Here](${malLink})`, inline: false }
+      sanitizeEmbedField({ name: '🎭 Genre', value: genres, inline: true }),
+      sanitizeEmbedField({ name: '⭐ MAL Rating', value: rating, inline: true }),
+      sanitizeEmbedField({ name: '📅 Release Date', value: releaseDate, inline: true }),
+      sanitizeEmbedField({ name: '🔗 MAL Link', value: `[Click Here](${malLink})`, inline: false })
     ];
     const embed = new EmbedBuilder()
       .setTitle(title)
-      .setDescription(`**Synopsis:** ${synopsis}`)
+      .setDescription(truncateEmbedDescription(`**Synopsis:** ${synopsis}`))
       .setColor(0x2E51A2)
       .addFields(fields)
       .setFooter({ text: "Powered by MyAnimeList API" });

@@ -1,4 +1,5 @@
 const { REST, Routes } = require('discord.js');
+const { serializeError } = require('./utils/logSanitize.js');
 const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
@@ -29,10 +30,7 @@ async function deployCommands() {
     try {
       command = require(`./commands/${file}`);
     } catch (error) {
-      logger.error(`Error occurred while loading command file ${file}.`, {
-        error: error.stack,
-        message: error.message
-      });
+      logger.error(`Error occurred while loading command file ${file}.`, { ...serializeError(error, { includeStack: true }) });
       loadErrors.push({ file, error });
       continue;
     }
@@ -67,7 +65,7 @@ async function deployCommands() {
     
     logger.info(`Successfully registered ${commands.length} application (/) commands.`);
   } catch (error) {
-    logger.error('Failed to deploy commands.', { error });
+    logger.error('Failed to deploy commands.', serializeError(error, { includeStack: true }));
     throw error;
   }
 }
@@ -78,7 +76,7 @@ if (require.main === module) {
   deployCommands()
     .then(() => logger.info('Command deployment completed successfully.'))
     .catch(err => {
-      logger.error('Failed to deploy commands.', { err });
+      logger.error('Failed to deploy commands.', serializeError(err, { includeStack: true }));
       process.exit(1);
     });
 }

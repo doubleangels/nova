@@ -25,9 +25,14 @@ function markInviteInitComplete() {
 
 /**
  * Resets the gate for a new startup cycle (used when invite init begins).
+ * Resolves any waiters on the previous promise so they are not orphaned.
  * @returns {void}
  */
 function resetInviteInitGate() {
+  if (resolveInit) {
+    resolveInit();
+    resolveInit = null;
+  }
   initPromise = new Promise((resolve) => {
     resolveInit = resolve;
   });

@@ -1,4 +1,5 @@
 const { ContextMenuCommandBuilder, ApplicationCommandType, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const config = require('../config');
@@ -72,8 +73,7 @@ module.exports = {
 
       await interaction.editReply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     } catch (error) {
-      logger.error('Error in View Join Date context menu command.', {
-        err: error,
+      logger.error('Error in View Join Date context menu command.', { ...serializeError(error, { includeStack: true }),
         userId: interaction.user?.id,
         guildId: interaction.guildId
       });
@@ -83,7 +83,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral
         });
       } catch (e) {
-        logger.error('Failed to send error reply.', { err: e });
+        logger.error('Failed to send error reply.', { ...serializeError(e, { includeStack: true }) });
       }
     }
   }

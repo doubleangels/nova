@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const { getValue, setValue } = require('../utils/database');
@@ -149,9 +150,7 @@ module.exports = {
         accountAge: accountAge ? Number(accountAge) : 30
       };
     } catch (error) {
-      logger.error("Failed to retrieve troll mode settings.", {
-        err: error
-      });
+      logger.error("Failed to retrieve troll mode settings.", { ...serializeError(error, { includeStack: true }) });
       throw new Error("DATABASE_READ_ERROR");
     }
   },
@@ -177,8 +176,7 @@ module.exports = {
       
       await Promise.all(updates);
     } catch (error) {
-      logger.error("Failed to update troll mode settings.", {
-        err: error,
+      logger.error("Failed to update troll mode settings.", { ...serializeError(error, { includeStack: true }),
         settings
       });
       throw new Error("DATABASE_WRITE_ERROR");
@@ -246,8 +244,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in trollmode command.", {
-      err: error,
+    logger.error("Error occurred in trollmode command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -270,8 +267,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for trollmode command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for trollmode command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

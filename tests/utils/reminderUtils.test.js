@@ -74,7 +74,7 @@ describe('reminderUtils', () => {
       getKeyvErrorHandler()(err);
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Reminder Keyv connection error occurred.',
-        { err }
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
     });
 
@@ -261,6 +261,27 @@ describe('reminderUtils', () => {
       );
       expect(mockChannel.send).not.toHaveBeenCalled();
     });
+
+    it('should skip in-process timeout when remind_at is already in the past', async () => {
+      jest.useFakeTimers();
+      mockDatabase.getValue.mockImplementation(async (k) => {
+        if (k === 'reminder_role') return 'role-123';
+        if (k === 'reminder_channel') return 'channel-123';
+        return null;
+      });
+
+      await reminderUtils.scheduleCommandCooldownNotifications(mockClient, 'promote', {
+        reminderId: 'r-past',
+        remind_at: dayjs().subtract(1, 'minute').toISOString(),
+        delayMs: reminderUtils.PROMOTE_REMINDER_MS
+      }, true);
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'promote reminder is in the past; skipping in-process timeout.',
+        expect.objectContaining({ reminderId: 'r-past' })
+      );
+      jest.useRealTimers();
+    });
   });
 
   describe('getLatestReminderData', () => {
@@ -307,7 +328,7 @@ describe('reminderUtils', () => {
       expect(result).toBeNull();
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Error occurred while getting latest reminder data.',
-        expect.objectContaining({ err: expect.any(Error) })
+        expect.objectContaining({ errorMessage: expect.any(String) })
       );
     });
   });

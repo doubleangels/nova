@@ -1,4 +1,5 @@
 const requireDefault = (m) => (require(m).default || require(m));
+const { serializeError } = require('./logSanitize.js');
 const Keyv = requireDefault('keyv');
 const path = require('path');
 const fs = require('fs');
@@ -41,8 +42,7 @@ try {
       dataDir: dataDir
     });
   } catch (accessError) {
-    logger.error('Data directory is not writable.', {
-      err: accessError,
+    logger.error('Data directory is not writable.', { ...serializeError(accessError, { includeStack: true }),
       dataDir: dataDir
     });
     logger.error('Please ensure the data directory has write permissions for the bot user.');
@@ -64,8 +64,7 @@ try {
     });
   }
 } catch (error) {
-  logger.error('Failed to create or access data directory.', {
-    err: error,
+  logger.error('Failed to create or access data directory.', { ...serializeError(error, { includeStack: true }),
     dataDir: dataDir
   });
   logger.error('This is likely a permissions issue. Please check directory permissions.');
@@ -84,8 +83,8 @@ const inviteKeyv = new Keyv({
 });
 
 // Handle connection errors
-keyv.on('error', err => logger.error('Keyv connection error occurred.', { err: err }));
-inviteKeyv.on('error', err => logger.error('Invite Keyv connection error occurred.', { err: err }));
+keyv.on('error', err => logger.error('Keyv connection error occurred.', { ...serializeError(err, { includeStack: true }) }));
+inviteKeyv.on('error', err => logger.error('Invite Keyv connection error occurred.', { ...serializeError(err, { includeStack: true }) }));
 
 // Ensure database file has correct permissions if it exists
 // 0o600 = rw------- (owner: read/write, group: no access, others: no access)
@@ -94,9 +93,7 @@ try {
     fs.chmodSync(sqlitePath, 0o600);
   }
 } catch (chmodError) {
-  logger.warn('Could not set permissions on database file, this is OK if running as non-root.', {
-    err: chmodError
-  });
+  logger.warn('Could not set permissions on database file, this is OK if running as non-root.', { ...serializeError(chmodError, { includeStack: true }) });
 }
 
 /**
@@ -160,9 +157,7 @@ async function initializeDatabase() {
           }
         } catch (chmodError) {
           // Non-fatal: permissions might be set by Docker entrypoint or user doesn't have permission
-          logger.debug('Could not set permissions on database file.', {
-            err: chmodError
-          });
+          logger.debug('Could not set permissions on database file.', { ...serializeError(chmodError, { includeStack: true }) });
         }
         
         return;
@@ -172,8 +167,7 @@ async function initializeDatabase() {
       
     } catch (err) {
       lastError = err;
-      logger.error('Database connection test failed.', {
-        err: err,
+      logger.error('Database connection test failed.', { ...serializeError(err, { includeStack: true }),
         attempt: retryCount + 1,
         maxRetries: MAX_RETRIES,
         sqlitePath: sqlitePath,
@@ -195,7 +189,7 @@ async function initializeDatabase() {
 
   logger.error("All database connection attempts failed. Stopping bot as database connectivity is critical.");
   
-  logger.error("Final database error occurred.", { err: lastError });
+  logger.error("Final database error occurred.", { ...serializeError(lastError, { includeStack: true }) });
   
   process.exit(1);
 }
@@ -243,7 +237,7 @@ async function getValue(key) {
     configCache.set(key, finalValue);
     return finalValue;
   } catch (err) {
-    logger.error('Error occurred while getting key.', { err: err, key: key });
+    logger.error('Error occurred while getting key.', { ...serializeError(err, { includeStack: true }), key: key });
     throw err;
   }
 }
@@ -261,7 +255,7 @@ async function setValue(key, value) {
     configCache.set(key, value);
     logger.debug('Set config for key successfully.', { key: key });
   } catch (err) {
-    logger.error('Error occurred while setting key.', { err: err, key: key });
+    logger.error('Error occurred while setting key.', { ...serializeError(err, { includeStack: true }), key: key });
     throw err;
   }
 }
@@ -278,7 +272,7 @@ async function deleteValue(key) {
     configCache.delete(key);
     logger.debug('Deleted config for key successfully.', { key: key });
   } catch (err) {
-    logger.error('Error occurred while deleting key.', { err: err, key: key });
+    logger.error('Error occurred while deleting key.', { ...serializeError(err, { includeStack: true }), key: key });
     throw err;
   }
 }
@@ -323,8 +317,7 @@ async function addToUserList(listKey, userId) {
       }
     })();
   } catch (error) {
-    logger.error('Error occurred while adding to user list.', {
-      err: error,
+    logger.error('Error occurred while adding to user list.', { ...serializeError(error, { includeStack: true }),
       listKey: listKey
     });
   }
@@ -351,8 +344,7 @@ async function removeFromUserList(listKey, userId) {
       ).run(fullKey, wrapped);
     })();
   } catch (error) {
-    logger.error('Error occurred while removing from user list.', {
-      err: error,
+    logger.error('Error occurred while removing from user list.', { ...serializeError(error, { includeStack: true }),
       listKey: listKey
     });
   }
@@ -362,14 +354,18 @@ async function removeFromUserList(listKey, userId) {
  * Adds a user to mute mode tracking
  * @param {string} userId - The Discord user ID
  * @param {string} username - The Discord username
+ * @param {Date|string|number} [joinTime] - When the member joined (defaults to now)
  * @returns {Promise<void>}
  */
-async function addMuteModeUser(userId, username) {
+async function addMuteModeUser(userId, username, joinTime) {
   try {
+    const normalizedJoinTime = joinTime
+      ? (joinTime instanceof Date ? joinTime.toISOString() : dayjs(joinTime).toISOString())
+      : dayjs().toISOString();
     const userData = {
       userId,
       username,
-      joinTime: dayjs().toISOString()
+      joinTime: normalizedJoinTime
     };
     await keyv.set(`mute_mode:${userId}`, userData);
     await addToUserList('mute_mode_users', userId);
@@ -378,8 +374,7 @@ async function addMuteModeUser(userId, username) {
       joinTime: userData.joinTime
     });
   } catch (error) {
-    logger.error('Error occurred while adding mute mode user.', {
-      err: error,
+    logger.error('Error occurred while adding mute mode user.', { ...serializeError(error, { includeStack: true }),
       userId: userId
     });
   }
@@ -400,8 +395,7 @@ async function removeMuteModeUser(userId) {
       userId: userId
     });
   } catch (error) {
-    logger.error('Error occurred while removing mute mode user.', {
-      err: error,
+    logger.error('Error occurred while removing mute mode user.', { ...serializeError(error, { includeStack: true }),
       userId: userId
     });
     throw error;
@@ -417,7 +411,7 @@ async function isUserInMuteMode(userId) {
     const userData = await keyv.get(`mute_mode:${userId}`);
     return userData != null;
   } catch (error) {
-    logger.error('Error checking mute mode status for user.', { err: error, userId });
+    logger.error('Error checking mute mode status for user.', { ...serializeError(error, { includeStack: true }), userId });
     return false;
   }
 }
@@ -447,9 +441,7 @@ async function getAllMuteModeUsers() {
 
     return users;
   } catch (error) {
-    logger.error("Error occurred while getting all mute mode users.", {
-      err: error
-    });
+    logger.error("Error occurred while getting all mute mode users.", { ...serializeError(error, { includeStack: true }) });
     return [];
   }
 }
@@ -467,8 +459,7 @@ async function getUserJoinTime(userId) {
     }
     return null;
   } catch (error) {
-    logger.error('Error occurred while getting user join time.', {
-      err: error,
+    logger.error('Error occurred while getting user join time.', { ...serializeError(error, { includeStack: true }),
       userId: userId
     });
     return null;
@@ -499,8 +490,7 @@ async function addSpamModeJoinTime(userId, username, joinTime) {
       joinTime: timeToSet
     });
   } catch (error) {
-    logger.error('Error occurred while adding spam mode join time for user.', {
-      err: error,
+    logger.error('Error occurred while adding spam mode join time for user.', { ...serializeError(error, { includeStack: true }),
       userId: userId
     });
   }
@@ -519,8 +509,7 @@ async function getSpamModeJoinTime(userId) {
     }
     return null;
   } catch (error) {
-    logger.error('Error occurred while getting spam mode join time for user.', {
-      err: error,
+    logger.error('Error occurred while getting spam mode join time for user.', { ...serializeError(error, { includeStack: true }),
       userId: userId
     });
     return null;
@@ -542,8 +531,7 @@ async function removeSpamModeJoinTime(userId) {
       });
     }
   } catch (error) {
-    logger.error('Error occurred while removing spam mode join time for user.', {
-      err: error,
+    logger.error('Error occurred while removing spam mode join time for user.', { ...serializeError(error, { includeStack: true }),
       userId: userId
     });
   }
@@ -666,9 +654,7 @@ async function cleanupOldTrackingUsers(client = null) {
     
     return { spamModeRemoved, muteModeRemoved };
   } catch (error) {
-    logger.error('Error occurred while cleaning up old tracking users.', {
-      err: error
-    });
+    logger.error('Error occurred while cleaning up old tracking users.', { ...serializeError(error, { includeStack: true }) });
     throw error;
   }
 }
@@ -690,8 +676,7 @@ async function setInviteTag(tagName, inviteData) {
       tagName: tagName
     });
   } catch (err) {
-    logger.error('Error occurred while setting invite tag.', {
-      err: err,
+    logger.error('Error occurred while setting invite tag.', { ...serializeError(err, { includeStack: true }),
       tagName: tagName
     });
     throw new Error("DATABASE_WRITE_ERROR");
@@ -711,8 +696,7 @@ async function getInviteTag(tagName) {
     const value = await inviteKeyv.get(`tags:${tagName.toLowerCase()}`);
     return value !== undefined ? value : null;
   } catch (err) {
-    logger.error('Error occurred while getting invite tag.', {
-      err: err,
+    logger.error('Error occurred while getting invite tag.', { ...serializeError(err, { includeStack: true }),
       tagName: tagName
     });
     return null;
@@ -735,8 +719,7 @@ async function deleteInviteTag(tagName) {
       tagName: tagName
     });
   } catch (err) {
-    logger.error('Error occurred while deleting invite tag.', {
-      err: err,
+    logger.error('Error occurred while deleting invite tag.', { ...serializeError(err, { includeStack: true }),
       tagName: tagName
     });
     throw new Error("DATABASE_DELETE_ERROR");
@@ -776,8 +759,7 @@ async function setInviteUsage(guildId, inviteUsage) {
       guildId: guildId
     });
   } catch (err) {
-    logger.error('Error occurred while setting invite usage for guild.', {
-      err: err,
+    logger.error('Error occurred while setting invite usage for guild.', { ...serializeError(err, { includeStack: true }),
       guildId: guildId
     });
   }
@@ -796,8 +778,7 @@ async function getInviteUsage(guildId) {
     const value = await keyv.get(`invite_usage:${guildId}`);
     return value || {};
   } catch (err) {
-    logger.error('Error occurred while getting invite usage for guild.', {
-      err: err,
+    logger.error('Error occurred while getting invite usage for guild.', { ...serializeError(err, { includeStack: true }),
       guildId: guildId
     });
     return {};
@@ -824,8 +805,7 @@ async function setInviteCodeToTagMap(guildId, codeToTagMap) {
       guildId: guildId
     });
   } catch (err) {
-    logger.error('Error occurred while setting invite code-to-tag map for guild.', {
-      err: err,
+    logger.error('Error occurred while setting invite code-to-tag map for guild.', { ...serializeError(err, { includeStack: true }),
       guildId: guildId
     });
   }
@@ -854,8 +834,7 @@ async function getInviteCodeToTagMap(guildId) {
     });
     return map;
   } catch (err) {
-    logger.error('Error occurred while getting invite code-to-tag map for guild.', {
-      err: err,
+    logger.error('Error occurred while getting invite code-to-tag map for guild.', { ...serializeError(err, { includeStack: true }),
       guildId: guildId
     });
     return {};
@@ -913,8 +892,7 @@ async function getAllInviteTagsData() {
           });
         }
       } catch (parseError) {
-        logger.warn('Failed to parse tag data for key.', {
-          err: parseError,
+        logger.warn('Failed to parse tag data for key.', { ...serializeError(parseError, { includeStack: true }),
           key: row.key
         });
       }
@@ -922,9 +900,7 @@ async function getAllInviteTagsData() {
     
     return tags;
   } catch (err) {
-    logger.error("Error occurred while getting all invite tags.", {
-      err: err
-    });
+    logger.error("Error occurred while getting all invite tags.", { ...serializeError(err, { includeStack: true }) });
     return [];
   }
 }
@@ -960,26 +936,28 @@ async function rebuildCodeToTagMap(guildId) {
           });
         }
       } catch (parseError) {
-        logger.warn('Failed to parse tag data for key.', {
-          err: parseError,
+        logger.warn('Failed to parse tag data for key.', { ...serializeError(parseError, { includeStack: true }),
           key: row.key
         });
       }
     }
     
-    // Save the rebuilt mapping for this guild
+    // Save the rebuilt mapping for this guild (including empty maps to clear stale entries)
+    await setInviteCodeToTagMap(guildId, codeToTagMap);
     if (Object.keys(codeToTagMap).length > 0) {
-      await setInviteCodeToTagMap(guildId, codeToTagMap);
       logger.info('Rebuilt code-to-tag mapping for guild.', {
         guildId: guildId,
         entryCount: Object.keys(codeToTagMap).length
+      });
+    } else {
+      logger.info('Cleared code-to-tag mapping for guild (no valid tags).', {
+        guildId: guildId
       });
     }
     
     return codeToTagMap;
   } catch (err) {
-    logger.error('Error occurred while rebuilding code-to-tag mapping for guild.', {
-      err: err,
+    logger.error('Error occurred while rebuilding code-to-tag mapping for guild.', { ...serializeError(err, { includeStack: true }),
       guildId: guildId
     });
     return {};
@@ -1007,7 +985,7 @@ async function setFormerMember(userId) {
   try {
     await keyv.set(`${FORMER_MEMBER_KEY_PREFIX}${userId}`, 1);
   } catch (err) {
-    logger.error('Error recording former member.', { err: err, userId });
+    logger.error('Error recording former member.', { ...serializeError(err, { includeStack: true }), userId });
   }
 }
 
@@ -1020,16 +998,40 @@ async function incrementMessageCount(userId) {
   try {
     logger.debug('Incrementing message count for user.', { userId: userId });
     const key = `message_count:${userId}`;
-    const current = (await keyv.get(key)) || 0;
-    const count = current + 1;
-    await keyv.set(key, count);
+    const fullKey = `main:${key}`;
+    const db = getWritableDb();
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS keyv (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      )
+    `);
+    const count = db.transaction(() => {
+      const row = db.prepare('SELECT value FROM keyv WHERE key = ?').get(fullKey);
+      let current = 0;
+      if (row?.value) {
+        try {
+          const parsed = JSON.parse(row.value);
+          const numeric = Number(parsed?.value ?? parsed);
+          current = Number.isFinite(numeric) ? numeric : 0;
+        } catch {
+          current = 0;
+        }
+      }
+      const next = current + 1;
+      db.prepare(`
+        INSERT INTO keyv (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+      `).run(fullKey, JSON.stringify({ value: next, expires: null }));
+      return next;
+    })();
     logger.debug('Incremented message count for user successfully.', {
       userId: userId,
       count: count
     });
     return count;
   } catch (error) {
-    logger.error('Error incrementing message count.', { err: error, userId });
+    logger.error('Error incrementing message count.', { ...serializeError(error, { includeStack: true }), userId });
     return null;
   }
 }
@@ -1044,7 +1046,7 @@ async function getMessageCount(userId) {
     const key = `message_count:${userId}`;
     return await keyv.get(key) || 0;
   } catch (error) {
-    logger.error('Error getting message count.', { err: error, userId });
+    logger.error('Error getting message count.', { ...serializeError(error, { includeStack: true }), userId });
     return 0;
   }
 }
@@ -1061,7 +1063,7 @@ async function deleteMessageCount(userId) {
     await keyv.delete(key);
     logger.debug('Deleted message count for user successfully.', { userId: userId });
   } catch (error) {
-    logger.error('Error deleting message count.', { err: error, userId });
+    logger.error('Error deleting message count.', { ...serializeError(error, { includeStack: true }), userId });
   }
 }
 
@@ -1075,7 +1077,7 @@ async function isFormerMember(userId) {
     const value = await keyv.get(`${FORMER_MEMBER_KEY_PREFIX}${userId}`);
     return value !== undefined && value !== null;
   } catch (err) {
-    logger.error('Error checking former member.', { err: err, userId });
+    logger.error('Error checking former member.', { ...serializeError(err, { includeStack: true }), userId });
     return false;
   }
 }

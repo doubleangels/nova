@@ -41,11 +41,207 @@ describe('predictionGameStore', () => {
       pointsAwarded: 3
     });
     await store.addUserPoints('user-a', 3);
+    await store.markFixturePrompted(900001);
+    await store.markFixtureScored(900001);
 
     await store.resetMockDemoState([900001], 'worldcup');
 
     expect(await store.getUserPoints('user-a')).toBe(0);
     expect(await store.getPrediction('user-a', 900001)).toBeNull();
+    expect(await store.getPromptedFixtures()).not.toContain(900001);
+    expect(await store.getScoredFixtures()).not.toContain(900001);
+  });
+
+  it('should merge legacy prompted_fixtures list entries into getPromptedFixtures', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:prompted_fixtures',
+      JSON.stringify({ value: [900, 'bad-id'], expires: null })
+    );
+
+    expect(await store.getPromptedFixtures()).toEqual([900]);
+  });
+
+  it('should merge legacy scored_fixtures list entries into getScoredFixtures', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:scored_fixtures',
+      JSON.stringify({ value: [800, 'bad-id'], expires: null })
+    );
+
+    expect(await store.getScoredFixtures()).toEqual([800]);
+  });
+
+  it('should clear legacy prompted list entries on releaseFixturePromptClaim', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:prompted_fixtures',
+      JSON.stringify({ value: [777], expires: null })
+    );
+
+    await store.releaseFixturePromptClaim(777);
+    expect(await store.getPromptedFixtures()).toEqual([]);
+  });
+
+  it('should no-op duplicate markFixtureScored calls', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: true }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const scoredStore = createPredictionStore('dup-scored-store', 'DupScored');
+
+    await scoredStore.markFixtureScored(501);
+    await scoredStore.markFixtureScored(501);
+    expect(await scoredStore.getScoredFixtures()).toEqual([501]);
+  });
+
+  it('should keep active scoring locks until released or expired', async () => {
+    expect(await store.tryAcquireScoringLock(44)).toBe(true);
+    expect(await store.tryAcquireScoringLock(44)).toBe(false);
+    await store.releaseScoringLock(44);
+    expect(await store.tryAcquireScoringLock(44)).toBe(true);
+  });
+
+  it('should replace scoring locks with invalid acquiredAt timestamps', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
+      'test-prediction-store:scoring_lock:55',
+      JSON.stringify({ value: { acquiredAt: 'not-a-date' }, expires: null })
+    );
+
+    expect(await store.tryAcquireScoringLock(55)).toBe(true);
+  });
+
+  it('should no-op releaseScoringLock for invalid fixture ids', async () => {
+    await expect(store.releaseScoringLock('bad-id')).resolves.toBeUndefined();
+  });
+
+  it('should detect prompted fixtures stored only as per-fixture flags', async () => {
+    await store.markFixturePrompted(606);
+    expect(await store.tryClaimFixtureForPrompt(606)).toBe(false);
+  });
+
+  it('should detect scored fixtures stored only as per-fixture flags', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: true }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const scoredFlagStore = createPredictionStore('scored-flag-store', 'ScoredFlag');
+
+    await scoredFlagStore.markFixtureScored(707);
+    await scoredFlagStore.markFixtureScored(707);
+    expect(await scoredFlagStore.getScoredFixtures()).toEqual([707]);
+  });
+
+  it('should treat legacy prompted list entries as already prompted', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:prompted_fixtures',
+      JSON.stringify({ value: [999], expires: null })
+    );
+
+    expect(await store.tryClaimFixtureForPrompt(999)).toBe(false);
+  });
+
+  it('should no-op markFixtureScored when legacy scored list already contains fixture', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:scored_fixtures',
+      JSON.stringify({ value: [888], expires: null })
+    );
+
+    await store.markFixtureScored(888);
+    expect(await store.getScoredFixtures()).toEqual([888]);
+  });
+
+  it('should ignore invalid fixture ids in per-fixture flag keys', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: true }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const flagStore = createPredictionStore('invalid-flag-store', 'InvalidFlag');
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
+      'invalid-flag-store:fixture_prompted:not-a-number',
+      JSON.stringify({ value: true, expires: null })
+    );
+
+    expect(await flagStore.getPromptedFixtures()).toEqual([]);
+  });
+
+  it('should leave active scoring locks in place during stale lock sweep', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: true }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const lockStore = createPredictionStore('active-lock-store', 'ActiveLock');
+
+    expect(await lockStore.tryAcquireScoringLock(33)).toBe(true);
+    expect(lockStore.clearStaleScoringLocks()).toBe(0);
+    expect(await lockStore.tryAcquireScoringLock(33)).toBe(false);
+  });
+
+  it('should reject scoring lock acquire for invalid fixture ids', async () => {
+    expect(await store.tryAcquireScoringLock('not-a-number')).toBe(false);
+  });
+
+  it('should replace scoring locks with unrecognized payload values', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
+      'test-prediction-store:scoring_lock:66',
+      JSON.stringify({ value: 'garbage', expires: null })
+    );
+
+    expect(await store.tryAcquireScoringLock(66)).toBe(true);
+    expect(await store.tryAcquireScoringLock(66)).toBe(false);
+  });
+
+  it('should clear legacy scored list entries during resetMockDemoState', async () => {
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare(`
+      INSERT INTO keyv (key, value) VALUES (?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(
+      'test-prediction-store:scored_fixtures',
+      JSON.stringify({ value: [900002], expires: null })
+    );
+
+    await store.resetMockDemoState([900002], 'worldcup');
+
+    expect(await store.getScoredFixtures()).not.toContain(900002);
   });
 
   it('should set and clear prompting paused flag', async () => {
@@ -208,7 +404,7 @@ describe('predictionGameStore', () => {
   });
 
   it(
-    'should prune prompted_fixtures when claiming beyond the cap',
+    'should retain all prompted fixtures beyond the legacy cap',
     async () => {
       jest.resetModules();
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
@@ -220,8 +416,8 @@ describe('predictionGameStore', () => {
         expect(await claimStore.tryClaimFixtureForPrompt(i)).toBe(true);
       }
       const prompted = await claimStore.getPromptedFixtures();
-      expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
-      expect(prompted[0]).toBe(5);
+      expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES + 5);
+      expect(prompted[0]).toBe(0);
       expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
     },
     120000
@@ -240,7 +436,7 @@ describe('predictionGameStore', () => {
   });
 
   it(
-    'should prune prompted_fixtures when the cap is exceeded',
+    'should retain all markFixturePrompted entries beyond the legacy cap',
     async () => {
       jest.resetModules();
       jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
@@ -252,28 +448,32 @@ describe('predictionGameStore', () => {
         await capStore.markFixturePrompted(i);
       }
       const prompted = await capStore.getPromptedFixtures();
-      expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES);
-      expect(prompted[0]).toBe(5);
+      expect(prompted).toHaveLength(MAX_TRACKED_FIXTURES + 5);
+      expect(prompted[0]).toBe(0);
       expect(prompted[prompted.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
     },
     120000
   );
 
-  it('should prune scored_fixtures when the cap is exceeded', async () => {
-    jest.resetModules();
-    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
-    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
-    const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
-    const capStore = createPredictionStore('cap-scored-store', 'ScoredCap');
+  it(
+    'should retain all scored fixtures beyond the legacy cap',
+    async () => {
+      jest.resetModules();
+      jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+      jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+      const { createPredictionStore, MAX_TRACKED_FIXTURES } = require('../../utils/predictionGameStore');
+      const capStore = createPredictionStore('cap-scored-store', 'ScoredCap');
 
-    for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
-      await capStore.markFixtureScored(i);
-    }
-    const scored = await capStore.getScoredFixtures();
-    expect(scored).toHaveLength(MAX_TRACKED_FIXTURES);
-    expect(scored[0]).toBe(5);
-    expect(scored[scored.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
-  });
+      for (let i = 0; i < MAX_TRACKED_FIXTURES + 5; i++) {
+        await capStore.markFixtureScored(i);
+      }
+      const scored = await capStore.getScoredFixtures();
+      expect(scored).toHaveLength(MAX_TRACKED_FIXTURES + 5);
+      expect(scored[0]).toBe(0);
+      expect(scored[scored.length - 1]).toBe(MAX_TRACKED_FIXTURES + 4);
+    },
+    120000
+  );
 
   it('should apply fixture scoring results atomically', async () => {
     await store.applyFixtureScoringResults(42, [{
@@ -336,6 +536,69 @@ describe('predictionGameStore', () => {
     expect(await store.tryAcquireScoringLock(99)).toBe(false);
     await store.releaseScoringLock(99);
     expect(await store.tryAcquireScoringLock(99)).toBe(true);
+  });
+
+  it('should replace expired scoring locks', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore, SCORING_LOCK_TTL_MS } = require('../../utils/predictionGameStore');
+    const lockStore = createPredictionStore('lock-ttl-store', 'LockTTL');
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    const staleAt = new Date(Date.now() - SCORING_LOCK_TTL_MS - 1000).toISOString();
+    db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
+      'lock-ttl-store:scoring_lock:77',
+      JSON.stringify({ value: { acquiredAt: staleAt }, expires: null })
+    );
+
+    expect(await lockStore.tryAcquireScoringLock(77)).toBe(true);
+    expect(await lockStore.tryAcquireScoringLock(77)).toBe(false);
+  });
+
+  it('should clear stale scoring locks on startup helper', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const lockStore = createPredictionStore('clear-lock-store', 'ClearLock');
+    const { getWritableDb } = require('../../utils/sqliteStore');
+    const db = getWritableDb();
+    db.exec('CREATE TABLE IF NOT EXISTS keyv (key TEXT PRIMARY KEY, value TEXT)');
+    db.prepare('INSERT INTO keyv (key, value) VALUES (?, ?)').run(
+      'clear-lock-store:scoring_lock:88',
+      JSON.stringify({ value: 1, expires: null })
+    );
+
+    expect(lockStore.clearStaleScoringLocks()).toBe(1);
+    expect(await lockStore.tryAcquireScoringLock(88)).toBe(true);
+  });
+
+  it('should evaluate scoring lock staleness using default now when nowMs is omitted', async () => {
+    jest.resetModules();
+    jest.doMock('../../logger', () => () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }));
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: false }));
+    const { createPredictionStore, SCORING_LOCK_TTL_MS } = require('../../utils/predictionGameStore');
+    const lockStore = createPredictionStore('default-now-store', 'DefaultNow');
+    const staleAt = new Date(Date.now() - SCORING_LOCK_TTL_MS - 1000).toISOString();
+    const freshAt = new Date().toISOString();
+
+    expect(lockStore.__test__.isScoringLockStale(null)).toBe(true);
+    expect(lockStore.__test__.isScoringLockStale({ acquiredAt: staleAt })).toBe(true);
+    expect(lockStore.__test__.isScoringLockStale({ acquiredAt: freshAt })).toBe(false);
+  });
+
+  it('should not export __test__ helpers outside test environment', () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionPendingTtlMs: 600000, predictionMockApi: true }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const prodStore = createPredictionStore('prod-store', 'Prod');
+
+    expect(prodStore.__test__).toBeUndefined();
+    process.env.NODE_ENV = originalEnv;
   });
 
   it('should skip duplicate participant tracking when adding points again', async () => {

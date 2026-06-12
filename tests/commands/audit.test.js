@@ -724,8 +724,8 @@ describe('audit command', () => {
       expect(pages[0]).toContain('Manage Messages');
     });
 
-    it('should buildPages splits when combined line length exceeds 900 characters', () => {
-      const longName = 'x'.repeat(900);
+    it('should buildPages splits when combined line length exceeds 1024 characters', () => {
+      const longName = 'x'.repeat(1020);
       const members = [
         {
           displayName: longName,

@@ -1,4 +1,5 @@
 const path = require('path');
+const { serializeError } = require('./logSanitize.js');
 const config = require('../config');
 const axios = require('./httpClient');
 const logger = require('../logger')(path.basename(__filename));
@@ -207,7 +208,7 @@ async function createSystemContextCache(systemInstruction, displayName) {
       });
     } else {
       logger.warn('Gemini context cache unavailable; using inline system instruction.', {
-        err: err?.message,
+        ...serializeError(err),
         displayName,
         model
       });

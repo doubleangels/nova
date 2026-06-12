@@ -79,8 +79,10 @@ describe('promote command', () => {
   });
 
   describe('handleError', () => {
+    const createDeferredInteraction = () => createMockInteraction({ deferred: true });
+
     it('should editReply with generic error message', async () => {
-      const mockInteraction = createMockInteraction();
+      const mockInteraction = createDeferredInteraction();
       await promoteCommand.handleError(new Error('fail'), mockInteraction);
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ An unexpected error occurred while promoting the post. Please try again later.'
@@ -88,7 +90,7 @@ describe('promote command', () => {
     });
 
     it('should map API_ERROR correctly', async () => {
-      const mockInteraction = createMockInteraction();
+      const mockInteraction = createDeferredInteraction();
       await promoteCommand.handleError(new Error('API_ERROR'), mockInteraction);
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: '⚠️ Failed to communicate with Reddit API.'
@@ -96,7 +98,7 @@ describe('promote command', () => {
     });
 
     it('should map various API error types in handleError', async () => {
-      const mockInteraction = createMockInteraction();
+      const mockInteraction = createDeferredInteraction();
       
       await promoteCommand.handleError(new Error('API_RATE_LIMIT'), mockInteraction);
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({ content: expect.stringContaining('rate limit reached') }));
@@ -120,7 +122,7 @@ describe('promote command', () => {
     });
 
     it('should handle catch inside handleError when editReply fails', async () => {
-      const mockInteraction = createMockInteraction();
+      const mockInteraction = createDeferredInteraction();
       mockInteraction.editReply.mockRejectedValue(new Error('Discord offline'));
       await promoteCommand.handleError(new Error('API_ERROR'), mockInteraction);
       expect(mockLogger.error).toHaveBeenCalledWith('Failed to send error message.', expect.any(Object));
@@ -433,11 +435,12 @@ describe('promote command', () => {
     it('should handle unexpected execute errors and invoke handleError', async () => {
       const mockInteraction = createMockInteraction();
       mockRedditClient.isRedditConfigured.mockReturnValue(true);
-      mockInteraction.deferReply.mockRejectedValue(new Error('DATABASE_ERROR')); // Cover lines 224
+      mockInteraction.deferReply.mockRejectedValue(new Error('DATABASE_ERROR'));
 
       await promoteCommand.execute(mockInteraction);
 
-      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockReminderUtils.releaseCommandCooldown).toHaveBeenCalledWith('promote');
+      expect(mockInteraction.reply).toHaveBeenCalledWith(expect.objectContaining({
         content: expect.stringContaining('Database error occurred')
       }));
     });

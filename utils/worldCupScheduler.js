@@ -41,5 +41,6 @@ module.exports = {
   runWorldCupPoll: scheduler.runPoll,
   runWorldCupStartup: scheduler.runStartup,
   startWorldCupScheduler: scheduler.startScheduler,
-  stopWorldCupScheduler: scheduler.stopScheduler
+  stopWorldCupScheduler: scheduler.stopScheduler,
+  waitForWorldCupPollDrain: scheduler.waitForPollDrain
 };

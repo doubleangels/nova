@@ -51,6 +51,7 @@ function formatStageLabel(stage) {
  * @returns {string}
  */
 function buildScheduledEventDescription(fixture) {
+  const markerLine = `${FIXTURE_ID_MARKER_PREFIX} ${fixture.id}`;
   const lines = [];
 
   if (fixture.venue) {
@@ -70,11 +71,19 @@ function buildScheduledEventDescription(fixture) {
     lines.push(`Kickoff: ${formatKickoffTimestamp(fixture.kickoff)}`);
   }
 
-  lines.push(`${FIXTURE_ID_MARKER_PREFIX} ${fixture.id}`);
+  const body = lines.join('\n');
+  if (!body) {
+    return markerLine.length <= EVENT_DESCRIPTION_MAX_LENGTH
+      ? markerLine
+      : `${markerLine.slice(0, EVENT_DESCRIPTION_MAX_LENGTH - 1)}…`;
+  }
 
-  const description = lines.join('\n');
-  if (description.length <= EVENT_DESCRIPTION_MAX_LENGTH) return description;
-  return `${description.slice(0, EVENT_DESCRIPTION_MAX_LENGTH - 1)}…`;
+  const maxBodyLen = EVENT_DESCRIPTION_MAX_LENGTH - markerLine.length - 1;
+  if (body.length <= maxBodyLen) {
+    return `${body}\n${markerLine}`;
+  }
+
+  return `${body.slice(0, maxBodyLen - 1)}…\n${markerLine}`;
 }
 
 /**

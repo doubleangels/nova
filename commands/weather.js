@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -13,6 +14,12 @@ const config = require('../config');
 const { getGeocodingData, getTimezoneData } = require('../utils/locationUtils');
 const { fetchWeatherContext } = require('../utils/commandContextAi');
 const { formatAiContextField } = require('../utils/geminiContextMessages');
+const {
+  truncateEmbedTitle,
+  truncateEmbedDescription,
+  truncateEmbedField,
+  sanitizeEmbedField
+} = require('../utils/embedUtils');
 
 const WEATHER_ICONS = {
   'clear-day': 'Clear',
@@ -144,7 +151,7 @@ module.exports = {
       const [weatherData, timezoneResult] = await Promise.all([
         this.fetchWeatherData(lat, lon, units),
         getTimezoneData({ lat, lng: lon }).catch((error) => {
-          logger.warn('Failed to get timezone for location; using UTC.', { err: error, lat, lon });
+          logger.warn('Failed to get timezone for location; using UTC.', { ...serializeError(error, { includeStack: true }), lat, lon });
           return { timezoneId: null, error: true };
         })
       ]);
@@ -204,7 +211,7 @@ module.exports = {
       });
       const requestUrl = `${url}?${params.toString()}`;
       
-      logger.debug("Making PirateWeather API request.", { requestUrl });
+      logger.debug("Making PirateWeather API request.", { lat, lon, units });
       
       const response = await axios.get(requestUrl, { timeout: 5000 });
       
@@ -219,8 +226,7 @@ module.exports = {
         return null;
       }
     } catch (error) {
-      logger.error("Error occurred while fetching weather data from the API.", { 
-        err: error,
+      logger.error("Error occurred while fetching weather data from the API.", { ...serializeError(error, { includeStack: true }),
         lat,
         lon
       });
@@ -279,7 +285,11 @@ module.exports = {
     const forecastText = this.createForecastText(daily, unitsOption, forecastDays, timezoneResult?.timezoneId);
     
     const fields = [
-      ...(hideLocation ? [] : [{ name: 'Location', value: `**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`, inline: false }]),
+      ...(hideLocation ? [] : [{
+        name: 'Location',
+        value: truncateEmbedField(`**${place}**\nLat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`),
+        inline: false
+      }]),
       { name: '🌡️ Temperature', value: `${weatherInfo.temperature.toFixed(1)}${tempUnit}`, inline: true },
       { name: '🤒 Feels Like', value: `${(currently.apparentTemperature || 0).toFixed(1)}${tempUnit}`, inline: true },
       { name: '💧 Humidity', value: `${weatherInfo.humidity.toFixed(0)}%`, inline: true },
@@ -291,12 +301,12 @@ module.exports = {
       { name: '☁️ Cloud Cover', value: `${weatherInfo.cloudCover.toFixed(0)}%`, inline: true },
       { name: '🌧️ Precipitation', value: `${weatherInfo.precipIntensity} ${precipUnit}`, inline: true },
       { name: '🌂 Precip. Probability', value: `${weatherInfo.precipProbability.toFixed(0)}%`, inline: true },
-      { name: `📆 ${forecastDays}-Day Forecast`, value: forecastText, inline: false }
+      { name: `📆 ${forecastDays}-Day Forecast`, value: truncateEmbedField(forecastText, 'No forecast data available.'), inline: false }
     ];
 
     const embed = new EmbedBuilder()
-      .setTitle(hideLocation ? 'Weather' : `Weather in ${place}`)
-      .setDescription(`**${weatherInfo.summary}**`)
+      .setTitle(truncateEmbedTitle(hideLocation ? 'Weather' : `Weather in ${place}`))
+      .setDescription(truncateEmbedDescription(`**${weatherInfo.summary}**`))
       .setColor(0xFF6E42)
       .addFields(fields)
       .setFooter({ text: 'Powered by PirateWeather' });
@@ -443,8 +453,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in weather command.", {
-      err: error,
+    logger.error("Error occurred in weather command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id
     });
@@ -467,8 +476,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for weather command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for weather command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });

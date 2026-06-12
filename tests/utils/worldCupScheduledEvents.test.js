@@ -206,12 +206,12 @@ describe('worldCupScheduledEvents', () => {
       expect(name.endsWith('…')).toBe(true);
     });
 
-    it('should truncate long descriptions', () => {
+    it('should truncate long descriptions while preserving match id', () => {
       const description = events.buildScheduledEventDescription(
         sampleFixture({ venue: 'V'.repeat(1200) })
       );
-      expect(description.length).toBe(1000);
-      expect(description.endsWith('…')).toBe(true);
+      expect(description.length).toBeLessThanOrEqual(1000);
+      expect(description).toContain('Match ID: 100');
     });
 
     it('should truncate long locations', () => {
@@ -230,12 +230,33 @@ describe('worldCupScheduledEvents', () => {
       expect(events.isFixtureEligibleForScheduledEvent(sampleFixture({ status: 'CANC' }))).toBe(false);
     });
 
-    it('should build minimal descriptions', () => {
+    it('should build minimal descriptions with invalid kickoff', () => {
       const description = events.buildScheduledEventDescription(
         sampleFixture({ venue: null, stage: null, group: null, kickoff: 'not-a-date' })
       );
       expect(description).toContain('Kickoff: TBD');
       expect(description).toContain('Match ID: 100');
+    });
+
+    it('should return marker-only description when fixture has no metadata lines', () => {
+      const description = events.buildScheduledEventDescription(
+        sampleFixture({ venue: null, stage: null, group: null, kickoff: null })
+      );
+      expect(description).toBe('Match ID: 100');
+    });
+
+    it('should truncate marker-only descriptions that exceed the limit', () => {
+      const description = events.buildScheduledEventDescription(
+        sampleFixture({
+          id: `9${'9'.repeat(2000)}`,
+          venue: null,
+          stage: null,
+          group: null,
+          kickoff: null
+        })
+      );
+      expect(description.length).toBeLessThanOrEqual(1000);
+      expect(description.endsWith('…')).toBe(true);
     });
 
     it('should ignore events with empty descriptions when checking duplicates', () => {

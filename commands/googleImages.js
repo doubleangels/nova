@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ButtonStyle, MessageFlags } = require('discord.js');
+const { serializeError } = require('../utils/logSanitize.js');
 const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const axios = require('axios');
@@ -6,6 +7,7 @@ const config = require('../config');
 const { createPaginatedResults, normalizeSearchParams, formatApiError } = require('../utils/searchUtils');
 const { fetchGoogleImagesContext } = require('../utils/commandContextAi');
 const { formatAiContextField } = require('../utils/geminiContextMessages');
+const { truncateEmbedTitle } = require('../utils/embedUtils');
 
 const titleCase = str =>
   str
@@ -170,10 +172,9 @@ module.exports = {
         items: response.data?.items || []
       };
     } catch (apiError) {
-      logger.error("Google API request failed.", { 
-        err: apiError,
-        status: apiError.response?.status,
-        errorDetails: apiError.response?.data
+      logger.error("Google API request failed.", {
+        ...serializeError(apiError, { includeStack: true }),
+        status: apiError.response?.status
       });
 
       return {
@@ -197,7 +198,7 @@ module.exports = {
     const pageLink = item.image?.contextLink || imageLink;
 
     const embed = new EmbedBuilder()
-      .setTitle(title)
+      .setTitle(truncateEmbedTitle(title))
       .setColor(0x4285F4)
       .setFooter({ text: `Powered by Google Image Search • Result ${index + 1} of ${items.length}` });
 
@@ -242,8 +243,7 @@ module.exports = {
    * @returns {Promise<void>}
    */
   async handleError(interaction, error) {
-    logger.error("Error occurred in googleimages command.", {
-      err: error,
+    logger.error("Error occurred in googleimages command.", { ...serializeError(error, { includeStack: true }),
       userId: interaction.user?.id,
       guildId: interaction.guild?.id,
       channelId: interaction.channel?.id
@@ -265,8 +265,7 @@ module.exports = {
         flags: MessageFlags.Ephemeral 
       });
     } catch (followUpError) {
-      logger.error("Failed to send error response for googleimages command.", {
-        err: followUpError,
+      logger.error("Failed to send error response for googleimages command.", { ...serializeError(followUpError, { includeStack: true }),
         originalError: error.message,
         userId: interaction.user?.id
       });
