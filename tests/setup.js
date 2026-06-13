@@ -57,8 +57,13 @@ afterAll(() => {
   } catch {
     // ignore
   }
-  const dbPath = path.join(jestDataDir, 'database.sqlite');
-  for (const ext of ['', '-wal', '-shm']) {
-    try { fs.unlinkSync(dbPath + ext); } catch { /* file may not exist */ }
-  }
+  // Delete every database-*.sqlite* file created by this suite's module instances.
+  try {
+    const files = fs.readdirSync(jestDataDir);
+    for (const file of files) {
+      if (/^database(-\d+)?\.sqlite/.test(file)) {
+        try { fs.unlinkSync(path.join(jestDataDir, file)); } catch { /* already gone */ }
+      }
+    }
+  } catch { /* jestDataDir may not exist yet */ }
 });

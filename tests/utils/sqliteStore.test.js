@@ -23,7 +23,7 @@ describe('sqliteStore', () => {
 
   it('should export data paths', () => {
     expect(sqliteStore.dataDir).toBeDefined();
-    expect(sqliteStore.sqlitePath).toContain('database.sqlite');
+    expect(sqliteStore.sqlitePath).toMatch(/database(-\d+)?\.sqlite$/);
   });
 
   it('should default dataDir to project data folder when DATA_DIR is unset', () => {
