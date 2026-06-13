@@ -67,14 +67,14 @@ describe('sqliteStore', () => {
     expect(mockWritableDb.pragma).toHaveBeenCalledWith('journal_mode = WAL');
   });
 
-  it('should close only readonly connection when writable was never opened', () => {
+  it('should close only readonly connection when writable was never opened', async () => {
     sqliteStore.getReadonlyDb();
-    sqliteStore.closeDatabaseConnections();
+    await sqliteStore.closeDatabaseConnections();
     expect(mockReadonlyDb.close).toHaveBeenCalled();
     expect(mockWritableDb.close).not.toHaveBeenCalled();
   });
 
-  it('should close only writable connection when readonly was never opened', () => {
+  it('should close only writable connection when readonly was never opened', async () => {
     jest.resetModules();
     jest.doMock('better-sqlite3', () =>
       jest.fn((path, opts) => (opts?.readonly ? mockReadonlyDb : mockWritableDb))
@@ -82,15 +82,15 @@ describe('sqliteStore', () => {
     jest.doMock('@keyv/sqlite', () => mockKeyvSqlite);
     const fresh = require('../../utils/sqliteStore');
     fresh.getWritableDb();
-    fresh.closeDatabaseConnections();
+    await fresh.closeDatabaseConnections();
     expect(mockWritableDb.close).toHaveBeenCalled();
     expect(mockReadonlyDb.close).not.toHaveBeenCalled();
   });
 
-  it('should close database connections and clears singletons', () => {
+  it('should close database connections and clears singletons', async () => {
     sqliteStore.getReadonlyDb();
     sqliteStore.getWritableDb();
-    sqliteStore.closeDatabaseConnections();
+    await sqliteStore.closeDatabaseConnections();
     expect(mockReadonlyDb.close).toHaveBeenCalled();
     expect(mockWritableDb.close).toHaveBeenCalled();
 
@@ -104,7 +104,7 @@ describe('sqliteStore', () => {
     expect(mockReadonlyDb.close).toHaveBeenCalledTimes(1);
   });
 
-  it('should call close on shared store when it exposes a close method', () => {
+  it('should call close on shared store when it exposes a close method', async () => {
     const mockClose = jest.fn();
     jest.resetModules();
     jest.doMock('better-sqlite3', () =>
@@ -116,11 +116,11 @@ describe('sqliteStore', () => {
     );
     const fresh = require('../../utils/sqliteStore');
     fresh.getSharedKeyvStore();
-    fresh.closeDatabaseConnections();
+    await fresh.closeDatabaseConnections();
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it('should not throw when shared store has no close method', () => {
+  it('should not throw when shared store has no close method', async () => {
     jest.resetModules();
     jest.doMock('better-sqlite3', () =>
       jest.fn((filePath, opts) => (opts?.readonly ? mockReadonlyDb : mockWritableDb))
@@ -129,6 +129,6 @@ describe('sqliteStore', () => {
     jest.doMock('@keyv/sqlite', () => jest.fn(() => ({})));
     const fresh = require('../../utils/sqliteStore');
     fresh.getSharedKeyvStore();
-    expect(() => fresh.closeDatabaseConnections()).not.toThrow();
+    await expect(fresh.closeDatabaseConnections()).resolves.not.toThrow();
   });
 });

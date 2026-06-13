@@ -15,6 +15,8 @@ const _instanceId = global.__sqliteStoreInstanceId;
 const sqliteBasename = _instanceId === 1 ? 'database.sqlite' : `database-${_instanceId}.sqlite`;
 const sqlitePath = path.join(dataDir, sqliteBasename);
 
+global.__openDatabaseConnections = global.__openDatabaseConnections || [];
+
 let sharedStore = null;
 let readonlyDb = null;
 let writableDb = null;
@@ -29,6 +31,7 @@ function getSharedKeyvStore() {
       table: 'keyv',
       busyTimeout: 10000
     });
+    global.__openDatabaseConnections.push(sharedStore);
   }
   return sharedStore;
 }
@@ -38,6 +41,7 @@ function getReadonlyDb() {
     const Database = require('better-sqlite3');
     readonlyDb = new Database(sqlitePath, { readonly: true });
     readonlyDb.pragma('busy_timeout = 10000');
+    global.__openDatabaseConnections.push(readonlyDb);
   }
   return readonlyDb;
 }
@@ -53,31 +57,30 @@ function getWritableDb() {
     // queries in tests don't fail with "no such table: keyv" before @keyv/sqlite
     // has had a chance to asynchronously create it upon connection.
     writableDb.exec('CREATE TABLE IF NOT EXISTS keyv (key VARCHAR(255) PRIMARY KEY, value TEXT)');
+    global.__openDatabaseConnections.push(writableDb);
   }
   return writableDb;
 }
 
 async function closeDatabaseConnections() {
-  if (readonlyDb) {
-    readonlyDb.close();
-    readonlyDb = null;
-  }
-  if (writableDb) {
-    writableDb.close();
-    writableDb = null;
-  }
-  if (sharedStore) {
+  const conns = global.__openDatabaseConnections;
+  global.__openDatabaseConnections = [];
+
+  for (const conn of conns) {
     try {
-      if (typeof sharedStore.disconnect === 'function') {
-        await sharedStore.disconnect();
-      } else if (typeof sharedStore.close === 'function') {
-        await sharedStore.close();
+      if (typeof conn.disconnect === 'function') {
+        await conn.disconnect();
+      } else if (typeof conn.close === 'function') {
+        await conn.close();
       }
     } catch {
       // Swallow errors from the adapter close — a stale or already-closed
-      // handle must not crash the Jest worker process.
+      // handle must not crash the process.
     }
   }
+
+  readonlyDb = null;
+  writableDb = null;
   sharedStore = null;
 }
 
