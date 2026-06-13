@@ -103,4 +103,32 @@ describe('sqliteStore', () => {
     fresh.getReadonlyDb();
     expect(mockReadonlyDb.close).toHaveBeenCalledTimes(1);
   });
+
+  it('should call close on shared store when it exposes a close method', () => {
+    const mockClose = jest.fn();
+    jest.resetModules();
+    jest.doMock('better-sqlite3', () =>
+      jest.fn((filePath, opts) => (opts?.readonly ? mockReadonlyDb : mockWritableDb))
+    );
+    // Return a KeyvSqlite-like object with a close() method
+    jest.doMock('@keyv/sqlite', () =>
+      jest.fn(() => ({ close: mockClose }))
+    );
+    const fresh = require('../../utils/sqliteStore');
+    fresh.getSharedKeyvStore();
+    fresh.closeDatabaseConnections();
+    expect(mockClose).toHaveBeenCalled();
+  });
+
+  it('should not throw when shared store has no close method', () => {
+    jest.resetModules();
+    jest.doMock('better-sqlite3', () =>
+      jest.fn((filePath, opts) => (opts?.readonly ? mockReadonlyDb : mockWritableDb))
+    );
+    // Return an object WITHOUT a close method
+    jest.doMock('@keyv/sqlite', () => jest.fn(() => ({})));
+    const fresh = require('../../utils/sqliteStore');
+    fresh.getSharedKeyvStore();
+    expect(() => fresh.closeDatabaseConnections()).not.toThrow();
+  });
 });
