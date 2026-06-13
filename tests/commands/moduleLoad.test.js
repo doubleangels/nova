@@ -6,13 +6,19 @@ describe('command module registration', () => {
     const commandsDir = path.join(__dirname, '../../commands');
     const files = fs.readdirSync(commandsDir).filter((f) => f.endsWith('.js'));
     for (const file of files) {
+      let closePromise;
       jest.isolateModules(() => {
         const cmd = require(path.join(commandsDir, file));
         expect(cmd.data).toBeDefined();
         expect(cmd.execute).toBeInstanceOf(Function);
         const json = cmd.data.toJSON();
         expect(json.name).toBeDefined();
+        try {
+          const store = require('../../utils/sqliteStore');
+          closePromise = store.closeDatabaseConnections();
+        } catch { }
       });
+      if (closePromise) await closePromise;
     }
   });
 });
