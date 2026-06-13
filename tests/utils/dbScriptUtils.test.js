@@ -244,7 +244,7 @@ describe('dbScriptUtils', () => {
       mockFs.existsSync.mockReturnValue(true);
       const info = dbScriptUtils.getDatabasePathInfo();
       expect(info.dataDir).toBeDefined();
-      expect(info.sqlitePath).toContain('database.sqlite');
+      expect(info.sqlitePath).toMatch(/database(-\d+)?\.sqlite$/);
       expect(info.dataDirExists).toBe(true);
       expect(info.databaseExists).toBe(true);
     });

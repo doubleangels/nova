@@ -6,8 +6,8 @@ describe('sqliteStore', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    mockReadonlyDb = { pragma: jest.fn(), close: jest.fn() };
-    mockWritableDb = { pragma: jest.fn(), close: jest.fn() };
+    mockReadonlyDb = { pragma: jest.fn(), close: jest.fn(), exec: jest.fn() };
+    mockWritableDb = { pragma: jest.fn(), close: jest.fn(), exec: jest.fn() };
     mockKeyvSqlite = jest.fn();
 
     jest.doMock('better-sqlite3', () =>
