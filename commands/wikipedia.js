@@ -60,9 +60,11 @@ module.exports = {
       });
 
       const page = summaryResponse.data;
-      if (!page?.extract) {
+      // Wikipedia REST API returns a document with type containing 'not_found'
+      // for missing or ambiguous titles instead of throwing an HTTP 404.
+      if (page?.type?.includes('not_found') || !page?.extract) {
         await interaction.editReply({
-          content: "⚠️ No results found for your search query.",
+          content: "⚠️ No Wikipedia article found for that query. Try rephrasing or using a more specific title.",
           flags: MessageFlags.Ephemeral
         });
         return;
@@ -116,6 +118,8 @@ module.exports = {
       errorMessage = "⚠️ Request timed out. Please try again later.";
     } else if (error.response?.status === 403) {
       errorMessage = "⚠️ Access to Wikipedia API denied. Please try again later.";
+    } else if (error.response?.status === 404) {
+      errorMessage = "⚠️ No Wikipedia article found for that query. Try rephrasing or using a more specific title.";
     } else if (error.response?.status === 429) {
       errorMessage = "⚠️ Too many requests. Please try again in a few minutes.";
     } else if (error.response?.status >= 500) {

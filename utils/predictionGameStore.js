@@ -596,13 +596,28 @@ function createPredictionStore(namespace, logLabel) {
   }
 
   /**
+   * Returns true only when every registered participant has submitted a prediction
+   * for every mock playable fixture.  A single user predicting is not enough —
+   * the full roster must be in before scoring is triggered.
    * @param {number[]} mockIds
    */
   async function areAllMockPlayableFixturesPredicted(mockIds) {
     if (!config.predictionMockApi) return false;
+    const registered = await getRegisteredUserIds();
+    // Require at least one registered participant; fall back to any-predictor check
+    // only when the roster is genuinely empty (e.g. no one has run /register yet).
+    if (registered.length === 0) {
+      // Legacy behaviour: each fixture must have at least one predictor.
+      for (const fixtureId of mockIds) {
+        const predictorIds = await getPredictorIdsForFixture(fixtureId);
+        if (predictorIds.length === 0) return false;
+      }
+      return true;
+    }
     for (const fixtureId of mockIds) {
       const predictorIds = await getPredictorIdsForFixture(fixtureId);
-      if (predictorIds.length === 0) return false;
+      const predictorSet = new Set(predictorIds);
+      if (!registered.every(uid => predictorSet.has(uid))) return false;
     }
     return true;
   }

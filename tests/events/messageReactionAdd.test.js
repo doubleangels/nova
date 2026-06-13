@@ -267,8 +267,40 @@ describe('messageReactionAdd event', () => {
           title: 'Translation to English 🇺🇸',
           description: 'Hello',
           footer: { text: 'Translation requested by: User#1234' }
-        })]
+        })],
+        allowedMentions: { repliedUser: false }
       });
+    });
+
+    it('should use the configured DEEPL_API_BASE_URL for the translation request', async () => {
+      mockConfig.deeplApiBaseUrl = 'https://api.deepl.com';
+
+      const mockReaction = {
+        partial: false,
+        emoji: { name: '🇺🇸' },
+        message: {
+          id: 'msg-paid',
+          content: 'Hola',
+          reply: jest.fn().mockResolvedValue(),
+          guild: null
+        }
+      };
+      const mockUser = { bot: false, id: 'user-paid', tag: 'PaidUser#0001' };
+
+      mockLanguageUtils.isValidTranslationFlag.mockReturnValue(true);
+      mockLanguageUtils.getLanguageInfo.mockReturnValue({ code: 'en', name: 'English' });
+
+      mockAxios.post.mockResolvedValue({
+        data: { translations: [{ text: 'Hello' }] }
+      });
+
+      await messageReactionAddEvent.execute(mockReaction, mockUser);
+
+      expect(mockAxios.post).toHaveBeenCalledWith(
+        'https://api.deepl.com/v2/translate',
+        expect.any(URLSearchParams),
+        expect.any(Object)
+      );
     });
 
     it('should translate successfully with default color if message has no guild, no member, or highest role has color 0', async () => {
@@ -310,7 +342,8 @@ describe('messageReactionAdd event', () => {
             color: 0x0099ff,
             title: 'Translation to English 🇺🇸',
             description: 'Hello'
-          })]
+          })],
+          allowedMentions: { repliedUser: false }
         });
       }
     });

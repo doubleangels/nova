@@ -127,9 +127,32 @@ describe('wikipedia command', () => {
       await wikipediaCommand.execute(mockInteraction);
 
       expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-        content: '⚠️ No results found for your search query.'
+        content: '⚠️ No Wikipedia article found for that query. Try rephrasing or using a more specific title.'
       }));
     });
+
+    it('should handle MediaWiki not_found type response (ambiguous or missing article)', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getString: jest.fn().mockReturnValue('veryobscurethingxyz999')
+        }
+      });
+
+      mockAxios.get.mockResolvedValueOnce({
+        data: {
+          type: 'https://mediawiki.org/wiki/HyperSwitch/errors/not_found',
+          title: 'Not found.',
+          detail: 'Page or revision not found.'
+        }
+      });
+
+      await wikipediaCommand.execute(mockInteraction);
+
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: '⚠️ No Wikipedia article found for that query. Try rephrasing or using a more specific title.'
+      }));
+    });
+
 
     it('should fall back to query title and default URL when page metadata is minimal', async () => {
       const mockInteraction = createMockInteraction({
@@ -199,6 +222,10 @@ describe('wikipedia command', () => {
         {
           error: { response: { status: 403 }, message: 'forbidden' },
           expected: '⚠️ Access to Wikipedia API denied. Please try again later.'
+        },
+        {
+          error: { response: { status: 404 }, message: 'not found' },
+          expected: '⚠️ No Wikipedia article found for that query. Try rephrasing or using a more specific title.'
         },
         {
           error: { response: { status: 429 }, message: 'rate limit' },

@@ -153,6 +153,7 @@ const googleImagesAiEnabled = isTruthyEnv(envFirst('GOOGLE_IMAGES_AI_ENABLED'));
  * @property {string} customRolePositioningAnchorId - Role ID for positioning custom roles (from CUSTOM_ROLE_POSITIONING_ANCHOR_ID env var)
  * @property {string} googleApiKey - Google API key for search functionality (from GOOGLE_API_KEY env var)
  * @property {string} deeplApiKey - DeepL API key for translation functionality (from DEEPL_API_KEY env var)
+ * @property {string} deeplApiBaseUrl - DeepL API base URL; use https://api.deepl.com for paid plans (from DEEPL_API_BASE_URL env var, default: https://api-free.deepl.com)
  * @property {string} guildName - Guild name (from GUILD_NAME env var, default: 'Da Frens')
  * @property {string} imageSearchEngineId - Google Custom Search Engine ID for images (from IMAGE_SEARCH_ENGINE_ID env var)
  * @property {string} logLevel - Logging level (from LOG_LEVEL env var, default: 'info')
@@ -231,6 +232,8 @@ module.exports = {
   googleApiKey: process.env.GOOGLE_API_KEY,
   // API key for DeepL translation service
   deeplApiKey: process.env.DEEPL_API_KEY,
+  // Base URL for DeepL API (use https://api.deepl.com for paid plans, default is free-tier)
+  deeplApiBaseUrl: process.env.DEEPL_API_BASE_URL || 'https://api-free.deepl.com',
   // Name of the guild/server
   guildName: process.env.GUILD_NAME || 'Da Frens',
   // Optional Discord guild ID when the bot is in multiple guilds

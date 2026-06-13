@@ -288,6 +288,63 @@ describe('predictionGameStore', () => {
     expect(result).toBe(false);
   });
 
+  it('areAllMockPlayableFixturesPredicted returns false when a registered user has not predicted', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: true, predictionPendingTtlMs: 600000 }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const rosterStore = createPredictionStore('roster-check-store', 'RosterCheck');
+
+    // Two registered users
+    await rosterStore.addRegisteredUser('user-alpha');
+    await rosterStore.addRegisteredUser('user-beta');
+
+    // Only user-alpha has predicted for fixture 1001
+    await rosterStore.savePrediction('user-alpha', 1001, {
+      homeScore: 1, awayScore: 0, resultPick: 'home',
+      submittedAt: new Date().toISOString()
+    });
+
+    const result = await rosterStore.areAllMockPlayableFixturesPredicted([1001]);
+    expect(result).toBe(false);
+  });
+
+  it('areAllMockPlayableFixturesPredicted returns true when all registered users have predicted', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: true, predictionPendingTtlMs: 600000 }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const rosterStore = createPredictionStore('roster-full-store', 'RosterFull');
+
+    await rosterStore.addRegisteredUser('user-alpha');
+    await rosterStore.addRegisteredUser('user-beta');
+
+    for (const uid of ['user-alpha', 'user-beta']) {
+      await rosterStore.savePrediction(uid, 1002, {
+        homeScore: 2, awayScore: 1, resultPick: 'home',
+        submittedAt: new Date().toISOString()
+      });
+    }
+
+    const result = await rosterStore.areAllMockPlayableFixturesPredicted([1002]);
+    expect(result).toBe(true);
+  });
+
+  it('areAllMockPlayableFixturesPredicted falls back to any-predictor check when roster is empty', async () => {
+    jest.resetModules();
+    jest.doMock('../../config', () => ({ predictionMockApi: true, predictionPendingTtlMs: 600000 }));
+    const { createPredictionStore } = require('../../utils/predictionGameStore');
+    const emptyRosterStore = createPredictionStore('empty-roster-store', 'EmptyRoster');
+
+    // No registered users — legacy behaviour: any predictor is enough
+    await emptyRosterStore.savePrediction('unregistered-user', 1003, {
+      homeScore: 0, awayScore: 0, resultPick: 'draw',
+      submittedAt: new Date().toISOString()
+    });
+
+    expect(await emptyRosterStore.areAllMockPlayableFixturesPredicted([1003])).toBe(true);
+    // Still false when no predictions at all
+    expect(await emptyRosterStore.areAllMockPlayableFixturesPredicted([9999])).toBe(false);
+  });
+
   it('should not track participant when adding 0 points (line 129 false branch)', async () => {
     await store.addUserPoints('user-zero', 0);
     expect(await store.getUserPoints('user-zero')).toBe(0);

@@ -127,8 +127,9 @@ async function handleTranslationRequest(reaction, user) {
         userId: user.id
       });
 
+      const deeplBaseUrl = config.deeplApiBaseUrl || 'https://api-free.deepl.com';
       const response = await httpClient.post(
-        'https://api-free.deepl.com/v2/translate',
+        `${deeplBaseUrl}/v2/translate`,
         new URLSearchParams({
           text: originalText,
           target_lang: languageInfo.code.toUpperCase()
@@ -179,7 +180,7 @@ async function handleTranslationRequest(reaction, user) {
       timestamp: dayjs().toDate()
     };
 
-    await message.reply({ embeds: [embed] });
+    await message.reply({ embeds: [embed], allowedMentions: { repliedUser: false } });
 
     logger.info('Translation completed successfully.', {
       targetLanguage: languageInfo.name,
