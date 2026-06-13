@@ -31,6 +31,20 @@ describe('predictionGameStore', () => {
     expect(board.some(e => e.userId === 'role-only-user' && e.points === 3)).toBe(true);
   });
 
+  it('should sort the leaderboard by points descending', async () => {
+    await store.addRegisteredUser('user-1');
+    await store.addRegisteredUser('user-2');
+    await store.addUserPoints('user-1', 5);
+    await store.addUserPoints('user-2', 10);
+
+    const board = await store.getLeaderboard(10);
+    expect(board).toHaveLength(2);
+    expect(board[0].userId).toBe('user-2');
+    expect(board[0].points).toBe(10);
+    expect(board[1].userId).toBe('user-1');
+    expect(board[1].points).toBe(5);
+  });
+
   it('should subtract points when clearing mock demo predictions', async () => {
     await store.savePrediction('user-a', 900001, {
       homeScore: 2,
@@ -40,7 +54,15 @@ describe('predictionGameStore', () => {
       scored: true,
       pointsAwarded: 3
     });
+    await store.savePrediction('user-b', 900001, {
+      homeScore: 1,
+      awayScore: 1,
+      resultPick: 'draw',
+      submittedAt: new Date().toISOString(),
+      scored: false
+    });
     await store.addUserPoints('user-a', 3);
+    await store.addUserPoints('user-b', 0);
     await store.markFixturePrompted(900001);
     await store.markFixtureScored(900001);
 
