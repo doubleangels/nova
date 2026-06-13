@@ -57,7 +57,7 @@ function getWritableDb() {
   return writableDb;
 }
 
-function closeDatabaseConnections() {
+async function closeDatabaseConnections() {
   if (readonlyDb) {
     readonlyDb.close();
     readonlyDb = null;
@@ -66,9 +66,13 @@ function closeDatabaseConnections() {
     writableDb.close();
     writableDb = null;
   }
-  if (sharedStore && typeof sharedStore.close === 'function') {
+  if (sharedStore) {
     try {
-      sharedStore.close();
+      if (typeof sharedStore.disconnect === 'function') {
+        await sharedStore.disconnect();
+      } else if (typeof sharedStore.close === 'function') {
+        await sharedStore.close();
+      }
     } catch {
       // Swallow errors from the adapter close — a stale or already-closed
       // handle must not crash the Jest worker process.

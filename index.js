@@ -174,7 +174,7 @@ async function gracefulShutdown(signal) {
     logger.error('Error destroying Discord client on shutdown.', serializeError(err, { includeStack: true }));
   }
   try {
-    closeDatabaseConnections();
+    await closeDatabaseConnections();
   } catch (err) {
     logger.error('Error closing database connections on shutdown.', serializeError(err, { includeStack: true }));
   }

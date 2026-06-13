@@ -34,11 +34,11 @@ jest.setTimeout(10000);
 // moduleLoad.test.js reloads config once per command module and can exceed the default limit
 process.setMaxListeners(200);
 
-afterEach(() => {
+afterEach(async () => {
   try {
     const sqliteStorePath = require.resolve('../utils/sqliteStore');
     if (require.cache[sqliteStorePath]) {
-      require('../utils/sqliteStore').closeDatabaseConnections();
+      await require('../utils/sqliteStore').closeDatabaseConnections();
     }
   } catch {
     // sqliteStore may be mocked or not loaded in this test file
@@ -48,11 +48,11 @@ afterEach(() => {
 // After every test suite, delete the SQLite database and its WAL/SHM sidecar files.
 // This prevents orphaned @keyv/sqlite connections (created by mid-test jest.resetModules()
 // calls) from corrupting the database for the next suite running in the same worker.
-afterAll(() => {
+afterAll(async () => {
   try {
     const sqliteStorePath = require.resolve('../utils/sqliteStore');
     if (require.cache[sqliteStorePath]) {
-      require('../utils/sqliteStore').closeDatabaseConnections();
+      await require('../utils/sqliteStore').closeDatabaseConnections();
     }
   } catch {
     // ignore
