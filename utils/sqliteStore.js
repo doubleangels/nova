@@ -51,6 +51,9 @@ function closeDatabaseConnections() {
     writableDb.close();
     writableDb = null;
   }
+  if (sharedStore && typeof sharedStore.close === 'function') {
+    sharedStore.close();
+  }
   sharedStore = null;
 }
 
