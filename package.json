@@ -26,7 +26,8 @@
       "brace-expansion": ">=5.0.6",
       "ip-address": ">=10.1.1",
       "socks": ">=2.8.9",
-      "tar": ">=7.5.11"
+      "tar": ">=7.5.11",
+      "form-data": ">=4.0.6"
     }
   },
   "repository": {
@@ -45,7 +46,8 @@
     "tar": ">=7.5.11",
     "undici": "~6.25.0",
     "@isaacs/brace-expansion": ">=5.0.6",
-    "brace-expansion": ">=5.0.6"
+    "brace-expansion": ">=5.0.6",
+    "form-data": ">=4.0.6"
   },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
