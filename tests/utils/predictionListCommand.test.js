@@ -105,8 +105,11 @@ describe('predictionListCommand', () => {
       paginationPrefix: 'football_predictions',
       logger: { debug: jest.fn(), error: jest.fn() },
       isApiConfigured: () => true,
-      getSeasonFixtures: async () => [],
-      getUserPredictionFixtureIds: async () => [1],
+      getSeasonFixtures: async () => [
+        { id: 1, kickoff: '2026-06-01T12:00:00Z' },
+        { id: 2, kickoff: '2026-06-02T12:00:00Z' }
+      ],
+      getUserPredictionFixtureIds: async () => [1, 2],
       getPredictionsForUser: async () => [{
         fixtureId: 1,
         prediction: {
@@ -115,6 +118,9 @@ describe('predictionListCommand', () => {
           resultPick: 'home',
           scored: false
         }
+      }, {
+        fixtureId: 2,
+        prediction: null
       }],
       getUserPoints: async () => 3,
       formatFixtureLine: () => 'fixture',
@@ -122,6 +128,34 @@ describe('predictionListCommand', () => {
     });
 
     expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+  });
+
+  it('should handle completely empty lines array to cover the empty pages branch', async () => {
+    const { handlePredictionsSubcommand } = require('../../utils/predictionListCommand');
+    const interaction = {
+      user: { id: 'caller-1' },
+      options: {
+        getUser: jest.fn().mockReturnValue({ id: 'other-1', displayName: 'Other User' })
+      },
+      reply: jest.fn(),
+      deferReply: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
+    };
+
+    await handlePredictionsSubcommand(interaction, {
+      gameId: 'club',
+      paginationPrefix: 'football_predictions',
+      logger: { debug: jest.fn(), error: jest.fn() },
+      isApiConfigured: () => true,
+      getSeasonFixtures: async () => [],
+      getUserPredictionFixtureIds: async () => [1],
+      getPredictionsForUser: async () => [], // returns empty
+      getUserPoints: async () => 0,
+      formatFixtureLine: () => 'line',
+      formatResultPickDisplay: () => 'home'
+    });
+
+    expect(interaction.editReply).toHaveBeenCalled();
   });
 
   it('should show another user empty message', async () => {

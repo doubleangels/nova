@@ -209,6 +209,15 @@ async function handlePredictionsSubcommand(interaction, deps) {
   }
 
   const predictionEntries = await getPredictionsForUser(targetUser.id, fixtureIds);
+
+  predictionEntries.sort((a, b) => {
+    const fixA = fixtureMap.get(a.fixtureId);
+    const fixB = fixtureMap.get(b.fixtureId);
+    const dateA = fixA && fixA.kickoff ? new Date(fixA.kickoff).getTime() : 0;
+    const dateB = fixB && fixB.kickoff ? new Date(fixB.kickoff).getTime() : 0;
+    return dateB - dateA;
+  });
+
   const lines = buildUserPredictionLines(
     predictionEntries,
     fixtureMap,
@@ -219,7 +228,13 @@ async function handlePredictionsSubcommand(interaction, deps) {
   const title = isSelf
     ? msgs.GAME[gameId].predictionsTitleSelf
     : msgs.predictionsTitleOther(targetUser.displayName);
-  const pages = splitContentIntoPages(lines);
+    
+  const chunkedLines = [];
+  const pageSize = 10;
+  for (let i = 0; i < lines.length; i += pageSize) {
+    chunkedLines.push(lines.slice(i, i + pageSize).join('\n'));
+  }
+  const pages = chunkedLines.length > 0 ? chunkedLines : [msgs.MSG_NO_PREDICTIONS];
   const pageCount = pages.length;
 
   await replyWithPagination(

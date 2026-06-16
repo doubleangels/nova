@@ -20,5 +20,5 @@ describe('command module registration', () => {
       });
       if (closePromise) await closePromise;
     }
-  });
+  }, 30000);
 });

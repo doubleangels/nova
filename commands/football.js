@@ -58,13 +58,6 @@ module.exports = {
       sub
         .setName('leaderboard')
         .setDescription('Show the points leaderboard.')
-        .addIntegerOption(opt =>
-          opt
-            .setName('limit')
-            .setDescription('How many players do you want to show? (1-25)')
-            .setMinValue(1)
-            .setMaxValue(25)
-        )
     )
     .addSubcommand(sub =>
       sub.setName('rules').setDescription('How predictions and scoring work.')
@@ -326,8 +319,7 @@ module.exports = {
 
     await scoreFinishedFixtures(interaction.client);
 
-    const limit = interaction.options.getInteger('limit') ?? 10;
-    const board = await getLeaderboard(limit);
+    const board = await getLeaderboard(1000000);
 
     if (board.length === 0) {
       await interaction.editReply({
@@ -336,18 +328,38 @@ module.exports = {
       return;
     }
 
-    const lines = board.map((entry, i) => {
-      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-      return `${medal} <@${entry.userId}> -  **${entry.points}** pts`;
-    });
+    const { createPaginatedResults } = require('../utils/searchUtils');
 
-    const embed = new EmbedBuilder()
-      .setColor(msgs.GAME.club.embedColor)
-      .setTitle(msgs.GAME.club.leaderboardTitle)
-      .setDescription(lines.join('\n'))
-      .setFooter({ text: msgs.GAME.club.leaderboardFooter });
+    const chunkedBoard = [];
+    const pageSize = 10;
+    for (let i = 0; i < board.length; i += pageSize) {
+      chunkedBoard.push(board.slice(i, i + pageSize));
+    }
 
-    await interaction.editReply({ embeds: [embed] });
+    const generateEmbed = (pageIndex) => {
+      const pageEntries = chunkedBoard[pageIndex];
+      const startIndex = pageIndex * pageSize;
+      const lines = pageEntries.map((entry, i) => {
+        const globalIndex = startIndex + i;
+        const medal = globalIndex === 0 ? '🥇' : globalIndex === 1 ? '🥈' : globalIndex === 2 ? '🥉' : `${globalIndex + 1}.`;
+        return `${medal} <@${entry.userId}> -  **${entry.points}** pts`;
+      });
+
+      return new EmbedBuilder()
+        .setColor(msgs.GAME.club.embedColor)
+        .setTitle(msgs.GAME.club.leaderboardTitle)
+        .setDescription(lines.join('\n'))
+        .setFooter({ text: `${msgs.GAME.club.leaderboardFooter} • Page ${pageIndex + 1} of ${chunkedBoard.length}` });
+    };
+
+    await createPaginatedResults(
+      interaction,
+      chunkedBoard,
+      generateEmbed,
+      'football_leaderboard',
+      300000,
+      logger
+    );
   },
 
   async handleRules(interaction) {
