@@ -356,8 +356,7 @@ module.exports = {
     }
 
     fixtures = fixtures
-      .sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff))
-      .slice(0, 15);
+      .sort((a, b) => new Date(b.kickoff) - new Date(a.kickoff));
 
     if (fixtures.length === 0) {
       await interaction.editReply({
@@ -366,13 +365,32 @@ module.exports = {
       return;
     }
 
-    const lines = fixtures.map(f => `• \`${f.id}\` ${formatFixtureLine(f)}`);
-    const embed = new EmbedBuilder()
-      .setColor(msgs.GAME.worldcup.embedColor)
-      .setTitle(msgs.GAME.worldcup.matchesTitle)
-      .setDescription(lines.join('\n').slice(0, 4000));
+    const { createPaginatedResults } = require('../utils/searchUtils');
 
-    await interaction.editReply({ embeds: [embed] });
+    const chunkedFixtures = [];
+    const pageSize = 10;
+    for (let i = 0; i < fixtures.length; i += pageSize) {
+      chunkedFixtures.push(fixtures.slice(i, i + pageSize));
+    }
+
+    const generateEmbed = (pageIndex) => {
+      const pageFixtures = chunkedFixtures[pageIndex];
+      const lines = pageFixtures.map(f => `• \`${f.id}\` ${formatFixtureLine(f)}`);
+      return new EmbedBuilder()
+        .setColor(msgs.GAME.worldcup.embedColor)
+        .setTitle(msgs.GAME.worldcup.matchesTitle)
+        .setDescription(lines.join('\n').slice(0, 4000))
+        .setFooter({ text: `Page ${pageIndex + 1} of ${chunkedFixtures.length}` });
+    };
+
+    await createPaginatedResults(
+      interaction,
+      chunkedFixtures,
+      generateEmbed,
+      'worldcup_matches',
+      300000,
+      logger
+    );
   },
 
   async handlePredictions(interaction) {

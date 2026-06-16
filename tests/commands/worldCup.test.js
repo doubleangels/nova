@@ -618,7 +618,7 @@ describe('worldcup command', () => {
     });
     await worldcupCommand.execute(interaction);
     const embed = interaction.editReply.mock.calls[0][0].embeds[0];
-    expect(embed.data.description.indexOf('`1`')).toBeLessThan(embed.data.description.indexOf('`2`'));
+    expect(embed.data.description.indexOf('`1`')).toBeGreaterThan(embed.data.description.indexOf('`2`'));
   });
 
   it('should filter upcoming matches', async () => {

@@ -22,7 +22,11 @@ function createMockInteraction(overrides = {}) {
       this.deferred = true;
       return {};
     }),
-    editReply: jest.fn().mockResolvedValue({}),
+    editReply: jest.fn().mockResolvedValue({
+      createMessageComponentCollector: jest.fn(() => ({
+        on: jest.fn()
+      }))
+    }),
     followUp: jest.fn().mockResolvedValue({}),
     isCommand: jest.fn(() => true),
     isButton: jest.fn(() => false),
