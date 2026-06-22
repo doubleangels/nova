@@ -97,19 +97,28 @@ describe('predictionMessages', () => {
       fixtureId: 537371,
       wrong: '5-1',
       correct: '4-1',
-      commit: false,
       namespaces: ['worldcup'],
       namespaceWarning: null,
       totalChanges: 0,
       netDelta: 0,
       anyCommitted: false,
       reportTruncated: false
-    })).toContain('No point adjustments needed');
+    })).toContain('No point adjustments were needed');
     expect(msgs.buildFixScoringSummaryDescription({
       fixtureId: 537371,
       wrong: '5-1',
       correct: '4-1',
-      commit: true,
+      namespaces: ['worldcup'],
+      namespaceWarning: null,
+      totalChanges: 1,
+      netDelta: 2,
+      anyCommitted: true,
+      reportTruncated: false
+    })).toContain('Changes were written to the database');
+    expect(msgs.buildFixScoringSummaryDescription({
+      fixtureId: 537371,
+      wrong: '5-1',
+      correct: '4-1',
       namespaces: ['worldcup'],
       namespaceWarning: 'Warning: no predictions in football',
       totalChanges: 2,
@@ -121,7 +130,6 @@ describe('predictionMessages', () => {
       fixtureId: 537371,
       wrong: '5-1',
       correct: '4-1',
-      commit: true,
       namespaces: [],
       namespaceWarning: null,
       totalChanges: 0,
@@ -133,26 +141,13 @@ describe('predictionMessages', () => {
       fixtureId: 537371,
       wrong: '5-1',
       correct: '4-1',
-      commit: true,
-      namespaces: ['worldcup'],
-      namespaceWarning: null,
-      totalChanges: 0,
-      netDelta: 0,
-      anyCommitted: false,
-      reportTruncated: false
-    })).toContain('Commit requested, but no point adjustments were needed');
-    expect(msgs.buildFixScoringSummaryDescription({
-      fixtureId: 537371,
-      wrong: '5-1',
-      correct: '4-1',
-      commit: false,
       namespaces: ['worldcup'],
       namespaceWarning: null,
       totalChanges: 2,
       netDelta: -3,
-      anyCommitted: false,
+      anyCommitted: true,
       reportTruncated: false
-    })).toContain('**2** user(s) would change by **-3** points total');
+    })).toContain('**2** user(s) adjusted by **-3** points total');
   });
 
   it('should return worldcup prompt title without competition', () => {

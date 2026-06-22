@@ -205,11 +205,6 @@ module.exports = {
               { name: 'World Cup', value: 'worldcup' }
             )
         )
-        .addBooleanOption(opt =>
-          opt
-            .setName('commit')
-            .setDescription('Apply changes (default: dry run preview only)')
-        )
     ),
 
   async execute(interaction) {

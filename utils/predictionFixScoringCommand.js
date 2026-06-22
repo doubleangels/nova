@@ -27,18 +27,16 @@ function summarizeReports(reports) {
 
 /**
  * @param {number} fixtureId
- * @param {boolean} commit
  * @param {string} fullReport
  * @returns {import('discord.js').AttachmentBuilder|null}
  */
-function buildReportAttachment(fixtureId, commit, fullReport) {
+function buildReportAttachment(fixtureId, fullReport) {
   if (fullReport.length <= REPORT_ATTACHMENT_THRESHOLD) {
     return null;
   }
 
-  const suffix = commit ? 'applied' : 'dry-run';
   return new AttachmentBuilder(Buffer.from(fullReport, 'utf8'), {
-    name: `fixture-${fixtureId}-scoring-fix-${suffix}.txt`
+    name: `fixture-${fixtureId}-scoring-fix.txt`
   });
 }
 
@@ -67,7 +65,7 @@ function runFixtureScoringFix(params) {
     wrong,
     correct,
     namespace: requestedNamespace,
-    commit = false,
+    commit = true,
     db
   } = params;
 
@@ -149,7 +147,6 @@ async function handleFixScoringSubcommand(interaction, deps) {
   const wrong = interaction.options.getString('wrong', true).trim();
   const correct = interaction.options.getString('correct', true).trim();
   const requestedNamespace = interaction.options.getString('namespace') || undefined;
-  const commit = interaction.options.getBoolean('commit') ?? false;
 
   let wrongActual;
   let correctActual;
@@ -171,12 +168,13 @@ async function handleFixScoringSubcommand(interaction, deps) {
     wrong,
     correct,
     namespace: requestedNamespace,
-    commit,
+    commit: true,
     db: deps.getWritableDb()
   });
 
   const { summary, fullReport, namespaces, namespaceWarning } = result;
   const netSign = summary.netDelta > 0 ? '+' : '';
+  const appliedChanges = summary.anyCommitted && summary.totalChanges > 0;
 
   deps.logger.info('Administrator ran fixture scoring fix.', {
     adminUserId: interaction.user.id,
@@ -185,7 +183,6 @@ async function handleFixScoringSubcommand(interaction, deps) {
     wrong: `${wrongActual.home}-${wrongActual.away}`,
     correct: `${correctActual.home}-${correctActual.away}`,
     namespace: requestedNamespace || '(auto)',
-    commit,
     totalChanges: summary.totalChanges,
     netDelta: summary.netDelta,
     gameId: deps.gameId,
@@ -194,14 +191,13 @@ async function handleFixScoringSubcommand(interaction, deps) {
 
   const embed = new EmbedBuilder()
     .setColor(msgs.GAME[deps.gameId].embedColor)
-    .setTitle(commit && summary.anyCommitted ? 'Fixture Scoring Changes Applied' : 'Fix Fixture Scoring')
+    .setTitle(appliedChanges ? 'Fixture Scoring Changes Applied' : 'Fix Fixture Scoring')
     .setDescription(
       truncateEmbedDescription(
         msgs.buildFixScoringSummaryDescription({
           fixtureId,
           wrong: `${wrongActual.home}-${wrongActual.away}`,
           correct: `${correctActual.home}-${correctActual.away}`,
-          commit,
           namespaces,
           namespaceWarning,
           totalChanges: summary.totalChanges,
@@ -213,12 +209,7 @@ async function handleFixScoringSubcommand(interaction, deps) {
     )
     .addFields(
       {
-        name: 'Mode',
-        value: commit ? (summary.anyCommitted ? 'Committed' : 'Commit (no changes)') : 'Dry run',
-        inline: true
-      },
-      {
-        name: 'Users to adjust',
+        name: 'Users adjusted',
         value: String(summary.totalChanges),
         inline: true
       },
@@ -229,15 +220,13 @@ async function handleFixScoringSubcommand(interaction, deps) {
       }
     );
 
-  const attachment = buildReportAttachment(fixtureId, commit, fullReport);
+  const attachment = buildReportAttachment(fixtureId, fullReport);
   const payload = { embeds: [embed] };
   if (attachment) {
     payload.files = [attachment];
   }
 
-  if (!commit) {
-    payload.content = '_Dry run only — no database changes were made. Re-run with `commit: true` to apply._';
-  } else if (summary.totalChanges === 0) {
+  if (summary.totalChanges === 0) {
     payload.content = '_No database changes were written._';
   }
 

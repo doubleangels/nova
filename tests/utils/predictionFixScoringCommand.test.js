@@ -30,7 +30,6 @@ function createAdminInteraction(overrides = {}) {
         if (name === 'namespace') return null;
         return null;
       }),
-      getBoolean: jest.fn().mockReturnValue(false),
       ...overrides.options
     },
     ...overrides
@@ -70,21 +69,21 @@ describe('predictionFixScoringCommand', () => {
 
   describe('buildReportAttachment', () => {
     it('should return null for short reports', () => {
-      expect(buildReportAttachment(1, false, 'short report')).toBeNull();
+      expect(buildReportAttachment(1, 'short report')).toBeNull();
     });
 
-    it('should attach a text file for long reports when committed', () => {
+    it('should attach a text file for long reports', () => {
       const longReport = 'x'.repeat(REPORT_ATTACHMENT_THRESHOLD + 1);
-      const attachment = buildReportAttachment(FIXTURE_ID, true, longReport);
+      const attachment = buildReportAttachment(FIXTURE_ID, longReport);
       expect(attachment).not.toBeNull();
-      expect(attachment.name).toBe(`fixture-${FIXTURE_ID}-scoring-fix-applied.txt`);
+      expect(attachment.name).toBe(`fixture-${FIXTURE_ID}-scoring-fix.txt`);
     });
   });
 
   describe('runFixtureScoringFix', () => {
-    it('should produce a dry-run report with no changes for unchanged picks', async () => {
+    it('should preview without writing when commit is false', async () => {
       await store.savePrediction(USER_A, FIXTURE_ID, {
-        homeScore: 3,
+        homeScore: 4,
         awayScore: 1,
         resultPick: 'home',
         submittedAt: new Date().toISOString(),
@@ -104,12 +103,12 @@ describe('predictionFixScoringCommand', () => {
         db
       });
 
-      expect(result.summary.totalChanges).toBe(0);
-      expect(result.fullReport).toContain('No point adjustments needed.');
+      expect(result.summary.totalChanges).toBe(1);
+      expect(result.summary.anyCommitted).toBe(false);
       expect(await store.getUserPoints(USER_A)).toBe(1);
     });
 
-    it('should commit scoring corrections when requested', async () => {
+    it('should commit scoring corrections by default', async () => {
       await store.savePrediction(USER_A, FIXTURE_ID, {
         homeScore: 4,
         awayScore: 1,
@@ -127,13 +126,38 @@ describe('predictionFixScoringCommand', () => {
         wrong: WRONG,
         correct: CORRECT,
         namespace: 'football',
-        commit: true,
         db
       });
 
       expect(result.summary.totalChanges).toBe(1);
       expect(result.summary.anyCommitted).toBe(true);
       expect(await store.getUserPoints(USER_A)).toBe(3);
+    });
+
+    it('should report no changes for unchanged picks', async () => {
+      await store.savePrediction(USER_A, FIXTURE_ID, {
+        homeScore: 3,
+        awayScore: 1,
+        resultPick: 'home',
+        submittedAt: new Date().toISOString(),
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+      await store.addUserPoints(USER_A, 1);
+
+      const result = runFixtureScoringFix({
+        fixtureId: FIXTURE_ID,
+        wrong: WRONG,
+        correct: CORRECT,
+        namespace: 'football',
+        db
+      });
+
+      expect(result.summary.totalChanges).toBe(0);
+      expect(result.fullReport).toContain('No point adjustments needed.');
+      expect(await store.getUserPoints(USER_A)).toBe(1);
     });
 
     it('should include a namespace warning when the requested namespace has no data', async () => {
@@ -211,8 +235,7 @@ describe('predictionFixScoringCommand', () => {
       const interaction = createAdminInteraction({
         options: {
           getInteger: jest.fn().mockReturnValue(FIXTURE_ID),
-          getString: jest.fn(name => (name === 'wrong' ? 'bad' : CORRECT)),
-          getBoolean: jest.fn().mockReturnValue(false)
+          getString: jest.fn(name => (name === 'wrong' ? 'bad' : CORRECT))
         }
       });
 
@@ -228,7 +251,7 @@ describe('predictionFixScoringCommand', () => {
       }));
     });
 
-    it('should reply with a dry-run embed', async () => {
+    it('should apply fixes and reply with a summary embed', async () => {
       const interaction = createAdminInteraction();
       const logger = { info: jest.fn() };
 
@@ -246,20 +269,9 @@ describe('predictionFixScoringCommand', () => {
             data: expect.objectContaining({ title: 'Fix Fixture Scoring' })
           })
         ]),
-        content: expect.stringContaining('Dry run only')
+        content: '_No database changes were written._'
       }));
       expect(logger.info).toHaveBeenCalled();
-    });
-
-    it('should default commit to false when the option is omitted', async () => {
-      const result = runFixtureScoringFix({
-        fixtureId: FIXTURE_ID,
-        wrong: WRONG,
-        correct: CORRECT,
-        db
-      });
-
-      expect(result.summary.anyCommitted).toBe(false);
     });
 
     it('should attach a file when the report is very long', async () => {
@@ -288,62 +300,7 @@ describe('predictionFixScoringCommand', () => {
       expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         files: expect.arrayContaining([
           expect.objectContaining({
-            name: `fixture-${FIXTURE_ID}-scoring-fix-dry-run.txt`
-          })
-        ])
-      }));
-    });
-
-    it('should treat a missing commit option as dry run', async () => {
-      const interaction = createAdminInteraction({
-        options: {
-          getInteger: jest.fn().mockReturnValue(FIXTURE_ID),
-          getString: jest.fn(name => {
-            if (name === 'wrong') return WRONG;
-            if (name === 'correct') return CORRECT;
-            return null;
-          }),
-          getBoolean: jest.fn().mockReturnValue(null)
-        }
-      });
-
-      await handleFixScoringSubcommand(interaction, {
-        gameId: 'worldcup',
-        isApiConfigured: jest.fn().mockReturnValue(true),
-        getWritableDb: () => db,
-        logger: { info: jest.fn() }
-      });
-
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-        content: expect.stringContaining('Dry run only')
-      }));
-    });
-
-    it('should note when commit is requested but no changes are needed', async () => {
-      const interaction = createAdminInteraction({
-        options: {
-          getInteger: jest.fn().mockReturnValue(FIXTURE_ID),
-          getString: jest.fn(name => {
-            if (name === 'wrong') return WRONG;
-            if (name === 'correct') return CORRECT;
-            return null;
-          }),
-          getBoolean: jest.fn().mockReturnValue(true)
-        }
-      });
-
-      await handleFixScoringSubcommand(interaction, {
-        gameId: 'worldcup',
-        isApiConfigured: jest.fn().mockReturnValue(true),
-        getWritableDb: () => db,
-        logger: { info: jest.fn() }
-      });
-
-      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
-        content: '_No database changes were written._',
-        embeds: expect.arrayContaining([
-          expect.objectContaining({
-            data: expect.objectContaining({ title: 'Fix Fixture Scoring' })
+            name: `fixture-${FIXTURE_ID}-scoring-fix.txt`
           })
         ])
       }));
@@ -369,8 +326,7 @@ describe('predictionFixScoringCommand', () => {
             if (name === 'wrong') return WRONG;
             if (name === 'correct') return CORRECT;
             return null;
-          }),
-          getBoolean: jest.fn().mockReturnValue(true)
+          })
         }
       });
 

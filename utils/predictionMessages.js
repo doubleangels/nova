@@ -608,7 +608,6 @@ function buildAddPredictionSuccessDescription(params) {
  *   fixtureId: number,
  *   wrong: string,
  *   correct: string,
- *   commit: boolean,
  *   namespaces: string[],
  *   namespaceWarning: string|null,
  *   totalChanges: number,
@@ -623,7 +622,6 @@ function buildFixScoringSummaryDescription(params) {
     fixtureId,
     wrong,
     correct,
-    commit,
     namespaces,
     namespaceWarning,
     totalChanges,
@@ -635,11 +633,9 @@ function buildFixScoringSummaryDescription(params) {
   const lines = [
     `Fixture **${fixtureId}**: wrong score **${wrong}** → correct **${correct}**`,
     `Namespaces: ${namespaces.length > 0 ? namespaces.join(', ') : '(none)'}`,
-    commit
-      ? anyCommitted
-        ? 'Changes were written to the database.'
-        : 'Commit requested, but no point adjustments were needed.'
-      : 'Preview only — no changes written.'
+    anyCommitted && totalChanges > 0
+      ? 'Changes were written to the database.'
+      : 'No point adjustments were needed.'
   ];
 
   if (namespaceWarning) {
@@ -648,9 +644,7 @@ function buildFixScoringSummaryDescription(params) {
 
   if (totalChanges > 0) {
     const sign = netDelta > 0 ? '+' : '';
-    lines.push('', `**${totalChanges}** user(s) would change by **${sign}${netDelta}** points total.`);
-  } else {
-    lines.push('', 'No point adjustments needed.');
+    lines.push('', `**${totalChanges}** user(s) adjusted by **${sign}${netDelta}** points total.`);
   }
 
   if (reportTruncated) {

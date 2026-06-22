@@ -979,8 +979,7 @@ describe('football command', () => {
           if (name === 'wrong') return '5-1';
           if (name === 'correct') return '4-1';
           return null;
-        }),
-        getBoolean: jest.fn().mockReturnValue(false)
+        })
       },
       guild: { id: 'g1' },
       memberPermissions: { has: jest.fn().mockReturnValue(false) }
@@ -1000,8 +999,7 @@ describe('football command', () => {
           if (name === 'wrong') return '5-1';
           if (name === 'correct') return '4-1';
           return null;
-        }),
-        getBoolean: jest.fn().mockReturnValue(false)
+        })
       },
       guild: { id: 'g1' },
       user: { id: 'admin-1' },
