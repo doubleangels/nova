@@ -33,7 +33,7 @@
  *   --fixture <id>     football-data.org match id (required)
  *   --wrong <h-a>      score the bot used when scoring (required)
  *   --correct <h-a>    actual final score (required)
- *   --namespace <ns>   keyv namespace (default: football)
+ *   --namespace <ns>   keyv namespace (optional; processes all namespaces with predictions when omitted)
  */
 
 require('dotenv').config();
@@ -41,7 +41,13 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const { sqlitePath, checkDatabaseAccess } = require('../utils/dbScriptUtils');
 const { parseDbWriteFlags, resolveDbWriteMode, printDbWriteDryRunHint } = require('../utils/dbWriteCli');
-const { parseScoreArg, fixFixtureScoring, formatFixtureScoringReport } = require('../utils/fixFixtureScoring');
+const {
+  parseScoreArg,
+  fixFixtureScoringAll,
+  resolveNamespacesToProcess,
+  detectNamespacesWithPredictions,
+  formatMultiNamespaceFixtureScoringReport
+} = require('../utils/fixFixtureScoring');
 
 /**
  * @param {string[]} argv
@@ -72,7 +78,7 @@ function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.error('Usage: node scripts/fix-fixture-scoring.js [--commit --force] --fixture <id> --wrong <h-a> --correct <h-a> [--namespace football]');
+  console.error('Usage: node scripts/fix-fixture-scoring.js [--commit --force] --fixture <id> --wrong <h-a> --correct <h-a> [--namespace football|worldcup]');
 }
 
 function main() {
@@ -99,7 +105,9 @@ function main() {
     process.exit(1);
   }
 
-  const namespace = String(parsed.namespace || 'football').trim();
+  const requestedNamespace = parsed.namespace
+    ? String(parsed.namespace).trim()
+    : undefined;
   const writeMode = resolveDbWriteMode({ isCommit, isForce }, { scriptName: 'scripts/fix-fixture-scoring.js' });
 
   let wrongActual;
@@ -114,7 +122,11 @@ function main() {
 
   console.log('=== Fix fixture scoring ===');
   console.log(`Database: ${sqlitePath}`);
-  console.log(`Namespace: ${namespace}`);
+  console.log(
+    requestedNamespace
+      ? `Namespace: ${requestedNamespace}`
+      : 'Namespace: (auto — all namespaces with predictions)'
+  );
   console.log(`Fixture: ${fixtureId}`);
   console.log(`Wrong score used for scoring: ${wrongActual.home}-${wrongActual.away}`);
   console.log(`Correct final score: ${correctActual.home}-${correctActual.away}`);
@@ -139,22 +151,37 @@ function main() {
   db.pragma('busy_timeout = 10000');
 
   try {
-    const result = fixFixtureScoring(
+    const namespaces = resolveNamespacesToProcess(db, fixtureId, requestedNamespace);
+    if (
+      requestedNamespace &&
+      !detectNamespacesWithPredictions(db, fixtureId).includes(requestedNamespace)
+    ) {
+      const found = detectNamespacesWithPredictions(db, fixtureId);
+      if (found.length > 0) {
+        console.warn(
+          `Warning: no predictions in "${requestedNamespace}" for fixture ${fixtureId}. ` +
+            `Predictions exist in: ${found.join(', ')}. ` +
+            'Re-run without --namespace to process them automatically.\n'
+        );
+      }
+    }
+
+    const reports = fixFixtureScoringAll(
       db,
-      namespace,
       fixtureId,
       wrongActual,
       correctActual,
-      { commit: writeMode.proceed }
+      { commit: writeMode.proceed, namespace: requestedNamespace }
     );
 
-    console.log(formatFixtureScoringReport(result));
+    console.log(formatMultiNamespaceFixtureScoringReport(reports));
     console.log('');
 
     if (writeMode.proceed) {
-      if (result.committed) {
-        console.log('Changes committed.');
-      } else {
+      const totalChanges = reports.reduce((sum, report) => sum + report.changes.length, 0);
+      if (reports.some(report => report.committed)) {
+        console.log(`Changes committed across: ${namespaces.join(', ')}.`);
+      } else if (totalChanges === 0) {
         console.log('No database changes were written.');
       }
     } else {

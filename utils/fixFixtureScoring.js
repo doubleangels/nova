@@ -544,6 +544,37 @@ function formatFixtureScoringReport(report) {
   lines.push('--- Corrections ---');
   if (report.changes.length === 0) {
     lines.push('No point adjustments needed.');
+    const exactCorrect = report.users.filter(
+      user =>
+        user.scored &&
+        user.prediction?.homeScore === report.correctActual.home &&
+        user.prediction?.awayScore === report.correctActual.away
+    );
+    const exactWrong = report.users.filter(
+      user =>
+        user.scored &&
+        user.prediction?.homeScore === report.wrongActual.home &&
+        user.prediction?.awayScore === report.wrongActual.away
+    );
+    lines.push(
+      `Picked exact correct score (${report.correctActual.home}-${report.correctActual.away}): ${
+        exactCorrect.length > 0
+          ? exactCorrect.map(user => user.userId).join(', ')
+          : '(none)'
+      }`
+    );
+    lines.push(
+      `Picked exact wrong score (${report.wrongActual.home}-${report.wrongActual.away}): ${
+        exactWrong.length > 0
+          ? exactWrong.map(user => user.userId).join(', ')
+          : '(none)'
+      }`
+    );
+    if (report.users.some(user => user.scored)) {
+      lines.push(
+        'Every scored prediction already earns the same match points against both the wrong and correct final scores.'
+      );
+    }
   } else {
     lines.push(`Users to adjust: ${report.changes.length}`);
     for (const change of report.changes) {
@@ -642,6 +673,89 @@ function fixFixtureScoring(db, namespace, fixtureId, wrongActual, correctActual,
   );
 }
 
+/**
+ * @param {import('better-sqlite3').Database} db
+ * @param {number} fixtureId
+ * @param {string|undefined} requestedNamespace
+ * @returns {string[]}
+ */
+function resolveNamespacesToProcess(db, fixtureId, requestedNamespace) {
+  const withPredictions = detectNamespacesWithPredictions(db, fixtureId);
+  if (requestedNamespace) {
+    return [requestedNamespace];
+  }
+  return withPredictions.length > 0 ? withPredictions : PREDICTION_NAMESPACES;
+}
+
+/**
+ * @param {import('better-sqlite3').Database} db
+ * @param {number} fixtureId
+ * @param {{ home: number, away: number }} wrongActual
+ * @param {{ home: number, away: number }} correctActual
+ * @param {{ commit?: boolean, namespace?: string }} [options]
+ * @returns {ReturnType<typeof buildFixtureScoringReport>[]}
+ */
+function fixFixtureScoringAll(db, fixtureId, wrongActual, correctActual, options = {}) {
+  const namespaces = resolveNamespacesToProcess(db, fixtureId, options.namespace);
+  return namespaces.map(namespace =>
+    buildFixtureScoringReport(db, namespace, fixtureId, wrongActual, correctActual, options)
+  );
+}
+
+/**
+ * @param {ReturnType<typeof buildFixtureScoringReport>[]} reports
+ * @returns {string}
+ */
+function formatMultiNamespaceFixtureScoringReport(reports) {
+  if (reports.length === 0) {
+    return 'No namespaces to process.';
+  }
+
+  const lines = [];
+  const namespacesWithPredictions = [
+    ...new Set(reports.flatMap(report => report.namespacesWithPredictions))
+  ];
+
+  if (namespacesWithPredictions.length > 0) {
+    lines.push(
+      `Namespaces with predictions for this fixture: ${namespacesWithPredictions.join(', ')}`
+    );
+    lines.push('');
+  }
+
+  for (const report of reports) {
+    if (reports.length > 1) {
+      lines.push(`========== Namespace: ${report.namespace} ==========`);
+      lines.push('');
+    }
+    lines.push(formatFixtureScoringReport(report));
+    if (reports.length > 1) {
+      lines.push('');
+    }
+  }
+
+  const totalChanges = reports.reduce((sum, report) => sum + report.changes.length, 0);
+  const anyCommitted = reports.some(report => report.committed);
+
+  if (reports.length > 1) {
+    lines.push('========== Summary ==========');
+    lines.push(`Namespaces processed: ${reports.map(report => report.namespace).join(', ')}`);
+    lines.push(`Total users to adjust: ${totalChanges}`);
+    if (totalChanges > 0) {
+      const netDelta = reports.reduce(
+        (sum, report) => sum + report.changes.reduce((inner, change) => inner + change.delta, 0),
+        0
+      );
+      lines.push(`Net points delta across all users: ${netDelta > 0 ? '+' : ''}${netDelta}`);
+    }
+    if (anyCommitted) {
+      lines.push('Changes committed.');
+    }
+  }
+
+  return lines.join('\n');
+}
+
 module.exports = {
   parseScoreArg,
   scorePrediction,
@@ -659,5 +773,8 @@ module.exports = {
   formatLongList,
   planFixtureScoringCorrections,
   fixFixtureScoring,
+  fixFixtureScoringAll,
+  resolveNamespacesToProcess,
+  formatMultiNamespaceFixtureScoringReport,
   parseKeyvValue
 };

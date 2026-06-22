@@ -15,13 +15,18 @@ const {
   formatLongList,
   buildFixtureScoringReport,
   formatFixtureScoringReport,
-  fixFixtureScoring
+  fixFixtureScoring,
+  fixFixtureScoringAll,
+  resolveNamespacesToProcess,
+  formatMultiNamespaceFixtureScoringReport
 } = require('../../utils/fixFixtureScoring');
 
 const FIXTURE_ID = 537371;
 const NAMESPACE = 'football';
 const WRONG = { home: 5, away: 1 };
 const CORRECT = { home: 4, away: 1 };
+const USER_A = '633344914847170562';
+const USER_B = '297922307303800833';
 
 function createTestDb() {
   const db = new Database(':memory:');
@@ -339,7 +344,7 @@ describe('fixFixtureScoring', () => {
 
     it('should discover predictors from prediction keys when the index is missing', () => {
       const db = createTestDb();
-      setKey(db, `${NAMESPACE}:prediction:999888777666555444:${FIXTURE_ID}`, {
+      setKey(db, `${NAMESPACE}:prediction:${USER_A}:${FIXTURE_ID}`, {
         homeScore: 4,
         awayScore: 1,
         resultPick: 'home',
@@ -350,7 +355,7 @@ describe('fixFixtureScoring', () => {
         submittedAt: '2026-01-01T00:00:00.000Z'
       });
 
-      expect(discoverPredictorUserIds(db, NAMESPACE, FIXTURE_ID)).toEqual(['999888777666555444']);
+      expect(discoverPredictorUserIds(db, NAMESPACE, FIXTURE_ID)).toEqual([USER_A]);
       expect(loadScoredPredictionsForFixture(db, NAMESPACE, FIXTURE_ID)).toHaveLength(1);
     });
 
@@ -532,6 +537,360 @@ describe('fixFixtureScoring', () => {
       );
 
       expect(formatted).toContain('Net points delta across all users: +2');
+    });
+
+    it('should process all namespaces with predictions when namespace is omitted', () => {
+      const db = createTestDb();
+      setKey(db, `worldcup:prediction:${USER_A}:${FIXTURE_ID}`, {
+        homeScore: 4,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+      setKey(db, `worldcup:points:${USER_A}`, 5);
+
+      const reports = fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT);
+      expect(reports).toHaveLength(1);
+      expect(reports[0].namespace).toBe('worldcup');
+      expect(reports[0].changes).toHaveLength(1);
+      expect(reports[0].changes[0].userId).toBe(USER_A);
+      expect(reports[0].changes[0].delta).toBe(2);
+    });
+
+    it('should explain when no exact-score pickers need adjustment', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        '111',
+        {
+          homeScore: 3,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        4
+      );
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      const formatted = formatFixtureScoringReport(report);
+
+      expect(formatted).toContain('Picked exact correct score (4-1): (none)');
+      expect(formatted).toContain('Picked exact wrong score (5-1): (none)');
+      expect(formatted).toContain(
+        'Every scored prediction already earns the same match points against both the wrong and correct final scores.'
+      );
+    });
+
+    it('should list exact-score pickers when no total adjustments are required', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        USER_A,
+        {
+          homeScore: 3,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        10
+      );
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      const formatted = formatFixtureScoringReport(report);
+
+      expect(report.changes).toHaveLength(0);
+      expect(formatted).toContain('Picked exact correct score (4-1): (none)');
+      expect(formatted).toContain('Picked exact wrong score (5-1): (none)');
+    });
+
+    it('should list wrong-score pickers when no adjustments are required', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        USER_A,
+        {
+          homeScore: 5,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        3
+      );
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      expect(report.changes).toHaveLength(1);
+      expect(report.changes[0].delta).toBe(-2);
+    });
+
+    it('should list wrong-score pickers in the no-change summary', () => {
+      const db = createTestDb();
+      const actual = { home: 4, away: 1 };
+      seedFixturePrediction(
+        db,
+        USER_A,
+        {
+          homeScore: 4,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 2,
+          resultPoints: 1,
+          pointsAwarded: 3
+        },
+        3
+      );
+
+      const formatted = formatFixtureScoringReport(
+        buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, actual, actual)
+      );
+
+      expect(formatted).toContain(`Picked exact wrong score (4-1): ${USER_A}`);
+    });
+
+    it('should award missing exact-score points when a 4-1 pick was scored against the wrong result', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        USER_A,
+        {
+          homeScore: 4,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        10
+      );
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+
+      expect(report.changes).toHaveLength(1);
+      expect(report.changes[0]).toMatchObject({
+        userId: USER_A,
+        oldTotal: 1,
+        newTotal: 3,
+        delta: 2,
+        pointsBefore: 10,
+        pointsAfter: 12
+      });
+    });
+
+    it('should include committed summary for multi-namespace reports', () => {
+      const db = createTestDb();
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      const summary = formatMultiNamespaceFixtureScoringReport([
+        { ...report, namespace: NAMESPACE, committed: true },
+        { ...report, namespace: 'worldcup', committed: true }
+      ]);
+      expect(summary).toContain('Changes committed.');
+    });
+
+    it('should summarize multi-namespace reports with no net changes', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        USER_A,
+        {
+          homeScore: 3,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        4
+      );
+      setKey(db, `worldcup:prediction:${USER_B}:${FIXTURE_ID}`, {
+        homeScore: 2,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+
+      const reports = fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT);
+      const formatted = formatMultiNamespaceFixtureScoringReport(reports);
+
+      expect(formatted).toContain('Total users to adjust: 0');
+      expect(formatted).not.toContain('Net points delta across all users');
+    });
+
+    it('should show negative net delta in multi-namespace summary', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:prediction:${USER_A}:${FIXTURE_ID}`, {
+        homeScore: 5,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 2,
+        resultPoints: 1,
+        pointsAwarded: 3
+      });
+      setKey(db, `worldcup:prediction:${USER_B}:${FIXTURE_ID}`, {
+        homeScore: 2,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+
+      const formatted = formatMultiNamespaceFixtureScoringReport(
+        fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT)
+      );
+
+      expect(formatted).toContain('Net points delta across all users: -2');
+    });
+
+    it('should format single-namespace report without multi summary headers', () => {
+      const db = createTestDb();
+      setKey(db, `worldcup:prediction:${USER_A}:${FIXTURE_ID}`, {
+        homeScore: 4,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+
+      const reports = fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT);
+      expect(reports).toHaveLength(1);
+
+      const formatted = formatMultiNamespaceFixtureScoringReport(reports);
+      expect(formatted).not.toContain('========== Namespace:');
+      expect(formatted).not.toContain('========== Summary ==========');
+      expect(formatted).toContain('Users to adjust: 1');
+    });
+
+    it('should show positive net delta in multi-namespace summary', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:prediction:${USER_A}:${FIXTURE_ID}`, {
+        homeScore: 4,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+      setKey(db, `worldcup:prediction:${USER_B}:${FIXTURE_ID}`, {
+        homeScore: 2,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+
+      const formatted = formatMultiNamespaceFixtureScoringReport(
+        fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT)
+      );
+
+      expect(formatted).toContain('Net points delta across all users: +2');
+    });
+
+    it('should match production fixture 537371 worldcup data (no adjustments for 5-1 vs 4-1)', () => {
+      const db = createTestDb();
+      const picks = [
+        [1466863387534426386, 1, 0],
+        [297440646661275654, 3, 2],
+        [297922307303800833, 2, 0],
+        [350390178788933632, 3, 1],
+        [462993343228411905, 3, 0],
+        [519193957054414859, 3, 0],
+        [633344914847170562, 4, 0]
+      ];
+
+      for (const [userId, homeScore, awayScore] of picks) {
+        setKey(db, `worldcup:prediction:${userId}:${FIXTURE_ID}`, {
+          homeScore,
+          awayScore,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        });
+      }
+
+      const reports = fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT);
+      expect(reports).toHaveLength(1);
+      expect(reports[0].namespace).toBe('worldcup');
+      expect(reports[0].changes).toHaveLength(0);
+
+      const formatted = formatFixtureScoringReport(reports[0]);
+      expect(formatted).toContain('Picked exact correct score (4-1): (none)');
+      expect(formatted).toContain('Predictors (7)');
+    });
+
+    it('should format multi-namespace output with summary', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:prediction:${USER_A}:${FIXTURE_ID}`, {
+        homeScore: 4,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+      setKey(db, `worldcup:prediction:${USER_B}:${FIXTURE_ID}`, {
+        homeScore: 5,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 2,
+        resultPoints: 1,
+        pointsAwarded: 3
+      });
+
+      const reports = fixFixtureScoringAll(db, FIXTURE_ID, WRONG, CORRECT);
+      expect(reports).toHaveLength(2);
+
+      const formatted = formatMultiNamespaceFixtureScoringReport(reports);
+      expect(formatted).toContain('========== Namespace: football ==========');
+      expect(formatted).toContain('========== Namespace: worldcup ==========');
+      expect(formatted).toContain('========== Summary ==========');
+      expect(formatted).toContain('Total users to adjust: 2');
+      expect(formatted).toContain('Net points delta across all users: 0');
+      expect(formatMultiNamespaceFixtureScoringReport([])).toBe('No namespaces to process.');
+    });
+
+    it('should resolve namespaces explicitly or automatically', () => {
+      const db = createTestDb();
+      setKey(db, `worldcup:prediction:${USER_B}:${FIXTURE_ID}`, {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+
+      expect(resolveNamespacesToProcess(db, FIXTURE_ID, 'football')).toEqual(['football']);
+      expect(resolveNamespacesToProcess(db, FIXTURE_ID, undefined)).toEqual(['worldcup']);
+      expect(resolveNamespacesToProcess(db, 999999, undefined)).toEqual(['football', 'worldcup']);
     });
   });
 
