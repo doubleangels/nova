@@ -41,7 +41,7 @@ const Database = require('better-sqlite3');
 const fs = require('fs');
 const { sqlitePath, checkDatabaseAccess } = require('../utils/dbScriptUtils');
 const { parseDbWriteFlags, resolveDbWriteMode, printDbWriteDryRunHint } = require('../utils/dbWriteCli');
-const { parseScoreArg, fixFixtureScoring } = require('../utils/fixFixtureScoring');
+const { parseScoreArg, fixFixtureScoring, formatFixtureScoringReport } = require('../utils/fixFixtureScoring');
 
 /**
  * @param {string[]} argv
@@ -148,30 +148,15 @@ function main() {
       { commit: writeMode.proceed }
     );
 
-    if (result.changes.length === 0) {
-      console.log('No point adjustments needed.');
-      console.log('Either no scored predictions exist for this fixture, or all totals already match the correct score.');
-      if (!writeMode.proceed) {
-        printDbWriteDryRunHint('scripts/fix-fixture-scoring.js');
-      }
-      return;
-    }
-
-    console.log(`Users to adjust: ${result.changes.length}\n`);
-    for (const change of result.changes) {
-      const sign = change.delta > 0 ? '+' : '';
-      console.log(`User ${change.userId}`);
-      console.log(`  Pick: ${change.pick}`);
-      console.log(`  Match points: ${change.oldTotal} -> ${change.newTotal} (${sign}${change.delta})`);
-      console.log(`  Total points: ${change.pointsBefore} -> ${change.pointsAfter}`);
-      console.log('');
-    }
-
-    const netDelta = result.changes.reduce((sum, change) => sum + change.delta, 0);
-    console.log(`Net points delta across all users: ${netDelta > 0 ? '+' : ''}${netDelta}`);
+    console.log(formatFixtureScoringReport(result));
+    console.log('');
 
     if (writeMode.proceed) {
-      console.log('\nChanges committed.');
+      if (result.committed) {
+        console.log('Changes committed.');
+      } else {
+        console.log('No database changes were written.');
+      }
     } else {
       printDbWriteDryRunHint('scripts/fix-fixture-scoring.js');
     }

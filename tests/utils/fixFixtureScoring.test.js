@@ -6,6 +6,11 @@ const {
   planFixtureScoringCorrections,
   parseKeyvValue,
   loadScoredPredictionsForFixture,
+  loadAllPredictionsForFixture,
+  getFixtureTrackingState,
+  listFixtureRelatedKeys,
+  buildFixtureScoringReport,
+  formatFixtureScoringReport,
   fixFixtureScoring
 } = require('../../utils/fixFixtureScoring');
 
@@ -213,6 +218,233 @@ describe('fixFixtureScoring', () => {
       expect(loadScoredPredictionsForFixture(db, NAMESPACE, FIXTURE_ID)).toEqual([
         { userId: '111', prediction }
       ]);
+    });
+  });
+
+  describe('fixture database reporting', () => {
+    it('should collect tracking state and related keys', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:scored_fixtures`, [FIXTURE_ID, 999]);
+      setKey(db, `${NAMESPACE}:prompted_fixtures`, [888]);
+      setKey(db, `${NAMESPACE}:scoring_lock:${FIXTURE_ID}`, 1);
+      seedFixturePrediction(
+        db,
+        '111',
+        {
+          homeScore: 5,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 2,
+          resultPoints: 1,
+          pointsAwarded: 3
+        },
+        8
+      );
+      setKey(db, `${NAMESPACE}:pending_prediction:111:${FIXTURE_ID}`, {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        updatedAt: '2026-01-01T00:00:00.000Z'
+      });
+
+      const tracking = getFixtureTrackingState(db, NAMESPACE, FIXTURE_ID);
+      expect(tracking.inScoredFixtures).toBe(true);
+      expect(tracking.inPromptedFixtures).toBe(false);
+      expect(tracking.hasScoringLock).toBe(true);
+
+      const relatedKeys = listFixtureRelatedKeys(db, NAMESPACE, FIXTURE_ID);
+      expect(relatedKeys.map(entry => entry.key)).toEqual(
+        expect.arrayContaining([
+          `${NAMESPACE}:predictions_by_fixture:${FIXTURE_ID}`,
+          `${NAMESPACE}:prediction:111:${FIXTURE_ID}`,
+          `${NAMESPACE}:pending_prediction:111:${FIXTURE_ID}`,
+          `${NAMESPACE}:scoring_lock:${FIXTURE_ID}`
+        ])
+      );
+
+      const allPredictions = loadAllPredictionsForFixture(db, NAMESPACE, FIXTURE_ID);
+      expect(allPredictions).toHaveLength(1);
+      expect(allPredictions[0].pendingPrediction).toMatchObject({ homeScore: 1, awayScore: 0 });
+
+      const formatted = formatFixtureScoringReport(
+        buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT)
+      );
+      expect(formatted).toContain('Pending prediction:');
+    });
+
+    it('should build a full report with unchanged and corrected users', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        '111',
+        {
+          homeScore: 5,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 2,
+          resultPoints: 1,
+          pointsAwarded: 3
+        },
+        8
+      );
+      seedFixturePrediction(
+        db,
+        '222',
+        {
+          homeScore: 2,
+          awayScore: 0,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        4
+      );
+      setKey(db, `${NAMESPACE}:predictions_by_fixture:${FIXTURE_ID}`, ['111', '222', '333']);
+      setKey(db, `${NAMESPACE}:prediction:333:${FIXTURE_ID}`, {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: false,
+        submittedAt: '2026-01-01T00:00:00.000Z'
+      });
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+
+      expect(report.users).toHaveLength(3);
+      expect(report.changes).toHaveLength(1);
+      expect(report.users.find(user => user.userId === '222')?.needsCorrection).toBe(false);
+      expect(report.users.find(user => user.userId === '333')?.scored).toBe(false);
+
+      const formatted = formatFixtureScoringReport(report);
+      expect(formatted).toContain('--- Database state ---');
+      expect(formatted).toContain('--- Fixture-related keys');
+      expect(formatted).toContain('User 111');
+      expect(formatted).toContain('User 333');
+      expect(formatted).toContain('Status: not scored (no correction applied)');
+      expect(formatted).toContain('Needs correction: no');
+      expect(formatted).toContain('Users to adjust: 1');
+    });
+
+    it('should format an empty report when no fixture data exists', () => {
+      const db = createTestDb();
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      const formatted = formatFixtureScoringReport(report);
+
+      expect(report.users).toEqual([]);
+      expect(report.relatedKeys).toEqual([]);
+      expect(formatted).toContain('(none indexed for this fixture)');
+      expect(formatted).toContain('(none)');
+      expect(formatted).toContain('No point adjustments needed.');
+    });
+
+    it('should handle invalid tracking lists and indexed users without predictions', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:scored_fixtures`, 'invalid');
+      setKey(db, `${NAMESPACE}:prompted_fixtures`, 'invalid');
+      setKey(db, `${NAMESPACE}:predictions_by_fixture:${FIXTURE_ID}`, ['444']);
+
+      const tracking = getFixtureTrackingState(db, NAMESPACE, FIXTURE_ID);
+      expect(tracking.inScoredFixtures).toBe(false);
+      expect(tracking.scoredFixtures).toEqual([]);
+      expect(tracking.promptedFixtures).toEqual([]);
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      expect(report.users).toEqual([
+        expect.objectContaining({
+          userId: '444',
+          prediction: null,
+          scored: false,
+          storedPoints: null
+        })
+      ]);
+    });
+
+    it('should format positive and negative correction deltas', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        '111',
+        {
+          homeScore: 5,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 2,
+          resultPoints: 1,
+          pointsAwarded: 3
+        },
+        8
+      );
+      seedFixturePrediction(
+        db,
+        '333',
+        {
+          homeScore: 4,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        2
+      );
+
+      const formatted = formatFixtureScoringReport(
+        buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT)
+      );
+
+      expect(formatted).toContain('(-2)');
+      expect(formatted).toContain('(+2)');
+      expect(formatted).toContain('Net points delta across all users: 0');
+    });
+
+    it('should handle scored predictions missing stored point fields', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:predictions_by_fixture:${FIXTURE_ID}`, ['111']);
+      setKey(db, `${NAMESPACE}:prediction:111:${FIXTURE_ID}`, {
+        homeScore: 2,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: true,
+        submittedAt: '2026-01-01T00:00:00.000Z'
+      });
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      expect(report.users[0].storedPoints).toEqual({
+        scorePoints: null,
+        resultPoints: null,
+        pointsAwarded: null
+      });
+      expect(report.changes).toHaveLength(1);
+    });
+
+    it('should format a positive net points delta', () => {
+      const db = createTestDb();
+      seedFixturePrediction(
+        db,
+        '333',
+        {
+          homeScore: 4,
+          awayScore: 1,
+          resultPick: 'home',
+          scored: true,
+          scorePoints: 0,
+          resultPoints: 1,
+          pointsAwarded: 1
+        },
+        2
+      );
+
+      const formatted = formatFixtureScoringReport(
+        buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT)
+      );
+
+      expect(formatted).toContain('Net points delta across all users: +2');
     });
   });
 
