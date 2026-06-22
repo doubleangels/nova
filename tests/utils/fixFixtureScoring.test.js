@@ -9,6 +9,10 @@ const {
   loadAllPredictionsForFixture,
   getFixtureTrackingState,
   listFixtureRelatedKeys,
+  detectNamespacesWithPredictions,
+  scanDatabaseForFixtureId,
+  discoverPredictorUserIds,
+  formatLongList,
   buildFixtureScoringReport,
   formatFixtureScoringReport,
   fixFixtureScoring
@@ -267,6 +271,10 @@ describe('fixFixtureScoring', () => {
       expect(allPredictions).toHaveLength(1);
       expect(allPredictions[0].pendingPrediction).toMatchObject({ homeScore: 1, awayScore: 0 });
 
+      setKey(db, `${NAMESPACE}:user_predictions:111`, [FIXTURE_ID, 999]);
+      const relatedKeysWithUserIndex = listFixtureRelatedKeys(db, NAMESPACE, FIXTURE_ID);
+      expect(relatedKeysWithUserIndex.some(entry => entry.key === `${NAMESPACE}:user_predictions:111`)).toBe(true);
+
       const formatted = formatFixtureScoringReport(
         buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT)
       );
@@ -329,6 +337,84 @@ describe('fixFixtureScoring', () => {
       expect(formatted).toContain('Users to adjust: 1');
     });
 
+    it('should discover predictors from prediction keys when the index is missing', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:prediction:999888777666555444:${FIXTURE_ID}`, {
+        homeScore: 4,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1,
+        submittedAt: '2026-01-01T00:00:00.000Z'
+      });
+
+      expect(discoverPredictorUserIds(db, NAMESPACE, FIXTURE_ID)).toEqual(['999888777666555444']);
+      expect(loadScoredPredictionsForFixture(db, NAMESPACE, FIXTURE_ID)).toHaveLength(1);
+    });
+
+    it('should scan the full database and detect alternate namespaces', () => {
+      const db = createTestDb();
+      setKey(db, `worldcup:prediction:999888777666555444:${FIXTURE_ID}`, {
+        homeScore: 2,
+        awayScore: 1,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 2,
+        resultPoints: 1,
+        pointsAwarded: 3,
+        submittedAt: '2026-01-01T00:00:00.000Z'
+      });
+      setKey(db, `${NAMESPACE}:fixture_scored:${FIXTURE_ID}`, true);
+
+      const scan = scanDatabaseForFixtureId(db, FIXTURE_ID);
+      expect(scan.some(entry => entry.key.startsWith('worldcup:prediction:'))).toBe(true);
+      expect(detectNamespacesWithPredictions(db, FIXTURE_ID)).toEqual(['worldcup']);
+
+      const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
+      const formatted = formatFixtureScoringReport(report);
+      expect(report.tracking.inScoredFixtures).toBe(true);
+      expect(report.tracking.hasFixtureScoredFlag).toBe(true);
+      expect(formatted).toContain('--- Database-wide scan for 537371');
+      expect(formatted).toContain('Try re-running with --namespace worldcup');
+      expect(formatLongList([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]))
+        .toContain('21 total');
+      expect(formatLongList('invalid')).toBe('"invalid"');
+    });
+
+    it('should ignore invalid user ids when discovering predictors', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:predictions_by_fixture:${FIXTURE_ID}`, ['', '111']);
+      setKey(db, `${NAMESPACE}:prediction:111:${FIXTURE_ID}`, {
+        homeScore: 1,
+        awayScore: 0,
+        resultPick: 'home',
+        scored: true,
+        scorePoints: 0,
+        resultPoints: 1,
+        pointsAwarded: 1
+      });
+
+      expect(discoverPredictorUserIds(db, NAMESPACE, FIXTURE_ID)).toEqual(['111']);
+    });
+
+    it('should ignore unrelated user prediction indexes', () => {
+      const db = createTestDb();
+      setKey(db, `${NAMESPACE}:user_predictions:111`, 'invalid');
+      setKey(db, `${NAMESPACE}:user_predictions:222`, [999]);
+
+      expect(listFixtureRelatedKeys(db, NAMESPACE, FIXTURE_ID)).toEqual([]);
+    });
+
+    it('should classify non-prediction keys as having no namespace during scan', () => {
+      const db = createTestDb();
+      setKey(db, `main:config:test_${FIXTURE_ID}`, FIXTURE_ID);
+
+      const scan = scanDatabaseForFixtureId(db, FIXTURE_ID);
+      expect(scan[0].namespace).toBeNull();
+    });
+
     it('should format an empty report when no fixture data exists', () => {
       const db = createTestDb();
       const report = buildFixtureScoringReport(db, NAMESPACE, FIXTURE_ID, WRONG, CORRECT);
@@ -337,7 +423,8 @@ describe('fixFixtureScoring', () => {
       expect(report.users).toEqual([]);
       expect(report.relatedKeys).toEqual([]);
       expect(formatted).toContain('(none indexed for this fixture)');
-      expect(formatted).toContain('(none)');
+      expect(formatted).toContain('(no keys or values contain this fixture id)');
+      expect(formatted).toContain('Verify the fixture id with /football list ft in Discord.');
       expect(formatted).toContain('No point adjustments needed.');
     });
 

@@ -116,6 +116,50 @@ function predictionMatchesCorrectedScoring(prediction, correction) {
   );
 }
 
+const PREDICTION_NAMESPACES = ['football', 'worldcup'];
+const DISCORD_ID_PATTERN = /^\d{17,20}$/;
+
+/**
+ * @param {string} dbKey
+ * @returns {string|null}
+ */
+function parseNamespaceFromDbKey(dbKey) {
+  const namespace = dbKey.split(':')[0];
+  return PREDICTION_NAMESPACES.includes(namespace) ? namespace : null;
+}
+
+/**
+ * @param {import('better-sqlite3').Database} db
+ * @param {string} namespace
+ * @param {number} fixtureId
+ * @returns {string[]}
+ */
+function discoverPredictorUserIds(db, namespace, fixtureId) {
+  const userIds = new Set();
+  const indexed = getDbValue(db, `${namespace}:predictions_by_fixture:${fixtureId}`);
+  if (Array.isArray(indexed)) {
+    for (const userId of indexed) {
+      if (userId) userIds.add(String(userId));
+    }
+  }
+
+  const rows = db.prepare(`
+    SELECT key FROM keyv
+    WHERE key LIKE ? AND key LIKE ?
+  `).all(`${namespace}:prediction:%`, `%:${fixtureId}`);
+
+  for (const row of rows) {
+    const parts = row.key.split(':');
+    const keyFixtureId = parts[parts.length - 1];
+    const userId = parts[parts.length - 2];
+    if (Number(keyFixtureId) === fixtureId && DISCORD_ID_PATTERN.test(userId)) {
+      userIds.add(userId);
+    }
+  }
+
+  return [...userIds];
+}
+
 /**
  * @param {import('better-sqlite3').Database} db
  * @param {string} namespace
@@ -123,8 +167,7 @@ function predictionMatchesCorrectedScoring(prediction, correction) {
  * @returns {string[]}
  */
 function loadPredictorUserIds(db, namespace, fixtureId) {
-  const userIds = getDbValue(db, `${namespace}:predictions_by_fixture:${fixtureId}`);
-  return Array.isArray(userIds) ? userIds : [];
+  return discoverPredictorUserIds(db, namespace, fixtureId);
 }
 
 /**
@@ -152,9 +195,13 @@ function loadAllPredictionsForFixture(db, namespace, fixtureId) {
 function getFixtureTrackingState(db, namespace, fixtureId) {
   const scoredFixtures = getDbValue(db, `${namespace}:scored_fixtures`) || [];
   const promptedFixtures = getDbValue(db, `${namespace}:prompted_fixtures`) || [];
+  const hasFixtureScoredFlag = getDbValue(db, `${namespace}:fixture_scored:${fixtureId}`) != null;
+  const hasFixturePromptedFlag = getDbValue(db, `${namespace}:fixture_prompted:${fixtureId}`) != null;
   return {
-    inScoredFixtures: listIncludesFixtureId(scoredFixtures, fixtureId),
-    inPromptedFixtures: listIncludesFixtureId(promptedFixtures, fixtureId),
+    inScoredFixtures: listIncludesFixtureId(scoredFixtures, fixtureId) || hasFixtureScoredFlag,
+    inPromptedFixtures: listIncludesFixtureId(promptedFixtures, fixtureId) || hasFixturePromptedFlag,
+    hasFixtureScoredFlag,
+    hasFixturePromptedFlag,
     hasScoringLock: getDbValue(db, `${namespace}:scoring_lock:${fixtureId}`) != null,
     scoredFixtures: Array.isArray(scoredFixtures) ? scoredFixtures : [],
     promptedFixtures: Array.isArray(promptedFixtures) ? promptedFixtures : []
@@ -174,20 +221,71 @@ function listFixtureRelatedKeys(db, namespace, fixtureId) {
     SELECT key, value FROM keyv
     WHERE key = ?
        OR key = ?
+       OR key = ?
+       OR key = ?
        OR key LIKE ?
        OR key LIKE ?
     ORDER BY key
   `).all(
     `${prefix}predictions_by_fixture:${fixtureId}`,
     `${prefix}scoring_lock:${fixtureId}`,
+    `${prefix}fixture_scored:${fixtureId}`,
+    `${prefix}fixture_prompted:${fixtureId}`,
     `${prefix}prediction:%${suffix}`,
     `${prefix}pending_prediction:%${suffix}`
   );
 
-  return rows.map(row => ({
+  /** @type {Array<{ key: string, value: unknown }>} */
+  const relatedKeys = rows.map(row => ({
     key: row.key,
     value: parseKeyvValue(row.value)
   }));
+
+  const userPredictionRows = db.prepare(`
+    SELECT key, value FROM keyv WHERE key LIKE ?
+  `).all(`${prefix}user_predictions:%`);
+
+  for (const row of userPredictionRows) {
+    const fixtureIds = parseKeyvValue(row.value);
+    if (!Array.isArray(fixtureIds) || !listIncludesFixtureId(fixtureIds, fixtureId)) continue;
+    relatedKeys.push({
+      key: row.key,
+      value: fixtureIds
+    });
+  }
+
+  return relatedKeys.sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/**
+ * @param {import('better-sqlite3').Database} db
+ * @param {number} fixtureId
+ * @returns {Array<{ key: string, value: unknown, namespace: string|null }>}
+ */
+function scanDatabaseForFixtureId(db, fixtureId) {
+  const idText = String(fixtureId);
+  const rows = db.prepare(`
+    SELECT key, value FROM keyv
+    WHERE key LIKE '%' || ? || '%' OR value LIKE '%' || ? || '%'
+    ORDER BY key
+  `).all(idText, idText);
+
+  return rows.map(row => ({
+    key: row.key,
+    value: parseKeyvValue(row.value),
+    namespace: parseNamespaceFromDbKey(row.key)
+  }));
+}
+
+/**
+ * @param {import('better-sqlite3').Database} db
+ * @param {number} fixtureId
+ * @returns {string[]}
+ */
+function detectNamespacesWithPredictions(db, fixtureId) {
+  return PREDICTION_NAMESPACES.filter(namespace =>
+    discoverPredictorUserIds(db, namespace, fixtureId).length > 0
+  );
 }
 
 /**
@@ -337,8 +435,25 @@ function buildFixtureScoringReport(db, namespace, fixtureId, wrongActual, correc
     relatedKeys,
     users,
     changes: pendingChanges.map(({ updatedPrediction, ...rest }) => rest),
-    committed: Boolean(options.commit && pendingChanges.length > 0)
+    committed: Boolean(options.commit && pendingChanges.length > 0),
+    namespacesWithPredictions: detectNamespacesWithPredictions(db, fixtureId),
+    databaseScan: scanDatabaseForFixtureId(db, fixtureId)
   };
+}
+
+/**
+ * @param {unknown[]} values
+ * @param {number} maxItems
+ * @returns {string}
+ */
+function formatLongList(values, maxItems = 20) {
+  if (!Array.isArray(values)) {
+    return JSON.stringify(values);
+  }
+  if (values.length <= maxItems) {
+    return JSON.stringify(values);
+  }
+  return `${JSON.stringify(values.slice(0, maxItems))} ... (${values.length} total)`;
 }
 
 /**
@@ -350,10 +465,29 @@ function formatFixtureScoringReport(report) {
 
   lines.push('--- Database state ---');
   lines.push(`Fixture tracked as scored: ${report.tracking.inScoredFixtures}`);
+  lines.push(`Fixture scored flag (fixture_scored:${report.fixtureId}): ${report.tracking.hasFixtureScoredFlag}`);
   lines.push(`Fixture tracked as prompted: ${report.tracking.inPromptedFixtures}`);
+  lines.push(`Fixture prompted flag (fixture_prompted:${report.fixtureId}): ${report.tracking.hasFixturePromptedFlag}`);
   lines.push(`Scoring lock present: ${report.tracking.hasScoringLock}`);
-  lines.push(`Scored fixtures list (${report.tracking.scoredFixtures.length}): ${JSON.stringify(report.tracking.scoredFixtures)}`);
-  lines.push(`Prompted fixtures list (${report.tracking.promptedFixtures.length}): ${JSON.stringify(report.tracking.promptedFixtures)}`);
+  lines.push(
+    `Legacy scored fixtures list (${report.tracking.scoredFixtures.length}): ${formatLongList(report.tracking.scoredFixtures)}`
+  );
+  lines.push(
+    `Legacy prompted fixtures list (${report.tracking.promptedFixtures.length}): ${formatLongList(report.tracking.promptedFixtures)}`
+  );
+  if (report.namespacesWithPredictions.length > 0) {
+    lines.push(`Namespaces with predictions for this fixture: ${report.namespacesWithPredictions.join(', ')}`);
+  } else {
+    lines.push('Namespaces with predictions for this fixture: (none)');
+  }
+  if (
+    report.namespacesWithPredictions.length > 0 &&
+    !report.namespacesWithPredictions.includes(report.namespace)
+  ) {
+    lines.push(
+      `Try re-running with --namespace ${report.namespacesWithPredictions[0]}`
+    );
+  }
   lines.push('');
 
   lines.push(`--- Fixture-related keys (${report.relatedKeys.length}) ---`);
@@ -393,6 +527,19 @@ function formatFixtureScoringReport(report) {
       lines.push('');
     }
   }
+
+  lines.push('');
+
+  lines.push(`--- Database-wide scan for ${report.fixtureId} (${report.databaseScan.length}) ---`);
+  if (report.databaseScan.length === 0) {
+    lines.push('(no keys or values contain this fixture id)');
+    lines.push('Verify the fixture id with /football list ft in Discord.');
+  } else {
+    for (const { key, value } of report.databaseScan) {
+      lines.push(`${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  lines.push('');
 
   lines.push('--- Corrections ---');
   if (report.changes.length === 0) {
@@ -499,13 +646,17 @@ module.exports = {
   parseScoreArg,
   scorePrediction,
   computeScoringCorrection,
+  discoverPredictorUserIds,
   loadPredictorUserIds,
   loadAllPredictionsForFixture,
   loadScoredPredictionsForFixture,
   getFixtureTrackingState,
   listFixtureRelatedKeys,
+  scanDatabaseForFixtureId,
+  detectNamespacesWithPredictions,
   buildFixtureScoringReport,
   formatFixtureScoringReport,
+  formatLongList,
   planFixtureScoringCorrections,
   fixFixtureScoring,
   parseKeyvValue
