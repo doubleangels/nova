@@ -176,6 +176,24 @@ function errAdminAddEventsOnly(gameId) {
   return `⚠️ Only administrators can create ${GAME[gameId].label.toLowerCase()} Discord events.`;
 }
 
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function errAdminAddPredictionOnly(gameId) {
+  return `⚠️ Only administrators can add ${GAME[gameId].label.toLowerCase()} predictions for other users.`;
+}
+
+/**
+ * @param {PredictionGameId} gameId
+ * @returns {string}
+ */
+function errAdminFixScoringOnly(gameId) {
+  return `⚠️ Only administrators can fix ${GAME[gameId].label.toLowerCase()} fixture scoring.`;
+}
+
+const ERR_FIXTURE_NOT_FOUND = '⚠️ That match was not found. Check the fixture id.';
+
 const ERR_ADMIN_REMOVE_USER_ONLY =
   '⚠️ Only administrators can remove users from prediction data.';
 
@@ -536,6 +554,112 @@ function buildRegisterAlreadyDescription(gameId) {
   return msgAlreadyRegistered(gameId);
 }
 
+/**
+ * @param {{
+ *   userId: string,
+ *   fixtureLine: string,
+ *   pickLine: string,
+ *   scoredNow: boolean,
+ *   pointsDelta: number,
+ *   matchPoints: number,
+ *   totalPoints: number,
+ *   overwritten: boolean
+ * }} params
+ * @returns {string}
+ */
+function buildAddPredictionSuccessDescription(params) {
+  const {
+    userId,
+    fixtureLine,
+    pickLine,
+    scoredNow,
+    pointsDelta,
+    matchPoints,
+    totalPoints,
+    overwritten
+  } = params;
+
+  const lines = [
+    `Added a prediction for <@${userId}> (\`${userId}\`):`,
+    '',
+    fixtureLine,
+    pickLine
+  ];
+
+  if (overwritten) {
+    lines.push('', '_Replaced an existing prediction for this match._');
+  }
+
+  lines.push('');
+  if (scoredNow) {
+    lines.push(`**Match points:** ${matchPoints}`);
+    const sign = pointsDelta > 0 ? '+' : '';
+    lines.push(`**Leaderboard change:** ${sign}${pointsDelta}`);
+    lines.push(`**New total:** ${totalPoints}`);
+  } else {
+    lines.push('_Match not finished yet — points will be awarded when the match ends._');
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * @param {{
+ *   fixtureId: number,
+ *   wrong: string,
+ *   correct: string,
+ *   commit: boolean,
+ *   namespaces: string[],
+ *   namespaceWarning: string|null,
+ *   totalChanges: number,
+ *   netDelta: number,
+ *   anyCommitted: boolean,
+ *   reportTruncated: boolean
+ * }} params
+ * @returns {string}
+ */
+function buildFixScoringSummaryDescription(params) {
+  const {
+    fixtureId,
+    wrong,
+    correct,
+    commit,
+    namespaces,
+    namespaceWarning,
+    totalChanges,
+    netDelta,
+    anyCommitted,
+    reportTruncated
+  } = params;
+
+  const lines = [
+    `Fixture **${fixtureId}**: wrong score **${wrong}** → correct **${correct}**`,
+    `Namespaces: ${namespaces.length > 0 ? namespaces.join(', ') : '(none)'}`,
+    commit
+      ? anyCommitted
+        ? 'Changes were written to the database.'
+        : 'Commit requested, but no point adjustments were needed.'
+      : 'Preview only — no changes written.'
+  ];
+
+  if (namespaceWarning) {
+    lines.push('', namespaceWarning);
+  }
+
+  if (totalChanges > 0) {
+    const sign = netDelta > 0 ? '+' : '';
+    lines.push('', `**${totalChanges}** user(s) would change by **${sign}${netDelta}** points total.`);
+  } else {
+    lines.push('', 'No point adjustments needed.');
+  }
+
+  if (reportTruncated) {
+    lines.push('', '_Full report attached as a text file._');
+  }
+
+  return lines.join('\n');
+}
+
 module.exports = {
   GAME,
   SUBMIT_BUTTON_LABEL,
@@ -579,6 +703,9 @@ module.exports = {
   errAdminPromptOnly,
   errAdminRepostScoreOnly,
   errAdminAddEventsOnly,
+  errAdminAddPredictionOnly,
+  errAdminFixScoringOnly,
+  ERR_FIXTURE_NOT_FOUND,
   ERR_ADMIN_REMOVE_USER_ONLY,
   ERR_INVALID_USER_ID,
   msgRemoveUserNoData,
@@ -606,5 +733,7 @@ module.exports = {
   formatMyPickLine,
   formatAiPredictionField,
   buildRegisterSuccessDescription,
-  buildRegisterAlreadyDescription
+  buildRegisterAlreadyDescription,
+  buildAddPredictionSuccessDescription,
+  buildFixScoringSummaryDescription
 };

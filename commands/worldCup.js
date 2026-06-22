@@ -21,6 +21,9 @@ const {
   handleRepostScoreSelect
 } = require('../utils/predictionScoreRepostCommand');
 const { handleRemoveUserSubcommand } = require('../utils/predictionRemoveUserCommand');
+const { handleAddPredictionSubcommand } = require('../utils/predictionAddPredictionCommand');
+const { handleFixScoringSubcommand } = require('../utils/predictionFixScoringCommand');
+const { getWritableDb } = require('../utils/sqliteStore');
 const {
   isUserRegistered,
   addRegisteredUser,
@@ -36,7 +39,11 @@ const {
   isWorldCupGameConfigured,
   setPromptingPaused,
   getScoredFixtures,
-  repostFinalScore
+  repostFinalScore,
+  applyUserScoringUpdate,
+  scoreFixtureIfFinished,
+  parseScoreInputs,
+  store: worldCupStore
 } = require('../utils/worldCupUtils');
 const { handlePredictionsSubcommand } = require('../utils/predictionListCommand');
 const { removeFootballUser } = require('../utils/footballUtils');
@@ -123,6 +130,86 @@ module.exports = {
             .setDescription('What Discord user ID do you want to remove?')
             .setRequired(true)
         )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('addprediction')
+        .setDescription('Add or replace a prediction for a user (admin).')
+        .addUserOption(opt =>
+          opt
+            .setName('user')
+            .setDescription('Which user should receive this prediction?')
+            .setRequired(true)
+        )
+        .addIntegerOption(opt =>
+          opt
+            .setName('fixture')
+            .setDescription('football-data.org match id')
+            .setRequired(true)
+        )
+        .addIntegerOption(opt =>
+          opt
+            .setName('home')
+            .setDescription('Predicted home goals (0–15)')
+            .setRequired(true)
+            .setMinValue(0)
+            .setMaxValue(15)
+        )
+        .addIntegerOption(opt =>
+          opt
+            .setName('away')
+            .setDescription('Predicted away goals (0–15)')
+            .setRequired(true)
+            .setMinValue(0)
+            .setMaxValue(15)
+        )
+        .addStringOption(opt =>
+          opt
+            .setName('result')
+            .setDescription('Winner pick (defaults to scoreline outcome)')
+            .addChoices(
+              { name: 'Home', value: 'home' },
+              { name: 'Draw', value: 'draw' },
+              { name: 'Away', value: 'away' }
+            )
+        )
+    )
+    .addSubcommand(sub =>
+      sub
+        .setName('fixscoring')
+        .setDescription('Fix points after a fixture was scored with the wrong final score (admin).')
+        .addIntegerOption(opt =>
+          opt
+            .setName('fixture')
+            .setDescription('football-data.org match id')
+            .setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt
+            .setName('wrong')
+            .setDescription('Score used when the bot scored (e.g. 5-1)')
+            .setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt
+            .setName('correct')
+            .setDescription('Actual final score (e.g. 4-1)')
+            .setRequired(true)
+        )
+        .addStringOption(opt =>
+          opt
+            .setName('namespace')
+            .setDescription('Limit to one game namespace (default: all with predictions)')
+            .addChoices(
+              { name: 'Club football', value: 'football' },
+              { name: 'World Cup', value: 'worldcup' }
+            )
+        )
+        .addBooleanOption(opt =>
+          opt
+            .setName('commit')
+            .setDescription('Apply changes (default: dry run preview only)')
+        )
     ),
 
   async execute(interaction) {
@@ -159,6 +246,12 @@ module.exports = {
           break;
         case 'removeuser':
           await this.handleRemoveUser(interaction);
+          break;
+        case 'addprediction':
+          await this.handleAddPrediction(interaction);
+          break;
+        case 'fixscoring':
+          await this.handleFixScoring(interaction);
           break;
         default:
           await interaction.reply({
@@ -565,6 +658,31 @@ module.exports = {
         ]);
         return { worldcup, football };
       },
+      logger
+    });
+  },
+
+  async handleAddPrediction(interaction) {
+    await handleAddPredictionSubcommand(interaction, {
+      gameId: 'worldcup',
+      isApiConfigured,
+      store: worldCupStore,
+      getFixtureById,
+      getScoredFixtures,
+      scoreFixtureIfFinished,
+      applyUserScoringUpdate,
+      formatFixtureLine,
+      formatResultPickDisplay,
+      parseScoreInputs,
+      logger
+    });
+  },
+
+  async handleFixScoring(interaction) {
+    await handleFixScoringSubcommand(interaction, {
+      gameId: 'worldcup',
+      isApiConfigured,
+      getWritableDb,
       logger
     });
   },

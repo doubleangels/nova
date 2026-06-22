@@ -582,6 +582,75 @@ describe('predictionGameStore', () => {
     expect(await store.getScoredFixtures()).toContain(55);
   });
 
+  it('should apply a signed user scoring update without re-marking the fixture globally', async () => {
+    await store.markFixtureScored(77);
+    await store.addUserPoints('user-late', 5);
+
+    await store.applyUserScoringUpdate(77, 'user-late', {
+      homeScore: 4,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 2,
+      resultPoints: 1,
+      pointsAwarded: 3
+    }, -2);
+
+    expect(await store.getUserPoints('user-late')).toBe(3);
+    const saved = await store.getPrediction('user-late', 77);
+    expect(saved.pointsAwarded).toBe(3);
+  });
+
+  it('should floor total points at zero when applying a negative scoring update', async () => {
+    await store.addUserPoints('user-floor', 1);
+
+    await store.applyUserScoringUpdate(78, 'user-floor', {
+      homeScore: 0,
+      awayScore: 2,
+      resultPick: 'away',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 0,
+      resultPoints: 0,
+      pointsAwarded: 0
+    }, -5);
+
+    expect(await store.getUserPoints('user-floor')).toBe(0);
+  });
+
+  it('should skip point changes when applyUserScoringUpdate delta is zero', async () => {
+    await store.applyUserScoringUpdate(79, 'user-zero', {
+      homeScore: 1,
+      awayScore: 0,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 0,
+      resultPoints: 1,
+      pointsAwarded: 1
+    }, 0);
+
+    expect(await store.getUserPoints('user-zero')).toBe(0);
+    expect(await store.getPrediction('user-zero', 79)).toMatchObject({ pointsAwarded: 1 });
+  });
+
+  it('should track participants when applyUserScoringUpdate increases total points', async () => {
+    await store.applyUserScoringUpdate(80, 'user-new-points', {
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 2,
+      resultPoints: 1,
+      pointsAwarded: 3
+    }, 3);
+
+    const board = await store.getLeaderboard(10);
+    expect(board.some(entry => entry.userId === 'user-new-points')).toBe(true);
+  });
+
   it('should recover from corrupted registered list JSON during addRegisteredUser', async () => {
     const { getWritableDb } = require('../../utils/sqliteStore');
     const db = getWritableDb();

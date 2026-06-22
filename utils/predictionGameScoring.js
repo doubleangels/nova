@@ -59,6 +59,98 @@ function alignResultPickWithScore(homeScore, awayScore, resultPick) {
 }
 
 /**
+ * @param {{ status?: string, goals?: { home: number|null, away: number|null } }} fixture
+ * @returns {boolean}
+ */
+function isFixtureFinishedForScoring(fixture) {
+  return (
+    fixture?.status === 'FT' &&
+    fixture.goals?.home != null &&
+    fixture.goals?.away != null
+  );
+}
+
+/**
+ * @param {import('./predictionGameStore').GamePrediction} prediction
+ * @param {number} actualHome
+ * @param {number} actualAway
+ * @returns {{ scoredPrediction: import('./predictionGameStore').GamePrediction, pointsDelta: number }}
+ */
+function buildScoringUpdate(prediction, actualHome, actualAway) {
+  const scorePts = calculateScorePoints(
+    prediction.homeScore,
+    prediction.awayScore,
+    actualHome,
+    actualAway
+  );
+  const resultPts = calculateResultPoints(
+    prediction.resultPick,
+    actualHome,
+    actualAway
+  );
+  const total = scorePts + resultPts;
+
+  return {
+    scoredPrediction: {
+      ...prediction,
+      scored: true,
+      scorePoints: scorePts,
+      resultPoints: resultPts,
+      pointsAwarded: total
+    },
+    pointsDelta: total
+  };
+}
+
+/**
+ * @param {import('./predictionGameStore').PredictionStore} store
+ * @param {{ id: number, goals: { home: number, away: number } }} fixture
+ * @returns {Promise<{
+ *   scored: boolean,
+ *   earners: Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>
+ * }>}
+ */
+async function scoreFixtureIfFinished(store, fixture) {
+  if (!isFixtureFinishedForScoring(fixture)) {
+    return { scored: false, earners: [] };
+  }
+
+  const predictorEntries = await store.getPredictionsForFixture(fixture.id);
+  /** @type {Array<{ userId: string, prediction: import('./predictionGameStore').GamePrediction, pointsDelta: number }>} */
+  const updates = [];
+  /** @type {Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>} */
+  const earners = [];
+
+  for (const { userId, prediction } of predictorEntries) {
+    if (!prediction || prediction.scored) continue;
+
+    const { scoredPrediction, pointsDelta } = buildScoringUpdate(
+      prediction,
+      fixture.goals.home,
+      fixture.goals.away
+    );
+
+    updates.push({
+      userId,
+      prediction: scoredPrediction,
+      pointsDelta
+    });
+
+    if (pointsDelta > 0) {
+      earners.push({
+        userId,
+        scorePoints: scoredPrediction.scorePoints,
+        resultPoints: scoredPrediction.resultPoints,
+        total: pointsDelta
+      });
+    }
+  }
+
+  await store.applyFixtureScoringResults(fixture.id, updates);
+  return { scored: true, earners };
+}
+
+/**
  * @param {import('./predictionGameStore').PredictionStore} store
  * @param {{
  *   isConfigured: () => boolean,
@@ -102,51 +194,7 @@ function createScoreFinishedFixtures(store, deps) {
         if (!(await store.tryAcquireScoringLock(fixture.id))) continue;
 
         try {
-          const predictorEntries = await store.getPredictionsForFixture(fixture.id);
-          /** @type {Array<{ userId: string, prediction: import('./predictionGameStore').GamePrediction, pointsDelta: number }>} */
-          const updates = [];
-          /** @type {Array<{ userId: string, scorePoints: number, resultPoints: number, total: number }>} */
-          const earners = [];
-
-          for (const { userId, prediction } of predictorEntries) {
-            if (!prediction || prediction.scored) continue;
-
-            const scorePts = calculateScorePoints(
-              prediction.homeScore,
-              prediction.awayScore,
-              fixture.goals.home,
-              fixture.goals.away
-            );
-            const resultPts = calculateResultPoints(
-              prediction.resultPick,
-              fixture.goals.home,
-              fixture.goals.away
-            );
-            const total = scorePts + resultPts;
-
-            updates.push({
-              userId,
-              prediction: {
-                ...prediction,
-                scored: true,
-                scorePoints: scorePts,
-                resultPoints: resultPts,
-                pointsAwarded: total
-              },
-              pointsDelta: total
-            });
-
-            if (total > 0) {
-              earners.push({
-                userId,
-                scorePoints: scorePts,
-                resultPoints: resultPts,
-                total
-              });
-            }
-          }
-
-          await store.applyFixtureScoringResults(fixture.id, updates);
+          const { earners } = await scoreFixtureIfFinished(store, fixture);
           scoredSet.add(fixture.id);
           scoredCount += 1;
 
@@ -252,6 +300,9 @@ module.exports = {
   calculateScorePoints,
   calculateResultPoints,
   alignResultPickWithScore,
+  isFixtureFinishedForScoring,
+  buildScoringUpdate,
+  scoreFixtureIfFinished,
   buildEarnersFromScoredPredictions,
   createScoreFinishedFixtures,
   createRepostFinalScore

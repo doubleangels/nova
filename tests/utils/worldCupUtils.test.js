@@ -925,5 +925,36 @@ describe('worldCupUtils pending prediction and mock state', () => {
     await utils.setPromptingPaused(false);
     expect(await utils.isPromptingPaused()).toBe(false);
   });
+
+  it('should delegate applyUserScoringUpdate and scoreFixtureIfFinished to the store', async () => {
+    await utils.savePrediction('user-1', 9, {
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: false
+    });
+
+    await utils.scoreFixtureIfFinished({
+      id: 9,
+      status: 'FT',
+      goals: { home: 2, away: 1 }
+    });
+
+    expect(await utils.getUserPoints('user-1')).toBe(3);
+
+    await utils.applyUserScoringUpdate(9, 'user-1', {
+      homeScore: 2,
+      awayScore: 1,
+      resultPick: 'home',
+      submittedAt: new Date().toISOString(),
+      scored: true,
+      scorePoints: 2,
+      resultPoints: 1,
+      pointsAwarded: 3
+    }, -1);
+
+    expect(await utils.getUserPoints('user-1')).toBe(2);
+  });
 });
 

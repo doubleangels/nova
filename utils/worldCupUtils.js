@@ -23,7 +23,8 @@ const {
   getOutcome,
   calculateScorePoints,
   calculateResultPoints,
-  alignResultPickWithScore
+  alignResultPickWithScore,
+  scoreFixtureIfFinished
 } = require('./predictionGameScoring');
 
 const store = createPredictionStore('worldcup', 'World Cup');
@@ -121,6 +122,9 @@ module.exports = {
   markFixturePrompted: fixtureId => store.markFixturePrompted(fixtureId),
   getScoredFixtures: () => store.getScoredFixtures(),
   markFixtureScored: fixtureId => store.markFixtureScored(fixtureId),
+  applyUserScoringUpdate: (fixtureId, userId, prediction, pointsDelta) =>
+    store.applyUserScoringUpdate(fixtureId, userId, prediction, pointsDelta),
+  scoreFixtureIfFinished: fixture => scoreFixtureIfFinished(store, fixture),
   getPredictorIdsForFixture: fixtureId => store.getPredictorIdsForFixture(fixtureId),
   getPredictionsForUser: (userId, fixtureIds) =>
     store.getPredictionsForUser(userId, fixtureIds),

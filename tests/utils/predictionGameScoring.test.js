@@ -89,6 +89,92 @@ describe('predictionGameScoring', () => {
       expect(scoring.alignResultPickWithScore(1, 1, 'home')).toBe('draw');
     });
   });
+
+  describe('isFixtureFinishedForScoring', () => {
+    it('should return true only for finished fixtures with both goals', () => {
+      expect(scoring.isFixtureFinishedForScoring({
+        status: 'FT',
+        goals: { home: 2, away: 1 }
+      })).toBe(true);
+      expect(scoring.isFixtureFinishedForScoring({
+        status: 'FT',
+        goals: { home: null, away: 1 }
+      })).toBe(false);
+      expect(scoring.isFixtureFinishedForScoring({
+        status: 'NS',
+        goals: { home: 0, away: 0 }
+      })).toBe(false);
+    });
+  });
+
+  describe('buildScoringUpdate', () => {
+    it('should build a scored prediction and total points', () => {
+      const result = scoring.buildScoringUpdate(
+        { homeScore: 4, awayScore: 1, resultPick: 'home', submittedAt: 't' },
+        4,
+        1
+      );
+
+      expect(result.pointsDelta).toBe(3);
+      expect(result.scoredPrediction).toMatchObject({
+        scored: true,
+        scorePoints: 2,
+        resultPoints: 1,
+        pointsAwarded: 3
+      });
+    });
+  });
+
+  describe('scoreFixtureIfFinished', () => {
+    it('should return without scoring when the fixture is not finished', async () => {
+      const store = {
+        getPredictionsForFixture: jest.fn(),
+        applyFixtureScoringResults: jest.fn()
+      };
+
+      const result = await scoring.scoreFixtureIfFinished(store, {
+        id: 1,
+        status: 'NS',
+        goals: { home: null, away: null }
+      });
+
+      expect(result).toEqual({ scored: false, earners: [] });
+      expect(store.applyFixtureScoringResults).not.toHaveBeenCalled();
+    });
+
+    it('should score all unscored predictions on a finished fixture', async () => {
+      const store = {
+        getPredictionsForFixture: jest.fn().mockResolvedValue([
+          {
+            userId: 'user1',
+            prediction: {
+              homeScore: 2,
+              awayScore: 1,
+              resultPick: 'home',
+              submittedAt: 't',
+              scored: false
+            }
+          }
+        ]),
+        applyFixtureScoringResults: jest.fn().mockResolvedValue(undefined)
+      };
+
+      const result = await scoring.scoreFixtureIfFinished(store, {
+        id: 9,
+        status: 'FT',
+        goals: { home: 2, away: 1 }
+      });
+
+      expect(result.scored).toBe(true);
+      expect(result.earners).toHaveLength(1);
+      expect(store.applyFixtureScoringResults).toHaveBeenCalledWith(9, [
+        expect.objectContaining({
+          userId: 'user1',
+          pointsDelta: 3
+        })
+      ]);
+    });
+  });
 });
 
 describe('createScoreFinishedFixtures', () => {

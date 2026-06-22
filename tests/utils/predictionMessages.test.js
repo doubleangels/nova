@@ -8,6 +8,9 @@ describe('predictionMessages', () => {
 
   it('should build admin-only add events and prompt errors', () => {
     expect(msgs.errAdminAddEventsOnly('worldcup')).toContain('Discord events');
+    expect(msgs.errAdminAddPredictionOnly('club')).toContain('add');
+    expect(msgs.errAdminFixScoringOnly('worldcup')).toContain('fix');
+    expect(msgs.ERR_FIXTURE_NOT_FOUND).toContain('not found');
     expect(msgs.errAdminPromptOnly('club')).toContain('re-post');
     expect(msgs.errAdminRepostScoreOnly('worldcup')).toContain('final score');
   });
@@ -60,6 +63,96 @@ describe('predictionMessages', () => {
     );
     expect(msgs.buildRegisterAlreadyDescription('worldcup')).toContain('already registered');
     expect(msgs.buildRegisterAlreadyDescription('club')).toContain('already registered');
+    expect(msgs.buildAddPredictionSuccessDescription({
+      userId: '123',
+      fixtureLine: 'A vs B',
+      pickLine: '**Pick:** 2-1 (Home)',
+      scoredNow: true,
+      pointsDelta: 2,
+      matchPoints: 3,
+      totalPoints: 5,
+      overwritten: true
+    })).toContain('Replaced an existing prediction');
+    expect(msgs.buildAddPredictionSuccessDescription({
+      userId: '123',
+      fixtureLine: 'A vs B',
+      pickLine: '**Pick:** 2-1 (Home)',
+      scoredNow: false,
+      pointsDelta: 0,
+      matchPoints: 0,
+      totalPoints: 0,
+      overwritten: false
+    })).toContain('Match not finished yet');
+    expect(msgs.buildAddPredictionSuccessDescription({
+      userId: '123',
+      fixtureLine: 'A vs B',
+      pickLine: '**Pick:** 2-1 (Home)',
+      scoredNow: true,
+      pointsDelta: -2,
+      matchPoints: 1,
+      totalPoints: 1,
+      overwritten: false
+    })).toContain('Leaderboard change:** -2');
+    expect(msgs.buildFixScoringSummaryDescription({
+      fixtureId: 537371,
+      wrong: '5-1',
+      correct: '4-1',
+      commit: false,
+      namespaces: ['worldcup'],
+      namespaceWarning: null,
+      totalChanges: 0,
+      netDelta: 0,
+      anyCommitted: false,
+      reportTruncated: false
+    })).toContain('No point adjustments needed');
+    expect(msgs.buildFixScoringSummaryDescription({
+      fixtureId: 537371,
+      wrong: '5-1',
+      correct: '4-1',
+      commit: true,
+      namespaces: ['worldcup'],
+      namespaceWarning: 'Warning: no predictions in football',
+      totalChanges: 2,
+      netDelta: 3,
+      anyCommitted: true,
+      reportTruncated: true
+    })).toContain('Full report attached');
+    expect(msgs.buildFixScoringSummaryDescription({
+      fixtureId: 537371,
+      wrong: '5-1',
+      correct: '4-1',
+      commit: true,
+      namespaces: [],
+      namespaceWarning: null,
+      totalChanges: 0,
+      netDelta: 0,
+      anyCommitted: false,
+      reportTruncated: false
+    })).toContain('(none)');
+    expect(msgs.buildFixScoringSummaryDescription({
+      fixtureId: 537371,
+      wrong: '5-1',
+      correct: '4-1',
+      commit: true,
+      namespaces: ['worldcup'],
+      namespaceWarning: null,
+      totalChanges: 0,
+      netDelta: 0,
+      anyCommitted: false,
+      reportTruncated: false
+    })).toContain('Commit requested, but no point adjustments were needed');
+    expect(msgs.buildFixScoringSummaryDescription({
+      fixtureId: 537371,
+      wrong: '5-1',
+      correct: '4-1',
+      commit: false,
+      namespaces: ['worldcup'],
+      namespaceWarning: null,
+      totalChanges: 2,
+      netDelta: -3,
+      anyCommitted: false,
+      reportTruncated: false
+    })).toContain('**2** user(s) would change by **-3** points total');
   });
 
   it('should return worldcup prompt title without competition', () => {

@@ -503,6 +503,33 @@ function createPredictionStore(namespace, logLabel) {
     });
   }
 
+  /**
+   * Updates one user's scored prediction and adjusts total points by a signed delta.
+   * Used for late additions and admin overwrites on already-scored fixtures.
+   * @param {number} fixtureId
+   * @param {string} userId
+   * @param {GamePrediction} scoredPrediction
+   * @param {number} pointsDelta
+   * @returns {Promise<void>}
+   */
+  async function applyUserScoringUpdate(fixtureId, userId, scoredPrediction, pointsDelta) {
+    runStoreTransaction((db) => {
+      setInTx(db, `prediction:${userId}:${fixtureId}`, scoredPrediction);
+      if (pointsDelta !== 0) {
+        const current = getInTx(db, `points:${userId}`) || 0;
+        const next = Math.max(0, current + pointsDelta);
+        setInTx(db, `points:${userId}`, next);
+        if (next > 0) {
+          const participants = getInTx(db, 'all_participants') || [];
+          if (!participants.includes(userId)) {
+            participants.push(userId);
+            setInTx(db, 'all_participants', participants);
+          }
+        }
+      }
+    });
+  }
+
   async function getPredictorIdsForFixture(fixtureId) {
     return (await keyv.get(`predictions_by_fixture:${fixtureId}`)) || [];
   }
@@ -795,6 +822,7 @@ function createPredictionStore(namespace, logLabel) {
     releaseScoringLock,
     clearStaleScoringLocks,
     applyFixtureScoringResults,
+    applyUserScoringUpdate,
     getPredictorIdsForFixture,
     getPredictionsForFixture,
     getPredictionsForUser,

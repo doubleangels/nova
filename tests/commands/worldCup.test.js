@@ -55,7 +55,15 @@ describe('worldcup command', () => {
       addRegisteredUser: jest.fn().mockResolvedValue(),
       setPromptingPaused: jest.fn().mockResolvedValue(),
       getScoredFixtures: jest.fn().mockResolvedValue([]),
-      repostFinalScore: jest.fn().mockResolvedValue(true)
+      repostFinalScore: jest.fn().mockResolvedValue(true),
+      applyUserScoringUpdate: jest.fn().mockResolvedValue(),
+      scoreFixtureIfFinished: jest.fn().mockResolvedValue({ scored: false, earners: [] }),
+      parseScoreInputs: jest.fn().mockReturnValue({ homeScore: 4, awayScore: 1 }),
+      store: {
+        getPrediction: jest.fn().mockResolvedValue(null),
+        savePrediction: jest.fn().mockResolvedValue(),
+        getUserPoints: jest.fn().mockResolvedValue(0)
+      }
     };
 
     mockScheduler = {
@@ -1116,5 +1124,120 @@ describe('worldcup command', () => {
     }));
   });
 
+  it('should deny addprediction for non-administrators', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('addprediction'),
+        getUser: jest.fn().mockReturnValue({ id: '123456789012345678', bot: false }),
+        getInteger: jest.fn(name => {
+          if (name === 'fixture') return 1;
+          if (name === 'home') return 2;
+          if (name === 'away') return 1;
+          return null;
+        }),
+        getString: jest.fn().mockReturnValue(null)
+      },
+      guild: { id: 'guild-1' },
+      memberPermissions: { has: jest.fn().mockReturnValue(false) }
+    });
 
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('administrators')
+    }));
+  });
+
+  it('should delegate addprediction to the shared admin handler', async () => {
+    mockClientApi.getFixtureById.mockResolvedValue({
+      id: 1,
+      status: 'NS',
+      home: 'A',
+      away: 'B',
+      goals: { home: null, away: null }
+    });
+    mockUtils.store.savePrediction.mockResolvedValue();
+    mockUtils.store.getUserPoints.mockResolvedValue(0);
+
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('addprediction'),
+        getUser: jest.fn().mockReturnValue({ id: '123456789012345678', bot: false }),
+        getInteger: jest.fn(name => {
+          if (name === 'fixture') return 1;
+          if (name === 'home') return 2;
+          if (name === 'away') return 1;
+          return null;
+        }),
+        getString: jest.fn().mockReturnValue(null)
+      },
+      guild: { id: 'guild-1' },
+      user: { id: 'admin-1' },
+      memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+    expect(mockUtils.store.savePrediction).toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.arrayContaining([
+        expect.objectContaining({
+          data: expect.objectContaining({ title: 'Prediction Added' })
+        })
+      ])
+    }));
+  });
+
+  it('should deny fixscoring for non-administrators', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('fixscoring'),
+        getInteger: jest.fn().mockReturnValue(1),
+        getString: jest.fn(name => {
+          if (name === 'wrong') return '5-1';
+          if (name === 'correct') return '4-1';
+          return null;
+        }),
+        getBoolean: jest.fn().mockReturnValue(false)
+      },
+      guild: { id: 'guild-1' },
+      memberPermissions: { has: jest.fn().mockReturnValue(false) }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith(expect.objectContaining({
+      content: expect.stringContaining('administrators')
+    }));
+  });
+
+  it('should delegate fixscoring to the shared admin handler', async () => {
+    const interaction = createMockInteraction({
+      options: {
+        getSubcommand: jest.fn().mockReturnValue('fixscoring'),
+        getInteger: jest.fn().mockReturnValue(1),
+        getString: jest.fn(name => {
+          if (name === 'wrong') return '5-1';
+          if (name === 'correct') return '4-1';
+          return null;
+        }),
+        getBoolean: jest.fn().mockReturnValue(false)
+      },
+      guild: { id: 'guild-1' },
+      user: { id: 'admin-1' },
+      memberPermissions: { has: jest.fn(p => p === PermissionFlagsBits.Administrator) }
+    });
+
+    await worldcupCommand.execute(interaction);
+
+    expect(interaction.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+    expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+      embeds: expect.arrayContaining([
+        expect.objectContaining({
+          data: expect.objectContaining({ title: 'Fix Fixture Scoring' })
+        })
+      ])
+    }));
+  });
 });
