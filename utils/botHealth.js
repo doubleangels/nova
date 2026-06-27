@@ -1,9 +1,9 @@
 const fs = require('fs');
 const path = require('path');
-const { dataDir } = require('./sqliteStore');
 
+const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const HEARTBEAT_FILENAME = 'bot-heartbeat.json';
-const DEFAULT_MAX_AGE_MS = 120_000;
+const DEFAULT_MAX_AGE_MS = 180_000;
 
 /**
  * @returns {string}

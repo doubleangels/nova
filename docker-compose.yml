@@ -1,6 +1,6 @@
 services:
   nova:
-    image: ghcr.io/doubleangels/nova:latest
+    image: ghcr.io/doubleangels/nova:dev
     container_name: nova
     restart: unless-stopped
     cap_drop:
@@ -12,6 +12,7 @@ services:
     read_only: true
     environment:
       - DOPPLER_TOKEN
+      - DATA_DIR=/app/data
       - NODE_OPTIONS=--max-old-space-size=192
     mem_limit: 512m
     mem_reservation: 256m
