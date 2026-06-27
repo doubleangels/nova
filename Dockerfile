@@ -69,7 +69,7 @@ VOLUME ["/app/data"]
 
 # Add health check - verify recent bot heartbeat in /app/data
 HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
-  CMD NODE_OPTIONS= node /app/scripts/healthcheck.js || exit 1
+  CMD su-exec discordbot env NODE_OPTIONS= node /app/scripts/healthcheck.js || exit 1
 
 # Entrypoint fixes data-dir permissions, then runs Doppler (inject secrets) + app. Pass DOPPLER_TOKEN when running.
 ENTRYPOINT ["dumb-init", "--", "/app/docker-entrypoint.sh"]

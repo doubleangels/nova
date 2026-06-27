@@ -3,6 +3,7 @@ const path = require('path');
 
 const dataDir = process.env.DATA_DIR || path.resolve(process.cwd(), 'data');
 const HEARTBEAT_FILENAME = 'bot-heartbeat.json';
+const HEARTBEAT_FILE_MODE = 0o644;
 const DEFAULT_MAX_AGE_MS = 180_000;
 
 /**
@@ -15,7 +16,8 @@ function getHeartbeatPath() {
 function writeBotHeartbeat() {
   const heartbeatPath = getHeartbeatPath();
   fs.mkdirSync(path.dirname(heartbeatPath), { recursive: true });
-  fs.writeFileSync(heartbeatPath, JSON.stringify({ at: Date.now() }));
+  fs.writeFileSync(heartbeatPath, JSON.stringify({ at: Date.now() }), { mode: HEARTBEAT_FILE_MODE });
+  fs.chmodSync(heartbeatPath, HEARTBEAT_FILE_MODE);
 }
 
 function clearBotHeartbeat() {
@@ -47,6 +49,7 @@ function isBotHeartbeatFresh(maxAgeMs = DEFAULT_MAX_AGE_MS) {
 
 module.exports = {
   HEARTBEAT_FILENAME,
+  HEARTBEAT_FILE_MODE,
   DEFAULT_MAX_AGE_MS,
   getHeartbeatPath,
   writeBotHeartbeat,

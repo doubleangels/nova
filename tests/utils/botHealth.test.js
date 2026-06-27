@@ -21,6 +21,10 @@ describe('botHealth', () => {
   it('should write and read a heartbeat file', () => {
     botHealth.writeBotHeartbeat();
     expect(botHealth.readBotHeartbeat()?.at).toEqual(expect.any(Number));
+    if (process.platform !== 'win32') {
+      const mode = fs.statSync(botHealth.getHeartbeatPath()).mode & 0o777;
+      expect(mode).toBe(botHealth.HEARTBEAT_FILE_MODE);
+    }
   });
 
   it('should clear an existing heartbeat file', () => {

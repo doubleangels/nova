@@ -12,6 +12,10 @@ fix_permissions() {
             chown discordbot:nodejs /app/data/database.sqlite 2>/dev/null || true
             chmod 600 /app/data/database.sqlite 2>/dev/null || true
         fi
+        if [ -f /app/data/bot-heartbeat.json ]; then
+            chown discordbot:nodejs /app/data/bot-heartbeat.json 2>/dev/null || true
+            chmod 644 /app/data/bot-heartbeat.json 2>/dev/null || true
+        fi
     else
         mkdir -p /app/data
         chown -R discordbot:nodejs /app/data
