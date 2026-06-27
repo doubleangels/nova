@@ -5,6 +5,13 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger')(path.basename(__filename));
 const config = require('./config');
+const { clearBotHeartbeat } = require('./utils/botHealth');
+
+try {
+  clearBotHeartbeat();
+} catch (error) {
+  logger.warn('Could not clear stale bot heartbeat on startup.', serializeError(error));
+}
 
 // Configure global HTTP and HTTPS Keep-Alive agents for Axios
 const http = require('http');

@@ -23,6 +23,12 @@ describe('botHealth', () => {
     expect(botHealth.readBotHeartbeat()?.at).toEqual(expect.any(Number));
   });
 
+  it('should clear an existing heartbeat file', () => {
+    botHealth.writeBotHeartbeat();
+    botHealth.clearBotHeartbeat();
+    expect(botHealth.readBotHeartbeat()).toBeNull();
+  });
+
   it('should treat a recent heartbeat as fresh', () => {
     jest.useFakeTimers();
     botHealth.writeBotHeartbeat();

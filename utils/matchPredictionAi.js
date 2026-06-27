@@ -188,7 +188,13 @@ function isDemoPredictionMode() {
 function buildSystemInstruction(demoMode = false) {
   let text =
     'You are a football analyst for a Discord prediction game. ' +
-    'You have access to Google Search - use it to check up-to-date team news, form, and context before you predict. ';
+    'You have access to Google Search - research up-to-date information before every prediction. ' +
+    'Weight these factors heavily when choosing the scoreline: ' +
+    '(1) each team\'s recent competitive results with actual scores and goal trends (roughly last 5 games), ' +
+    '(2) direct head-to-head history between the two opponents, especially recent meetings and scorelines, ' +
+    '(3) confirmed injuries, suspensions, and other key squad absences, ' +
+    '(4) home advantage for the designated home side (crowd, travel/fatigue for the away side; at neutral-site tournaments use travel, rest, and squad depth instead of crowd), ' +
+    'and (5) competition stakes and standings. ';
 
   if (demoMode) {
     text +=
@@ -200,7 +206,7 @@ function buildSystemInstruction(demoMode = false) {
     'Return only valid JSON with keys homeScore, awayScore, winner, and reasoning. ' +
     'homeScore and awayScore must be integers from 0 to 15. ' +
     'winner must be "home", "draw", or "away" and must match the scoreline. ' +
-    `reasoning: one short sentence only, max ${AI_REASONING_MAX_LENGTH} characters, summarising the main current factors (form, injuries, standings); plain text, no markdown.`;
+    `reasoning: one short sentence only, max ${AI_REASONING_MAX_LENGTH} characters, citing the strongest factors you used (recent scores/form, head-to-head, injuries, or home advantage); plain text, no markdown.`;
 
   if (demoMode) {
     text += ' Do not mention demos, mocks, simulations, or Discord tests in reasoning.';
@@ -210,7 +216,7 @@ function buildSystemInstruction(demoMode = false) {
 }
 
 /**
- * @param {{ game: 'worldcup'|'club', fixture: { id: number, home: string, away: string, kickoff?: string, status?: string, competitionName?: string, competitionCode?: string }, demoMode?: boolean }} params
+ * @param {{ game: 'worldcup'|'club', fixture: { id: number, home: string, away: string, kickoff?: string, status?: string, competitionName?: string, competitionCode?: string, venue?: string|null, stage?: string|null }, demoMode?: boolean }} params
  * @returns {string}
  */
 function buildUserPrompt({ game, fixture, demoMode = false }) {
@@ -224,6 +230,10 @@ function buildUserPrompt({ game, fixture, demoMode = false }) {
     (game === 'worldcup' ? 'FIFA World Cup' : 'Club football');
   const home = fixture.home;
   const away = fixture.away;
+  const homeAdvantageLine =
+    game === 'worldcup'
+      ? `- Home advantage: ${home} is the designated home side. Many World Cup matches are at neutral venues - if this one is, weigh travel, rest, and squad depth rather than crowd support; otherwise factor normal home benefit for ${home}.`
+      : `- Home advantage: ${home} hosts at their home ground - factor crowd support, familiar conditions, and each team's home/away record this season; ${away} may face travel and fatigue.`;
 
   const lines = [`Today (UTC): ${todayUtc}`, ''];
 
@@ -231,27 +241,38 @@ function buildUserPrompt({ game, fixture, demoMode = false }) {
     lines.push(
       'IMPORTANT - Bot test mode is on, but predict as for a REAL match:',
       `- Treat **${home} vs ${away}** as a genuine upcoming fixture at the kickoff below.`,
-      '- Use Google Search for real-world current form, injuries, standings, and news for both teams.',
+      '- Use Google Search for real-world recent scores, head-to-head results, injuries, standings, and news for both teams.',
       '- Do not describe the match as fake, demo, mock, simulated, or a Discord test.',
       ''
     );
   }
 
   lines.push(
-    'Use Google Search to research CURRENT information for this fixture before you predict, including:',
-    `- Recent results and form for ${home} and ${away}`,
-    `- Injuries, suspensions, or notable squad/absence news`,
-    `- Competition context (table position, knockout stage, stakes)`,
-    '- Any reliable pre-match reporting on tactics or head-to-head trends',
+    'Use Google Search to research CURRENT information for this fixture. Prioritise:',
+    `- Recent match results WITH SCORES for ${home} and ${away} (last ~5 competitive games; note wins, draws, goals scored and conceded)`,
+    `- Direct head-to-head history between ${home} and ${away}, especially recent meetings and final scorelines`,
+    `- Confirmed injuries, suspensions, and other key squad absences on both sides`,
+    homeAdvantageLine,
+    `- Competition context for ${competition} (table position, knockout stage, rotation risk, stakes)`,
     '',
     'Match:',
     `- Competition: ${competition}`,
     `- ${home} (home) vs ${away} (away)`,
     `- Kickoff: ${kickoff}`,
     `- Fixture status: ${fixture.status || 'scheduled'}`,
+  );
+
+  if (fixture.stage) {
+    lines.push(`- Stage: ${fixture.stage}`);
+  }
+  if (fixture.venue) {
+    lines.push(`- Venue: ${fixture.venue}`);
+  }
+
+  lines.push(
     '',
-    'Predict the full-time score and winner based on what you find.',
-    `In reasoning, one brief sentence (max ${AI_REASONING_MAX_LENGTH} characters) on the main current factors you relied on.`,
+    'Predict the full-time score and winner using the factors above - recent form/scores and head-to-head should materially influence your pick.',
+    `In reasoning, one brief sentence (max ${AI_REASONING_MAX_LENGTH} characters) naming the strongest factors (e.g. recent scores, H2H, injuries, or home edge).`,
     '',
     'Respond with JSON only, for example:',
     '{"homeScore":2,"awayScore":1,"winner":"home","reasoning":"..."}'

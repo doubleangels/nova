@@ -68,7 +68,7 @@ RUN apk update && apk upgrade --no-cache
 VOLUME ["/app/data"]
 
 # Add health check - verify recent bot heartbeat in /app/data
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
   CMD node /app/scripts/healthcheck.js || exit 1
 
 # Entrypoint fixes data-dir permissions, then runs Doppler (inject secrets) + app. Pass DOPPLER_TOKEN when running.

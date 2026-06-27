@@ -126,7 +126,9 @@ describe('matchPredictionAi', () => {
     const userText = body.contents[0].parts[0].text;
     expect(userText).toContain('Google Search');
     expect(userText).toContain('Brazil');
-    expect(userText).toContain('Recent results and form');
+    expect(userText).toContain('Recent match results WITH SCORES');
+    expect(userText).toContain('head-to-head');
+    expect(userText).toContain('Home advantage');
   });
 
   it('should fetch and cache predictions from Gemini', async () => {
@@ -330,6 +332,36 @@ describe('matchPredictionAi', () => {
     });
     expect(prompt).toContain('FIFA World Cup');
     expect(prompt).toContain('TBD');
+    expect(prompt).toContain('neutral venues');
+  });
+
+  it('should emphasise club home ground advantage and include venue when provided', () => {
+    const clubPrompt = ai.buildUserPrompt({
+      game: 'club',
+      fixture: {
+        id: 2,
+        home: 'Arsenal',
+        away: 'Chelsea',
+        competitionName: 'Premier League',
+        kickoff: '2026-04-12T15:00:00Z'
+      }
+    });
+    expect(clubPrompt).toContain('hosts at their home ground');
+    expect(clubPrompt).toContain('head-to-head');
+
+    const wcPrompt = ai.buildUserPrompt({
+      game: 'worldcup',
+      fixture: {
+        id: 3,
+        home: 'Brazil',
+        away: 'Argentina',
+        venue: 'MetLife Stadium',
+        stage: 'FINAL',
+        kickoff: '2026-07-19T19:00:00Z'
+      }
+    });
+    expect(wcPrompt).toContain('MetLife Stadium');
+    expect(wcPrompt).toContain('Stage: FINAL');
   });
 
   it('should use fixed cache TTL when geminiPredictionCacheTtlMs is set', () => {

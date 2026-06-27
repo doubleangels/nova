@@ -107,6 +107,10 @@ describe('ready event', () => {
 
     await readyEvent.execute(mockClient);
 
+    expect(mockWriteBotHeartbeat).toHaveBeenCalled();
+    expect(mockWriteBotHeartbeat.mock.invocationCallOrder[0]).toBeLessThan(
+      mockDatabase.initializeDatabase.mock.invocationCallOrder[0]
+    );
     expect(mockDatabase.initializeDatabase).toHaveBeenCalled();
     expect(mockWorldCupScheduler.startWorldCupScheduler).toHaveBeenCalledWith(mockClient);
     expect(mockClient.user.setActivity).toHaveBeenCalledWith(

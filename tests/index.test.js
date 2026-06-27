@@ -47,6 +47,7 @@ describe('index bootstrap', () => {
     jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
     jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
     jest.doMock('../deploy-commands', () => deployCommands);
+    jest.doMock('../utils/botHealth', () => ({ clearBotHeartbeat: jest.fn() }));
 
     jest.doMock('../config', () => ({
       token: 'test-token',

@@ -38,6 +38,16 @@ module.exports = {
    */
   async execute(client) {
     try {
+      writeBotHeartbeat();
+      client.heartbeatInterval = setInterval(() => {
+        try {
+          writeBotHeartbeat();
+        } catch (error) {
+          captureError(error, { event: 'ready', handler: 'heartbeat' });
+          logger.error('Failed to write bot heartbeat.', { ...serializeError(error, { includeStack: true }) });
+        }
+      }, HEARTBEAT_INTERVAL_MS);
+
       await initializeDatabase();
       logger.info('Database connection initialized successfully.');
 
@@ -95,16 +105,6 @@ module.exports = {
         guildId: config.guildId,
         warn: (message, meta) => logger.warn(message, meta)
       });
-
-      writeBotHeartbeat();
-      client.heartbeatInterval = setInterval(() => {
-        try {
-          writeBotHeartbeat();
-        } catch (error) {
-          captureError(error, { event: 'ready', handler: 'heartbeat' });
-          logger.error('Failed to write bot heartbeat.', { ...serializeError(error, { includeStack: true }) });
-        }
-      }, HEARTBEAT_INTERVAL_MS);
 
       const startupTasks = [];
       if (config.settings.rescheduleAllMuteKicksOnStart) {

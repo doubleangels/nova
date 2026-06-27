@@ -18,6 +18,10 @@ function writeBotHeartbeat() {
   fs.writeFileSync(heartbeatPath, JSON.stringify({ at: Date.now() }));
 }
 
+function clearBotHeartbeat() {
+  fs.rmSync(getHeartbeatPath(), { force: true });
+}
+
 /**
  * @returns {{ at: number }|null}
  */
@@ -46,6 +50,7 @@ module.exports = {
   DEFAULT_MAX_AGE_MS,
   getHeartbeatPath,
   writeBotHeartbeat,
+  clearBotHeartbeat,
   readBotHeartbeat,
   isBotHeartbeatFresh
 };
