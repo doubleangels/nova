@@ -10,7 +10,7 @@ describe('index bootstrap', () => {
   let processOnHandlers;
   let originalExit;
 
-  function loadIndex(configOverrides = {}) {
+  function loadIndex(configOverrides = {}, bootstrapOverrides = {}) {
     jest.resetModules();
     processOnHandlers = {};
     mockLogger = require('./__mocks__/logger.mock')();
@@ -47,7 +47,9 @@ describe('index bootstrap', () => {
     jest.doMock('../utils/muteModeUtils', () => ({ clearAllScheduledMuteKicks: jest.fn() }));
     jest.doMock('../utils/reminderUtils', () => ({ cancelAllReminderTimeouts: jest.fn() }));
     jest.doMock('../deploy-commands', () => deployCommands);
-    jest.doMock('../utils/botHealth', () => ({ clearBotHeartbeat: jest.fn() }));
+    jest.doMock('../utils/botHealth', () => ({
+      clearBotHeartbeat: bootstrapOverrides.clearBotHeartbeat || jest.fn()
+    }));
 
     jest.doMock('../config', () => ({
       token: 'test-token',
@@ -115,6 +117,20 @@ describe('index bootstrap', () => {
     expect(mockLogger.info).toHaveBeenCalledWith(
       expect.stringContaining('Base embed color was loaded')
     );
+  });
+
+  it('should warn when clearing stale bot heartbeat fails on startup', () => {
+    const heartbeatError = new Error('heartbeat store unavailable');
+    loadIndex({}, {
+      clearBotHeartbeat: jest.fn(() => {
+        throw heartbeatError;
+      })
+    });
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'Could not clear stale bot heartbeat on startup.',
+      expect.objectContaining({ errorMessage: 'heartbeat store unavailable' })
+    );
+    expect(mockClient.login).toHaveBeenCalledWith('test-token');
   });
 
   it('should skip loading disabled commands', () => {
