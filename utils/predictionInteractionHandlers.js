@@ -214,13 +214,16 @@ function createPredictionInteractionHandlers(options) {
       return;
     }
 
+    // Acknowledge within 3s; store/API calls may take longer.
+    await interaction.deferUpdate();
+
     const registered = await store.isUserRegistered(interaction.user.id);
     const roleId = options.gameId === 'worldcup'
       ? config.worldCupParticipantRoleId
       : config.footballParticipantRoleId;
     const hasRole = roleId && interaction.member.roles?.cache?.has(roleId);
     if (!registered && !hasRole) {
-      await interaction.update({
+      await interaction.editReply({
         content: msgs.errRegisterFirst(options.gameId),
         components: []
       });
@@ -230,7 +233,7 @@ function createPredictionInteractionHandlers(options) {
     const fixture = await options.getFixtureById(fixtureId);
     if (!fixture || !isFixtureOpenForPrediction(fixture)) {
       await store.clearPendingPrediction(interaction.user.id, fixtureId);
-      await interaction.update({
+      await interaction.editReply({
         content: msgs.ERR_PREDICTIONS_CLOSED_SHORT,
         components: []
       });
@@ -240,7 +243,7 @@ function createPredictionInteractionHandlers(options) {
     const existing = await store.getPrediction(interaction.user.id, fixtureId);
     if (existing) {
       await store.clearPendingPrediction(interaction.user.id, fixtureId);
-      await interaction.update({
+      await interaction.editReply({
         content: msgs.ERR_ALREADY_PREDICTED,
         components: []
       });
@@ -253,7 +256,7 @@ function createPredictionInteractionHandlers(options) {
     if (side === 'home' || side === 'away') {
       const goals = parseInt(value, 10);
       if (!Number.isInteger(goals) || goals < 0 || goals > 15) {
-        await interaction.update({
+        await interaction.editReply({
           content: msgs.ERR_GOALS_RANGE,
           components: []
         });
@@ -262,7 +265,7 @@ function createPredictionInteractionHandlers(options) {
       partial = side === 'home' ? { homeScore: goals } : { awayScore: goals };
     } else { // side === 'winner'
       if (!['home', 'draw', 'away'].includes(value)) {
-        await interaction.update({
+        await interaction.editReply({
           content: msgs.ERR_INVALID_WINNER,
           components: []
         });
@@ -278,7 +281,7 @@ function createPredictionInteractionHandlers(options) {
     );
 
     if (!isPendingPredictionComplete(pending)) {
-      await interaction.update({
+      await interaction.editReply({
         content: buildPredictionFormContent(fixture, pending),
         components: buildPredictionSelectRows(fixture, fixtureId, pending)
       });
@@ -315,7 +318,7 @@ function createPredictionInteractionHandlers(options) {
         winnerLine
       );
 
-    await interaction.update({ embeds: [embed], content: null, components: [] });
+    await interaction.editReply({ embeds: [embed], content: null, components: [] });
 
     if (
       config.predictionMockApi &&

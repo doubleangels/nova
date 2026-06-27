@@ -132,13 +132,15 @@ describe('worldCupInteractions', () => {
         roles: { cache: { has: jest.fn().mockReturnValue(true) } }
       },
       values: ['2'],
-      update: jest.fn().mockResolvedValue()
+      deferUpdate: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
     };
 
     await interactions.handleWorldCupPickSelect(interaction);
 
     expect(mockUtils.savePrediction).not.toHaveBeenCalled();
-    expect(interaction.update).toHaveBeenCalledWith(
+    expect(interaction.deferUpdate).toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         components: expect.any(Array)
       })
@@ -162,7 +164,8 @@ describe('worldCupInteractions', () => {
       },
       values: ['home'],
       client: {},
-      update: jest.fn().mockResolvedValue()
+      deferUpdate: jest.fn().mockResolvedValue(),
+      editReply: jest.fn().mockResolvedValue()
     };
 
     await interactions.handleWorldCupPickSelect(interaction);
@@ -180,7 +183,8 @@ describe('worldCupInteractions', () => {
       '111111111111111111',
       42
     );
-    expect(interaction.update).toHaveBeenCalledWith(
+    expect(interaction.deferUpdate).toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith(
       expect.objectContaining({
         embeds: expect.any(Array),
         components: []

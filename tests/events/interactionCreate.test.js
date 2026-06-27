@@ -163,6 +163,26 @@ describe('interactionCreate event', () => {
     await interactionCreateEvent.execute(mockInteraction);
 
     expect(mockInteraction.reply).not.toHaveBeenCalled();
+    expect(mockInteraction.editReply).not.toHaveBeenCalled();
+  });
+
+  it('should editReply on World Cup select errors when deferred', async () => {
+    mockWorldCupInteractions.handleWorldCupPickSelect.mockRejectedValue(new Error('select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = true;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+    expect(mockInteraction.editReply).toHaveBeenCalledWith({
+      content: '⚠️ Something went wrong saving your prediction.',
+      components: []
+    });
   });
 
   it('should swallow reply failures after World Cup select errors', async () => {
@@ -175,6 +195,20 @@ describe('interactionCreate event', () => {
     mockInteraction.replied = false;
     mockInteraction.deferred = false;
     mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+
+    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+  });
+
+  it('should swallow editReply failures after World Cup select errors when deferred', async () => {
+    mockWorldCupInteractions.handleWorldCupPickSelect.mockRejectedValue(new Error('select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'worldcup:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = true;
+    mockInteraction.editReply = jest.fn().mockRejectedValue(new Error('edit fail'));
 
     await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
   });
@@ -280,6 +314,27 @@ describe('interactionCreate event', () => {
     await interactionCreateEvent.execute(mockInteraction);
 
     expect(mockInteraction.reply).not.toHaveBeenCalled();
+    expect(mockInteraction.editReply).not.toHaveBeenCalled();
+  });
+
+  it('should editReply on Football select errors when deferred', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    footballInteractions.handleFootballPickSelect.mockRejectedValue(new Error('football select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = true;
+
+    await interactionCreateEvent.execute(mockInteraction);
+
+    expect(mockInteraction.reply).not.toHaveBeenCalled();
+    expect(mockInteraction.editReply).toHaveBeenCalledWith({
+      content: '⚠️ Something went wrong saving your prediction.',
+      components: []
+    });
   });
 
   it('should swallow reply failures after Football select errors', async () => {
@@ -293,6 +348,21 @@ describe('interactionCreate event', () => {
     mockInteraction.replied = false;
     mockInteraction.deferred = false;
     mockInteraction.reply = jest.fn().mockRejectedValue(new Error('reply fail'));
+
+    await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
+  });
+
+  it('should swallow editReply failures after Football select errors when deferred', async () => {
+    const footballInteractions = require('../../utils/footballInteractions');
+    footballInteractions.handleFootballPickSelect.mockRejectedValue(new Error('football select fail'));
+    const mockInteraction = createMockInteraction({
+      customId: 'football:pick:winner:99'
+    });
+    mockInteraction.isButton = jest.fn().mockReturnValue(false);
+    mockInteraction.isStringSelectMenu = jest.fn().mockReturnValue(true);
+    mockInteraction.replied = false;
+    mockInteraction.deferred = true;
+    mockInteraction.editReply = jest.fn().mockRejectedValue(new Error('edit fail'));
 
     await expect(interactionCreateEvent.execute(mockInteraction)).resolves.toBeUndefined();
   });

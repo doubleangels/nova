@@ -57,6 +57,7 @@ describe('predictionInteractionHandlers', () => {
       customId: '',
       reply: jest.fn().mockResolvedValue(),
       update: jest.fn().mockResolvedValue(),
+      deferUpdate: jest.fn().mockResolvedValue(),
       deferReply: jest.fn().mockResolvedValue(),
       editReply: jest.fn().mockResolvedValue(),
       showModal: jest.fn().mockResolvedValue(),
@@ -286,6 +287,7 @@ describe('predictionInteractionHandlers', () => {
         content: 'Use in server',
         flags: MessageFlags.Ephemeral
       });
+      expect(interaction.deferUpdate).not.toHaveBeenCalled();
     });
 
     it('should reply when pick select is used without a member', async () => {
@@ -299,6 +301,7 @@ describe('predictionInteractionHandlers', () => {
         content: 'Use in server',
         flags: MessageFlags.Ephemeral
       });
+      expect(interaction.deferUpdate).not.toHaveBeenCalled();
     });
 
     it('should reject unregistered club users without participant role', async () => {
@@ -309,7 +312,8 @@ describe('predictionInteractionHandlers', () => {
 
       await handlers.handlePickSelect(interaction);
 
-      expect(interaction.update).toHaveBeenCalledWith({
+      expect(interaction.deferUpdate).toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalledWith({
         content: 'not registered',
         components: []
       });
@@ -322,7 +326,8 @@ describe('predictionInteractionHandlers', () => {
 
       await handlers.handlePickSelect(interaction);
 
-      expect(interaction.update).toHaveBeenCalledWith({
+      expect(interaction.deferUpdate).toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalledWith({
         content: 'not registered',
         components: []
       });
@@ -338,6 +343,7 @@ describe('predictionInteractionHandlers', () => {
         content: 'Invalid match',
         flags: MessageFlags.Ephemeral
       });
+      expect(interaction.deferUpdate).not.toHaveBeenCalled();
     });
 
     it('should reply with closed error if fixture closed', async () => {
@@ -346,8 +352,9 @@ describe('predictionInteractionHandlers', () => {
       
       await handlers.handlePickSelect(interaction);
       
+      expect(interaction.deferUpdate).toHaveBeenCalled();
       expect(store.clearPendingPrediction).toHaveBeenCalledWith('user1', 123);
-      expect(interaction.update).toHaveBeenCalledWith({
+      expect(interaction.editReply).toHaveBeenCalledWith({
         content: 'Closed short',
         components: []
       });
@@ -361,7 +368,8 @@ describe('predictionInteractionHandlers', () => {
       
       await handlers.handlePickSelect(interaction);
       
-      expect(interaction.update).toHaveBeenCalledWith({
+      expect(interaction.deferUpdate).toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalledWith({
         content: 'Invalid goals',
         components: []
       });
@@ -375,7 +383,8 @@ describe('predictionInteractionHandlers', () => {
       
       await handlers.handlePickSelect(interaction);
       
-      expect(interaction.update).toHaveBeenCalledWith({
+      expect(interaction.deferUpdate).toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalledWith({
         content: 'Invalid winner',
         components: []
       });
@@ -388,8 +397,9 @@ describe('predictionInteractionHandlers', () => {
       
       await handlers.handlePickSelect(interaction);
       
+      expect(interaction.deferUpdate).toHaveBeenCalled();
       expect(store.clearPendingPrediction).toHaveBeenCalledWith('user1', 123);
-      expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         content: 'Already predicted',
         components: []
       }));
@@ -440,7 +450,8 @@ describe('predictionInteractionHandlers', () => {
         homeScore: 2, awayScore: 1, resultPick: 'home', scored: false
       }));
       expect(store.clearPendingPrediction).toHaveBeenCalledWith('user1', 123);
-      expect(interaction.update).toHaveBeenCalledWith(expect.objectContaining({
+      expect(interaction.deferUpdate).toHaveBeenCalled();
+      expect(interaction.editReply).toHaveBeenCalledWith(expect.objectContaining({
         embeds: expect.any(Array),
         content: null,
         components: []
@@ -456,8 +467,8 @@ describe('predictionInteractionHandlers', () => {
 
       await handlers.handlePickSelect(interaction);
 
-      const updateArg = interaction.update.mock.calls[0][0];
-      expect(updateArg.embeds[0].data.description).toContain(msgs.NOTE_WINNER_REALIGNED);
+      const editReplyArg = interaction.editReply.mock.calls[0][0];
+      expect(editReplyArg.embeds[0].data.description).toContain(msgs.NOTE_WINNER_REALIGNED);
     });
 
     it('should trigger scoreFinishedFixtures if mock Api and all predicted', async () => {

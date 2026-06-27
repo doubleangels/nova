@@ -82,7 +82,12 @@ module.exports = {
       } catch (error) {
         captureError(error, { handler: 'worldcupPickSelect' });
         logger.error('Error handling World Cup prediction select.', { ...serializeError(error, { includeStack: true }) });
-        if (!interaction.replied && !interaction.deferred) {
+        if (interaction.deferred) {
+          await interaction.editReply({
+            content: '⚠️ Something went wrong saving your prediction.',
+            components: []
+          }).catch(() => {});
+        } else if (!interaction.replied) {
           await interaction.reply({
             content: '⚠️ Something went wrong saving your prediction.',
             flags: MessageFlags.Ephemeral
@@ -102,7 +107,12 @@ module.exports = {
       } catch (error) {
         captureError(error, { handler: 'footballPickSelect' });
         logger.error('Error handling Football prediction select.', { ...serializeError(error, { includeStack: true }) });
-        if (!interaction.replied && !interaction.deferred) {
+        if (interaction.deferred) {
+          await interaction.editReply({
+            content: '⚠️ Something went wrong saving your prediction.',
+            components: []
+          }).catch(() => {});
+        } else if (!interaction.replied) {
           await interaction.reply({
             content: '⚠️ Something went wrong saving your prediction.',
             flags: MessageFlags.Ephemeral
