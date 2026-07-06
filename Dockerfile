@@ -16,7 +16,7 @@ RUN apk update && apk upgrade --no-cache && \
     adduser -u 1001 -G nodejs -s /bin/sh -D discordbot
 
 # Copy package files for dependency installation (better caching)
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Build stage for native modules
 FROM base AS builder
