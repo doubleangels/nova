@@ -15,22 +15,6 @@
     "test:watch": "jest --watch",
     "test:debug": "pnpm exec jest --inspect-brk --runInBand"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "sqlite3"
-    ],
-    "overrides": {
-      "@tootallnate/once": ">=3.0.1",
-      "@isaacs/brace-expansion": ">=5.0.6",
-      "brace-expansion": ">=5.0.6",
-      "ip-address": ">=10.1.1",
-      "socks": ">=2.8.9",
-      "tar": ">=7.5.11",
-      "form-data": ">=4.0.6",
-      "undici": "^6.27.0"
-    }
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/doubleangels/nova.git"
@@ -40,20 +24,10 @@
     "url": "https://github.com/doubleangels/nova/issues"
   },
   "homepage": "https://github.com/doubleangels/nova#readme",
-  "overrides": {
-    "@tootallnate/once": ">=3.0.1",
-    "ip-address": ">=10.1.1",
-    "socks": ">=2.8.9",
-    "tar": ">=7.5.11",
-    "undici": "^6.27.0",
-    "@isaacs/brace-expansion": ">=5.0.6",
-    "brace-expansion": ">=5.0.6",
-    "form-data": ">=4.0.6"
-  },
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "@sentry/node": "^10.59.0",
-    "axios": "^1.18.0",
+    "@sentry/node": "^10.63.0",
+    "axios": "^1.18.1",
     "better-sqlite3": "^12.11.1",
     "dayjs": "^1.11.21",
     "discord.js": "^14.26.4",

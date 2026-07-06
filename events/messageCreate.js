@@ -110,6 +110,30 @@ module.exports = {
   }
 };
 
+const GIF_FILE_URL_PATTERN = /https?:\/\/\S+\.gif(?:\?.*)?$/i;
+const GIF_PROVIDER_URL_PATTERN = /https?:\/\/(?:[\w-]+\.)?(?:tenor|giphy|imgur|klipy)\.com\/\S+/i;
+
+/**
+ * @param {string|undefined|null} text
+ * @returns {boolean}
+ */
+function containsGifUrl(text) {
+  if (!text) return false;
+  return GIF_FILE_URL_PATTERN.test(text) || GIF_PROVIDER_URL_PATTERN.test(text);
+}
+
+/**
+ * @param {import('discord.js').Embed} embed
+ * @returns {boolean}
+ */
+function isGifEmbed(embed) {
+  if (embed.type === 'gifv') return true;
+  return containsGifUrl(embed.url)
+    || containsGifUrl(embed.video?.url)
+    || containsGifUrl(embed.image?.url)
+    || containsGifUrl(embed.thumbnail?.url);
+}
+
 /**
  * @param {import('discord.js').Message} message
  * @returns {boolean}
@@ -119,7 +143,8 @@ function isDisallowedNoTextMessage(message) {
   const hasGif = message.attachments.some(attachment =>
     attachment.url.toLowerCase().endsWith('.gif') ||
     attachment.contentType?.toLowerCase() === 'image/gif'
-  ) || content.toLowerCase().match(/(?:https?:\/\/.*\.gif(\?.*)?$|https?:\/\/(?:tenor|giphy|imgur)\.com\/.*\/.*)/i);
+  ) || containsGifUrl(content)
+    || message.embeds?.some(isGifEmbed);
 
   const hasImage = message.attachments.some(attachment =>
     attachment.contentType?.toLowerCase().startsWith('image/')

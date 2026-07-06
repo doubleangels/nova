@@ -395,6 +395,87 @@ describe('messageCreate event', () => {
         expect(mockMessage.delete).not.toHaveBeenCalled();
       });
 
+      it('should NOT delete if in no-text channel but has a Klipy GIF URL', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: 'https://klipy.com/gifs/dane-cook-waiting',
+          attachments: new Collection(),
+          stickers: new Collection(),
+          embeds: [],
+          delete: jest.fn()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).not.toHaveBeenCalled();
+      });
+
+      it('should NOT delete if in no-text channel but has a Klipy GIF embed URL', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: '',
+          attachments: new Collection(),
+          stickers: new Collection(),
+          embeds: [{
+            type: 'video',
+            url: 'https://klipy.com/gifs/dane-cook-waiting',
+            video: {
+              url: 'https://media.discordapp.net/attachments/1/2/example.mp4'
+            }
+          }],
+          delete: jest.fn()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).not.toHaveBeenCalled();
+      });
+
+      it('should NOT delete if in no-text channel but has a gifv embed from the GIF picker', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: '',
+          attachments: new Collection(),
+          stickers: new Collection(),
+          embeds: [{
+            type: 'gifv',
+            url: 'https://media.discordapp.net/attachments/1/2/example.mp4'
+          }],
+          delete: jest.fn()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).not.toHaveBeenCalled();
+      });
+
       it('should reply with error if delete fails', async () => {
         const mockMessage = {
           partial: false,
