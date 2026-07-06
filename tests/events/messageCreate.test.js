@@ -449,6 +449,96 @@ describe('messageCreate event', () => {
         expect(mockMessage.delete).not.toHaveBeenCalled();
       });
 
+      it('should NOT delete if in no-text channel but has a GIF embed video URL', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: '',
+          attachments: new Collection(),
+          stickers: new Collection(),
+          embeds: [{
+            type: 'video',
+            url: 'https://example.com/page',
+            video: {
+              url: 'https://cdn.example.com/animation.gif'
+            }
+          }],
+          delete: jest.fn()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).not.toHaveBeenCalled();
+      });
+
+      it('should NOT delete if in no-text channel but has a GIF embed thumbnail URL', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: '',
+          attachments: new Collection(),
+          stickers: new Collection(),
+          embeds: [{
+            type: 'link',
+            url: 'https://example.com/page',
+            thumbnail: {
+              url: 'https://tenor.com/view/example'
+            }
+          }],
+          delete: jest.fn()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).not.toHaveBeenCalled();
+      });
+
+      it('should NOT delete if in no-text channel but has a GIF embed image URL', async () => {
+        const mockMessage = {
+          partial: false,
+          author: { id: 'user-1', tag: 'User#1234', bot: false },
+          channel: { id: 'chan-notext', name: 'notext' },
+          channelId: 'chan-notext',
+          content: '',
+          attachments: new Collection(),
+          stickers: new Collection(),
+          embeds: [{
+            type: 'image',
+            url: 'https://example.com/page',
+            image: {
+              url: 'https://i.imgur.com/example.gif'
+            }
+          }],
+          delete: jest.fn()
+        };
+
+        mockDatabase.getValue.mockImplementation(async (key) => {
+          if (key === 'notext_channel') return 'chan-notext';
+          return null;
+        });
+        mockMuteModeUtils.cancelMuteKick.mockReturnValue(false);
+
+        await messageCreateEvent.execute(mockMessage);
+
+        expect(mockMessage.delete).not.toHaveBeenCalled();
+      });
+
       it('should NOT delete if in no-text channel but has a gifv embed from the GIF picker', async () => {
         const mockMessage = {
           partial: false,
