@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
-  "packageManager": "pnpm@10.6.4",
+  "packageManager": "pnpm@11.13.0",
   "scripts": {
     "start": "doppler run -- node index.js",
     "update": "pnpm outdated && pnpm update",
