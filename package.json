@@ -28,7 +28,7 @@
     "@keyv/sqlite": "^4.0.8",
     "@sentry/node": "^10.67.0",
     "axios": "^1.18.1",
-    "better-sqlite3": "^12.11.1",
+    "better-sqlite3": "^13.0.1",
     "dayjs": "^1.11.21",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
