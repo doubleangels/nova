@@ -62,7 +62,9 @@ RUN chmod +x /app/docker-entrypoint.sh && \
     chmod +x /app/scripts/*.sh 2>/dev/null || true
 
 # Apply latest Alpine secfixes after all layers (node base, doppler repo, app copy).
-RUN apk update && apk upgrade --no-cache
+# npm/npx are unused at runtime (pnpm in build, node + doppler at runtime); remove bundled npm CVE surface.
+RUN apk update && apk upgrade --no-cache && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # Create volume mount point for database persistence
 VOLUME ["/app/data"]
