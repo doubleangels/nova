@@ -26,9 +26,9 @@
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "@sentry/node": "^10.68.0",
+    "@sentry/node": "^10.69.0",
     "axios": "^1.18.1",
-    "better-sqlite3": "^13.0.1",
+    "better-sqlite3": "^13.0.2",
     "dayjs": "^1.11.21",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
