@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Helpful multi-purpose bot for the Da Frens Discord server.",
   "main": "index.js",
-  "packageManager": "pnpm@11.21.0",
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
     "start": "doppler run -- node index.js",
     "update": "pnpm outdated && pnpm update",
@@ -26,10 +26,10 @@
   "homepage": "https://github.com/doubleangels/nova#readme",
   "dependencies": {
     "@keyv/sqlite": "^4.0.8",
-    "@sentry/node": "^10.70.0",
-    "axios": "^1.19.0",
+    "@sentry/node": "^10.71.0",
+    "axios": "^1.20.0",
     "better-sqlite3": "^13.0.3",
-    "dayjs": "^1.11.21",
+    "dayjs": "^1.11.23",
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
     "he": "^1.2.0",
