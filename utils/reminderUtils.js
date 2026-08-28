@@ -5,6 +5,7 @@ const dayjs = require('dayjs');
 const { randomUUID } = require('crypto');
 const { EmbedBuilder, MessageFlags } = require('discord.js');
 const { getValue } = require('../utils/database');
+const config = require('../config');
 const requireDefault = (m) => (require(m).default || require(m));
 const Keyv = requireDefault('keyv');
 const { getSharedKeyvStore } = require('./sqliteStore');
@@ -78,6 +79,16 @@ async function replyReminderNotConfigured(interaction) {
   } else {
     await interaction.reply(payload);
   }
+}
+
+/**
+ * Whether a reminder type has been disabled via the DISABLED_REMINDERS env var.
+ * @param {string} type - 'bump' | 'promote' | 'needafriend'
+ * @returns {boolean}
+ */
+function isReminderTypeDisabled(type) {
+  const list = config?.settings?.disabledReminders || [];
+  return list.includes(type);
 }
 
 /**
@@ -511,6 +522,9 @@ async function clearCommandCooldown(type) {
  */
 async function tryAcquireCommandCooldown(type, delayMs) {
   return runSerializedByType(type, async () => {
+    if (isReminderTypeDisabled(type)) {
+      return { acquired: false, disabled: true };
+    }
     if (!(await isReminderConfigured())) {
       return { acquired: false, notConfigured: true };
     }
@@ -653,6 +667,10 @@ async function scheduleCommandCooldownNotifications(client, type, reminder, skip
  */
 async function handleReminder(message, delay, type = 'bump', skipConfirmation = false) {
   return runSerializedByType(type, async () => {
+    if (isReminderTypeDisabled(type)) {
+      logger.debug('Reminder type is disabled; skipping reminder scheduling.', { type });
+      return;
+    }
     if (!(await isReminderConfigured())) {
       logger.debug('Reminder is not configured; skipping reminder scheduling.', { type });
       return;
@@ -683,6 +701,13 @@ async function rescheduleReminder(client) {
     if (!reminderRole) {
       logger.warn("Reminders cannot be rescheduled because the reminder role is not configured.");
       return;
+    }
+
+    for (const type of ['bump', 'promote', 'needafriend']) {
+      if (isReminderTypeDisabled(type)) {
+        await clearCommandCooldown(type);
+        logger.info('Cleared stored reminders for disabled reminder type on startup.', { type });
+      }
     }
 
     const now = dayjs();
@@ -779,6 +804,7 @@ module.exports = {
   releaseCommandCooldown,
   scheduleCommandCooldownNotifications,
   isReminderConfigured,
+  isReminderTypeDisabled,
   buildReminderIncompleteEmbed,
   replyReminderNotConfigured,
   addReminderId,

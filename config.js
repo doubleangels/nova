@@ -7,12 +7,23 @@ require('dotenv').config({ quiet: isTestEnv });
  * @property {boolean} deployCommandsOnStart - Whether to deploy slash commands on bot startup
  * @property {boolean} rescheduleReminderOnStart - Whether to reschedule reminders on bot startup
  * @property {boolean} rescheduleAllMuteKicksOnStart - Whether to reschedule mute kicks on bot startup
- * @property {string[]} disabledCommands - Array of command names that are disabled (derived from DISABLED_COMMANDS env var)
+ * @property {string[]} disabledCommands - Effective set of disabled command names: DISABLED_COMMANDS plus any command-backed reminder types from DISABLED_REMINDERS (`promote`, `needafriend`)
+ * @property {string[]} disabledReminders - Reminder types that are disabled (derived from DISABLED_REMINDERS env var)
  *
  * To disable commands, set `DISABLED_COMMANDS` as a comma-separated list:
  * - `DISABLED_COMMANDS="promote,invite"`
  *
- * Disabled commands will not be deployed/updated to Discord on bot startup.
+ * Disabled commands are not loaded or deployed/updated to Discord on bot startup.
+ *
+ * To disable individual reminder features, set `DISABLED_REMINDERS` as a comma-separated
+ * list of reminder types (`promote`, `needafriend`, `bump`):
+ * - `DISABLED_REMINDERS="promote,needafriend"`
+ *
+ * `promote` and `needafriend` are also slash commands, so listing them here additionally
+ * skips registering/deploying that command (they are merged into `disabledCommands`); `/fix`
+ * stays registered but refuses the matching subcommand. Any pending reminder of a disabled
+ * type is cleared on the next bot startup so it never fires. Reminder types not listed here
+ * keep working.
  */
 
 function parseDisabledCommands(value) {
@@ -23,6 +34,24 @@ function parseDisabledCommands(value) {
 
   // Comma-separated only (whitespace around commas is ok).
   return [...new Set(trimmed.split(',').map(s => s.trim()).filter(Boolean))];
+}
+
+/** Reminder types that are also slash commands, so disabling them skips command registration. */
+const COMMAND_BACKED_REMINDERS = ['promote', 'needafriend'];
+
+/**
+ * Effective disabled-command list: DISABLED_COMMANDS merged with any command-backed
+ * reminder types from DISABLED_REMINDERS, so a reminder disabled via DISABLED_REMINDERS
+ * is also skipped at load/deploy time exactly like DISABLED_COMMANDS.
+ * @param {string[]} disabledCommands
+ * @param {string[]} disabledReminders
+ * @returns {string[]}
+ */
+function mergeDisabledCommands(disabledCommands, disabledReminders) {
+  return [...new Set([
+    ...disabledCommands,
+    ...disabledReminders.filter(type => COMMAND_BACKED_REMINDERS.includes(type))
+  ])];
 }
 
 function isSet(value) {
@@ -206,7 +235,11 @@ module.exports = {
     deployCommandsOnStart: true,
     rescheduleReminderOnStart: true,
     rescheduleAllMuteKicksOnStart: true,
-    disabledCommands: parseDisabledCommands(process.env.DISABLED_COMMANDS),
+    disabledReminders: parseDisabledCommands(process.env.DISABLED_REMINDERS),
+    disabledCommands: mergeDisabledCommands(
+      parseDisabledCommands(process.env.DISABLED_COMMANDS),
+      parseDisabledCommands(process.env.DISABLED_REMINDERS)
+    ),
   },
   // Base embed color in hex format (e.g., CD41FF or #CD41FF); default #999999
   baseEmbedColor: (() => {

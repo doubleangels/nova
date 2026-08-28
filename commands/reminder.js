@@ -6,7 +6,7 @@ const dayjs = require('dayjs');
 const duration = require('dayjs/plugin/duration');
 dayjs.extend(duration);
 const { getValue, setValue } = require('../utils/database');
-const { getLatestReminderData } = require('../utils/reminderUtils');
+const { getLatestReminderData, isReminderTypeDisabled } = require('../utils/reminderUtils');
 
 /**
  * Command module for configuring and managing reminders.
@@ -187,9 +187,9 @@ module.exports = {
       const fields = [
         { name: 'Channel', value: channelStr },
         { name: 'Role', value: roleStr },
-        { name: 'Next Bump (Disboard)', value: bumpTimeStr },
-        { name: 'Next Promotion', value: promoteTimeStr },
-        { name: 'Next r/needafriend', value: needafriendTimeStr }
+        { name: 'Next Bump (Disboard)', value: isReminderTypeDisabled('bump') ? '🚫 Disabled' : bumpTimeStr },
+        { name: 'Next Promotion', value: isReminderTypeDisabled('promote') ? '🚫 Disabled' : promoteTimeStr },
+        { name: 'Next r/needafriend', value: isReminderTypeDisabled('needafriend') ? '🚫 Disabled' : needafriendTimeStr }
       ];
       const embed = new EmbedBuilder()
         .setColor(0xc03728)

@@ -22,6 +22,7 @@ let mockReminderUtils = {
   handleReminder: jest.fn(),
   NEEDAFRIEND_REMINDER_MS: 604800000,
   isReminderConfigured: jest.fn().mockResolvedValue(true),
+  isReminderTypeDisabled: jest.fn().mockReturnValue(false),
   replyReminderNotConfigured: jest.fn().mockResolvedValue(undefined)
 };
 jest.mock('../../utils/reminderUtils', () => mockReminderUtils);
@@ -107,6 +108,28 @@ describe('fix command', () => {
       );
       const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
       expect(embed.data.title).toBe('r/needafriend weekly Reminder Fixed');
+    });
+
+    it.each([
+      ['disboard', 'bump', 'Disboard Bump'],
+      ['reddit', 'promote', 'Reddit Promotion'],
+      ['needafriend', 'needafriend', 'r/needafriend weekly']
+    ])('should refuse /fix %s when the %s reminder feature is disabled', async (subcommand, type, displayName) => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getSubcommand: jest.fn().mockReturnValue(subcommand)
+        }
+      });
+
+      mockReminderUtils.isReminderConfigured.mockResolvedValue(true);
+      mockReminderUtils.isReminderTypeDisabled.mockImplementation((t) => t === type);
+
+      await fixCommand.execute(mockInteraction);
+
+      expect(mockReminderUtils.handleReminder).not.toHaveBeenCalled();
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: `⚠️ The \`${displayName}\` reminder feature is currently disabled.`
+      }));
     });
 
     it('should do nothing if subcommand is unknown (covers subcommand === "needafriend" false branch)', async () => {

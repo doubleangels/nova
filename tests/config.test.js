@@ -111,6 +111,52 @@ describe('config', () => {
     expect(config.settings.disabledCommands).toEqual([]);
   });
 
+  it('should parse DISABLED_REMINDERS as comma-separated list', () => {
+    delete process.env.DISABLED_COMMANDS;
+    process.env.DISABLED_REMINDERS = 'promote, needafriend, bump';
+    const config = require('../config');
+    expect(config.settings.disabledReminders).toEqual(['promote', 'needafriend', 'bump']);
+    delete process.env.DISABLED_REMINDERS;
+  });
+
+  it('should dedupe DISABLED_REMINDERS entries', () => {
+    process.env.DISABLED_REMINDERS = 'promote,promote, needafriend';
+    const config = require('../config');
+    expect(config.settings.disabledReminders).toEqual(['promote', 'needafriend']);
+    delete process.env.DISABLED_REMINDERS;
+  });
+
+  it('should return [] when DISABLED_REMINDERS is an empty string', () => {
+    process.env.DISABLED_REMINDERS = '   ';
+    const config = require('../config');
+    expect(config.settings.disabledReminders).toEqual([]);
+    delete process.env.DISABLED_REMINDERS;
+  });
+
+  it('should return [] when DISABLED_REMINDERS is unset', () => {
+    delete process.env.DISABLED_REMINDERS;
+    const config = require('../config');
+    expect(config.settings.disabledReminders).toEqual([]);
+  });
+
+  it('should merge command-backed DISABLED_REMINDERS types into disabledCommands', () => {
+    delete process.env.DISABLED_COMMANDS;
+    process.env.DISABLED_REMINDERS = 'promote, needafriend, bump';
+    const config = require('../config');
+    // bump is not a command, so it is not merged
+    expect(config.settings.disabledCommands).toEqual(['promote', 'needafriend']);
+    delete process.env.DISABLED_REMINDERS;
+  });
+
+  it('should union DISABLED_COMMANDS and DISABLED_REMINDERS without duplicates', () => {
+    process.env.DISABLED_COMMANDS = 'promote, invite';
+    process.env.DISABLED_REMINDERS = 'promote, needafriend';
+    const config = require('../config');
+    expect(config.settings.disabledCommands).toEqual(['promote', 'invite', 'needafriend']);
+    delete process.env.DISABLED_COMMANDS;
+    delete process.env.DISABLED_REMINDERS;
+  });
+
   it('should exit when required env vars are missing', () => {
     delete process.env.DISCORD_BOT_TOKEN;
     require('../config');
