@@ -1127,4 +1127,119 @@ describe('reminderUtils', () => {
       expect(mockChannel.send).not.toHaveBeenCalled();
     });
   });
+
+  describe('DISABLED_REMINDERS gating', () => {
+    function initWithDisabledReminders(disabledReminders) {
+      jest.resetModules();
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2025-06-01T12:00:00.000Z'));
+
+      mockLogger = require('../../tests/__mocks__/logger.mock')();
+      jest.doMock('../../logger', () => () => mockLogger);
+      jest.doMock('../../config', () => ({ settings: { disabledReminders } }));
+
+      mockDatabase = { getValue: jest.fn() };
+      jest.doMock('../../utils/database', () => mockDatabase);
+
+      mockGetSharedKeyvStore = jest.fn(() => ({}));
+      jest.doMock('../../utils/sqliteStore', () => ({
+        getSharedKeyvStore: mockGetSharedKeyvStore
+      }));
+
+      const MockKeyvClass = require('../../tests/__mocks__/keyv.mock');
+      jest.doMock('keyv', () =>
+        jest.fn().mockImplementation((opts) => {
+          reminderKeyvInstance = new MockKeyvClass(opts);
+          return reminderKeyvInstance;
+        })
+      );
+      jest.doMock('@keyv/sqlite', () => jest.fn().mockImplementation(() => ({})));
+
+      mockChannel = { id: 'channel-123', send: jest.fn().mockResolvedValue(true) };
+      mockClient = {
+        channels: {
+          cache: new Map([['channel-123', mockChannel]]),
+          fetch: jest.fn().mockResolvedValue(mockChannel)
+        }
+      };
+
+      reminderUtils = require('../../utils/reminderUtils');
+      setupConfig();
+    }
+
+    it('isReminderTypeDisabled reflects config.settings.disabledReminders', () => {
+      initWithDisabledReminders(['promote', 'needafriend']);
+      expect(reminderUtils.isReminderTypeDisabled('promote')).toBe(true);
+      expect(reminderUtils.isReminderTypeDisabled('needafriend')).toBe(true);
+      expect(reminderUtils.isReminderTypeDisabled('bump')).toBe(false);
+    });
+
+    it('handleReminder does nothing for a disabled type', async () => {
+      initWithDisabledReminders(['promote']);
+      reminderKeyvInstance.get.mockImplementation(async (k) => (k.endsWith(':list') ? [] : null));
+
+      await reminderUtils.handleReminder({ client: mockClient }, 5000, 'promote');
+      await jest.runAllTimersAsync();
+
+      expect(reminderKeyvInstance.set).not.toHaveBeenCalled();
+      expect(mockChannel.send).not.toHaveBeenCalled();
+    });
+
+    it('handleReminder still schedules an enabled type while another is disabled', async () => {
+      initWithDisabledReminders(['promote']);
+      reminderKeyvInstance.get.mockImplementation(async (k) => (k.endsWith(':list') ? [] : null));
+
+      await reminderUtils.handleReminder({ client: mockClient }, 60000, 'bump');
+
+      expect(reminderKeyvInstance.set).toHaveBeenCalled();
+    });
+
+    it('tryAcquireCommandCooldown refuses a disabled type', async () => {
+      initWithDisabledReminders(['needafriend']);
+
+      const result = await reminderUtils.tryAcquireCommandCooldown(
+        'needafriend',
+        reminderUtils.NEEDAFRIEND_REMINDER_MS
+      );
+
+      expect(result).toEqual({ acquired: false, disabled: true });
+    });
+
+    it('rescheduleReminder clears stored reminders for a disabled type but reschedules enabled ones', async () => {
+      initWithDisabledReminders(['promote']);
+
+      const store = {
+        'reminders:bump:list': ['bump-1'],
+        'reminder:bump-1': {
+          reminder_id: 'bump-1',
+          remind_at: dayjs().add(1, 'hour').toISOString(),
+          type: 'bump'
+        },
+        'reminders:promote:list': ['promote-1'],
+        'reminder:promote-1': {
+          reminder_id: 'promote-1',
+          remind_at: dayjs().add(1, 'day').toISOString(),
+          type: 'promote'
+        },
+        'reminders:needafriend:list': []
+      };
+      reminderKeyvInstance.get.mockImplementation(async (k) =>
+        k in store ? store[k] : (k.endsWith(':list') ? [] : null)
+      );
+      reminderKeyvInstance.set.mockImplementation(async (k, v) => { store[k] = v; });
+      reminderKeyvInstance.delete.mockImplementation(async (k) => { delete store[k]; });
+
+      await reminderUtils.rescheduleReminder(mockClient);
+      await jest.runAllTimersAsync();
+
+      expect(store['reminders:promote:list']).toEqual([]);
+      expect(store['reminder:promote-1']).toBeUndefined();
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Cleared stored reminders for disabled reminder type on startup.',
+        { type: 'promote' }
+      );
+      expect(mockChannel.send).toHaveBeenCalledWith(expect.stringContaining('Time to bump the server!'));
+      expect(mockChannel.send).not.toHaveBeenCalledWith(expect.stringContaining('Time to promote the server!'));
+    });
+  });
 });

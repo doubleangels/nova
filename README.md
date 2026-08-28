@@ -135,6 +135,7 @@ Set variables in Doppler (or `.env` for local experiments).
 | `GUILD_ID` | Discord guild ID when the bot is in more than one guild | *unset* |
 | `LOG_LEVEL` | Pino log level | `info` |
 | `DISABLED_COMMANDS` | Slash command names to skip during deploy | `[]` |
+| `DISABLED_REMINDERS` | Reminder types to disable independently: `promote`, `needafriend`, `bump` (comma-separated). `promote` / `needafriend` are also skipped at command registration/deploy (merged into `DISABLED_COMMANDS`); pending reminders of a disabled type are cleared on startup. Types not listed keep working | `[]` |
 
 ### Integrations (optional)
 
@@ -193,7 +194,7 @@ These run without a slash command:
 - **Flag-emoji translation** — React with a supported country-flag emoji to translate message text (requires `DEEPL_API_KEY`).
 - **Member join** — Assign returning-member or Noobies roles, schedule mute-mode kicks, and check tagged invites for notifications.
 - **Message moderation** — Spam-mode duplicate detection and no-text channel enforcement.
-- **Reminders** — Disboard bumps (2 h), r/findaserver posts (24 h), r/needafriend comments (7 d) when configured via `/reminder setup`.
+- **Reminders** — Disboard bumps (2 h), r/findaserver posts (24 h), r/needafriend comments (7 d) when configured via `/reminder setup`. Any type can be turned off individually with `DISABLED_REMINDERS` while the others keep running.
 - **Former members** — Users who leave are recorded for returning-member detection on re-join.
 - **Prediction games** — When `FOOTBALL_DATA_API_KEY` and `FOOTBALL_PREDICTION_CHANNEL_ID` are set, `/worldcup` and `/football` post prompts in the same channel; registered users predict via buttons and dropdowns, and results are announced after full-time.
 

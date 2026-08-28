@@ -4,7 +4,7 @@ const path = require('path');
 const logger = require('../logger')(path.basename(__filename));
 const dayjs = require('dayjs');
 const config = require('../config');
-const { handleReminder, NEEDAFRIEND_REMINDER_MS, isReminderConfigured, replyReminderNotConfigured } = require('../utils/reminderUtils');
+const { handleReminder, NEEDAFRIEND_REMINDER_MS, isReminderConfigured, isReminderTypeDisabled, replyReminderNotConfigured } = require('../utils/reminderUtils');
 
 /**
  * Command module for fixing reminder data.
@@ -94,7 +94,16 @@ module.exports = {
         await replyReminderNotConfigured(interaction);
         return;
       }
-      
+
+      if (isReminderTypeDisabled(type)) {
+        logger.debug('Fix skipped because the reminder feature is disabled.', { type });
+        await interaction.editReply({
+          content: `⚠️ The \`${displayName}\` reminder feature is currently disabled.`,
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const scheduledTime = dayjs().add(delayMs, 'millisecond');
       const unixTimestamp = Math.floor(scheduledTime.valueOf() / 1000);
 

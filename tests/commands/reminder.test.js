@@ -27,7 +27,8 @@ describe('reminder command', () => {
     jest.doMock('../../utils/database', () => mockDatabase);
 
     mockReminderUtils = {
-      getLatestReminderData: jest.fn()
+      getLatestReminderData: jest.fn(),
+      isReminderTypeDisabled: jest.fn().mockReturnValue(false)
     };
     jest.doMock('../../utils/reminderUtils', () => mockReminderUtils);
 
@@ -195,6 +196,31 @@ describe('reminder command', () => {
       
       const bumpField = embed.data.fields.find(f => f.name === 'Next Bump (Disboard)');
       expect(bumpField.value).toContain(`<t:${Math.floor(futureTime / 1000)}:R>`);
+    });
+
+    it('should render disabled reminder types as "🚫 Disabled"', async () => {
+      const mockInteraction = createMockInteraction({
+        guild: {
+          channels: { cache: new Collection([['ch-text', { id: 'ch-text', name: 'reminders' }]]) },
+          roles: { cache: new Collection([['role-ping', { id: 'role-ping', name: 'pingme' }]]) }
+        }
+      });
+
+      mockDatabase.getValue.mockImplementation(async (key) => {
+        if (key === 'reminder_channel') return 'ch-text';
+        if (key === 'reminder_role') return 'role-ping';
+        return null;
+      });
+      mockReminderUtils.getLatestReminderData.mockResolvedValue({ remind_at: dayjs().add(2, 'hour').valueOf() });
+      mockReminderUtils.isReminderTypeDisabled.mockReturnValue(true);
+
+      await reminderCommand.handleReminderStatus(mockInteraction);
+
+      const embed = mockInteraction.editReply.mock.calls[0][0].embeds[0];
+      const fields = embed.data.fields;
+      expect(fields.find(f => f.name === 'Next Bump (Disboard)').value).toBe('🚫 Disabled');
+      expect(fields.find(f => f.name === 'Next Promotion').value).toBe('🚫 Disabled');
+      expect(fields.find(f => f.name === 'Next r/needafriend').value).toBe('🚫 Disabled');
     });
 
     it('should show invalid channel and role when IDs are missing from cache', async () => {
