@@ -27,6 +27,23 @@ describe('botHealth', () => {
     }
   });
 
+  it('should overwrite an existing heartbeat file on a later write without re-creating the directory', () => {
+    botHealth.writeBotHeartbeat();
+    const firstAt = botHealth.readBotHeartbeat().at;
+
+    jest.useFakeTimers();
+    jest.advanceTimersByTime(1000);
+    botHealth.writeBotHeartbeat();
+    jest.useRealTimers();
+
+    const secondAt = botHealth.readBotHeartbeat().at;
+    expect(secondAt).toBeGreaterThan(firstAt);
+    if (process.platform !== 'win32') {
+      const mode = fs.statSync(botHealth.getHeartbeatPath()).mode & 0o777;
+      expect(mode).toBe(botHealth.HEARTBEAT_FILE_MODE);
+    }
+  });
+
   it('should clear an existing heartbeat file', () => {
     botHealth.writeBotHeartbeat();
     botHealth.clearBotHeartbeat();

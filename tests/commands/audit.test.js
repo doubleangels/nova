@@ -40,6 +40,33 @@ describe('audit command', () => {
       }));
     });
 
+    it('should refuse to audit a guild over the member-count cap without fetching members', async () => {
+      const mockInteraction = createMockInteraction({
+        options: {
+          getBoolean: jest.fn().mockReturnValue(false),
+          getSubcommand: jest.fn().mockReturnValue('admin')
+        }
+      });
+
+      const fetchMembers = jest.fn();
+      mockInteraction.guild = {
+        id: 'huge-guild-id',
+        memberCount: 10001,
+        members: { fetch: fetchMembers }
+      };
+
+      await auditCommand.execute(mockInteraction);
+
+      expect(fetchMembers).not.toHaveBeenCalled();
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'Refused /audit on oversized guild.',
+        expect.objectContaining({ guildId: 'huge-guild-id', memberCount: 10001 })
+      );
+      expect(mockInteraction.editReply).toHaveBeenCalledWith(expect.objectContaining({
+        content: expect.stringContaining('10001 members')
+      }));
+    });
+
     it('should audit admins successfully (subcommand admin) including bots, and render a single page', async () => {
       const mockInteraction = createMockInteraction({
         options: {
