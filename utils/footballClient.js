@@ -23,6 +23,8 @@ let seasonCache = { data: null, expiresAt: 0 };
 let seasonFetchInFlight = null;
 /** @type {number} */
 let lastApiRequestAt = 0;
+/** Serializes throttle checks so concurrent requests can't all read a stale lastApiRequestAt at once. */
+let throttleQueueTail = Promise.resolve();
 
 /** @type {Record<string, string>} football-data.org status → internal short code */
 const STATUS_MAP = {
@@ -110,6 +112,7 @@ function clearSeasonCache() {
   seasonCache = { data: null, expiresAt: 0 };
   seasonFetchInFlight = null;
   lastApiRequestAt = 0;
+  throttleQueueTail = Promise.resolve();
 }
 
 /**
@@ -152,15 +155,24 @@ function rateLimitWaitMs(response) {
 }
 
 /**
+ * Serialized via throttleQueueTail so concurrent callers (e.g. getFixturesByIds'
+ * Promise.all batches) wait their turn instead of all reading the same stale
+ * lastApiRequestAt and firing at once.
  * @returns {Promise<void>}
  */
-async function throttleBeforeApiRequest() {
-  if (MIN_REQUEST_GAP_MS <= 0) return;
-  const elapsed = Date.now() - lastApiRequestAt;
-  if (elapsed < MIN_REQUEST_GAP_MS) {
-    await sleep(MIN_REQUEST_GAP_MS - elapsed);
-  }
-  lastApiRequestAt = Date.now();
+function throttleBeforeApiRequest() {
+  if (MIN_REQUEST_GAP_MS <= 0) return Promise.resolve();
+
+  const turn = throttleQueueTail.then(async () => {
+    const elapsed = Date.now() - lastApiRequestAt;
+    if (elapsed < MIN_REQUEST_GAP_MS) {
+      await sleep(MIN_REQUEST_GAP_MS - elapsed);
+    }
+    lastApiRequestAt = Date.now();
+  });
+  // Keep the chain alive even if this turn errors, so later callers aren't stuck.
+  throttleQueueTail = turn.catch(() => {});
+  return turn;
 }
 
 /**
