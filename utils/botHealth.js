@@ -15,9 +15,16 @@ function getHeartbeatPath() {
 
 function writeBotHeartbeat() {
   const heartbeatPath = getHeartbeatPath();
-  fs.mkdirSync(path.dirname(heartbeatPath), { recursive: true });
+  // Only pay for mkdir + an explicit chmod (guards against a restrictive host umask)
+  // on the file's first write; a periodic re-write of an existing file keeps its mode.
+  const isNewFile = !fs.existsSync(heartbeatPath);
+  if (isNewFile) {
+    fs.mkdirSync(path.dirname(heartbeatPath), { recursive: true });
+  }
   fs.writeFileSync(heartbeatPath, JSON.stringify({ at: Date.now() }), { mode: HEARTBEAT_FILE_MODE });
-  fs.chmodSync(heartbeatPath, HEARTBEAT_FILE_MODE);
+  if (isNewFile) {
+    fs.chmodSync(heartbeatPath, HEARTBEAT_FILE_MODE);
+  }
 }
 
 function clearBotHeartbeat() {
