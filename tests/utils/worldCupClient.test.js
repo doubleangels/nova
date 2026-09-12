@@ -373,7 +373,10 @@ describe('worldCupClient', () => {
 
         await prodClient.__test__.throttleBeforeApiRequest();
         const second = prodClient.__test__.throttleBeforeApiRequest();
-        jest.advanceTimersByTime(6_500);
+        // advanceTimersByTimeAsync interleaves pending microtasks with each step of the
+        // clock advance, so the second call's throttle check (deferred onto a promise
+        // chain) actually runs and registers its own wait instead of being skipped over.
+        await jest.advanceTimersByTimeAsync(6_500);
         await second;
       } finally {
         process.env.NODE_ENV = savedEnv;

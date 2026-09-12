@@ -161,6 +161,7 @@ function throttleBeforeApiRequest() {
     lastApiRequestAt = Date.now();
   });
   // Keep the chain alive even if this turn errors, so later callers aren't stuck.
+  /* istanbul ignore next -- defensive: the callback above never actually throws */
   throttleQueueTail = turn.catch(() => {});
   return turn;
 }

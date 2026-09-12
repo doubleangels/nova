@@ -723,6 +723,29 @@ describe('database utils', () => {
       expect(result.muteModeRemoved).toBe(0);
     });
 
+    it('should skip the guild-membership check for mute users with no join data or an expired window', async () => {
+      const oldTime = dayjs().subtract(10, 'hour').toISOString();
+      const fetchMembers = jest.fn();
+      const mockClient = {
+        guilds: {
+          cache: {
+            first: () => ({ members: { fetch: fetchMembers } })
+          }
+        }
+      };
+      mainKeyvInstance.get.mockImplementation(async (key) => {
+        if (key === 'config:spam_mode_users') return [];
+        if (key === 'config:mute_mode_users') return ['orphan-m', 'expired-m'];
+        if (key === 'mute_mode:orphan-m') return null;
+        if (key === 'mute_mode:expired-m') return { joinTime: oldTime };
+        return '4';
+      });
+      const result = await db.cleanupOldTrackingUsers(mockClient);
+      expect(result.muteModeRemoved).toBe(2);
+      // Neither user needed a membership check: one had no data, the other's window had already expired.
+      expect(fetchMembers).not.toHaveBeenCalled();
+    });
+
     it('should handle synchronous fetch errors for guild members', async () => {
       const recent = dayjs().toISOString();
       const mockClient = {
