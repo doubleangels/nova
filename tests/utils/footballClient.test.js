@@ -165,8 +165,10 @@ describe('footballClient', () => {
     jest.useFakeTimers();
     const p1 = prodClient.getFixtureById(10);
     const p2 = prodClient.getFixtureById(11);
-    await Promise.resolve();
-    jest.advanceTimersByTime(10000);
+    // advanceTimersByTimeAsync interleaves pending microtasks with each step of the
+    // clock advance, so the second call's throttle check (deferred onto a promise
+    // chain) actually runs and registers its own wait instead of being skipped over.
+    await jest.advanceTimersByTimeAsync(10000);
     await Promise.all([p1, p2]);
     expect(mockAxios.get).toHaveBeenCalledTimes(2);
     jest.useRealTimers();

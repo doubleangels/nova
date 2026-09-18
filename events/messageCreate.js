@@ -56,11 +56,12 @@ module.exports = {
 
       // Track new user messages for spam mode if enabled (BEFORE removing from mute mode)
       // Fetch config values in parallel
-      const [spamModeEnabled, noTextChannelId] = await Promise.all([
+      const [spamModeEnabled, noTextChannelId, muteModeEnabled] = await Promise.all([
         getValue('spam_mode_enabled'),
-        getValue('notext_channel')
+        getValue('notext_channel'),
+        getValue('mute_mode_enabled')
       ]);
-      
+
       try {
         if (spamModeEnabled === true) {
           await trackNewUserMessage(message);
@@ -74,7 +75,6 @@ module.exports = {
 
       cancelMuteKick(message.author.id);
 
-      const muteModeEnabled = await getValue('mute_mode_enabled');
       if (muteModeEnabled === true) {
         const inMuteMode = await isUserInMuteMode(message.author.id);
         if (inMuteMode) {
