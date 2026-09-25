@@ -16,6 +16,7 @@ services:
       - NODE_OPTIONS=--max-old-space-size=192
     mem_limit: 512m
     mem_reservation: 256m
+    cpus: "1.0"
     volumes:
       - ./data:/app/data:rw,noexec,nosuid
     tmpfs:
