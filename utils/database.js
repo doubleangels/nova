@@ -565,82 +565,101 @@ async function cleanupOldTrackingUsers(client = null) {
     // Clean up spam mode users
     const spamUserIds = await keyv.get('config:spam_mode_users') || [];
     const remainingSpamUsers = [];
-    
+    const spamIdsToDelete = [];
+
     // Fetch all user records in parallel rather than serially
     const spamUserDataList = await Promise.all(
       spamUserIds.map(userId => keyv.get(`spam_mode:${userId}`))
     );
-    
+
     for (let i = 0; i < spamUserIds.length; i++) {
       const userId = spamUserIds[i];
       const userData = spamUserDataList[i];
       if (userData && userData.joinTime) {
         const joinTime = dayjs(userData.joinTime).toDate();
         if (joinTime < spamCutoffTime) {
-          await keyv.delete(`spam_mode:${userId}`);
-          spamModeRemoved++;
+          spamIdsToDelete.push(userId);
         } else {
           remainingSpamUsers.push(userId);
         }
       } else {
         // User data missing or corrupted; remove from list and delete any orphan key
-        await keyv.delete(`spam_mode:${userId}`);
-        spamModeRemoved++;
+        spamIdsToDelete.push(userId);
       }
     }
+    await Promise.all(spamIdsToDelete.map(userId => keyv.delete(`spam_mode:${userId}`)));
+    spamModeRemoved = spamIdsToDelete.length;
     await keyv.set('config:spam_mode_users', remainingSpamUsers);
-    
+
     // Clean up mute mode users
     const muteUserIds = await keyv.get('config:mute_mode_users') || [];
     const remainingMuteUsers = [];
-    
+    const muteIdsToDelete = [];
+
     // Fetch all user records in parallel rather than serially
     const muteUserDataList = await Promise.all(
       muteUserIds.map(userId => keyv.get(`mute_mode:${userId}`))
     );
-    
+
+    // Resolve the guild once (bot is only in one guild) instead of on every iteration
+    const muteGuild = client
+      ? resolvePrimaryGuild(client, {
+        guildId: config.guildId,
+        warn: (message, meta) => logger.warn(message, meta)
+      })
+      : null;
+
+    // Users whose time window hasn't expired yet still need a guild-membership check;
+    // run those lookups in parallel rather than one fetch per user in sequence.
+    const membershipChecks = new Map();
+    if (muteGuild) {
+      const checkTargets = [];
+      for (let i = 0; i < muteUserIds.length; i++) {
+        const userData = muteUserDataList[i];
+        if (userData?.joinTime && dayjs(userData.joinTime).toDate() >= muteCutoffTime) {
+          checkTargets.push(muteUserIds[i]);
+        }
+      }
+      const results = await Promise.all(
+        checkTargets.map(async userId => {
+          try {
+            const member = await muteGuild.members.fetch(userId);
+            return [userId, Boolean(member)];
+          } catch {
+            // Synchronous throws and rejections both land here — assume not a member.
+            return [userId, false];
+          }
+        })
+      );
+      for (const [userId, stillMember] of results) {
+        membershipChecks.set(userId, stillMember);
+      }
+    }
+
     for (let i = 0; i < muteUserIds.length; i++) {
       const userId = muteUserIds[i];
       const userData = muteUserDataList[i];
       if (userData && userData.joinTime) {
         const joinTime = dayjs(userData.joinTime).toDate();
         let shouldRemove = joinTime < muteCutoffTime;
-        
+
         // If client is provided, also check if user is still in guild
-        // Bot is only in one guild, so check that guild directly
         if (!shouldRemove && client) {
-          const guild = resolvePrimaryGuild(client, {
-            guildId: config.guildId,
-            warn: (message, meta) => logger.warn(message, meta)
-          });
-          if (guild) {
-            try {
-              const member = await guild.members.fetch(userId).catch(() => null);
-              if (!member) {
-                shouldRemove = true;
-              }
-            } catch (error) {
-              // If fetch fails, assume user is not in guild
-              shouldRemove = true;
-            }
-          } else {
-            // No guild found, remove user
-            shouldRemove = true;
-          }
+          shouldRemove = !muteGuild || membershipChecks.get(userId) !== true;
         }
-        
+
         if (shouldRemove) {
-          await keyv.delete(`mute_mode:${userId}`);
-          muteModeRemoved++;
+          muteIdsToDelete.push(userId);
         } else {
           remainingMuteUsers.push(userId);
         }
       } else {
         // User data missing or corrupted; remove from list and delete any orphan key
-        await keyv.delete(`mute_mode:${userId}`);
-        muteModeRemoved++;
+        muteIdsToDelete.push(userId);
       }
     }
+    await Promise.all(muteIdsToDelete.map(userId => keyv.delete(`mute_mode:${userId}`)));
+    muteModeRemoved = muteIdsToDelete.length;
     await keyv.set('config:mute_mode_users', remainingMuteUsers);
     
     if (spamModeRemoved > 0 || muteModeRemoved > 0) {

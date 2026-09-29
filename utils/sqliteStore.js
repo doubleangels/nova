@@ -52,7 +52,11 @@ function getWritableDb() {
     writableDb = new Database(sqlitePath);
     writableDb.pragma('busy_timeout = 10000');
     writableDb.pragma('journal_mode = WAL');
-    
+    // NORMAL is safe (and standard) in WAL mode: still durable across app/process
+    // crashes, just not against OS power loss. Avoids an fsync on every commit,
+    // which matters since writes happen synchronously on the message-handling path.
+    writableDb.pragma('synchronous = NORMAL');
+
     // Ensure the keyv table exists synchronously so that direct better-sqlite3 
     // queries in tests don't fail with "no such table: keyv" before @keyv/sqlite
     // has had a chance to asynchronously create it upon connection.

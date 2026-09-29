@@ -23,6 +23,14 @@ const EXCLUDED_FOR_MODERATOR_LIST = new Set([
   PermissionFlagsBits.KickMembers
 ]);
 
+/**
+ * guild.members.fetch() pulls every member over the gateway and holds them all
+ * in memory for the duration of the command. That's fine at the bot's normal
+ * scale, but without a cap a much larger guild could turn one /audit run into
+ * a large, slow chunking operation and a real memory spike.
+ */
+const MAX_AUDITABLE_MEMBERS = 10000;
+
 function formatLine(member, showPerms, excludePowerPerms = false) {
   const name = member.displayName || member.user.username;
   const boldName = `**${name}**`;
@@ -168,6 +176,20 @@ module.exports = {
 
       const includeBots = interaction.options.getBoolean('include-bots') ?? false;
       const subcommand = interaction.options.getSubcommand();
+
+      if (guild.memberCount > MAX_AUDITABLE_MEMBERS) {
+        logger.warn('Refused /audit on oversized guild.', {
+          guildId: guild.id,
+          memberCount: guild.memberCount,
+          maxAuditableMembers: MAX_AUDITABLE_MEMBERS
+        });
+        await interaction.editReply({
+          content: `⚠️ This server has ${guild.memberCount} members, which is too many to audit in one pass. This command is only supported on smaller servers.`,
+          flags: MessageFlags.Ephemeral
+        });
+        return;
+      }
+
       const members = await guild.members.fetch();
 
       const moderatorMembers = [];
